@@ -72,7 +72,7 @@ func (s *SarifRepository) SaveSarifReport(appName string, report *sarif.Report) 
 	}
 
 	for _, runReport := range report.Runs {
-		run := Run{ApplicationName: app.Name,
+		run := Run{ApplicationID: app.ID,
 			DriverName:           runReport.Tool.Driver.Name,
 			DriverVersion:        runReport.Tool.Driver.Version,
 			DriverInformationUri: runReport.Tool.Driver.InformationURI,

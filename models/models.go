@@ -17,11 +17,19 @@ package models
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
+
+type Project struct {
+	AppModel
+	Name             string `json:"name" gorm:"unique;primarykey;type:varchar(255)"`
+	Applications     []Application
+	ServiceProviders []ServiceProvider
+}
 
 type AppModel struct {
 	ID        uuid.UUID `gorm:"primarykey;type:uuid;default:gen_random_uuid()"`
@@ -32,11 +40,13 @@ type AppModel struct {
 
 type Run struct {
 	AppModel
-	ApplicationName      string  `json:"applicationName"`
-	DriverName           string  `json:"driverName"`
-	DriverVersion        *string `json:"driverVersion"`
-	DriverInformationUri *string `json:"driverInformationUri"`
+	ApplicationID        uuid.UUID `json:"applicationId"`
+	DriverName           string    `json:"driverName"`
+	DriverVersion        *string   `json:"driverVersion"`
+	DriverInformationUri *string   `json:"driverInformationUri"`
 	Results              []Result
+	ProjectID            uuid.UUID `json:"projectId"`
+	UserID               string    `json:"userId"`
 }
 
 type Result struct {
@@ -49,9 +59,88 @@ type Result struct {
 }
 
 type Application struct {
-	Name      string `json:"name" gorm:"unique;primarykey;type:varchar(255)"`
+	AppModel
+	Name      string `json:"name" gorm:"type:varchar(255)"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt sql.NullTime `gorm:"index"`
 	Runs      []Run
+	ProjectID uuid.UUID `json:"projectId"`
+}
+
+type (
+	MitigationType  string
+	MitigationState string
+)
+
+const (
+	MitigationStateActive MitigationState = "active"
+	MitigationStateDone   MitigationState = "done"
+)
+
+const (
+	MitigationTypeAvoid    MitigationType = "avoid"
+	MitigationTypeAccept   MitigationType = "accept"
+	MitigationTypeFix      MitigationType = "fix"
+	MitigationTypeTransfer MitigationType = "transfer"
+)
+
+type Mitigation struct {
+	AppModel
+	MitigationType   MitigationType  `json:"mitigationType"`
+	InitiatingUserID string          `json:"initiatingUserId"`
+	ResultID         uuid.UUID       `json:"resultId"`
+	State            MitigationState `json:"state" gorm:"default:active"`
+	DueDate          *time.Time      `json:"dueDate"`
+	Properties       datatypes.JSON  `gorm:"type:jsonb;default:'{}';not null"`
+
+	propertiesMap any
+}
+
+type ServiceProvider struct {
+	AppModel
+	Name         string `json:"name" gorm:"unique;primarykey;type:varchar(255)"`
+	ContactEmail string `json:"contact" gorm:"type:varchar(255)"`
+	ProjectID    uuid.UUID
+}
+
+type MitigationTransferProperties struct {
+	ServiceProviderID uuid.UUID `json:"serviceProviderId"`
+}
+
+type MitigationFixProperties = map[string]interface{}
+
+type MitigationAcceptProperties struct {
+	Justification string `json:"justification"`
+}
+
+type MitigationAvoidProperties struct {
+	Justification string `json:"justification"`
+}
+
+func (m Mitigation) IsActive() bool {
+	return m.State == MitigationStateActive
+}
+
+func (m Mitigation) IsDone() bool {
+	return m.State == MitigationStateDone
+}
+
+// it is safe to typecast the return value to the correct type
+func (m *Mitigation) GetProperties() any {
+	if m.propertiesMap == nil {
+		switch m.MitigationType {
+		case MitigationTypeAvoid:
+			m.propertiesMap = &MitigationAvoidProperties{}
+		case MitigationTypeAccept:
+			m.propertiesMap = &MitigationAcceptProperties{}
+		case MitigationTypeFix:
+			m.propertiesMap = &MitigationFixProperties{}
+		case MitigationTypeTransfer:
+			m.propertiesMap = &MitigationTransferProperties{}
+		}
+
+		json.Unmarshal(m.Properties, &m.propertiesMap)
+	}
+	return m.propertiesMap
 }
