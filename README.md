@@ -99,7 +99,7 @@ _Please refer to the [Documentation](https://docs.flawfix.dev)_
 <!-- CONTRIBUTING -->
 ## Contributing
 
-Please read our [contribution guide](CONTRIBUTING.md) if you would like to report a bug, ask a question, or help us with coding.
+Please read our [contribution guide](CONTRIBUTING.md) if you would like to report a bug, ask a question, write issues or help us with coding. All help is appreciated!
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
