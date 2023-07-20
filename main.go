@@ -20,15 +20,16 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/l3montree-dev/flawfix/db"
+	"github.com/l3montree-dev/flawfix/models"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/owenrumney/go-sarif/sarif"
 )
 
 func main() {
 	godotenv.Load()
 
-	_, err := db.NewConnection(os.Getenv("POSTGRES_HOST"), "5432", os.Getenv("POSTGRES_DB"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"))
+	db, err := models.NewConnection(os.Getenv("POSTGRES_HOST"), "5432", os.Getenv("POSTGRES_DB"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"))
 	if err != nil {
 		panic(err)
 	}
@@ -38,6 +39,9 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
+
+	appRepository := models.NewApplicationRepository(db)
+	sarifWrapper := models.NewSarifWrapper(db, appRepository)
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.String(200, "ok")
@@ -49,7 +53,17 @@ func main() {
 		if err != nil {
 			return err
 		}
-		println(string(reportStr))
+		report, err := sarif.FromBytes(reportStr)
+		if err != nil {
+			return err
+		}
+		// save the report inside the database
+		err = sarifWrapper.SaveSarifReport("test", report)
+
+		if err != nil {
+			return err
+		}
+
 		return c.String(200, "ok")
 	})
 

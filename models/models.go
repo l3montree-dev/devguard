@@ -13,13 +13,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package db
+package models
 
 import (
 	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 type AppModel struct {
@@ -31,31 +32,26 @@ type AppModel struct {
 
 type Run struct {
 	AppModel
-	Driver        Driver
-	ApplicationID uuid.UUID `json:"applicationId"`
-	Results       []Result
-}
-
-type Driver struct {
-	AppModel
-	RunID          uuid.UUID
-	FullName       string `json:"fullName"`
-	Name           string `json:"name"`
-	Version        string `json:"version"`
-	InformationUri string `json:"informationUri"`
+	ApplicationName      string  `json:"applicationName"`
+	DriverName           string  `json:"driverName"`
+	DriverVersion        *string `json:"driverVersion"`
+	DriverInformationUri *string `json:"driverInformationUri"`
+	Results              []Result
 }
 
 type Result struct {
 	AppModel
 	RunID     uuid.UUID      `json:"runId"`
-	RuleID    string         `json:"ruleId"`
-	Level     string         `json:"level"`
-	Message   string         `json:"message"`
-	Locations map[string]any `gorm:"type:jsonb;default:'[]';not null"`
+	RuleID    *string        `json:"ruleId"`
+	Level     *string        `json:"level"`
+	Message   *string        `json:"message"`
+	Locations datatypes.JSON `gorm:"type:jsonb;default:'[]';not null"`
 }
 
 type Application struct {
-	AppModel
-	Runs []Run
-	Name string `json:"name"`
+	Name      string `json:"name" gorm:"unique;primarykey;type:varchar(255)"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt sql.NullTime `gorm:"index"`
+	Runs      []Run
 }

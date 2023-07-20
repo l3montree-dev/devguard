@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package db
+package models
 
 import (
 	"fmt"
@@ -31,7 +31,7 @@ func NewConnection(host, port, dbname, user, password string) (*gorm.DB, error) 
 		return nil, err
 	}
 
-	err = db.AutoMigrate(&Application{}, &Run{}, &Driver{}, &Result{})
+	err = db.AutoMigrate(&Application{}, &Run{}, &Result{})
 	if err != nil {
 		return nil, err
 	}
