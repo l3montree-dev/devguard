@@ -79,10 +79,11 @@ Please refer to: [FlawFix-Web on Github](https://github.com/l3montree-dev/flawfi
 
 FlawFix is divided into two projects: A frontend (FlawFix Web) and a backend (FlawFix Backend). 
 
-**Backend:**
+**Backend (this project):**
 * [![Go][go.dev]][go-url]
 
-Please refer to: [FlawFix-Web on Github](https://github.com/l3montree-dev/flawfix-web)
+**Frontend:**
+* Please refer to: [FlawFix-Web on Github](https://github.com/l3montree-dev/flawfix-web)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -98,7 +99,7 @@ _Please refer to the [Documentation](https://docs.flawfix.dev)_
 <!-- CONTRIBUTING -->
 ## Contributing
 
-Please read our contribution guide if you would like to report a bug, ask a question, or help us with coding.
+Please read our [contribution guide](CONTRIBUTING.md) if you would like to report a bug, ask a question, write issues or help us with coding. All help is appreciated!
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -106,7 +107,7 @@ Please read our contribution guide if you would like to report a bug, ask a ques
 <!-- Code of Conduct -->
 ## Code of Conduct
 
-Help us keep FlawFix open and inclusive. Please read and follow our Code of Conduct.
+Help us keep FlawFix open and inclusive. Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -114,7 +115,7 @@ Help us keep FlawFix open and inclusive. Please read and follow our Code of Cond
 <!-- LICENSE -->
 ## License
 
-Distributed under the AGPL-3.0-or-later License. See `LICENSE.txt` for more information.
+Distributed under the AGPL-3.0-or-later License. See [`LICENSE.txt`](LICENSE.txt) for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
