@@ -95,17 +95,17 @@ func main() {
 	appRepository := models.NewApplicationRepository(db)
 	sarifWrapper := models.NewSarifWrapper(db, appRepository)
 
-	e.GET("/health", func(c echo.Context) error {
+	e.GET("/api/v1/health", func(c echo.Context) error {
 		return c.String(200, "ok")
 	})
 
-	e.Use(sessionMiddleware(ory))
+	authorizedGroup := e.Group("/api/v1", sessionMiddleware(ory))
 
-	e.GET("/", func(c echo.Context) error {
+	authorizedGroup.GET("/", func(c echo.Context) error {
 		return c.JSON(200, getSession(c))
 	})
 
-	e.POST("/reports", func(c echo.Context) error {
+	authorizedGroup.POST("/reports", func(c echo.Context) error {
 		// print the request body as string
 		reportStr, err := io.ReadAll(c.Request().Body)
 		if err != nil {

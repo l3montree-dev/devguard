@@ -24,11 +24,25 @@ import (
 	"gorm.io/datatypes"
 )
 
+type User struct {
+	AppModel
+	Email string `json:"email" gorm:"type:varchar(255);unique"`
+	Name  string `json:"name" gorm:"type:varchar(255)"`
+}
+type Organization struct {
+	AppModel
+	Name     string `json:"name" gorm:"type:varchar(255)"`
+	Projects []Project
+	Users    []User `gorm:"many2many:organization_users;"`
+}
+
 type Project struct {
 	AppModel
-	Name             string `json:"name" gorm:"unique;primarykey;type:varchar(255)"`
+	Name             string `json:"name" gorm:"type:varchar(255)"`
 	Applications     []Application
 	ServiceProviders []ServiceProvider
+	OrganizationID   uuid.UUID `json:"organizationId"`
+	Users            []User    `gorm:"many2many:project_users;"`
 }
 
 type AppModel struct {
@@ -38,6 +52,25 @@ type AppModel struct {
 	DeletedAt sql.NullTime `gorm:"index"`
 }
 
+type Application struct {
+	AppModel
+	Name      string `json:"name" gorm:"type:varchar(255)"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt sql.NullTime `gorm:"index"`
+
+	Envs      []Env
+	ProjectID uuid.UUID `json:"projectId"`
+}
+
+type Env struct {
+	AppModel
+	Name          string `json:"name" gorm:"type:varchar(255)"`
+	Runs          []Run
+	ApplicationID uuid.UUID `json:"applicationId"`
+	IsDefault     bool      `json:"isDefault"`
+}
+
 type Run struct {
 	AppModel
 	ApplicationID        uuid.UUID `json:"applicationId"`
@@ -45,8 +78,8 @@ type Run struct {
 	DriverVersion        *string   `json:"driverVersion"`
 	DriverInformationUri *string   `json:"driverInformationUri"`
 	Results              []Result
-	ProjectID            uuid.UUID `json:"projectId"`
-	UserID               string    `json:"userId"`
+	EnvID                uuid.UUID `json:"envId"`
+	InitiatingUserID     string    `json:"initiatingUserId"`
 }
 
 type Result struct {
@@ -56,16 +89,6 @@ type Result struct {
 	Level     *string        `json:"level"`
 	Message   *string        `json:"message"`
 	Locations datatypes.JSON `gorm:"type:jsonb;default:'[]';not null"`
-}
-
-type Application struct {
-	AppModel
-	Name      string `json:"name" gorm:"type:varchar(255)"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt sql.NullTime `gorm:"index"`
-	Runs      []Run
-	ProjectID uuid.UUID `json:"projectId"`
 }
 
 type (
