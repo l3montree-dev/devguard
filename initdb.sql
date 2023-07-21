@@ -1,0 +1,4 @@
+CREATE DATABASE kratos;
+CREATE USER kratos PASSWORD 'secret';
+
+GRANT CONNECT ON DATABASE kratos to kratos;

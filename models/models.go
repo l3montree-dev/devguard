@@ -69,13 +69,7 @@ type Application struct {
 }
 
 type (
-	MitigationType  string
-	MitigationState string
-)
-
-const (
-	MitigationStateActive MitigationState = "active"
-	MitigationStateDone   MitigationState = "done"
+	MitigationType string
 )
 
 const (
@@ -87,12 +81,14 @@ const (
 
 type Mitigation struct {
 	AppModel
-	MitigationType   MitigationType  `json:"mitigationType"`
-	InitiatingUserID string          `json:"initiatingUserId"`
-	ResultID         uuid.UUID       `json:"resultId"`
-	State            MitigationState `json:"state" gorm:"default:active"`
-	DueDate          *time.Time      `json:"dueDate"`
-	Properties       datatypes.JSON  `gorm:"type:jsonb;default:'{}';not null"`
+	MitigationType   MitigationType `json:"mitigationType"`
+	InitiatingUserID string         `json:"initiatingUserId"`
+	ResultID         uuid.UUID      `json:"resultId"`
+
+	DueDate    *time.Time     `json:"dueDate"`
+	Properties datatypes.JSON `gorm:"type:jsonb;default:'{}';not null"`
+
+	MitigationPending bool `json:"mitigationPending" gorm:"default:false"` // will be true for fix and transfer types - we are waiting for another scan report which verifies, that the related result is fixed. Will be false for avoid and accept types
 
 	propertiesMap any
 }
@@ -116,14 +112,6 @@ type MitigationAcceptProperties struct {
 
 type MitigationAvoidProperties struct {
 	Justification string `json:"justification"`
-}
-
-func (m Mitigation) IsActive() bool {
-	return m.State == MitigationStateActive
-}
-
-func (m Mitigation) IsDone() bool {
-	return m.State == MitigationStateDone
 }
 
 // it is safe to typecast the return value to the correct type

@@ -1,3 +1,5 @@
+version: '3.7'
+
 # postgresql database for local development
 services:
   postgresql:
@@ -7,6 +9,35 @@ services:
       - "5432:5432"
     volumes:
       - postgres:/var/lib/postgresql/data
+      - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
   
+  kratos-migrate:
+    image: oryd/kratos:v1.0.0
+    depends_on:
+      - postgresql
+    environment:
+      - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
+    volumes:
+      - type: bind
+        source: ./kratos
+        target: /etc/config/kratos
+    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+
+  kratos:
+    image: oryd/kratos:v1.0.0
+    depends_on:
+      - kratos-migrate
+      - postgresql
+    ports:
+      - '4433:4433' # public
+      - '4434:4434' # admin
+    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+    environment:
+      - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
+      - LOG_LEVEL=trace
+    volumes:
+        - type: bind
+          source: ./kratos
+          target: /etc/config/kratos
 volumes:
   postgres:
