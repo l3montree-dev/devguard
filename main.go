@@ -17,6 +17,7 @@ package main
 
 import (
 	"io"
+	"net/http"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -24,10 +25,61 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/owenrumney/go-sarif/sarif"
+
+	"github.com/ory/client-go"
 )
+
+func getOryApiClient() *client.APIClient {
+	cfg := client.NewConfiguration()
+	cfg.Servers = client.ServerConfigurations{
+		{URL: os.Getenv("ORY_KRATOS")},
+	}
+
+	ory := client.NewAPIClient(cfg)
+	return ory
+}
+
+func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
+	for _, cookie := range cookies {
+		if cookie.Name == name {
+			return cookie
+		}
+	}
+	return nil
+}
+
+func sessionMiddleware(oryApiClient *client.APIClient) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) (err error) {
+
+			oryKratosSessionCookie := getCookie("ory_kratos_session", c.Cookies())
+			if oryKratosSessionCookie == nil {
+				return c.JSON(401, map[string]string{"error": "no session cookie"})
+			}
+
+			// check if we have a session
+			session, _, err := oryApiClient.FrontendApi.ToSession(c.Request().Context()).Cookie(oryKratosSessionCookie.String()).Execute()
+			if (err != nil && session == nil) || (err == nil && !*session.Active) {
+				return c.JSON(401, map[string]string{"error": "no session"})
+			}
+
+			c.Set("session", session)
+			c.Set("sessionCookie", oryKratosSessionCookie)
+			// continue to the requested page (in our case the Dashboard)
+			return next(c)
+		}
+	}
+}
+
+func getSession(ctx echo.Context) *client.Session {
+	session := ctx.Get("session").(*client.Session)
+	return session
+}
 
 func main() {
 	godotenv.Load()
+
+	ory := getOryApiClient()
 
 	db, err := models.NewConnection(os.Getenv("POSTGRES_HOST"), "5432", os.Getenv("POSTGRES_DB"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"))
 	if err != nil {
@@ -45,6 +97,12 @@ func main() {
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.String(200, "ok")
+	})
+
+	e.Use(sessionMiddleware(ory))
+
+	e.GET("/", func(c echo.Context) error {
+		return c.JSON(200, getSession(c))
 	})
 
 	e.POST("/reports", func(c echo.Context) error {

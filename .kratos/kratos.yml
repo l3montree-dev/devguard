@@ -2,13 +2,17 @@ version: v0.13.0
 
 dsn: memory
 
+session:
+  cookie:
+    name: ory_kratos_session
+
 serve:
   public:
     base_url: http://127.0.0.1:4433/
     cors:
       enabled: true
   admin:
-    base_url: http://kratos:4434/
+    base_url: http://127.0.0.1:4434/
 
 selfservice:
   default_browser_return_url: http://127.0.0.1:3000/

@@ -19,7 +19,7 @@ services:
       - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
     volumes:
       - type: bind
-        source: ./kratos
+        source: ./.kratos
         target: /etc/config/kratos
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
 
@@ -37,7 +37,7 @@ services:
       - LOG_LEVEL=trace
     volumes:
         - type: bind
-          source: ./kratos
+          source: ./.kratos
           target: /etc/config/kratos
 volumes:
   postgres:
