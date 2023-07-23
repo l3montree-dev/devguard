@@ -13,23 +13,33 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package helpers
+package middleware
 
 import (
-	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
-	"github.com/l3montree-dev/flawfix/internal/auth"
-	"github.com/l3montree-dev/flawfix/internal/models"
+	"github.com/l3montree-dev/flawfix/internal/helpers"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/gommon/log"
 )
 
-func GetRBAC(c echo.Context) accesscontrol.AccessControl {
-	return c.Get("rbac").(accesscontrol.AccessControl)
-}
+func AccessControlDecorator(obj string, act string, next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) (err error) {
+		// get the rbac
+		rbac := helpers.GetRBAC(c)
 
-func GetTenant(c echo.Context) models.Organization {
-	return c.Get("tenant").(models.Organization)
-}
+		// get the user
+		user := helpers.GetSession(c).GetUserID()
 
-func GetSession(ctx echo.Context) auth.AuthSession {
-	return ctx.Get("session").(auth.AuthSession)
+		allowed, err := rbac.IsAllowed(user, obj, act)
+		if err != nil {
+			log.Errorf("could not determine if the user has access", err)
+			return c.JSON(500, map[string]string{"error": "internal server error"})
+		}
+
+		// check if the user has the required role
+		if !allowed {
+			return c.JSON(403, map[string]string{"error": "forbidden"})
+		}
+
+		return next(c)
+	}
 }

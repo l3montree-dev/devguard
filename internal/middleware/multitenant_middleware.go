@@ -16,22 +16,15 @@
 package middleware
 
 import (
+	"github.com/google/uuid"
 	accesscontrol "github.com/l3montree-dev/flawfix/internal/accesscontrol"
-	"github.com/l3montree-dev/flawfix/internal/models"
+	"github.com/l3montree-dev/flawfix/internal/helpers"
 	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 )
 
-func GetRBAC(c echo.Context) accesscontrol.AccessControl {
-	return c.Get("rbac").(accesscontrol.AccessControl)
-}
-
-func GetTenant(c echo.Context) models.Organization {
-	return c.Get("tenant").(models.Organization)
-}
-
-func MultiTenantMiddleware(rbacProvider accesscontrol.CasbinRBACProvider, organizationRepo *repositories.OrganizationRepository) echo.MiddlewareFunc {
+func MultiTenantMiddleware(rbacProvider accesscontrol.CasbinRBACProvider, organizationRepo *repositories.GormOrganizationRepository) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
 			// get the tenant from the provided context
@@ -45,8 +38,8 @@ func MultiTenantMiddleware(rbacProvider accesscontrol.CasbinRBACProvider, organi
 			domainRBAC := rbacProvider.GetDomainRBAC(tenant)
 
 			// check if the user is allowed to access the tenant
-			session := GetSession(c)
-			allowed := domainRBAC.HasAccess(session.Identity.Id)
+			session := helpers.GetSession(c)
+			allowed := domainRBAC.HasAccess(session.GetUserID())
 
 			if !allowed {
 				log.Errorf("access denied")
@@ -54,7 +47,13 @@ func MultiTenantMiddleware(rbacProvider accesscontrol.CasbinRBACProvider, organi
 			}
 
 			// fetch the tenant from the database
-			tenantObj, err := organizationRepo.FindByName(tenant)
+			tenantUuid, err := uuid.FromBytes([]byte(tenant))
+			if err != nil {
+				log.Errorf("not a valid tenant uuid - but access was granted")
+				return c.JSON(500, map[string]string{"error": "tenant not found"})
+			}
+
+			tenantObj, err := organizationRepo.Read(tenantUuid)
 			if err != nil {
 				log.Errorf("tenant not found - but access was granted")
 				return c.JSON(500, map[string]string{"error": "tenant not found"})

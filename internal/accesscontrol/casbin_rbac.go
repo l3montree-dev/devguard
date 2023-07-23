@@ -35,8 +35,8 @@ type CasbinRBACProvider struct {
 	enforcer *casbin.Enforcer
 }
 
-func (c *CasbinRBACProvider) GetDomainRBAC(domain string) CasbinRBAC {
-	return CasbinRBAC{
+func (c CasbinRBACProvider) GetDomainRBAC(domain string) AccessControl {
+	return &CasbinRBAC{
 		domain:   domain,
 		enforcer: c.enforcer,
 	}
@@ -54,6 +54,25 @@ func (c *CasbinRBAC) GrantRole(user, role string) error {
 
 func (c *CasbinRBAC) RevokeRole(user, role string) error {
 	_, err := c.enforcer.DeleteRoleForUserInDomain("user::"+user, "role::"+role, "domain::"+c.domain)
+	return err
+}
+
+func (c *CasbinRBAC) AllowRole(role, object string, action []string) error {
+	policies := make([][]string, len(action))
+	for i, ac := range action {
+		policies[i] = []string{"role::" + role, "obj::" + object, "act::" + ac}
+	}
+	_, err := c.enforcer.AddPolicies(policies)
+	return err
+}
+
+func (c *CasbinRBAC) GrantRoleInProject(user, role, project string) error {
+	_, err := c.enforcer.AddRoleForUserInDomain("user::"+user, "project::"+project+"|role::"+role, "domain::"+c.domain)
+	return err
+}
+
+func (c *CasbinRBAC) RevokeRoleInProject(user, role, project string) error {
+	_, err := c.enforcer.DeleteRoleForUserInDomain("user::"+user, "project::"+project+"|role::"+role, "domain::"+c.domain)
 	return err
 }
 

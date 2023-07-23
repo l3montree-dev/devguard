@@ -24,13 +24,13 @@ import (
 	"gorm.io/gorm"
 )
 
-type SarifRepository struct {
+type GormReportRepository struct {
 	db            *gorm.DB
-	appRepository *ApplicationRepository
+	appRepository *GormApplicationRepository
 }
 
-func NewSarifReport(db *gorm.DB, appRepository *ApplicationRepository) *SarifRepository {
-	return &SarifRepository{
+func NewGormReportRepository(db *gorm.DB, appRepository *GormApplicationRepository) *GormReportRepository {
+	return &GormReportRepository{
 		db:            db,
 		appRepository: appRepository,
 	}
@@ -65,7 +65,7 @@ func transformLocations2Map(locations []*sarif.Location) datatypes.JSON {
 	return datatypes.JSON(b)
 }
 
-func (s *SarifRepository) SaveSarifReport(appName string, report *sarif.Report) error {
+func (s *GormReportRepository) SaveSarifReport(appName string, report *sarif.Report) error {
 	// check if the application does already exist
 	app, err := s.appRepository.FindOrCreate(appName)
 	if err != nil {

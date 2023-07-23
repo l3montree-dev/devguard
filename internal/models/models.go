@@ -24,18 +24,27 @@ import (
 	"gorm.io/datatypes"
 )
 
+type AppModel struct {
+	ID        uuid.UUID `gorm:"primarykey;type:uuid;default:gen_random_uuid()"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt sql.NullTime `gorm:"index"`
+}
+
+func (a AppModel) GetID() uuid.UUID {
+	return a.ID
+}
+
 type User struct {
 	AppModel
-	Email         string         `json:"email" gorm:"type:varchar(255);unique"`
-	Name          string         `json:"name" gorm:"type:varchar(255)"`
-	Organizations []Organization `gorm:"many2many:organization_users;"`
+	Email string `json:"email" gorm:"type:varchar(255);unique"`
+	Name  string `json:"name" gorm:"type:varchar(255)"`
 }
 
 type Organization struct {
 	AppModel
 	Name     string `json:"name" gorm:"type:varchar(255)"`
 	Projects []Project
-	Users    []User `gorm:"many2many:organization_users;"`
 }
 
 type Project struct {
@@ -44,14 +53,6 @@ type Project struct {
 	Applications     []Application
 	ServiceProviders []ServiceProvider
 	OrganizationID   uuid.UUID `json:"organizationId"`
-	Users            []User    `gorm:"many2many:project_users;"`
-}
-
-type AppModel struct {
-	ID        uuid.UUID `gorm:"primarykey;type:uuid;default:gen_random_uuid()"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt sql.NullTime `gorm:"index"`
 }
 
 type Application struct {

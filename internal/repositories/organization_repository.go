@@ -16,26 +16,18 @@
 package repositories
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"gorm.io/gorm"
 )
 
-type OrganizationRepository struct {
+type GormOrganizationRepository struct {
 	db *gorm.DB
+	GormRepository[uuid.UUID, models.Organization]
 }
 
-func NewOrganization(db *gorm.DB) *OrganizationRepository {
-	return &OrganizationRepository{
+func NewGormOrganizationRepository(db *gorm.DB) *GormOrganizationRepository {
+	return &GormOrganizationRepository{
 		db: db,
 	}
-}
-
-func (o *OrganizationRepository) Save(org models.Organization) error {
-	return o.db.Create(&org).Error
-}
-
-func (o *OrganizationRepository) FindByName(name string) (models.Organization, error) {
-	var org models.Organization
-	err := o.db.Where("name = ?", name).First(&org).Error
-	return org, err
 }

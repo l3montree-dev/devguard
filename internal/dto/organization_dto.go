@@ -13,35 +13,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package accesscontrol
+package dto
 
-const (
-	RoleOwner  = "owner"
-	RoleAdmin  = "admin"
-	RoleMember = "member"
-	RoleGuest  = "guest"
+import (
+	"github.com/l3montree-dev/flawfix/internal/models"
 )
 
-const (
-	ActionCreate = "create"
-	ActionRead   = "read"
-	ActionUpdate = "update"
-	ActionDelete = "delete"
-)
-
-type AccessControl interface {
-	HasAccess(subject string) bool
-
-	GrantRole(subject, role string) error
-	RevokeRole(subject, role string) error
-
-	GrantRoleInProject(subject, role, project string) error
-	RevokeRoleInProject(subject, role, project string) error
-
-	AllowRole(role, object string, action []string) error
-	IsAllowed(subject, object, action string) (bool, error)
+type OrganizationCreateRequest struct {
+	Name string `json:"name" validate:"required"`
 }
 
-type RBACProvider interface {
-	GetDomainRBAC(domain string) AccessControl
+func (o *OrganizationCreateRequest) ToModel() models.Organization {
+
+	return models.Organization{
+		Name: o.Name,
+	}
 }

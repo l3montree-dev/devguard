@@ -13,35 +13,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package accesscontrol
+package testutils
 
-const (
-	RoleOwner  = "owner"
-	RoleAdmin  = "admin"
-	RoleMember = "member"
-	RoleGuest  = "guest"
-)
-
-const (
-	ActionCreate = "create"
-	ActionRead   = "read"
-	ActionUpdate = "update"
-	ActionDelete = "delete"
-)
-
-type AccessControl interface {
-	HasAccess(subject string) bool
-
-	GrantRole(subject, role string) error
-	RevokeRole(subject, role string) error
-
-	GrantRoleInProject(subject, role, project string) error
-	RevokeRoleInProject(subject, role, project string) error
-
-	AllowRole(role, object string, action []string) error
-	IsAllowed(subject, object, action string) (bool, error)
+type SessionMock struct {
+	UserID string
 }
 
-type RBACProvider interface {
-	GetDomainRBAC(domain string) AccessControl
+func (s SessionMock) GetUserID() string {
+	return s.UserID
+}
+
+func NewSessionMock(userID string) SessionMock {
+	return SessionMock{
+		UserID: userID,
+	}
 }

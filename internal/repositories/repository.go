@@ -13,35 +13,41 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package accesscontrol
+package repositories
 
-const (
-	RoleOwner  = "owner"
-	RoleAdmin  = "admin"
-	RoleMember = "member"
-	RoleGuest  = "guest"
-)
+import "gorm.io/gorm"
 
-const (
-	ActionCreate = "create"
-	ActionRead   = "read"
-	ActionUpdate = "update"
-	ActionDelete = "delete"
-)
-
-type AccessControl interface {
-	HasAccess(subject string) bool
-
-	GrantRole(subject, role string) error
-	RevokeRole(subject, role string) error
-
-	GrantRoleInProject(subject, role, project string) error
-	RevokeRoleInProject(subject, role, project string) error
-
-	AllowRole(role, object string, action []string) error
-	IsAllowed(subject, object, action string) (bool, error)
+type Repository[ID any, T any] interface {
+	Create(t T) error
+	Read(id ID) (T, error)
+	Update(t T) error
+	Delete(id ID) error
 }
 
-type RBACProvider interface {
-	GetDomainRBAC(domain string) AccessControl
+type GormRepository[ID comparable, T any] struct {
+	db *gorm.DB
+}
+
+func NewGormRepository[ID comparable, T any](db *gorm.DB) *GormRepository[ID, T] {
+	return &GormRepository[ID, T]{
+		db: db,
+	}
+}
+
+func (g *GormRepository[ID, T]) Create(t *T) error {
+	return g.db.Create(t).Error
+}
+
+func (g *GormRepository[ID, T]) Read(id ID) (T, error) {
+	var t T
+	err := g.db.First(&t, id).Error
+	return t, err
+}
+
+func (g *GormRepository[ID, T]) Update(t T) error {
+	return g.db.Save(t).Error
+}
+
+func (g *GormRepository[ID, T]) Delete(id ID) error {
+	return g.db.Delete(id).Error
 }

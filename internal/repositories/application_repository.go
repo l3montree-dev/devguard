@@ -20,21 +20,21 @@ import (
 	"gorm.io/gorm"
 )
 
-type ApplicationRepository struct {
+type GormApplicationRepository struct {
 	db *gorm.DB
 }
 
-func NewApplication(db *gorm.DB) *ApplicationRepository {
-	return &ApplicationRepository{
+func NewGormApplicationRepository(db *gorm.DB) *GormApplicationRepository {
+	return &GormApplicationRepository{
 		db: db,
 	}
 }
 
-func (a *ApplicationRepository) Save(app models.Application) error {
+func (a *GormApplicationRepository) Save(app models.Application) error {
 	return a.db.Create(&app).Error
 }
 
-func (a *ApplicationRepository) FindByName(name string) (models.Application, error) {
+func (a *GormApplicationRepository) FindByName(name string) (models.Application, error) {
 	var app models.Application
 	err := a.db.Where("name = ?", name).First(&app).Error
 	if err != nil {
@@ -43,7 +43,7 @@ func (a *ApplicationRepository) FindByName(name string) (models.Application, err
 	return app, nil
 }
 
-func (a *ApplicationRepository) FindOrCreate(name string) (models.Application, error) {
+func (a *GormApplicationRepository) FindOrCreate(name string) (models.Application, error) {
 	app, err := a.FindByName(name)
 	if err != nil {
 		app = models.Application{Name: name}

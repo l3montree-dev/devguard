@@ -18,9 +18,11 @@ package main
 import (
 	"io"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	accesscontrol "github.com/l3montree-dev/flawfix/internal/accesscontrol"
+	"github.com/l3montree-dev/flawfix/internal/controller"
 	appMiddleware "github.com/l3montree-dev/flawfix/internal/middleware"
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/l3montree-dev/flawfix/internal/repositories"
@@ -63,14 +65,29 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
+	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		Timeout: 10 * time.Second,
+	}))
 
-	appRepository := repositories.NewApplication(db)
-	reportRepository := repositories.NewSarifReport(db, appRepository)
-	organizationRepository := repositories.NewOrganization(db)
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		c.Logger().Error(err)
+		e.DefaultHTTPErrorHandler(err, c)
+	}
 
+	appRepository := repositories.NewGormApplicationRepository(db)
+	reportRepository := repositories.NewGormReportRepository(db, appRepository)
+	organizationRepository := repositories.NewGormOrganizationRepository(db)
+
+	organizationController := controller.NewOrganizationController(organizationRepository, casbinRBACProvider)
+
+	// apply the health route without any session or multi tenant middleware
 	e.GET("/api/v1/health", func(c echo.Context) error {
 		return c.String(200, "ok")
 	})
+
+	// use the organization router for creating a new organization - this is not multi tenant
+	orgRouter := e.Group("/api/v1/organization", appMiddleware.SessionMiddleware(ory))
+	orgRouter.POST("/", organizationController.Create)
 
 	appRouter := e.Group("/api/v1/:tenant", appMiddleware.SessionMiddleware(ory), appMiddleware.MultiTenantMiddleware(casbinRBACProvider, organizationRepository))
 

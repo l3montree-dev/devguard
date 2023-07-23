@@ -18,6 +18,7 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/l3montree-dev/flawfix/internal/auth"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
 )
@@ -29,11 +30,6 @@ func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
 		}
 	}
 	return nil
-}
-
-func GetSession(ctx echo.Context) *client.Session {
-	session := ctx.Get("session").(*client.Session)
-	return session
 }
 
 func SessionMiddleware(oryApiClient *client.APIClient) echo.MiddlewareFunc {
@@ -51,7 +47,7 @@ func SessionMiddleware(oryApiClient *client.APIClient) echo.MiddlewareFunc {
 				return c.JSON(401, map[string]string{"error": "no session"})
 			}
 
-			c.Set("session", session)
+			c.Set("session", auth.NewOrySession(session))
 			c.Set("sessionCookie", oryKratosSessionCookie)
 			// continue to the requested page (in our case the Dashboard)
 			return next(c)
