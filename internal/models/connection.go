@@ -16,40 +16,25 @@
 package models
 
 import (
+	"fmt"
+
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-type ApplicationRepository struct {
-	db *gorm.DB
-}
+func NewConnection(host, user, password, dbname, port string) (*gorm.DB, error) {
+	// https://github.com/go-gorm/postgres
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN: fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbname),
+	}), &gorm.Config{})
 
-func NewApplicationRepository(db *gorm.DB) *ApplicationRepository {
-	return &ApplicationRepository{
-		db: db,
-	}
-}
-
-func (a *ApplicationRepository) Save(app Application) error {
-	return a.db.Create(&app).Error
-}
-
-func (a *ApplicationRepository) FindByName(name string) (Application, error) {
-	var app Application
-	err := a.db.Where("name = ?", name).First(&app).Error
 	if err != nil {
-		return app, err
+		return nil, err
 	}
-	return app, nil
-}
 
-func (a *ApplicationRepository) FindOrCreate(name string) (Application, error) {
-	app, err := a.FindByName(name)
+	err = db.AutoMigrate(&User{}, &Organization{}, &Project{}, &Application{}, &Run{}, &Result{}, &ServiceProvider{})
 	if err != nil {
-		app = Application{Name: name}
-		err = a.Save(app)
-		if err != nil {
-			return app, err
-		}
+		return nil, err
 	}
-	return app, nil
+	return db, nil
 }

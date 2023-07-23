@@ -13,11 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package models
+package repositories
 
 import (
 	"encoding/json"
 
+	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/owenrumney/go-sarif/sarif"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -28,7 +29,7 @@ type SarifRepository struct {
 	appRepository *ApplicationRepository
 }
 
-func NewSarifWrapper(db *gorm.DB, appRepository *ApplicationRepository) *SarifRepository {
+func NewSarifReport(db *gorm.DB, appRepository *ApplicationRepository) *SarifRepository {
 	return &SarifRepository{
 		db:            db,
 		appRepository: appRepository,
@@ -72,13 +73,13 @@ func (s *SarifRepository) SaveSarifReport(appName string, report *sarif.Report) 
 	}
 
 	for _, runReport := range report.Runs {
-		run := Run{ApplicationID: app.ID,
+		run := models.Run{ApplicationID: app.ID,
 			DriverName:           runReport.Tool.Driver.Name,
 			DriverVersion:        runReport.Tool.Driver.Version,
 			DriverInformationUri: runReport.Tool.Driver.InformationURI,
 		}
 		for _, result := range runReport.Results {
-			run.Results = append(run.Results, Result{
+			run.Results = append(run.Results, models.Result{
 				Level:     result.Level,
 				Message:   result.Message.Text,
 				RuleID:    result.RuleID,

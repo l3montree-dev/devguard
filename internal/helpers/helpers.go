@@ -13,27 +13,4 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package models
-
-import (
-	"fmt"
-
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-)
-
-func NewConnection(host, port, dbname, user, password string) (*gorm.DB, error) {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", host, user, password, dbname, port)
-	// https://github.com/go-gorm/postgres
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.AutoMigrate(&User{}, &Organization{}, &Project{}, &Application{}, &Run{}, &Result{}, &ServiceProvider{})
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
+package helpers

@@ -26,9 +26,11 @@ import (
 
 type User struct {
 	AppModel
-	Email string `json:"email" gorm:"type:varchar(255);unique"`
-	Name  string `json:"name" gorm:"type:varchar(255)"`
+	Email         string         `json:"email" gorm:"type:varchar(255);unique"`
+	Name          string         `json:"name" gorm:"type:varchar(255)"`
+	Organizations []Organization `gorm:"many2many:organization_users;"`
 }
+
 type Organization struct {
 	AppModel
 	Name     string `json:"name" gorm:"type:varchar(255)"`

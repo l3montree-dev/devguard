@@ -17,15 +17,18 @@ package main
 
 import (
 	"io"
-	"net/http"
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/l3montree-dev/flawfix/models"
+	accesscontrol "github.com/l3montree-dev/flawfix/internal/accesscontrol"
+	appMiddleware "github.com/l3montree-dev/flawfix/internal/middleware"
+	"github.com/l3montree-dev/flawfix/internal/models"
+	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/owenrumney/go-sarif/sarif"
 
+	_ "github.com/lib/pq"
 	"github.com/ory/client-go"
 )
 
@@ -39,49 +42,18 @@ func getOryApiClient() *client.APIClient {
 	return ory
 }
 
-func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
-	for _, cookie := range cookies {
-		if cookie.Name == name {
-			return cookie
-		}
-	}
-	return nil
-}
-
-func sessionMiddleware(oryApiClient *client.APIClient) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) (err error) {
-
-			oryKratosSessionCookie := getCookie("ory_kratos_session", c.Cookies())
-			if oryKratosSessionCookie == nil {
-				return c.JSON(401, map[string]string{"error": "no session cookie"})
-			}
-
-			// check if we have a session
-			session, _, err := oryApiClient.FrontendApi.ToSession(c.Request().Context()).Cookie(oryKratosSessionCookie.String()).Execute()
-			if (err != nil && session == nil) || (err == nil && !*session.Active) {
-				return c.JSON(401, map[string]string{"error": "no session"})
-			}
-
-			c.Set("session", session)
-			c.Set("sessionCookie", oryKratosSessionCookie)
-			// continue to the requested page (in our case the Dashboard)
-			return next(c)
-		}
-	}
-}
-
-func getSession(ctx echo.Context) *client.Session {
-	session := ctx.Get("session").(*client.Session)
-	return session
-}
-
 func main() {
 	godotenv.Load()
 
 	ory := getOryApiClient()
 
-	db, err := models.NewConnection(os.Getenv("POSTGRES_HOST"), "5432", os.Getenv("POSTGRES_DB"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"))
+	db, err := models.NewConnection(os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_DB"), "5432")
+	if err != nil {
+		panic(err)
+	}
+
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+
 	if err != nil {
 		panic(err)
 	}
@@ -92,20 +64,17 @@ func main() {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
-	appRepository := models.NewApplicationRepository(db)
-	sarifWrapper := models.NewSarifWrapper(db, appRepository)
+	appRepository := repositories.NewApplication(db)
+	reportRepository := repositories.NewSarifReport(db, appRepository)
+	organizationRepository := repositories.NewOrganization(db)
 
 	e.GET("/api/v1/health", func(c echo.Context) error {
 		return c.String(200, "ok")
 	})
 
-	authorizedGroup := e.Group("/api/v1", sessionMiddleware(ory))
+	appRouter := e.Group("/api/v1/:tenant", appMiddleware.SessionMiddleware(ory), appMiddleware.MultiTenantMiddleware(casbinRBACProvider, organizationRepository))
 
-	authorizedGroup.GET("/", func(c echo.Context) error {
-		return c.JSON(200, getSession(c))
-	})
-
-	authorizedGroup.POST("/reports", func(c echo.Context) error {
+	appRouter.POST("/reports", func(c echo.Context) error {
 		// print the request body as string
 		reportStr, err := io.ReadAll(c.Request().Body)
 		if err != nil {
@@ -116,7 +85,7 @@ func main() {
 			return err
 		}
 		// save the report inside the database
-		err = sarifWrapper.SaveSarifReport("test", report)
+		err = reportRepository.SaveSarifReport("test", report)
 
 		if err != nil {
 			return err
