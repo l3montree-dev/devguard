@@ -69,12 +69,12 @@ type Application struct {
 type Env struct {
 	AppModel
 	Name          string `json:"name" gorm:"type:varchar(255)"`
-	Runs          []Run
+	Runs          []Report
 	ApplicationID uuid.UUID `json:"applicationId"`
 	IsDefault     bool      `json:"isDefault"`
 }
 
-type Run struct {
+type Report struct {
 	AppModel
 	ApplicationID        uuid.UUID `json:"applicationId"`
 	DriverName           string    `json:"driverName"`
@@ -87,11 +87,26 @@ type Run struct {
 
 type Result struct {
 	AppModel
-	RunID     uuid.UUID      `json:"runId"`
+	ReportID  uuid.UUID      `json:"reportId"`
 	RuleID    *string        `json:"ruleId"`
 	Level     *string        `json:"level"`
 	Message   *string        `json:"message"`
 	Locations datatypes.JSON `gorm:"type:jsonb;default:'[]';not null"`
+	Comments  []Comment
+}
+
+type Comment struct {
+	AppModel
+	ResultID uuid.UUID `json:"resultId"`
+	UserID   uuid.UUID `json:"userId"`
+	Comment  string    `json:"comment"`
+}
+
+type MitigationComment struct {
+	AppModel
+	MitigationID uuid.UUID `json:"mitigationId"`
+	UserID       uuid.UUID `json:"userId"`
+	Comment      string    `json:"comment"`
 }
 
 type (
@@ -117,6 +132,8 @@ type Mitigation struct {
 	MitigationPending bool `json:"mitigationPending" gorm:"default:false"` // will be true for fix and transfer types - we are waiting for another scan report which verifies, that the related result is fixed. Will be false for avoid and accept types
 
 	propertiesMap any
+
+	Comments []MitigationComment
 }
 
 type ServiceProvider struct {

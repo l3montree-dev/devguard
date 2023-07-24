@@ -13,28 +13,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package models
+package dto
 
-import (
-	"fmt"
+import "github.com/l3montree-dev/flawfix/internal/models"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-)
+type ProjectCreateRequest struct {
+	Name string `json:"name" validate:"required"`
+}
 
-func NewConnection(host, user, password, dbname, port string) (*gorm.DB, error) {
-	// https://github.com/go-gorm/postgres
-	db, err := gorm.Open(postgres.New(postgres.Config{
-		DSN: fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbname),
-	}), &gorm.Config{})
-
-	if err != nil {
-		return nil, err
+func (p *ProjectCreateRequest) ToModel() models.Project {
+	return models.Project{
+		Name: p.Name,
 	}
-
-	err = db.AutoMigrate(&User{}, &Organization{}, &Project{}, &Application{}, &Report{}, &Mitigation{}, &MitigationComment{}, &Comment{}, &Result{}, &ServiceProvider{})
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
 }

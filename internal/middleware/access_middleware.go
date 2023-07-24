@@ -16,30 +16,60 @@
 package middleware
 
 import (
+	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/helpers"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/log"
 )
 
-func AccessControlDecorator(obj string, act string, next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) (err error) {
-		// get the rbac
-		rbac := helpers.GetRBAC(c)
+func AccessControlMiddleware(obj string, act accesscontrol.Action) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// get the rbac
+			rbac := helpers.GetRBAC(c)
 
-		// get the user
-		user := helpers.GetSession(c).GetUserID()
+			// get the user
+			user := helpers.GetSession(c).GetUserID()
 
-		allowed, err := rbac.IsAllowed(user, obj, act)
-		if err != nil {
-			log.Errorf("could not determine if the user has access", err)
-			return c.JSON(500, map[string]string{"error": "internal server error"})
+			allowed, err := rbac.IsAllowed(user, obj, act)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not determine if the user has access")
+			}
+
+			// check if the user has the required role
+			if !allowed {
+				return echo.NewHTTPError(403, "forbidden")
+			}
+			return next(c)
 		}
+	}
+}
 
-		// check if the user has the required role
-		if !allowed {
-			return c.JSON(403, map[string]string{"error": "forbidden"})
+func ProjectAccessControl(obj string, act accesscontrol.Action) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// get the rbac
+			rbac := helpers.GetRBAC(c)
+
+			// get the user
+			user := helpers.GetSession(c).GetUserID()
+
+			// get the project id
+			projectID, err := helpers.GetProjectID(c)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not get project id")
+			}
+
+			allowed, err := rbac.IsAllowedInProject(projectID.String(), user, obj, act)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not determine if the user has access")
+			}
+
+			// check if the user has the required role
+			if !allowed {
+				return echo.NewHTTPError(403, "forbidden")
+			}
+
+			return next(c)
 		}
-
-		return next(c)
 	}
 }

@@ -43,10 +43,10 @@ func (m *MockRepository[ID, T]) Read(id ID) (T, error) {
 	return t, nil
 }
 
-func (m *MockRepository[ID, T]) Update(t T) error {
+func (m *MockRepository[ID, T]) Update(t *T) error {
 	for i, item := range m.Items {
-		if item.GetID() == t.GetID() {
-			m.Items[i] = t
+		if item.GetID() == (*t).GetID() {
+			m.Items[i] = (*t)
 			return nil
 		}
 	}

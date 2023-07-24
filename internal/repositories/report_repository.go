@@ -18,6 +18,7 @@ package repositories
 import (
 	"encoding/json"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/owenrumney/go-sarif/sarif"
 	"gorm.io/datatypes"
@@ -65,15 +66,17 @@ func transformLocations2Map(locations []*sarif.Location) datatypes.JSON {
 	return datatypes.JSON(b)
 }
 
-func (s *GormReportRepository) SaveSarifReport(appName string, report *sarif.Report) error {
+func (s *GormReportRepository) SaveSarifReport(appName string, report *sarif.Report) ([]models.Report, error) {
 	// check if the application does already exist
 	app, err := s.appRepository.FindOrCreate(appName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	runs := make([]models.Report, len(report.Runs))
+
 	for _, runReport := range report.Runs {
-		run := models.Run{ApplicationID: app.ID,
+		run := models.Report{ApplicationID: app.ID,
 			DriverName:           runReport.Tool.Driver.Name,
 			DriverVersion:        runReport.Tool.Driver.Version,
 			DriverInformationUri: runReport.Tool.Driver.InformationURI,
@@ -88,9 +91,28 @@ func (s *GormReportRepository) SaveSarifReport(appName string, report *sarif.Rep
 		}
 		err := s.db.Create(&run).Error
 		if err != nil {
-			return err
+			return nil, err
 		}
+
+		runs = append(runs, run)
 	}
 
-	return nil
+	return runs, nil
+}
+
+func (s *GormReportRepository) Delete(id uuid.UUID) error {
+	return s.db.Delete(&models.Report{}, id).Error
+}
+
+func (s *GormReportRepository) Read(id uuid.UUID) (models.Report, error) {
+	var report models.Report
+	err := s.db.First(&report, id).Error
+	if err != nil {
+		return report, err
+	}
+	return report, nil
+}
+
+func (s *GormReportRepository) Update(report *models.Report) error {
+	return s.db.Save(report).Error
 }

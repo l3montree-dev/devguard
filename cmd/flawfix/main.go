@@ -16,7 +16,6 @@
 package main
 
 import (
-	"io"
 	"os"
 	"time"
 
@@ -28,7 +27,6 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/owenrumney/go-sarif/sarif"
 
 	_ "github.com/lib/pq"
 	"github.com/ory/client-go"
@@ -70,6 +68,8 @@ func main() {
 	}))
 
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		// do the logging straight inside the error handler
+		// this keeps controller methods clean
 		c.Logger().Error(err)
 		e.DefaultHTTPErrorHandler(err, c)
 	}
@@ -79,6 +79,7 @@ func main() {
 	organizationRepository := repositories.NewGormOrganizationRepository(db)
 
 	organizationController := controller.NewOrganizationController(organizationRepository, casbinRBACProvider)
+	reportController := controller.NewReportController(reportRepository)
 
 	// apply the health route without any session or multi tenant middleware
 	e.GET("/api/v1/health", func(c echo.Context) error {
@@ -86,30 +87,18 @@ func main() {
 	})
 
 	// use the organization router for creating a new organization - this is not multi tenant
-	orgRouter := e.Group("/api/v1/organization", appMiddleware.SessionMiddleware(ory))
-	orgRouter.POST("/", organizationController.Create)
+	e.POST("/api/v1/organization", organizationController.Create, appMiddleware.SessionMiddleware(ory))
 
-	appRouter := e.Group("/api/v1/:tenant", appMiddleware.SessionMiddleware(ory), appMiddleware.MultiTenantMiddleware(casbinRBACProvider, organizationRepository))
+	tenantRouter := e.Group("/api/v1/:tenant", appMiddleware.SessionMiddleware(ory), appMiddleware.MultiTenantMiddleware(casbinRBACProvider, organizationRepository))
 
-	appRouter.POST("/reports", func(c echo.Context) error {
-		// print the request body as string
-		reportStr, err := io.ReadAll(c.Request().Body)
-		if err != nil {
-			return err
-		}
-		report, err := sarif.FromBytes(reportStr)
-		if err != nil {
-			return err
-		}
-		// save the report inside the database
-		err = reportRepository.SaveSarifReport("test", report)
+	tenantRouter.DELETE("/", organizationController.Delete, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionDelete))
+	tenantRouter.GET("/", organizationController.Read, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 
-		if err != nil {
-			return err
-		}
+	projectRouter := tenantRouter.Group("/projects/:projectID", appMiddleware.ProjectAccessControl("project", accesscontrol.ActionRead))
 
-		return c.String(200, "ok")
-	})
+	applicationRouter := projectRouter.Group("/applications/:applicationID")
+
+	applicationRouter.POST("/reports", reportController.Create, appMiddleware.ProjectAccessControl("report", accesscontrol.ActionCreate))
 
 	e.Logger.Fatal(e.Start(":8080"))
 }

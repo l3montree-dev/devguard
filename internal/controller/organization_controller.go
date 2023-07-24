@@ -16,6 +16,7 @@
 package controller
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/dto"
 	"github.com/l3montree-dev/flawfix/internal/helpers"
@@ -25,6 +26,9 @@ import (
 
 type organizationRepository interface {
 	Create(*models.Organization) error
+	Delete(uuid.UUID) error
+	Read(uuid.UUID) (models.Organization, error)
+	Update(*models.Organization) error
 }
 
 type OrganizationController struct {
@@ -67,15 +71,26 @@ func (o *OrganizationController) bootstrapOrg(c echo.Context, organization model
 	userId := helpers.GetSession(c).GetUserID()
 
 	rbac.GrantRole(userId, "owner")
-	rbac.GrantRole("owner", "admin")
-	rbac.GrantRole("admin", "member")
-	rbac.GrantRole("member", "guest")
+	rbac.InheritRole("admin", "owner")
+	rbac.InheritRole("member", "admin")
 
-	rbac.AllowRole("owner", "organization", []string{
+	rbac.AllowRole("owner", "organization", []accesscontrol.Action{
+		accesscontrol.ActionDelete,
+	})
+
+	rbac.AllowRole("admin", "organization", []accesscontrol.Action{
+		accesscontrol.ActionUpdate,
+	})
+
+	rbac.AllowRole("admin", "project", []accesscontrol.Action{
 		accesscontrol.ActionCreate,
-		accesscontrol.ActionRead,
+		accesscontrol.ActionRead, // listing all projects
 		accesscontrol.ActionUpdate,
 		accesscontrol.ActionDelete,
+	})
+
+	rbac.AllowRole("member", "organization", []accesscontrol.Action{
+		accesscontrol.ActionRead,
 	})
 
 	c.Set("rbac", rbac)
@@ -86,13 +101,20 @@ func (o *OrganizationController) Update(c echo.Context) error {
 }
 
 func (o *OrganizationController) Delete(c echo.Context) error {
-	return nil
+	// get the id of the organization
+	organizationID := helpers.GetTenant(c).ID
+
+	// delete the organization
+	err := o.organizationRepository.Delete(organizationID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not delete organization").WithInternal(err)
+	}
+
+	return c.NoContent(200)
 }
 
-func (o *OrganizationController) Get(c echo.Context) error {
-	return nil
-}
-
-func (o *OrganizationController) List(c echo.Context) error {
-	return nil
+func (o *OrganizationController) Read(c echo.Context) error {
+	// get the organization from the context
+	organization := helpers.GetTenant(c)
+	return c.JSON(200, organization)
 }

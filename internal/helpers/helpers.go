@@ -16,6 +16,9 @@
 package helpers
 
 import (
+	"fmt"
+
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/auth"
 	"github.com/l3montree-dev/flawfix/internal/models"
@@ -32,4 +35,20 @@ func GetTenant(c echo.Context) models.Organization {
 
 func GetSession(ctx echo.Context) auth.AuthSession {
 	return ctx.Get("session").(auth.AuthSession)
+}
+
+func GetProjectID(c echo.Context) (uuid.UUID, error) {
+	projectID := c.Param("projectID")
+	if projectID == "" {
+		return uuid.UUID{}, fmt.Errorf("could not get project id")
+	}
+	return uuid.Parse(projectID)
+}
+
+func GetApplicationID(c echo.Context) (uuid.UUID, error) {
+	applicationID := c.Param("applicationID")
+	if applicationID == "" {
+		return uuid.UUID{}, fmt.Errorf("could not get application id")
+	}
+	return uuid.Parse(applicationID)
 }

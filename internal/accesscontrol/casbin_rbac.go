@@ -52,15 +52,33 @@ func (c *CasbinRBAC) GrantRole(user, role string) error {
 	return err
 }
 
+func (c *CasbinRBAC) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error {
+	_, err := c.enforcer.AddRoleForUserInDomain("role::"+roleWhichGetsPermissions, "role::"+roleWhichProvidesPermissions, "domain::"+c.domain)
+	return err
+}
+
+func (c *CasbinRBAC) GetProjectRoleName(project, role string) string {
+	return "project::" + project + "|role::" + role
+}
+
 func (c *CasbinRBAC) RevokeRole(user, role string) error {
 	_, err := c.enforcer.DeleteRoleForUserInDomain("user::"+user, "role::"+role, "domain::"+c.domain)
 	return err
 }
 
-func (c *CasbinRBAC) AllowRole(role, object string, action []string) error {
+func (c *CasbinRBAC) AllowRole(role, object string, action []Action) error {
 	policies := make([][]string, len(action))
 	for i, ac := range action {
-		policies[i] = []string{"role::" + role, "obj::" + object, "act::" + ac}
+		policies[i] = []string{"role::" + role, "domain::" + c.domain, "obj::" + object, "act::" + string(ac)}
+	}
+	_, err := c.enforcer.AddPolicies(policies)
+	return err
+}
+
+func (c *CasbinRBAC) AllowRoleInProject(project, role, object string, action []Action) error {
+	policies := make([][]string, len(action))
+	for i, ac := range action {
+		policies[i] = []string{"project::" + project + "|role::" + role, "domain::" + c.domain, "project::" + project + "|obj::" + object, "act::" + string(ac)}
 	}
 	_, err := c.enforcer.AddPolicies(policies)
 	return err
@@ -76,8 +94,12 @@ func (c *CasbinRBAC) RevokeRoleInProject(user, role, project string) error {
 	return err
 }
 
-func (c *CasbinRBAC) IsAllowed(user, object, action string) (bool, error) {
+func (c *CasbinRBAC) IsAllowed(user, object string, action Action) (bool, error) {
 	return c.enforcer.Enforce("user::"+user, "domain::"+c.domain, "obj::"+object, "act::"+action)
+}
+
+func (c *CasbinRBAC) IsAllowedInProject(project, user, object string, action Action) (bool, error) {
+	return c.enforcer.Enforce("user::"+user, "domain::"+c.domain, "project::"+project+"|obj::"+object, "act::"+action)
 }
 
 // the provider can be used to create domain specific RBAC instances

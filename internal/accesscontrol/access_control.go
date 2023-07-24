@@ -19,18 +19,23 @@ const (
 	RoleOwner  = "owner"
 	RoleAdmin  = "admin"
 	RoleMember = "member"
-	RoleGuest  = "guest"
 )
 
+type Action string
+
 const (
-	ActionCreate = "create"
-	ActionRead   = "read"
-	ActionUpdate = "update"
-	ActionDelete = "delete"
+	ActionCreate Action = "create"
+	ActionRead   Action = "read"
+	ActionUpdate Action = "update"
+	ActionDelete Action = "delete"
 )
 
 type AccessControl interface {
 	HasAccess(subject string) bool
+
+	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error
+
+	GetProjectRoleName(project, role string) string
 
 	GrantRole(subject, role string) error
 	RevokeRole(subject, role string) error
@@ -38,8 +43,11 @@ type AccessControl interface {
 	GrantRoleInProject(subject, role, project string) error
 	RevokeRoleInProject(subject, role, project string) error
 
-	AllowRole(role, object string, action []string) error
-	IsAllowed(subject, object, action string) (bool, error)
+	AllowRole(role, object string, action []Action) error
+	IsAllowed(subject, object string, action Action) (bool, error)
+
+	IsAllowedInProject(project, user, object string, action Action) (bool, error)
+	AllowRoleInProject(project, role, object string, action []Action) error
 }
 
 type RBACProvider interface {

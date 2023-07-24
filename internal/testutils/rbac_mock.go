@@ -37,6 +37,14 @@ func (r *RBACMock) GrantRole(subject, role string) error {
 	return nil
 }
 
+func (r *RBACMock) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error {
+	return r.GrantRole(roleWhichGetsPermissions, roleWhichProvidesPermissions)
+}
+
+func (r *RBACMock) GetProjectRoleName(project, role string) string {
+	return project + "|" + role
+}
+
 func (r *RBACMock) RevokeRole(subject, role string) error {
 	if _, ok := r.roles[subject]; !ok {
 		return nil
@@ -60,12 +68,12 @@ func (r *RBACMock) RevokeRoleInProject(subject, role, project string) error {
 	return nil
 }
 
-func (r *RBACMock) AllowRole(role, object string, action []string) error {
+func (r *RBACMock) AllowRole(role, object string, action []accesscontrol.Action) error {
 	if _, ok := r.rules[role]; !ok {
 		r.rules[role] = []string{}
 	}
 	for _, v := range action {
-		r.rules[role] = append(r.rules[role], object+"|"+v)
+		r.rules[role] = append(r.rules[role], object+"|"+string(v))
 	}
 	return nil
 }
@@ -85,7 +93,7 @@ func (r *RBACMock) getRolesOf(subject string) []string {
 	return roles
 }
 
-func (r *RBACMock) IsAllowed(subject, object, action string) (bool, error) {
+func (r *RBACMock) IsAllowed(subject, object string, action accesscontrol.Action) (bool, error) {
 	// recursively gather all roles
 	roles := r.getRolesOf(subject)
 	// get all permissions for roles
@@ -94,12 +102,20 @@ func (r *RBACMock) IsAllowed(subject, object, action string) (bool, error) {
 			continue
 		}
 		for _, w := range r.rules[v] {
-			if w == object+"|"+action {
+			if w == object+"|"+string(action) {
 				return true, nil
 			}
 		}
 	}
 	return false, nil
+}
+
+func (r *RBACMock) IsAllowedInProject(project, user, object string, action accesscontrol.Action) (bool, error) {
+	return r.IsAllowed(user, project+"|"+object, action)
+}
+
+func (r *RBACMock) AllowRoleInProject(project, role, object string, action []accesscontrol.Action) error {
+	return r.AllowRole(project+"|"+role, project+"|"+object, action)
 }
 
 func (r RBACProviderMock) GetDomainRBAC(domain string) accesscontrol.AccessControl {
