@@ -125,6 +125,10 @@ func (r RBACProviderMock) GetDomainRBAC(domain string) accesscontrol.AccessContr
 	}
 }
 
+func (r RBACProviderMock) DomainsOfUser(user string) ([]string, error) {
+	return []string{"domain::" + user}, nil
+}
+
 func NewRBACProviderMock() accesscontrol.RBACProvider {
 	return &RBACProviderMock{}
 }

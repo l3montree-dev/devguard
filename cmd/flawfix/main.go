@@ -27,6 +27,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/gommon/log"
 
 	_ "github.com/lib/pq"
 	"github.com/ory/client-go"
@@ -61,11 +62,19 @@ func main() {
 	e := echo.New()
 
 	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+
 	e.Use(middleware.CORS())
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		Timeout: 10 * time.Second,
 	}))
+
+	if os.Getenv("ENV") == "dev" {
+		if l, ok := e.Logger.(*log.Logger); ok {
+			l.SetHeader("${time_rfc3339} ${level}")
+		}
+	}
+
+	e.Use(middleware.Recover())
 
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
 		// do the logging straight inside the error handler
@@ -87,7 +96,8 @@ func main() {
 	})
 
 	// use the organization router for creating a new organization - this is not multi tenant
-	e.POST("/api/v1/organization", organizationController.Create, appMiddleware.SessionMiddleware(ory))
+	e.POST("/api/v1/organizations", organizationController.Create, appMiddleware.SessionMiddleware(ory))
+	e.GET("/api/v1/organizations", organizationController.List, appMiddleware.SessionMiddleware(ory))
 
 	tenantRouter := e.Group("/api/v1/:tenant", appMiddleware.SessionMiddleware(ory), appMiddleware.MultiTenantMiddleware(casbinRBACProvider, organizationRepository))
 

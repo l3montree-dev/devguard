@@ -62,3 +62,15 @@ func (m *MockRepository[ID, T]) Delete(id ID) error {
 	}
 	return nil
 }
+
+func (m *MockRepository[ID, T]) List(ids []ID) ([]T, error) {
+	var ts []T
+	for _, id := range ids {
+		for _, item := range m.Items {
+			if item.GetID() == id {
+				ts = append(ts, item)
+			}
+		}
+	}
+	return ts, nil
+}

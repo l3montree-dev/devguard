@@ -52,4 +52,5 @@ type AccessControl interface {
 
 type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
+	DomainsOfUser(user string) ([]string, error)
 }

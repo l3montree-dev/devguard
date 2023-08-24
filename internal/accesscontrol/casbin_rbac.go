@@ -102,6 +102,18 @@ func (c *CasbinRBAC) IsAllowedInProject(project, user, object string, action Act
 	return c.enforcer.Enforce("user::"+user, "domain::"+c.domain, "project::"+project+"|obj::"+object, "act::"+action)
 }
 
+func (c CasbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
+	domains, err := c.enforcer.GetDomainsForUser("user::" + user)
+	if err != nil {
+		return nil, err
+	}
+	// slice the "domain::" prefix
+	for i, d := range domains {
+		domains[i] = d[8:]
+	}
+	return domains, nil
+}
+
 // the provider can be used to create domain specific RBAC instances
 func NewCasbinRBACProvider(db *gorm.DB) (CasbinRBACProvider, error) {
 	enforcer, err := buildEnforcer(db)

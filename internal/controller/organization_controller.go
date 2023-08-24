@@ -29,6 +29,7 @@ type organizationRepository interface {
 	Delete(uuid.UUID) error
 	Read(uuid.UUID) (models.Organization, error)
 	Update(*models.Organization) error
+	List([]uuid.UUID) ([]models.Organization, error)
 }
 
 type OrganizationController struct {
@@ -117,4 +118,34 @@ func (o *OrganizationController) Read(c echo.Context) error {
 	// get the organization from the context
 	organization := helpers.GetTenant(c)
 	return c.JSON(200, organization)
+}
+
+func (o *OrganizationController) List(c echo.Context) error {
+
+	// get all organizations the user has access to
+	userID := helpers.GetSession(c).GetUserID()
+
+	domains, err := o.rbacProvider.DomainsOfUser(userID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get domains of user").WithInternal(err)
+	}
+
+	// transform the domains to organization ids
+	organizationIDs := make([]uuid.UUID, len(domains))
+	for i, domain := range domains {
+		id, err := uuid.Parse(domain[8:])
+		if err != nil {
+			continue
+		}
+		organizationIDs[i] = id
+	}
+
+	// get the organizations from the database
+	organizations, err := o.organizationRepository.List(organizationIDs)
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not read organizations").WithInternal(err)
+	}
+
+	return c.JSON(200, organizations)
 }

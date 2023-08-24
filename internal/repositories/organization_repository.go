@@ -23,32 +23,12 @@ import (
 
 type GormOrganizationRepository struct {
 	db *gorm.DB
-	GormRepository[uuid.UUID, models.Organization]
+	Repository[uuid.UUID, models.Organization]
 }
 
 func NewGormOrganizationRepository(db *gorm.DB) *GormOrganizationRepository {
 	return &GormOrganizationRepository{
-		db: db,
+		db:         db,
+		Repository: NewGormRepository[uuid.UUID, models.Organization](db),
 	}
-}
-
-func (o *GormOrganizationRepository) Create(org *models.Organization) error {
-	return o.db.Create(org).Error
-}
-
-func (o *GormOrganizationRepository) Delete(id uuid.UUID) error {
-	return o.db.Delete(&models.Organization{}, id).Error
-}
-
-func (o *GormOrganizationRepository) Read(id uuid.UUID) (models.Organization, error) {
-	var org models.Organization
-	err := o.db.First(&org, id).Error
-	if err != nil {
-		return org, err
-	}
-	return org, nil
-}
-
-func (o *GormOrganizationRepository) Update(org *models.Organization) error {
-	return o.db.Save(org).Error
 }

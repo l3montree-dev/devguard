@@ -15,20 +15,23 @@
 
 package repositories
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 type Repository[ID any, T any] interface {
-	Create(t T) error
+	Create(t *T) error
 	Read(id ID) (T, error)
-	Update(t T) error
+	Update(t *T) error
 	Delete(id ID) error
+	List(ids []ID) ([]T, error)
 }
 
 type GormRepository[ID comparable, T any] struct {
 	db *gorm.DB
 }
 
-func NewGormRepository[ID comparable, T any](db *gorm.DB) *GormRepository[ID, T] {
+func NewGormRepository[ID comparable, T any](db *gorm.DB) Repository[ID, T] {
 	return &GormRepository[ID, T]{
 		db: db,
 	}
@@ -44,10 +47,19 @@ func (g *GormRepository[ID, T]) Read(id ID) (T, error) {
 	return t, err
 }
 
-func (g *GormRepository[ID, T]) Update(t T) error {
+func (g *GormRepository[ID, T]) Update(t *T) error {
 	return g.db.Save(t).Error
 }
 
 func (g *GormRepository[ID, T]) Delete(id ID) error {
 	return g.db.Delete(id).Error
+}
+
+func (g *GormRepository[ID, T]) List(ids []ID) ([]T, error) {
+	var ts []T
+	err := g.db.Find(&ts, ids).Error
+	if err != nil {
+		return ts, err
+	}
+	return ts, nil
 }
