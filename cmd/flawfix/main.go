@@ -63,7 +63,15 @@ func main() {
 
 	e.Use(middleware.Logger())
 
-	e.Use(middleware.CORS())
+	e.Use(middleware.CORSWithConfig(
+		middleware.CORSConfig{
+			AllowOrigins:     []string{"http://localhost:3000"},
+			AllowHeaders:     middleware.DefaultCORSConfig.AllowHeaders,
+			AllowMethods:     middleware.DefaultCORSConfig.AllowMethods,
+			AllowCredentials: true,
+		},
+	))
+
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		Timeout: 10 * time.Second,
 	}))
@@ -99,7 +107,7 @@ func main() {
 	e.POST("/api/v1/organizations", organizationController.Create, appMiddleware.SessionMiddleware(ory))
 	e.GET("/api/v1/organizations", organizationController.List, appMiddleware.SessionMiddleware(ory))
 
-	tenantRouter := e.Group("/api/v1/:tenant", appMiddleware.SessionMiddleware(ory), appMiddleware.MultiTenantMiddleware(casbinRBACProvider, organizationRepository))
+	tenantRouter := e.Group("/api/v1/organizations/:tenant", appMiddleware.SessionMiddleware(ory), appMiddleware.MultiTenantMiddleware(casbinRBACProvider, organizationRepository))
 
 	tenantRouter.DELETE("/", organizationController.Delete, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionDelete))
 	tenantRouter.GET("/", organizationController.Read, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionRead))

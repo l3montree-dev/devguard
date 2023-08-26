@@ -20,12 +20,27 @@ import (
 )
 
 type OrganizationCreateRequest struct {
-	Name string `json:"name" validate:"required"`
+	Name                   string  `json:"name" validate:"required"`
+	ContactPhoneNumber     *string `json:"contactPhoneNumber"`
+	NumberOfEmployees      *int    `json:"numberOfEmployees"`
+	Country                *string `json:"country"`
+	Industry               *string `json:"industry"`
+	CriticalInfrastructure bool    `json:"criticalInfrastructure"`
+	ISO27001               bool    `json:"iso27001"`
+	NIST                   bool    `json:"nist"`
+	Grundschutz            bool    `json:"grundschutz"`
 }
 
 func (o *OrganizationCreateRequest) ToModel() models.Organization {
-
 	return models.Organization{
-		Name: o.Name,
+		Name:                   o.Name,
+		ContactPhoneNumber:     o.ContactPhoneNumber,
+		NumberOfEmployees:      o.NumberOfEmployees,
+		Country:                o.Country,
+		Industry:               o.Industry,
+		CriticalInfrastructure: o.CriticalInfrastructure,
+		ISO27001:               o.ISO27001,
+		NIST:                   o.NIST,
+		Grundschutz:            o.Grundschutz,
 	}
 }

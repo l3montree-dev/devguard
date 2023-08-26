@@ -25,10 +25,10 @@ import (
 )
 
 type AppModel struct {
-	ID        uuid.UUID `gorm:"primarykey;type:uuid;default:gen_random_uuid()"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt sql.NullTime `gorm:"index"`
+	ID        uuid.UUID    `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
+	CreatedAt time.Time    `json:"createdAt"`
+	UpdatedAt time.Time    `json:"updatedAt"`
+	DeletedAt sql.NullTime `gorm:"index" json:"-"`
 }
 
 func (a AppModel) GetID() uuid.UUID {
@@ -43,8 +43,16 @@ type User struct {
 
 type Organization struct {
 	AppModel
-	Name     string `json:"name" gorm:"type:varchar(255)"`
-	Projects []Project
+	Name                   string    `json:"name" gorm:"type:varchar(255)"`
+	ContactPhoneNumber     *string   `json:"-" gorm:"type:varchar(255)"`
+	NumberOfEmployees      *int      `json:"numberOfEmployees"`
+	Country                *string   `json:"country" gorm:"type:varchar(255)"`
+	Industry               *string   `json:"industry" gorm:"type:varchar(255)"`
+	CriticalInfrastructure bool      `json:"criticalInfrastructure"`
+	ISO27001               bool      `json:"iso27001"`
+	NIST                   bool      `json:"nist"`
+	Grundschutz            bool      `json:"grundschutz"`
+	Projects               []Project `json:"projects"`
 }
 
 type Project struct {
