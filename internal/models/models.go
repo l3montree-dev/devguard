@@ -44,7 +44,7 @@ type User struct {
 type Organization struct {
 	AppModel
 	Name                   string    `json:"name" gorm:"type:varchar(255)"`
-	ContactPhoneNumber     *string   `json:"-" gorm:"type:varchar(255)"`
+	ContactPhoneNumber     *string   `json:"contactPhoneNumber" gorm:"type:varchar(255)"`
 	NumberOfEmployees      *int      `json:"numberOfEmployees"`
 	Country                *string   `json:"country" gorm:"type:varchar(255)"`
 	Industry               *string   `json:"industry" gorm:"type:varchar(255)"`
@@ -53,6 +53,7 @@ type Organization struct {
 	NIST                   bool      `json:"nist"`
 	Grundschutz            bool      `json:"grundschutz"`
 	Projects               []Project `json:"projects"`
+	Slug                   string    `json:"slug" gorm:"type:varchar(255);unique;not null"`
 }
 
 type Project struct {

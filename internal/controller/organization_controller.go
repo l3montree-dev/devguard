@@ -126,6 +126,7 @@ func (o *OrganizationController) List(c echo.Context) error {
 	userID := helpers.GetSession(c).GetUserID()
 
 	domains, err := o.rbacProvider.DomainsOfUser(userID)
+
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get domains of user").WithInternal(err)
 	}
@@ -133,7 +134,7 @@ func (o *OrganizationController) List(c echo.Context) error {
 	// transform the domains to organization ids
 	organizationIDs := make([]uuid.UUID, len(domains))
 	for i, domain := range domains {
-		id, err := uuid.Parse(domain[8:])
+		id, err := uuid.Parse(domain)
 		if err != nil {
 			continue
 		}

@@ -16,6 +16,7 @@
 package dto
 
 import (
+	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/flawfix/internal/models"
 )
 
@@ -42,5 +43,6 @@ func (o *OrganizationCreateRequest) ToModel() models.Organization {
 		ISO27001:               o.ISO27001,
 		NIST:                   o.NIST,
 		Grundschutz:            o.Grundschutz,
+		Slug:                   slug.Make(o.Name),
 	}
 }

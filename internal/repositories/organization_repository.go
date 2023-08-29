@@ -32,3 +32,9 @@ func NewGormOrganizationRepository(db *gorm.DB) *GormOrganizationRepository {
 		Repository: NewGormRepository[uuid.UUID, models.Organization](db),
 	}
 }
+
+func (g *GormOrganizationRepository) ReadBySlug(slug string) (models.Organization, error) {
+	var t models.Organization
+	err := g.db.Where("slug = ?", slug).First(&t).Error
+	return t, err
+}

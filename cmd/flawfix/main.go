@@ -16,8 +16,11 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 	"time"
+
+	"github.com/lmittmann/tint"
 
 	"github.com/joho/godotenv"
 	accesscontrol "github.com/l3montree-dev/flawfix/internal/accesscontrol"
@@ -27,7 +30,6 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/labstack/gommon/log"
 
 	_ "github.com/lib/pq"
 	"github.com/ory/client-go"
@@ -44,6 +46,14 @@ func getOryApiClient() *client.APIClient {
 }
 
 func main() {
+
+	loggingHandler := tint.NewHandler(os.Stdout, &tint.Options{
+		AddSource: true,
+		Level:     slog.LevelDebug,
+	})
+	logger := slog.New(loggingHandler)
+	slog.SetDefault(logger)
+
 	godotenv.Load()
 
 	ory := getOryApiClient()
@@ -61,8 +71,6 @@ func main() {
 
 	e := echo.New()
 
-	e.Use(middleware.Logger())
-
 	e.Use(middleware.CORSWithConfig(
 		middleware.CORSConfig{
 			AllowOrigins:     []string{"http://localhost:3000"},
@@ -76,18 +84,12 @@ func main() {
 		Timeout: 10 * time.Second,
 	}))
 
-	if os.Getenv("ENV") == "dev" {
-		if l, ok := e.Logger.(*log.Logger); ok {
-			l.SetHeader("${time_rfc3339} ${level}")
-		}
-	}
-
 	e.Use(middleware.Recover())
 
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
 		// do the logging straight inside the error handler
 		// this keeps controller methods clean
-		c.Logger().Error(err)
+		slog.Error(err.Error())
 		e.DefaultHTTPErrorHandler(err, c)
 	}
 
@@ -118,5 +120,5 @@ func main() {
 
 	applicationRouter.POST("/reports", reportController.Create, appMiddleware.ProjectAccessControl("report", accesscontrol.ActionCreate))
 
-	e.Logger.Fatal(e.Start(":8080"))
+	slog.Error("failed to start server", e.Start(":8080").Error())
 }

@@ -43,13 +43,14 @@ func SessionMiddleware(oryApiClient *client.APIClient) echo.MiddlewareFunc {
 
 			// check if we have a session
 			session, _, err := oryApiClient.FrontendApi.ToSession(c.Request().Context()).Cookie(oryKratosSessionCookie.String()).Execute()
+
 			if (err != nil && session == nil) || (err == nil && !*session.Active) {
 				return c.JSON(401, map[string]string{"error": "no session"})
 			}
 
 			c.Set("session", auth.NewOrySession(session))
 			c.Set("sessionCookie", oryKratosSessionCookie)
-			// continue to the requested page (in our case the Dashboard)
+
 			return next(c)
 		}
 	}
