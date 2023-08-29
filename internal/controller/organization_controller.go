@@ -72,8 +72,8 @@ func (o *OrganizationController) bootstrapOrg(c echo.Context, organization model
 	userId := helpers.GetSession(c).GetUserID()
 
 	rbac.GrantRole(userId, "owner")
-	rbac.InheritRole("admin", "owner")
-	rbac.InheritRole("member", "admin")
+	rbac.InheritRole("owner", "admin")  // an owner is an admin
+	rbac.InheritRole("admin", "member") // an admin is a member
 
 	rbac.AllowRole("owner", "organization", []accesscontrol.Action{
 		accesscontrol.ActionDelete,

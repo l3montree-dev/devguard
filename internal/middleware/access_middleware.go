@@ -16,8 +16,6 @@
 package middleware
 
 import (
-	"log/slog"
-
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/helpers"
 	"github.com/labstack/echo/v4"
@@ -31,8 +29,8 @@ func AccessControlMiddleware(obj string, act accesscontrol.Action) echo.Middlewa
 
 			// get the user
 			user := helpers.GetSession(c).GetUserID()
-			slog.Debug("checking permission", "user", user, "obj", obj, "act", act)
-			allowed, err := rbac.IsAllowed(user, obj, act)
+
+			allowed, err := rbac.IsAllowed(user, obj, "delete")
 			if err != nil {
 				return echo.NewHTTPError(500, "could not determine if the user has access")
 			}

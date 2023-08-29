@@ -15,7 +15,9 @@
 
 package testutils
 
-import "github.com/l3montree-dev/flawfix/internal/accesscontrol"
+import (
+	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
+)
 
 type RBACProviderMock struct {
 }
@@ -38,7 +40,7 @@ func (r *RBACMock) GrantRole(subject, role string) error {
 }
 
 func (r *RBACMock) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error {
-	return r.GrantRole(roleWhichGetsPermissions, roleWhichProvidesPermissions)
+	return r.GrantRole(roleWhichProvidesPermissions, roleWhichGetsPermissions)
 }
 
 func (r *RBACMock) GetProjectRoleName(project, role string) string {

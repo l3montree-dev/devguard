@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/controller"
 	"github.com/l3montree-dev/flawfix/internal/dto"
 	"github.com/l3montree-dev/flawfix/internal/helpers"
@@ -80,9 +81,10 @@ func TestBootstrapOrgAfterCreation(t *testing.T) {
 	rbac := helpers.GetRBAC(c)
 
 	// check if the permissions were created
-	allowed, err := rbac.IsAllowed("alice", "organization", "delete")
-
-	assert.NoError(t, err)
-
-	assert.True(t, allowed)
+	// the owner should be allowed to do everything
+	for _, action := range []accesscontrol.Action{"read", "update", "delete"} {
+		allowed, err := rbac.IsAllowed("alice", "organization", action)
+		assert.NoError(t, err)
+		assert.True(t, allowed, "alice should be allowed to "+action+" the organization")
+	}
 }

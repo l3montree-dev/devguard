@@ -71,6 +71,7 @@ func (c *CasbinRBAC) AllowRole(role, object string, action []Action) error {
 	for i, ac := range action {
 		policies[i] = []string{"role::" + role, "domain::" + c.domain, "obj::" + object, "act::" + string(ac)}
 	}
+
 	_, err := c.enforcer.AddPolicies(policies)
 	return err
 }
@@ -95,7 +96,19 @@ func (c *CasbinRBAC) RevokeRoleInProject(user, role, project string) error {
 }
 
 func (c *CasbinRBAC) IsAllowed(user, object string, action Action) (bool, error) {
-	return c.enforcer.Enforce("user::"+user, "domain::"+c.domain, "obj::"+object, "act::"+action)
+
+	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
+	if err != nil {
+		return false, err
+	}
+
+	// check for the permissions
+	for _, p := range permissions {
+		if p[2] == "obj::"+object && p[3] == "act::"+string(action) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (c *CasbinRBAC) IsAllowedInProject(project, user, object string, action Action) (bool, error) {
@@ -142,6 +155,8 @@ func buildEnforcer(db *gorm.DB) (*casbin.Enforcer, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	e.EnableLog(true)
 
 	// Load the policy from DB.
 	if err = e.LoadPolicy(); err != nil {
