@@ -35,7 +35,7 @@ func NewConnection(host, user, password, dbname, port string) (*gorm.DB, error) 
 		return nil, err
 	}
 
-	err = db.AutoMigrate(&User{}, &Organization{}, &Project{}, &Application{}, &Report{}, &Mitigation{}, &MitigationComment{}, &Comment{}, &Result{}, &ServiceProvider{})
+	err = db.AutoMigrate(&PersonalAccessToken{}, &Organization{}, &Project{}, &Application{}, &Report{}, &Mitigation{}, &MitigationComment{}, &Comment{}, &Result{}, &ServiceProvider{})
 	if err != nil {
 		return nil, err
 	}

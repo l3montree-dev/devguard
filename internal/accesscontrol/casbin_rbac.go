@@ -156,7 +156,7 @@ func buildEnforcer(db *gorm.DB) (*casbin.Enforcer, error) {
 		return nil, err
 	}
 
-	e.EnableLog(true)
+	e.EnableLog(false)
 
 	// Load the policy from DB.
 	if err = e.LoadPolicy(); err != nil {

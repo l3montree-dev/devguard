@@ -96,20 +96,27 @@ func main() {
 	appRepository := repositories.NewGormApplicationRepository(db)
 	reportRepository := repositories.NewGormReportRepository(db, appRepository)
 	organizationRepository := repositories.NewGormOrganizationRepository(db)
+	patRepository := repositories.NewGormPatRepository(db)
 
 	organizationController := controller.NewOrganizationController(organizationRepository, casbinRBACProvider)
 	reportController := controller.NewReportController(reportRepository)
+	patController := controller.NewPatController(patRepository)
 
 	// apply the health route without any session or multi tenant middleware
 	e.GET("/api/v1/health", func(c echo.Context) error {
 		return c.String(200, "ok")
 	})
 
-	// use the organization router for creating a new organization - this is not multi tenant
-	e.POST("/api/v1/organizations", organizationController.Create, appMiddleware.SessionMiddleware(ory))
-	e.GET("/api/v1/organizations", organizationController.List, appMiddleware.SessionMiddleware(ory))
+	sessionMiddleware := appMiddleware.SessionMiddleware(ory, patRepository)
 
-	tenantRouter := e.Group("/api/v1/organizations/:tenant", appMiddleware.SessionMiddleware(ory), appMiddleware.MultiTenantMiddleware(casbinRBACProvider, organizationRepository))
+	e.POST("/api/v1/pat", patController.Create, sessionMiddleware)
+	e.DELETE("/api/v1/pat/:token", patController.Delete, sessionMiddleware)
+	e.GET("/api/v1/pat/:token", patController.Read, sessionMiddleware)
+	// use the organization router for creating a new organization - this is not multi tenant
+	e.POST("/api/v1/organizations", organizationController.Create, sessionMiddleware)
+	e.GET("/api/v1/organizations", organizationController.List, sessionMiddleware)
+
+	tenantRouter := e.Group("/api/v1/organizations/:tenant", sessionMiddleware, appMiddleware.MultiTenantMiddleware(casbinRBACProvider, organizationRepository))
 
 	tenantRouter.DELETE("/", organizationController.Delete, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionDelete))
 	tenantRouter.GET("/", organizationController.Read, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionRead))

@@ -16,7 +16,9 @@
 package models
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"time"
 
@@ -35,10 +37,27 @@ func (a AppModel) GetID() uuid.UUID {
 	return a.ID
 }
 
-type User struct {
-	AppModel
-	Email string `json:"email" gorm:"type:varchar(255);unique"`
-	Name  string `json:"name" gorm:"type:varchar(255)"`
+type PersonalAccessToken struct {
+	CreatedAt time.Time `json:"createdAt"`
+	UserID    uuid.UUID `json:"userId"`
+	Token     string    `json:"token" gorm:"primarykey"`
+}
+
+func (p PersonalAccessToken) HashToken(token string) string {
+	hasher := sha256.New()
+	hasher.Write([]byte(token))
+	return string(hasher.Sum(nil))
+}
+
+func NewPersonalAccessToken(userID uuid.UUID) (PersonalAccessToken, string) {
+	token := base64.StdEncoding.EncodeToString([]byte(uuid.New().String()))
+
+	pat := PersonalAccessToken{
+		UserID: userID,
+	}
+
+	pat.Token = pat.HashToken(token)
+	return pat, token // return the unhashed token. This is the token that will be sent to the user
 }
 
 type Organization struct {
@@ -54,6 +73,7 @@ type Organization struct {
 	Grundschutz            bool      `json:"grundschutz"`
 	Projects               []Project `json:"projects"`
 	Slug                   string    `json:"slug" gorm:"type:varchar(255);unique;not null"`
+	Description            string    `json:"description" gorm:"type:text"`
 }
 
 type Project struct {
@@ -62,6 +82,7 @@ type Project struct {
 	Applications     []Application
 	ServiceProviders []ServiceProvider
 	OrganizationID   uuid.UUID `json:"organizationId"`
+	Slug             string    `json:"slug" gorm:"type:varchar(255);unique;not null"`
 }
 
 type Application struct {

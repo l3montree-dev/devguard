@@ -15,7 +15,10 @@
 
 package dto
 
-import "github.com/l3montree-dev/flawfix/internal/models"
+import (
+	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/flawfix/internal/models"
+)
 
 type ProjectCreateRequest struct {
 	Name string `json:"name" validate:"required"`
@@ -24,5 +27,6 @@ type ProjectCreateRequest struct {
 func (p *ProjectCreateRequest) ToModel() models.Project {
 	return models.Project{
 		Name: p.Name,
+		Slug: slug.Make(p.Name),
 	}
 }

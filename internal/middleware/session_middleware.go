@@ -16,9 +16,11 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/l3montree-dev/flawfix/internal/auth"
+	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
 )
@@ -32,17 +34,49 @@ func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
 	return nil
 }
 
-func SessionMiddleware(oryApiClient *client.APIClient) echo.MiddlewareFunc {
+func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSessionCookie string) (*client.Session, *http.Response, error) {
+	// check if we have a session
+	return oryApiClient.FrontendApi.ToSession(ctx).Cookie(oryKratosSessionCookie).Execute()
+}
+
+func patAuth(ctx context.Context, patRepository *repositories.GormPatRepository, oryApiClient *client.APIClient, header string) (*client.Session, *http.Response, error) {
+	// get the user id from the database.
+	pat, err := patRepository.Read(header)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// now we know the user id - lets get the session
+	identity, resp, err := oryApiClient.IdentityApi.GetIdentity(ctx, pat.UserID.String()).Execute()
+
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return &client.Session{
+		Active:   &[]bool{true}[0],
+		Identity: *identity,
+	}, resp, nil
+}
+
+func SessionMiddleware(oryApiClient *client.APIClient, patRepository *repositories.GormPatRepository) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
 
 			oryKratosSessionCookie := getCookie("ory_kratos_session", c.Cookies())
-			if oryKratosSessionCookie == nil {
-				return c.JSON(401, map[string]string{"error": "no session cookie"})
-			}
 
-			// check if we have a session
-			session, _, err := oryApiClient.FrontendApi.ToSession(c.Request().Context()).Cookie(oryKratosSessionCookie.String()).Execute()
+			var session *client.Session
+
+			if oryKratosSessionCookie == nil {
+				// check for authorization header
+				authorizationHeader := c.Request().Header.Get("Authorization")
+				if authorizationHeader == "" {
+					return c.JSON(401, map[string]string{"error": "no session"})
+				}
+				session, _, err = patAuth(c.Request().Context(), patRepository, oryApiClient, authorizationHeader)
+			} else {
+				session, _, err = cookieAuth(c.Request().Context(), oryApiClient, oryKratosSessionCookie.Value)
+			}
 
 			if (err != nil && session == nil) || (err == nil && !*session.Active) {
 				return c.JSON(401, map[string]string{"error": "no session"})

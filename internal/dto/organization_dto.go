@@ -30,6 +30,7 @@ type OrganizationCreateRequest struct {
 	ISO27001               bool    `json:"iso27001"`
 	NIST                   bool    `json:"nist"`
 	Grundschutz            bool    `json:"grundschutz"`
+	Description            string  `json:"description"`
 }
 
 func (o *OrganizationCreateRequest) ToModel() models.Organization {
