@@ -41,12 +41,16 @@ func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSe
 
 func patAuth(ctx context.Context, patRepository *repositories.GormPatRepository, oryApiClient *client.APIClient, header string) (*client.Session, *http.Response, error) {
 	// get the user id from the database.
-	pat, err := patRepository.Read(header)
+	// check if we need to strip a bearer prefix
+	if len(header) > 7 && header[:7] == "Bearer " {
+		header = header[7:]
+	}
+	pat, err := patRepository.ReadByToken(header)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// now we know the user id - lets get the session
+	// now we know the user id - lets gSet the session
 	identity, resp, err := oryApiClient.IdentityApi.GetIdentity(ctx, pat.UserID.String()).Execute()
 
 	if err != nil {
@@ -75,7 +79,7 @@ func SessionMiddleware(oryApiClient *client.APIClient, patRepository *repositori
 				}
 				session, _, err = patAuth(c.Request().Context(), patRepository, oryApiClient, authorizationHeader)
 			} else {
-				session, _, err = cookieAuth(c.Request().Context(), oryApiClient, oryKratosSessionCookie.Value)
+				session, _, err = cookieAuth(c.Request().Context(), oryApiClient, oryKratosSessionCookie.String())
 			}
 
 			if (err != nil && session == nil) || (err == nil && !*session.Active) {

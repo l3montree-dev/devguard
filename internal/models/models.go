@@ -38,26 +38,18 @@ func (a AppModel) GetID() uuid.UUID {
 }
 
 type PersonalAccessToken struct {
-	CreatedAt time.Time `json:"createdAt"`
-	UserID    uuid.UUID `json:"userId"`
-	Token     string    `json:"token" gorm:"primarykey"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UserID      uuid.UUID `json:"userId"`
+	Token       string    `json:"-"`
+	Description string    `json:"description" gorm:"type:text"`
+	ID          uuid.UUID `json:"id" gorm:"type:uuid;default:gen_random_uuid()"`
 }
 
 func (p PersonalAccessToken) HashToken(token string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(token))
-	return string(hasher.Sum(nil))
-}
-
-func NewPersonalAccessToken(userID uuid.UUID) (PersonalAccessToken, string) {
-	token := base64.StdEncoding.EncodeToString([]byte(uuid.New().String()))
-
-	pat := PersonalAccessToken{
-		UserID: userID,
-	}
-
-	pat.Token = pat.HashToken(token)
-	return pat, token // return the unhashed token. This is the token that will be sent to the user
+	// make it base64
+	return base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 }
 
 type Organization struct {

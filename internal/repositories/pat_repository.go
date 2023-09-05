@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"gorm.io/gorm"
 )
@@ -34,16 +35,22 @@ func (g *GormPatRepository) Create(t *models.PersonalAccessToken) error {
 	return g.db.Create(t).Error
 }
 
-func (g *GormPatRepository) Read(token string) (models.PersonalAccessToken, error) {
+func (g *GormPatRepository) Read(id uuid.UUID) (models.PersonalAccessToken, error) {
 	var t models.PersonalAccessToken
-	// make sure to hash the token before querying
-	err := g.db.First(&t, t.HashToken(token)).Error
+	err := g.db.First(&t, id).Error
 	return t, err
 }
 
-func (g *GormPatRepository) Delete(token string) error {
+func (g *GormPatRepository) ReadByToken(token string) (models.PersonalAccessToken, error) {
+	var t models.PersonalAccessToken
+	// make sure to hash the token before querying
+	err := g.db.First(&t, "token = ?", t.HashToken(token)).Error
+	return t, err
+}
+
+func (g *GormPatRepository) Delete(tokenId uuid.UUID) error {
 	pat := models.PersonalAccessToken{}
-	return g.db.Delete(&pat, pat.HashToken(token)).Error
+	return g.db.Delete(&pat, "id = ?", tokenId.String()).Error
 }
 
 func (g *GormPatRepository) List(userId string) ([]models.PersonalAccessToken, error) {

@@ -17,6 +17,7 @@ package controller
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/flawfix/internal/dto"
 	"github.com/l3montree-dev/flawfix/internal/helpers"
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/labstack/echo/v4"
@@ -24,8 +25,9 @@ import (
 
 type patRepository interface {
 	Create(*models.PersonalAccessToken) error
-	Delete(token string) error
-	Read(token string) (models.PersonalAccessToken, error)
+	Delete(id uuid.UUID) error
+	ReadByToken(token string) (models.PersonalAccessToken, error)
+	Read(id uuid.UUID) (models.PersonalAccessToken, error)
 	List(userId string) ([]models.PersonalAccessToken, error)
 }
 
@@ -43,7 +45,19 @@ func (p *PatController) Create(c echo.Context) error {
 	// get the user id from the session
 	session := helpers.GetSession(c)
 	userID := session.GetUserID()
-	patStruct, token := models.NewPersonalAccessToken(uuid.MustParse(userID))
+
+	// get the json body
+	var req dto.PatCreateRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	// validate the request
+	if err := v.Struct(req); err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	patStruct, token := req.ToModel(userID)
 
 	err := p.patRepository.Create(&patStruct)
 	if err != nil {
@@ -51,30 +65,31 @@ func (p *PatController) Create(c echo.Context) error {
 	}
 
 	return c.JSON(200, map[string]string{
-		"token": token,
+		"createdAt":   patStruct.CreatedAt.String(),
+		"description": patStruct.Description,
+		"token":       token,
+		"userId":      patStruct.UserID.String(),
 	})
 }
 
 func (p *PatController) Delete(c echo.Context) error {
-	token := c.Param("token")
+	tokenId := c.Param("tokenId")
 
-	err := p.patRepository.Delete(token)
+	// check if the current user is allowed to delete the token
+	pat, err := p.patRepository.Read(uuid.MustParse(tokenId))
 	if err != nil {
 		return echo.NewHTTPError(500, err.Error())
 	}
+	// check the owner of the token
+	if pat.UserID.String() != helpers.GetSession(c).GetUserID() {
+		return echo.NewHTTPError(403, "not allowed to delete this token")
+	}
+	err = p.patRepository.Delete(uuid.MustParse(tokenId))
 
+	if err != nil {
+		return echo.NewHTTPError(500, err.Error())
+	}
 	return c.NoContent(200)
-}
-
-func (p *PatController) Read(c echo.Context) error {
-	token := c.Param("token")
-
-	pat, err := p.patRepository.Read(token)
-	if err != nil {
-		return echo.NewHTTPError(500, err.Error())
-	}
-
-	return c.JSON(200, pat)
 }
 
 func (p *PatController) List(c echo.Context) error {

@@ -25,6 +25,7 @@ import (
 	"github.com/joho/godotenv"
 	accesscontrol "github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/controller"
+	"github.com/l3montree-dev/flawfix/internal/helpers"
 	appMiddleware "github.com/l3montree-dev/flawfix/internal/middleware"
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/l3montree-dev/flawfix/internal/repositories"
@@ -83,6 +84,7 @@ func main() {
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		Timeout: 10 * time.Second,
 	}))
+	e.Use(middleware.Logger())
 
 	e.Use(middleware.Recover())
 
@@ -108,10 +110,15 @@ func main() {
 	})
 
 	sessionMiddleware := appMiddleware.SessionMiddleware(ory, patRepository)
+	e.GET("/api/v1/whoami", func(c echo.Context) error {
+		return c.JSON(200, map[string]string{
+			"userId": helpers.GetSession(c).GetUserID(),
+		})
+	}, sessionMiddleware)
 
 	e.POST("/api/v1/pat", patController.Create, sessionMiddleware)
-	e.DELETE("/api/v1/pat/:token", patController.Delete, sessionMiddleware)
-	e.GET("/api/v1/pat/:token", patController.Read, sessionMiddleware)
+	e.GET("/api/v1/pat", patController.List, sessionMiddleware)
+	e.DELETE("/api/v1/pat/:tokenId", patController.Delete, sessionMiddleware)
 	// use the organization router for creating a new organization - this is not multi tenant
 	e.POST("/api/v1/organizations", organizationController.Create, sessionMiddleware)
 	e.GET("/api/v1/organizations", organizationController.List, sessionMiddleware)
