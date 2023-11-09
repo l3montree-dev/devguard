@@ -16,7 +16,6 @@
 package controller_test
 
 import (
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -32,59 +31,57 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setup(req *http.Request) (*controller.OrganizationController, *echo.Echo, echo.Context) {
+func TestOrganizationController(t *testing.T) {
 	rbacProvider := testutils.NewRBACProviderMock()
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	sut := controller.NewOrganizationController(testutils.NewMockRepository[uuid.UUID, models.Organization](), rbacProvider)
 
 	e := echo.New()
 	rec := httptest.NewRecorder()
 
-	return sut, e, e.NewContext(req, rec)
-}
+	t.Run("it it should not be possible to create an organization without a name", func(t *testing.T) {
+		req := httptest.NewRequest(echo.POST, "/", testutils.ReaderFromAny(dto.OrganizationCreateRequest{
+			Name: "",
+		}))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		ctx := e.NewContext(req, rec)
 
-// it should not be possible to create an organization without a name
-// this should be handled by the validator
-func TestCreateOrgWithoutName(t *testing.T) {
-	sut, _, c := setup(httptest.NewRequest(echo.POST, "/", nil))
+		if err := sut.Create(ctx); assert.Error(t, err) {
+			assert.Equal(t, 400, err.(*echo.HTTPError).Code)
+		}
+	})
 
-	if err := sut.Create(c); assert.Error(t, err) {
-		assert.Equal(t, 400, err.(*echo.HTTPError).Code)
-	}
-}
+	t.Run("it should be possible to create an organization with a name", func(t *testing.T) {
+		req := httptest.NewRequest(echo.POST, "/", testutils.ReaderFromAny(dto.OrganizationCreateRequest{
+			Name: "test",
+		}))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		ctx := e.NewContext(req, rec)
 
-func TestCreateOrg(t *testing.T) {
-	req := dto.OrganizationCreateRequest{
-		Name: "test",
-	}
+		ctx.Set("session", testutils.NewSessionMock("test_user"))
 
-	sut, _, c := setup(httptest.NewRequest(echo.POST, "/", testutils.ReaderFromAny(req)))
-
-	c.Set("session", testutils.NewSessionMock("test_user"))
-
-	err := sut.Create(c)
-	assert.NoError(t, err)
-}
-
-// it should bootstrap an organization after creation
-// this includes creating the necessary permissions
-func TestBootstrapOrgAfterCreation(t *testing.T) {
-	req := dto.OrganizationCreateRequest{
-		Name: "test",
-	}
-
-	sut, _, c := setup(httptest.NewRequest(echo.POST, "/", testutils.ReaderFromAny(req)))
-	c.Set("session", testutils.NewSessionMock("alice"))
-
-	sut.Create(c)
-
-	rbac := helpers.GetRBAC(c)
-
-	// check if the permissions were created
-	// the owner should be allowed to do everything
-	for _, action := range []accesscontrol.Action{"read", "update", "delete"} {
-		allowed, err := rbac.IsAllowed("alice", "organization", action)
+		err := sut.Create(ctx)
 		assert.NoError(t, err)
-		assert.True(t, allowed, "alice should be allowed to "+action+" the organization")
-	}
+	})
+
+	t.Run("it should bootstrap the permissions inside an organization", func(t *testing.T) {
+		req := httptest.NewRequest(echo.POST, "/", testutils.ReaderFromAny(dto.OrganizationCreateRequest{
+			Name: "test",
+		}))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		ctx := e.NewContext(req, rec)
+
+		ctx.Set("session", testutils.NewSessionMock("alice"))
+
+		sut.Create(ctx)
+
+		rbac := helpers.GetRBAC(ctx)
+
+		// check if the permissions were created
+		// the owner should be allowed to do everything
+		for _, action := range []accesscontrol.Action{"read", "update", "delete"} {
+			allowed, err := rbac.IsAllowed("alice", "organization", action)
+			assert.NoError(t, err)
+			assert.True(t, allowed, "alice should be allowed to "+action+" the organization")
+		}
+	})
 }

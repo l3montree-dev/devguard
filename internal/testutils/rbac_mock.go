@@ -40,7 +40,7 @@ func (r *RBACMock) GrantRole(subject, role string) error {
 }
 
 func (r *RBACMock) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error {
-	return r.GrantRole(roleWhichProvidesPermissions, roleWhichGetsPermissions)
+	return r.GrantRole(roleWhichGetsPermissions, roleWhichProvidesPermissions)
 }
 
 func (r *RBACMock) GetProjectRoleName(project, role string) string {
