@@ -21,9 +21,3 @@
 
 The FlawFix project has a Code of Conduct
 to which all contributors must adhere.
-
-## Contributor License Agreement
-
-Our code is licensed under AGPLv3. If you contribute either, your grant us the rights to publish your contributions under those licenses. Also you have to digitally sign a Contributor License Agreement (CLA). This is required to protect the maintainers of FlawFix from legal problems with patent or copyright infringement. The CLA signature process is triggered by your first pull request automatically. You will be asked to authenticate with your GitHub account and your username will be stored even if you revoke any activity on GitHub.
-
-We are using [cla-assistant](https://github.com/cla-assistant/cla-assistant) for this.
