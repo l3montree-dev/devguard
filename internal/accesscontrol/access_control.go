@@ -37,6 +37,8 @@ type AccessControl interface {
 
 	GetProjectRoleName(project, role string) string
 
+	GetAllRoles(user string) []string
+
 	GrantRole(subject, role string) error
 	RevokeRole(subject, role string) error
 

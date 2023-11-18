@@ -71,6 +71,7 @@ func main() {
 	}
 
 	e := echo.New()
+	e.Logger.SetLevel(99)
 
 	e.Use(middleware.CORSWithConfig(
 		middleware.CORSConfig{
@@ -84,25 +85,27 @@ func main() {
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		Timeout: 10 * time.Second,
 	}))
-	e.Use(middleware.Logger())
+	e.Use(appMiddleware.Logger())
 
-	e.Use(middleware.Recover())
+	e.Use(appMiddleware.Recover())
 
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
 		// do the logging straight inside the error handler
 		// this keeps controller methods clean
 		slog.Error(err.Error())
-		e.DefaultHTTPErrorHandler(err, c)
+		// 	e.DefaultHTTPErrorHandler(err, c)
 	}
 
 	appRepository := repositories.NewGormApplicationRepository(db)
 	reportRepository := repositories.NewGormReportRepository(db, appRepository)
 	organizationRepository := repositories.NewGormOrganizationRepository(db)
 	patRepository := repositories.NewGormPatRepository(db)
+	projectRepository := repositories.NewGormProjectRepository(db)
 
 	organizationController := controller.NewOrganizationController(organizationRepository, casbinRBACProvider)
 	reportController := controller.NewReportController(reportRepository)
 	patController := controller.NewPatController(patRepository)
+	projectController := controller.NewProjectController(projectRepository)
 
 	// apply the health route without any session or multi tenant middleware
 	e.GET("/api/v1/health", func(c echo.Context) error {
@@ -127,6 +130,9 @@ func main() {
 
 	tenantRouter.DELETE("/", organizationController.Delete, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionDelete))
 	tenantRouter.GET("/", organizationController.Read, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionRead))
+	tenantRouter.GET("/projects", projectController.List, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionRead))
+
+	tenantRouter.POST("/projects", projectController.Create, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
 
 	projectRouter := tenantRouter.Group("/projects/:projectID", appMiddleware.ProjectAccessControl("project", accesscontrol.ActionRead))
 
@@ -134,5 +140,5 @@ func main() {
 
 	applicationRouter.POST("/reports", reportController.Create, appMiddleware.ProjectAccessControl("report", accesscontrol.ActionCreate))
 
-	slog.Error("failed to start server", e.Start(":8080").Error())
+	slog.Error("failed to start server", "err", e.Start(":8080").Error())
 }

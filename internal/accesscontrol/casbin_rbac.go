@@ -47,6 +47,11 @@ func (c *CasbinRBAC) HasAccess(user string) bool {
 	return len(roles) > 0
 }
 
+func (c *CasbinRBAC) GetAllRoles(user string) []string {
+	roles := c.enforcer.GetRolesForUserInDomain("user::"+user, "domain::"+c.domain)
+	return roles
+}
+
 func (c *CasbinRBAC) GrantRole(user, role string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("user::"+user, "role::"+role, "domain::"+c.domain)
 	return err

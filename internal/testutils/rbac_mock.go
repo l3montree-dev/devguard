@@ -120,6 +120,10 @@ func (r *RBACMock) AllowRoleInProject(project, role, object string, action []acc
 	return r.AllowRole(project+"|"+role, project+"|"+object, action)
 }
 
+func (r *RBACMock) GetAllRoles(user string) []string {
+	return []string{"role::" + user}
+}
+
 func (r RBACProviderMock) GetDomainRBAC(domain string) accesscontrol.AccessControl {
 	return &RBACMock{
 		roles: map[string][]string{},

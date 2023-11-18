@@ -16,6 +16,8 @@
 package controller
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/dto"
@@ -29,6 +31,7 @@ type projectRepository interface {
 	Delete(uuid.UUID) error
 	Read(uuid.UUID) (models.Project, error)
 	Update(*models.Project) error
+	List([]uuid.UUID) ([]models.Project, error)
 }
 
 type ProjectController struct {
@@ -108,4 +111,12 @@ func (p *ProjectController) Read(c echo.Context) error {
 	}
 
 	return c.JSON(200, project)
+}
+
+func (p *ProjectController) List(c echo.Context) error {
+	// get all projects the user has at least read access to
+	rbac := helpers.GetRBAC(c)
+	fmt.Println(rbac.GetAllRoles(helpers.GetSession(c).GetUserID()))
+
+	return c.JSON(200, []models.Project{})
 }
