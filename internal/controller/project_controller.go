@@ -16,7 +16,8 @@
 package controller
 
 import (
-	"fmt"
+	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
@@ -55,6 +56,8 @@ func (p *ProjectController) Create(c echo.Context) error {
 	}
 
 	model := req.ToModel()
+	// add the organization id
+	model.OrganizationID = helpers.GetTenant(c).ID
 
 	err := p.projectRepository.Create(&model)
 
@@ -116,7 +119,26 @@ func (p *ProjectController) Read(c echo.Context) error {
 func (p *ProjectController) List(c echo.Context) error {
 	// get all projects the user has at least read access to
 	rbac := helpers.GetRBAC(c)
-	fmt.Println(rbac.GetAllRoles(helpers.GetSession(c).GetUserID()))
+	roles := rbac.GetAllRoles(helpers.GetSession(c).GetUserID())
 
-	return c.JSON(200, []models.Project{})
+	// extract the project ids from the roles
+	projectIDs := make([]uuid.UUID, 0)
+	for _, role := range roles {
+		if !strings.HasPrefix(role, "role::project::") {
+			continue // not a project role
+		}
+		// extract everything between the prefix and a "|"
+		projectID, err := uuid.Parse(strings.Split(strings.TrimPrefix(role, "role::project::"), "|")[0])
+		if err != nil {
+			slog.Error("could not parse project id from role", "role", role)
+			continue
+		}
+		projectIDs = append(projectIDs, projectID)
+	}
+	projects, err := p.projectRepository.List(projectIDs)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, projects)
 }

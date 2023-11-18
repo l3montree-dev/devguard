@@ -16,6 +16,7 @@ package accesscontrol
 
 import (
 	"log"
+	"log/slog"
 
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 
@@ -48,7 +49,13 @@ func (c *CasbinRBAC) HasAccess(user string) bool {
 }
 
 func (c *CasbinRBAC) GetAllRoles(user string) []string {
-	roles := c.enforcer.GetRolesForUserInDomain("user::"+user, "domain::"+c.domain)
+	roles, err := c.enforcer.GetImplicitRolesForUser("user::"+user, "domain::"+c.domain)
+
+	if err != nil {
+		slog.Error("GetAllRoles failed", "err", err)
+		return []string{}
+	}
+
 	return roles
 }
 
