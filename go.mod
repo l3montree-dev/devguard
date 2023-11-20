@@ -15,7 +15,6 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/lmittmann/tint v1.0.1
 	github.com/ory/client-go v1.1.41
-	github.com/owenrumney/go-sarif v1.1.1
 	github.com/stretchr/testify v1.8.2
 	gorm.io/datatypes v1.2.0
 	gorm.io/driver/postgres v1.5.2
@@ -42,6 +41,7 @@ require (
 	github.com/jackc/pgx/v5 v5.3.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/kr/text v0.1.0 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -56,7 +56,6 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
-	github.com/zclconf/go-cty v1.10.0 // indirect
 	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect

@@ -21,12 +21,14 @@ import (
 )
 
 type ProjectCreateRequest struct {
-	Name string `json:"name" validate:"required"`
+	Name        string `json:"name" validate:"required"`
+	Description string `json:"description"`
 }
 
 func (p *ProjectCreateRequest) ToModel() models.Project {
 	return models.Project{
-		Name: p.Name,
-		Slug: slug.Make(p.Name),
+		Name:        p.Name,
+		Slug:        slug.Make(p.Name),
+		Description: p.Description,
 	}
 }

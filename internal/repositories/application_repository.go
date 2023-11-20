@@ -62,3 +62,9 @@ func (a *GormApplicationRepository) GetByProjectID(projectID uuid.UUID) ([]model
 	}
 	return apps, nil
 }
+
+func (g *GormApplicationRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.Application, error) {
+	var t models.Application
+	err := g.db.Preload("Envs").Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
+	return t, err
+}

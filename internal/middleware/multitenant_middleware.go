@@ -19,7 +19,8 @@ import (
 	"log/slog"
 
 	accesscontrol "github.com/l3montree-dev/flawfix/internal/accesscontrol"
-	"github.com/l3montree-dev/flawfix/internal/helpers"
+	"github.com/l3montree-dev/flawfix/internal/controller"
+
 	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
 )
@@ -46,7 +47,7 @@ func MultiTenantMiddleware(rbacProvider accesscontrol.CasbinRBACProvider, organi
 			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
 
 			// check if the user is allowed to access the tenant
-			session := helpers.GetSession(c)
+			session := controller.GetSession(c)
 			allowed := domainRBAC.HasAccess(session.GetUserID())
 
 			if !allowed {

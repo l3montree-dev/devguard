@@ -23,7 +23,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/controller"
 	"github.com/l3montree-dev/flawfix/internal/dto"
-	"github.com/l3montree-dev/flawfix/internal/helpers"
+
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/l3montree-dev/flawfix/internal/testutils"
 	"github.com/l3montree-dev/flawfix/mocks"
@@ -79,7 +79,7 @@ func TestOrganizationController(t *testing.T) {
 
 		sut.Create(ctx)
 
-		rbac := helpers.GetRBAC(ctx)
+		rbac := controller.GetRBAC(ctx)
 
 		// check if the permissions were created
 		// the owner should be allowed to do everything

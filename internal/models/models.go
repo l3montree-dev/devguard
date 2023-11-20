@@ -73,55 +73,61 @@ type Project struct {
 	Name             string            `json:"name" gorm:"type:varchar(255)"`
 	Applications     []Application     `json:"applications"`
 	ServiceProviders []ServiceProvider `json:"serviceProviders"`
-	OrganizationID   uuid.UUID         `json:"organizationId" gorm:"index:idx_project_org_slug;unique;not null"`
-	Slug             string            `json:"slug" gorm:"type:varchar(255);index:idx_project_org_slug;unique;not null"`
+	OrganizationID   uuid.UUID         `json:"organizationId" gorm:"uniqueIndex:idx_project_org_slug;not null"`
+	Slug             string            `json:"slug" gorm:"type:varchar(255);uniqueIndex:idx_project_org_slug;not null"`
+	Description      string            `json:"description" gorm:"type:text"`
 }
 
 type Application struct {
 	AppModel
 	Name string `json:"name" gorm:"type:varchar(255)"`
-	Slug string `json:"slug" gorm:"type:varchar(255);index:idx_app_project_slug;unique;not null;"`
+	Slug string `json:"slug" gorm:"type:varchar(255);uniqueIndex:idx_app_project_slug;not null;"`
 
-	Envs      []Env     `json:"envs"`
-	ProjectID uuid.UUID `json:"projectId" gorm:"index:idx_app_project_slug;not null;unique"`
+	Envs        []Env     `json:"envs"`
+	ProjectID   uuid.UUID `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;"`
+	Description string    `json:"description" gorm:"type:text"`
 }
 
 type Env struct {
 	AppModel
-	Name          string `json:"name" gorm:"type:varchar(255)"`
-	Slug          string `json:"slug" gorm:"type:varchar(255);index:idx_env_app_slug;unique;not null;"`
-	Runs          []Report
-	ApplicationID uuid.UUID `json:"applicationId" gorm:"index:idx_env_app_slug;not null;unique"`
+	Name          string    `json:"name" gorm:"type:varchar(255)"`
+	Slug          string    `json:"slug" gorm:"type:varchar(255);uniqueIndex:idx_env_app_slug;not null;"`
+	ApplicationID uuid.UUID `json:"applicationId" gorm:"uniqueIndex:idx_env_app_slug;not null;"`
 	IsDefault     bool      `json:"isDefault"`
+	Flaws         []Flaw    `json:"flaws"`
 }
 
-type Report struct {
+type Flaw struct {
 	AppModel
-	ApplicationID        uuid.UUID `json:"applicationId"`
-	DriverName           string    `json:"driverName"`
-	DriverVersion        *string   `json:"driverVersion"`
-	DriverInformationUri *string   `json:"driverInformationUri"`
-	Results              []Result
-	EnvID                uuid.UUID `json:"envId"`
-	InitiatingUserID     string    `json:"initiatingUserId"`
-	Timestamp            time.Time `json:"timestamp"`
+	EnvID    uuid.UUID `json:"envId"`
+	RuleID   *string   `json:"ruleId"`
+	Level    *string   `json:"level"`
+	Message  *string   `json:"message"`
+	Comments []Comment
+	Events   []FlawEvent
 }
 
-type Result struct {
+// a flaw event is basically a change to a flaw. It might be a "fix" or a "detected"
+
+type FlawEventType string
+
+const (
+	FlawEventTypeDetected FlawEventType = "detected"
+	FlawEventTypeFixed    FlawEventType = "fixed"
+)
+
+type FlawEvent struct {
 	AppModel
-	ReportID  uuid.UUID      `json:"reportId"`
-	RuleID    *string        `json:"ruleId"`
-	Level     *string        `json:"level"`
-	Message   *string        `json:"message"`
-	Locations datatypes.JSON `gorm:"type:jsonb;default:'[]';not null"`
-	Comments  []Comment
+	Type   FlawEventType `json:"type" gorm:"type:varchar(255)"`
+	FlawID uuid.UUID     `json:"flawId"`
+	UserID uuid.UUID     `json:"userId"`
 }
 
 type Comment struct {
 	AppModel
-	ResultID uuid.UUID `json:"resultId"`
-	UserID   uuid.UUID `json:"userId"`
-	Comment  string    `json:"comment"`
+	FlawID  uuid.UUID `json:"resultId"`
+	UserID  uuid.UUID `json:"userId"`
+	Comment string    `json:"comment"`
 }
 
 type MitigationComment struct {
@@ -160,7 +166,7 @@ type Mitigation struct {
 
 type ServiceProvider struct {
 	AppModel
-	Name         string    `json:"name" gorm:"unique;primarykey;type:varchar(255)"`
+	Name         string    `json:"name" gorm:"primarykey;type:varchar(255)"`
 	ContactEmail string    `json:"contact" gorm:"type:varchar(255)"`
 	ProjectID    uuid.UUID `json:"projectId"`
 }

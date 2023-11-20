@@ -18,7 +18,7 @@ package controller
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/dto"
-	"github.com/l3montree-dev/flawfix/internal/helpers"
+
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/labstack/echo/v4"
 )
@@ -43,7 +43,7 @@ func NewPatController(repository patRepository) *PatController {
 
 func (p *PatController) Create(c echo.Context) error {
 	// get the user id from the session
-	session := helpers.GetSession(c)
+	session := GetSession(c)
 	userID := session.GetUserID()
 
 	// get the json body
@@ -81,7 +81,7 @@ func (p *PatController) Delete(c echo.Context) error {
 		return echo.NewHTTPError(500, err.Error())
 	}
 	// check the owner of the token
-	if pat.UserID.String() != helpers.GetSession(c).GetUserID() {
+	if pat.UserID.String() != GetSession(c).GetUserID() {
 		return echo.NewHTTPError(403, "not allowed to delete this token")
 	}
 	err = p.patRepository.Delete(uuid.MustParse(tokenId))
@@ -94,7 +94,7 @@ func (p *PatController) Delete(c echo.Context) error {
 
 func (p *PatController) List(c echo.Context) error {
 	// get the user id from the session
-	session := helpers.GetSession(c)
+	session := GetSession(c)
 	userID := session.GetUserID()
 
 	pats, err := p.patRepository.List(userID)

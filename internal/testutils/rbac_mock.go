@@ -43,16 +43,16 @@ func (r *RBACMock) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermis
 	return r.GrantRole(roleWhichGetsPermissions, roleWhichProvidesPermissions)
 }
 
-func (r *RBACMock) GetProjectRoleName(project, role string) string {
-	return project + "|" + role
+func (r *RBACMock) GetProjectRoleName(project string, role string) string {
+	return project + "|" + string(role)
 }
 
-func (r *RBACMock) RevokeRole(subject, role string) error {
+func (r *RBACMock) RevokeRole(subject string, role string) error {
 	if _, ok := r.roles[subject]; !ok {
 		return nil
 	}
 	for i, v := range r.roles[subject] {
-		if v == role {
+		if v == string(role) {
 			r.roles[subject] = append(r.roles[subject][:i], r.roles[subject][i+1:]...)
 			return nil
 		}
@@ -60,22 +60,22 @@ func (r *RBACMock) RevokeRole(subject, role string) error {
 	return nil
 }
 
-func (r *RBACMock) GrantRoleInProject(subject, role, project string) error {
-	r.GrantRole(subject, project+"|"+role)
+func (r *RBACMock) GrantRoleInProject(subject string, role string, project string) error {
+	r.GrantRole(subject, project+"|"+string(role))
 	return nil
 }
 
-func (r *RBACMock) RevokeRoleInProject(subject, role, project string) error {
+func (r *RBACMock) RevokeRoleInProject(subject string, role string, project string) error {
 	r.RevokeRole(subject, project+"|"+role)
 	return nil
 }
 
-func (r *RBACMock) AllowRole(role, object string, action []accesscontrol.Action) error {
-	if _, ok := r.rules[role]; !ok {
-		r.rules[role] = []string{}
+func (r *RBACMock) AllowRole(role string, object string, action []accesscontrol.Action) error {
+	if _, ok := r.rules[string(role)]; !ok {
+		r.rules[string(role)] = []string{}
 	}
 	for _, v := range action {
-		r.rules[role] = append(r.rules[role], object+"|"+string(v))
+		r.rules[string(role)] = append(r.rules[string(role)], string(object)+"|"+string(v))
 	}
 	return nil
 }
@@ -116,7 +116,7 @@ func (r *RBACMock) IsAllowedInProject(project, user, object string, action acces
 	return r.IsAllowed(user, project+"|"+object, action)
 }
 
-func (r *RBACMock) AllowRoleInProject(project, role, object string, action []accesscontrol.Action) error {
+func (r *RBACMock) AllowRoleInProject(project, role string, object string, action []accesscontrol.Action) error {
 	return r.AllowRole(project+"|"+role, project+"|"+object, action)
 }
 

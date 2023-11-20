@@ -30,6 +30,13 @@ const (
 	ActionDelete Action = "delete"
 )
 
+type Object string
+
+const (
+	ObjectProject     Object = "project"
+	ObjectApplication Object = "application"
+)
+
 type AccessControl interface {
 	HasAccess(subject string) bool
 
@@ -37,20 +44,20 @@ type AccessControl interface {
 
 	GetAllRoles(user string) []string
 
-	GrantRole(subject, role string) error
-	RevokeRole(subject, role string) error
+	GrantRole(subject string, role string) error
+	RevokeRole(subject string, role string) error
 
-	GrantRoleInProject(subject, role, project string) error
-	RevokeRoleInProject(subject, role, project string) error
-	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions, project string) error
+	GrantRoleInProject(subject string, role string, project string) error
+	RevokeRoleInProject(subject string, role string, project string) error
+	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string, project string) error
 
-	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project string) error
+	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions string, project string) error
 
-	AllowRole(role, object string, action []Action) error
-	IsAllowed(subject, object string, action Action) (bool, error)
+	AllowRole(role string, object string, action []Action) error
+	IsAllowed(subject string, object string, action Action) (bool, error)
 
-	IsAllowedInProject(project, user, object string, action Action) (bool, error)
-	AllowRoleInProject(project, role, object string, action []Action) error
+	IsAllowedInProject(project, user string, object string, action Action) (bool, error)
+	AllowRoleInProject(project string, role string, object string, action []Action) error
 }
 
 type RBACProvider interface {

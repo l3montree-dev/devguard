@@ -16,7 +16,9 @@
 package main
 
 import (
+	"encoding/json"
 	"log/slog"
+	"net/http"
 	"os"
 	"time"
 
@@ -25,7 +27,7 @@ import (
 	"github.com/joho/godotenv"
 	accesscontrol "github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/controller"
-	"github.com/l3montree-dev/flawfix/internal/helpers"
+
 	appMiddleware "github.com/l3montree-dev/flawfix/internal/middleware"
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/l3montree-dev/flawfix/internal/repositories"
@@ -46,8 +48,72 @@ func getOryApiClient() *client.APIClient {
 	return ory
 }
 
-func main() {
+func registerMiddlewares(e *echo.Echo) {
+	e.Use(middleware.CORSWithConfig(
+		middleware.CORSConfig{
+			AllowOrigins:     []string{"http://localhost:3000"},
+			AllowHeaders:     middleware.DefaultCORSConfig.AllowHeaders,
+			AllowMethods:     middleware.DefaultCORSConfig.AllowMethods,
+			AllowCredentials: true,
+		},
+	))
 
+	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		Timeout: 10 * time.Second,
+	}))
+	e.Use(appMiddleware.Logger())
+
+	e.Use(appMiddleware.Recover())
+
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		// do the logging straight inside the error handler
+		// this keeps controller methods clean
+		slog.Error(err.Error())
+
+		if c.Response().Committed {
+			return
+		}
+
+		he, ok := err.(*echo.HTTPError)
+		if ok {
+			if he.Internal != nil {
+				if herr, ok := he.Internal.(*echo.HTTPError); ok {
+					he = herr
+				}
+			}
+		} else {
+			he = &echo.HTTPError{
+				Code:    http.StatusInternalServerError,
+				Message: http.StatusText(http.StatusInternalServerError),
+			}
+		}
+
+		code := he.Code
+		message := he.Message
+
+		switch m := he.Message.(type) {
+		case string:
+			if e.Debug {
+				message = echo.Map{"message": m, "error": err.Error()}
+			} else {
+				message = echo.Map{"message": m}
+			}
+		case json.Marshaler:
+			// do nothing - this type knows how to format itself to JSON
+		case error:
+			message = echo.Map{"message": m.Error()}
+		}
+
+		// Send response
+		if c.Request().Method == http.MethodHead { // Issue #608
+			c.NoContent(he.Code)
+		} else {
+			c.JSON(code, message)
+		}
+	}
+}
+
+func main() {
 	loggingHandler := tint.NewHandler(os.Stdout, &tint.Options{
 		AddSource: true,
 		Level:     slog.LevelDebug,
@@ -73,58 +139,45 @@ func main() {
 	e := echo.New()
 	e.Logger.SetLevel(99)
 
-	e.Use(middleware.CORSWithConfig(
-		middleware.CORSConfig{
-			AllowOrigins:     []string{"http://localhost:3000"},
-			AllowHeaders:     middleware.DefaultCORSConfig.AllowHeaders,
-			AllowMethods:     middleware.DefaultCORSConfig.AllowMethods,
-			AllowCredentials: true,
-		},
-	))
+	registerMiddlewares(e)
 
-	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-		Timeout: 10 * time.Second,
-	}))
-	e.Use(appMiddleware.Logger())
-
-	e.Use(appMiddleware.Recover())
-
-	e.HTTPErrorHandler = func(err error, c echo.Context) {
-		// do the logging straight inside the error handler
-		// this keeps controller methods clean
-		slog.Error(err.Error())
-		// 	e.DefaultHTTPErrorHandler(err, c)
-	}
-
+	// create all repositories
 	appRepository := repositories.NewGormApplicationRepository(db)
-	reportRepository := repositories.NewGormReportRepository(db, appRepository)
+
 	organizationRepository := repositories.NewGormOrganizationRepository(db)
 	patRepository := repositories.NewGormPatRepository(db)
 	projectRepository := repositories.NewGormProjectRepository(db)
+	envRepository := repositories.NewGormEnvRepository(db)
 
+	// create all controllers
 	organizationController := controller.NewOrganizationController(organizationRepository, casbinRBACProvider)
-	reportController := controller.NewReportController(reportRepository)
+
 	patController := controller.NewPatController(patRepository)
 	projectController := controller.NewProjectController(projectRepository, appRepository)
+	applicationController := controller.NewApplicationController(appRepository, envRepository)
 
+	apiV1Router := e.Group("/api/v1")
 	// apply the health route without any session or multi tenant middleware
-	e.GET("/api/v1/health", func(c echo.Context) error {
+	apiV1Router.GET("/health", func(c echo.Context) error {
 		return c.String(200, "ok")
 	})
 
 	sessionMiddleware := appMiddleware.SessionMiddleware(ory, patRepository)
-	e.GET("/api/v1/whoami", func(c echo.Context) error {
+
+	apiV1Router.GET("/whoami", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{
-			"userId": helpers.GetSession(c).GetUserID(),
+			"userId": controller.GetSession(c).GetUserID(),
 		})
 	}, sessionMiddleware)
 
-	e.POST("/api/v1/pat", patController.Create, sessionMiddleware)
-	e.GET("/api/v1/pat", patController.List, sessionMiddleware)
-	e.DELETE("/api/v1/pat/:tokenId", patController.Delete, sessionMiddleware)
+	patRouter := apiV1Router.Group("/pat")
+
+	patRouter.POST("/", patController.Create, sessionMiddleware)
+	patRouter.GET("/", patController.List, sessionMiddleware)
+	patRouter.DELETE("/:tokenId", patController.Delete, sessionMiddleware)
 	// use the organization router for creating a new organization - this is not multi tenant
-	e.POST("/api/v1/organizations", organizationController.Create, sessionMiddleware)
-	e.GET("/api/v1/organizations", organizationController.List, sessionMiddleware)
+	apiV1Router.POST("/organizations", organizationController.Create, sessionMiddleware)
+	apiV1Router.GET("/organizations", organizationController.List, sessionMiddleware)
 
 	tenantRouter := e.Group("/api/v1/organizations/:tenant", sessionMiddleware, appMiddleware.MultiTenantMiddleware(casbinRBACProvider, organizationRepository))
 
@@ -137,10 +190,10 @@ func main() {
 	projectRouter := tenantRouter.Group("/projects/:projectSlug", appMiddleware.ProjectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 
 	projectRouter.GET("/", projectController.Read)
+	projectRouter.POST("/applications", applicationController.Create, appMiddleware.ProjectAccessControl(projectRepository, accesscontrol.ObjectApplication, accesscontrol.ActionCreate))
 
 	applicationRouter := projectRouter.Group("/applications/:applicationSlug")
-
-	applicationRouter.POST("/reports", reportController.Create, appMiddleware.ProjectAccessControl(projectRepository, "report", accesscontrol.ActionCreate))
+	applicationRouter.GET("/", applicationController.Read, appMiddleware.ProjectAccessControl(projectRepository, "application", accesscontrol.ActionRead))
 
 	slog.Error("failed to start server", "err", e.Start(":8080").Error())
 }

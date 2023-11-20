@@ -22,7 +22,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/dto"
-	"github.com/l3montree-dev/flawfix/internal/helpers"
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
@@ -53,7 +52,7 @@ func (p *ProjectController) Create(c echo.Context) error {
 
 	model := req.ToModel()
 	// add the organization id
-	model.OrganizationID = helpers.GetTenant(c).ID
+	model.OrganizationID = GetTenant(c).ID
 
 	err := p.projectRepository.Create(nil, &model)
 
@@ -68,7 +67,7 @@ func (p *ProjectController) Create(c echo.Context) error {
 
 func (p *ProjectController) bootstrapProject(c echo.Context, project models.Project) {
 	// get the rbac object
-	rbac := helpers.GetRBAC(c)
+	rbac := GetRBAC(c)
 	// make sure to keep the organization roles in sync
 	// let the organization admin role inherit all permissions from the project admin
 	rbac.LinkDomainAndProjectRole("admin", "admin", project.ID.String())
@@ -77,10 +76,21 @@ func (p *ProjectController) bootstrapProject(c echo.Context, project models.Proj
 	rbac.AllowRoleInProject(project.ID.String(), "admin", "user", []accesscontrol.Action{
 		accesscontrol.ActionCreate,
 		accesscontrol.ActionDelete,
+		accesscontrol.ActionUpdate,
+	})
+
+	rbac.AllowRoleInProject(project.ID.String(), "admin", "application", []accesscontrol.Action{
+		accesscontrol.ActionCreate,
+		accesscontrol.ActionDelete,
+		accesscontrol.ActionUpdate,
 	})
 
 	rbac.AllowRoleInProject(project.ID.String(), "member", "project", []accesscontrol.Action{
-		accesscontrol.ActionRead, // project:read will be used to check all other permissions
+		accesscontrol.ActionRead,
+	})
+
+	rbac.AllowRoleInProject(project.ID.String(), "member", "application", []accesscontrol.Action{
+		accesscontrol.ActionRead,
 	})
 }
 
@@ -101,7 +111,7 @@ func (p *ProjectController) Delete(c echo.Context) error {
 func (p *ProjectController) Read(c echo.Context) error {
 
 	// just get the project from the context
-	project, err := helpers.GetProject(c)
+	project, err := GetProject(c)
 	if err != nil {
 		return echo.NewHTTPError(500, "this should never happen").WithInternal(err)
 	}
@@ -119,8 +129,8 @@ func (p *ProjectController) Read(c echo.Context) error {
 
 func (p *ProjectController) List(c echo.Context) error {
 	// get all projects the user has at least read access to
-	rbac := helpers.GetRBAC(c)
-	roles := rbac.GetAllRoles(helpers.GetSession(c).GetUserID())
+	rbac := GetRBAC(c)
+	roles := rbac.GetAllRoles(GetSession(c).GetUserID())
 
 	// extract the project ids from the roles
 	projectIDs := make([]uuid.UUID, 0)

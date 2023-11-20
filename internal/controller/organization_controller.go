@@ -19,7 +19,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/dto"
-	"github.com/l3montree-dev/flawfix/internal/helpers"
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
@@ -63,7 +62,7 @@ func (o *OrganizationController) Create(c echo.Context) error {
 func (o *OrganizationController) bootstrapOrg(c echo.Context, organization models.Organization) {
 	// create the permissions for the organization
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
-	userId := helpers.GetSession(c).GetUserID()
+	userId := GetSession(c).GetUserID()
 
 	rbac.GrantRole(userId, "owner")
 	rbac.InheritRole("owner", "admin")  // an owner is an admin
@@ -97,7 +96,7 @@ func (o *OrganizationController) Update(c echo.Context) error {
 
 func (o *OrganizationController) Delete(c echo.Context) error {
 	// get the id of the organization
-	organizationID := helpers.GetTenant(c).ID
+	organizationID := GetTenant(c).ID
 
 	// delete the organization
 	err := o.organizationRepository.Delete(nil, organizationID)
@@ -110,14 +109,14 @@ func (o *OrganizationController) Delete(c echo.Context) error {
 
 func (o *OrganizationController) Read(c echo.Context) error {
 	// get the organization from the context
-	organization := helpers.GetTenant(c)
+	organization := GetTenant(c)
 	return c.JSON(200, organization)
 }
 
 func (o *OrganizationController) List(c echo.Context) error {
 
 	// get all organizations the user has access to
-	userID := helpers.GetSession(c).GetUserID()
+	userID := GetSession(c).GetUserID()
 
 	domains, err := o.rbacProvider.DomainsOfUser(userID)
 

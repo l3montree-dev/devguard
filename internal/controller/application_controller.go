@@ -3,7 +3,7 @@ package controller
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/dto"
-	"github.com/l3montree-dev/flawfix/internal/helpers"
+
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
@@ -12,11 +12,12 @@ import (
 
 type applicationRepository interface {
 	GetByProjectID(uuid.UUID) ([]models.Application, error)
+	ReadBySlug(uuid.UUID, string) (models.Application, error)
 	repositories.Repository[uuid.UUID, models.Application, *gorm.DB]
 }
 
 type envRepository interface {
-	repositories.Repository[uuid.UUID, models.Env, any]
+	repositories.Repository[uuid.UUID, models.Env, *gorm.DB]
 }
 
 type ApplicationController struct {
@@ -32,7 +33,7 @@ func NewApplicationController(repository applicationRepository, envRepository en
 }
 
 func (a *ApplicationController) List(c echo.Context) error {
-	project, err := helpers.GetProject(c)
+	project, err := GetProject(c)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid project id")
 	}
@@ -55,14 +56,14 @@ func (a *ApplicationController) Create(c echo.Context) error {
 		return echo.NewHTTPError(400, err.Error())
 	}
 
-	project, err := helpers.GetProject(c)
+	project, err := GetProject(c)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid project id")
 	}
 
 	app := req.ToModel(project.ID)
 
-	a.applicationRepository.Transaction(func(tx *gorm.DB) error {
+	err = a.applicationRepository.Transaction(func(tx *gorm.DB) error {
 		err = a.applicationRepository.Create(tx, &app)
 
 		if err != nil {
@@ -98,6 +99,31 @@ func (a *ApplicationController) Create(c echo.Context) error {
 
 		return nil
 	})
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not create application").WithInternal(err)
+	}
+
+	return c.JSON(200, app)
+}
+
+func (a *ApplicationController) Read(c echo.Context) error {
+	// get the project
+	project, err := GetProject(c)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid project slug")
+	}
+
+	applicationSlug, err := GetApplicationSlug(c)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid application slug")
+	}
+
+	app, err := a.ReadBySlug(project.ID, applicationSlug)
+
+	if err != nil {
+		return echo.NewHTTPError(404, "could not find application").WithInternal(err)
+	}
 
 	return c.JSON(200, app)
 }

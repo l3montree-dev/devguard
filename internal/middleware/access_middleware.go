@@ -18,21 +18,22 @@ package middleware
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
-	"github.com/l3montree-dev/flawfix/internal/helpers"
+	"github.com/l3montree-dev/flawfix/internal/controller"
+
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/labstack/echo/v4"
 )
 
-func AccessControlMiddleware(obj string, act accesscontrol.Action) echo.MiddlewareFunc {
+func AccessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// get the rbac
-			rbac := helpers.GetRBAC(c)
+			rbac := controller.GetRBAC(c)
 
 			// get the user
-			user := helpers.GetSession(c).GetUserID()
+			user := controller.GetSession(c).GetUserID()
 
-			allowed, err := rbac.IsAllowed(user, obj, "delete")
+			allowed, err := rbac.IsAllowed(user, string(obj), act)
 			if err != nil {
 				return echo.NewHTTPError(500, "could not determine if the user has access")
 			}
@@ -51,29 +52,29 @@ type projectRepository interface {
 	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
 }
 
-func ProjectAccessControl(projectRepository projectRepository, obj string, act accesscontrol.Action) echo.MiddlewareFunc {
+func ProjectAccessControl(projectRepository projectRepository, obj accesscontrol.Object, act accesscontrol.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// get the rbac
-			rbac := helpers.GetRBAC(c)
+			rbac := controller.GetRBAC(c)
 
 			// get the user
-			user := helpers.GetSession(c).GetUserID()
+			user := controller.GetSession(c).GetUserID()
 
 			// get the project id
-			projectSlug, err := helpers.GetProjectSlug(c)
+			projectSlug, err := controller.GetProjectSlug(c)
 			if err != nil {
 				return echo.NewHTTPError(500, "could not get project id")
 			}
 
 			// get the project by slug and tenant.
-			project, err := projectRepository.ReadBySlug(helpers.GetTenant(c).ID, projectSlug)
+			project, err := projectRepository.ReadBySlug(controller.GetTenant(c).ID, projectSlug)
 
 			if err != nil {
 				return echo.NewHTTPError(404, "could not get project")
 			}
 
-			allowed, err := rbac.IsAllowedInProject(project.ID.String(), user, obj, act)
+			allowed, err := rbac.IsAllowedInProject(project.ID.String(), user, string(obj), act)
 
 			if err != nil {
 				return echo.NewHTTPError(500, "could not determine if the user has access")
