@@ -23,7 +23,7 @@ import (
 
 type GormOrganizationRepository struct {
 	db *gorm.DB
-	Repository[uuid.UUID, models.Organization]
+	Repository[uuid.UUID, models.Organization, *gorm.DB]
 }
 
 func NewGormOrganizationRepository(db *gorm.DB) *GormOrganizationRepository {

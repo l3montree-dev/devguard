@@ -24,24 +24,20 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/dto"
 	"github.com/l3montree-dev/flawfix/internal/helpers"
 	"github.com/l3montree-dev/flawfix/internal/models"
+	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
-type projectRepository interface {
-	Create(*models.Project) error
-	Delete(uuid.UUID) error
-	Read(uuid.UUID) (models.Project, error)
-	Update(*models.Project) error
-	List([]uuid.UUID) ([]models.Project, error)
-}
-
 type ProjectController struct {
-	projectRepository
+	projectRepository repositories.Repository[uuid.UUID, models.Project, *gorm.DB]
+	applicationRepository
 }
 
-func NewProjectController(repository projectRepository) *ProjectController {
+func NewProjectController(repository repositories.Repository[uuid.UUID, models.Project, *gorm.DB], appRepository applicationRepository) *ProjectController {
 	return &ProjectController{
-		projectRepository: repository,
+		projectRepository:     repository,
+		applicationRepository: appRepository,
 	}
 }
 
@@ -59,7 +55,7 @@ func (p *ProjectController) Create(c echo.Context) error {
 	// add the organization id
 	model.OrganizationID = helpers.GetTenant(c).ID
 
-	err := p.projectRepository.Create(&model)
+	err := p.projectRepository.Create(nil, &model)
 
 	if err != nil {
 		return err
@@ -94,7 +90,7 @@ func (p *ProjectController) Delete(c echo.Context) error {
 		return echo.NewHTTPError(400, "invalid project id").WithInternal(err)
 	}
 
-	err = p.projectRepository.Delete(projectID)
+	err = p.projectRepository.Delete(nil, projectID)
 	if err != nil {
 		return err
 	}
@@ -109,6 +105,14 @@ func (p *ProjectController) Read(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "this should never happen").WithInternal(err)
 	}
+
+	// lets fetch the applications related to this project
+	applications, err := p.GetByProjectID(project.ID)
+	if err != nil {
+		return err
+	}
+
+	project.Applications = applications
 
 	return c.JSON(200, project)
 }

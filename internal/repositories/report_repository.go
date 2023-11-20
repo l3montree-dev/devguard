@@ -68,7 +68,7 @@ func transformLocations2Map(locations []*sarif.Location) datatypes.JSON {
 
 func (s *GormReportRepository) SaveSarifReport(appName string, report *sarif.Report) ([]models.Report, error) {
 	// check if the application does already exist
-	app, err := s.appRepository.FindOrCreate(appName)
+	app, err := s.appRepository.FindOrCreate(nil, appName)
 	if err != nil {
 		return nil, err
 	}

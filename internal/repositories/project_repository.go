@@ -8,7 +8,7 @@ import (
 
 type GormProjectRepository struct {
 	db *gorm.DB
-	Repository[uuid.UUID, models.Project]
+	Repository[uuid.UUID, models.Project, *gorm.DB]
 }
 
 func NewGormProjectRepository(db *gorm.DB) *GormProjectRepository {

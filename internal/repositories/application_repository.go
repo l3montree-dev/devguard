@@ -16,22 +16,21 @@
 package repositories
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"gorm.io/gorm"
 )
 
 type GormApplicationRepository struct {
 	db *gorm.DB
+	Repository[uuid.UUID, models.Application, *gorm.DB]
 }
 
 func NewGormApplicationRepository(db *gorm.DB) *GormApplicationRepository {
 	return &GormApplicationRepository{
-		db: db,
+		db:         db,
+		Repository: NewGormRepository[uuid.UUID, models.Application](db),
 	}
-}
-
-func (a *GormApplicationRepository) Save(app models.Application) error {
-	return a.db.Create(&app).Error
 }
 
 func (a *GormApplicationRepository) FindByName(name string) (models.Application, error) {
@@ -43,14 +42,23 @@ func (a *GormApplicationRepository) FindByName(name string) (models.Application,
 	return app, nil
 }
 
-func (a *GormApplicationRepository) FindOrCreate(name string) (models.Application, error) {
+func (a *GormApplicationRepository) FindOrCreate(tx *gorm.DB, name string) (models.Application, error) {
 	app, err := a.FindByName(name)
 	if err != nil {
 		app = models.Application{Name: name}
-		err = a.Save(app)
+		err = a.Create(tx, &app)
 		if err != nil {
 			return app, err
 		}
 	}
 	return app, nil
+}
+
+func (a *GormApplicationRepository) GetByProjectID(projectID uuid.UUID) ([]models.Application, error) {
+	var apps []models.Application
+	err := a.db.Where("project_id = ?", projectID).Find(&apps).Error
+	if err != nil {
+		return nil, err
+	}
+	return apps, nil
 }

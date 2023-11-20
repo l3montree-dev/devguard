@@ -70,22 +70,19 @@ type Organization struct {
 
 type Project struct {
 	AppModel
-	Name             string `json:"name" gorm:"type:varchar(255)"`
-	Applications     []Application
-	ServiceProviders []ServiceProvider
-	OrganizationID   uuid.UUID `json:"organizationId" gorm:"index:idx_project_org_slug;unique;not null"`
-	Slug             string    `json:"slug" gorm:"type:varchar(255);index:idx_project_org_slug;unique;not null"`
+	Name             string            `json:"name" gorm:"type:varchar(255)"`
+	Applications     []Application     `json:"applications"`
+	ServiceProviders []ServiceProvider `json:"serviceProviders"`
+	OrganizationID   uuid.UUID         `json:"organizationId" gorm:"index:idx_project_org_slug;unique;not null"`
+	Slug             string            `json:"slug" gorm:"type:varchar(255);index:idx_project_org_slug;unique;not null"`
 }
 
 type Application struct {
 	AppModel
-	Name      string `json:"name" gorm:"type:varchar(255)"`
-	Slug      string `json:"slug" gorm:"type:varchar(255);index:idx_app_project_slug;unique;not null;"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt sql.NullTime `gorm:"index"`
+	Name string `json:"name" gorm:"type:varchar(255)"`
+	Slug string `json:"slug" gorm:"type:varchar(255);index:idx_app_project_slug;unique;not null;"`
 
-	Envs      []Env
+	Envs      []Env     `json:"envs"`
 	ProjectID uuid.UUID `json:"projectId" gorm:"index:idx_app_project_slug;not null;unique"`
 }
 
@@ -163,9 +160,9 @@ type Mitigation struct {
 
 type ServiceProvider struct {
 	AppModel
-	Name         string `json:"name" gorm:"unique;primarykey;type:varchar(255)"`
-	ContactEmail string `json:"contact" gorm:"type:varchar(255)"`
-	ProjectID    uuid.UUID
+	Name         string    `json:"name" gorm:"unique;primarykey;type:varchar(255)"`
+	ContactEmail string    `json:"contact" gorm:"type:varchar(255)"`
+	ProjectID    uuid.UUID `json:"projectId"`
 }
 
 type MitigationTransferProperties struct {

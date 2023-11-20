@@ -26,14 +26,19 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/helpers"
 	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/l3montree-dev/flawfix/internal/testutils"
+	"github.com/l3montree-dev/flawfix/mocks"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestOrganizationController(t *testing.T) {
 	rbacProvider := testutils.NewRBACProviderMock()
-	sut := controller.NewOrganizationController(testutils.NewMockRepository[uuid.UUID, models.Organization](), rbacProvider)
+	sut := controller.NewOrganizationController(
+		&mocks.Repository[uuid.UUID, models.Organization, *gorm.DB]{},
+		rbacProvider,
+	)
 
 	e := echo.New()
 	rec := httptest.NewRecorder()

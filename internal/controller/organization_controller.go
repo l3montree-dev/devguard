@@ -21,23 +21,17 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/dto"
 	"github.com/l3montree-dev/flawfix/internal/helpers"
 	"github.com/l3montree-dev/flawfix/internal/models"
+	"github.com/l3montree-dev/flawfix/internal/repositories"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
-type organizationRepository interface {
-	Create(*models.Organization) error
-	Delete(uuid.UUID) error
-	Read(uuid.UUID) (models.Organization, error)
-	Update(*models.Organization) error
-	List([]uuid.UUID) ([]models.Organization, error)
-}
-
 type OrganizationController struct {
-	organizationRepository
-	rbacProvider accesscontrol.RBACProvider
+	organizationRepository repositories.Repository[uuid.UUID, models.Organization, *gorm.DB]
+	rbacProvider           accesscontrol.RBACProvider
 }
 
-func NewOrganizationController(repository organizationRepository, rbacProvider accesscontrol.RBACProvider) *OrganizationController {
+func NewOrganizationController(repository repositories.Repository[uuid.UUID, models.Organization, *gorm.DB], rbacProvider accesscontrol.RBACProvider) *OrganizationController {
 	return &OrganizationController{
 		organizationRepository: repository,
 		rbacProvider:           rbacProvider,
@@ -56,7 +50,7 @@ func (o *OrganizationController) Create(c echo.Context) error {
 
 	org := req.ToModel()
 
-	err := o.organizationRepository.Create(&org)
+	err := o.organizationRepository.Create(nil, &org)
 	o.bootstrapOrg(c, org)
 
 	if err != nil {
@@ -106,7 +100,7 @@ func (o *OrganizationController) Delete(c echo.Context) error {
 	organizationID := helpers.GetTenant(c).ID
 
 	// delete the organization
-	err := o.organizationRepository.Delete(organizationID)
+	err := o.organizationRepository.Delete(nil, organizationID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not delete organization").WithInternal(err)
 	}

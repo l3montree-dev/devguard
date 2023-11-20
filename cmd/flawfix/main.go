@@ -105,7 +105,7 @@ func main() {
 	organizationController := controller.NewOrganizationController(organizationRepository, casbinRBACProvider)
 	reportController := controller.NewReportController(reportRepository)
 	patController := controller.NewPatController(patRepository)
-	projectController := controller.NewProjectController(projectRepository)
+	projectController := controller.NewProjectController(projectRepository, appRepository)
 
 	// apply the health route without any session or multi tenant middleware
 	e.GET("/api/v1/health", func(c echo.Context) error {
