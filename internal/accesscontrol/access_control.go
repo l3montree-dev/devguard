@@ -35,8 +35,6 @@ type AccessControl interface {
 
 	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error
 
-	GetProjectRoleName(project, role string) string
-
 	GetAllRoles(user string) []string
 
 	GrantRole(subject, role string) error
@@ -44,6 +42,9 @@ type AccessControl interface {
 
 	GrantRoleInProject(subject, role, project string) error
 	RevokeRoleInProject(subject, role, project string) error
+	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions, project string) error
+
+	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project string) error
 
 	AllowRole(role, object string, action []Action) error
 	IsAllowed(subject, object string, action Action) (bool, error)

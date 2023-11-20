@@ -64,12 +64,23 @@ func (c *CasbinRBAC) GrantRole(user, role string) error {
 	return err
 }
 
+// both roles are treated as projects roles.
+func (c *CasbinRBAC) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions, project string) error {
+	_, err := c.enforcer.AddRoleForUserInDomain(c.getProjectRoleName(roleWhichGetsPermissions, project), c.getProjectRoleName(roleWhichProvidesPermissions, project), "domain::"+c.domain)
+	return err
+}
+
 func (c *CasbinRBAC) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("role::"+roleWhichGetsPermissions, "role::"+roleWhichProvidesPermissions, "domain::"+c.domain)
 	return err
 }
 
-func (c *CasbinRBAC) GetProjectRoleName(project, role string) string {
+func (c *CasbinRBAC) LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project string) error {
+	_, err := c.enforcer.AddRoleForUserInDomain("role::"+domainRoleWhichGetsPermission, c.getProjectRoleName(projectRoleWhichProvidesPermissions, project), "domain::"+c.domain)
+	return err
+}
+
+func (c *CasbinRBAC) getProjectRoleName(role, project string) string {
 	return "project::" + project + "|role::" + role
 }
 
@@ -108,7 +119,6 @@ func (c *CasbinRBAC) RevokeRoleInProject(user, role, project string) error {
 }
 
 func (c *CasbinRBAC) IsAllowed(user, object string, action Action) (bool, error) {
-
 	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
 	if err != nil {
 		return false, err
@@ -124,7 +134,18 @@ func (c *CasbinRBAC) IsAllowed(user, object string, action Action) (bool, error)
 }
 
 func (c *CasbinRBAC) IsAllowedInProject(project, user, object string, action Action) (bool, error) {
-	return c.enforcer.Enforce("user::"+user, "domain::"+c.domain, "project::"+project+"|obj::"+object, "act::"+action)
+	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
+	if err != nil {
+		return false, err
+	}
+
+	// check for the permissions
+	for _, p := range permissions {
+		if p[2] == "project::"+project+"|obj::"+object && p[3] == "act::"+string(action) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (c CasbinRBACProvider) DomainsOfUser(user string) ([]string, error) {

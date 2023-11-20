@@ -134,11 +134,13 @@ func main() {
 
 	tenantRouter.POST("/projects", projectController.Create, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
 
-	projectRouter := tenantRouter.Group("/projects/:projectID", appMiddleware.ProjectAccessControl("project", accesscontrol.ActionRead))
+	projectRouter := tenantRouter.Group("/projects/:projectSlug", appMiddleware.ProjectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 
-	applicationRouter := projectRouter.Group("/applications/:applicationID")
+	projectRouter.GET("/", projectController.Read)
 
-	applicationRouter.POST("/reports", reportController.Create, appMiddleware.ProjectAccessControl("report", accesscontrol.ActionCreate))
+	applicationRouter := projectRouter.Group("/applications/:applicationSlug")
+
+	applicationRouter.POST("/reports", reportController.Create, appMiddleware.ProjectAccessControl(projectRepository, "report", accesscontrol.ActionCreate))
 
 	slog.Error("failed to start server", "err", e.Start(":8080").Error())
 }

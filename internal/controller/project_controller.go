@@ -75,8 +75,8 @@ func (p *ProjectController) bootstrapProject(c echo.Context, project models.Proj
 	rbac := helpers.GetRBAC(c)
 	// make sure to keep the organization roles in sync
 	// let the organization admin role inherit all permissions from the project admin
-	rbac.InheritRole("admin", rbac.GetProjectRoleName(project.ID.String(), "admin"))
-	rbac.InheritRole(rbac.GetProjectRoleName(project.ID.String(), "admin"), rbac.GetProjectRoleName(project.ID.String(), "member"))
+	rbac.LinkDomainAndProjectRole("admin", "admin", project.ID.String())
+	rbac.InheritProjectRole("admin", "member", project.ID.String())
 
 	rbac.AllowRoleInProject(project.ID.String(), "admin", "user", []accesscontrol.Action{
 		accesscontrol.ActionCreate,
@@ -103,14 +103,11 @@ func (p *ProjectController) Delete(c echo.Context) error {
 }
 
 func (p *ProjectController) Read(c echo.Context) error {
-	projectID, err := uuid.Parse(c.Param("projectID"))
-	if err != nil {
-		return echo.NewHTTPError(400, "invalid project id").WithInternal(err)
-	}
 
-	project, err := p.projectRepository.Read(projectID)
+	// just get the project from the context
+	project, err := helpers.GetProject(c)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(500, "this should never happen").WithInternal(err)
 	}
 
 	return c.JSON(200, project)

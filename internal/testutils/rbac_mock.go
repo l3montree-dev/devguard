@@ -124,6 +124,14 @@ func (r *RBACMock) GetAllRoles(user string) []string {
 	return []string{"role::" + user}
 }
 
+func (r *RBACMock) LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project string) error {
+	return nil
+}
+
+func (r *RBACMock) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions, project string) error {
+	return nil
+}
+
 func (r RBACProviderMock) GetDomainRBAC(domain string) accesscontrol.AccessControl {
 	return &RBACMock{
 		roles: map[string][]string{},

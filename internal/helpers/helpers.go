@@ -18,7 +18,6 @@ package helpers
 import (
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/auth"
 	"github.com/l3montree-dev/flawfix/internal/models"
@@ -37,18 +36,27 @@ func GetSession(ctx echo.Context) auth.AuthSession {
 	return ctx.Get("session").(auth.AuthSession)
 }
 
-func GetProjectID(c echo.Context) (uuid.UUID, error) {
-	projectID := c.Param("projectID")
+func GetProjectSlug(c echo.Context) (string, error) {
+	projectID := c.Param("projectSlug")
 	if projectID == "" {
-		return uuid.UUID{}, fmt.Errorf("could not get project id")
+		return "", fmt.Errorf("could not get project id")
 	}
-	return uuid.Parse(projectID)
+	return projectID, nil
 }
 
-func GetApplicationID(c echo.Context) (uuid.UUID, error) {
-	applicationID := c.Param("applicationID")
-	if applicationID == "" {
-		return uuid.UUID{}, fmt.Errorf("could not get application id")
+func GetApplicationSlug(c echo.Context) (string, error) {
+	applicationSlug := c.Param("applicationSlug")
+	if applicationSlug == "" {
+		return "", fmt.Errorf("could not get application id")
 	}
-	return uuid.Parse(applicationID)
+	return applicationSlug, nil
+}
+
+func GetProject(c echo.Context) (models.Project, error) {
+	project, ok := c.Get("project").(models.Project)
+	if !ok {
+		return models.Project{}, fmt.Errorf("could not get project")
+	}
+
+	return project, nil
 }

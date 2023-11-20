@@ -16,8 +16,10 @@
 package middleware
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/helpers"
+	"github.com/l3montree-dev/flawfix/internal/models"
 	"github.com/labstack/echo/v4"
 )
 
@@ -45,7 +47,11 @@ func AccessControlMiddleware(obj string, act accesscontrol.Action) echo.Middlewa
 	}
 }
 
-func ProjectAccessControl(obj string, act accesscontrol.Action) echo.MiddlewareFunc {
+type projectRepository interface {
+	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
+}
+
+func ProjectAccessControl(projectRepository projectRepository, obj string, act accesscontrol.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// get the rbac
@@ -55,12 +61,20 @@ func ProjectAccessControl(obj string, act accesscontrol.Action) echo.MiddlewareF
 			user := helpers.GetSession(c).GetUserID()
 
 			// get the project id
-			projectID, err := helpers.GetProjectID(c)
+			projectSlug, err := helpers.GetProjectSlug(c)
 			if err != nil {
 				return echo.NewHTTPError(500, "could not get project id")
 			}
 
-			allowed, err := rbac.IsAllowedInProject(projectID.String(), user, obj, act)
+			// get the project by slug and tenant.
+			project, err := projectRepository.ReadBySlug(helpers.GetTenant(c).ID, projectSlug)
+
+			if err != nil {
+				return echo.NewHTTPError(404, "could not get project")
+			}
+
+			allowed, err := rbac.IsAllowedInProject(project.ID.String(), user, obj, act)
+
 			if err != nil {
 				return echo.NewHTTPError(500, "could not determine if the user has access")
 			}
@@ -69,6 +83,8 @@ func ProjectAccessControl(obj string, act accesscontrol.Action) echo.MiddlewareF
 			if !allowed {
 				return echo.NewHTTPError(403, "forbidden")
 			}
+
+			c.Set("project", project)
 
 			return next(c)
 		}

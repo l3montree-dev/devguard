@@ -64,7 +64,7 @@ type Organization struct {
 	NIST                   bool      `json:"nist"`
 	Grundschutz            bool      `json:"grundschutz"`
 	Projects               []Project `json:"projects"`
-	Slug                   string    `json:"slug" gorm:"type:varchar(255);unique;not null"`
+	Slug                   string    `json:"slug" gorm:"type:varchar(255);unique;not null;index"`
 	Description            string    `json:"description" gorm:"type:text"`
 }
 
@@ -73,26 +73,28 @@ type Project struct {
 	Name             string `json:"name" gorm:"type:varchar(255)"`
 	Applications     []Application
 	ServiceProviders []ServiceProvider
-	OrganizationID   uuid.UUID `json:"organizationId"`
-	Slug             string    `json:"slug" gorm:"type:varchar(255);unique;not null"`
+	OrganizationID   uuid.UUID `json:"organizationId" gorm:"index:idx_project_org_slug;unique;not null"`
+	Slug             string    `json:"slug" gorm:"type:varchar(255);index:idx_project_org_slug;unique;not null"`
 }
 
 type Application struct {
 	AppModel
 	Name      string `json:"name" gorm:"type:varchar(255)"`
+	Slug      string `json:"slug" gorm:"type:varchar(255);index:idx_app_project_slug;unique;not null;"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt sql.NullTime `gorm:"index"`
 
 	Envs      []Env
-	ProjectID uuid.UUID `json:"projectId"`
+	ProjectID uuid.UUID `json:"projectId" gorm:"index:idx_app_project_slug;not null;unique"`
 }
 
 type Env struct {
 	AppModel
 	Name          string `json:"name" gorm:"type:varchar(255)"`
+	Slug          string `json:"slug" gorm:"type:varchar(255);index:idx_env_app_slug;unique;not null;"`
 	Runs          []Report
-	ApplicationID uuid.UUID `json:"applicationId"`
+	ApplicationID uuid.UUID `json:"applicationId" gorm:"index:idx_env_app_slug;not null;unique"`
 	IsDefault     bool      `json:"isDefault"`
 }
 
@@ -105,6 +107,7 @@ type Report struct {
 	Results              []Result
 	EnvID                uuid.UUID `json:"envId"`
 	InitiatingUserID     string    `json:"initiatingUserId"`
+	Timestamp            time.Time `json:"timestamp"`
 }
 
 type Result struct {

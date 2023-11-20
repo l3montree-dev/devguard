@@ -53,12 +53,12 @@ func (r *ReportController) Create(c echo.Context) error {
 		return err
 	}
 
-	applicationID, err := helpers.GetApplicationID(c)
+	applicationSlug, err := helpers.GetApplicationSlug(c)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get application id").WithInternal(err)
 	}
 	// save the report inside the database
-	reports, err := r.SaveSarifReport(applicationID.String(), report)
+	reports, err := r.SaveSarifReport(applicationSlug, report)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not save report").WithInternal(err)

@@ -17,3 +17,9 @@ func NewGormProjectRepository(db *gorm.DB) *GormProjectRepository {
 		Repository: NewGormRepository[uuid.UUID, models.Project](db),
 	}
 }
+
+func (g *GormProjectRepository) ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error) {
+	var t models.Project
+	err := g.db.Where("slug = ? AND organization_id = ?", slug, organizationID).First(&t).Error
+	return t, err
+}
