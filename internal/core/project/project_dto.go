@@ -13,4 +13,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package models
+package project
+
+import (
+	"github.com/gosimple/slug"
+)
+
+type CreateRequest struct {
+	Name        string `json:"name" validate:"required"`
+	Description string `json:"description"`
+}
+
+func (p *CreateRequest) ToModel() Model {
+	return Model{
+		Name:        p.Name,
+		Slug:        slug.Make(p.Name),
+		Description: p.Description,
+	}
+}

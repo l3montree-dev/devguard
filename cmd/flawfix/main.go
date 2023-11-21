@@ -16,23 +16,25 @@
 package main
 
 import (
-	"encoding/json"
 	"log/slog"
-	"net/http"
 	"os"
-	"time"
 
 	"github.com/lmittmann/tint"
 
 	"github.com/joho/godotenv"
 	accesscontrol "github.com/l3montree-dev/flawfix/internal/accesscontrol"
-	"github.com/l3montree-dev/flawfix/internal/controller"
+	"github.com/l3montree-dev/flawfix/internal/auth"
+	"github.com/l3montree-dev/flawfix/internal/core"
 
-	appMiddleware "github.com/l3montree-dev/flawfix/internal/middleware"
-	"github.com/l3montree-dev/flawfix/internal/models"
-	"github.com/l3montree-dev/flawfix/internal/repositories"
+	"github.com/l3montree-dev/flawfix/internal/core/application"
+	"github.com/l3montree-dev/flawfix/internal/core/env"
+	"github.com/l3montree-dev/flawfix/internal/core/org"
+	"github.com/l3montree-dev/flawfix/internal/core/pat"
+	"github.com/l3montree-dev/flawfix/internal/core/project"
+	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/echohttp"
+
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 
 	_ "github.com/lib/pq"
 	"github.com/ory/client-go"
@@ -48,84 +50,24 @@ func getOryApiClient() *client.APIClient {
 	return ory
 }
 
-func registerMiddlewares(e *echo.Echo) {
-	e.Use(middleware.CORSWithConfig(
-		middleware.CORSConfig{
-			AllowOrigins:     []string{"http://localhost:3000"},
-			AllowHeaders:     middleware.DefaultCORSConfig.AllowHeaders,
-			AllowMethods:     middleware.DefaultCORSConfig.AllowMethods,
-			AllowCredentials: true,
-		},
-	))
-
-	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-		Timeout: 10 * time.Second,
-	}))
-	e.Use(appMiddleware.Logger())
-
-	e.Use(appMiddleware.Recover())
-
-	e.HTTPErrorHandler = func(err error, c echo.Context) {
-		// do the logging straight inside the error handler
-		// this keeps controller methods clean
-		slog.Error(err.Error())
-
-		if c.Response().Committed {
-			return
-		}
-
-		he, ok := err.(*echo.HTTPError)
-		if ok {
-			if he.Internal != nil {
-				if herr, ok := he.Internal.(*echo.HTTPError); ok {
-					he = herr
-				}
-			}
-		} else {
-			he = &echo.HTTPError{
-				Code:    http.StatusInternalServerError,
-				Message: http.StatusText(http.StatusInternalServerError),
-			}
-		}
-
-		code := he.Code
-		message := he.Message
-
-		switch m := he.Message.(type) {
-		case string:
-			if e.Debug {
-				message = echo.Map{"message": m, "error": err.Error()}
-			} else {
-				message = echo.Map{"message": m}
-			}
-		case json.Marshaler:
-			// do nothing - this type knows how to format itself to JSON
-		case error:
-			message = echo.Map{"message": m.Error()}
-		}
-
-		// Send response
-		if c.Request().Method == http.MethodHead { // Issue #608
-			c.NoContent(he.Code)
-		} else {
-			c.JSON(code, message)
-		}
-	}
-}
-
-func main() {
+// initLogger initializes the logger with a tint handler.
+// tint is a simple logging library that allows to add colors to the log output.
+// this is obviously not required, but it makes the logs easier to read.
+func initLogger() {
 	loggingHandler := tint.NewHandler(os.Stdout, &tint.Options{
 		AddSource: true,
 		Level:     slog.LevelDebug,
 	})
 	logger := slog.New(loggingHandler)
 	slog.SetDefault(logger)
+}
 
+func main() {
 	godotenv.Load()
-
+	initLogger()
 	ory := getOryApiClient()
 
-	db, err := models.NewConnection(os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_DB"), "5432")
+	db, err := database.NewConnection(os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_DB"), "5432")
 	if err != nil {
 		panic(err)
 	}
@@ -136,64 +78,42 @@ func main() {
 		panic(err)
 	}
 
-	e := echo.New()
-	e.Logger.SetLevel(99)
+	server := echohttp.Server()
 
-	registerMiddlewares(e)
-
-	// create all repositories
-	appRepository := repositories.NewGormApplicationRepository(db)
-
-	organizationRepository := repositories.NewGormOrganizationRepository(db)
-	patRepository := repositories.NewGormPatRepository(db)
-	projectRepository := repositories.NewGormProjectRepository(db)
-	envRepository := repositories.NewGormEnvRepository(db)
-
-	// create all controllers
-	organizationController := controller.NewOrganizationController(organizationRepository, casbinRBACProvider)
-
-	patController := controller.NewPatController(patRepository)
-	projectController := controller.NewProjectController(projectRepository, appRepository)
-	applicationController := controller.NewApplicationController(appRepository, envRepository)
-
-	apiV1Router := e.Group("/api/v1")
+	apiV1Router := server.Group("/api/v1")
 	// apply the health route without any session or multi tenant middleware
 	apiV1Router.GET("/health", func(c echo.Context) error {
 		return c.String(200, "ok")
 	})
 
-	sessionMiddleware := appMiddleware.SessionMiddleware(ory, patRepository)
+	// we need those core features in globally scoped middlewares. Therefore
+	// initialize them right here.
+	patRepository := pat.NewGormRepository(db)
+	appRepository := application.NewGormRepository(db)
+	projectRepository := project.NewGormRepository(db)
+	projectScopedRBAC := project.ProjectAccessControlFactory(projectRepository)
 
-	apiV1Router.GET("/whoami", func(c echo.Context) error {
+	sessionMiddleware := auth.SessionMiddleware(ory, patRepository)
+
+	// everything below this line is protected by the session middleware
+	sessionRouter := apiV1Router.Group("", sessionMiddleware)
+	// register a simple whoami route for testing purposes
+	sessionRouter.GET("/whoami", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{
-			"userId": controller.GetSession(c).GetUserID(),
+			"userId": core.GetSession(c).GetUserID(),
 		})
-	}, sessionMiddleware)
+	})
 
-	patRouter := apiV1Router.Group("/pat")
+	// pat does return a scoped router, but we don't need it here.
+	pat.RegisterHttpHandler(db, apiV1Router)
 
-	patRouter.POST("/", patController.Create, sessionMiddleware)
-	patRouter.GET("/", patController.List, sessionMiddleware)
-	patRouter.DELETE("/:tokenId", patController.Delete, sessionMiddleware)
-	// use the organization router for creating a new organization - this is not multi tenant
-	apiV1Router.POST("/organizations", organizationController.Create, sessionMiddleware)
-	apiV1Router.GET("/organizations", organizationController.List, sessionMiddleware)
+	// each http registration returns its own scoped router.
+	// since this application has a multi tenant and hierarchical structure
+	// we need to pass the returned router to the next registration.
+	tenantRouter := org.RegisterHttpHandler(db, sessionRouter, casbinRBACProvider)
+	projectRouter := project.RegisterHttpHandler(db, tenantRouter, appRepository)
+	applicationRouter := application.RegisterHttpHandler(db, projectRouter, projectScopedRBAC)
+	env.RegisterHttpHandler(db, applicationRouter, appRepository)
 
-	tenantRouter := e.Group("/api/v1/organizations/:tenant", sessionMiddleware, appMiddleware.MultiTenantMiddleware(casbinRBACProvider, organizationRepository))
-
-	tenantRouter.DELETE("/", organizationController.Delete, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionDelete))
-	tenantRouter.GET("/", organizationController.Read, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionRead))
-	tenantRouter.GET("/projects", projectController.List, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionRead))
-
-	tenantRouter.POST("/projects", projectController.Create, appMiddleware.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
-
-	projectRouter := tenantRouter.Group("/projects/:projectSlug", appMiddleware.ProjectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
-
-	projectRouter.GET("/", projectController.Read)
-	projectRouter.POST("/applications", applicationController.Create, appMiddleware.ProjectAccessControl(projectRepository, accesscontrol.ObjectApplication, accesscontrol.ActionCreate))
-
-	applicationRouter := projectRouter.Group("/applications/:applicationSlug")
-	applicationRouter.GET("/", applicationController.Read, appMiddleware.ProjectAccessControl(projectRepository, "application", accesscontrol.ActionRead))
-
-	slog.Error("failed to start server", "err", e.Start(":8080").Error())
+	slog.Error("failed to start server", "err", server.Start(":8080").Error())
 }

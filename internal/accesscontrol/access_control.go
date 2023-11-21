@@ -15,6 +15,8 @@
 
 package accesscontrol
 
+import "github.com/labstack/echo/v4"
+
 const (
 	RoleOwner  = "owner"
 	RoleAdmin  = "admin"
@@ -64,3 +66,5 @@ type RBACProvider interface {
 	GetDomainRBAC(domain string) AccessControl
 	DomainsOfUser(user string) ([]string, error)
 }
+
+type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc

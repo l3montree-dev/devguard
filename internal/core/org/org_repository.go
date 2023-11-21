@@ -13,4 +13,34 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package models
+package org
+
+import (
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/database"
+)
+
+type GormRepository struct {
+	db core.DB
+	database.Repository[uuid.UUID, Model, core.DB]
+}
+
+type Repository interface {
+	database.Repository[uuid.UUID, Model, core.DB]
+	// ReadBySlug reads an organization by its slug
+	ReadBySlug(slug string) (Model, error)
+}
+
+func NewGormRepository(db core.DB) *GormRepository {
+	return &GormRepository{
+		db:         db,
+		Repository: database.NewGormRepository[uuid.UUID, Model](db),
+	}
+}
+
+func (g *GormRepository) ReadBySlug(slug string) (Model, error) {
+	var t Model
+	err := g.db.Where("slug = ?", slug).First(&t).Error
+	return t, err
+}

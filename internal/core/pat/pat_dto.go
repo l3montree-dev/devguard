@@ -13,4 +13,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package models
+package pat
+
+import (
+	"encoding/base64"
+
+	"github.com/google/uuid"
+)
+
+type CreateRequest struct {
+	Description string `json:"description" validate:"required"`
+}
+
+func (p CreateRequest) ToModel(userID string) (Model, string) {
+	token := base64.StdEncoding.EncodeToString([]byte(uuid.New().String()))
+
+	pat := Model{
+		UserID:      uuid.MustParse(userID),
+		Description: p.Description,
+	}
+
+	pat.Token = pat.HashToken(token)
+	return pat, token // return the unhashed token. This is the token that will be sent to the user
+}
