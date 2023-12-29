@@ -17,9 +17,9 @@ func RegisterHttpHandler(
 
 	controller := NewHttpController(repository, appRepository)
 
-	server.GET("/projects", controller.List, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
+	server.GET("/projects/", controller.List, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 
-	server.POST("/projects", controller.Create, core.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
+	server.POST("/projects/", controller.Create, core.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
 
 	projectRouter := server.Group("/projects/:projectSlug", ProjectAccessControl(repository, "project", accesscontrol.ActionRead))
 

@@ -16,6 +16,8 @@
 package pat
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 
@@ -50,6 +52,8 @@ func (p *PatController) Create(c core.Context) error {
 
 	patStruct, token := req.ToModel(userID)
 
+	fmt.Println(patStruct)
+
 	err := p.patRepository.Create(nil, &patStruct)
 	if err != nil {
 		return echo.NewHTTPError(500, err.Error())
@@ -64,7 +68,7 @@ func (p *PatController) Create(c core.Context) error {
 }
 
 func (p *PatController) Delete(c core.Context) error {
-	tokenId := c.Param("tokenId")
+	tokenId := core.SanitizeParam(c.Param("tokenId"))
 
 	// check if the current user is allowed to delete the token
 	pat, err := p.patRepository.Read(uuid.MustParse(tokenId))

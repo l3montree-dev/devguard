@@ -11,6 +11,7 @@ import (
 )
 
 func registerMiddlewares(e *echo.Echo) {
+	e.Pre(middleware.AddTrailingSlash())
 	e.Use(middleware.CORSWithConfig(
 		middleware.CORSConfig{
 			AllowOrigins:     []string{"http://localhost:3000"},

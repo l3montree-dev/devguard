@@ -19,7 +19,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type Repository[ID any, T any, Tx any] interface {
+type Tabler interface {
+	TableName() string
+}
+
+type Repository[ID any, T Tabler, Tx any] interface {
 	Create(tx Tx, t *T) error
 	Read(id ID) (T, error)
 	Update(tx Tx, t *T) error
@@ -28,11 +32,11 @@ type Repository[ID any, T any, Tx any] interface {
 	Transaction(func(tx Tx) error) error
 }
 
-type GormRepository[ID comparable, T any] struct {
+type GormRepository[ID comparable, T Tabler] struct {
 	db *gorm.DB
 }
 
-func NewGormRepository[ID comparable, T any](db *gorm.DB) Repository[ID, T, *gorm.DB] {
+func NewGormRepository[ID comparable, T Tabler](db *gorm.DB) Repository[ID, T, *gorm.DB] {
 	return &GormRepository[ID, T]{
 		db: db,
 	}
@@ -52,6 +56,7 @@ func (g *GormRepository[ID, T]) getDB(tx *gorm.DB) *gorm.DB {
 	if tx != nil {
 		return tx
 	}
+
 	return g.db
 }
 
@@ -62,6 +67,7 @@ func (g *GormRepository[ID, T]) Create(tx *gorm.DB, t *T) error {
 func (g *GormRepository[ID, T]) Read(id ID) (T, error) {
 	var t T
 	err := g.db.First(&t, id).Error
+
 	return t, err
 }
 
@@ -70,7 +76,8 @@ func (g *GormRepository[ID, T]) Update(tx *gorm.DB, t *T) error {
 }
 
 func (g *GormRepository[ID, T]) Delete(tx *gorm.DB, id ID) error {
-	return g.getDB(tx).Delete(id).Error
+	var t T
+	return g.getDB(tx).Delete(&t, id).Error
 }
 
 func (g *GormRepository[ID, T]) List(ids []ID) ([]T, error) {

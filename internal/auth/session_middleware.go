@@ -68,7 +68,6 @@ func tokenAuth(ctx context.Context, tokenRepository tokenRepository, oryApiClien
 func SessionMiddleware(oryApiClient *client.APIClient, tokenRepository tokenRepository) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
-
 			oryKratosSessionCookie := getCookie("ory_kratos_session", c.Cookies())
 
 			var session *client.Session
@@ -77,7 +76,7 @@ func SessionMiddleware(oryApiClient *client.APIClient, tokenRepository tokenRepo
 				// check for authorization header
 				authorizationHeader := c.Request().Header.Get("Authorization")
 				if authorizationHeader == "" {
-					return c.JSON(401, map[string]string{"error": "no session"})
+					return c.JSON(401, map[string]string{"error": "no session, missing authorization header"})
 				}
 				session, _, err = tokenAuth(c.Request().Context(), tokenRepository, oryApiClient, authorizationHeader)
 			} else {

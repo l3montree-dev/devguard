@@ -35,7 +35,8 @@ type Repository interface {
 
 func NewGormRepository(db core.DB) *GormPatRepository {
 	return &GormPatRepository{
-		db: db,
+		db:         db,
+		Repository: database.NewGormRepository[uuid.UUID, Model](db),
 	}
 }
 

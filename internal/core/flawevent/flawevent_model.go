@@ -17,6 +17,7 @@ type Model struct {
 	Type   Type      `json:"type" gorm:"type:varchar(255)"`
 	FlawID uuid.UUID `json:"flawId"`
 	UserID uuid.UUID `json:"userId"`
+	EnvID  uuid.UUID `json:"envId"`
 }
 
 func (m Model) TableName() string {

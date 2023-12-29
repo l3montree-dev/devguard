@@ -22,7 +22,7 @@ import (
 )
 
 type CreateRequest struct {
-	Description string `json:"description" validate:"required"`
+	Description string `json:"description"`
 }
 
 func (p CreateRequest) ToModel(userID string) (Model, string) {

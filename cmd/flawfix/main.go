@@ -32,6 +32,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core/org"
 	"github.com/l3montree-dev/flawfix/internal/core/pat"
 	"github.com/l3montree-dev/flawfix/internal/core/project"
+	"github.com/l3montree-dev/flawfix/internal/core/vulnreport"
 	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/echohttp"
 
@@ -104,6 +105,7 @@ func main() {
 			"userId": core.GetSession(c).GetUserID(),
 		})
 	})
+	vulnreport.RegisterHttpHandler(db, sessionRouter)
 
 	// pat does return a scoped router, but we don't need it here.
 	pat.RegisterHttpHandler(db, sessionRouter)
