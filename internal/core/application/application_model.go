@@ -11,7 +11,7 @@ type Model struct {
 	Name string `json:"name" gorm:"type:varchar(255)"`
 	Slug string `json:"slug" gorm:"type:varchar(255);uniqueIndex:idx_app_project_slug;not null;"`
 
-	Envs        []env.Model `json:"envs" gorm:"foreignKey:ApplicationID"`
+	Envs        []env.Model `json:"envs" gorm:"foreignKey:ApplicationID;constraint:OnDelete:CASCADE;"`
 	ProjectID   uuid.UUID   `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;"`
 	Description string      `json:"description" gorm:"type:text"`
 }

@@ -22,3 +22,9 @@ func NewConnection(host, user, password, dbname, port string) (*gorm.DB, error) 
 
 	return db, nil
 }
+
+type PageInfo struct {
+	Total    int64 `json:"total"`
+	PageSize int   `json:"pageSize"`
+	Page     int   `json:"page"`
+}

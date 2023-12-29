@@ -29,6 +29,7 @@ import (
 
 	"github.com/l3montree-dev/flawfix/internal/core/application"
 	"github.com/l3montree-dev/flawfix/internal/core/env"
+	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 	"github.com/l3montree-dev/flawfix/internal/core/org"
 	"github.com/l3montree-dev/flawfix/internal/core/pat"
 	"github.com/l3montree-dev/flawfix/internal/core/project"
@@ -116,7 +117,9 @@ func main() {
 	tenantRouter := org.RegisterHttpHandler(db, sessionRouter, casbinRBACProvider)
 	projectRouter := project.RegisterHttpHandler(db, tenantRouter, appRepository)
 	applicationRouter := application.RegisterHttpHandler(db, projectRouter, projectScopedRBAC)
-	env.RegisterHttpHandler(db, applicationRouter, appRepository)
+	envRouter := env.RegisterHttpHandler(db, applicationRouter, appRepository)
+
+	flaw.RegisterHttpHandler(db, envRouter, projectScopedRBAC)
 
 	data, err := json.MarshalIndent(server.Routes(), "", "  ")
 	if err == nil {

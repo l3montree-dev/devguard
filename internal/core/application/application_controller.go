@@ -72,19 +72,6 @@ func (a *HttpController) Create(c core.Context) error {
 }
 
 func (a *HttpController) Read(c core.Context) error {
-	// get the project
-	project := core.GetProject(c)
-
-	applicationSlug, err := core.GetApplicationSlug(c)
-	if err != nil {
-		return echo.NewHTTPError(400, "invalid application slug")
-	}
-
-	app, err := a.applicationRepository.ReadBySlug(project.GetID(), applicationSlug)
-
-	if err != nil {
-		return echo.NewHTTPError(404, "could not find application").WithInternal(err)
-	}
-
+	app := core.GetApplication(c).(Model)
 	return c.JSON(200, app)
 }

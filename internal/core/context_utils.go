@@ -16,6 +16,7 @@ package core
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -23,7 +24,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/auth"
 )
 
-type Project interface {
+type HasID interface {
 	GetID() uuid.UUID
 }
 
@@ -59,8 +60,16 @@ func GetApplicationSlug(c Context) (string, error) {
 	return applicationSlug, nil
 }
 
-func GetProject(c Context) Project {
-	return c.Get("project").(Project)
+func GetApplication(c Context) HasID {
+	return c.Get("application").(HasID)
+}
+
+func GetProject(c Context) HasID {
+	return c.Get("project").(HasID)
+}
+
+func GetEnv(c Context) HasID {
+	return c.Get("env").(HasID)
 }
 
 func GetEnvSlug(c Context) (string, error) {
@@ -69,4 +78,47 @@ func GetEnvSlug(c Context) (string, error) {
 		return "", fmt.Errorf("could not get env slug")
 	}
 	return strings.TrimSpace(envSlug), nil
+}
+
+type PageInfo struct {
+	PageSize int `json:"pageSize"`
+	Page     int `json:"page"`
+}
+
+func (p PageInfo) ApplyOnDB(db DB) DB {
+	return db.Offset((p.Page - 1) * p.PageSize).Limit(p.PageSize)
+}
+
+type Paged[T any] struct {
+	PageInfo
+	Total int64 `json:"total"`
+	Data  []T   `json:"data"`
+}
+
+func NewPaged[T any](pageInfo PageInfo, total int64, data []T) Paged[T] {
+	return Paged[T]{
+		PageInfo: pageInfo,
+		Total:    total,
+		Data:     data,
+	}
+}
+
+func GetPageInfo(ctx Context) PageInfo {
+	page, _ := strconv.Atoi(ctx.QueryParam("page"))
+	if page <= 0 {
+		page = 1
+	}
+
+	pageSize, _ := strconv.Atoi(ctx.QueryParam("pageSize"))
+	switch {
+	case pageSize > 100:
+		pageSize = 100
+	case pageSize <= 0:
+		pageSize = 10
+	}
+
+	return PageInfo{
+		Page:     page,
+		PageSize: pageSize,
+	}
 }
