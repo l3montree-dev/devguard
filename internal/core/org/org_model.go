@@ -16,7 +16,11 @@ type Model struct {
 	ISO27001               bool            `json:"iso27001"`
 	NIST                   bool            `json:"nist"`
 	Grundschutz            bool            `json:"grundschutz"`
-	Projects               []project.Model `json:"projects"`
+	Projects               []project.Model `json:"projects" gorm:"foreignKey:OrganizationID"`
 	Slug                   string          `json:"slug" gorm:"type:varchar(255);unique;not null;index"`
 	Description            string          `json:"description" gorm:"type:text"`
+}
+
+func (m Model) TableName() string {
+	return "organizations"
 }

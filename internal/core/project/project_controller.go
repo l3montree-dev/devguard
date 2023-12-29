@@ -107,7 +107,6 @@ func (p *Controller) Delete(c core.Context) error {
 }
 
 func (p *Controller) Read(c core.Context) error {
-
 	// just get the project from the context
 	project := core.GetProject(c).(Model)
 

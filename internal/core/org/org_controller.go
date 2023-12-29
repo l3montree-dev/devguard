@@ -36,6 +36,7 @@ func NewHttpController(repository Repository, rbacProvider accesscontrol.RBACPro
 }
 
 func (o *HttpController) Create(c core.Context) error {
+
 	var req CreateRequest
 	if err := c.Bind(&req); err != nil {
 		return err

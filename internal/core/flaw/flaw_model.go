@@ -9,10 +9,14 @@ import (
 
 type Model struct {
 	core.Model
-	EnvID    uuid.UUID `json:"envId"`
-	RuleID   *string   `json:"ruleId"`
-	Level    *string   `json:"level"`
-	Message  *string   `json:"message"`
-	Comments []comment.Model
-	Events   []flawevent.Model
+	EnvID    uuid.UUID         `json:"envId"`
+	RuleID   *string           `json:"ruleId"`
+	Level    *string           `json:"level"`
+	Message  *string           `json:"message"`
+	Comments []comment.Model   `gorm:"foreignKey:FlawID"`
+	Events   []flawevent.Model `gorm:"foreignKey:FlawID"`
+}
+
+func (m Model) TableName() string {
+	return "flaws"
 }

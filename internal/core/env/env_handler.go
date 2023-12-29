@@ -7,6 +7,8 @@ import (
 )
 
 func RegisterHttpHandler(database core.DB, server core.Server, applicationService applicationService) core.Server {
+	database.AutoMigrate(&Model{}, &flaw.Model{}, &flawevent.Model{})
+
 	repository := NewGormRepository(database)
 
 	service := NewDomainService(repository)

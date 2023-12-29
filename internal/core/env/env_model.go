@@ -12,5 +12,9 @@ type Model struct {
 	Slug          string       `json:"slug" gorm:"type:varchar(255);uniqueIndex:idx_env_app_slug;not null;"`
 	ApplicationID uuid.UUID    `json:"applicationId" gorm:"uniqueIndex:idx_env_app_slug;not null;"`
 	IsDefault     bool         `json:"isDefault"`
-	Flaws         []flaw.Model `json:"flaws"`
+	Flaws         []flaw.Model `json:"flaws" gorm:"foreignKey:EnvID"`
+}
+
+func (m Model) TableName() string {
+	return "envs"
 }

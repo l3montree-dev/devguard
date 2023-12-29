@@ -7,13 +7,15 @@ import (
 )
 
 func RegisterHttpHandler(database core.DB, server core.Server, rbacMiddleware accesscontrol.RBACMiddleware) core.Server {
+	database.AutoMigrate(&Model{})
+
 	repository := NewGormRepository(database)
 
 	controller := NewHttpController(repository, env.NewDomainService(env.NewGormRepository(database)))
 
 	server.POST("/applications", controller.Create, rbacMiddleware(accesscontrol.ObjectApplication, accesscontrol.ActionCreate))
 
-	server.GET("/", controller.Read)
+	server.GET("/applications", controller.Read)
 
 	applicationRouter := server.Group("/applications/:applicationSlug")
 

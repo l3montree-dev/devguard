@@ -7,7 +7,11 @@ import (
 
 type Model struct {
 	core.Model
-	FlawID  uuid.UUID `json:"resultId"`
+	FlawID  uuid.UUID `json:"flawId"`
 	UserID  uuid.UUID `json:"userId"`
 	Comment string    `json:"comment"`
+}
+
+func (m Model) TableName() string {
+	return "comments"
 }

@@ -16,6 +16,10 @@ type Model struct {
 	ID          uuid.UUID `json:"id" gorm:"type:uuid;default:gen_random_uuid()"`
 }
 
+func (p Model) TableName() string {
+	return "pat"
+}
+
 func (p Model) HashToken(token string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(token))

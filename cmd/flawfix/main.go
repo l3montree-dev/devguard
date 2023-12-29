@@ -16,6 +16,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log/slog"
 	"os"
 
@@ -105,7 +106,7 @@ func main() {
 	})
 
 	// pat does return a scoped router, but we don't need it here.
-	pat.RegisterHttpHandler(db, apiV1Router)
+	pat.RegisterHttpHandler(db, sessionRouter)
 
 	// each http registration returns its own scoped router.
 	// since this application has a multi tenant and hierarchical structure
@@ -114,6 +115,11 @@ func main() {
 	projectRouter := project.RegisterHttpHandler(db, tenantRouter, appRepository)
 	applicationRouter := application.RegisterHttpHandler(db, projectRouter, projectScopedRBAC)
 	env.RegisterHttpHandler(db, applicationRouter, appRepository)
+
+	data, err := json.MarshalIndent(server.Routes(), "", "  ")
+	if err == nil {
+		os.WriteFile("routes.json", data, 0644)
+	}
 
 	slog.Error("failed to start server", "err", server.Start(":8080").Error())
 }

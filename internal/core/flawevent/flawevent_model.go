@@ -18,3 +18,7 @@ type Model struct {
 	FlawID uuid.UUID `json:"flawId"`
 	UserID uuid.UUID `json:"userId"`
 }
+
+func (m Model) TableName() string {
+	return "flaw_events"
+}

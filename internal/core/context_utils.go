@@ -16,6 +16,7 @@ package core
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
@@ -67,5 +68,5 @@ func GetEnvSlug(c Context) (string, error) {
 	if envSlug == "" {
 		return "", fmt.Errorf("could not get env slug")
 	}
-	return envSlug, nil
+	return strings.TrimSpace(envSlug), nil
 }
