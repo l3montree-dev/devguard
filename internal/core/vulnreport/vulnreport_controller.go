@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/application"
 	"github.com/l3montree-dev/flawfix/internal/core/env"
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 	"github.com/l3montree-dev/flawfix/internal/core/flawevent"
@@ -16,23 +15,26 @@ import (
 )
 
 type VulnReportHttpController struct {
-	applicationRepository application.Repository
-	flawRepository        flaw.Repository
-	flawEventRepository   flawevent.Repository
-	envRepository         env.Repository
+	flawRepository flaw.Repository
+	flawEnricher   flaw.Enricher
+
+	flawEventRepository flawevent.Repository
+
+	envRepository env.Repository
 }
 
 func NewHttpController(
-	applicationRepository application.Repository,
 	flawRepository flaw.Repository,
+	flawEnricher flaw.Enricher,
 	flawEventRepository flawevent.Repository,
 	envRepository env.Repository,
 ) VulnReportHttpController {
 	return VulnReportHttpController{
-		applicationRepository: applicationRepository,
-		flawRepository:        flawRepository,
-		flawEventRepository:   flawEventRepository,
-		envRepository:         envRepository,
+		flawRepository: flawRepository,
+		flawEnricher:   flawEnricher,
+
+		flawEventRepository: flawEventRepository,
+		envRepository:       envRepository,
 	}
 }
 
@@ -57,7 +59,7 @@ func getRulesAndResults(report *sarif.Report) (rulesAndResults, error) {
 		rules:   map[string]*sarif.ReportingDescriptor{},
 	}
 outer:
-	for _, result := range tmpResults {
+	for _, result := range tmpResults[:1] {
 		if result.RuleID == nil {
 			continue
 		}
@@ -78,6 +80,23 @@ outer:
 	return res, nil
 }
 
+func parseReport(ctx core.Context) (rulesAndResults, error) {
+
+	// read the request body
+	reader := http.MaxBytesReader(ctx.Response().Writer, ctx.Request().Body, 1024*1024*10) // 10MB
+
+	bytes, err := io.ReadAll(reader)
+	if err != nil {
+		return rulesAndResults{}, echo.NewHTTPError(400, "unable to read request body").WithInternal(err)
+	}
+	report, err := sarif.FromBytes(bytes)
+	if err != nil {
+		return rulesAndResults{}, echo.NewHTTPError(400, "unable to parse SARIF report").WithInternal(err)
+	}
+
+	return getRulesAndResults(report)
+}
+
 func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 	envID := ctx.Param("envID")
 	if envID == "" {
@@ -87,26 +106,15 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 	envUUID := uuid.MustParse(envID)
 	userUUID := uuid.MustParse(core.GetSession(ctx).GetUserID())
 
-	// read the request body
-	reader := http.MaxBytesReader(ctx.Response().Writer, ctx.Request().Body, 1024*1024*10) // 10MB
-
-	bytes, err := io.ReadAll(reader)
-	if err != nil {
-		return echo.NewHTTPError(400, "unable to read request body").WithInternal(err)
-	}
-	report, err := sarif.FromBytes(bytes)
-	if err != nil {
-		return echo.NewHTTPError(400, "unable to parse SARIF report").WithInternal(err)
-	}
-
-	rulesAndResults, err := getRulesAndResults(report)
+	// parse the report
+	rulesAndResults, err := parseReport(ctx)
 	if err != nil {
 		return err
 	}
 
-	// get the current unfixed flaws.
+	// get the current flaws.
 	// we will use this to determine if a flaw is new or not
-	flaws, err := c.flawRepository.GetWithLastEvent(nil, envUUID)
+	flaws, err := c.flawRepository.GetByEnvId(nil, envUUID)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "unable to get flaws").WithInternal(err)
@@ -114,19 +122,20 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 
 	// split the flaws into fixed and unfixed
 	// key is the rule id
-	fixedFlaws := map[string]flaw.ModelWithLastEvent{}
-	unfixedFlaws := map[string]flaw.ModelWithLastEvent{}
+	fixedFlaws := map[string]flaw.Model{}
+	unfixedFlaws := map[string]flaw.Model{}
 
-	for _, flaw := range flaws {
-		if flaw.LastEvent.Type == flawevent.EventTypeFixed {
-			fixedFlaws[flaw.RuleID] = flaw
+	for _, f := range flaws {
+		if f.State == flaw.StateFixed {
+			fixedFlaws[f.RuleID] = f
 		} else {
-			unfixedFlaws[flaw.RuleID] = flaw
+			unfixedFlaws[f.RuleID] = f
 		}
 	}
 
 	newDetectedFlaws := []flaw.Model{}
 	newFlawEvents := []flawevent.Model{}
+	flawsToUpdate := []flaw.Model{}
 
 	// check which flaws needs to be created and which are fixed now.
 	// we will do this by comparing the results in the report with the unfixed flaws
@@ -140,25 +149,27 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 			// nothing todo here.
 			continue
 		}
-		if flaw, ok := fixedFlaws[*result.RuleID]; ok {
-			fmt.Println("flaw is fixed", ruleId)
+		if f, ok := fixedFlaws[*result.RuleID]; ok {
 			// we need to create a new detected event.
-			newFlawEvents = append(newFlawEvents, flawevent.Model{
+			flawEvent := flawevent.Model{
 				Type:   flawevent.EventTypeDetected,
-				FlawID: flaw.ID,
+				FlawID: f.ID,
 				UserID: userUUID,
-			})
+			}
+			newFlawEvents = append(newFlawEvents, flawEvent)
+
+			// we need to reopen the flaw
+			flawsToUpdate = append(flawsToUpdate, f.ApplyEvent(flawEvent))
+
 			continue
 		}
-
-		fmt.Println("flaw is new", ruleId)
 
 		// we never saw this flaw before
 		newDetectedFlaws = append(newDetectedFlaws, flaw.Model{
 			RuleID:  *result.RuleID,
-			Level:   result.Level,
 			Message: result.Message.Text,
 			EnvID:   envUUID,
+			State:   flaw.StateOpen,
 			Events: []flawevent.Model{
 				{
 					Type:   flawevent.EventTypeDetected,
@@ -168,7 +179,7 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 		})
 	}
 
-	// now safe all.
+	// now save all.
 	err = c.flawRepository.Transaction(func(tx core.DB) error {
 		c.envRepository.UpdateLastReportTime(tx, envUUID)
 		// create the new flaws
@@ -183,12 +194,20 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 			return c.flawEventRepository.CreateBatch(tx, newFlawEvents)
 		}
 
+		if len(flawsToUpdate) > 0 {
+			return c.flawRepository.UpdateBatch(tx, flawsToUpdate)
+		}
+
 		return nil
 	})
+
+	// enrich the flaws
+	// this method runs asynchronously
+	c.flawEnricher.AsyncEnrich(newDetectedFlaws)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "unable to create new flaws").WithInternal(err)
 	}
 
-	return ctx.JSON(200, flaws)
+	return ctx.JSON(200, nil)
 }

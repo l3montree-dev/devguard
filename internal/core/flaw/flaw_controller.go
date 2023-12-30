@@ -19,7 +19,7 @@ func (c FlawHttpController) ListPaged(ctx core.Context) error {
 	// get the env
 	env := core.GetEnv(ctx)
 
-	pagedResp, err := c.flawRepository.GetWithLastEventPaged(
+	pagedResp, err := c.flawRepository.GetByEnvIdPaged(
 		nil,
 		core.GetPageInfo(ctx),
 		env.GetID(),
