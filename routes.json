@@ -1,8 +1,8 @@
 [
   {
-    "method": "echo_route_not_found",
-    "path": "/api/v1/pats",
-    "name": "github.com/labstack/echo/v4.glob..func1"
+    "method": "POST",
+    "path": "/api/v1/pats/",
+    "name": "github.com/l3montree-dev/flawfix/internal/core/pat.(*PatController).Create-fm"
   },
   {
     "method": "DELETE",
@@ -10,99 +10,14 @@
     "name": "github.com/l3montree-dev/flawfix/internal/core/org.(*HttpController).Delete-fm"
   },
   {
-    "method": "echo_route_not_found",
-    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/envs/:envSlug/*",
-    "name": "github.com/labstack/echo/v4.glob..func1"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/envs/:envSlug/",
-    "name": "github.com/l3montree-dev/flawfix/internal/core/env.(*Controller).Read-fm"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/health",
-    "name": "main.main.func1"
-  },
-  {
-    "method": "echo_route_not_found",
-    "path": "/api/v1/*",
-    "name": "github.com/labstack/echo/v4.glob..func1"
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/organizations/",
-    "name": "github.com/l3montree-dev/flawfix/internal/core/org.(*HttpController).Create-fm"
-  },
-  {
-    "method": "echo_route_not_found",
-    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/*",
-    "name": "github.com/labstack/echo/v4.glob..func1"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/",
-    "name": "github.com/l3montree-dev/flawfix/internal/core/application.(*HttpController).Read-fm"
-  },
-  {
-    "method": "echo_route_not_found",
-    "path": "/api/v1",
-    "name": "github.com/labstack/echo/v4.glob..func1"
-  },
-  {
-    "method": "echo_route_not_found",
-    "path": "/api/v1/vulnreports",
-    "name": "github.com/labstack/echo/v4.glob..func1"
-  },
-  {
     "method": "GET",
     "path": "/api/v1/organizations/:tenant/",
     "name": "github.com/l3montree-dev/flawfix/internal/core/org.(*HttpController).Read-fm"
   },
   {
-    "method": "GET",
+    "method": "POST",
     "path": "/api/v1/organizations/:tenant/projects/",
-    "name": "github.com/l3montree-dev/flawfix/internal/core/project.(*Controller).List-fm"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/",
-    "name": "github.com/l3montree-dev/flawfix/internal/core/project.(*Controller).Read-fm"
-  },
-  {
-    "method": "echo_route_not_found",
-    "path": "/api/v1/organizations/:tenant/*",
-    "name": "github.com/labstack/echo/v4.glob..func1"
-  },
-  {
-    "method": "echo_route_not_found",
-    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/envs/:envSlug/flaws",
-    "name": "github.com/labstack/echo/v4.glob..func1"
-  },
-  {
-    "method": "echo_route_not_found",
-    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/envs/:envSlug/flaws/*",
-    "name": "github.com/labstack/echo/v4.glob..func1"
-  },
-  {
-    "method": "GET",
-    "path": "/api/v1/whoami",
-    "name": "main.main.func2"
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/vulnreports/:envID/",
-    "name": "github.com/l3montree-dev/flawfix/internal/core/vulnreport.VulnReportHttpController.ImportVulnReport-fm"
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/pats/",
-    "name": "github.com/l3montree-dev/flawfix/internal/core/pat.(*PatController).Create-fm"
-  },
-  {
-    "method": "echo_route_not_found",
-    "path": "/api/v1/organizations",
-    "name": "github.com/labstack/echo/v4.glob..func1"
+    "name": "github.com/l3montree-dev/flawfix/internal/core/project.(*Controller).Create-fm"
   },
   {
     "method": "echo_route_not_found",
@@ -111,12 +26,22 @@
   },
   {
     "method": "GET",
-    "path": "/api/v1/pats/",
-    "name": "github.com/l3montree-dev/flawfix/internal/core/pat.(*PatController).List-fm"
+    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/",
+    "name": "github.com/l3montree-dev/flawfix/internal/core/project.(*Controller).Read-fm"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/health",
+    "name": "main.main.func1"
   },
   {
     "method": "echo_route_not_found",
-    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/*",
+    "path": "/api/v1/organizations/:tenant",
+    "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "echo_route_not_found",
+    "path": "/api/v1/organizations/:tenant/*",
     "name": "github.com/labstack/echo/v4.glob..func1"
   },
   {
@@ -126,13 +51,58 @@
   },
   {
     "method": "echo_route_not_found",
-    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/envs/:envSlug",
+    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/envs/:envSlug/flaws",
     "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "echo_route_not_found",
+    "path": "/api/v1/organizations",
+    "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "echo_route_not_found",
+    "path": "/api/v1/vulnreports",
+    "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/",
+    "name": "github.com/l3montree-dev/flawfix/internal/core/application.(*HttpController).Create-fm"
+  },
+  {
+    "method": "echo_route_not_found",
+    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/envs/:envSlug/flaws/*",
+    "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "echo_route_not_found",
+    "path": "/api/v1/*",
+    "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "echo_route_not_found",
+    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/*",
+    "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/whoami",
+    "name": "main.main.func2"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/organizations/",
+    "name": "github.com/l3montree-dev/flawfix/internal/core/org.(*HttpController).Create-fm"
   },
   {
     "method": "echo_route_not_found",
     "path": "/api/v1/pats/*",
     "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/pats/",
+    "name": "github.com/l3montree-dev/flawfix/internal/core/pat.(*PatController).List-fm"
   },
   {
     "method": "DELETE",
@@ -145,18 +115,23 @@
     "name": "github.com/l3montree-dev/flawfix/internal/core/org.(*HttpController).List-fm"
   },
   {
-    "method": "echo_route_not_found",
-    "path": "/api/v1/organizations/:tenant",
-    "name": "github.com/labstack/echo/v4.glob..func1"
-  },
-  {
     "method": "GET",
     "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/",
     "name": "github.com/l3montree-dev/flawfix/internal/core/application.(*HttpController).Read-fm"
   },
   {
+    "method": "GET",
+    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/",
+    "name": "github.com/l3montree-dev/flawfix/internal/core/application.(*HttpController).Read-fm"
+  },
+  {
     "method": "echo_route_not_found",
-    "path": "/api/v1/vulnreports/*",
+    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/envs/:envSlug/*",
+    "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "echo_route_not_found",
+    "path": "/api/v1",
     "name": "github.com/labstack/echo/v4.glob..func1"
   },
   {
@@ -165,18 +140,43 @@
     "name": "github.com/labstack/echo/v4.glob..func1"
   },
   {
-    "method": "POST",
+    "method": "GET",
     "path": "/api/v1/organizations/:tenant/projects/",
-    "name": "github.com/l3montree-dev/flawfix/internal/core/project.(*Controller).Create-fm"
-  },
-  {
-    "method": "POST",
-    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/",
-    "name": "github.com/l3montree-dev/flawfix/internal/core/application.(*HttpController).Create-fm"
+    "name": "github.com/l3montree-dev/flawfix/internal/core/project.(*Controller).List-fm"
   },
   {
     "method": "GET",
     "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/envs/:envSlug/flaws/",
     "name": "github.com/l3montree-dev/flawfix/internal/core/flaw.FlawHttpController.ListPaged-fm"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/vulnreports/:envID/",
+    "name": "github.com/l3montree-dev/flawfix/internal/core/vulnreport.VulnReportHttpController.ImportVulnReport-fm"
+  },
+  {
+    "method": "echo_route_not_found",
+    "path": "/api/v1/pats",
+    "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "echo_route_not_found",
+    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/*",
+    "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "echo_route_not_found",
+    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/envs/:envSlug",
+    "name": "github.com/labstack/echo/v4.glob..func1"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/organizations/:tenant/projects/:projectSlug/applications/:applicationSlug/envs/:envSlug/",
+    "name": "github.com/l3montree-dev/flawfix/internal/core/env.(*Controller).Read-fm"
+  },
+  {
+    "method": "echo_route_not_found",
+    "path": "/api/v1/vulnreports/*",
+    "name": "github.com/labstack/echo/v4.glob..func1"
   }
 ]

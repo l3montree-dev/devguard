@@ -59,7 +59,7 @@ func getRulesAndResults(report *sarif.Report) (rulesAndResults, error) {
 		rules:   map[string]*sarif.ReportingDescriptor{},
 	}
 outer:
-	for _, result := range tmpResults[:1] {
+	for _, result := range tmpResults {
 		if result.RuleID == nil {
 			continue
 		}
