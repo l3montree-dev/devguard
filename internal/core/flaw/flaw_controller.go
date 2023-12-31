@@ -22,6 +22,8 @@ func (c FlawHttpController) ListPaged(ctx core.Context) error {
 	pagedResp, err := c.flawRepository.GetByEnvIdPaged(
 		nil,
 		core.GetPageInfo(ctx),
+		core.GetFilterQuery(ctx),
+		core.GetSortQuery(ctx),
 		env.GetID(),
 	)
 

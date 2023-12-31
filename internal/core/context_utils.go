@@ -16,6 +16,7 @@ package core
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -120,5 +121,166 @@ func GetPageInfo(ctx Context) PageInfo {
 	return PageInfo{
 		Page:     page,
 		PageSize: pageSize,
+	}
+}
+
+type FilterQuery struct {
+	Field    string
+	Value    string
+	Operator string
+}
+
+func GetFilterQuery(ctx Context) []FilterQuery {
+	// get all query params, which start with filterQuery
+	query := ctx.QueryParams()
+	filterQuerys := []FilterQuery{}
+	for key := range query {
+		if !strings.HasPrefix(key, "filterQuery") {
+			continue
+		}
+
+		// get the value
+		value := query.Get(key)
+		// extract the field and operator from the key
+		// it looks like this: filterQuery[cve.cvss][is]=10
+
+		// remove the filterQuery prefix
+		key = strings.TrimPrefix(key, "filterQuery")
+		// use a regex
+		// get the field
+		field := strings.Split(key, "[")[1]
+		field = strings.TrimSuffix(field, "]")
+
+		// get the operator
+		operator := strings.Split(key, "[")[2]
+		operator = strings.TrimSuffix(operator, "]")
+
+		fmt.Println(field, operator, value)
+
+		filterQuerys = append(filterQuerys, FilterQuery{
+			Field:    field,
+			Value:    value,
+			Operator: operator,
+		})
+	}
+
+	return filterQuerys
+}
+
+type SortQuery struct {
+	Field    string
+	Operator string // asc or desc
+}
+
+func GetSortQuery(ctx Context) []SortQuery {
+	// get all query params, which start with filterQuery
+	query := ctx.QueryParams()
+	sortQuerys := []SortQuery{}
+	for key := range query {
+		if !strings.HasPrefix(key, "sort") {
+			continue
+		}
+
+		// get the value
+		operator := query.Get(key)
+		// extract the field and operator from the key
+		// it looks like this: sort[cve.cvss]=desc
+
+		// remove the filterQuery prefix
+		key = strings.TrimPrefix(key, "sort")
+		// use a regex
+		// get the field
+		field := strings.Split(key, "[")[1]
+		field = strings.TrimSuffix(field, "]")
+
+		sortQuerys = append(sortQuerys, SortQuery{
+			Field:    field,
+			Operator: operator,
+		})
+	}
+
+	return sortQuerys
+}
+
+func field2TableName(fieldName string) string {
+	switch fieldName {
+	case "cve":
+		return "CVE"
+	default:
+		return fieldName
+	}
+}
+
+func quoteRelationField(field string) string {
+	// split at the dot
+	split := strings.Split(field, ".")
+	if len(split) > 1 {
+		// quote the field. it looks like this: "cve"."cvss"
+		return fmt.Sprintf("\"%s\".\"%s\"", field2TableName(split[0]), split[1])
+	}
+	return field
+}
+
+var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+// Regular expression to validate field names
+var validFieldNameRegex = regexp.MustCompile("^[a-zA-Z0-9_.]+$")
+
+func toSnakeCase(str string) string {
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
+}
+
+func sanitizeField(field string) string {
+	if !validFieldNameRegex.MatchString(field) {
+		panic("invalid field name - to risky, might be sql injection")
+	}
+
+	return quoteRelationField(toSnakeCase(field))
+}
+
+func (f FilterQuery) SQL() string {
+
+	field := sanitizeField(f.Field)
+
+	switch f.Operator {
+	case "is":
+		return field + " = ?"
+	case "is not":
+		return field + " != ?"
+	case "is greater than":
+		return field + " > ?"
+	case "is less than":
+		return field + " < ?"
+	case "is after":
+		return field + " > ?"
+	case "is before":
+		return field + " < ?"
+	default:
+		// default do an equals
+		return f.Field + " = ?"
+	}
+}
+
+func (s SortQuery) SQL() string {
+	// Regular expression to validate field names
+	validFieldNameRegex := regexp.MustCompile("^[a-zA-Z0-9_.]+$")
+
+	if !validFieldNameRegex.MatchString(s.Field) {
+		panic("invalid field name - to risky, might be sql injection")
+	}
+
+	field := sanitizeField(s.Field)
+
+	switch s.Operator {
+	case "asc":
+		return field + " asc"
+	case "desc":
+		return field + " desc"
+	default:
+		// default do an equals
+		return s.Field + " asc"
 	}
 }

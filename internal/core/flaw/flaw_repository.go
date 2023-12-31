@@ -16,7 +16,7 @@ type Repository interface {
 	database.Repository[uuid.UUID, Model, core.DB]
 
 	GetByEnvId(tx core.DB, envId uuid.UUID) ([]Model, error)
-	GetByEnvIdPaged(tx core.DB, pageInfo core.PageInfo, envId uuid.UUID) (core.Paged[Model], error)
+	GetByEnvIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, envId uuid.UUID) (core.Paged[Model], error)
 }
 
 func NewGormRepository(db core.DB) Repository {
@@ -39,12 +39,38 @@ func (r *GormRepository) GetByEnvId(
 	return flaws, nil
 }
 
-func (r *GormRepository) GetByEnvIdPaged(tx core.DB, pageInfo core.PageInfo, envId uuid.UUID) (core.Paged[Model], error) {
+func (r *GormRepository) GetByEnvIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, envId uuid.UUID) (core.Paged[Model], error) {
 	var count int64
 	var flaws []Model = []Model{}
 
+	q := r.Repository.GetDB(tx).Joins("CVE").Where("env_id = ?", envId)
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value)
+	}
+	q.Model(&Model{}).Count(&count)
+
 	// get all flaws of the environment
-	if err := pageInfo.ApplyOnDB(r.Repository.GetDB(tx)).Preload("CVE").Where("env_id = ?", envId).Find(&flaws).Error; err != nil {
+	q = pageInfo.ApplyOnDB(r.Repository.GetDB(tx)).Joins("CVE").Where("env_id = ?", envId)
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value)
+	}
+
+	// apply sorting
+	if len(sort) > 0 {
+		for _, s := range sort {
+			q = q.Order(s.SQL())
+		}
+	} else {
+		q = q.Order("\"CVE\".\"cvss\" desc")
+	}
+
+	err := q.Find(&flaws).Error
+
+	if err != nil {
 		return core.Paged[Model]{}, err
 	}
 
