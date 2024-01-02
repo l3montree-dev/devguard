@@ -59,7 +59,7 @@ func getRulesAndResults(report *sarif.Report) (rulesAndResults, error) {
 		rules:   map[string]*sarif.ReportingDescriptor{},
 	}
 outer:
-	for _, result := range tmpResults {
+	for _, result := range tmpResults[:1] {
 		if result.RuleID == nil {
 			continue
 		}
@@ -81,7 +81,6 @@ outer:
 }
 
 func parseReport(ctx core.Context) (rulesAndResults, error) {
-
 	// read the request body
 	reader := http.MaxBytesReader(ctx.Response().Writer, ctx.Request().Body, 1024*1024*10) // 10MB
 

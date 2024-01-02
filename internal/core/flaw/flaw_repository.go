@@ -76,3 +76,10 @@ func (r *GormRepository) GetByEnvIdPaged(tx core.DB, pageInfo core.PageInfo, fil
 
 	return core.NewPaged(pageInfo, count, flaws), nil
 }
+
+func (g GormRepository) Read(id uuid.UUID) (Model, error) {
+	var t Model
+	err := g.db.Preload("CVE.CWEs").Preload("Events").Preload("CVE").First(&t, id).Error
+
+	return t, err
+}

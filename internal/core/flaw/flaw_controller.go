@@ -33,3 +33,19 @@ func (c FlawHttpController) ListPaged(ctx core.Context) error {
 
 	return ctx.JSON(200, pagedResp)
 }
+
+func (c FlawHttpController) Read(ctx core.Context) error {
+	flawId, err := core.GetFlawID(ctx)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid flaw id")
+	}
+
+	flaw, err := c.flawRepository.Read(flawId)
+	if err != nil {
+		return echo.NewHTTPError(404, "could not find flaw")
+	}
+
+	// get all the associated cwes
+
+	return ctx.JSON(200, flaw)
+}

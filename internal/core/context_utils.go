@@ -33,6 +33,14 @@ type Tenant interface {
 	GetID() uuid.UUID
 }
 
+func GetFlawID(c Context) (uuid.UUID, error) {
+	flawID := c.Param("flawId")
+	if flawID == "" {
+		return uuid.UUID{}, fmt.Errorf("could not get flaw id")
+	}
+	return uuid.Parse(flawID)
+}
+
 func GetRBAC(c Context) accesscontrol.AccessControl {
 	return c.Get("rbac").(accesscontrol.AccessControl)
 }

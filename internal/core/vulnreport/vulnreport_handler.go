@@ -2,18 +2,22 @@ package vulnreport
 
 import (
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/cve"
+	"github.com/l3montree-dev/flawfix/internal/core/cwe"
 	"github.com/l3montree-dev/flawfix/internal/core/env"
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 	"github.com/l3montree-dev/flawfix/internal/core/flawevent"
 )
 
 func RegisterHttpHandler(database core.DB, server core.Server) {
-	database.AutoMigrate(&cve.CVEModel{}, &cve.CWEModel{})
+	database.AutoMigrate(&cwe.CVEModel{}, &cwe.CWEModel{})
 
-	cveRepository := cve.NewGormRepository(database)
+	cweRepository := cwe.NewGormCWERepository(database)
 
-	cveService := cve.NewService(cveRepository)
+	cwe.SyncCWEs(cweRepository) // sync on startup
+
+	cveRepository := cwe.NewGormRepository(database)
+
+	cveService := cwe.NewService(cveRepository)
 
 	flawRepository := flaw.NewGormRepository(database)
 

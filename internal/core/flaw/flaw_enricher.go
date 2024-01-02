@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/flawfix/internal/core/cve"
+	"github.com/l3montree-dev/flawfix/internal/core/cwe"
 )
 
 type Enricher interface {
@@ -13,11 +13,11 @@ type Enricher interface {
 }
 
 type enricher struct {
-	cveService     cve.Service
+	cveService     cwe.CVEService
 	flawRepository Repository
 }
 
-func NewEnricher(cveService cve.Service, flawRepository Repository) Enricher {
+func NewEnricher(cveService cwe.CVEService, flawRepository Repository) Enricher {
 	return &enricher{
 		cveService:     cveService,
 		flawRepository: flawRepository,

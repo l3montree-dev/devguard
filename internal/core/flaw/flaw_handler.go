@@ -13,5 +13,6 @@ func RegisterHttpHandler(database core.DB, server core.Server, rbacMiddleware ac
 	flawRouter := server.Group("/flaws")
 
 	flawRouter.GET("/", controller.ListPaged)
+	flawRouter.GET("/:flawId/", controller.Read)
 	return flawRouter
 }

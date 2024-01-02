@@ -4,7 +4,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/core/comment"
-	"github.com/l3montree-dev/flawfix/internal/core/cve"
+	"github.com/l3montree-dev/flawfix/internal/core/cwe"
 	"github.com/l3montree-dev/flawfix/internal/core/flawevent"
 )
 
@@ -15,6 +15,7 @@ const (
 	StateFixed               State = "fixed"
 	StateAccepted            State = "accepted"
 	StateMarkedForMitigation State = "markedForMitigation"
+	StateFalsePositive       State = "falsePositive"
 )
 
 type Model struct {
@@ -25,10 +26,12 @@ type Model struct {
 	Events   []flawevent.Model `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"events"`
 	EnvID    uuid.UUID         `json:"envId" gorm:"uniqueIndex:idx_ruleId_env;not null;"`
 	State    State             `json:"state" gorm:"default:'open';not null;type:varchar(255);"`
-	Priority int               `json:"priority" gorm:"default:5;not null;"`
 
-	CVE   *cve.CVEModel `json:"cve"`
+	CVE   *cwe.CVEModel `json:"cve"`
 	CVEID string        `json:"cveId" gorm:"null;type:varchar(255);default:null;"`
+
+	Effort         *int `json:"effort" gorm:"default:null;"`
+	RiskAssessment *int `json:"riskAssessment" gorm:"default:null;"`
 }
 
 func (m Model) TableName() string {

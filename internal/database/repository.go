@@ -33,6 +33,9 @@ type Repository[ID any, T Tabler, Tx any] interface {
 	List(ids []ID) ([]T, error)
 	Transaction(func(tx Tx) error) error
 	GetDB(tx Tx) Tx
+
+	Save(tx Tx, t *T) error
+	SaveBatch(tx Tx, ts []T) error
 }
 
 type GormRepository[ID comparable, T Tabler] struct {
@@ -43,6 +46,14 @@ func NewGormRepository[ID comparable, T Tabler](db *gorm.DB) Repository[ID, T, *
 	return &GormRepository[ID, T]{
 		db: db,
 	}
+}
+
+func (g *GormRepository[ID, T]) Save(tx *gorm.DB, t *T) error {
+	return g.GetDB(tx).Save(t).Error
+}
+
+func (g *GormRepository[ID, T]) SaveBatch(tx *gorm.DB, ts []T) error {
+	return g.GetDB(tx).Save(ts).Error
 }
 
 func (g *GormRepository[ID, T]) Transaction(f func(tx *gorm.DB) error) error {
