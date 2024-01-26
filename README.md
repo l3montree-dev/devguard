@@ -91,7 +91,7 @@ FlawFix is divided into two projects: A frontend (FlawFix Web) and a backend (Fl
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-_Please refer to the [Documentation](https://docs.flawfix.dev)_
+_Please refer to the [Documentation](https://flawfix.dev/docs/getting-started)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
