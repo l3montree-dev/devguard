@@ -3,7 +3,6 @@ package env
 import (
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/core/flawevent"
 	"github.com/labstack/echo/v4"
 )
 
@@ -32,12 +31,12 @@ func envMiddleware(repository Repository) func(next echo.HandlerFunc) echo.Handl
 }
 
 func RegisterHttpHandler(database core.DB, server core.Server, applicationService applicationService) core.Server {
-	database.AutoMigrate(&Model{}, &flaw.Model{}, &flawevent.Model{})
+	database.AutoMigrate(&Model{}, &flaw.Model{}, &flaw.Model{})
 
 	repository := NewGormRepository(database)
 
 	service := NewDomainService(repository)
-	controller := NewHttpController(service, repository, flaw.NewGormRepository(database), flawevent.NewGormRepository(database), applicationService)
+	controller := NewHttpController(service, repository, flaw.NewGormRepository(database), flaw.NewGormRepository(database), applicationService)
 
 	envRouter := server.Group("/envs/:envSlug", envMiddleware(repository))
 	envRouter.GET("/", controller.Read)

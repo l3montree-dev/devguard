@@ -4,7 +4,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/core/flawevent"
 	"github.com/labstack/echo/v4"
 )
 
@@ -16,7 +15,7 @@ type Controller struct {
 	envService          Service
 	envRepository       Repository
 	flawRepository      flaw.Repository
-	flawEventRepository flawevent.Repository
+	flawEventRepository flaw.Repository
 	applicationService  applicationService
 }
 
@@ -24,7 +23,7 @@ func NewHttpController(
 	envService Service,
 	envRepo Repository,
 	flawRepository flaw.Repository,
-	flawEventRepository flawevent.Repository,
+	flawEventRepository flaw.Repository,
 	applicationService applicationService,
 ) *Controller {
 	return &Controller{

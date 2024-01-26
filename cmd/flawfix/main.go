@@ -16,7 +16,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log/slog"
 	"os"
 
@@ -120,11 +119,6 @@ func main() {
 	envRouter := env.RegisterHttpHandler(db, applicationRouter, appRepository)
 
 	flaw.RegisterHttpHandler(db, envRouter, projectScopedRBAC)
-
-	data, err := json.MarshalIndent(server.Routes(), "", "  ")
-	if err == nil {
-		os.WriteFile("routes.json", data, 0644)
-	}
 
 	slog.Error("failed to start server", "err", server.Start(":8080").Error())
 }

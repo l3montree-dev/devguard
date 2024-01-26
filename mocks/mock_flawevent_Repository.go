@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	flawevent "github.com/l3montree-dev/flawfix/internal/core/flawevent"
+	flaw "github.com/l3montree-dev/flawfix/internal/core/flaw"
 	gorm "gorm.io/gorm"
 
 	mock "github.com/stretchr/testify/mock"
@@ -25,7 +25,7 @@ func (_m *FlaweventRepository) EXPECT() *FlaweventRepository_Expecter {
 }
 
 // Create provides a mock function with given fields: tx, t
-func (_m *FlaweventRepository) Create(tx *gorm.DB, t *flawevent.Model) error {
+func (_m *FlaweventRepository) Create(tx *gorm.DB, t *flaw.Model) error {
 	ret := _m.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -33,7 +33,7 @@ func (_m *FlaweventRepository) Create(tx *gorm.DB, t *flawevent.Model) error {
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, *flawevent.Model) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *flaw.Model) error); ok {
 		r0 = rf(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -49,14 +49,14 @@ type FlaweventRepository_Create_Call struct {
 
 // Create is a helper method to define mock.On call
 //   - tx *gorm.DB
-//   - t *flawevent.Model
+//   - t *flaw.Model
 func (_e *FlaweventRepository_Expecter) Create(tx interface{}, t interface{}) *FlaweventRepository_Create_Call {
 	return &FlaweventRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
-func (_c *FlaweventRepository_Create_Call) Run(run func(tx *gorm.DB, t *flawevent.Model)) *FlaweventRepository_Create_Call {
+func (_c *FlaweventRepository_Create_Call) Run(run func(tx *gorm.DB, t *flaw.Model)) *FlaweventRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(*flawevent.Model))
+		run(args[0].(*gorm.DB), args[1].(*flaw.Model))
 	})
 	return _c
 }
@@ -66,7 +66,7 @@ func (_c *FlaweventRepository_Create_Call) Return(_a0 error) *FlaweventRepositor
 	return _c
 }
 
-func (_c *FlaweventRepository_Create_Call) RunAndReturn(run func(*gorm.DB, *flawevent.Model) error) *FlaweventRepository_Create_Call {
+func (_c *FlaweventRepository_Create_Call) RunAndReturn(run func(*gorm.DB, *flaw.Model) error) *FlaweventRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -119,23 +119,23 @@ func (_c *FlaweventRepository_Delete_Call) RunAndReturn(run func(*gorm.DB, uuid.
 }
 
 // List provides a mock function with given fields: ids
-func (_m *FlaweventRepository) List(ids []uuid.UUID) ([]flawevent.Model, error) {
+func (_m *FlaweventRepository) List(ids []uuid.UUID) ([]flaw.Model, error) {
 	ret := _m.Called(ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []flawevent.Model
+	var r0 []flaw.Model
 	var r1 error
-	if rf, ok := ret.Get(0).(func([]uuid.UUID) ([]flawevent.Model, error)); ok {
+	if rf, ok := ret.Get(0).(func([]uuid.UUID) ([]flaw.Model, error)); ok {
 		return rf(ids)
 	}
-	if rf, ok := ret.Get(0).(func([]uuid.UUID) []flawevent.Model); ok {
+	if rf, ok := ret.Get(0).(func([]uuid.UUID) []flaw.Model); ok {
 		r0 = rf(ids)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]flawevent.Model)
+			r0 = ret.Get(0).([]flaw.Model)
 		}
 	}
 
@@ -166,33 +166,33 @@ func (_c *FlaweventRepository_List_Call) Run(run func(ids []uuid.UUID)) *Flaweve
 	return _c
 }
 
-func (_c *FlaweventRepository_List_Call) Return(_a0 []flawevent.Model, _a1 error) *FlaweventRepository_List_Call {
+func (_c *FlaweventRepository_List_Call) Return(_a0 []flaw.Model, _a1 error) *FlaweventRepository_List_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FlaweventRepository_List_Call) RunAndReturn(run func([]uuid.UUID) ([]flawevent.Model, error)) *FlaweventRepository_List_Call {
+func (_c *FlaweventRepository_List_Call) RunAndReturn(run func([]uuid.UUID) ([]flaw.Model, error)) *FlaweventRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function with given fields: id
-func (_m *FlaweventRepository) Read(id uuid.UUID) (flawevent.Model, error) {
+func (_m *FlaweventRepository) Read(id uuid.UUID) (flaw.Model, error) {
 	ret := _m.Called(id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
 	}
 
-	var r0 flawevent.Model
+	var r0 flaw.Model
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID) (flawevent.Model, error)); ok {
+	if rf, ok := ret.Get(0).(func(uuid.UUID) (flaw.Model, error)); ok {
 		return rf(id)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID) flawevent.Model); ok {
+	if rf, ok := ret.Get(0).(func(uuid.UUID) flaw.Model); ok {
 		r0 = rf(id)
 	} else {
-		r0 = ret.Get(0).(flawevent.Model)
+		r0 = ret.Get(0).(flaw.Model)
 	}
 
 	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
@@ -222,12 +222,12 @@ func (_c *FlaweventRepository_Read_Call) Run(run func(id uuid.UUID)) *FlaweventR
 	return _c
 }
 
-func (_c *FlaweventRepository_Read_Call) Return(_a0 flawevent.Model, _a1 error) *FlaweventRepository_Read_Call {
+func (_c *FlaweventRepository_Read_Call) Return(_a0 flaw.Model, _a1 error) *FlaweventRepository_Read_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FlaweventRepository_Read_Call) RunAndReturn(run func(uuid.UUID) (flawevent.Model, error)) *FlaweventRepository_Read_Call {
+func (_c *FlaweventRepository_Read_Call) RunAndReturn(run func(uuid.UUID) (flaw.Model, error)) *FlaweventRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -279,7 +279,7 @@ func (_c *FlaweventRepository_Transaction_Call) RunAndReturn(run func(func(*gorm
 }
 
 // Update provides a mock function with given fields: tx, t
-func (_m *FlaweventRepository) Update(tx *gorm.DB, t *flawevent.Model) error {
+func (_m *FlaweventRepository) Update(tx *gorm.DB, t *flaw.Model) error {
 	ret := _m.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -287,7 +287,7 @@ func (_m *FlaweventRepository) Update(tx *gorm.DB, t *flawevent.Model) error {
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, *flawevent.Model) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *flaw.Model) error); ok {
 		r0 = rf(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -303,14 +303,14 @@ type FlaweventRepository_Update_Call struct {
 
 // Update is a helper method to define mock.On call
 //   - tx *gorm.DB
-//   - t *flawevent.Model
+//   - t *flaw.Model
 func (_e *FlaweventRepository_Expecter) Update(tx interface{}, t interface{}) *FlaweventRepository_Update_Call {
 	return &FlaweventRepository_Update_Call{Call: _e.mock.On("Update", tx, t)}
 }
 
-func (_c *FlaweventRepository_Update_Call) Run(run func(tx *gorm.DB, t *flawevent.Model)) *FlaweventRepository_Update_Call {
+func (_c *FlaweventRepository_Update_Call) Run(run func(tx *gorm.DB, t *flaw.Model)) *FlaweventRepository_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(*flawevent.Model))
+		run(args[0].(*gorm.DB), args[1].(*flaw.Model))
 	})
 	return _c
 }
@@ -320,7 +320,7 @@ func (_c *FlaweventRepository_Update_Call) Return(_a0 error) *FlaweventRepositor
 	return _c
 }
 
-func (_c *FlaweventRepository_Update_Call) RunAndReturn(run func(*gorm.DB, *flawevent.Model) error) *FlaweventRepository_Update_Call {
+func (_c *FlaweventRepository_Update_Call) RunAndReturn(run func(*gorm.DB, *flaw.Model) error) *FlaweventRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

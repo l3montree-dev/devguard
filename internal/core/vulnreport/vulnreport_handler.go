@@ -5,7 +5,6 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core/cwe"
 	"github.com/l3montree-dev/flawfix/internal/core/env"
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/core/flawevent"
 )
 
 func RegisterHttpHandler(database core.DB, server core.Server) {
@@ -23,7 +22,7 @@ func RegisterHttpHandler(database core.DB, server core.Server) {
 
 	flawEnricher := flaw.NewEnricher(cveService, flawRepository)
 
-	flawEventRepository := flawevent.NewGormRepository(database)
+	flawEventRepository := flaw.NewEventGormRepository(database)
 	envRepository := env.NewGormRepository(database)
 
 	controller := NewHttpController(

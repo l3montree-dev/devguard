@@ -9,7 +9,6 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/core/env"
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/core/flawevent"
 	"github.com/labstack/echo/v4"
 	"github.com/owenrumney/go-sarif/sarif"
 )
@@ -18,7 +17,7 @@ type VulnReportHttpController struct {
 	flawRepository flaw.Repository
 	flawEnricher   flaw.Enricher
 
-	flawEventRepository flawevent.Repository
+	flawEventRepository flaw.EventRepository
 
 	envRepository env.Repository
 }
@@ -26,7 +25,7 @@ type VulnReportHttpController struct {
 func NewHttpController(
 	flawRepository flaw.Repository,
 	flawEnricher flaw.Enricher,
-	flawEventRepository flawevent.Repository,
+	flawEventRepository flaw.EventRepository,
 	envRepository env.Repository,
 ) VulnReportHttpController {
 	return VulnReportHttpController{
@@ -133,7 +132,7 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 	}
 
 	newDetectedFlaws := []flaw.Model{}
-	newFlawEvents := []flawevent.Model{}
+	newFlawEvents := []flaw.EventModel{}
 	flawsToUpdate := []flaw.Model{}
 
 	// check which flaws needs to be created and which are fixed now.
@@ -150,15 +149,15 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 		}
 		if f, ok := fixedFlaws[*result.RuleID]; ok {
 			// we need to create a new detected event.
-			flawEvent := flawevent.Model{
-				Type:   flawevent.EventTypeDetected,
+			flawEvent := flaw.EventModel{
+				Type:   flaw.EventTypeDetected,
 				FlawID: f.ID,
 				UserID: userUUID,
 			}
 			newFlawEvents = append(newFlawEvents, flawEvent)
 
 			// we need to reopen the flaw
-			flawsToUpdate = append(flawsToUpdate, f.ApplyEvent(flawEvent))
+			flawsToUpdate = append(flawsToUpdate, flawEvent.Apply(f))
 
 			continue
 		}
@@ -169,9 +168,9 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 			Message: result.Message.Text,
 			EnvID:   envUUID,
 			State:   flaw.StateOpen,
-			Events: []flawevent.Model{
+			Events: []flaw.EventModel{
 				{
-					Type:   flawevent.EventTypeDetected,
+					Type:   flaw.EventTypeDetected,
 					UserID: userUUID,
 				},
 			},
