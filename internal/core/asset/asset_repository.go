@@ -74,7 +74,7 @@ func (a *GormRepository) GetByProjectID(projectID uuid.UUID) ([]Model, error) {
 
 func (g *GormRepository) ReadBySlug(projectID uuid.UUID, slug string) (Model, error) {
 	var t Model
-	err := g.db.Preload("Envs").Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
+	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
 	return t, err
 }
 
