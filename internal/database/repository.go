@@ -103,7 +103,11 @@ func (g *GormRepository[ID, T]) Delete(tx *gorm.DB, id ID) error {
 }
 
 func (g *GormRepository[ID, T]) List(ids []ID) ([]T, error) {
+	if len(ids) == 0 {
+		return []T{}, nil
+	}
 	var ts []T
+
 	err := g.db.Find(&ts, ids).Error
 	if err != nil {
 		return ts, err

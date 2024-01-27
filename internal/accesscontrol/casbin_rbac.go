@@ -17,6 +17,7 @@ package accesscontrol
 import (
 	"log"
 	"log/slog"
+	"strings"
 
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 
@@ -46,6 +47,22 @@ func (c CasbinRBACProvider) GetDomainRBAC(domain string) AccessControl {
 func (c *CasbinRBAC) HasAccess(user string) bool {
 	roles := c.enforcer.GetRolesForUserInDomain("user::"+user, "domain::"+c.domain)
 	return len(roles) > 0
+}
+
+func (c *CasbinRBAC) GetAllProjectsForUser(user string) []string {
+	projectIDs := []string{}
+
+	roles, _ := c.enforcer.GetImplicitRolesForUser("user::"+user, "domain::"+c.domain)
+
+	for _, role := range roles {
+		if !(strings.HasPrefix(role, "project::") && strings.Contains(role, "role::")) {
+			continue // not a project role
+		}
+		// extract everything between the prefix and a "|"
+		projectIDs = append(projectIDs, strings.Split(strings.TrimPrefix(role, "project::"), "|")[0])
+
+	}
+	return projectIDs
 }
 
 func (c *CasbinRBAC) GetAllRoles(user string) []string {

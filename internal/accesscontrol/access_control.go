@@ -60,6 +60,8 @@ type AccessControl interface {
 
 	IsAllowedInProject(project, user string, object string, action Action) (bool, error)
 	AllowRoleInProject(project string, role string, object string, action []Action) error
+
+	GetAllProjectsForUser(user string) []string
 }
 
 type RBACProvider interface {

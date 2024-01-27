@@ -16,9 +16,6 @@
 package project
 
 import (
-	"log/slog"
-	"strings"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/core"
@@ -125,23 +122,17 @@ func (p *Controller) Read(c core.Context) error {
 func (p *Controller) List(c core.Context) error {
 	// get all projects the user has at least read access to
 	rbac := core.GetRBAC(c)
-	roles := rbac.GetAllRoles(core.GetSession(c).GetUserID())
+	projectsIdsStr := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
 
 	// extract the project ids from the roles
 	projectIDs := make([]uuid.UUID, 0)
-	for _, role := range roles {
-		if !strings.HasPrefix(role, "role::project::") {
-			continue // not a project role
-		}
-		// extract everything between the prefix and a "|"
-		projectID, err := uuid.Parse(strings.Split(strings.TrimPrefix(role, "role::project::"), "|")[0])
-		if err != nil {
-			slog.Error("could not parse project id from role", "role", role)
-			continue
-		}
+	for _, project := range projectsIdsStr {
+		projectID := uuid.MustParse(project)
 		projectIDs = append(projectIDs, projectID)
 	}
+
 	projects, err := p.projectRepository.List(projectIDs)
+
 	if err != nil {
 		return err
 	}
