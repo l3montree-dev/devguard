@@ -22,19 +22,20 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/application"
+	"github.com/l3montree-dev/flawfix/internal/core/asset"
+
 	"github.com/labstack/echo/v4"
 )
 
 type Controller struct {
-	projectRepository     Repository
-	applicationRepository application.Repository
+	projectRepository Repository
+	assetRepository   asset.Repository
 }
 
-func NewHttpController(repository Repository, appRepository application.Repository) *Controller {
+func NewHttpController(repository Repository, assetRepository asset.Repository) *Controller {
 	return &Controller{
-		projectRepository:     repository,
-		applicationRepository: appRepository,
+		projectRepository: repository,
+		assetRepository:   assetRepository,
 	}
 }
 
@@ -111,12 +112,12 @@ func (p *Controller) Read(c core.Context) error {
 	project := core.GetProject(c).(Model)
 
 	// lets fetch the applications related to this project
-	applications, err := p.applicationRepository.GetByProjectID(project.ID)
+	applications, err := p.assetRepository.GetByProjectID(project.ID)
 	if err != nil {
 		return err
 	}
 
-	project.Applications = applications
+	project.Assets = applications
 
 	return c.JSON(200, project)
 }

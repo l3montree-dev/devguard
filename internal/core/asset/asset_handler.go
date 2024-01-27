@@ -1,4 +1,4 @@
-package application
+package asset
 
 import (
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"

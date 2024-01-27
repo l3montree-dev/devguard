@@ -1,4 +1,4 @@
-package application
+package asset
 
 import (
 	"github.com/google/uuid"
