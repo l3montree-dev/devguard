@@ -8,6 +8,22 @@ import (
 type CreateRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
+
+	Importance            int  `json:"importance" validate:"required"`
+	ReachableFromInternet bool `json:"reachableFromInternet" validate:"required"`
+
+	ConfidentialityRequirement string `json:"confidentialityRequirement" validate:"required"`
+	IntegrityRequirement       string `json:"integrityRequirement" validate:"required"`
+	AvailabilityRequirement    string `json:"availabilityRequirement" validate:"required"`
+}
+
+func sanitizeRequirementLevel(level string) RequirementLevel {
+	switch level {
+	case "low", "medium", "high":
+		return RequirementLevel(level)
+	default:
+		return "high"
+	}
 }
 
 func (a *CreateRequest) ToModel(projectID uuid.UUID) Model {
@@ -16,5 +32,12 @@ func (a *CreateRequest) ToModel(projectID uuid.UUID) Model {
 		Slug:        slug.Make(a.Name),
 		ProjectID:   projectID,
 		Description: a.Description,
+
+		Importance:            a.Importance,
+		ReachableFromInternet: a.ReachableFromInternet,
+
+		ConfidentialityRequirement: sanitizeRequirementLevel(a.ConfidentialityRequirement),
+		IntegrityRequirement:       sanitizeRequirementLevel(a.IntegrityRequirement),
+		AvailabilityRequirement:    sanitizeRequirementLevel(a.AvailabilityRequirement),
 	}
 }
