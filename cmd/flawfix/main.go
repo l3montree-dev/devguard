@@ -111,12 +111,12 @@ func main() {
 	pat.RegisterHttpHandler(db, sessionRouter)
 
 	// each http registration returns its own scoped router.
-	// since this application has a multi tenant and hierarchical structure
+	// since this asset has a multi tenant and hierarchical structure
 	// we need to pass the returned router to the next registration.
 	tenantRouter := org.RegisterHttpHandler(db, sessionRouter, casbinRBACProvider)
 	projectRouter := project.RegisterHttpHandler(db, tenantRouter, assetRepository)
-	applicationRouter := asset.RegisterHttpHandler(db, projectRouter, projectScopedRBAC)
-	envRouter := env.RegisterHttpHandler(db, applicationRouter, assetRepository)
+	assetRouter := asset.RegisterHttpHandler(db, projectRouter, projectScopedRBAC)
+	envRouter := env.RegisterHttpHandler(db, assetRouter, assetRepository)
 
 	flaw.RegisterHttpHandler(db, envRouter, projectScopedRBAC)
 

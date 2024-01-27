@@ -15,7 +15,7 @@ type GormRepository struct {
 
 type Repository interface {
 	database.Repository[uuid.UUID, Model, core.DB]
-	ReadBySlug(applicationID uuid.UUID, slug string) (Model, error)
+	ReadBySlug(assetID uuid.UUID, slug string) (Model, error)
 	UpdateLastReportTime(tx core.DB, envId uuid.UUID) error
 }
 
@@ -26,9 +26,9 @@ func NewGormRepository(db core.DB) *GormRepository {
 	}
 }
 
-func (g *GormRepository) ReadBySlug(applicationID uuid.UUID, slug string) (Model, error) {
+func (g *GormRepository) ReadBySlug(assetID uuid.UUID, slug string) (Model, error) {
 	var env Model
-	err := g.db.Where("slug = ? AND application_id = ?", slug, applicationID).First(&env).Error
+	err := g.db.Where("slug = ? AND asset_id = ?", slug, assetID).First(&env).Error
 	return env, err
 }
 

@@ -7,8 +7,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type applicationService interface {
-	GetApplicationIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
+type assetService interface {
+	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
 }
 
 type Controller struct {
@@ -16,7 +16,7 @@ type Controller struct {
 	envRepository       Repository
 	flawRepository      flaw.Repository
 	flawEventRepository flaw.Repository
-	applicationService  applicationService
+	assetService        assetService
 }
 
 func NewHttpController(
@@ -24,14 +24,14 @@ func NewHttpController(
 	envRepo Repository,
 	flawRepository flaw.Repository,
 	flawEventRepository flaw.Repository,
-	applicationService applicationService,
+	assetService assetService,
 ) *Controller {
 	return &Controller{
 		envService:          envService,
 		envRepository:       envRepo,
 		flawRepository:      flawRepository,
 		flawEventRepository: flawEventRepository,
-		applicationService:  applicationService,
+		assetService:        assetService,
 	}
 }
 
@@ -41,22 +41,22 @@ func (e *Controller) Read(c core.Context) error {
 		return echo.NewHTTPError(400, "invalid env slug")
 	}
 
-	applicationSlug, err := core.GetApplicationSlug(c)
+	assetSlug, err := core.GetAssetSlug(c)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid application slug")
+		return echo.NewHTTPError(400, "invalid asset slug")
 	}
 
 	project := core.GetProject(c)
 
-	// fetch the application
-	applicationID, err := e.applicationService.GetApplicationIDBySlug(project.GetID(), applicationSlug)
+	// fetch the asset
+	assetID, err := e.assetService.GetAssetIDBySlug(project.GetID(), assetSlug)
 
 	if err != nil {
-		return echo.NewHTTPError(404, "could not find application")
+		return echo.NewHTTPError(404, "could not find asset")
 	}
 
 	// fetch the env by slug
-	env, err := e.envRepository.ReadBySlug(applicationID, envSlug)
+	env, err := e.envRepository.ReadBySlug(assetID, envSlug)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find env")
 	}

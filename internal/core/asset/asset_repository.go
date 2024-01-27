@@ -32,7 +32,7 @@ type Repository interface {
 	FindOrCreate(tx core.DB, name string) (Model, error)
 	GetByProjectID(projectID uuid.UUID) ([]Model, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (Model, error)
-	GetApplicationIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
+	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
 }
 
 func NewGormRepository(db core.DB) *GormRepository {
@@ -78,7 +78,7 @@ func (g *GormRepository) ReadBySlug(projectID uuid.UUID, slug string) (Model, er
 	return t, err
 }
 
-func (g *GormRepository) GetApplicationIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
+func (g *GormRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
 	app, err := g.ReadBySlug(projectID, slug)
 	if err != nil {
 		return uuid.UUID{}, err

@@ -8,24 +8,24 @@ import (
 )
 
 type envService interface {
-	CreateDefaultEnvForApp(tx core.DB, applicationID uuid.UUID) ([]env.Model, error)
+	CreateDefaultEnvForApp(tx core.DB, assetID uuid.UUID) ([]env.Model, error)
 }
 type HttpController struct {
-	applicationRepository Repository
-	envService            envService
+	assetRepository Repository
+	envService      envService
 }
 
 func NewHttpController(repository Repository, envService envService) *HttpController {
 	return &HttpController{
-		applicationRepository: repository,
-		envService:            envService,
+		assetRepository: repository,
+		envService:      envService,
 	}
 }
 
 func (a *HttpController) List(c core.Context) error {
 	project := core.GetProject(c)
 
-	apps, err := a.applicationRepository.GetByProjectID(project.GetID())
+	apps, err := a.assetRepository.GetByProjectID(project.GetID())
 	if err != nil {
 		return err
 	}
@@ -47,14 +47,14 @@ func (a *HttpController) Create(c core.Context) error {
 
 	app := req.ToModel(project.GetID())
 
-	err := a.applicationRepository.Transaction(func(tx core.DB) error {
-		err := a.applicationRepository.Create(tx, &app)
+	err := a.assetRepository.Transaction(func(tx core.DB) error {
+		err := a.assetRepository.Create(tx, &app)
 
 		if err != nil {
 			return err
 		}
 
-		// setup environment for the application
+		// setup environment for the asset
 		environments, err := a.envService.CreateDefaultEnvForApp(tx, app.ID)
 		if err != nil {
 			return err
@@ -65,13 +65,13 @@ func (a *HttpController) Create(c core.Context) error {
 	})
 
 	if err != nil {
-		return echo.NewHTTPError(500, "could not create application").WithInternal(err)
+		return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
 	}
 
 	return c.JSON(200, app)
 }
 
 func (a *HttpController) Read(c core.Context) error {
-	app := core.GetApplication(c).(Model)
+	app := core.GetAsset(c).(Model)
 	return c.JSON(200, app)
 }

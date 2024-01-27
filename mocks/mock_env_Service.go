@@ -24,9 +24,9 @@ func (_m *EnvService) EXPECT() *EnvService_Expecter {
 	return &EnvService_Expecter{mock: &_m.Mock}
 }
 
-// CreateDefaultEnvForApp provides a mock function with given fields: tx, applicationID
-func (_m *EnvService) CreateDefaultEnvForApp(tx *gorm.DB, applicationID uuid.UUID) ([]env.Model, error) {
-	ret := _m.Called(tx, applicationID)
+// CreateDefaultEnvForApp provides a mock function with given fields: tx, assetID
+func (_m *EnvService) CreateDefaultEnvForApp(tx *gorm.DB, assetID uuid.UUID) ([]env.Model, error) {
+	ret := _m.Called(tx, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateDefaultEnvForApp")
@@ -35,10 +35,10 @@ func (_m *EnvService) CreateDefaultEnvForApp(tx *gorm.DB, applicationID uuid.UUI
 	var r0 []env.Model
 	var r1 error
 	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) ([]env.Model, error)); ok {
-		return rf(tx, applicationID)
+		return rf(tx, assetID)
 	}
 	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) []env.Model); ok {
-		r0 = rf(tx, applicationID)
+		r0 = rf(tx, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]env.Model)
@@ -46,7 +46,7 @@ func (_m *EnvService) CreateDefaultEnvForApp(tx *gorm.DB, applicationID uuid.UUI
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, uuid.UUID) error); ok {
-		r1 = rf(tx, applicationID)
+		r1 = rf(tx, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -61,12 +61,12 @@ type EnvService_CreateDefaultEnvForApp_Call struct {
 
 // CreateDefaultEnvForApp is a helper method to define mock.On call
 //   - tx *gorm.DB
-//   - applicationID uuid.UUID
-func (_e *EnvService_Expecter) CreateDefaultEnvForApp(tx interface{}, applicationID interface{}) *EnvService_CreateDefaultEnvForApp_Call {
-	return &EnvService_CreateDefaultEnvForApp_Call{Call: _e.mock.On("CreateDefaultEnvForApp", tx, applicationID)}
+//   - assetID uuid.UUID
+func (_e *EnvService_Expecter) CreateDefaultEnvForApp(tx interface{}, assetID interface{}) *EnvService_CreateDefaultEnvForApp_Call {
+	return &EnvService_CreateDefaultEnvForApp_Call{Call: _e.mock.On("CreateDefaultEnvForApp", tx, assetID)}
 }
 
-func (_c *EnvService_CreateDefaultEnvForApp_Call) Run(run func(tx *gorm.DB, applicationID uuid.UUID)) *EnvService_CreateDefaultEnvForApp_Call {
+func (_c *EnvService_CreateDefaultEnvForApp_Call) Run(run func(tx *gorm.DB, assetID uuid.UUID)) *EnvService_CreateDefaultEnvForApp_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(*gorm.DB), args[1].(uuid.UUID))
 	})

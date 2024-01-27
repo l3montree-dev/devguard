@@ -7,24 +7,24 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func applicationMiddleware(repository Repository) func(next echo.HandlerFunc) echo.HandlerFunc {
+func assetMiddleware(repository Repository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		// get the project
 		return func(c echo.Context) error {
 			project := core.GetProject(c)
 
-			applicationSlug, err := core.GetApplicationSlug(c)
+			assetSlug, err := core.GetAssetSlug(c)
 			if err != nil {
-				return echo.NewHTTPError(400, "invalid application slug")
+				return echo.NewHTTPError(400, "invalid asset slug")
 			}
 
-			app, err := repository.ReadBySlug(project.GetID(), applicationSlug)
+			app, err := repository.ReadBySlug(project.GetID(), assetSlug)
 
 			if err != nil {
-				return echo.NewHTTPError(404, "could not find application").WithInternal(err)
+				return echo.NewHTTPError(404, "could not find asset").WithInternal(err)
 			}
 
-			c.Set("application", app)
+			c.Set("asset", app)
 
 			return next(c)
 		}
@@ -38,13 +38,13 @@ func RegisterHttpHandler(database core.DB, server core.Server, rbacMiddleware ac
 
 	controller := NewHttpController(repository, env.NewDomainService(env.NewGormRepository(database)))
 
-	server.POST("/applications/", controller.Create, rbacMiddleware(accesscontrol.ObjectApplication, accesscontrol.ActionCreate))
+	server.POST("/assets/", controller.Create, rbacMiddleware(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
 
-	server.GET("/applications/", controller.Read)
+	server.GET("/assets/", controller.Read)
 
-	applicationRouter := server.Group("/applications/:applicationSlug", rbacMiddleware("application", accesscontrol.ActionRead), applicationMiddleware(repository))
+	assetRouter := server.Group("/assets/:assetSlug", rbacMiddleware("asset", accesscontrol.ActionRead), assetMiddleware(repository))
 
-	applicationRouter.GET("/", controller.Read)
+	assetRouter.GET("/", controller.Read)
 
-	return applicationRouter
+	return assetRouter
 }

@@ -232,9 +232,9 @@ func (_c *EnvRepository_Read_Call) RunAndReturn(run func(uuid.UUID) (env.Model, 
 	return _c
 }
 
-// ReadBySlug provides a mock function with given fields: applicationID, slug
-func (_m *EnvRepository) ReadBySlug(applicationID uuid.UUID, slug string) (env.Model, error) {
-	ret := _m.Called(applicationID, slug)
+// ReadBySlug provides a mock function with given fields: assetID, slug
+func (_m *EnvRepository) ReadBySlug(assetID uuid.UUID, slug string) (env.Model, error) {
+	ret := _m.Called(assetID, slug)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReadBySlug")
@@ -243,16 +243,16 @@ func (_m *EnvRepository) ReadBySlug(applicationID uuid.UUID, slug string) (env.M
 	var r0 env.Model
 	var r1 error
 	if rf, ok := ret.Get(0).(func(uuid.UUID, string) (env.Model, error)); ok {
-		return rf(applicationID, slug)
+		return rf(assetID, slug)
 	}
 	if rf, ok := ret.Get(0).(func(uuid.UUID, string) env.Model); ok {
-		r0 = rf(applicationID, slug)
+		r0 = rf(assetID, slug)
 	} else {
 		r0 = ret.Get(0).(env.Model)
 	}
 
 	if rf, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
-		r1 = rf(applicationID, slug)
+		r1 = rf(assetID, slug)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -266,13 +266,13 @@ type EnvRepository_ReadBySlug_Call struct {
 }
 
 // ReadBySlug is a helper method to define mock.On call
-//   - applicationID uuid.UUID
+//   - assetID uuid.UUID
 //   - slug string
-func (_e *EnvRepository_Expecter) ReadBySlug(applicationID interface{}, slug interface{}) *EnvRepository_ReadBySlug_Call {
-	return &EnvRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", applicationID, slug)}
+func (_e *EnvRepository_Expecter) ReadBySlug(assetID interface{}, slug interface{}) *EnvRepository_ReadBySlug_Call {
+	return &EnvRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", assetID, slug)}
 }
 
-func (_c *EnvRepository_ReadBySlug_Call) Run(run func(applicationID uuid.UUID, slug string)) *EnvRepository_ReadBySlug_Call {
+func (_c *EnvRepository_ReadBySlug_Call) Run(run func(assetID uuid.UUID, slug string)) *EnvRepository_ReadBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(uuid.UUID), args[1].(string))
 	})

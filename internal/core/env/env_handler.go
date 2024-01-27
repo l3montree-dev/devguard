@@ -10,11 +10,11 @@ func envMiddleware(repository Repository) func(next echo.HandlerFunc) echo.Handl
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		// get the project
 		return func(c echo.Context) error {
-			app := core.GetApplication(c)
+			app := core.GetAsset(c)
 
 			envSlug, err := core.GetEnvSlug(c)
 			if err != nil {
-				return echo.NewHTTPError(400, "invalid application slug")
+				return echo.NewHTTPError(400, "invalid asset slug")
 			}
 
 			env, err := repository.ReadBySlug(app.GetID(), envSlug)
@@ -30,13 +30,13 @@ func envMiddleware(repository Repository) func(next echo.HandlerFunc) echo.Handl
 	}
 }
 
-func RegisterHttpHandler(database core.DB, server core.Server, applicationService applicationService) core.Server {
+func RegisterHttpHandler(database core.DB, server core.Server, assetService assetService) core.Server {
 	database.AutoMigrate(&Model{}, &flaw.Model{}, &flaw.Model{})
 
 	repository := NewGormRepository(database)
 
 	service := NewDomainService(repository)
-	controller := NewHttpController(service, repository, flaw.NewGormRepository(database), flaw.NewGormRepository(database), applicationService)
+	controller := NewHttpController(service, repository, flaw.NewGormRepository(database), flaw.NewGormRepository(database), assetService)
 
 	envRouter := server.Group("/envs/:envSlug", envMiddleware(repository))
 	envRouter.GET("/", controller.Read)

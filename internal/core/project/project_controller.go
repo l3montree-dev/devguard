@@ -78,7 +78,7 @@ func (p *Controller) bootstrapProject(c core.Context, project Model) {
 		accesscontrol.ActionUpdate,
 	})
 
-	rbac.AllowRoleInProject(project.ID.String(), "admin", "application", []accesscontrol.Action{
+	rbac.AllowRoleInProject(project.ID.String(), "admin", "asset", []accesscontrol.Action{
 		accesscontrol.ActionCreate,
 		accesscontrol.ActionDelete,
 		accesscontrol.ActionUpdate,
@@ -88,7 +88,7 @@ func (p *Controller) bootstrapProject(c core.Context, project Model) {
 		accesscontrol.ActionRead,
 	})
 
-	rbac.AllowRoleInProject(project.ID.String(), "member", "application", []accesscontrol.Action{
+	rbac.AllowRoleInProject(project.ID.String(), "member", "asset", []accesscontrol.Action{
 		accesscontrol.ActionRead,
 	})
 }
@@ -111,13 +111,13 @@ func (p *Controller) Read(c core.Context) error {
 	// just get the project from the context
 	project := core.GetProject(c).(Model)
 
-	// lets fetch the applications related to this project
-	applications, err := p.assetRepository.GetByProjectID(project.ID)
+	// lets fetch the assets related to this project
+	assets, err := p.assetRepository.GetByProjectID(project.ID)
 	if err != nil {
 		return err
 	}
 
-	project.Assets = applications
+	project.Assets = assets
 
 	return c.JSON(200, project)
 }

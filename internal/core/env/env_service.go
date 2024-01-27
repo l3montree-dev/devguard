@@ -10,7 +10,7 @@ type DomainService struct {
 }
 
 type Service interface {
-	CreateDefaultEnvForApp(tx core.DB, applicationID uuid.UUID) ([]Model, error)
+	CreateDefaultEnvForApp(tx core.DB, assetID uuid.UUID) ([]Model, error)
 }
 
 func NewDomainService(repository Repository) *DomainService {
@@ -19,19 +19,19 @@ func NewDomainService(repository Repository) *DomainService {
 	}
 }
 
-func (s *DomainService) CreateDefaultEnvForApp(tx core.DB, applicationID uuid.UUID) ([]Model, error) {
+func (s *DomainService) CreateDefaultEnvForApp(tx core.DB, assetID uuid.UUID) ([]Model, error) {
 	// create a default development and production environment
 	devEnv := Model{
-		Name:          "Development",
-		ApplicationID: applicationID,
-		Slug:          "development",
+		Name:    "Development",
+		AssetID: assetID,
+		Slug:    "development",
 	}
 
 	prodEnv := Model{
-		Name:          "Production",
-		ApplicationID: applicationID,
-		Slug:          "production",
-		IsDefault:     true,
+		Name:      "Production",
+		AssetID:   assetID,
+		Slug:      "production",
+		IsDefault: true,
 	}
 
 	// create the environments
