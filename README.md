@@ -29,7 +29,7 @@
 <br />
 <div align="center">
   <a href="https://flawfix.dev">
-    <img src="images/logo_flaw_fix_white_l3.svg" alt="FlawFix by L3montree Logo" width="240" height="80">
+    <img src="images/logo_horizontal.svg" alt="FlawFix by L3montree Logo" width="240" height="80">
   </a>
 
   <h3 align="center">FlawFix - Vulnerability Management - Backend</h3>
