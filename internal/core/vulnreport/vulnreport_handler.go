@@ -2,8 +2,9 @@ package vulnreport
 
 import (
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/asset"
 	"github.com/l3montree-dev/flawfix/internal/core/cwe"
-	"github.com/l3montree-dev/flawfix/internal/core/env"
+
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 )
 
@@ -23,15 +24,15 @@ func RegisterHttpHandler(database core.DB, server core.Server) {
 	flawEnricher := flaw.NewEnricher(cveService, flawRepository)
 
 	flawEventRepository := flaw.NewEventGormRepository(database)
-	envRepository := env.NewGormRepository(database)
+	assetRepository := asset.NewGormRepository(database)
 
 	controller := NewHttpController(
 		flawRepository,
 		flawEnricher,
 		flawEventRepository,
-		envRepository,
+		assetRepository,
 	)
 
 	vulnreportRouter := server.Group("/vulnreports")
-	vulnreportRouter.POST("/:envID/", controller.ImportVulnReport)
+	vulnreportRouter.POST("/:assetID/", controller.ImportVulnReport)
 }

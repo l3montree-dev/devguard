@@ -19,11 +19,11 @@ const (
 
 type Model struct {
 	core.Model
-	RuleID   string          `json:"ruleId" gorm:"uniqueIndex:idx_ruleId_env;not null;"`
+	RuleID   string          `json:"ruleId" gorm:"uniqueIndex:idx_ruleId_asset;not null;"`
 	Message  *string         `json:"message"`
 	Comments []comment.Model `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
 	Events   []EventModel    `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"events"`
-	EnvID    uuid.UUID       `json:"envId" gorm:"uniqueIndex:idx_ruleId_env;not null;"`
+	AssetID  uuid.UUID       `json:"assetId" gorm:"uniqueIndex:idx_ruleId_asset;not null;"`
 	State    State           `json:"state" gorm:"default:'open';not null;type:varchar(255);"`
 
 	CVE   *cwe.CVEModel `json:"cve"`

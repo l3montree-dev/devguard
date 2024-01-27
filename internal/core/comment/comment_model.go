@@ -10,7 +10,6 @@ type Model struct {
 	FlawID  uuid.UUID `json:"flawId"`
 	UserID  uuid.UUID `json:"userId"`
 	Comment string    `json:"comment"`
-	EnvID   uuid.UUID `json:"envId"`
 }
 
 func (m Model) TableName() string {

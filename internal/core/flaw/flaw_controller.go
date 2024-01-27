@@ -16,15 +16,15 @@ func NewHttpController(flawRepository Repository) *FlawHttpController {
 }
 
 func (c FlawHttpController) ListPaged(ctx core.Context) error {
-	// get the env
-	env := core.GetEnv(ctx)
+	// get the asset
+	asset := core.GetAsset(ctx)
 
-	pagedResp, err := c.flawRepository.GetByEnvIdPaged(
+	pagedResp, err := c.flawRepository.GetByAssetIdPaged(
 		nil,
 		core.GetPageInfo(ctx),
 		core.GetFilterQuery(ctx),
 		core.GetSortQuery(ctx),
-		env.GetID(),
+		asset.GetID(),
 	)
 
 	if err != nil {

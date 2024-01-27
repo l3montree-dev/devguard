@@ -27,7 +27,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core"
 
 	"github.com/l3montree-dev/flawfix/internal/core/asset"
-	"github.com/l3montree-dev/flawfix/internal/core/env"
+
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 	"github.com/l3montree-dev/flawfix/internal/core/org"
 	"github.com/l3montree-dev/flawfix/internal/core/pat"
@@ -116,9 +116,8 @@ func main() {
 	tenantRouter := org.RegisterHttpHandler(db, sessionRouter, casbinRBACProvider)
 	projectRouter := project.RegisterHttpHandler(db, tenantRouter, assetRepository)
 	assetRouter := asset.RegisterHttpHandler(db, projectRouter, projectScopedRBAC)
-	envRouter := env.RegisterHttpHandler(db, assetRouter, assetRepository)
 
-	flaw.RegisterHttpHandler(db, envRouter, projectScopedRBAC)
+	flaw.RegisterHttpHandler(db, assetRouter, projectScopedRBAC)
 
 	slog.Error("failed to start server", "err", server.Start(":8080").Error())
 }

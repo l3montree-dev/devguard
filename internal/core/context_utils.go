@@ -77,18 +77,6 @@ func GetProject(c Context) HasID {
 	return c.Get("project").(HasID)
 }
 
-func GetEnv(c Context) HasID {
-	return c.Get("env").(HasID)
-}
-
-func GetEnvSlug(c Context) (string, error) {
-	envSlug := c.Param("envSlug")
-	if envSlug == "" {
-		return "", fmt.Errorf("could not get env slug")
-	}
-	return strings.TrimSpace(envSlug), nil
-}
-
 type PageInfo struct {
 	PageSize int `json:"pageSize"`
 	Page     int `json:"page"`

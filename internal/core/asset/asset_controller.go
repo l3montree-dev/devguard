@@ -1,24 +1,18 @@
 package asset
 
 import (
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/env"
+
 	"github.com/labstack/echo/v4"
 )
 
-type envService interface {
-	CreateDefaultEnvForApp(tx core.DB, assetID uuid.UUID) ([]env.Model, error)
-}
 type HttpController struct {
 	assetRepository Repository
-	envService      envService
 }
 
-func NewHttpController(repository Repository, envService envService) *HttpController {
+func NewHttpController(repository Repository) *HttpController {
 	return &HttpController{
 		assetRepository: repository,
-		envService:      envService,
 	}
 }
 
@@ -47,22 +41,7 @@ func (a *HttpController) Create(c core.Context) error {
 
 	app := req.ToModel(project.GetID())
 
-	err := a.assetRepository.Transaction(func(tx core.DB) error {
-		err := a.assetRepository.Create(tx, &app)
-
-		if err != nil {
-			return err
-		}
-
-		// setup environment for the asset
-		environments, err := a.envService.CreateDefaultEnvForApp(tx, app.ID)
-		if err != nil {
-			return err
-		}
-
-		app.Envs = environments
-		return nil
-	})
+	err := a.assetRepository.Create(nil, &app)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not create asset").WithInternal(err)

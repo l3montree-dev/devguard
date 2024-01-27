@@ -3,7 +3,6 @@ package asset
 import (
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/env"
 	"github.com/labstack/echo/v4"
 )
 
@@ -36,7 +35,7 @@ func RegisterHttpHandler(database core.DB, server core.Server, rbacMiddleware ac
 
 	repository := NewGormRepository(database)
 
-	controller := NewHttpController(repository, env.NewDomainService(env.NewGormRepository(database)))
+	controller := NewHttpController(repository)
 
 	server.POST("/assets/", controller.Create, rbacMiddleware(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
 
