@@ -69,9 +69,13 @@ func registerMiddlewares(e *echo.Echo) {
 
 		// Send response
 		if c.Request().Method == http.MethodHead { // Issue #608
-			c.NoContent(he.Code)
+			if err := c.NoContent(he.Code); err != nil {
+				slog.Error("could not send error response", "error", err)
+			}
 		} else {
-			c.JSON(code, message)
+			if err := c.JSON(code, message); err != nil {
+				slog.Error("could not send error response", "error", err)
+			}
 		}
 	}
 }

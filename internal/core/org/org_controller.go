@@ -49,44 +49,61 @@ func (o *HttpController) Create(c core.Context) error {
 	org := req.ToModel()
 
 	err := o.organizationRepository.Create(nil, &org)
-	o.bootstrapOrg(c, org)
-
 	if err != nil {
-		return err
+		return echo.NewHTTPError(500, "could not create organization").WithInternal(err)
+	}
+
+	if err = o.bootstrapOrg(c, org); err != nil {
+		return echo.NewHTTPError(500, "could not bootstrap organization").WithInternal(err)
 	}
 
 	return c.JSON(200, org)
 }
 
-func (o *HttpController) bootstrapOrg(c core.Context, organization Model) {
+func (o *HttpController) bootstrapOrg(c core.Context, organization Model) error {
 	// create the permissions for the organization
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
 	userId := core.GetSession(c).GetUserID()
 
-	rbac.GrantRole(userId, "owner")
-	rbac.InheritRole("owner", "admin")  // an owner is an admin
-	rbac.InheritRole("admin", "member") // an admin is a member
+	if err := rbac.GrantRole(userId, "owner"); err != nil {
+		return err
+	}
+	if err := rbac.InheritRole("owner", "admin"); err != nil { // an owner is an admin
+		return err
+	}
+	if err := rbac.InheritRole("admin", "member"); err != nil { // an admin is a member
+		return err
+	}
 
-	rbac.AllowRole("owner", "organization", []accesscontrol.Action{
+	if err := rbac.AllowRole("owner", "organization", []accesscontrol.Action{
 		accesscontrol.ActionDelete,
-	})
+	}); err != nil {
+		return err
+	}
 
-	rbac.AllowRole("admin", "organization", []accesscontrol.Action{
+	if err := rbac.AllowRole("admin", "organization", []accesscontrol.Action{
 		accesscontrol.ActionUpdate,
-	})
+	}); err != nil {
+		return err
+	}
 
-	rbac.AllowRole("admin", "project", []accesscontrol.Action{
+	if err := rbac.AllowRole("admin", "project", []accesscontrol.Action{
 		accesscontrol.ActionCreate,
 		accesscontrol.ActionRead, // listing all projects
 		accesscontrol.ActionUpdate,
 		accesscontrol.ActionDelete,
-	})
+	}); err != nil {
+		return err
+	}
 
-	rbac.AllowRole("member", "organization", []accesscontrol.Action{
+	if err := rbac.AllowRole("member", "organization", []accesscontrol.Action{
 		accesscontrol.ActionRead,
-	})
+	}); err != nil {
+		return err
+	}
 
 	c.Set("rbac", rbac)
+	return nil
 }
 
 func (o *HttpController) Update(c core.Context) error {

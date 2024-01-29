@@ -31,7 +31,9 @@ func envMiddleware(repository Repository) func(next echo.HandlerFunc) echo.Handl
 }
 
 func RegisterHttpHandler(database core.DB, server core.Server, applicationService applicationService) core.Server {
-	database.AutoMigrate(&Model{}, &flaw.Model{}, &flaw.Model{})
+	if err := database.AutoMigrate(&Model{}, &flaw.Model{}, &flaw.Model{}); err != nil {
+		panic(err)
+	}
 
 	repository := NewGormRepository(database)
 

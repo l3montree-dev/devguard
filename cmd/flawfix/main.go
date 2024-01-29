@@ -65,7 +65,9 @@ func initLogger() {
 }
 
 func main() {
-	godotenv.Load()
+	if err := godotenv.Load(); err != nil {
+		panic(err)
+	}
 	initLogger()
 	ory := getOryApiClient()
 

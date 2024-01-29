@@ -11,7 +11,9 @@ func RegisterHttpHandler(
 	server core.Server,
 	appRepository application.Repository,
 ) core.Server {
-	database.AutoMigrate(&Model{})
+	if err := database.AutoMigrate(&Model{}); err != nil {
+		panic(err)
+	}
 
 	repository := NewGormRepository(database)
 
