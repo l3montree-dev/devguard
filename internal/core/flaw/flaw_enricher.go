@@ -39,7 +39,9 @@ func (e enricher) AsyncEnrich(flaw []Model) {
 
 			if err == nil {
 				f.CVE = &cve
-				e.flawRepository.Update(nil, &f)
+				if err = e.flawRepository.Update(nil, &f); err != nil {
+					slog.Info("could not update flaw", "err", err)
+				}
 			}
 		}(f)
 	}

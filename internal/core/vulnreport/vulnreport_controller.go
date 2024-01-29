@@ -179,7 +179,9 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 
 	// now save all.
 	err = c.flawRepository.Transaction(func(tx core.DB) error {
-		c.envRepository.UpdateLastReportTime(tx, envUUID)
+		if err := c.envRepository.UpdateLastReportTime(tx, envUUID); err != nil {
+			return err
+		}
 		// create the new flaws
 		if len(newDetectedFlaws) > 0 {
 			err := c.flawRepository.CreateBatch(tx, newDetectedFlaws)
