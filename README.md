@@ -37,7 +37,7 @@
   <p align="center">
     Manage your CVEs seamlessly, Integrate your Vulnerability Scanners, Documentation made easy, Compliance to security Frameworks
     <br />
-    <a href="https://docs.flawfix.dev"><strong>Explore the docs »</strong></a>
+    <a href="https://flawfix.dev/docs/getting-started"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/l3montree-dev/flawfix/issues">Report Bug</a>
@@ -91,7 +91,7 @@ FlawFix is divided into two projects: A frontend (FlawFix Web) and a backend (Fl
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-_Please refer to the [Documentation](https://docs.flawfix.dev)_
+_Please refer to the [Documentation](https://flawfix.dev/docs/getting-started)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

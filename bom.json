@@ -1,0 +1,2059 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:3b3efde3-6869-4bf4-87e2-7fbd8ac4f7f2",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2024-01-28T09:21:50.788Z",
+    "tools": {
+      "components": [
+        {
+          "group": "@cyclonedx",
+          "name": "cdxgen",
+          "version": "9.11.3",
+          "purl": "pkg:npm/%40cyclonedx/cdxgen@9.11.3",
+          "type": "application",
+          "bom-ref": "pkg:npm/@cyclonedx/cdxgen@9.11.3",
+          "author": "OWASP Foundation",
+          "publisher": "OWASP Foundation"
+        }
+      ]
+    },
+    "authors": [
+      {
+        "name": "OWASP Foundation"
+      }
+    ],
+    "component": {
+      "group": "",
+      "name": "github.com/l3montree-dev/flawfix",
+      "version": "",
+      "purl": "pkg:golang/github.com%2Fl3montree-dev%2Fflawfix",
+      "bom-ref": "pkg:golang/github.com/l3montree-dev/flawfix",
+      "scope": "required",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/Documents/Source_Codes/flawfix/go.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.21"
+        }
+      ],
+      "type": "application",
+      "components": []
+    }
+  },
+  "components": [
+    {
+      "group": "",
+      "name": "github.com/joho/godotenv",
+      "version": "v1.5.1",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7f82c3af9568ab48b67bf4790c334ea1adb3cc37f0b6465ae839c4c006eac2ae"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fjoho%2Fgodotenv@v1.5.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/joho/godotenv@v1.5.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/joho/godotenv/@v/v1.5.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.12"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/Knetic/govaluate",
+      "version": "v3.0.1-0.20171022003610-9aa49832a739+incompatible",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "afb25c392963d307ce327720d222e6f0b7a1e3c4d968a55e3487c99ed276c1ad"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2FKnetic%2Fgovaluate@v3.0.1-0.20171022003610-9aa49832a739%2Bincompatible",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/Knetic/govaluate@v3.0.1-0.20171022003610-9aa49832a739+incompatible",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/!knetic/govaluate/@v/v3.0.1-0.20171022003610-9aa49832a739+incompatible.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/casbin/casbin/v2",
+      "version": "v2.72.1",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9b31b1d21616f7f92c392a70df036393735102ba2ae5530561443a1b8de218f9"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fcasbin%2Fcasbin%2Fv2@v2.72.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/casbin/casbin/v2@v2.72.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/casbin/casbin/v2/@v/v2.72.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.13"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/tidwall/match",
+      "version": "v1.1.1",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "79148f1116e0b4d3dc1a10fc502b6173a3e62c44171167773d1079253c6c7e63"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Ftidwall%2Fmatch@v1.1.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/tidwall/match@v1.1.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/tidwall/match/@v/v1.1.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.15"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/tidwall/pretty",
+      "version": "v1.2.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "213115bc761ab1f8c16ccd2ed8f83c4f69c99f39bcc4fc2f36186ca1a1868cd5"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Ftidwall%2Fpretty@v1.2.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/tidwall/pretty@v1.2.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/tidwall/pretty/@v/v1.2.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.16"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/tidwall/gjson",
+      "version": "v1.14.4",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ff06f289b46bd851cc92ce6d8c727917c74c661dc073024431fe6f95f0b49719"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Ftidwall%2Fgjson@v1.14.4",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/tidwall/gjson@v1.14.4",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/tidwall/gjson/@v/v1.14.4.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.12"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "golang.org/x/sys",
+      "version": "v0.10.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a0f921a75309ae1ee751ea4205c939fa60337cef49adb02934d81a4dd1832138"
+        }
+      ],
+      "purl": "pkg:golang/golang.org%2Fx%2Fsys@v0.10.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/golang.org/x/sys@v0.10.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/golang.org/x/sys/@v/v0.10.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.17"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/dustin/go-humanize",
+      "version": "v1.0.1",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "32ed7322ce97c15b85fe023539ea6f234a83d7cab2710c7e985ca48797c196da"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fdustin%2Fgo-humanize@v1.0.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/dustin/go-humanize@v1.0.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/dustin/go-humanize/@v/v1.0.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.16"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/google/uuid",
+      "version": "v1.3.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4c8c8f65ee0c82abdf7980c115e74ca061a9130fcba8e79a393fa787153ec87a"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fgoogle%2Fuuid@v1.3.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/google/uuid@v1.3.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/google/uuid/@v/v1.3.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/mattn/go-isatty",
+      "version": "v0.0.19",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5be57c3e5b534cc3af2af01e247ec8bae712f784b60ba8df2bf0fb753093a376"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fmattn%2Fgo-isatty@v0.0.19",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/mattn/go-isatty@v0.0.19",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/mattn/go-isatty/@v/v0.0.19.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.15"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "modernc.org/libc",
+      "version": "v1.22.2",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "baf41abc9d69674848a02fe37ea36830b51120c84acc83485b2a4d335ee9bae8"
+        }
+      ],
+      "purl": "pkg:golang/modernc.org%2Flibc@v1.22.2",
+      "type": "library",
+      "bom-ref": "pkg:golang/modernc.org/libc@v1.22.2",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/modernc.org/libc/@v/v1.22.2.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.17"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/remyoudompheng/bigfft",
+      "version": "v0.0.0-20230126093431-47fa9a501578",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "aaa6c7ca1f2feb40e103b0a858ae68442a8bacc1d11a8c580924bd123033e84a"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fremyoudompheng%2Fbigfft@v0.0.0-20230126093431-47fa9a501578",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/remyoudompheng/bigfft@v0.0.0-20230126093431-47fa9a501578",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/remyoudompheng/bigfft/@v/v0.0.0-20230126093431-47fa9a501578.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.12"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "modernc.org/mathutil",
+      "version": "v1.5.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9995bc08a7513d8d6ff3bab10bfc14757e4ed6a0f35cc3f94c7df08dfa606ba1"
+        }
+      ],
+      "purl": "pkg:golang/modernc.org%2Fmathutil@v1.5.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/modernc.org/mathutil@v1.5.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/modernc.org/mathutil/@v/v1.5.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.13"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "modernc.org/memory",
+      "version": "v1.5.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3e45212f432e830db5b073deb24c195b80fa56c704fc64093a72290a75baa525"
+        }
+      ],
+      "purl": "pkg:golang/modernc.org%2Fmemory@v1.5.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/modernc.org/memory@v1.5.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/modernc.org/memory/@v/v1.5.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.18"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "modernc.org/sqlite",
+      "version": "v1.20.3",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cca706cab2026b13533041d2af51d0d8652b68fd23fbce39198c37efe1324fa0"
+        }
+      ],
+      "purl": "pkg:golang/modernc.org%2Fsqlite@v1.20.3",
+      "type": "library",
+      "bom-ref": "pkg:golang/modernc.org/sqlite@v1.20.3",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/modernc.org/sqlite/@v/v1.20.3.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.17"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/glebarez/go-sqlite",
+      "version": "v1.20.3",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bb737a0ffc1fb6203320e26d665e8199e76ac669a40df1f7abe8a18eac42f6ed"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fglebarez%2Fgo-sqlite@v1.20.3",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/glebarez/go-sqlite@v1.20.3",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/glebarez/go-sqlite/@v/v1.20.3.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.17"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/jinzhu/now",
+      "version": "v1.1.5",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "777492568a305f42dcbb4201be2016269a2555f23950955967b70eef5944ff3f"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fjinzhu%2Fnow@v1.1.5",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/jinzhu/now@v1.1.5",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/jinzhu/now/@v/v1.1.5.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.12"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "gorm.io/gorm",
+      "version": "v1.25.2",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2f8bb178aa5f06697df0d62a56ac007665756b69c1b4079cfdc7f77e9b9c5bf9"
+        }
+      ],
+      "purl": "pkg:golang/gorm.io%2Fgorm@v1.25.2",
+      "type": "library",
+      "bom-ref": "pkg:golang/gorm.io/gorm@v1.25.2",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/gorm.io/gorm/@v/v1.25.2.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.16"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/jinzhu/inflection",
+      "version": "v1.0.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "87eb852e56a0f90a7555ae6974ab4b0d88fe907a79a7151592bcae123f92ae57"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fjinzhu%2Finflection@v1.0.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/jinzhu/inflection/@v/v1.0.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/glebarez/sqlite",
+      "version": "v1.7.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3e479ebeb46517fd418500429f370c5b382b224ec83a8a7ea92da35182df1e19"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fglebarez%2Fsqlite@v1.7.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/glebarez/sqlite@v1.7.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/glebarez/sqlite/@v/v1.7.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.18"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/go-sql-driver/mysql",
+      "version": "v1.7.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3976d5cb7b0475c4360e87aabba679056e9f5cd4139b1fbd4b530224de7224c2"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fgo-sql-driver%2Fmysql@v1.7.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/go-sql-driver/mysql@v1.7.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/go-sql-driver/mysql/@v/v1.7.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.13"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "gorm.io/driver/mysql",
+      "version": "v1.4.7",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4b1cc8b659d3d5c6fa7b57b8651a6024dd9562d72a260aa71f15abe30b0ff287"
+        }
+      ],
+      "purl": "pkg:golang/gorm.io%2Fdriver%2Fmysql@v1.4.7",
+      "type": "library",
+      "bom-ref": "pkg:golang/gorm.io/driver/mysql@v1.4.7",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/gorm.io/driver/mysql/@v/v1.4.7.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.14"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/jackc/pgx/v5",
+      "version": "v5.3.1",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b772432a708195821cd1ec0b17443b07c3179a821a04e663fe273b887a3333ff"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fjackc%2Fpgx%2Fv5@v5.3.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/jackc/pgx/v5@v5.3.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/jackc/pgx/v5/@v/v5.3.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.19"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/jackc/pgpassfile",
+      "version": "v1.0.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "084c74892e5a99b34575c46dc4f8f9261133fb107ab91932e5ec95bbf5b61c48"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fjackc%2Fpgpassfile@v1.0.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/jackc/pgpassfile@v1.0.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/jackc/pgpassfile/@v/v1.0.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.12"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/jackc/pgservicefile",
+      "version": "v0.0.0-20221227161230-091c0ba34f0a",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e5325958a1169e23ef7b7def956612a0661e7e7de02d04738df0e585227d64a3"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fjackc%2Fpgservicefile@v0.0.0-20221227161230-091c0ba34f0a",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/jackc/pgservicefile@v0.0.0-20221227161230-091c0ba34f0a",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/jackc/pgservicefile/@v/v0.0.0-20221227161230-091c0ba34f0a.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.14"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "golang.org/x/crypto",
+      "version": "v0.11.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c60261b735bc17d8c67551566444ab89dd54d5b8de372e33832e5c46bfc2222a"
+        }
+      ],
+      "purl": "pkg:golang/golang.org%2Fx%2Fcrypto@v0.11.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/golang.org/x/crypto@v0.11.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/golang.org/x/crypto/@v/v0.11.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.17"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "golang.org/x/text",
+      "version": "v0.11.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4ef3e5919b64b1638cb33edf6c036f929e1633cc7f582a3fa26f0130b6f3f9a1"
+        }
+      ],
+      "purl": "pkg:golang/golang.org%2Fx%2Ftext@v0.11.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/golang.org/x/text@v0.11.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/golang.org/x/text/@v/v0.11.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.17"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "gorm.io/driver/postgres",
+      "version": "v1.5.2",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7e6a57d26d88d4f2ae47b98a662125bb0acfde16ecfa9b3b24818c501a42825f"
+        }
+      ],
+      "purl": "pkg:golang/gorm.io%2Fdriver%2Fpostgres@v1.5.2",
+      "type": "library",
+      "bom-ref": "pkg:golang/gorm.io/driver/postgres@v1.5.2",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/gorm.io/driver/postgres/@v/v1.5.2.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.18"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/golang-sql/civil",
+      "version": "v0.0.0-20220223132316-b832511892a9",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f2f837af6560bec4e12c12052fddd06f9c96ce0c995a112607050959ebc090ad"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fgolang-sql%2Fcivil@v0.0.0-20220223132316-b832511892a9",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/golang-sql/civil@v0.0.0-20220223132316-b832511892a9",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/golang-sql/civil/@v/v0.0.0-20220223132316-b832511892a9.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/golang-sql/sqlexp",
+      "version": "v0.1.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "27869df55a3c642590d8632b0b8502432d49a426f053d9b710eaada4ac30c072"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fgolang-sql%2Fsqlexp@v0.1.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/golang-sql/sqlexp@v0.1.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/golang-sql/sqlexp/@v/v0.1.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.16"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/microsoft/go-mssqldb",
+      "version": "v0.17.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3a4a0d1a1184b3c119a9c8554eda1c8655ebb8484439a3b84b4776b01e5a7864"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fmicrosoft%2Fgo-mssqldb@v0.17.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/microsoft/go-mssqldb@v0.17.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/microsoft/go-mssqldb/@v/v0.17.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.13"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "gorm.io/driver/sqlserver",
+      "version": "v1.4.1",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0c9e0ff8c7996dce6bbd8e7c3e798dd4b9f2bdbe60c3934fcc6b211c39c92e28"
+        }
+      ],
+      "purl": "pkg:golang/gorm.io%2Fdriver%2Fsqlserver@v1.4.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/gorm.io/driver/sqlserver@v1.4.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/gorm.io/driver/sqlserver/@v/v1.4.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.14"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "gorm.io/plugin/dbresolver",
+      "version": "v1.3.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3ebee9e7e2459600da88ceac3ab962e6895e9090f5e9846e9ccc80d92ed97ca9"
+        }
+      ],
+      "purl": "pkg:golang/gorm.io%2Fplugin%2Fdbresolver@v1.3.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/gorm.io/plugin/dbresolver@v1.3.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/gorm.io/plugin/dbresolver/@v/v1.3.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.14"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/casbin/gorm-adapter/v3",
+      "version": "v3.18.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7a4b9f3cd06054842fbfd25f7d51ac83b294bf80e39debd387a0109c1364a0af"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fcasbin%2Fgorm-adapter%2Fv3@v3.18.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/casbin/gorm-adapter/v3@v3.18.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/casbin/gorm-adapter/v3/@v/v3.18.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.20"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/mattn/go-colorable",
+      "version": "v0.1.13",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ed2f7f7afd249600434781ad5d35d7f1adef206269328be407cbd07146da5c78"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fmattn%2Fgo-colorable@v0.1.13",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/mattn/go-colorable@v0.1.13",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/mattn/go-colorable/@v/v0.1.13.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.15"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/labstack/gommon",
+      "version": "v0.4.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b96ea43f5eee3e52c9b03de28d4627dff3396c0c6d95984c23a9b7305c533133"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Flabstack%2Fgommon@v0.4.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/labstack/gommon@v0.4.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/labstack/gommon/@v/v0.4.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.12"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/valyala/bytebufferpool",
+      "version": "v1.0.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e9b05c300af0c89e4afc0982916bf58edefb9155b2089e87a4eb849fbcf40ac7"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fvalyala%2Fbytebufferpool@v1.0.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/valyala/bytebufferpool@v1.0.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/valyala/bytebufferpool/@v/v1.0.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/valyala/fasttemplate",
+      "version": "v1.2.2",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2872d7b77b553761c1a7c7a28d2bff906268a5bbe8ed2faa4401042a2bfe4a24"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fvalyala%2Ffasttemplate@v1.2.2",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/valyala/fasttemplate@v1.2.2",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/valyala/fasttemplate/@v/v1.2.2.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.12"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "golang.org/x/net",
+      "version": "v0.12.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cc4558167402ee6fef9a940510b85c0f5116919957ebd978a2a8267abea17ca0"
+        }
+      ],
+      "purl": "pkg:golang/golang.org%2Fx%2Fnet@v0.12.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/golang.org/x/net@v0.12.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/golang.org/x/net/@v/v0.12.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.17"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/labstack/echo/v4",
+      "version": "v4.11.1",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "62e6114d2337087b36c9b7eb2fc3f1e3c6cee8102760837897cc124cc3fa0434"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Flabstack%2Fecho%2Fv4@v4.11.1",
+      "type": "framework",
+      "bom-ref": "pkg:golang/github.com/labstack/echo/v4@v4.11.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/labstack/echo/v4/@v/v4.11.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.17"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "golang.org/x/oauth2",
+      "version": "v0.10.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "913a60bab3aec7b2eab6ec63bb265ae068f681d7b322dfe342d1a73457f2a502"
+        }
+      ],
+      "purl": "pkg:golang/golang.org%2Fx%2Foauth2@v0.10.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/golang.org/x/oauth2@v0.10.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/golang.org/x/oauth2/@v/v0.10.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.17"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/ory/client-go",
+      "version": "v1.1.41",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8398d71cb4eb3a8f38efd9929a03db03dfd05a71204362bca60b1a3b0862751b"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fory%2Fclient-go@v1.1.41",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/ory/client-go@v1.1.41",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/ory/client-go/@v/v1.1.41.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.17"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/gabriel-vasile/mimetype",
+      "version": "v1.4.2",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cc0a6c1ff98a1b8c34edeaca21a24f1625f44ecabd045420377a866391a73600"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fgabriel-vasile%2Fmimetype@v1.4.2",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.2",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/gabriel-vasile/mimetype/@v/v1.4.2.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.20"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/go-playground/locales",
+      "version": "v0.14.1",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "871aea2d5beb2bae7e470adde4573a1763bbe89fcdb96f6dd2c8e75aa1b5b256"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fgo-playground%2Flocales@v0.14.1",
+      "type": "framework",
+      "bom-ref": "pkg:golang/github.com/go-playground/locales@v0.14.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/go-playground/locales/@v/v0.14.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.17"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/go-playground/universal-translator",
+      "version": "v0.18.1",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c5e918f9424a36e5fd58ff754e9c121f654c9437f6f148f6e010a9d3c6454d46"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fgo-playground%2Funiversal-translator@v0.18.1",
+      "type": "framework",
+      "bom-ref": "pkg:golang/github.com/go-playground/universal-translator@v0.18.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/go-playground/universal-translator/@v/v0.18.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.18"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/leodido/go-urn",
+      "version": "v1.2.4",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ed9ac8f264d278148797f51a4722905b5a9978c81a938d4035e08d69572483ee"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fleodido%2Fgo-urn@v1.2.4",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/leodido/go-urn@v1.2.4",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/leodido/go-urn/@v/v1.2.4.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.16"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/go-playground/validator/v10",
+      "version": "v10.14.1",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f625cc353eec1248d76f423e7a73bb4179b31ba402b0f598e33bde2855514b25"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fgo-playground%2Fvalidator%2Fv10@v10.14.1",
+      "type": "framework",
+      "bom-ref": "pkg:golang/github.com/go-playground/validator/v10@v10.14.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/go-playground/validator/v10/@v/v10.14.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.18"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/gosimple/unidecode",
+      "version": "v1.0.1",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "08fd02af563592880eb71d1b25b94acec556aea61aa9f34e9c7ce9816c380307"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fgosimple%2Funidecode@v1.0.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/gosimple/unidecode@v1.0.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/gosimple/unidecode/@v/v1.0.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.16"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/gosimple/slug",
+      "version": "v1.13.1",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "52245a147f86122947b2d2d499c06059c238daf88137b9806fcd7c26b60e7854"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fgosimple%2Fslug@v1.13.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/gosimple/slug@v1.13.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/gosimple/slug/@v/v1.13.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.11"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/zclconf/go-cty",
+      "version": "v1.10.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bd528bc67937a6e2f8a9102fef600ef96f7d2d40f875af74837b94033caebc09"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fzclconf%2Fgo-cty@v1.10.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/zclconf/go-cty@v1.10.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/zclconf/go-cty/@v/v1.10.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.12"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/owenrumney/go-sarif",
+      "version": "v1.1.1",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "74d0e23e5174e04491ffa7c794fcaaee01ca9ab334b0752f0068eca21f191f45"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fowenrumney%2Fgo-sarif@v1.1.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/owenrumney/go-sarif@v1.1.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/owenrumney/go-sarif/@v/v1.1.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.16"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/golang-jwt/jwt",
+      "version": "v3.2.2+incompatible",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f29cf6b7913203bd1f150412ae5e97657cea79c99865e50407c39418793127e2"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fgolang-jwt%2Fjwt@v3.2.2%2Bincompatible",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/golang-jwt/jwt@v3.2.2+incompatible",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/golang-jwt/jwt/@v/v3.2.2+incompatible.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "golang.org/x/time",
+      "version": "v0.3.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b5124d3e2c824348a746f6316cdf6393923ebef5bf3974908530d2a04e37d484"
+        }
+      ],
+      "purl": "pkg:golang/golang.org%2Fx%2Ftime@v0.3.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/golang.org/x/time@v0.3.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/golang.org/x/time/@v/v0.3.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/lib/pq",
+      "version": "v1.10.9",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "02554de71e04e13e78e2d5b31fa84a7db7d0be6dc775b3b1ae68200cd00f63da"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Flib%2Fpq@v1.10.9",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/lib/pq@v1.10.9",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/lib/pq/@v/v1.10.9.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.13"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/lmittmann/tint",
+      "version": "v1.0.1",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1c84b7812cbba8dc060a3fb9a118c0bad12b1419780737503fa70967435f3301"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Flmittmann%2Ftint@v1.0.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/lmittmann/tint@v1.0.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/lmittmann/tint/@v/v1.0.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.21"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "gorm.io/datatypes",
+      "version": "v1.2.0",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a35761d19be3223847fdb9e04e9ca91ba955449e5c853071134f451ffef5934e"
+        }
+      ],
+      "purl": "pkg:golang/gorm.io%2Fdatatypes@v1.2.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/gorm.io/datatypes@v1.2.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/gorm.io/datatypes/@v/v1.2.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.18"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/davecgh/go-spew",
+      "version": "v1.1.1",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "27b63c61c5b636286c826568fe6bf7940c25fec90e37888b1e34ac23e7391f7f"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fdavecgh%2Fgo-spew@v1.1.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/davecgh/go-spew/@v/v1.1.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/pmezard/go-difflib",
+      "version": "v1.0.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "88a1fbee4a05858c532b5a5c46790a92a7d3a20b1b83b819355638b110d867fe"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fpmezard%2Fgo-difflib@v1.0.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/pmezard/go-difflib@v1.0.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/pmezard/go-difflib/@v/v1.0.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/stretchr/objx",
+      "version": "v0.5.0",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "621fada38f04b0611f62e6870f35cf704df1853931ef7121982194a443a094aa"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fstretchr%2Fobjx@v0.5.0",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/stretchr/objx@v0.5.0",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/stretchr/objx/@v/v0.5.0.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.12"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "gopkg.in/yaml.v3",
+      "version": "v3.0.1",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2b8bb293bcfb04210faaee84f82eb861fbf5710ee4cfbac866f89498df848043"
+        }
+      ],
+      "purl": "pkg:golang/gopkg.in%2Fyaml.v3@v3.0.1",
+      "type": "library",
+      "bom-ref": "pkg:golang/gopkg.in/yaml.v3@v3.0.1",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/gopkg.in/yaml.v3/@v/v3.0.1.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/stretchr/testify",
+      "version": "v1.8.2",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c362cf0882b05b049f636cde76ed3e91e849a2a19cb62548dbda3a7f3af2eeee"
+        }
+      ],
+      "purl": "pkg:golang/github.com%2Fstretchr%2Ftestify@v1.8.2",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/stretchr/testify@v1.8.2",
+      "properties": [
+        {
+          "name": "SrcGoMod",
+          "value": "/Users/sebastiankw/go/pkg/mod/cache/download/github.com/stretchr/testify/@v/v1.8.2.mod"
+        },
+        {
+          "name": "ModuleGoVersion",
+          "value": "1.13"
+        }
+      ]
+    },
+    {
+      "group": "",
+      "name": "github.com/l3montree-dev/flawfix",
+      "version": "",
+      "purl": "pkg:golang/github.com%2Fl3montree-dev%2Fflawfix",
+      "type": "library",
+      "bom-ref": "pkg:golang/github.com/l3montree-dev/flawfix",
+      "evidence": {
+        "identity": {
+          "field": "purl",
+          "confidence": 1,
+          "methods": [
+            {
+              "technique": "manifest-analysis",
+              "confidence": 1,
+              "value": "/Users/sebastiankw/Documents/Source_Codes/flawfix/go.mod"
+            }
+          ]
+        }
+      },
+      "properties": [
+        {
+          "name": "SrcFile",
+          "value": "/Users/sebastiankw/Documents/Source_Codes/flawfix/go.mod"
+        }
+      ]
+    }
+  ],
+  "services": [],
+  "dependencies": [
+    {
+      "ref": "pkg:golang/github.com/Knetic/govaluate@v3.0.1-0.20171022003610-9aa49832a739+incompatible",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/casbin/casbin/v2@v2.72.1",
+      "dependsOn": [
+        "pkg:golang/github.com/Knetic/govaluate@v3.0.1-0.20171022003610-9aa49832a739+incompatible",
+        "pkg:golang/github.com/tidwall/gjson@v1.14.4"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/casbin/gorm-adapter/v3@v3.18.0",
+      "dependsOn": [
+        "pkg:golang/github.com/Knetic/govaluate@v3.0.1-0.20171022003610-9aa49832a739+incompatible",
+        "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
+        "pkg:golang/github.com/dustin/go-humanize@v1.0.1",
+        "pkg:golang/github.com/glebarez/go-sqlite@v1.20.3",
+        "pkg:golang/github.com/glebarez/sqlite@v1.7.0",
+        "pkg:golang/github.com/golang-sql/civil@v0.0.0-20220223132316-b832511892a9",
+        "pkg:golang/github.com/golang-sql/sqlexp@v0.1.0",
+        "pkg:golang/github.com/google/uuid@v1.3.0",
+        "pkg:golang/github.com/jackc/pgpassfile@v1.0.0",
+        "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+        "pkg:golang/github.com/jinzhu/now@v1.1.5",
+        "pkg:golang/github.com/microsoft/go-mssqldb@v0.17.0",
+        "pkg:golang/github.com/pmezard/go-difflib@v1.0.0",
+        "pkg:golang/github.com/remyoudompheng/bigfft@v0.0.0-20230126093431-47fa9a501578",
+        "pkg:golang/gopkg.in/yaml.v3@v3.0.1",
+        "pkg:golang/gorm.io/driver/sqlserver@v1.4.1",
+        "pkg:golang/gorm.io/plugin/dbresolver@v1.3.0",
+        "pkg:golang/modernc.org/libc@v1.22.2",
+        "pkg:golang/modernc.org/mathutil@v1.5.0",
+        "pkg:golang/modernc.org/memory@v1.5.0",
+        "pkg:golang/modernc.org/sqlite@v1.20.3"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/dustin/go-humanize@v1.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/glebarez/go-sqlite@v1.20.3",
+      "dependsOn": [
+        "pkg:golang/github.com/dustin/go-humanize@v1.0.1",
+        "pkg:golang/github.com/google/uuid@v1.3.0",
+        "pkg:golang/github.com/remyoudompheng/bigfft@v0.0.0-20230126093431-47fa9a501578",
+        "pkg:golang/modernc.org/libc@v1.22.2",
+        "pkg:golang/modernc.org/mathutil@v1.5.0",
+        "pkg:golang/modernc.org/memory@v1.5.0",
+        "pkg:golang/modernc.org/sqlite@v1.20.3"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/glebarez/sqlite@v1.7.0",
+      "dependsOn": [
+        "pkg:golang/github.com/dustin/go-humanize@v1.0.1",
+        "pkg:golang/github.com/glebarez/go-sqlite@v1.20.3",
+        "pkg:golang/github.com/google/uuid@v1.3.0",
+        "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+        "pkg:golang/github.com/jinzhu/now@v1.1.5",
+        "pkg:golang/github.com/remyoudompheng/bigfft@v0.0.0-20230126093431-47fa9a501578",
+        "pkg:golang/modernc.org/libc@v1.22.2",
+        "pkg:golang/modernc.org/mathutil@v1.5.0",
+        "pkg:golang/modernc.org/memory@v1.5.0",
+        "pkg:golang/modernc.org/sqlite@v1.20.3"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/go-playground/locales@v0.14.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/go-playground/universal-translator@v0.18.1",
+      "dependsOn": [
+        "pkg:golang/github.com/go-playground/locales@v0.14.1"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/go-playground/validator/v10@v10.14.1",
+      "dependsOn": [
+        "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.2",
+        "pkg:golang/github.com/go-playground/locales@v0.14.1",
+        "pkg:golang/github.com/go-playground/universal-translator@v0.18.1",
+        "pkg:golang/github.com/leodido/go-urn@v1.2.4"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/go-sql-driver/mysql@v1.7.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/golang-jwt/jwt@v3.2.2+incompatible",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/golang-sql/civil@v0.0.0-20220223132316-b832511892a9",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/golang-sql/sqlexp@v0.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/google/uuid@v1.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/gosimple/slug@v1.13.1",
+      "dependsOn": [
+        "pkg:golang/github.com/gosimple/unidecode@v1.0.1"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/gosimple/unidecode@v1.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/jackc/pgpassfile@v1.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/jackc/pgservicefile@v0.0.0-20221227161230-091c0ba34f0a",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/jackc/pgx/v5@v5.3.1",
+      "dependsOn": [
+        "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
+        "pkg:golang/github.com/jackc/pgpassfile@v1.0.0",
+        "pkg:golang/github.com/jackc/pgservicefile@v0.0.0-20221227161230-091c0ba34f0a",
+        "pkg:golang/github.com/pmezard/go-difflib@v1.0.0",
+        "pkg:golang/gopkg.in/yaml.v3@v3.0.1"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/jinzhu/now@v1.1.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/joho/godotenv@v1.5.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/l3montree-dev/flawfix",
+      "dependsOn": [
+        "pkg:golang/github.com/Knetic/govaluate@v3.0.1-0.20171022003610-9aa49832a739+incompatible",
+        "pkg:golang/github.com/casbin/casbin/v2@v2.72.1",
+        "pkg:golang/github.com/casbin/gorm-adapter/v3@v3.18.0",
+        "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
+        "pkg:golang/github.com/dustin/go-humanize@v1.0.1",
+        "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.2",
+        "pkg:golang/github.com/glebarez/go-sqlite@v1.20.3",
+        "pkg:golang/github.com/glebarez/sqlite@v1.7.0",
+        "pkg:golang/github.com/go-playground/locales@v0.14.1",
+        "pkg:golang/github.com/go-playground/universal-translator@v0.18.1",
+        "pkg:golang/github.com/go-playground/validator/v10@v10.14.1",
+        "pkg:golang/github.com/go-sql-driver/mysql@v1.7.0",
+        "pkg:golang/github.com/golang-jwt/jwt@v3.2.2+incompatible",
+        "pkg:golang/github.com/golang-sql/civil@v0.0.0-20220223132316-b832511892a9",
+        "pkg:golang/github.com/golang-sql/sqlexp@v0.1.0",
+        "pkg:golang/github.com/google/uuid@v1.3.0",
+        "pkg:golang/github.com/gosimple/slug@v1.13.1",
+        "pkg:golang/github.com/gosimple/unidecode@v1.0.1",
+        "pkg:golang/github.com/jackc/pgpassfile@v1.0.0",
+        "pkg:golang/github.com/jackc/pgservicefile@v0.0.0-20221227161230-091c0ba34f0a",
+        "pkg:golang/github.com/jackc/pgx/v5@v5.3.1",
+        "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+        "pkg:golang/github.com/jinzhu/now@v1.1.5",
+        "pkg:golang/github.com/joho/godotenv@v1.5.1",
+        "pkg:golang/github.com/labstack/echo/v4@v4.11.1",
+        "pkg:golang/github.com/labstack/gommon@v0.4.0",
+        "pkg:golang/github.com/leodido/go-urn@v1.2.4",
+        "pkg:golang/github.com/lib/pq@v1.10.9",
+        "pkg:golang/github.com/lmittmann/tint@v1.0.1",
+        "pkg:golang/github.com/mattn/go-colorable@v0.1.13",
+        "pkg:golang/github.com/mattn/go-isatty@v0.0.19",
+        "pkg:golang/github.com/microsoft/go-mssqldb@v0.17.0",
+        "pkg:golang/github.com/ory/client-go@v1.1.41",
+        "pkg:golang/github.com/owenrumney/go-sarif@v1.1.1",
+        "pkg:golang/github.com/pmezard/go-difflib@v1.0.0",
+        "pkg:golang/github.com/remyoudompheng/bigfft@v0.0.0-20230126093431-47fa9a501578",
+        "pkg:golang/github.com/stretchr/objx@v0.5.0",
+        "pkg:golang/github.com/stretchr/testify@v1.8.2",
+        "pkg:golang/github.com/tidwall/gjson@v1.14.4",
+        "pkg:golang/github.com/tidwall/match@v1.1.1",
+        "pkg:golang/github.com/tidwall/pretty@v1.2.0",
+        "pkg:golang/github.com/valyala/bytebufferpool@v1.0.0",
+        "pkg:golang/github.com/valyala/fasttemplate@v1.2.2",
+        "pkg:golang/github.com/zclconf/go-cty@v1.10.0",
+        "pkg:golang/golang.org/x/crypto@v0.11.0",
+        "pkg:golang/golang.org/x/net@v0.12.0",
+        "pkg:golang/golang.org/x/oauth2@v0.10.0",
+        "pkg:golang/golang.org/x/sys@v0.10.0",
+        "pkg:golang/golang.org/x/text@v0.11.0",
+        "pkg:golang/golang.org/x/time@v0.3.0",
+        "pkg:golang/gopkg.in/yaml.v3@v3.0.1",
+        "pkg:golang/gorm.io/datatypes@v1.2.0",
+        "pkg:golang/gorm.io/driver/mysql@v1.4.7",
+        "pkg:golang/gorm.io/driver/postgres@v1.5.2",
+        "pkg:golang/gorm.io/driver/sqlserver@v1.4.1",
+        "pkg:golang/gorm.io/gorm@v1.25.2",
+        "pkg:golang/gorm.io/plugin/dbresolver@v1.3.0",
+        "pkg:golang/modernc.org/libc@v1.22.2",
+        "pkg:golang/modernc.org/mathutil@v1.5.0",
+        "pkg:golang/modernc.org/memory@v1.5.0",
+        "pkg:golang/modernc.org/sqlite@v1.20.3"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/labstack/echo/v4@v4.11.1",
+      "dependsOn": [
+        "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
+        "pkg:golang/github.com/golang-jwt/jwt@v3.2.2+incompatible",
+        "pkg:golang/github.com/labstack/gommon@v0.4.0",
+        "pkg:golang/github.com/mattn/go-colorable@v0.1.13",
+        "pkg:golang/github.com/mattn/go-isatty@v0.0.19",
+        "pkg:golang/github.com/pmezard/go-difflib@v1.0.0",
+        "pkg:golang/github.com/valyala/bytebufferpool@v1.0.0",
+        "pkg:golang/github.com/valyala/fasttemplate@v1.2.2",
+        "pkg:golang/golang.org/x/crypto@v0.11.0",
+        "pkg:golang/golang.org/x/net@v0.12.0",
+        "pkg:golang/golang.org/x/sys@v0.10.0",
+        "pkg:golang/golang.org/x/text@v0.11.0",
+        "pkg:golang/golang.org/x/time@v0.3.0",
+        "pkg:golang/gopkg.in/yaml.v3@v3.0.1"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/labstack/gommon@v0.4.0",
+      "dependsOn": [
+        "pkg:golang/github.com/davecgh/go-spew@v1.1.1"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/leodido/go-urn@v1.2.4",
+      "dependsOn": [
+        "pkg:golang/github.com/stretchr/testify@v1.8.2"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/lib/pq@v1.10.9",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/lmittmann/tint@v1.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/mattn/go-colorable@v0.1.13",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/mattn/go-isatty@v0.0.19",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/microsoft/go-mssqldb@v0.17.0",
+      "dependsOn": [
+        "pkg:golang/github.com/golang-jwt/jwt@v3.2.2+incompatible",
+        "pkg:golang/github.com/golang-sql/sqlexp@v0.1.0",
+        "pkg:golang/github.com/google/uuid@v1.3.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/ory/client-go@v1.1.41",
+      "dependsOn": [
+        "pkg:golang/golang.org/x/net@v0.12.0",
+        "pkg:golang/golang.org/x/oauth2@v0.10.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/owenrumney/go-sarif@v1.1.1",
+      "dependsOn": [
+        "pkg:golang/github.com/zclconf/go-cty@v1.10.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/pmezard/go-difflib@v1.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/remyoudompheng/bigfft@v0.0.0-20230126093431-47fa9a501578",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/stretchr/objx@v0.5.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/stretchr/testify@v1.8.2",
+      "dependsOn": [
+        "pkg:golang/github.com/davecgh/go-spew@v1.1.1",
+        "pkg:golang/github.com/pmezard/go-difflib@v1.0.0",
+        "pkg:golang/github.com/stretchr/objx@v0.5.0",
+        "pkg:golang/gopkg.in/yaml.v3@v3.0.1"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/tidwall/gjson@v1.14.4",
+      "dependsOn": [
+        "pkg:golang/github.com/tidwall/match@v1.1.1",
+        "pkg:golang/github.com/tidwall/pretty@v1.2.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/tidwall/match@v1.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/tidwall/pretty@v1.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/valyala/bytebufferpool@v1.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/github.com/valyala/fasttemplate@v1.2.2",
+      "dependsOn": [
+        "pkg:golang/github.com/valyala/bytebufferpool@v1.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/zclconf/go-cty@v1.10.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/golang.org/x/crypto@v0.11.0",
+      "dependsOn": [
+        "pkg:golang/golang.org/x/sys@v0.10.0",
+        "pkg:golang/golang.org/x/text@v0.11.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/golang.org/x/net@v0.12.0",
+      "dependsOn": [
+        "pkg:golang/golang.org/x/crypto@v0.11.0",
+        "pkg:golang/golang.org/x/sys@v0.10.0",
+        "pkg:golang/golang.org/x/text@v0.11.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/golang.org/x/oauth2@v0.10.0",
+      "dependsOn": [
+        "pkg:golang/golang.org/x/net@v0.12.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/golang.org/x/sys@v0.10.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/golang.org/x/text@v0.11.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/golang.org/x/time@v0.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/gopkg.in/yaml.v3@v3.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/gorm.io/datatypes@v1.2.0",
+      "dependsOn": [
+        "pkg:golang/github.com/go-sql-driver/mysql@v1.7.0",
+        "pkg:golang/github.com/golang-sql/civil@v0.0.0-20220223132316-b832511892a9",
+        "pkg:golang/github.com/golang-sql/sqlexp@v0.1.0",
+        "pkg:golang/github.com/jackc/pgpassfile@v1.0.0",
+        "pkg:golang/github.com/jackc/pgservicefile@v0.0.0-20221227161230-091c0ba34f0a",
+        "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+        "pkg:golang/github.com/jinzhu/now@v1.1.5",
+        "pkg:golang/github.com/microsoft/go-mssqldb@v0.17.0",
+        "pkg:golang/gorm.io/driver/mysql@v1.4.7",
+        "pkg:golang/gorm.io/driver/sqlserver@v1.4.1"
+      ]
+    },
+    {
+      "ref": "pkg:golang/gorm.io/driver/mysql@v1.4.7",
+      "dependsOn": [
+        "pkg:golang/github.com/go-sql-driver/mysql@v1.7.0",
+        "pkg:golang/github.com/jinzhu/now@v1.1.5"
+      ]
+    },
+    {
+      "ref": "pkg:golang/gorm.io/driver/postgres@v1.5.2",
+      "dependsOn": [
+        "pkg:golang/github.com/jackc/pgpassfile@v1.0.0",
+        "pkg:golang/github.com/jackc/pgservicefile@v0.0.0-20221227161230-091c0ba34f0a",
+        "pkg:golang/github.com/jackc/pgx/v5@v5.3.1",
+        "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+        "pkg:golang/github.com/jinzhu/now@v1.1.5"
+      ]
+    },
+    {
+      "ref": "pkg:golang/gorm.io/driver/sqlserver@v1.4.1",
+      "dependsOn": [
+        "pkg:golang/github.com/golang-sql/civil@v0.0.0-20220223132316-b832511892a9",
+        "pkg:golang/github.com/jinzhu/now@v1.1.5",
+        "pkg:golang/github.com/microsoft/go-mssqldb@v0.17.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/gorm.io/gorm@v1.25.2",
+      "dependsOn": [
+        "pkg:golang/github.com/jinzhu/inflection@v1.0.0",
+        "pkg:golang/github.com/jinzhu/now@v1.1.5"
+      ]
+    },
+    {
+      "ref": "pkg:golang/gorm.io/plugin/dbresolver@v1.3.0",
+      "dependsOn": [
+        "pkg:golang/github.com/jinzhu/now@v1.1.5"
+      ]
+    },
+    {
+      "ref": "pkg:golang/modernc.org/libc@v1.22.2",
+      "dependsOn": [
+        "pkg:golang/github.com/google/uuid@v1.3.0",
+        "pkg:golang/modernc.org/mathutil@v1.5.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/modernc.org/mathutil@v1.5.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:golang/modernc.org/memory@v1.5.0",
+      "dependsOn": [
+        "pkg:golang/modernc.org/mathutil@v1.5.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/modernc.org/sqlite@v1.20.3",
+      "dependsOn": [
+        "pkg:golang/github.com/google/uuid@v1.3.0",
+        "pkg:golang/modernc.org/libc@v1.22.2",
+        "pkg:golang/modernc.org/mathutil@v1.5.0"
+      ]
+    }
+  ]
+}
