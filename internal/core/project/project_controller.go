@@ -50,44 +50,58 @@ func (p *Controller) Create(c core.Context) error {
 	// add the organization id
 	model.OrganizationID = core.GetTenant(c).GetID()
 
-	err := p.projectRepository.Create(nil, &model)
-
-	if err != nil {
-		return err
+	if err := p.projectRepository.Create(nil, &model); err != nil {
+		return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 	}
 
-	p.bootstrapProject(c, model)
+	if err := p.bootstrapProject(c, model); err != nil {
+		return echo.NewHTTPError(500, "could not bootstrap project").WithInternal(err)
+	}
 
 	return c.JSON(200, model)
 }
 
-func (p *Controller) bootstrapProject(c core.Context, project Model) {
+func (p *Controller) bootstrapProject(c core.Context, project Model) error {
 	// get the rbac object
 	rbac := core.GetRBAC(c)
 	// make sure to keep the organization roles in sync
 	// let the organization admin role inherit all permissions from the project admin
-	rbac.LinkDomainAndProjectRole("admin", "admin", project.ID.String())
-	rbac.InheritProjectRole("admin", "member", project.ID.String())
+	if err := rbac.LinkDomainAndProjectRole("admin", "admin", project.ID.String()); err != nil {
+		return err
+	}
 
-	rbac.AllowRoleInProject(project.ID.String(), "admin", "user", []accesscontrol.Action{
+	if err := rbac.InheritProjectRole("admin", "member", project.ID.String()); err != nil {
+		return err
+	}
+
+	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "user", []accesscontrol.Action{
 		accesscontrol.ActionCreate,
 		accesscontrol.ActionDelete,
 		accesscontrol.ActionUpdate,
-	})
+	}); err != nil {
+		return err
+	}
 
-	rbac.AllowRoleInProject(project.ID.String(), "admin", "asset", []accesscontrol.Action{
+	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "asset", []accesscontrol.Action{
 		accesscontrol.ActionCreate,
 		accesscontrol.ActionDelete,
 		accesscontrol.ActionUpdate,
-	})
+	}); err != nil {
+		return err
+	}
 
-	rbac.AllowRoleInProject(project.ID.String(), "member", "project", []accesscontrol.Action{
+	if err := rbac.AllowRoleInProject(project.ID.String(), "member", "project", []accesscontrol.Action{
 		accesscontrol.ActionRead,
-	})
+	}); err != nil {
+		return err
+	}
 
-	rbac.AllowRoleInProject(project.ID.String(), "member", "asset", []accesscontrol.Action{
+	if err := rbac.AllowRoleInProject(project.ID.String(), "member", "asset", []accesscontrol.Action{
 		accesscontrol.ActionRead,
-	})
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *Controller) Delete(c core.Context) error {

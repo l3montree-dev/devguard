@@ -9,7 +9,9 @@ import (
 )
 
 func RegisterHttpHandler(database core.DB, server core.Server) {
-	database.AutoMigrate(&cwe.CVEModel{}, &cwe.CWEModel{})
+	if err := database.AutoMigrate(&cwe.CVEModel{}, &cwe.CWEModel{}); err != nil {
+		panic(err)
+	}
 
 	cweRepository := cwe.NewGormCWERepository(database)
 
