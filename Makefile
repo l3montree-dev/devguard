@@ -7,3 +7,6 @@ clean::
 
 mocks::
 	mockery --config=.mockery.yaml
+
+lint::
+	golangci-lint run ./...

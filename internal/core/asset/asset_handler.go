@@ -17,13 +17,13 @@ func assetMiddleware(repository Repository) func(next echo.HandlerFunc) echo.Han
 				return echo.NewHTTPError(400, "invalid asset slug")
 			}
 
-			app, err := repository.ReadBySlug(project.GetID(), assetSlug)
+			asset, err := repository.ReadBySlug(project.GetID(), assetSlug)
 
 			if err != nil {
 				return echo.NewHTTPError(404, "could not find asset").WithInternal(err)
 			}
 
-			c.Set("asset", app)
+			c.Set("asset", asset)
 
 			return next(c)
 		}
