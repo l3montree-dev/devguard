@@ -61,32 +61,20 @@ func GetProjectSlug(c Context) (string, error) {
 	return projectID, nil
 }
 
-func GetApplicationSlug(c Context) (string, error) {
-	applicationSlug := c.Param("applicationSlug")
-	if applicationSlug == "" {
-		return "", fmt.Errorf("could not get application slug")
+func GetAssetSlug(c Context) (string, error) {
+	assetSlug := c.Param("assetSlug")
+	if assetSlug == "" {
+		return "", fmt.Errorf("could not get asset slug")
 	}
-	return applicationSlug, nil
+	return assetSlug, nil
 }
 
-func GetApplication(c Context) HasID {
-	return c.Get("application").(HasID)
+func GetAsset(c Context) HasID {
+	return c.Get("asset").(HasID)
 }
 
 func GetProject(c Context) HasID {
 	return c.Get("project").(HasID)
-}
-
-func GetEnv(c Context) HasID {
-	return c.Get("env").(HasID)
-}
-
-func GetEnvSlug(c Context) (string, error) {
-	envSlug := c.Param("envSlug")
-	if envSlug == "" {
-		return "", fmt.Errorf("could not get env slug")
-	}
-	return strings.TrimSpace(envSlug), nil
 }
 
 type PageInfo struct {

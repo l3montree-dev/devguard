@@ -61,13 +61,12 @@ func (r *RBACMock) RevokeRole(subject string, role string) error {
 }
 
 func (r *RBACMock) GrantRoleInProject(subject string, role string, project string) error {
-	r.GrantRole(subject, project+"|"+string(role))
-	return nil
+	return r.GrantRole(subject, project+"|"+string(role))
+
 }
 
 func (r *RBACMock) RevokeRoleInProject(subject string, role string, project string) error {
-	r.RevokeRole(subject, project+"|"+role)
-	return nil
+	return r.RevokeRole(subject, project+"|"+role)
 }
 
 func (r *RBACMock) AllowRole(role string, object string, action []accesscontrol.Action) error {
@@ -137,6 +136,10 @@ func (r RBACProviderMock) GetDomainRBAC(domain string) accesscontrol.AccessContr
 		roles: map[string][]string{},
 		rules: map[string][]string{},
 	}
+}
+
+func (r RBACMock) GetAllProjectsForUser(user string) []string {
+	return []string{}
 }
 
 func (r RBACProviderMock) DomainsOfUser(user string) ([]string, error) {

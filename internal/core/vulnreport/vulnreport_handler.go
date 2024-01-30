@@ -2,14 +2,16 @@ package vulnreport
 
 import (
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/asset"
 	"github.com/l3montree-dev/flawfix/internal/core/cwe"
-	"github.com/l3montree-dev/flawfix/internal/core/env"
+
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/core/flawevent"
 )
 
 func RegisterHttpHandler(database core.DB, server core.Server) {
-	database.AutoMigrate(&cwe.CVEModel{}, &cwe.CWEModel{})
+	if err := database.AutoMigrate(&cwe.CVEModel{}, &cwe.CWEModel{}); err != nil {
+		panic(err)
+	}
 
 	cweRepository := cwe.NewGormCWERepository(database)
 
@@ -23,16 +25,16 @@ func RegisterHttpHandler(database core.DB, server core.Server) {
 
 	flawEnricher := flaw.NewEnricher(cveService, flawRepository)
 
-	flawEventRepository := flawevent.NewGormRepository(database)
-	envRepository := env.NewGormRepository(database)
+	flawEventRepository := flaw.NewEventGormRepository(database)
+	assetRepository := asset.NewGormRepository(database)
 
 	controller := NewHttpController(
 		flawRepository,
 		flawEnricher,
 		flawEventRepository,
-		envRepository,
+		assetRepository,
 	)
 
 	vulnreportRouter := server.Group("/vulnreports")
-	vulnreportRouter.POST("/:envID/", controller.ImportVulnReport)
+	vulnreportRouter.POST("/:assetID/", controller.ImportVulnReport)
 }

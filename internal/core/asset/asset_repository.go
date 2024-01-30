@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package application
+package asset
 
 import (
 	"github.com/google/uuid"
@@ -32,7 +32,7 @@ type Repository interface {
 	FindOrCreate(tx core.DB, name string) (Model, error)
 	GetByProjectID(projectID uuid.UUID) ([]Model, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (Model, error)
-	GetApplicationIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
+	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
 }
 
 func NewGormRepository(db core.DB) *GormRepository {
@@ -74,11 +74,11 @@ func (a *GormRepository) GetByProjectID(projectID uuid.UUID) ([]Model, error) {
 
 func (g *GormRepository) ReadBySlug(projectID uuid.UUID, slug string) (Model, error) {
 	var t Model
-	err := g.db.Preload("Envs").Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
+	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
 	return t, err
 }
 
-func (g *GormRepository) GetApplicationIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
+func (g *GormRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
 	app, err := g.ReadBySlug(projectID, slug)
 	if err != nil {
 		return uuid.UUID{}, err

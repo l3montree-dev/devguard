@@ -6,8 +6,8 @@ import (
 	"os"
 )
 
-func parseCWEs(filePath string) ([]*WeaknessType, error) {
-	file, err := os.Open(filePath)
+func parseCWEs() ([]*WeaknessType, error) {
+	file, err := os.Open("cwe.xml")
 
 	if err != nil {
 		return nil, err
@@ -33,11 +33,8 @@ func parseCWEs(filePath string) ([]*WeaknessType, error) {
 }
 
 func SyncCWEs(cweRepository CWERepository) {
-	// read the CWEs from the local file system
-	filePath := "cwec.xml"
-
 	// parse the CWEs
-	cwes, err := parseCWEs(filePath)
+	cwes, err := parseCWEs()
 
 	if err != nil {
 		panic(err)

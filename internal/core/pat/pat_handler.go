@@ -5,7 +5,9 @@ import (
 )
 
 func RegisterHttpHandler(database core.DB, server core.Server) core.Server {
-	database.AutoMigrate(&Model{})
+	if err := database.AutoMigrate(&Model{}); err != nil {
+		panic(err)
+	}
 
 	patRepository := NewGormRepository(database)
 	patController := NewHttpController(patRepository)

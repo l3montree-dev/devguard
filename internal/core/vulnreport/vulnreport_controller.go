@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/env"
+	"github.com/l3montree-dev/flawfix/internal/core/asset"
+
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/core/flawevent"
 	"github.com/labstack/echo/v4"
 	"github.com/owenrumney/go-sarif/sarif"
 )
@@ -18,23 +18,23 @@ type VulnReportHttpController struct {
 	flawRepository flaw.Repository
 	flawEnricher   flaw.Enricher
 
-	flawEventRepository flawevent.Repository
+	flawEventRepository flaw.EventRepository
 
-	envRepository env.Repository
+	assetRepository asset.Repository
 }
 
 func NewHttpController(
 	flawRepository flaw.Repository,
 	flawEnricher flaw.Enricher,
-	flawEventRepository flawevent.Repository,
-	envRepository env.Repository,
+	flawEventRepository flaw.EventRepository,
+	assetRepository asset.Repository,
 ) VulnReportHttpController {
 	return VulnReportHttpController{
 		flawRepository: flawRepository,
 		flawEnricher:   flawEnricher,
 
 		flawEventRepository: flawEventRepository,
-		envRepository:       envRepository,
+		assetRepository:     assetRepository,
 	}
 }
 
@@ -97,12 +97,12 @@ func parseReport(ctx core.Context) (rulesAndResults, error) {
 }
 
 func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
-	envID := ctx.Param("envID")
-	if envID == "" {
-		return echo.NewHTTPError(400, "no envID provided")
+	assetID := ctx.Param("assetID")
+	if assetID == "" {
+		return echo.NewHTTPError(400, "no assetID provided")
 	}
 
-	envUUID := uuid.MustParse(envID)
+	assetUUID := uuid.MustParse(assetID)
 	userUUID := uuid.MustParse(core.GetSession(ctx).GetUserID())
 
 	// parse the report
@@ -113,7 +113,7 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 
 	// get the current flaws.
 	// we will use this to determine if a flaw is new or not
-	flaws, err := c.flawRepository.GetByEnvId(nil, envUUID)
+	flaws, err := c.flawRepository.GetByAssetId(nil, assetUUID)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "unable to get flaws").WithInternal(err)
@@ -133,7 +133,7 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 	}
 
 	newDetectedFlaws := []flaw.Model{}
-	newFlawEvents := []flawevent.Model{}
+	newFlawEvents := []flaw.EventModel{}
 	flawsToUpdate := []flaw.Model{}
 
 	// check which flaws needs to be created and which are fixed now.
@@ -150,15 +150,15 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 		}
 		if f, ok := fixedFlaws[*result.RuleID]; ok {
 			// we need to create a new detected event.
-			flawEvent := flawevent.Model{
-				Type:   flawevent.EventTypeDetected,
+			flawEvent := flaw.EventModel{
+				Type:   flaw.EventTypeDetected,
 				FlawID: f.ID,
 				UserID: userUUID,
 			}
 			newFlawEvents = append(newFlawEvents, flawEvent)
 
 			// we need to reopen the flaw
-			flawsToUpdate = append(flawsToUpdate, f.ApplyEvent(flawEvent))
+			flawsToUpdate = append(flawsToUpdate, flawEvent.Apply(f))
 
 			continue
 		}
@@ -167,11 +167,11 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 		newDetectedFlaws = append(newDetectedFlaws, flaw.Model{
 			RuleID:  *result.RuleID,
 			Message: result.Message.Text,
-			EnvID:   envUUID,
+			AssetID: assetUUID,
 			State:   flaw.StateOpen,
-			Events: []flawevent.Model{
+			Events: []flaw.EventModel{
 				{
-					Type:   flawevent.EventTypeDetected,
+					Type:   flaw.EventTypeDetected,
 					UserID: userUUID,
 				},
 			},
@@ -180,7 +180,6 @@ func (c VulnReportHttpController) ImportVulnReport(ctx core.Context) error {
 
 	// now save all.
 	err = c.flawRepository.Transaction(func(tx core.DB) error {
-		c.envRepository.UpdateLastReportTime(tx, envUUID)
 		// create the new flaws
 		if len(newDetectedFlaws) > 0 {
 			err := c.flawRepository.CreateBatch(tx, newDetectedFlaws)

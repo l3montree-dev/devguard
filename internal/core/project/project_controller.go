@@ -16,25 +16,23 @@
 package project
 
 import (
-	"log/slog"
-	"strings"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/application"
+	"github.com/l3montree-dev/flawfix/internal/core/asset"
+
 	"github.com/labstack/echo/v4"
 )
 
 type Controller struct {
-	projectRepository     Repository
-	applicationRepository application.Repository
+	projectRepository Repository
+	assetRepository   asset.Repository
 }
 
-func NewHttpController(repository Repository, appRepository application.Repository) *Controller {
+func NewHttpController(repository Repository, assetRepository asset.Repository) *Controller {
 	return &Controller{
-		projectRepository:     repository,
-		applicationRepository: appRepository,
+		projectRepository: repository,
+		assetRepository:   assetRepository,
 	}
 }
 
@@ -52,44 +50,58 @@ func (p *Controller) Create(c core.Context) error {
 	// add the organization id
 	model.OrganizationID = core.GetTenant(c).GetID()
 
-	err := p.projectRepository.Create(nil, &model)
-
-	if err != nil {
-		return err
+	if err := p.projectRepository.Create(nil, &model); err != nil {
+		return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 	}
 
-	p.bootstrapProject(c, model)
+	if err := p.bootstrapProject(c, model); err != nil {
+		return echo.NewHTTPError(500, "could not bootstrap project").WithInternal(err)
+	}
 
 	return c.JSON(200, model)
 }
 
-func (p *Controller) bootstrapProject(c core.Context, project Model) {
+func (p *Controller) bootstrapProject(c core.Context, project Model) error {
 	// get the rbac object
 	rbac := core.GetRBAC(c)
 	// make sure to keep the organization roles in sync
 	// let the organization admin role inherit all permissions from the project admin
-	rbac.LinkDomainAndProjectRole("admin", "admin", project.ID.String())
-	rbac.InheritProjectRole("admin", "member", project.ID.String())
+	if err := rbac.LinkDomainAndProjectRole("admin", "admin", project.ID.String()); err != nil {
+		return err
+	}
 
-	rbac.AllowRoleInProject(project.ID.String(), "admin", "user", []accesscontrol.Action{
+	if err := rbac.InheritProjectRole("admin", "member", project.ID.String()); err != nil {
+		return err
+	}
+
+	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "user", []accesscontrol.Action{
 		accesscontrol.ActionCreate,
 		accesscontrol.ActionDelete,
 		accesscontrol.ActionUpdate,
-	})
+	}); err != nil {
+		return err
+	}
 
-	rbac.AllowRoleInProject(project.ID.String(), "admin", "application", []accesscontrol.Action{
+	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "asset", []accesscontrol.Action{
 		accesscontrol.ActionCreate,
 		accesscontrol.ActionDelete,
 		accesscontrol.ActionUpdate,
-	})
+	}); err != nil {
+		return err
+	}
 
-	rbac.AllowRoleInProject(project.ID.String(), "member", "project", []accesscontrol.Action{
+	if err := rbac.AllowRoleInProject(project.ID.String(), "member", "project", []accesscontrol.Action{
 		accesscontrol.ActionRead,
-	})
+	}); err != nil {
+		return err
+	}
 
-	rbac.AllowRoleInProject(project.ID.String(), "member", "application", []accesscontrol.Action{
+	if err := rbac.AllowRoleInProject(project.ID.String(), "member", "asset", []accesscontrol.Action{
 		accesscontrol.ActionRead,
-	})
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *Controller) Delete(c core.Context) error {
@@ -110,13 +122,13 @@ func (p *Controller) Read(c core.Context) error {
 	// just get the project from the context
 	project := core.GetProject(c).(Model)
 
-	// lets fetch the applications related to this project
-	applications, err := p.applicationRepository.GetByProjectID(project.ID)
+	// lets fetch the assets related to this project
+	assets, err := p.assetRepository.GetByProjectID(project.ID)
 	if err != nil {
 		return err
 	}
 
-	project.Applications = applications
+	project.Assets = assets
 
 	return c.JSON(200, project)
 }
@@ -124,23 +136,17 @@ func (p *Controller) Read(c core.Context) error {
 func (p *Controller) List(c core.Context) error {
 	// get all projects the user has at least read access to
 	rbac := core.GetRBAC(c)
-	roles := rbac.GetAllRoles(core.GetSession(c).GetUserID())
+	projectsIdsStr := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
 
 	// extract the project ids from the roles
 	projectIDs := make([]uuid.UUID, 0)
-	for _, role := range roles {
-		if !strings.HasPrefix(role, "role::project::") {
-			continue // not a project role
-		}
-		// extract everything between the prefix and a "|"
-		projectID, err := uuid.Parse(strings.Split(strings.TrimPrefix(role, "role::project::"), "|")[0])
-		if err != nil {
-			slog.Error("could not parse project id from role", "role", role)
-			continue
-		}
+	for _, project := range projectsIdsStr {
+		projectID := uuid.MustParse(project)
 		projectIDs = append(projectIDs, projectID)
 	}
+
 	projects, err := p.projectRepository.List(projectIDs)
+
 	if err != nil {
 		return err
 	}

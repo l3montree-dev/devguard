@@ -3,19 +3,21 @@ package project
 import (
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/application"
+	"github.com/l3montree-dev/flawfix/internal/core/asset"
 )
 
 func RegisterHttpHandler(
 	database core.DB,
 	server core.Server,
-	appRepository application.Repository,
+	assetRepository asset.Repository,
 ) core.Server {
-	database.AutoMigrate(&Model{})
+	if err := database.AutoMigrate(&Model{}); err != nil {
+		panic(err)
+	}
 
 	repository := NewGormRepository(database)
 
-	controller := NewHttpController(repository, appRepository)
+	controller := NewHttpController(repository, assetRepository)
 
 	server.GET("/projects/", controller.List, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 
