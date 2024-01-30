@@ -31,7 +31,9 @@ func assetMiddleware(repository Repository) func(next echo.HandlerFunc) echo.Han
 }
 
 func RegisterHttpHandler(database core.DB, server core.Server, rbacMiddleware accesscontrol.RBACMiddleware) core.Server {
-	database.AutoMigrate(&Model{})
+	if err := database.AutoMigrate(&Model{}); err != nil {
+		panic(err)
+	}
 
 	repository := NewGormRepository(database)
 
