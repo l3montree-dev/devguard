@@ -15,8 +15,8 @@ type GormRepository struct {
 type Repository interface {
 	database.Repository[uuid.UUID, Model, core.DB]
 
-	GetByEnvId(tx core.DB, envId uuid.UUID) ([]Model, error)
-	GetByEnvIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, envId uuid.UUID) (core.Paged[Model], error)
+	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]Model, error)
+	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[Model], error)
 }
 
 func NewGormRepository(db core.DB) Repository {
@@ -26,24 +26,24 @@ func NewGormRepository(db core.DB) Repository {
 	}
 }
 
-func (r *GormRepository) GetByEnvId(
+func (r *GormRepository) GetByAssetId(
 	tx *gorm.DB,
-	envId uuid.UUID,
+	assetId uuid.UUID,
 ) ([]Model, error) {
 
 	var flaws []Model = []Model{}
-	// get all flaws of the environment
-	if err := r.Repository.GetDB(tx).Where("env_id = ?", envId).Find(&flaws).Error; err != nil {
+	// get all flaws of the asset
+	if err := r.Repository.GetDB(tx).Where("asset_id = ?", assetId).Find(&flaws).Error; err != nil {
 		return nil, err
 	}
 	return flaws, nil
 }
 
-func (r *GormRepository) GetByEnvIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, envId uuid.UUID) (core.Paged[Model], error) {
+func (r *GormRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[Model], error) {
 	var count int64
 	var flaws []Model = []Model{}
 
-	q := r.Repository.GetDB(tx).Joins("CVE").Where("env_id = ?", envId)
+	q := r.Repository.GetDB(tx).Joins("CVE").Where("asset_id = ?", assetId)
 
 	// apply filters
 	for _, f := range filter {
@@ -51,8 +51,8 @@ func (r *GormRepository) GetByEnvIdPaged(tx core.DB, pageInfo core.PageInfo, fil
 	}
 	q.Model(&Model{}).Count(&count)
 
-	// get all flaws of the environment
-	q = pageInfo.ApplyOnDB(r.Repository.GetDB(tx)).Joins("CVE").Where("env_id = ?", envId)
+	// get all flaws of the asset
+	q = pageInfo.ApplyOnDB(r.Repository.GetDB(tx)).Joins("CVE").Where("asset_id = ?", assetId)
 
 	// apply filters
 	for _, f := range filter {

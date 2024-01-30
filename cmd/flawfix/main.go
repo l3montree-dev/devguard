@@ -26,8 +26,8 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/auth"
 	"github.com/l3montree-dev/flawfix/internal/core"
 
-	"github.com/l3montree-dev/flawfix/internal/core/application"
-	"github.com/l3montree-dev/flawfix/internal/core/env"
+	"github.com/l3montree-dev/flawfix/internal/core/asset"
+
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 	"github.com/l3montree-dev/flawfix/internal/core/org"
 	"github.com/l3montree-dev/flawfix/internal/core/pat"
@@ -93,7 +93,7 @@ func main() {
 	// we need those core features in globally scoped middlewares. Therefore
 	// initialize them right here.
 	patRepository := pat.NewGormRepository(db)
-	appRepository := application.NewGormRepository(db)
+	assetRepository := asset.NewGormRepository(db)
 	projectRepository := project.NewGormRepository(db)
 	projectScopedRBAC := project.ProjectAccessControlFactory(projectRepository)
 
@@ -113,14 +113,13 @@ func main() {
 	pat.RegisterHttpHandler(db, sessionRouter)
 
 	// each http registration returns its own scoped router.
-	// since this application has a multi tenant and hierarchical structure
+	// since this asset has a multi tenant and hierarchical structure
 	// we need to pass the returned router to the next registration.
 	tenantRouter := org.RegisterHttpHandler(db, sessionRouter, casbinRBACProvider)
-	projectRouter := project.RegisterHttpHandler(db, tenantRouter, appRepository)
-	applicationRouter := application.RegisterHttpHandler(db, projectRouter, projectScopedRBAC)
-	envRouter := env.RegisterHttpHandler(db, applicationRouter, appRepository)
+	projectRouter := project.RegisterHttpHandler(db, tenantRouter, assetRepository)
+	assetRouter := asset.RegisterHttpHandler(db, projectRouter, projectScopedRBAC)
 
-	flaw.RegisterHttpHandler(db, envRouter, projectScopedRBAC)
+	flaw.RegisterHttpHandler(db, assetRouter, projectScopedRBAC)
 
 	slog.Error("failed to start server", "err", server.Start(":8080").Error())
 }
