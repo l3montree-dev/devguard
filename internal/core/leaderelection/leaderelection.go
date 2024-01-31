@@ -1,0 +1,100 @@
+package leaderelection
+
+import (
+	"log/slog"
+	"math/rand"
+	"sync/atomic"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+type configService interface {
+	GetJSONConfig(key string, v any) error
+	SetJSONConfig(key string, v any) error
+}
+
+type leaderElectionConfig struct {
+	LeaderID string `json:"leaderId"`
+	LastPing int64  `json:"lastPing"`
+}
+
+type DatabaseLeaderElector struct {
+	leaderElectorID string
+	configService   configService
+	isLeader        atomic.Bool // this variable gets updated by a daemon goroutine. Usage of atomic is required.
+	daemonIsRunning bool
+}
+
+func NewDatabaseLeaderElector(configService configService) *DatabaseLeaderElector {
+	leaderElector := DatabaseLeaderElector{
+		configService: configService,
+		// generate a random ID for this leader elector
+		leaderElectorID: uuid.New().String(),
+	}
+	// start the daemon
+	leaderElector.startDaemon()
+	return &leaderElector
+}
+
+func randomNumberBetween(min, max int) int {
+	//nolint:gosec
+	return rand.Intn(max-min) + min
+}
+
+func (e *DatabaseLeaderElector) daemon() {
+	for {
+		isLeader, err := e.checkIfLeader()
+		if err != nil {
+			slog.Error("could not check if leader", "err", err)
+		}
+
+		if isLeader {
+			e.isLeader.Store(true)
+			slog.Info("this instance is the leader", "instanceId", e.leaderElectorID)
+		} else {
+			e.isLeader.Store(false)
+			slog.Info("this instance is not the leader", "instanceId", e.leaderElectorID)
+		}
+
+		time.Sleep(2 * time.Second)
+		// time.Sleep(time.Duration(randomNumberBetween(60, 359)) * time.Second)
+	}
+}
+
+func (e *DatabaseLeaderElector) startDaemon() {
+	e.daemonIsRunning = true
+	go e.daemon()
+}
+
+func (e *DatabaseLeaderElector) IsLeader() bool {
+	return true
+	return e.isLeader.Load()
+}
+
+func (e *DatabaseLeaderElector) makeLeader() error {
+	// there is no leader yet - overwrite it.
+	return e.configService.SetJSONConfig("leaderElection", leaderElectionConfig{
+		LeaderID: e.leaderElectorID,
+		LastPing: time.Now().Unix(),
+	})
+}
+
+func (e *DatabaseLeaderElector) checkIfLeader() (bool, error) {
+	var config leaderElectionConfig
+
+	err := e.configService.GetJSONConfig("leaderElection", &config)
+	if err != nil {
+		slog.Info("could not get leader election config", "err", err)
+		// there is no leader yet - overwrite it.
+		return true, e.makeLeader()
+	}
+
+	// check if the last ping was more than 360 seconds ago
+	if time.Now().Unix()-config.LastPing > 360 {
+		// probably the leader died - overwrite it.
+		return true, e.makeLeader()
+	}
+
+	return config.LeaderID == e.leaderElectorID, nil
+}

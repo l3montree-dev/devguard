@@ -4,7 +4,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/core/comment"
-	"github.com/l3montree-dev/flawfix/internal/core/cwe"
+	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
 )
 
 type State string
@@ -26,8 +26,8 @@ type Model struct {
 	AssetID  uuid.UUID       `json:"assetId" gorm:"uniqueIndex:idx_ruleId_asset;not null;"`
 	State    State           `json:"state" gorm:"default:'open';not null;type:varchar(255);"`
 
-	CVE   *cwe.CVEModel `json:"cve"`
-	CVEID string        `json:"cveId" gorm:"null;type:varchar(255);default:null;"`
+	CVE   *vulndb.CVE `json:"cve"`
+	CVEID string      `json:"cveId" gorm:"null;type:varchar(255);default:null;"`
 
 	Effort            *int `json:"effort" gorm:"default:null;"`
 	RiskAssessment    *int `json:"riskAssessment" gorm:"default:null;"`
