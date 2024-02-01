@@ -62,6 +62,10 @@ func (s *epssService) fetchCSV(ctx context.Context) ([]CVE, error) {
 	// the second line is the header
 	for _, line := range strings.Split(string(bytes), "\n")[2:] {
 		columns := strings.Split(line, ",")
+		if len(columns) != 3 {
+			slog.Warn("could not parse line", "line", line)
+			continue
+		}
 		epss, err := strconv.ParseFloat(columns[1], 32)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not parse epss")
@@ -88,10 +92,15 @@ func (s epssService) mirror() error {
 		slog.Error("Could not fetch EPSS data", "error", err)
 		return err
 	} else {
-		// save the cves
-		if err := s.cveRepository.UpdateBatch(nil, cves); err != nil {
-			slog.Error("Could not save EPSS data", "error", err)
-			return err
+		for _, cve := range cves {
+			tmpCVE := cve
+			if err := s.cveRepository.GetDB(nil).Model(&CVE{}).Where("cve = ?", tmpCVE.CVE).Updates(map[string]interface{}{
+				"epss":       tmpCVE.EPSS,
+				"percentile": tmpCVE.Percentile,
+			}).Error; err != nil {
+				slog.Error("could not save EPSS data", "err", err, "cve", tmpCVE.CVE)
+				// just swallow the error
+			}
 		}
 	}
 	return nil

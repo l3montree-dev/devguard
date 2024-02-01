@@ -71,10 +71,17 @@ func (nvdService nvdService) fetchJSONFromNVD(url string, currentTry int) (nistR
 	res, err := nvdService.httpClient.Do(req)
 	if err != nil {
 		// check if we should retry
-		if currentTry < 3 {
-			slog.Info("Could not fetch from NVD. Retrying in 6 seconds", "try", currentTry)
+		if currentTry < 10 {
+			slog.Error("Could not fetch from NVD", "try", currentTry, "err", err)
 			return nvdService.fetchJSONFromNVD(url, currentTry+1)
 		}
+	}
+	if res.StatusCode != http.StatusOK {
+		if currentTry < 10 {
+			slog.Error("Could not fetch from NVD", "try", currentTry, "statusCode", res.StatusCode)
+			return nvdService.fetchJSONFromNVD(url, currentTry+1)
+		}
+		return nistResponse{}, fmt.Errorf("could not fetch from NVD. Status code: %d", res.StatusCode)
 	}
 
 	defer res.Body.Close()
@@ -84,7 +91,7 @@ func (nvdService nvdService) fetchJSONFromNVD(url string, currentTry int) (nistR
 	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
 		slog.Error("Could not decode response from NVD", "err", err)
 		// check if we should retry
-		if currentTry < 3 {
+		if currentTry < 10 {
 			slog.Info("Could not fetch from NVD. Retrying in 6 seconds", "try", currentTry)
 			return nvdService.fetchJSONFromNVD(url, currentTry+1)
 		}
@@ -124,7 +131,7 @@ func (nvdService nvdService) initialPopulation() error {
 			return err
 		}
 
-		slog.Info("Done iteration", "apiRequestTime", apiRequestFinished.Sub(start).String(), "database time", time.Since(apiRequestFinished).String())
+		slog.Info("Done iteration", "apiRequestTime", apiRequestFinished.Sub(start).String(), "databaseTime", time.Since(apiRequestFinished).String())
 
 		// check if we have more to fetch
 		if resp.TotalResults > startIndex {

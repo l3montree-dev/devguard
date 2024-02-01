@@ -28,9 +28,8 @@ type cveReference struct {
 type CVE struct {
 	CVE string `json:"cve" gorm:"primaryKey;not null;type:varchar(255);"`
 
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
-	FixAvailable *bool     `json:"fixAvailable" gorm:"type:boolean;"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 
 	DatePublished    time.Time `json:"datePublished"`
 	DateLastModified time.Time `json:"dateLastModified"`

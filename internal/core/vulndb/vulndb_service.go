@@ -32,13 +32,19 @@ func (v *vulnDBService) mirror() {
 		if v.leaderElector.IsLeader() {
 			if err := v.mitreService.mirror(); err != nil {
 				slog.Error("could not mirror mitre cwes", "err", err)
+			} else {
+				slog.Info("successfully mirrored mitre cwes")
 			}
 			if err := v.nvdService.mirror(); err != nil {
 				slog.Error("could not mirror nvd", "err", err)
 				panic(err)
+			} else {
+				slog.Info("successfully mirrored nvd")
 			}
 			if err := v.epssService.mirror(); err != nil {
 				slog.Error("could not mirror epss", "err", err)
+			} else {
+				slog.Info("successfully mirrored epss")
 			}
 			time.Sleep(2 * time.Hour)
 		} else {
