@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/flawfix/internal/utils"
+	"gorm.io/datatypes"
 )
 
 type Severity string
@@ -34,7 +35,7 @@ type CVE struct {
 	DatePublished    time.Time `json:"datePublished"`
 	DateLastModified time.Time `json:"dateLastModified"`
 
-	Weaknesses  []*Weakness `json:"weaknesses"`
+	Weaknesses  []*Weakness `json:"weaknesses" gorm:"foreignKey:CVEID;constraint:OnDelete:CASCADE;"`
 	Description string      `json:"description" gorm:"type:text;"`
 
 	CVSS                float32  `json:"cvss" gorm:"type:decimal(4,2);"`
@@ -53,10 +54,10 @@ type CVE struct {
 
 	References string `json:"references" gorm:"type:text;"`
 
-	CISAExploitAdd        *time.Time `json:"cisaExploitAdd" gorm:"type:date;"`
-	CISAActionDue         *time.Time `json:"cisaActionDue" gorm:"type:date;"`
-	CISARequiredAction    string     `json:"cisaRequiredAction" gorm:"type:text;"`
-	CISAVulnerabilityName string     `json:"cisaVulnerabilityName" gorm:"type:text;"`
+	CISAExploitAdd        *datatypes.Date `json:"cisaExploitAdd" gorm:"type:date;"`
+	CISAActionDue         *datatypes.Date `json:"cisaActionDue" gorm:"type:date;"`
+	CISARequiredAction    string          `json:"cisaRequiredAction" gorm:"type:text;"`
+	CISAVulnerabilityName string          `json:"cisaVulnerabilityName" gorm:"type:text;"`
 
 	Configurations []*CPEMatch `json:"configurations" gorm:"many2many:cve_cpe_match;"`
 
@@ -70,7 +71,6 @@ type Weakness struct {
 	CVEID  string `json:"cve" gorm:"primaryKey;not null;type:varchar(255);"`
 	CVE    CVE
 	CWEID  string `json:"cwe" gorm:"primaryKey;not null;type:varchar(255);"`
-	CWE    CWE    `gorm:"foreignKey:CWEID;constraint:OnDelete:CASCADE;"`
 }
 
 func (m Weakness) TableName() string {
@@ -142,8 +142,16 @@ func getCVSSMetric(nvdCVE nvdCVE) cvssMetric {
 	}
 }
 
+func toDate(date *utils.Date) *datatypes.Date {
+	if date == nil {
+		return nil
+	}
+	t := datatypes.Date(*date)
+	return &t
+}
+
 func fromNVDCVE(nistCVE nvdCVE) CVE {
-	published, err := time.Parse(time.RFC3339, nistCVE.Published)
+	published, err := time.Parse(utils.ISO8601Format, nistCVE.Published)
 	if err != nil {
 		published = time.Now()
 	}
@@ -173,6 +181,7 @@ func fromNVDCVE(nistCVE nvdCVE) CVE {
 				// only handle CWES - just continue. The nist might give us other weaknesses
 				continue
 			}
+
 			if d.Lang == "en" {
 				weaknesses = append(weaknesses, &Weakness{
 					Source: w.Source,
@@ -184,9 +193,16 @@ func fromNVDCVE(nistCVE nvdCVE) CVE {
 		}
 	}
 
+	matchCriteriaIds := make(map[string]struct{})
+
 	for _, c := range nistCVE.Configurations {
 		for _, n := range c.Nodes {
 			for _, m := range n.CpeMatch {
+				// check if we already have that criteria
+				if _, ok := matchCriteriaIds[m.MatchCriteriaID]; ok {
+					continue
+				}
+				matchCriteriaIds[m.MatchCriteriaID] = struct{}{}
 				cpe := fromNVDCPEMatch(m)
 				configurations = append(configurations, &cpe)
 			}
@@ -223,8 +239,8 @@ func fromNVDCVE(nistCVE nvdCVE) CVE {
 		IntegrityImpact:       cvssMetric.IntegrityImpact,
 		AvailabilityImpact:    cvssMetric.AvailabilityImpact,
 
-		CISAExploitAdd:        nistCVE.CISAExploitAdd,
-		CISAActionDue:         nistCVE.CISAActionDue,
+		CISAExploitAdd:        toDate(nistCVE.CISAExploitAdd),
+		CISAActionDue:         toDate(nistCVE.CISAActionDue),
 		CISARequiredAction:    nistCVE.CISARequiredAction,
 		CISAVulnerabilityName: nistCVE.CISAVulnerabilityName,
 

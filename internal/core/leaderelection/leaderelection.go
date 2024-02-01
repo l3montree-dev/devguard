@@ -38,8 +38,7 @@ func NewDatabaseLeaderElector(configService configService) *DatabaseLeaderElecto
 }
 
 func randomNumberBetween(min, max int) int {
-	//nolint:gosec
-	return rand.Intn(max-min) + min
+	return rand.Intn(max-min) + min // #nosec
 }
 
 func (e *DatabaseLeaderElector) daemon() {
@@ -51,12 +50,9 @@ func (e *DatabaseLeaderElector) daemon() {
 
 		if isLeader {
 			e.isLeader.Store(true)
-			slog.Info("this instance is the leader", "instanceId", e.leaderElectorID)
 		} else {
 			e.isLeader.Store(false)
-			slog.Info("this instance is not the leader", "instanceId", e.leaderElectorID)
 		}
-
 		time.Sleep(2 * time.Second)
 		// time.Sleep(time.Duration(randomNumberBetween(60, 359)) * time.Second)
 	}

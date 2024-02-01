@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/l3montree-dev/flawfix/internal/utils"
@@ -34,6 +35,7 @@ type nvdService struct {
 	cveRepository Repository
 	leaderElector leaderElector
 	configService configService
+	lock          *sync.Mutex
 }
 
 func newNVDService(leaderElector leaderElector, configService configService, cveRepository Repository) nvdService {
@@ -41,6 +43,7 @@ func newNVDService(leaderElector leaderElector, configService configService, cve
 		configService: configService,
 		cveRepository: cveRepository,
 		leaderElector: leaderElector,
+		lock:          &sync.Mutex{},
 
 		httpClient: &http.Client{
 			Transport: &http.Transport{
@@ -50,24 +53,43 @@ func newNVDService(leaderElector leaderElector, configService configService, cve
 	}
 }
 
-func (nvdService nvdService) fetchFromNVD(ctx context.Context, startIndex int) (nistResponse, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"?startIndex="+fmt.Sprint(startIndex), nil)
+// this method will retry 3 times before returning an error
+func (nvdService nvdService) fetchJSONFromNVD(url string, currentTry int) (nistResponse, error) {
+	// limit to a single request all 6 seconds max
+	nvdService.lock.Lock()
+	time.AfterFunc(6*time.Second, func() {
+		nvdService.lock.Unlock()
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 
 	if err != nil {
-		return nistResponse{}, err
+		return nistResponse{}, errors.Wrap(err, "could not create request before fetching from NVD")
 	}
 
 	res, err := nvdService.httpClient.Do(req)
 	if err != nil {
-		return nistResponse{}, err
+		// check if we should retry
+		if currentTry < 3 {
+			slog.Info("Could not fetch from NVD. Retrying in 6 seconds", "try", currentTry)
+			return nvdService.fetchJSONFromNVD(url, currentTry+1)
+		}
 	}
 
 	defer res.Body.Close()
 
 	var resp nistResponse
+
 	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
-		return nistResponse{}, err
+		slog.Error("Could not decode response from NVD", "err", err)
+		// check if we should retry
+		if currentTry < 3 {
+			slog.Info("Could not fetch from NVD. Retrying in 6 seconds", "try", currentTry)
+			return nvdService.fetchJSONFromNVD(url, currentTry+1)
+		}
 	}
+
 	return resp, nil
 }
 
@@ -75,14 +97,16 @@ func (nvdService nvdService) initialPopulation() error {
 	slog.Info("Starting initial NVD population. This is a one time process and takes a while - we have to respect the NVD API rate limits.")
 	startIndex := 0
 	var totalResults int
+
 	for {
 		if totalResults != 0 && startIndex >= totalResults {
 			break
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		resp, err := nvdService.fetchFromNVD(ctx, startIndex)
+		start := time.Now()
+
+		resp, err := nvdService.fetchJSONFromNVD(baseURL+"?startIndex="+fmt.Sprint(startIndex), 1)
 		// make sure to cancel the context
-		cancel()
+		apiRequestFinished := time.Now()
 		if err != nil {
 			return err
 		}
@@ -100,55 +124,42 @@ func (nvdService nvdService) initialPopulation() error {
 			return err
 		}
 
+		slog.Info("Done iteration", "apiRequestTime", apiRequestFinished.Sub(start).String(), "database time", time.Since(apiRequestFinished).String())
+
 		// check if we have more to fetch
 		if resp.TotalResults > startIndex {
 			// we have more to fetch
-			slog.Info("There is more to fetch. Waiting for 6 seconds to respect the NVD API rate limits", "datamode", "initial population")
-			time.Sleep(6 * time.Second)
+			slog.Info("There is more to fetch...")
 		}
 	}
 	return nil
 }
 
+func minTime(a, b time.Time) time.Time {
+	if a.Before(b) {
+		return a
+	}
+	return b
+}
+
 // return if there is more to fetch - and error if something went wrong
 func (nvdService nvdService) fetchAfter(lastModDate time.Time) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	currentTime := time.Now()
+	endDate := minTime(currentTime, lastModDate.Add(119*24*time.Hour))
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"?lastModStartDate="+lastModDate.Format(utils.ISO8601Format)+"&lastModEndDate="+time.Now().Format(utils.ISO8601Format), nil)
-
+	resp, err := nvdService.fetchJSONFromNVD(baseURL+"?lastModStartDate="+lastModDate.Format(utils.ISO8601Format)+"&lastModEndDate="+endDate.Format(utils.ISO8601Format), 1)
 	if err != nil {
-		return false, errors.Wrap(err, "could not create request before fetching from NVD")
-	}
-
-	res, err := nvdService.httpClient.Do(req)
-	if err != nil {
-		return false, errors.Wrap(err, "could not fetch from NVD")
-	}
-
-	defer res.Body.Close()
-
-	slog.Info(baseURL + "?lastModStartDate=" + lastModDate.Format(utils.ISO8601Format) + "&lastModEndDate=" + time.Now().Format(utils.ISO8601Format))
-
-	var resp nistResponse
-
-	if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
-		return false, errors.Wrap(err, "could not decode response from NVD")
+		return false, err
 	}
 
 	slog.Info("Fetched NVD data", "datamode", "maintaining", "totalResults", resp.TotalResults, "resultsPerPage", resp.ResultsPerPage)
+
 	cves := make([]CVE, len(resp.Vulnerabilities))
 	for i, v := range resp.Vulnerabilities {
 		cves[i] = fromNVDCVE(v.Cve)
 	}
 
-	// check if we have more to fetch
-	if resp.TotalResults > resp.ResultsPerPage {
-		// we have more to fetch
-		return true, nvdService.cveRepository.SaveBatch(nil, cves)
-	}
-
-	return false, nvdService.cveRepository.SaveBatch(nil, cves)
+	return resp.TotalResults > resp.ResultsPerPage || endDate.Before(currentTime), nvdService.cveRepository.SaveBatch(nil, cves)
 }
 
 // After initial data population has occurred, the last modified date parameters provide an efficient way to update a user's local repository and stay within the API rate limits. No more than once every two hours, automated requests should include a range where lastModStartDate equals the time of the last CVE or CPE received and lastModEndDate equals the current time.
@@ -168,7 +179,6 @@ func (nvdService nvdService) mirror() error {
 	if moreToFetch {
 		// wait for 6 seconds to respect the NVD API rate limits
 		slog.Info("maintaining nvd data. There is more to fetch. Waiting for 6 seconds to respect the NVD API rate limits", "datamode", "maintaining")
-		time.Sleep(6 * time.Second)
 		return nvdService.mirror()
 	}
 

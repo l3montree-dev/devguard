@@ -13,8 +13,6 @@ type CWE struct {
 	CWE string `json:"cwe" gorm:"primaryKey;not null;"`
 
 	Description string `json:"description" gorm:"type:text;"`
-
-	Weaknessess []*Weakness `json:"weaknesses"`
 }
 
 func (m CWE) TableName() string {

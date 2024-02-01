@@ -1,6 +1,6 @@
 package vulndb
 
-import "time"
+import "github.com/l3montree-dev/flawfix/internal/utils"
 
 type nvdCpeMatch struct {
 	Vulnerable            bool   `json:"vulnerable"`
@@ -20,10 +20,10 @@ type nvdCVE struct {
 		Lang  string `json:"lang"`
 		Value string `json:"value"`
 	} `json:"descriptions"`
-	CISAExploitAdd        *time.Time `json:"cisaExploitAdd"`
-	CISAActionDue         *time.Time `json:"cisaActionDue"`
-	CISARequiredAction    string     `json:"cisaRequiredAction"`
-	CISAVulnerabilityName string     `json:"cisaVulnerabilityName"`
+	CISAExploitAdd        *utils.Date `json:"cisaExploitAdd"`
+	CISAActionDue         *utils.Date `json:"cisaActionDue"`
+	CISARequiredAction    string      `json:"cisaRequiredAction"`
+	CISAVulnerabilityName string      `json:"cisaVulnerabilityName"`
 	Metrics               struct {
 		CvssMetricV31 []struct {
 			Source   string `json:"source"`

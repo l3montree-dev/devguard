@@ -35,6 +35,7 @@ func (v *vulnDBService) mirror() {
 			}
 			if err := v.nvdService.mirror(); err != nil {
 				slog.Error("could not mirror nvd", "err", err)
+				panic(err)
 			}
 			if err := v.epssService.mirror(); err != nil {
 				slog.Error("could not mirror epss", "err", err)
@@ -49,5 +50,5 @@ func (v *vulnDBService) mirror() {
 }
 
 func (v *vulnDBService) startMirrorDaemon() {
-	go v.mirror()
+	v.mirror()
 }
