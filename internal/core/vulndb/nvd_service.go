@@ -30,7 +30,7 @@ import (
 
 const baseURL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 
-type nvdService struct {
+type NVDService struct {
 	httpClient    *http.Client
 	cveRepository Repository
 	leaderElector leaderElector
@@ -38,8 +38,8 @@ type nvdService struct {
 	lock          *sync.Mutex
 }
 
-func newNVDService(leaderElector leaderElector, configService configService, cveRepository Repository) nvdService {
-	return nvdService{
+func NewNVDService(leaderElector leaderElector, configService configService, cveRepository Repository) NVDService {
+	return NVDService{
 		configService: configService,
 		cveRepository: cveRepository,
 		leaderElector: leaderElector,
@@ -53,8 +53,28 @@ func newNVDService(leaderElector leaderElector, configService configService, cve
 	}
 }
 
+func (nvdService NVDService) ImportCVE(cveID string) (CVE, error) {
+	// fetch from NVD
+	resp, err := nvdService.fetchJSONFromNVD(baseURL+"?cveId="+cveID, 1)
+	if err != nil {
+		slog.Error("Could not fetch from NVD", "err", err)
+		return CVE{}, err
+	}
+
+	if len(resp.Vulnerabilities) == 0 {
+		return CVE{}, fmt.Errorf("could not find CVE with id %s", cveID)
+	}
+
+	cve := fromNVDCVE(resp.Vulnerabilities[0].Cve)
+	if err := nvdService.cveRepository.Save(nil, &cve); err != nil {
+		return CVE{}, err
+	}
+
+	return cve, nil
+}
+
 // this method will retry 3 times before returning an error
-func (nvdService nvdService) fetchJSONFromNVD(url string, currentTry int) (nistResponse, error) {
+func (nvdService NVDService) fetchJSONFromNVD(url string, currentTry int) (nistResponse, error) {
 	// limit to a single request all 6 seconds max
 	nvdService.lock.Lock()
 	time.AfterFunc(6*time.Second, func() {
@@ -100,7 +120,7 @@ func (nvdService nvdService) fetchJSONFromNVD(url string, currentTry int) (nistR
 	return resp, nil
 }
 
-func (nvdService nvdService) initialPopulation() error {
+func (nvdService NVDService) initialPopulation() error {
 	slog.Info("Starting initial NVD population. This is a one time process and takes a while - we have to respect the NVD API rate limits.")
 	startIndex := 0
 	var totalResults int
@@ -150,7 +170,7 @@ func minTime(a, b time.Time) time.Time {
 }
 
 // return if there is more to fetch - and error if something went wrong
-func (nvdService nvdService) fetchAfter(lastModDate time.Time) (bool, error) {
+func (nvdService NVDService) fetchAfter(lastModDate time.Time) (bool, error) {
 	currentTime := time.Now()
 	endDate := minTime(currentTime, lastModDate.Add(119*24*time.Hour))
 
@@ -171,7 +191,7 @@ func (nvdService nvdService) fetchAfter(lastModDate time.Time) (bool, error) {
 
 // After initial data population has occurred, the last modified date parameters provide an efficient way to update a user's local repository and stay within the API rate limits. No more than once every two hours, automated requests should include a range where lastModStartDate equals the time of the last CVE or CPE received and lastModEndDate equals the current time.
 // ref: https://nvd.nist.gov/developers/start-here
-func (nvdService nvdService) mirror() error {
+func (nvdService NVDService) mirror() error {
 	lastModDate, err := nvdService.cveRepository.GetLastModDate()
 	if err != nil {
 		// we are doing the initial population

@@ -10,10 +10,10 @@ type vulnDBService struct {
 
 	mitreService mitreService
 	epssService  epssService
-	nvdService   nvdService
+	nvdService   NVDService
 }
 
-func newVulnDBService(leaderElector leaderElector, mitreService mitreService, epssService epssService, nvdService nvdService) *vulnDBService {
+func newVulnDBService(leaderElector leaderElector, mitreService mitreService, epssService epssService, nvdService NVDService) *vulnDBService {
 	return &vulnDBService{
 		leaderElector: leaderElector,
 

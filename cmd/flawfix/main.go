@@ -19,9 +19,6 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/lmittmann/tint"
-
-	"github.com/joho/godotenv"
 	accesscontrol "github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/auth"
 	"github.com/l3montree-dev/flawfix/internal/core"
@@ -35,45 +32,22 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core/org"
 	"github.com/l3montree-dev/flawfix/internal/core/pat"
 	"github.com/l3montree-dev/flawfix/internal/core/project"
-	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/echohttp"
 
 	"github.com/labstack/echo/v4"
 
 	_ "github.com/lib/pq"
-	"github.com/ory/client-go"
 )
 
-func getOryApiClient() *client.APIClient {
-	cfg := client.NewConfiguration()
-	cfg.Servers = client.ServerConfigurations{
-		{URL: os.Getenv("ORY_KRATOS")},
-	}
-
-	ory := client.NewAPIClient(cfg)
-	return ory
-}
-
-// initLogger initializes the logger with a tint handler.
-// tint is a simple logging library that allows to add colors to the log output.
-// this is obviously not required, but it makes the logs easier to read.
-func initLogger() {
-	loggingHandler := tint.NewHandler(os.Stdout, &tint.Options{
-		AddSource: true,
-		Level:     slog.LevelDebug,
-	})
-	logger := slog.New(loggingHandler)
-	slog.SetDefault(logger)
-}
-
 func main() {
-	if err := godotenv.Load(); err != nil {
+	if err := core.LoadConfig(); err != nil {
 		panic(err)
 	}
-	initLogger()
-	ory := getOryApiClient()
+	core.InitLogger()
+	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS"))
 
-	db, err := database.NewConnection(os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_DB"), "5432")
+	db, err := core.DatabaseFactory()
+
 	if err != nil {
 		panic(err)
 	}

@@ -5,7 +5,7 @@ import "github.com/l3montree-dev/flawfix/internal/utils"
 type nvdCpeMatch struct {
 	Vulnerable            bool   `json:"vulnerable"`
 	Criteria              string `json:"criteria"`
-	VersionEndIncluding   string `json:"versionEndIncluding"`
+	VersionEndIncluding   string `json:"versionEndExcluding"`
 	VersionStartIncluding string `json:"versionStartIncluding"`
 	MatchCriteriaID       string `json:"matchCriteriaId"`
 }

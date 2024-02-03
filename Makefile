@@ -10,3 +10,9 @@ mocks::
 
 lint::
 	golangci-lint run ./...
+
+cli::
+	go build -o flawfix-cli ./cmd/flawfix-cli/main.go
+
+run-cli::
+	go run ./cmd/flawfix-cli/main.go

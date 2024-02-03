@@ -17,7 +17,7 @@ func StartMirror(database core.DB, leaderElector leaderElector, configService co
 	cveRepository := NewGormRepository(database)
 	cweRepository := NewGormCWERepository(database)
 
-	nvdService := newNVDService(leaderElector, configService, cveRepository)
+	nvdService := NewNVDService(leaderElector, configService, cveRepository)
 	epssService := newEPSSService(nvdService, cveRepository)
 	mitreService := newMitreService(leaderElector, cweRepository)
 	// start the mirror process.
