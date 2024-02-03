@@ -3,13 +3,16 @@ version: '3.7'
 # postgresql database for local development
 services:
   postgresql:
-    image: postgres:15.3
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
     env_file: .env
     ports:
       - "5432:5432"
     volumes:
       - postgres:/var/lib/postgresql/data
       - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./export:/export
   
   kratos-migrate:
     image: oryd/kratos:v1.0.0
