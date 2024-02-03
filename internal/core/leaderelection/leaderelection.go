@@ -53,8 +53,8 @@ func (e *DatabaseLeaderElector) daemon() {
 		} else {
 			e.isLeader.Store(false)
 		}
-		time.Sleep(2 * time.Second)
-		// time.Sleep(time.Duration(randomNumberBetween(60, 359)) * time.Second)
+
+		time.Sleep(time.Duration(randomNumberBetween(60, 359)) * time.Second)
 	}
 }
 
@@ -64,7 +64,6 @@ func (e *DatabaseLeaderElector) startDaemon() {
 }
 
 func (e *DatabaseLeaderElector) IsLeader() bool {
-	return true
 	return e.isLeader.Load()
 }
 
