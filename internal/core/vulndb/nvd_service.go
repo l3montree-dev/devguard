@@ -193,7 +193,7 @@ func (nvdService NVDService) fetchAfter(lastModDate time.Time) (bool, error) {
 // ref: https://nvd.nist.gov/developers/start-here
 func (nvdService NVDService) mirror() error {
 	lastModDate, err := nvdService.cveRepository.GetLastModDate()
-	if err == nil {
+	if err != nil {
 		// we are doing the initial population
 		return nvdService.initialPopulation()
 	}
