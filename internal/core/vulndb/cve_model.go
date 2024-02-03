@@ -201,6 +201,7 @@ func fromNVDCVE(nistCVE nvdCVE) CVE {
 				if _, ok := matchCriteriaIds[m.MatchCriteriaID]; ok {
 					continue
 				}
+
 				matchCriteriaIds[m.MatchCriteriaID] = struct{}{}
 				cpe := fromNVDCPEMatch(m)
 				configurations = append(configurations, &cpe)

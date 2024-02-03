@@ -14,12 +14,12 @@ import (
 )
 
 type epssService struct {
-	nvdService    nvdService
+	nvdService    NVDService
 	cveRepository Repository
 	httpClient    *http.Client
 }
 
-func newEPSSService(nvdService nvdService, cveRepository Repository) epssService {
+func newEPSSService(nvdService NVDService, cveRepository Repository) epssService {
 	return epssService{
 		nvdService:    nvdService,
 		cveRepository: cveRepository,

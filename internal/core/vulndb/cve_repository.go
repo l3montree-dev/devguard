@@ -90,3 +90,14 @@ func (g *GormRepository) createInBatches(tx core.DB, cves []CVE, batchSize int) 
 func (g *GormRepository) SaveBatch(tx core.DB, cves []CVE) error {
 	return g.createInBatches(tx, cves, 1000)
 }
+
+func (g *GormRepository) Save(tx core.DB, cve *CVE) error {
+	return g.GetDB(tx).Session(
+		&gorm.Session{
+			FullSaveAssociations: true,
+		}).Clauses(
+		clause.OnConflict{
+			UpdateAll: true,
+		},
+	).Save(cve).Error
+}
