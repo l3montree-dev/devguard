@@ -6,11 +6,7 @@ import (
 )
 
 func RegisterHttpHandler(database core.DB, server core.Server, rbacMiddleware accesscontrol.RBACMiddleware) core.Server {
-	if err := database.AutoMigrate(&Model{}); err != nil {
-		panic(err)
-	}
 	repository := NewGormRepository(database)
-
 	controller := NewHttpController(repository)
 
 	flawRouter := server.Group("/flaws")

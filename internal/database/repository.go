@@ -27,8 +27,6 @@ type Repository[ID any, T Tabler, Tx any] interface {
 	Create(tx Tx, t *T) error
 	CreateBatch(tx Tx, ts []T) error
 	Read(id ID) (T, error)
-	Update(tx Tx, t *T) error
-	UpdateBatch(tx Tx, ts []T) error
 	Delete(tx Tx, id ID) error
 	List(ids []ID) ([]T, error)
 	Transaction(func(tx Tx) error) error
@@ -87,14 +85,6 @@ func (g *GormRepository[ID, T]) Read(id ID) (T, error) {
 	err := g.db.First(&t, id).Error
 
 	return t, err
-}
-
-func (g *GormRepository[ID, T]) Update(tx *gorm.DB, t *T) error {
-	return g.GetDB(tx).Save(t).Error
-}
-
-func (g *GormRepository[ID, T]) UpdateBatch(tx *gorm.DB, ts []T) error {
-	return g.GetDB(tx).Save(ts).Error
 }
 
 func (g *GormRepository[ID, T]) Delete(tx *gorm.DB, id ID) error {

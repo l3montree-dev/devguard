@@ -27,12 +27,14 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core"
 
 	"github.com/l3montree-dev/flawfix/internal/core/asset"
+	"github.com/l3montree-dev/flawfix/internal/core/config"
+	"github.com/l3montree-dev/flawfix/internal/core/leaderelection"
+	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
 
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 	"github.com/l3montree-dev/flawfix/internal/core/org"
 	"github.com/l3montree-dev/flawfix/internal/core/pat"
 	"github.com/l3montree-dev/flawfix/internal/core/project"
-	"github.com/l3montree-dev/flawfix/internal/core/vulnreport"
 	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/echohttp"
 
@@ -97,6 +99,9 @@ func main() {
 	projectRepository := project.NewGormRepository(db)
 	projectScopedRBAC := project.ProjectAccessControlFactory(projectRepository)
 
+	configService := config.NewService(db)
+	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
+
 	sessionMiddleware := auth.SessionMiddleware(ory, patRepository)
 
 	// everything below this line is protected by the session middleware
@@ -107,7 +112,8 @@ func main() {
 			"userId": core.GetSession(c).GetUserID(),
 		})
 	})
-	vulnreport.RegisterHttpHandler(db, sessionRouter)
+
+	vulndb.StartMirror(db, leaderElector, configService)
 
 	// pat does return a scoped router, but we don't need it here.
 	pat.RegisterHttpHandler(db, sessionRouter)
