@@ -16,12 +16,15 @@ type leaderElector interface {
 func StartMirror(database core.DB, leaderElector leaderElector, configService configService) {
 	cveRepository := NewGormRepository(database)
 	cweRepository := NewGormCWERepository(database)
+	affectedPkgRepository := newAffectedPkgGormRepository(database)
 
 	nvdService := NewNVDService(leaderElector, configService, cveRepository)
 	epssService := newEPSSService(nvdService, cveRepository)
 	mitreService := newMitreService(leaderElector, cweRepository)
+
+	osvService := newOSVService(affectedPkgRepository)
 	// start the mirror process.
-	vulnDBService := newVulnDBService(leaderElector, mitreService, epssService, nvdService)
+	vulnDBService := newVulnDBService(leaderElector, mitreService, epssService, nvdService, configService, osvService)
 
 	vulnDBService.startMirrorDaemon()
 }

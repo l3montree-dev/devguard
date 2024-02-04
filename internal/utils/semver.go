@@ -1,0 +1,88 @@
+// Copyright (C) 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+package utils
+
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+// Regex for validating a correct semver.
+var validSemverRegex = regexp.MustCompile(`^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
+
+// normalizeVersionPart removes leading zeros from a version part.
+func normalizeVersionPart(versionPart string) string {
+	normalized, err := strconv.Atoi(versionPart)
+	if err != nil {
+		// In case of error (which should not happen with numeric parts), return original.
+		return versionPart
+	}
+	return strconv.Itoa(normalized)
+}
+
+func SemverOrNil(version string) *string {
+	if version == "" || version == "0" {
+		return nil
+	}
+
+	// lets check if we need to fix the semver - there are some cases where the semver is not valid
+	// examples are: "1.5", "1.0", "19.03.9", "3.0-beta1"
+	// we need to fix these to be valid semver
+
+	if validSemverRegex.MatchString(version) {
+		// If the version is already a valid semver, no need to fix.
+		return &version
+	}
+
+	// Attempt to fix common semver issues.
+	// Split version by ".", "-" to check for missing parts.
+	parts := regexp.MustCompile(`[\.-]`).Split(version, -1)
+	fixedVersion := version
+
+	for i, part := range parts {
+		if strings.HasPrefix(part, "0") && len(part) > 1 {
+			// Remove leading zeros from version parts.
+			parts[i] = normalizeVersionPart(part)
+		}
+	}
+
+	// Reconstruct the version string with the fixed parts.
+	fixedVersion = strings.Join(parts, ".")
+
+	switch len(parts) {
+	case 2: // Missing PATCH version
+		fixedVersion += ".0"
+	case 3: // Possible that we have a pre-release without PATCH
+		if !regexp.MustCompile(`^[0-9]+$`).MatchString(parts[2]) {
+			// The third part is not numeric, likely a pre-release without PATCH
+			fixedVersion = fmt.Sprintf("%s.%s.0-%s", parts[0], parts[1], parts[2])
+		}
+	case 4: // Might have pre-release or build metadata directly after MINOR
+		fixedVersion = fmt.Sprintf("%s.%s.0-%s+%s", parts[0], parts[1], parts[2], parts[3])
+	}
+
+	// Re-check if the fixed version is now valid.
+	if validSemverRegex.MatchString(fixedVersion) {
+		return &fixedVersion
+	}
+
+	fmt.Println("Could not fix semver", "version", version, "fixedVersion", fixedVersion)
+
+	// If we can't fix it to be a valid semver, return the original version.
+	return &version
+}

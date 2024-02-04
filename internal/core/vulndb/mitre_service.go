@@ -1,16 +1,14 @@
 package vulndb
 
 import (
-	"archive/zip"
-	"bytes"
 	"encoding/xml"
 	"fmt"
-	"io"
 
 	"net/http"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/utils"
 )
 
 type mitreService struct {
@@ -30,15 +28,6 @@ func (mitreService) parseCWEs(xmlBytes []byte) ([]*WeaknessType, error) {
 
 var cweXMLUrl = "https://cwe.mitre.org/data/xml/cwec_latest.xml.zip"
 
-func readZipFile(zf *zip.File) ([]byte, error) {
-	f, err := zf.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return io.ReadAll(f)
-}
-
 func (mitreService mitreService) fetchCWEXML() ([]*WeaknessType, error) {
 	resp, err := mitreService.httpClient.Get(cweXMLUrl)
 
@@ -47,13 +36,8 @@ func (mitreService mitreService) fetchCWEXML() ([]*WeaknessType, error) {
 	}
 
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
 
-	zipReader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
-
+	zipReader, err := utils.ZipReaderFromResponse(resp)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +50,7 @@ func (mitreService mitreService) fetchCWEXML() ([]*WeaknessType, error) {
 	file := zipReader.File[0]
 
 	// read the file
-	unzippedFileBytes, err := readZipFile(file)
+	unzippedFileBytes, err := utils.ReadZipFile(file)
 	if err != nil {
 		return nil, err
 	}
