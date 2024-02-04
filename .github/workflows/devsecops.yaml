@@ -2,7 +2,13 @@
 # This workflow is triggered on every push to the repository
 name: DevSecOps Workflow
 
-on: push
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+
 
 # Environment variables used across multiple jobs
 env:
