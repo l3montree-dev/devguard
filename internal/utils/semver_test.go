@@ -16,18 +16,25 @@ package utils
 
 import "testing"
 
-func TestSemverOrNil(t *testing.T) {
+func TestSemverFix(t *testing.T) {
 	t.Run("empty string", func(t *testing.T) {
-		semver := SemverOrNil("")
-		if semver != nil {
-			t.Errorf("Expected nil, got %s", *semver)
+		semver, err := SemverFix("")
+		if err == nil {
+			t.Errorf("Expected invalid version, got %s", semver)
+		}
+	})
+
+	t.Run("v Prefix should be removed", func(t *testing.T) {
+		semver, _ := SemverFix("v1.14.14")
+		if semver != "1.14.14" {
+			t.Errorf("Expected 1.14.14, got %s", semver)
 		}
 	})
 
 	t.Run("valid semver", func(t *testing.T) {
-		semver := SemverOrNil("1.14.14")
-		if *semver != "1.14.14" {
-			t.Errorf("Expected 1.14.14, got %s", *semver)
+		semver, _ := SemverFix("1.14.14")
+		if semver != "1.14.14" {
+			t.Errorf("Expected 1.14.14, got %s", semver)
 		}
 	})
 
@@ -43,10 +50,10 @@ func TestSemverOrNil(t *testing.T) {
 			{"3.0-beta1", "3.0.0-beta1"},
 		}
 		for _, tt := range invalidSemvers {
-			semver := SemverOrNil(tt.input)
+			semver, _ := SemverFix(tt.input)
 
-			if *semver != tt.expected {
-				t.Errorf("Expected %s, got %s", tt.expected, *semver)
+			if semver != tt.expected {
+				t.Errorf("Expected %s, got %s", tt.expected, semver)
 			}
 		}
 	})

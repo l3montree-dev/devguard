@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/scan"
 	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
 	"github.com/spf13/cobra"
 )
@@ -76,6 +77,49 @@ func init() {
 				os.Exit(1)
 			}
 			slog.Info("successfully imported CVE", "cve", cve.CVE)
+		},
+	})
+
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "scan",
+		Short: "Scan a SBOM for vulnerabilities.",
+		Long:  `Scan a SBOM for vulnerabilities. This command will scan a SBOM for vulnerabilities and return a list of vulnerabilities found in the SBOM. The SBOM must be passed as an argument.`,
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			// check if a single argument was passed
+			if len(args) != 1 {
+				cmd.Help() // nolint: errcheck
+				os.Exit(1)
+			}
+			err := core.LoadConfig()
+			if err != nil {
+				slog.Error("could not initialize config", "err", err)
+				os.Exit(1)
+			}
+
+			core.InitLogger()
+
+			db, err := core.DatabaseFactory()
+			if err != nil {
+				slog.Error("could not connect to database", "err", err)
+				os.Exit(1)
+			}
+
+			cpeComparer := vulndb.NewCPEComparer(db)
+			purlComparer := vulndb.NewPurlComparer(db)
+
+			scanner := scan.NewSBOMScanner(cpeComparer, purlComparer)
+
+			f, err := os.Open(args[0])
+			if err != nil {
+				slog.Error("could not open file", "err", err)
+				os.Exit(1)
+			}
+			defer f.Close()
+			if err = scanner.Scan(f); err != nil {
+				slog.Error("could not scan file", "err", err)
+				os.Exit(1)
+			}
 		},
 	})
 }
