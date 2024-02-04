@@ -40,13 +40,11 @@ func (v *vulnDBService) mirror() {
 			var lastMirror struct {
 				Time time.Time `json:"time"`
 			}
-			v.configService.SetJSONConfig("vulndb.last_mirror", struct {
-				Time time.Time `json:"time"`
-			}{
-				Time: time.Now(),
-			})
 
-			v.configService.GetJSONConfig("vulndb.last_mirror", &lastMirror)
+			if err := v.configService.GetJSONConfig("vulndb.lastMirror", &lastMirror); err != nil {
+				slog.Error("could not get last mirror time", "err", err)
+				continue
+			}
 			if time.Since(lastMirror.Time) < 2*time.Hour {
 				slog.Info("last mirror was less than 2 hours ago. Starting mirror process")
 				if err := v.mitreService.mirror(); err != nil {
@@ -68,6 +66,13 @@ func (v *vulnDBService) mirror() {
 				if err := v.osvService.mirror(); err != nil {
 					slog.Error("could not mirror osv", "err", err)
 				}
+				if err := v.configService.SetJSONConfig("vulndb.lastMirror", struct {
+					Time time.Time `json:"time"`
+				}{
+					Time: time.Now(),
+				}); err != nil {
+					slog.Error("could not set last mirror time", "err", err)
+				}
 			} else {
 				slog.Info("last mirror was less than 2 hours ago. Not mirroring", "lastMirror", lastMirror.Time, "now", time.Now())
 			}
@@ -81,6 +86,5 @@ func (v *vulnDBService) mirror() {
 }
 
 func (v *vulnDBService) startMirrorDaemon() {
-
-	//go v.mirror()
+	go v.mirror()
 }
