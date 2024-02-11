@@ -24,6 +24,7 @@ require (
 )
 
 require (
+	github.com/CycloneDX/cyclonedx-go v0.8.0 // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect

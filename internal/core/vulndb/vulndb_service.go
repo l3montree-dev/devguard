@@ -1,8 +1,11 @@
 package vulndb
 
 import (
+	"errors"
 	"log/slog"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type vulnDBService struct {
@@ -41,7 +44,7 @@ func (v *vulnDBService) mirror() {
 				Time time.Time `json:"time"`
 			}
 
-			if err := v.configService.GetJSONConfig("vulndb.lastMirror", &lastMirror); err != nil {
+			if err := v.configService.GetJSONConfig("vulndb.lastMirror", &lastMirror); !errors.Is(err, gorm.ErrRecordNotFound) {
 				slog.Error("could not get last mirror time", "err", err)
 				continue
 			}

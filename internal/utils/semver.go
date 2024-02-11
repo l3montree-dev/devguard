@@ -35,9 +35,15 @@ func normalizeVersionPart(versionPart string) string {
 	return strconv.Itoa(normalized)
 }
 
-func SemverOrNil(version string) *string {
+var (
+	ErrInvalidVersion = fmt.Errorf("invalid version")
+)
+
+func SemverFix(version string) (string, error) {
+	version = strings.TrimPrefix(version, "v")
+
 	if version == "" || version == "0" {
-		return nil
+		return "", ErrInvalidVersion
 	}
 
 	// lets check if we need to fix the semver - there are some cases where the semver is not valid
@@ -46,13 +52,12 @@ func SemverOrNil(version string) *string {
 
 	if validSemverRegex.MatchString(version) {
 		// If the version is already a valid semver, no need to fix.
-		return &version
+		return version, nil
 	}
 
 	// Attempt to fix common semver issues.
 	// Split version by ".", "-" to check for missing parts.
 	parts := regexp.MustCompile(`[\.-]`).Split(version, -1)
-	fixedVersion := version
 
 	for i, part := range parts {
 		if strings.HasPrefix(part, "0") && len(part) > 1 {
@@ -62,7 +67,7 @@ func SemverOrNil(version string) *string {
 	}
 
 	// Reconstruct the version string with the fixed parts.
-	fixedVersion = strings.Join(parts, ".")
+	fixedVersion := strings.Join(parts, ".")
 
 	switch len(parts) {
 	case 2: // Missing PATCH version
@@ -78,11 +83,11 @@ func SemverOrNil(version string) *string {
 
 	// Re-check if the fixed version is now valid.
 	if validSemverRegex.MatchString(fixedVersion) {
-		return &fixedVersion
+		return fixedVersion, nil
 	}
 
 	fmt.Println("Could not fix semver", "version", version, "fixedVersion", fixedVersion)
 
 	// If we can't fix it to be a valid semver, return the original version.
-	return &version
+	return version, ErrInvalidVersion
 }

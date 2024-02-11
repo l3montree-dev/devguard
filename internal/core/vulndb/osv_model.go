@@ -154,6 +154,17 @@ func fromOSV(osv OSV) []AffectedPackage {
 					fixed = r.Events[i+1].Fixed
 				}
 
+				var semverIntroducedPtr *string
+				var semverFixedPtr *string
+				semverIntroduced, err := utils.SemverFix(tmpE.Introduced)
+				if err == nil {
+					semverIntroducedPtr = &semverIntroduced
+				}
+				semverFixed, err := utils.SemverFix(fixed)
+				if err == nil {
+					semverFixedPtr = &semverFixed
+				}
+
 				// create the affected package
 				affectedPackage := AffectedPackage{
 					PURL:       affected.Package.Purl,
@@ -165,8 +176,8 @@ func fromOSV(osv OSV) []AffectedPackage {
 					Qualifiers: &qualifiersStr,
 					Subpath:    &purl.Subpath,
 
-					SemverIntroduced: utils.SemverOrNil(tmpE.Introduced),
-					SemverFixed:      utils.SemverOrNil(fixed),
+					SemverIntroduced: semverIntroducedPtr,
+					SemverFixed:      semverFixedPtr,
 
 					CVE: cves,
 				}

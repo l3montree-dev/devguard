@@ -27,13 +27,13 @@ func newEPSSService(nvdService NVDService, cveRepository Repository) epssService
 	}
 }
 
-var url = "https://epss.cyentia.com/epss_scores-current.csv.gz"
+var epssURL = "https://epss.cyentia.com/epss_scores-current.csv.gz"
 
 func ptrFloat32(f float32) *float32 {
 	return &f
 }
 func (s *epssService) fetchCSV(ctx context.Context) ([]CVE, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, epssURL, nil)
 
 	if err != nil {
 		return nil, err
