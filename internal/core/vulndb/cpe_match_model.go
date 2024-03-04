@@ -22,7 +22,7 @@ type CPEMatch struct {
 
 	Vulnerable bool `json:"vulnerable" gorm:"type:boolean;"`
 
-	CVEs []*CVE `json:"cve" gorm:"many2many:cve_cpe_match;"`
+	CVEs []*CVE `json:"cve" gorm:"many2many:cve_cpe_match;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 // criteria format:
