@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -28,7 +29,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-const baseURL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+var baseURL = url.URL{
+	Scheme: "https",
+	Host:   "services.nvd.nist.gov",
+	Path:   "/rest/json/cves/2.0",
+}
 
 type NVDService struct {
 	httpClient    *http.Client
@@ -54,8 +59,13 @@ func NewNVDService(leaderElector leaderElector, configService configService, cve
 }
 
 func (nvdService NVDService) ImportCVE(cveID string) (CVE, error) {
-	// fetch from NVD
-	resp, err := nvdService.fetchJSONFromNVD(baseURL+"?cveId="+cveID, 1)
+	// make a copy of the base url
+	u := baseURL
+	q := u.Query()
+	q.Add("cveId", cveID)
+	u.RawQuery = q.Encode()
+
+	resp, err := nvdService.fetchJSONFromNVD(u, 1)
 	if err != nil {
 		slog.Error("Could not fetch from NVD", "err", err)
 		return CVE{}, err
@@ -74,15 +84,15 @@ func (nvdService NVDService) ImportCVE(cveID string) (CVE, error) {
 }
 
 // this method will retry 3 times before returning an error
-func (nvdService NVDService) fetchJSONFromNVD(url string, currentTry int) (nistResponse, error) {
+func (nvdService NVDService) fetchJSONFromNVD(url url.URL, currentTry int) (nistResponse, error) {
 	// limit to a single request all 6 seconds max
 	nvdService.lock.Lock()
 	time.AfterFunc(6*time.Second, func() {
 		nvdService.lock.Unlock()
 	})
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.String(), nil)
 
 	if err != nil {
 		return nistResponse{}, errors.Wrap(err, "could not create request before fetching from NVD")
@@ -120,8 +130,31 @@ func (nvdService NVDService) fetchJSONFromNVD(url string, currentTry int) (nistR
 	return resp, nil
 }
 
+func (nvdService NVDService) saveResponseInDB(resp nistResponse) error {
+	cves := make([]CVE, len(resp.Vulnerabilities))
+	for i, v := range resp.Vulnerabilities {
+		cves[i] = fromNVDCVE(v.Cve)
+	}
+
+	return nvdService.cveRepository.SaveBatch(nil, cves)
+}
+
 func (nvdService NVDService) initialPopulation() error {
-	slog.Info("Starting initial NVD population. This is a one time process and takes a while - we have to respect the NVD API rate limits.")
+	slog.Info("starting initial NVD population. This is a one time process and takes a while - we have to respect the NVD API rate limits.")
+
+	return nvdService.fetchAndSaveAllPages(baseURL)
+}
+
+func minTime(a, b time.Time) time.Time {
+	if a.Before(b) {
+		return a
+	}
+	return b
+}
+
+func (nvdService NVDService) fetchAndSaveAllPages(url url.URL) error {
+	u := url
+
 	startIndex := 0
 	var totalResults int
 
@@ -131,7 +164,12 @@ func (nvdService NVDService) initialPopulation() error {
 		}
 		start := time.Now()
 
-		resp, err := nvdService.fetchJSONFromNVD(baseURL+"?startIndex="+fmt.Sprint(startIndex), 1)
+		q := u.Query()
+		q.Set("startIndex", fmt.Sprint(startIndex))
+		u.RawQuery = q.Encode()
+
+		slog.Info("fetching all pages from nvd", "url", u.String())
+		resp, err := nvdService.fetchJSONFromNVD(u, 1)
 		// make sure to cancel the context
 		apiRequestFinished := time.Now()
 		if err != nil {
@@ -140,14 +178,9 @@ func (nvdService NVDService) initialPopulation() error {
 		startIndex += resp.ResultsPerPage
 		totalResults = resp.TotalResults
 
-		slog.Info("Fetched NVD data", "datamode", "initial population", "totalResults", resp.TotalResults, "currentIndex", startIndex)
+		slog.Info("fetched NVD data", "totalResults", resp.TotalResults, "currentIndex", startIndex)
 
-		cves := make([]CVE, len(resp.Vulnerabilities))
-		for i, v := range resp.Vulnerabilities {
-			cves[i] = fromNVDCVE(v.Cve)
-		}
-
-		if err := nvdService.cveRepository.SaveBatch(nil, cves); err != nil {
+		if err := nvdService.saveResponseInDB(resp); err != nil {
 			return err
 		}
 
@@ -162,31 +195,29 @@ func (nvdService NVDService) initialPopulation() error {
 	return nil
 }
 
-func minTime(a, b time.Time) time.Time {
-	if a.Before(b) {
-		return a
-	}
-	return b
-}
-
 // return if there is more to fetch - and error if something went wrong
-func (nvdService NVDService) fetchAfter(lastModDate time.Time) (bool, error) {
-	currentTime := time.Now()
-	endDate := minTime(currentTime, lastModDate.Add(119*24*time.Hour))
+func (nvdService NVDService) fetchAfter(lastModDate time.Time) error {
+	slog.Info("starting to maintain NVD data", "lastModDate", lastModDate.String())
+	now := time.Now()
+	// we can only fetch 120 days at a time
+	// we use 119 days, to make sure, that nvd is happy with the date range
+	endDate := minTime(now, lastModDate.Add(119*24*time.Hour))
+	for lastModDate.Before(now) {
+		u := baseURL
+		q := u.Query()
+		q.Add("lastModStartDate", lastModDate.Format(utils.ISO8601Format))
+		q.Add("lastModEndDate", endDate.Format(utils.ISO8601Format))
+		u.RawQuery = q.Encode()
 
-	resp, err := nvdService.fetchJSONFromNVD(baseURL+"?lastModStartDate="+lastModDate.Format(utils.ISO8601Format)+"&lastModEndDate="+endDate.Format(utils.ISO8601Format), 1)
-	if err != nil {
-		return false, err
+		if err := nvdService.fetchAndSaveAllPages(u); err != nil {
+			return err
+		}
+
+		// update the range
+		lastModDate = endDate
+		endDate = minTime(now, endDate.Add(119*24*time.Hour))
 	}
-
-	slog.Info("Fetched NVD data", "datamode", "maintaining", "totalResults", resp.TotalResults, "resultsPerPage", resp.ResultsPerPage)
-
-	cves := make([]CVE, len(resp.Vulnerabilities))
-	for i, v := range resp.Vulnerabilities {
-		cves[i] = fromNVDCVE(v.Cve)
-	}
-
-	return resp.TotalResults > resp.ResultsPerPage || endDate.Before(currentTime), nvdService.cveRepository.SaveBatch(nil, cves)
+	return nil
 }
 
 // After initial data population has occurred, the last modified date parameters provide an efficient way to update a user's local repository and stay within the API rate limits. No more than once every two hours, automated requests should include a range where lastModStartDate equals the time of the last CVE or CPE received and lastModEndDate equals the current time.
@@ -198,16 +229,6 @@ func (nvdService NVDService) mirror() error {
 		return nvdService.initialPopulation()
 	}
 
-	moreToFetch, err := nvdService.fetchAfter(lastModDate)
-	if err != nil {
-		return err
-	}
-
-	if moreToFetch {
-		// wait for 6 seconds to respect the NVD API rate limits
-		slog.Info("maintaining nvd data. There is more to fetch. Waiting for 6 seconds to respect the NVD API rate limits", "datamode", "maintaining")
-		return nvdService.mirror()
-	}
-
-	return nil
+	lastModDate, _ = time.Parse("2006-01-02", "2024-02-01")
+	return nvdService.fetchAfter(lastModDate)
 }

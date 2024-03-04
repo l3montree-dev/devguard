@@ -94,7 +94,7 @@ type AffectedPackage struct {
 	SemverIntroduced *string `json:"semver_start" gorm:"type:semver;"`
 	SemverFixed      *string `json:"semver_end" gorm:"type:semver;"`
 
-	CVE []CVE `json:"cves" gorm:"many2many:cve_affected_package;"`
+	CVE []CVE `json:"cves" gorm:"many2many:cve_affected_package;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func (affectedPackage AffectedPackage) TableName() string {
