@@ -229,6 +229,5 @@ func (nvdService NVDService) mirror() error {
 		return nvdService.initialPopulation()
 	}
 
-	lastModDate, _ = time.Parse("2006-01-02", "2024-02-01")
 	return nvdService.fetchAfter(lastModDate)
 }
