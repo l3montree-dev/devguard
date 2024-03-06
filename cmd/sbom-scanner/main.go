@@ -20,7 +20,7 @@ import (
 	"os"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
+	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 	"github.com/l3montree-dev/flawfix/internal/core/vulndb/scan"
 	"github.com/spf13/cobra"
 )
@@ -28,7 +28,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "flawfix",
 	Short: "Vulnerability management for devs.",
-	Long:  `Flawfix is a tool to manage vulnerabilities in your software.`,
+	Long:  `Flawfix is a tool to manage vulnerabilities and other flaws in your software.`,
 }
 
 func Execute() {
@@ -40,49 +40,22 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().String("assetId", "", "The id of the asset which is scanned")
+	rootCmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
+	err := rootCmd.MarkPersistentFlagRequired("assetId")
+	if err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+		os.Exit(1)
+	}
+	err = rootCmd.MarkPersistentFlagRequired("token")
+	if err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+		os.Exit(1)
+	}
 
 	rootCmd.AddCommand(&cobra.Command{
-		Use:   "import",
-		Short: "Import a CVE.",
-		Long:  `Import a CVE from the NVD. This command will fetch the CVE from the NVD and store it in the local database. The ID of the CVE must be passed as an argument. The ID is in the format CVE-YYYY-NNNN.`,
-		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			// check if a single argument was passed
-			if len(args) != 1 {
-				cmd.Help() // nolint: errcheck
-				os.Exit(1)
-			}
-			err := core.LoadConfig()
-			if err != nil {
-				slog.Error("could not initialize config", "err", err)
-				os.Exit(1)
-			}
-
-			core.InitLogger()
-
-			db, err := core.DatabaseFactory()
-			if err != nil {
-				slog.Error("could not connect to database", "err", err)
-				os.Exit(1)
-			}
-
-			cveRepository := vulndb.NewGormRepository(db)
-
-			nvdService := vulndb.NewNVDService(nil, nil, cveRepository)
-
-			slog.Info("importing CVE", "cve", args[0])
-			cve, err := nvdService.ImportCVE(args[0])
-			if err != nil {
-				slog.Error("could not import CVE", "err", err)
-				os.Exit(1)
-			}
-			slog.Info("successfully imported CVE", "cve", cve.CVE)
-		},
-	})
-
-	rootCmd.AddCommand(&cobra.Command{
-		Use:   "scan",
-		Short: "Scan a SBOM for vulnerabilities.",
+		Use:   "sca [path to SBOM file]",
+		Short: "Software composition analysis",
 		Long:  `Scan a SBOM for vulnerabilities. This command will scan a SBOM for vulnerabilities and return a list of vulnerabilities found in the SBOM. The SBOM must be passed as an argument.`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -116,10 +89,27 @@ func init() {
 				os.Exit(1)
 			}
 			defer f.Close()
-			if err = scanner.Scan(f); err != nil {
+			vulns, err := scanner.Scan(f)
+			if err != nil {
 				slog.Error("could not scan file", "err", err)
 				os.Exit(1)
 			}
+
+			// create flaws out of those vulnerabilities
+			flaws := []flaw.Model{}
+			for _, vuln := range vulns {
+				flaw := flaw.Model{
+					CVEID:     vuln.CVEID,
+					ScannerID: "github.com/l3montree-dev/flawfix/cmd/sbom-scanner",
+				}
+				flaw.SetAdditionalData(map[string]any{
+					"introducedVersion": vuln.GetIntroducedVersion(),
+					"fixedVersion":      vuln.GetFixedVersion(),
+					"packageName":       vuln.PackageName,
+				})
+				flaws = append(flaws, flaw)
+			}
+			// save the flaws in the database.
 		},
 	})
 }

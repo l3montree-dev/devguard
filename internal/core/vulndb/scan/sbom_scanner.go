@@ -31,19 +31,20 @@ type sbomScanner struct {
 // it includes more than just the CVE ID to allow for more detailed information
 // like the affected package version and fixed version
 type vulnInPackage struct {
-	CVEID             string
-	FixedVersion      *string
-	IntroducedVersion *string
+	CVEID             string  `json:"cveId"`
+	FixedVersion      *string `json:"fixedVersion"`
+	IntroducedVersion *string `json:"introducedVersion"`
+	PackageName       string  `json:"packageName"`
 }
 
-func (v vulnInPackage) getIntroducedVersion() string {
+func (v vulnInPackage) GetIntroducedVersion() string {
 	if v.IntroducedVersion != nil {
 		return *v.IntroducedVersion
 	}
 	return ""
 }
 
-func (v vulnInPackage) getFixedVersion() string {
+func (v vulnInPackage) GetFixedVersion() string {
 	if v.FixedVersion != nil {
 		return *v.FixedVersion
 	}
@@ -61,11 +62,11 @@ func NewSBOMScanner(cpeComparer comparer, purlComparer comparer) *sbomScanner {
 	}
 }
 
-func (s *sbomScanner) Scan(reader io.Reader) error {
+func (s *sbomScanner) Scan(reader io.Reader) ([]vulnInPackage, error) {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(reader, cdx.BOMFileFormatJSON)
 	if err := decoder.Decode(bom); err != nil {
-		return err
+		return nil, err
 	}
 
 	vulnerabilities := make([]vulnInPackage, 0)
@@ -91,8 +92,8 @@ func (s *sbomScanner) Scan(reader io.Reader) error {
 
 	// print all found CVEs
 	for _, vuln := range vulnerabilities {
-		slog.Info(vuln.getIntroducedVersion(), vuln.CVEID, vuln.getFixedVersion())
+		slog.Info(vuln.PackageName, "cve", vuln.CVEID, "introduced", vuln.GetIntroducedVersion(), "fixed", vuln.GetFixedVersion())
 	}
 
-	return nil
+	return vulnerabilities, nil
 }

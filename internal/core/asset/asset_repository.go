@@ -16,6 +16,8 @@
 package asset
 
 import (
+	"sync"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database"
@@ -37,6 +39,13 @@ type gormRepository struct {
 }
 
 func NewGormRepository(db core.DB) *gormRepository {
+	sync.OnceFunc(func() {
+		err := db.AutoMigrate(&Model{})
+		if err != nil {
+			panic(err)
+		}
+	})
+
 	return &gormRepository{
 		db:         db,
 		Repository: database.NewGormRepository[uuid.UUID, Model](db),
