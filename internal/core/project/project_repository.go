@@ -17,6 +17,9 @@ type repository interface {
 }
 
 func NewGormRepository(db core.DB) *gormRepository {
+	if err := db.AutoMigrate(&Model{}); err != nil {
+		panic(err)
+	}
 	return &gormRepository{
 		db:         db,
 		Repository: database.NewGormRepository[uuid.UUID, Model](db),

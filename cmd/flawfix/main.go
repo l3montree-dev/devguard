@@ -16,25 +16,11 @@
 package main
 
 import (
-	"log/slog"
-	"os"
-
-	accesscontrol "github.com/l3montree-dev/flawfix/internal/accesscontrol"
-	"github.com/l3montree-dev/flawfix/internal/auth"
+	"github.com/l3montree-dev/flawfix/cmd/flawfix/api"
 	"github.com/l3montree-dev/flawfix/internal/core"
-
-	"github.com/l3montree-dev/flawfix/internal/core/asset"
 	"github.com/l3montree-dev/flawfix/internal/core/config"
 	"github.com/l3montree-dev/flawfix/internal/core/leaderelection"
 	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
-
-	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/core/org"
-	"github.com/l3montree-dev/flawfix/internal/core/pat"
-	"github.com/l3montree-dev/flawfix/internal/core/project"
-	"github.com/l3montree-dev/flawfix/internal/echohttp"
-
-	"github.com/labstack/echo/v4"
 
 	_ "github.com/lib/pq"
 )
@@ -44,7 +30,6 @@ func main() {
 		panic(err)
 	}
 	core.InitLogger()
-	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS"))
 
 	db, err := core.DatabaseFactory()
 
@@ -52,54 +37,8 @@ func main() {
 		panic(err)
 	}
 
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
-
-	if err != nil {
-		panic(err)
-	}
-
-	server := echohttp.Server()
-
-	apiV1Router := server.Group("/api/v1")
-	// apply the health route without any session or multi tenant middleware
-	apiV1Router.GET("/health", func(c echo.Context) error {
-		return c.String(200, "ok")
-	})
-
-	// we need those core features in globally scoped middlewares. Therefore
-	// initialize them right here.
-	patRepository := pat.NewGormRepository(db)
-	assetRepository := asset.NewGormRepository(db)
-	projectRepository := project.NewGormRepository(db)
-	projectScopedRBAC := project.ProjectAccessControlFactory(projectRepository)
-
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
-
-	sessionMiddleware := auth.SessionMiddleware(ory, patRepository)
-
-	// everything below this line is protected by the session middleware
-	sessionRouter := apiV1Router.Group("", sessionMiddleware)
-	// register a simple whoami route for testing purposes
-	sessionRouter.GET("/whoami", func(c echo.Context) error {
-		return c.JSON(200, map[string]string{
-			"userId": core.GetSession(c).GetUserID(),
-		})
-	})
-
 	vulndb.StartMirror(db, leaderElector, configService)
-
-	// pat does return a scoped router, but we don't need it here.
-	pat.RegisterHttpHandler(db, sessionRouter)
-
-	// each http registration returns its own scoped router.
-	// since this asset has a multi tenant and hierarchical structure
-	// we need to pass the returned router to the next registration.
-	tenantRouter := org.RegisterHttpHandler(db, sessionRouter, casbinRBACProvider)
-	projectRouter := project.RegisterHttpHandler(db, tenantRouter, assetRepository)
-	assetRouter := asset.RegisterHttpHandler(db, projectRouter, projectScopedRBAC)
-
-	flaw.RegisterHttpHandler(db, assetRouter, projectScopedRBAC)
-
-	slog.Error("failed to start server", "err", server.Start(":8080").Error())
+	api.Start(db)
 }

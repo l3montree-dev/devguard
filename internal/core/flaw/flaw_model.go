@@ -22,11 +22,13 @@ const (
 
 type Model struct {
 	core.Model
-	RuleID   string          `json:"ruleId" gorm:"uniqueIndex:idx_ruleId_asset;not null;"`
+	// the scanner which was used to detect this flaw
+	ScannerID string `json:"scanner" gorm:"uniqueIndex:idx_ruleId_scanner_asset;not null;"`
+
 	Message  *string         `json:"message"`
 	Comments []comment.Model `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
 	Events   []EventModel    `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"events"`
-	AssetID  uuid.UUID       `json:"assetId" gorm:"uniqueIndex:idx_ruleId_asset;not null;"`
+	AssetID  uuid.UUID       `json:"assetId" gorm:"uniqueIndex:idx_ruleId_scanner_asset;not null;"`
 	State    State           `json:"state" gorm:"default:'open';not null;type:text;"`
 
 	CVE   *vulndb.CVE `json:"cve"`

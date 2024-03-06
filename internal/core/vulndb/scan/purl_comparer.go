@@ -73,6 +73,7 @@ func (comparer *purlComparer) GetVulns(purl string) ([]vulnInPackage, error) {
 				CVEID:             cve.CVE,
 				FixedVersion:      affectedPackage.SemverFixed,
 				IntroducedVersion: affectedPackage.SemverIntroduced,
+				PackageName:       affectedPackage.PURL,
 			})
 		}
 	}

@@ -156,10 +156,10 @@ func (nvdService NVDService) fetchAndSaveAllPages(url url.URL) error {
 	u := url
 
 	startIndex := 0
-	var totalResults int
+	totalResults := -1
 
 	for {
-		if totalResults != 0 && startIndex >= totalResults {
+		if totalResults != -1 && startIndex >= totalResults {
 			break
 		}
 		start := time.Now()
