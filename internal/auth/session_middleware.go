@@ -36,33 +36,22 @@ func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
 	return nil
 }
 
-func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSessionCookie string) (*client.Session, *http.Response, error) {
+func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSessionCookie string) (string, error) {
 	// check if we have a session
-	return oryApiClient.FrontendApi.ToSession(ctx).Cookie(oryKratosSessionCookie).Execute()
+	session, _, err := oryApiClient.FrontendApi.ToSession(ctx).Cookie(oryKratosSessionCookie).Execute()
+	if err != nil {
+		return "", err
+	}
+	return session.Identity.Id, nil
 }
 
-func tokenAuth(ctx context.Context, tokenRepository tokenRepository, oryApiClient *client.APIClient, header string) (*client.Session, *http.Response, error) {
+func tokenAuth(tokenRepository tokenRepository, header string) (string, error) {
 	// get the user id from the database.
 	// check if we need to strip a bearer prefix
 	if len(header) > 7 && header[:7] == "Bearer " {
 		header = header[7:]
 	}
-	userID, err := tokenRepository.GetUserIDByToken(header)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// now we know the user id - lets gSet the session
-	identity, resp, err := oryApiClient.IdentityApi.GetIdentity(ctx, userID).Execute()
-
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return &client.Session{
-		Active:   &[]bool{true}[0],
-		Identity: *identity,
-	}, resp, nil
+	return tokenRepository.GetUserIDByToken(header)
 }
 
 func SessionMiddleware(oryApiClient *client.APIClient, tokenRepository tokenRepository) echo.MiddlewareFunc {
@@ -70,7 +59,7 @@ func SessionMiddleware(oryApiClient *client.APIClient, tokenRepository tokenRepo
 		return func(c echo.Context) (err error) {
 			oryKratosSessionCookie := getCookie("ory_kratos_session", c.Cookies())
 
-			var session *client.Session
+			var userID string
 
 			if oryKratosSessionCookie == nil {
 				// check for authorization header
@@ -78,16 +67,16 @@ func SessionMiddleware(oryApiClient *client.APIClient, tokenRepository tokenRepo
 				if authorizationHeader == "" {
 					return c.JSON(401, map[string]string{"error": "no session, missing authorization header"})
 				}
-				session, _, err = tokenAuth(c.Request().Context(), tokenRepository, oryApiClient, authorizationHeader)
+				userID, err = tokenAuth(tokenRepository, authorizationHeader)
 			} else {
-				session, _, err = cookieAuth(c.Request().Context(), oryApiClient, oryKratosSessionCookie.String())
+				userID, err = cookieAuth(c.Request().Context(), oryApiClient, oryKratosSessionCookie.String())
 			}
 
-			if (err != nil && session == nil) || (err == nil && !*session.Active) {
-				return c.JSON(401, map[string]string{"error": "no session"})
+			if err != nil {
+				return c.JSON(401, map[string]string{"error": "no session, could not authenticate"})
 			}
 
-			c.Set("session", NewOrySession(session))
+			c.Set("session", NewSession(userID))
 			c.Set("sessionCookie", oryKratosSessionCookie)
 
 			return next(c)

@@ -33,7 +33,7 @@ services:
       - postgresql
     ports:
       - '4433:4433' # public
-      - '4434:4434' # admin
+      # - '4434:4434' # admin
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
     environment:
       - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
