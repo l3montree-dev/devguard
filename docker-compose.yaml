@@ -26,6 +26,15 @@ services:
         target: /etc/config/kratos
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
 
+  oathkeeper:
+    image : oryd/oathkeeper:v0.40.7
+    ports: 
+      - "4455:4455"
+    volumes:
+        - type: bind
+          source: ./.oathkeeper
+          target: /etc/config/oathkeeper
+
   kratos:
     image: oryd/kratos:v1.0.0
     depends_on:
@@ -33,7 +42,7 @@ services:
       - postgresql
     ports:
       - '4433:4433' # public
-      - '4434:4434' # admin
+      # - '4434:4434' # admin
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
     environment:
       - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable

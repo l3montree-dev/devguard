@@ -1,0 +1,65 @@
+# Copyright (C) 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+serve:
+  proxy:
+    port: 4455 # run the proxy at port 4455
+  api:
+    port: 4456 # run the api at port 4456
+
+access_rules:
+  repositories:
+    - file:///rules.json
+
+errors:
+  fallback:
+    - json
+  handlers:
+    json:
+      enabled: true
+      config:
+        verbose: true
+    redirect:
+      enabled: true
+      config:
+        to: https://www.ory.sh/docs
+
+mutators:
+  header:
+    enabled: true
+    config:
+      headers:
+        X-User: "{{ print .Subject }}"
+        # You could add some other headers, for example with data from the
+        # session.
+        # X-Some-Arbitrary-Data: "{{ print .Extra.some.arbitrary.data }}"
+  noop:
+    enabled: true
+  id_token:
+    enabled: true
+    config:
+      issuer_url: http://localhost:4455/
+      jwks_url: file:///jwks.json
+
+authorizers:
+  allow:
+    enabled: true
+  deny:
+    enabled: true
+
+authenticators:
+  anonymous:
+    enabled: true
+    config:
+      subject: guest

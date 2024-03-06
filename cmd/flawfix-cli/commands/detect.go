@@ -13,11 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package commands
 
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -28,35 +29,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "flawfix",
-	Short: "Vulnerability management for devs.",
-	Long:  `Flawfix is a tool to manage vulnerabilities and other flaws in your software.`,
-}
-
-func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
-		os.Exit(1)
+func DetectCommand() *cobra.Command {
+	detectCmd := &cobra.Command{
+		Use:   "detect",
+		Short: "Detect flaws in your project",
 	}
-}
-
-func init() {
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.PersistentFlags().String("assetId", "", "The id of the asset which is scanned")
-	rootCmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-	err := rootCmd.MarkPersistentFlagRequired("assetId")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		os.Exit(1)
-	}
-	err = rootCmd.MarkPersistentFlagRequired("token")
+	detectCmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
+	detectCmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
+	err := detectCmd.MarkPersistentFlagRequired("assetName")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)
 		os.Exit(1)
 	}
 
-	rootCmd.AddCommand(&cobra.Command{
+	detectCmd.AddCommand(&cobra.Command{
 		Use:   "sca [path to SBOM file]",
 		Short: "Software composition analysis",
 		Long:  `Scan a SBOM for vulnerabilities. This command will scan a SBOM for vulnerabilities and return a list of vulnerabilities found in the SBOM. The SBOM must be passed as an argument.`,
@@ -73,7 +59,7 @@ func init() {
 				slog.Error("could not get token", "err", err)
 				os.Exit(1)
 			}
-			assetID, err := cmd.Flags().GetString("assetId")
+			assetName, err := cmd.Flags().GetString("assetName")
 			if err != nil {
 				slog.Error("could not get asset id", "err", err)
 				os.Exit(1)
@@ -103,7 +89,7 @@ func init() {
 			}
 
 			req.Header.Set("Authorization", "Bearer "+token)
-			req.Header.Set("X-Asset-ID", assetID)
+			req.Header.Set("X-Asset-Name", assetName)
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
@@ -112,7 +98,16 @@ func init() {
 			}
 
 			if resp.StatusCode != http.StatusOK {
-				slog.Error("could not scan file", "status", resp.Status)
+				// parse the body - it should be an error message
+				// print the error message to the console
+				// and exit with status code 1
+				body, err := io.ReadAll(resp.Body)
+				if err != nil {
+					slog.Error("could not read response body", "err", err)
+					os.Exit(1)
+				}
+
+				slog.Error("could not scan file", "status", resp.Status, "message", string(body))
 				os.Exit(1)
 			}
 
@@ -131,8 +126,5 @@ func init() {
 			}
 		},
 	})
-}
-
-func main() {
-	Execute()
+	return detectCmd
 }

@@ -19,6 +19,7 @@ selfservice:
   allowed_return_urls:
     - http://127.0.0.1:3000
     - http://localhost:3000
+    - http://localhost:6060 # flawfix cli will open this port
 
   methods:
     password:

@@ -15,18 +15,16 @@
 
 package auth
 
-import "github.com/ory/client-go"
-
-type orySession struct {
-	session *client.Session
+type identity struct {
+	userID string
 }
 
-func (a orySession) GetUserID() string {
-	return a.session.Identity.Id
+func (a identity) GetUserID() string {
+	return a.userID
 }
 
-func NewOrySession(session *client.Session) orySession {
-	return orySession{
-		session: session,
+func NewIdentity(userID string) identity {
+	return identity{
+		userID: userID,
 	}
 }
