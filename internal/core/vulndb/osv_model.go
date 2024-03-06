@@ -82,14 +82,14 @@ func (osv OSV) isCVE() bool {
 
 type AffectedPackage struct {
 	ID               string  `json:"id" gorm:"primaryKey;varchar(255);"`
-	PURL             string  `json:"purl" gorm:"type:varchar(255);"`
-	Ecosystem        string  `json:"ecosystem" gorm:"type:varchar(255);"`
-	Scheme           string  `json:"scheme" gorm:"type:varchar(255);"`
-	Type             string  `json:"type" gorm:"type:varchar(255);"`
-	Name             string  `json:"name" gorm:"type:varchar(255);"`
-	Namespace        *string `json:"namespace" gorm:"type:varchar(255);"`
-	Qualifiers       *string `json:"qualifiers" gorm:"type:varchar(255);"`
-	Subpath          *string `json:"subpath" gorm:"type:varchar(255);"`
+	PURL             string  `json:"purl" gorm:"type:text;"`
+	Ecosystem        string  `json:"ecosystem" gorm:"type:text;"`
+	Scheme           string  `json:"scheme" gorm:"type:text;"`
+	Type             string  `json:"type" gorm:"type:text;"`
+	Name             string  `json:"name" gorm:"type:text;"`
+	Namespace        *string `json:"namespace" gorm:"type:text;"`
+	Qualifiers       *string `json:"qualifiers" gorm:"type:text;"`
+	Subpath          *string `json:"subpath" gorm:"type:text;"`
 	Version          *string `json:"version"` // either version or semver is defined
 	SemverIntroduced *string `json:"semver_start" gorm:"type:semver;"`
 	SemverFixed      *string `json:"semver_end" gorm:"type:semver;"`

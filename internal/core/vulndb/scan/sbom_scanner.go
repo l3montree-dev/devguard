@@ -16,12 +16,10 @@
 package scan
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
 )
 
 type sbomScanner struct {
@@ -29,8 +27,31 @@ type sbomScanner struct {
 	purlComparer comparer
 }
 
+// the vulnInPackage interface is used to abstract the different types of vulnerabilities
+// it includes more than just the CVE ID to allow for more detailed information
+// like the affected package version and fixed version
+type vulnInPackage struct {
+	CVEID             string
+	FixedVersion      *string
+	IntroducedVersion *string
+}
+
+func (v vulnInPackage) getIntroducedVersion() string {
+	if v.IntroducedVersion != nil {
+		return *v.IntroducedVersion
+	}
+	return ""
+}
+
+func (v vulnInPackage) getFixedVersion() string {
+	if v.FixedVersion != nil {
+		return *v.FixedVersion
+	}
+	return ""
+}
+
 type comparer interface {
-	GetCVEs(packageIdentifier string) ([]vulndb.CVE, error)
+	GetVulns(packageIdentifier string) ([]vulnInPackage, error)
 }
 
 func NewSBOMScanner(cpeComparer comparer, purlComparer comparer) *sbomScanner {
@@ -47,29 +68,30 @@ func (s *sbomScanner) Scan(reader io.Reader) error {
 		return err
 	}
 
-	cves := make([]vulndb.CVE, 0)
+	vulnerabilities := make([]vulnInPackage, 0)
 	// iterate through all components
 	for _, component := range *bom.Components {
 		// check if CPE is present
 		if component.CPE != "" {
-			c, err := s.cpeComparer.GetCVEs(component.CPE)
+			c, err := s.cpeComparer.GetVulns(component.CPE)
 			if err != nil {
-				return err
-			}
-			cves = append(cves, c...)
-		} else if component.PackageURL != "" {
-			c, err := s.purlComparer.GetCVEs(component.PackageURL)
-			if err != nil {
-				slog.Info("could not get cves", "err", err)
+				slog.Warn("could not get cves", "err", err, "cpe", component.CPE)
 				continue
 			}
-			cves = append(cves, c...)
+			vulnerabilities = append(vulnerabilities, c...)
+		} else if component.PackageURL != "" {
+			c, err := s.purlComparer.GetVulns(component.PackageURL)
+			if err != nil {
+				slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
+				continue
+			}
+			vulnerabilities = append(vulnerabilities, c...)
 		}
 	}
 
 	// print all found CVEs
-	for _, cve := range cves {
-		fmt.Println(cve.CVE)
+	for _, vuln := range vulnerabilities {
+		slog.Info(vuln.getIntroducedVersion(), vuln.CVEID, vuln.getFixedVersion())
 	}
 
 	return nil

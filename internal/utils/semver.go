@@ -49,7 +49,6 @@ func SemverFix(version string) (string, error) {
 	// lets check if we need to fix the semver - there are some cases where the semver is not valid
 	// examples are: "1.5", "1.0", "19.03.9", "3.0-beta1"
 	// we need to fix these to be valid semver
-
 	if validSemverRegex.MatchString(version) {
 		// If the version is already a valid semver, no need to fix.
 		return version, nil
@@ -70,6 +69,8 @@ func SemverFix(version string) (string, error) {
 	fixedVersion := strings.Join(parts, ".")
 
 	switch len(parts) {
+	case 1: // Missing MINOR and PATCH version
+		fixedVersion += ".0.0"
 	case 2: // Missing PATCH version
 		fixedVersion += ".0"
 	case 3: // Possible that we have a pre-release without PATCH
@@ -85,8 +86,6 @@ func SemverFix(version string) (string, error) {
 	if validSemverRegex.MatchString(fixedVersion) {
 		return fixedVersion, nil
 	}
-
-	fmt.Println("Could not fix semver", "version", version, "fixedVersion", fixedVersion)
 
 	// If we can't fix it to be a valid semver, return the original version.
 	return version, ErrInvalidVersion

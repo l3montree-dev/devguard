@@ -16,8 +16,6 @@
 package scan
 
 import (
-	"log/slog"
-
 	"net/url"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
@@ -37,14 +35,7 @@ func NewPurlComparer(db core.DB) *purlComparer {
 	}
 }
 
-func stringOrNil(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
-func (comparer *purlComparer) GetCVEs(purl string) ([]vulndb.CVE, error) {
+func (comparer *purlComparer) GetVulns(purl string) ([]vulnInPackage, error) {
 	// parse the purl
 	p, err := packageurl.FromString(purl)
 	if err != nil {
@@ -72,12 +63,19 @@ func (comparer *purlComparer) GetCVEs(purl string) ([]vulndb.CVE, error) {
 			Or("semver_introduced < ? AND semver_fixed > ?", version, version),
 	).Preload("CVE").Find(&affectedPackages)
 
-	p.Version = version
-	for _, pkg := range affectedPackages {
-		for _, cve := range pkg.CVE {
-			slog.Info("found cve", "cve", cve.CVE, "purl", pURL, "installedVersion", version, "fixedVersion", stringOrNil(pkg.SemverFixed), "introducedVersion", stringOrNil(pkg.SemverIntroduced))
+	vulnerabilities := []vulnInPackage{}
+
+	// transform the affected packages to the vulnInPackage struct
+	for _, affectedPackage := range affectedPackages {
+		for _, cve := range affectedPackage.CVE {
+			// append the cve to the vulnerabilities
+			vulnerabilities = append(vulnerabilities, vulnInPackage{
+				CVEID:             cve.CVE,
+				FixedVersion:      affectedPackage.SemverFixed,
+				IntroducedVersion: affectedPackage.SemverIntroduced,
+			})
 		}
 	}
 
-	return nil, nil
+	return vulnerabilities, nil
 }

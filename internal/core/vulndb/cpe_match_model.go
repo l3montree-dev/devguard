@@ -3,22 +3,22 @@ package vulndb
 import "strings"
 
 type CPEMatch struct {
-	MatchCriteriaID string `json:"matchCriteriaId" gorm:"primaryKey;type:varchar(255);"`
-	Criteria        string `json:"criteria" gorm:"type:varchar(255);"`
-	Part            string `json:"part" gorm:"type:varchar(255);"`
-	Vendor          string `json:"vendor" gorm:"type:varchar(255);"`
-	Product         string `json:"product" gorm:"type:varchar(255);"`
-	Version         string `json:"version" gorm:"type:varchar(255);"`
-	Update          string `json:"update" gorm:"type:varchar(255);"`
-	Edition         string `json:"edition" gorm:"type:varchar(255);"`
-	Language        string `json:"language" gorm:"type:varchar(255);"`
-	SwEdition       string `json:"swEdition" gorm:"type:varchar(255);"`
-	TargetSw        string `json:"targetSw" gorm:"type:varchar(255);"`
-	TargetHw        string `json:"targetHw" gorm:"type:varchar(255);"`
-	Other           string `json:"other" gorm:"type:varchar(255);"`
+	MatchCriteriaID string `json:"matchCriteriaId" gorm:"primaryKey;type:text;"`
+	Criteria        string `json:"criteria" gorm:"type:text;"`
+	Part            string `json:"part" gorm:"type:text;"`
+	Vendor          string `json:"vendor" gorm:"type:text;"`
+	Product         string `json:"product" gorm:"type:text;"`
+	Version         string `json:"version" gorm:"type:text;"`
+	Update          string `json:"update" gorm:"type:text;"`
+	Edition         string `json:"edition" gorm:"type:text;"`
+	Language        string `json:"language" gorm:"type:text;"`
+	SwEdition       string `json:"swEdition" gorm:"type:text;"`
+	TargetSw        string `json:"targetSw" gorm:"type:text;"`
+	TargetHw        string `json:"targetHw" gorm:"type:text;"`
+	Other           string `json:"other" gorm:"type:text;"`
 
-	VersionEndExcluding   string `json:"versionEndExcluding" gorm:"type:varchar(255);"`
-	VersionStartIncluding string `json:"versionStartIncluding" gorm:"type:varchar(255);"`
+	VersionEndExcluding   string `json:"versionEndExcluding" gorm:"type:text;"`
+	VersionStartIncluding string `json:"versionStartIncluding" gorm:"type:text;"`
 
 	Vulnerable bool `json:"vulnerable" gorm:"type:boolean;"`
 

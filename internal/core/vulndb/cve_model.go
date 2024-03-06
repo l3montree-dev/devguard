@@ -26,7 +26,7 @@ type cveReference struct {
 	Tags   []string `json:"tags"`
 }
 type CVE struct {
-	CVE string `json:"cve" gorm:"primaryKey;not null;type:varchar(255);"`
+	CVE string `json:"cve" gorm:"primaryKey;not null;type:text;"`
 
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
@@ -65,11 +65,11 @@ type CVE struct {
 }
 
 type Weakness struct {
-	Source string `json:"source" gorm:"type:varchar(255);"`
-	Type   string `json:"type" gorm:"type:varchar(255);"`
-	CVEID  string `json:"cve" gorm:"primaryKey;not null;type:varchar(255);"`
+	Source string `json:"source" gorm:"type:text;"`
+	Type   string `json:"type" gorm:"type:text;"`
+	CVEID  string `json:"cve" gorm:"primaryKey;not null;type:text;"`
 	CVE    CVE
-	CWEID  string `json:"cwe" gorm:"primaryKey;not null;type:varchar(255);"`
+	CWEID  string `json:"cwe" gorm:"primaryKey;not null;type:text;"`
 }
 
 func (m Weakness) TableName() string {

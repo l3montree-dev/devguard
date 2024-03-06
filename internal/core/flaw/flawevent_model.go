@@ -17,7 +17,7 @@ const (
 
 type EventModel struct {
 	core.Model
-	Type   Type      `json:"type" gorm:"type:varchar(255)"`
+	Type   Type      `json:"type" gorm:"type:text"`
 	FlawID uuid.UUID `json:"flawId"`
 	UserID uuid.UUID `json:"userId"`
 
