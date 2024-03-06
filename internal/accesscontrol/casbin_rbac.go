@@ -25,31 +25,31 @@ import (
 	"gorm.io/gorm"
 )
 
-var _ AccessControl = &CasbinRBAC{}
+var _ AccessControl = &casbinRBAC{}
 var casbinEnforcer *casbin.Enforcer
 
-type CasbinRBAC struct {
+type casbinRBAC struct {
 	domain   string // scopes this to a specific domain - or tenant
 	enforcer *casbin.Enforcer
 }
 
-type CasbinRBACProvider struct {
+type casbinRBACProvider struct {
 	enforcer *casbin.Enforcer
 }
 
-func (c CasbinRBACProvider) GetDomainRBAC(domain string) AccessControl {
-	return &CasbinRBAC{
+func (c casbinRBACProvider) GetDomainRBAC(domain string) AccessControl {
+	return &casbinRBAC{
 		domain:   domain,
 		enforcer: c.enforcer,
 	}
 }
 
-func (c *CasbinRBAC) HasAccess(user string) bool {
+func (c *casbinRBAC) HasAccess(user string) bool {
 	roles := c.enforcer.GetRolesForUserInDomain("user::"+user, "domain::"+c.domain)
 	return len(roles) > 0
 }
 
-func (c *CasbinRBAC) GetAllProjectsForUser(user string) []string {
+func (c *casbinRBAC) GetAllProjectsForUser(user string) []string {
 	projectIDs := []string{}
 
 	roles, _ := c.enforcer.GetImplicitRolesForUser("user::"+user, "domain::"+c.domain)
@@ -65,7 +65,7 @@ func (c *CasbinRBAC) GetAllProjectsForUser(user string) []string {
 	return projectIDs
 }
 
-func (c *CasbinRBAC) GetAllRoles(user string) []string {
+func (c *casbinRBAC) GetAllRoles(user string) []string {
 	roles, err := c.enforcer.GetImplicitRolesForUser("user::"+user, "domain::"+c.domain)
 
 	if err != nil {
@@ -76,37 +76,37 @@ func (c *CasbinRBAC) GetAllRoles(user string) []string {
 	return roles
 }
 
-func (c *CasbinRBAC) GrantRole(user string, role string) error {
+func (c *casbinRBAC) GrantRole(user string, role string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("user::"+user, "role::"+string(role), "domain::"+c.domain)
 	return err
 }
 
 // both roles are treated as projects roles.
-func (c *CasbinRBAC) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string, project string) error {
+func (c *casbinRBAC) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string, project string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain(c.getProjectRoleName(roleWhichGetsPermissions, project), c.getProjectRoleName(roleWhichProvidesPermissions, project), "domain::"+c.domain)
 	return err
 }
 
-func (c *CasbinRBAC) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error {
+func (c *casbinRBAC) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("role::"+string(roleWhichGetsPermissions), "role::"+string(roleWhichProvidesPermissions), "domain::"+c.domain)
 	return err
 }
 
-func (c *CasbinRBAC) LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions string, project string) error {
+func (c *casbinRBAC) LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions string, project string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("role::"+string(domainRoleWhichGetsPermission), c.getProjectRoleName(projectRoleWhichProvidesPermissions, project), "domain::"+c.domain)
 	return err
 }
 
-func (c *CasbinRBAC) getProjectRoleName(role string, project string) string {
+func (c *casbinRBAC) getProjectRoleName(role string, project string) string {
 	return "project::" + project + "|role::" + string(role)
 }
 
-func (c *CasbinRBAC) RevokeRole(user string, role string) error {
+func (c *casbinRBAC) RevokeRole(user string, role string) error {
 	_, err := c.enforcer.DeleteRoleForUserInDomain("user::"+user, "role::"+string(role), "domain::"+c.domain)
 	return err
 }
 
-func (c *CasbinRBAC) AllowRole(role string, object string, action []Action) error {
+func (c *casbinRBAC) AllowRole(role string, object string, action []Action) error {
 	policies := make([][]string, len(action))
 	for i, ac := range action {
 		policies[i] = []string{"role::" + string(role), "domain::" + c.domain, "obj::" + string(object), "act::" + string(ac)}
@@ -116,7 +116,7 @@ func (c *CasbinRBAC) AllowRole(role string, object string, action []Action) erro
 	return err
 }
 
-func (c *CasbinRBAC) AllowRoleInProject(project string, role string, object string, action []Action) error {
+func (c *casbinRBAC) AllowRoleInProject(project string, role string, object string, action []Action) error {
 	policies := make([][]string, len(action))
 	for i, ac := range action {
 		policies[i] = []string{"project::" + project + "|role::" + string(role), "domain::" + c.domain, "project::" + project + "|obj::" + string(object), "act::" + string(ac)}
@@ -125,17 +125,17 @@ func (c *CasbinRBAC) AllowRoleInProject(project string, role string, object stri
 	return err
 }
 
-func (c *CasbinRBAC) GrantRoleInProject(user string, role string, project string) error {
+func (c *casbinRBAC) GrantRoleInProject(user string, role string, project string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("user::"+user, "project::"+project+"|role::"+string(role), "domain::"+c.domain)
 	return err
 }
 
-func (c *CasbinRBAC) RevokeRoleInProject(user string, role string, project string) error {
+func (c *casbinRBAC) RevokeRoleInProject(user string, role string, project string) error {
 	_, err := c.enforcer.DeleteRoleForUserInDomain("user::"+user, "project::"+project+"|role::"+string(role), "domain::"+c.domain)
 	return err
 }
 
-func (c *CasbinRBAC) IsAllowed(user string, object string, action Action) (bool, error) {
+func (c *casbinRBAC) IsAllowed(user string, object string, action Action) (bool, error) {
 	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
 	if err != nil {
 		return false, err
@@ -150,7 +150,7 @@ func (c *CasbinRBAC) IsAllowed(user string, object string, action Action) (bool,
 	return false, nil
 }
 
-func (c *CasbinRBAC) IsAllowedInProject(project, user string, object string, action Action) (bool, error) {
+func (c *casbinRBAC) IsAllowedInProject(project, user string, object string, action Action) (bool, error) {
 	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
 	if err != nil {
 		return false, err
@@ -165,7 +165,7 @@ func (c *CasbinRBAC) IsAllowedInProject(project, user string, object string, act
 	return false, nil
 }
 
-func (c CasbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
+func (c casbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
 	domains, err := c.enforcer.GetDomainsForUser("user::" + user)
 	if err != nil {
 		return nil, err
@@ -178,12 +178,12 @@ func (c CasbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
 }
 
 // the provider can be used to create domain specific RBAC instances
-func NewCasbinRBACProvider(db *gorm.DB) (CasbinRBACProvider, error) {
+func NewCasbinRBACProvider(db *gorm.DB) (casbinRBACProvider, error) {
 	enforcer, err := buildEnforcer(db)
 	if err != nil {
-		return CasbinRBACProvider{}, err
+		return casbinRBACProvider{}, err
 	}
-	return CasbinRBACProvider{
+	return casbinRBACProvider{
 		enforcer: enforcer,
 	}, nil
 }

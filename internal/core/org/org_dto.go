@@ -19,7 +19,7 @@ import (
 	"github.com/gosimple/slug"
 )
 
-type CreateRequest struct {
+type createRequest struct {
 	Name                   string  `json:"name" validate:"required"`
 	ContactPhoneNumber     *string `json:"contactPhoneNumber"`
 	NumberOfEmployees      *int    `json:"numberOfEmployees"`
@@ -32,7 +32,7 @@ type CreateRequest struct {
 	Description            string  `json:"description"`
 }
 
-func (c CreateRequest) ToModel() Model {
+func (c createRequest) toModel() Model {
 	return Model{
 		Name:                   c.Name,
 		ContactPhoneNumber:     c.ContactPhoneNumber,

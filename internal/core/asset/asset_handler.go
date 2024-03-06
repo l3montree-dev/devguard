@@ -6,7 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func assetMiddleware(repository Repository) func(next echo.HandlerFunc) echo.HandlerFunc {
+func assetMiddleware(repository repository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		// get the project
 		return func(c echo.Context) error {

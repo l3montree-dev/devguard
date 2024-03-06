@@ -21,12 +21,8 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/database"
 )
 
-type GormRepository struct {
-	db core.DB
-	database.Repository[uuid.UUID, Model, core.DB]
-}
-
-type Repository interface {
+// we use this in multiple files in the asset package itself
+type repository interface {
 	database.Repository[uuid.UUID, Model, core.DB]
 	FindByName(name string) (Model, error)
 	FindOrCreate(tx core.DB, name string) (Model, error)
@@ -35,14 +31,19 @@ type Repository interface {
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
 }
 
-func NewGormRepository(db core.DB) *GormRepository {
-	return &GormRepository{
+type gormRepository struct {
+	db core.DB
+	database.Repository[uuid.UUID, Model, core.DB]
+}
+
+func NewGormRepository(db core.DB) *gormRepository {
+	return &gormRepository{
 		db:         db,
 		Repository: database.NewGormRepository[uuid.UUID, Model](db),
 	}
 }
 
-func (a *GormRepository) FindByName(name string) (Model, error) {
+func (a *gormRepository) FindByName(name string) (Model, error) {
 	var app Model
 	err := a.db.Where("name = ?", name).First(&app).Error
 	if err != nil {
@@ -51,7 +52,7 @@ func (a *GormRepository) FindByName(name string) (Model, error) {
 	return app, nil
 }
 
-func (a *GormRepository) FindOrCreate(tx core.DB, name string) (Model, error) {
+func (a *gormRepository) FindOrCreate(tx core.DB, name string) (Model, error) {
 	app, err := a.FindByName(name)
 	if err != nil {
 		app = Model{Name: name}
@@ -63,7 +64,7 @@ func (a *GormRepository) FindOrCreate(tx core.DB, name string) (Model, error) {
 	return app, nil
 }
 
-func (a *GormRepository) GetByProjectID(projectID uuid.UUID) ([]Model, error) {
+func (a *gormRepository) GetByProjectID(projectID uuid.UUID) ([]Model, error) {
 	var apps []Model
 	err := a.db.Where("project_id = ?", projectID).Find(&apps).Error
 	if err != nil {
@@ -72,13 +73,13 @@ func (a *GormRepository) GetByProjectID(projectID uuid.UUID) ([]Model, error) {
 	return apps, nil
 }
 
-func (g *GormRepository) ReadBySlug(projectID uuid.UUID, slug string) (Model, error) {
+func (g *gormRepository) ReadBySlug(projectID uuid.UUID, slug string) (Model, error) {
 	var t Model
 	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
 	return t, err
 }
 
-func (g *GormRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
+func (g *gormRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
 	app, err := g.ReadBySlug(projectID, slug)
 	if err != nil {
 		return uuid.UUID{}, err

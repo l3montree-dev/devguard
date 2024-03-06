@@ -13,6 +13,7 @@ import (
 )
 
 type Server = *echo.Group
+type MiddlewareFunc = echo.MiddlewareFunc
 type Context = echo.Context
 type DB = *gorm.DB
 

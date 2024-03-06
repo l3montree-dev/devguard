@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package vulndb
+package scan
 
 import (
 	"log/slog"
@@ -21,17 +21,18 @@ import (
 	"net/url"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
 	"github.com/l3montree-dev/flawfix/internal/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
 )
 
-type PurlComparer struct {
+type purlComparer struct {
 	db core.DB
 }
 
-func NewPurlComparer(db core.DB) *PurlComparer {
-	return &PurlComparer{
+func NewPurlComparer(db core.DB) *purlComparer {
+	return &purlComparer{
 		db: db,
 	}
 }
@@ -43,7 +44,7 @@ func stringOrNil(s *string) string {
 	return *s
 }
 
-func (comparer *PurlComparer) GetCVEs(purl string) ([]CVE, error) {
+func (comparer *purlComparer) GetCVEs(purl string) ([]vulndb.CVE, error) {
 	// parse the purl
 	p, err := packageurl.FromString(purl)
 	if err != nil {
@@ -55,7 +56,7 @@ func (comparer *PurlComparer) GetCVEs(purl string) ([]CVE, error) {
 		return nil, err
 	}
 
-	affectedPackages := []AffectedPackage{}
+	affectedPackages := []vulndb.AffectedPackage{}
 	p.Version = ""
 
 	pURL, err := url.PathUnescape(p.ToString())
@@ -63,7 +64,7 @@ func (comparer *PurlComparer) GetCVEs(purl string) ([]CVE, error) {
 		return nil, errors.Wrap(err, "could not unescape purl path")
 	}
 	// check if the package is present in the database
-	comparer.db.Model(&AffectedPackage{}).Where("p_url = ?", pURL).Where(
+	comparer.db.Model(&vulndb.AffectedPackage{}).Where("p_url = ?", pURL).Where(
 		comparer.db.Where(
 			"version = ?", version).
 			Or("semver_introduced IS NULL AND semver_fixed > ?", version).

@@ -7,29 +7,29 @@ import (
 	"gorm.io/gorm"
 )
 
-type GormRepository struct {
+type gormRepository struct {
 	db core.DB
 	database.Repository[uuid.UUID, Model, core.DB]
 }
 
-type Repository interface {
+type repository interface {
 	database.Repository[uuid.UUID, Model, core.DB]
 
 	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]Model, error)
 	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[Model], error)
 }
 
-func NewGormRepository(db core.DB) Repository {
+func NewGormRepository(db core.DB) *gormRepository {
 	if err := db.AutoMigrate(&Model{}); err != nil {
 		panic(err)
 	}
-	return &GormRepository{
+	return &gormRepository{
 		db:         db,
 		Repository: database.NewGormRepository[uuid.UUID, Model](db),
 	}
 }
 
-func (r *GormRepository) GetByAssetId(
+func (r *gormRepository) GetByAssetId(
 	tx *gorm.DB,
 	assetId uuid.UUID,
 ) ([]Model, error) {
@@ -42,7 +42,7 @@ func (r *GormRepository) GetByAssetId(
 	return flaws, nil
 }
 
-func (r *GormRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[Model], error) {
+func (r *gormRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[Model], error) {
 	var count int64
 	var flaws []Model = []Model{}
 
@@ -80,7 +80,7 @@ func (r *GormRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 	return core.NewPaged(pageInfo, count, flaws), nil
 }
 
-func (g GormRepository) Read(id uuid.UUID) (Model, error) {
+func (g gormRepository) Read(id uuid.UUID) (Model, error) {
 	var t Model
 	err := g.db.Preload("CVE.CWEs").Preload("Events").Preload("CVE").First(&t, id).Error
 

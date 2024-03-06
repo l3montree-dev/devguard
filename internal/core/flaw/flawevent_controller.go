@@ -6,10 +6,10 @@ import (
 )
 
 type FlawEventHttpController struct {
-	flawEventRepository EventRepository
+	flawEventRepository eventRepository
 }
 
-func NewEventHttpController(flawEventRepository EventRepository) *FlawEventHttpController {
+func NewEventHttpController(flawEventRepository eventRepository) *FlawEventHttpController {
 	return &FlawEventHttpController{
 		flawEventRepository: flawEventRepository,
 	}

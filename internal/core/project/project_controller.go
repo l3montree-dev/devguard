@@ -24,12 +24,16 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type Controller struct {
-	projectRepository Repository
-	assetRepository   asset.Repository
+type assetRepository interface {
+	GetByProjectID(projectID uuid.UUID) ([]asset.Model, error)
 }
 
-func NewHttpController(repository Repository, assetRepository asset.Repository) *Controller {
+type Controller struct {
+	projectRepository repository
+	assetRepository   assetRepository
+}
+
+func NewHttpController(repository repository, assetRepository assetRepository) *Controller {
 	return &Controller{
 		projectRepository: repository,
 		assetRepository:   assetRepository,

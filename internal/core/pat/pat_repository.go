@@ -21,39 +21,39 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/database"
 )
 
-type GormPatRepository struct {
+type gormPatRepository struct {
 	database.Repository[uuid.UUID, Model, core.DB]
 	db core.DB
 }
 
-type Repository interface {
+type repository interface {
 	database.Repository[uuid.UUID, Model, core.DB]
 	ReadByToken(token string) (Model, error)
 	ListByUserID(userId string) ([]Model, error)
 	GetUserIDByToken(token string) (string, error)
 }
 
-func NewGormRepository(db core.DB) *GormPatRepository {
-	return &GormPatRepository{
+func NewGormRepository(db core.DB) *gormPatRepository {
+	return &gormPatRepository{
 		db:         db,
 		Repository: database.NewGormRepository[uuid.UUID, Model](db),
 	}
 }
 
-func (g *GormPatRepository) ReadByToken(token string) (Model, error) {
+func (g *gormPatRepository) ReadByToken(token string) (Model, error) {
 	var t Model
 	// make sure to hash the token before querying
 	err := g.db.First(&t, "token = ?", t.HashToken(token)).Error
 	return t, err
 }
 
-func (g *GormPatRepository) ListByUserID(userId string) ([]Model, error) {
+func (g *gormPatRepository) ListByUserID(userId string) ([]Model, error) {
 	var pats []Model
 	err := g.db.Where("user_id = ?", userId).Find(&pats).Error
 	return pats, err
 }
 
-func (g *GormPatRepository) GetUserIDByToken(token string) (string, error) {
+func (g *gormPatRepository) GetUserIDByToken(token string) (string, error) {
 	var t Model
 	err := g.db.First(&t, "token = ?", t.HashToken(token)).Error
 	return t.UserID.String(), err

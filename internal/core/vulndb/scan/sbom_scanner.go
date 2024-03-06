@@ -24,23 +24,23 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
 )
 
-type SBOMScanner struct {
-	cpeComparer  Comparer
-	purlComparer Comparer
+type sbomScanner struct {
+	cpeComparer  comparer
+	purlComparer comparer
 }
 
-type Comparer interface {
+type comparer interface {
 	GetCVEs(packageIdentifier string) ([]vulndb.CVE, error)
 }
 
-func NewSBOMScanner(cpeComparer Comparer, purlComparer Comparer) *SBOMScanner {
-	return &SBOMScanner{
+func NewSBOMScanner(cpeComparer comparer, purlComparer comparer) *sbomScanner {
+	return &sbomScanner{
 		cpeComparer:  cpeComparer,
 		purlComparer: purlComparer,
 	}
 }
 
-func (s *SBOMScanner) Scan(reader io.Reader) error {
+func (s *sbomScanner) Scan(reader io.Reader) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(reader, cdx.BOMFileFormatJSON)
 	if err := decoder.Decode(bom); err != nil {

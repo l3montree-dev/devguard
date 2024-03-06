@@ -5,17 +5,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type FlawHttpController struct {
-	flawRepository Repository
+type flawHttpController struct {
+	flawRepository repository
 }
 
-func NewHttpController(flawRepository Repository) *FlawHttpController {
-	return &FlawHttpController{
+func NewHttpController(flawRepository repository) *flawHttpController {
+	return &flawHttpController{
 		flawRepository: flawRepository,
 	}
 }
 
-func (c FlawHttpController) ListPaged(ctx core.Context) error {
+func (c flawHttpController) ListPaged(ctx core.Context) error {
 	// get the asset
 	asset := core.GetAsset(ctx)
 
@@ -34,7 +34,7 @@ func (c FlawHttpController) ListPaged(ctx core.Context) error {
 	return ctx.JSON(200, pagedResp)
 }
 
-func (c FlawHttpController) Read(ctx core.Context) error {
+func (c flawHttpController) Read(ctx core.Context) error {
 	flawId, err := core.GetFlawID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid flaw id")

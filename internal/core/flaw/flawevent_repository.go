@@ -6,17 +6,17 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/database"
 )
 
-type EventGormRepository struct {
+type eventGormRepository struct {
 	db core.DB
 	database.Repository[uuid.UUID, EventModel, core.DB]
 }
 
-type EventRepository interface {
+type eventRepository interface {
 	database.Repository[uuid.UUID, EventModel, core.DB]
 }
 
-func NewEventGormRepository(db core.DB) EventRepository {
-	return &EventGormRepository{
+func NewEventGormRepository(db core.DB) *eventGormRepository {
+	return &eventGormRepository{
 		db:         db,
 		Repository: database.NewGormRepository[uuid.UUID, EventModel](db),
 	}

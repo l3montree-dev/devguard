@@ -11,43 +11,43 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type Repository interface {
+type repository interface {
 	database.Repository[string, CVE, core.DB]
 	FindByID(id string) (CVE, error)
 	GetLastModDate() (time.Time, error)
 }
 
-type GormRepository struct {
+type gormRepository struct {
 	database.Repository[string, CVE, core.DB]
 	db *gorm.DB
 }
 
-func NewGormRepository(db core.DB) Repository {
+func NewGormRepository(db core.DB) *gormRepository {
 	if err := db.AutoMigrate(&CVE{}, &Weakness{}); err != nil {
 		panic(err)
 	}
 
-	return &GormRepository{
+	return &gormRepository{
 		db:         db,
 		Repository: database.NewGormRepository[string, CVE](db),
 	}
 }
 
-func (g *GormRepository) GetLastModDate() (time.Time, error) {
+func (g *gormRepository) GetLastModDate() (time.Time, error) {
 	var cve CVE
 	err := g.db.Order("date_last_modified desc").First(&cve).Error
 
 	return cve.DateLastModified, err
 }
 
-func (g *GormRepository) FindByID(id string) (CVE, error) {
+func (g *gormRepository) FindByID(id string) (CVE, error) {
 	var t CVE
 	err := g.db.First(&t, "cve = ?", id).Error
 
 	return t, err
 }
 
-func (g *GormRepository) createInBatches(tx core.DB, cves []CVE, batchSize int) error {
+func (g *gormRepository) createInBatches(tx core.DB, cves []CVE, batchSize int) error {
 	err := g.GetDB(tx).Session(
 		&gorm.Session{
 			Logger:               logger.Default.LogMode(logger.Silent),
@@ -87,11 +87,11 @@ func (g *GormRepository) createInBatches(tx core.DB, cves []CVE, batchSize int) 
 	return err
 }
 
-func (g *GormRepository) SaveBatch(tx core.DB, cves []CVE) error {
+func (g *gormRepository) SaveBatch(tx core.DB, cves []CVE) error {
 	return g.createInBatches(tx, cves, 1000)
 }
 
-func (g *GormRepository) Save(tx core.DB, cve *CVE) error {
+func (g *gormRepository) Save(tx core.DB, cve *CVE) error {
 	return g.GetDB(tx).Session(
 		&gorm.Session{
 			FullSaveAssociations: true,

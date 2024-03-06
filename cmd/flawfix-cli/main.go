@@ -20,8 +20,8 @@ import (
 	"os"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/scan"
 	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
+	"github.com/l3montree-dev/flawfix/internal/core/vulndb/scan"
 	"github.com/spf13/cobra"
 )
 
@@ -105,8 +105,8 @@ func init() {
 				os.Exit(1)
 			}
 
-			cpeComparer := vulndb.NewCPEComparer(db)
-			purlComparer := vulndb.NewPurlComparer(db)
+			cpeComparer := scan.NewCPEComparer(db)
+			purlComparer := scan.NewPurlComparer(db)
 
 			scanner := scan.NewSBOMScanner(cpeComparer, purlComparer)
 

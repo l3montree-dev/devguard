@@ -7,8 +7,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func ProjectAccessControlFactory(projectRepository Repository) accesscontrol.RBACMiddleware {
-	return func(obj accesscontrol.Object, act accesscontrol.Action) echo.MiddlewareFunc {
+func ProjectAccessControlFactory(projectRepository repository) accesscontrol.RBACMiddleware {
+	return func(obj accesscontrol.Object, act accesscontrol.Action) core.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(c core.Context) error {
 				// get the rbac
@@ -49,7 +49,7 @@ func ProjectAccessControlFactory(projectRepository Repository) accesscontrol.RBA
 	}
 }
 
-func ProjectAccessControl(projectRepository Repository, obj accesscontrol.Object, act accesscontrol.Action) echo.MiddlewareFunc {
+func ProjectAccessControl(projectRepository repository, obj accesscontrol.Object, act accesscontrol.Action) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c core.Context) error {
 			// get the rbac

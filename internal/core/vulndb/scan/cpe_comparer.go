@@ -13,21 +13,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package vulndb
+package scan
 
-import "github.com/l3montree-dev/flawfix/internal/core"
+import (
+	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
+)
 
-type CPEComparer struct {
+type cpeComparer struct {
 	db core.DB
 }
 
-func NewCPEComparer(db core.DB) *CPEComparer {
-	return &CPEComparer{
+func NewCPEComparer(db core.DB) *cpeComparer {
+	return &cpeComparer{
 		db: db,
 	}
 }
 
-func (c *CPEComparer) GetCVEs(cpe string) ([]CVE, error) {
-
+func (c *cpeComparer) GetCVEs(cpe string) ([]vulndb.CVE, error) {
 	return nil, nil
 }

@@ -25,10 +25,10 @@ import (
 )
 
 type PatController struct {
-	patRepository Repository
+	patRepository repository
 }
 
-func NewHttpController(repository Repository) *PatController {
+func NewHttpController(repository repository) *PatController {
 	return &PatController{
 		patRepository: repository,
 	}

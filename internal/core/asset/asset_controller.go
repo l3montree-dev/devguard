@@ -6,17 +6,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type HttpController struct {
-	assetRepository Repository
+type httpController struct {
+	assetRepository repository
 }
 
-func NewHttpController(repository Repository) *HttpController {
-	return &HttpController{
+func NewHttpController(repository repository) *httpController {
+	return &httpController{
 		assetRepository: repository,
 	}
 }
 
-func (a *HttpController) List(c core.Context) error {
+func (a *httpController) List(c core.Context) error {
 	project := core.GetProject(c)
 
 	apps, err := a.assetRepository.GetByProjectID(project.GetID())
@@ -27,8 +27,8 @@ func (a *HttpController) List(c core.Context) error {
 	return c.JSON(200, apps)
 }
 
-func (a *HttpController) Create(c core.Context) error {
-	var req CreateRequest
+func (a *httpController) Create(c core.Context) error {
+	var req createRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
@@ -39,7 +39,7 @@ func (a *HttpController) Create(c core.Context) error {
 
 	project := core.GetProject(c)
 
-	app := req.ToModel(project.GetID())
+	app := req.toModel(project.GetID())
 
 	err := a.assetRepository.Create(nil, &app)
 
@@ -50,7 +50,7 @@ func (a *HttpController) Create(c core.Context) error {
 	return c.JSON(200, app)
 }
 
-func (a *HttpController) Read(c core.Context) error {
+func (a *httpController) Read(c core.Context) error {
 	app := core.GetAsset(c).(Model)
 	return c.JSON(200, app)
 }

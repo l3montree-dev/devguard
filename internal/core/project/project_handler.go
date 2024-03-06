@@ -3,13 +3,12 @@ package project
 import (
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/asset"
 )
 
 func RegisterHttpHandler(
 	database core.DB,
 	server core.Server,
-	assetRepository asset.Repository,
+	assetRepository assetRepository,
 ) core.Server {
 	if err := database.AutoMigrate(&Model{}); err != nil {
 		panic(err)

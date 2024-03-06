@@ -37,13 +37,13 @@ var baseURL = url.URL{
 
 type NVDService struct {
 	httpClient    *http.Client
-	cveRepository Repository
+	cveRepository repository
 	leaderElector leaderElector
 	configService configService
 	lock          *sync.Mutex
 }
 
-func NewNVDService(leaderElector leaderElector, configService configService, cveRepository Repository) NVDService {
+func NewNVDService(leaderElector leaderElector, configService configService, cveRepository repository) NVDService {
 	return NVDService{
 		configService: configService,
 		cveRepository: cveRepository,

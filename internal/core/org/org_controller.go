@@ -23,21 +23,21 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type HttpController struct {
-	organizationRepository Repository
+type httpController struct {
+	organizationRepository repository
 	rbacProvider           accesscontrol.RBACProvider
 }
 
-func NewHttpController(repository Repository, rbacProvider accesscontrol.RBACProvider) *HttpController {
-	return &HttpController{
+func NewHttpController(repository repository, rbacProvider accesscontrol.RBACProvider) *httpController {
+	return &httpController{
 		organizationRepository: repository,
 		rbacProvider:           rbacProvider,
 	}
 }
 
-func (o *HttpController) Create(c core.Context) error {
+func (o *httpController) Create(c core.Context) error {
 
-	var req CreateRequest
+	var req createRequest
 	if err := c.Bind(&req); err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (o *HttpController) Create(c core.Context) error {
 		return echo.NewHTTPError(400, err.Error())
 	}
 
-	org := req.ToModel()
+	org := req.toModel()
 
 	err := o.organizationRepository.Create(nil, &org)
 	if err != nil {
@@ -60,7 +60,7 @@ func (o *HttpController) Create(c core.Context) error {
 	return c.JSON(200, org)
 }
 
-func (o *HttpController) bootstrapOrg(c core.Context, organization Model) error {
+func (o *httpController) bootstrapOrg(c core.Context, organization Model) error {
 	// create the permissions for the organization
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
 	userId := core.GetSession(c).GetUserID()
@@ -106,11 +106,11 @@ func (o *HttpController) bootstrapOrg(c core.Context, organization Model) error 
 	return nil
 }
 
-func (o *HttpController) Update(c core.Context) error {
+func (o *httpController) Update(c core.Context) error {
 	return nil
 }
 
-func (o *HttpController) Delete(c core.Context) error {
+func (o *httpController) Delete(c core.Context) error {
 	// get the id of the organization
 	organizationID := core.GetTenant(c).GetID()
 
@@ -123,13 +123,13 @@ func (o *HttpController) Delete(c core.Context) error {
 	return c.NoContent(200)
 }
 
-func (o *HttpController) Read(c core.Context) error {
+func (o *httpController) Read(c core.Context) error {
 	// get the organization from the context
 	organization := core.GetTenant(c)
 	return c.JSON(200, organization)
 }
 
-func (o *HttpController) List(c core.Context) error {
+func (o *httpController) List(c core.Context) error {
 
 	// get all organizations the user has access to
 	userID := core.GetSession(c).GetUserID()

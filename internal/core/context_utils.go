@@ -22,7 +22,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
-	"github.com/l3montree-dev/flawfix/internal/auth"
 )
 
 type HasID interface {
@@ -31,6 +30,10 @@ type HasID interface {
 
 type Tenant interface {
 	GetID() uuid.UUID
+}
+
+type AuthSession interface {
+	GetUserID() string
 }
 
 func GetFlawID(c Context) (uuid.UUID, error) {
@@ -49,8 +52,8 @@ func GetTenant(c Context) Tenant {
 	return c.Get("tenant").(Tenant)
 }
 
-func GetSession(ctx Context) auth.AuthSession {
-	return ctx.Get("session").(auth.AuthSession)
+func GetSession(ctx Context) AuthSession {
+	return ctx.Get("session").(AuthSession)
 }
 
 func GetProjectSlug(c Context) (string, error) {

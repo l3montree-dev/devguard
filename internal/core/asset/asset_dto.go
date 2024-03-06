@@ -5,7 +5,7 @@ import (
 	"github.com/gosimple/slug"
 )
 
-type CreateRequest struct {
+type createRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 
@@ -26,7 +26,7 @@ func sanitizeRequirementLevel(level string) RequirementLevel {
 	}
 }
 
-func (a *CreateRequest) ToModel(projectID uuid.UUID) Model {
+func (a *createRequest) toModel(projectID uuid.UUID) Model {
 	return Model{
 		Name:        a.Name,
 		Slug:        slug.Make(a.Name),

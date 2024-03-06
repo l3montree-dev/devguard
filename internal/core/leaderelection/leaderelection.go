@@ -19,15 +19,15 @@ type leaderElectionConfig struct {
 	LastPing int64  `json:"lastPing"`
 }
 
-type DatabaseLeaderElector struct {
+type databaseLeaderElector struct {
 	leaderElectorID string
 	configService   configService
 	isLeader        atomic.Bool // this variable gets updated by a daemon goroutine. Usage of atomic is required.
 	daemonIsRunning bool
 }
 
-func NewDatabaseLeaderElector(configService configService) *DatabaseLeaderElector {
-	leaderElector := DatabaseLeaderElector{
+func NewDatabaseLeaderElector(configService configService) *databaseLeaderElector {
+	leaderElector := databaseLeaderElector{
 		configService: configService,
 		// generate a random ID for this leader elector
 		leaderElectorID: uuid.New().String(),
@@ -41,7 +41,7 @@ func randomNumberBetween(min, max int) int {
 	return rand.Intn(max-min) + min // #nosec
 }
 
-func (e *DatabaseLeaderElector) daemon() {
+func (e *databaseLeaderElector) daemon() {
 	for {
 		isLeader, err := e.checkIfLeader()
 		if err != nil {
@@ -58,16 +58,16 @@ func (e *DatabaseLeaderElector) daemon() {
 	}
 }
 
-func (e *DatabaseLeaderElector) startDaemon() {
+func (e *databaseLeaderElector) startDaemon() {
 	e.daemonIsRunning = true
 	go e.daemon()
 }
 
-func (e *DatabaseLeaderElector) IsLeader() bool {
+func (e *databaseLeaderElector) IsLeader() bool {
 	return e.isLeader.Load()
 }
 
-func (e *DatabaseLeaderElector) makeLeader() error {
+func (e *databaseLeaderElector) makeLeader() error {
 	// there is no leader yet - overwrite it.
 	return e.configService.SetJSONConfig("leaderElection", leaderElectionConfig{
 		LeaderID: e.leaderElectorID,
@@ -75,7 +75,7 @@ func (e *DatabaseLeaderElector) makeLeader() error {
 	})
 }
 
-func (e *DatabaseLeaderElector) checkIfLeader() (bool, error) {
+func (e *databaseLeaderElector) checkIfLeader() (bool, error) {
 	var config leaderElectionConfig
 
 	err := e.configService.GetJSONConfig("leaderElection", &config)

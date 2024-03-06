@@ -85,7 +85,7 @@ func (v *vulnDBService) mirror() {
 			} else {
 				slog.Info("last mirror was less than 2 hours ago. Not mirroring", "lastMirror", lastMirror.Time, "now", time.Now())
 			}
-			slog.Info("mirroring done. Waiting for 2 hours to check again")
+			slog.Info("done. Waiting for 2 hours to check again")
 			time.Sleep(2 * time.Hour)
 		} else {
 			// if we are not the leader, sleep for 5 minutes

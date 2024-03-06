@@ -15,7 +15,7 @@ type leaderElector interface {
 
 func StartMirror(database core.DB, leaderElector leaderElector, configService configService) {
 	cveRepository := NewGormRepository(database)
-	cweRepository := NewGormCWERepository(database)
+	cweRepository := newGormCWERepository(database)
 	affectedPkgRepository := newAffectedPkgGormRepository(database)
 
 	nvdService := NewNVDService(leaderElector, configService, cveRepository)
