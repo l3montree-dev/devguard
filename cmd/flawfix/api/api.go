@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core/org"
 	"github.com/l3montree-dev/flawfix/internal/core/pat"
 	"github.com/l3montree-dev/flawfix/internal/core/project"
+	"github.com/l3montree-dev/flawfix/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/flawfix/internal/echohttp"
 	"github.com/labstack/echo/v4"
 )
@@ -200,14 +201,6 @@ func Start(db core.DB) {
 		panic(err)
 	}
 
-	server := echohttp.Server()
-
-	apiV1Router := server.Group("/api/v1")
-	// apply the health route without any session or multi tenant middleware
-	apiV1Router.GET("/health/", func(c echo.Context) error {
-		return c.String(200, "ok")
-	})
-
 	// init all repositories using the provided database
 	patRepository := pat.NewGormRepository(db)
 	assetRepository := asset.NewGormRepository(db)
@@ -222,7 +215,15 @@ func Start(db core.DB) {
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
 	assetController := asset.NewHttpController(assetRepository)
+	scanController := scan.NewHttpController(db)
 
+	server := echohttp.Server()
+
+	apiV1Router := server.Group("/api/v1")
+	// apply the health route without any session or multi tenant middleware
+	apiV1Router.GET("/health/", func(c echo.Context) error {
+		return c.String(200, "ok")
+	})
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patRepository))
 	// register a simple whoami route for testing purposes
@@ -231,6 +232,8 @@ func Start(db core.DB) {
 			"userId": core.GetSession(c).GetUserID(),
 		})
 	})
+
+	apiV1Router.POST("/scan/", scanController.Scan)
 
 	patRouter := sessionRouter.Group("/pats")
 	patRouter.POST("/", patController.Create)

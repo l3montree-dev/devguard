@@ -90,10 +90,5 @@ func (s *sbomScanner) Scan(reader io.Reader) ([]vulnInPackage, error) {
 		}
 	}
 
-	// print all found CVEs
-	for _, vuln := range vulnerabilities {
-		slog.Info(vuln.PackageName, "cve", vuln.CVEID, "introduced", vuln.GetIntroducedVersion(), "fixed", vuln.GetFixedVersion())
-	}
-
 	return vulnerabilities, nil
 }

@@ -16,12 +16,15 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"log/slog"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/core/vulndb/scan"
 	"github.com/spf13/cobra"
 )
 
@@ -59,57 +62,73 @@ func init() {
 		Long:  `Scan a SBOM for vulnerabilities. This command will scan a SBOM for vulnerabilities and return a list of vulnerabilities found in the SBOM. The SBOM must be passed as an argument.`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			core.InitLogger()
 			// check if a single argument was passed
 			if len(args) != 1 {
 				cmd.Help() // nolint: errcheck
 				os.Exit(1)
 			}
-			err := core.LoadConfig()
+			token, err := cmd.Flags().GetString("token")
+			if err != nil {
+				slog.Error("could not get token", "err", err)
+				os.Exit(1)
+			}
+			assetID, err := cmd.Flags().GetString("assetId")
+			if err != nil {
+				slog.Error("could not get asset id", "err", err)
+				os.Exit(1)
+			}
+			err = core.LoadConfig()
 			if err != nil {
 				slog.Error("could not initialize config", "err", err)
 				os.Exit(1)
 			}
 
-			core.InitLogger()
-
-			db, err := core.DatabaseFactory()
-			if err != nil {
-				slog.Error("could not connect to database", "err", err)
-				os.Exit(1)
-			}
-
-			cpeComparer := scan.NewCPEComparer(db)
-			purlComparer := scan.NewPurlComparer(db)
-
-			scanner := scan.NewSBOMScanner(cpeComparer, purlComparer)
-
-			f, err := os.Open(args[0])
+			// read the sbom file and post it to the scan endpoint
+			// get the flaws and print them to the console
+			file, err := os.Open(args[0])
 			if err != nil {
 				slog.Error("could not open file", "err", err)
 				os.Exit(1)
 			}
-			defer f.Close()
-			vulns, err := scanner.Scan(f)
+			defer file.Close()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+
+			req, err := http.NewRequestWithContext(ctx, "POST", "http://localhost:8080/api/v1/scan", file)
 			if err != nil {
-				slog.Error("could not scan file", "err", err)
+				slog.Error("could not create request", "err", err)
 				os.Exit(1)
 			}
 
-			// create flaws out of those vulnerabilities
-			flaws := []flaw.Model{}
-			for _, vuln := range vulns {
-				flaw := flaw.Model{
-					CVEID:     vuln.CVEID,
-					ScannerID: "github.com/l3montree-dev/flawfix/cmd/sbom-scanner",
-				}
-				flaw.SetAdditionalData(map[string]any{
-					"introducedVersion": vuln.GetIntroducedVersion(),
-					"fixedVersion":      vuln.GetFixedVersion(),
-					"packageName":       vuln.PackageName,
-				})
-				flaws = append(flaws, flaw)
+			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set("X-Asset-ID", assetID)
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				slog.Error("could not send request", "err", err)
+				os.Exit(1)
 			}
-			// save the flaws in the database.
+
+			if resp.StatusCode != http.StatusOK {
+				slog.Error("could not scan file", "status", resp.Status)
+				os.Exit(1)
+			}
+
+			// read and parse the body - it should be an array of flaws
+			// print the flaws to the console
+			flaws := []flaw.Model{}
+
+			err = json.NewDecoder(resp.Body).Decode(&flaws)
+			if err != nil {
+				slog.Error("could not parse response", "err", err)
+				os.Exit(1)
+			}
+
+			for _, f := range flaws {
+				slog.Info("flaw found", "cve", f.CVEID, "package", f.GetAdditionalData()["packageName"])
+			}
 		},
 	})
 }
