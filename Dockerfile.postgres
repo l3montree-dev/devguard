@@ -46,8 +46,5 @@ RUN apt-get remove -y git build-essential postgresql-server-dev-all && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Automatically load the pg-semver extension to all new databases
-RUN echo "CREATE EXTENSION IF NOT EXISTS semver;" > /docker-entrypoint-initdb.d/init-user-db.sh
-
 # Set the default command to run when starting the container
 CMD ["postgres"]
