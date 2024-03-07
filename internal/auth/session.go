@@ -15,16 +15,16 @@
 
 package auth
 
-type identity struct {
+type session struct {
 	userID string
 }
 
-func (a identity) GetUserID() string {
+func (a session) GetUserID() string {
 	return a.userID
 }
 
-func NewIdentity(userID string) identity {
-	return identity{
+func NewSession(userID string) session {
+	return session{
 		userID: userID,
 	}
 }

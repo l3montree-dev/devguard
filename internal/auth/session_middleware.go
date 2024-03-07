@@ -42,7 +42,6 @@ func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSe
 	if err != nil {
 		return "", err
 	}
-
 	return session.Identity.Id, nil
 }
 
@@ -52,12 +51,7 @@ func tokenAuth(tokenRepository tokenRepository, header string) (string, error) {
 	if len(header) > 7 && header[:7] == "Bearer " {
 		header = header[7:]
 	}
-	userID, err := tokenRepository.GetUserIDByToken(header)
-	if err != nil {
-		return "", err
-	}
-
-	return userID, nil
+	return tokenRepository.GetUserIDByToken(header)
 }
 
 func SessionMiddleware(oryApiClient *client.APIClient, tokenRepository tokenRepository) echo.MiddlewareFunc {
@@ -79,10 +73,10 @@ func SessionMiddleware(oryApiClient *client.APIClient, tokenRepository tokenRepo
 			}
 
 			if err != nil {
-				return c.JSON(401, map[string]string{"error": "no session"})
+				return c.JSON(401, map[string]string{"error": "no session, could not authenticate"})
 			}
 
-			c.Set("session", NewIdentity(userID))
+			c.Set("session", NewSession(userID))
 			c.Set("sessionCookie", oryKratosSessionCookie)
 
 			return next(c)
