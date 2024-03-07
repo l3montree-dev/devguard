@@ -7,5 +7,3 @@ GRANT ALL PRIVILEGES ON DATABASE kratos to kratos;
 \c kratos
 
 GRANT USAGE, CREATE ON SCHEMA public TO kratos;
-
-CREATE EXTENSION IF NOT EXISTS semver;
