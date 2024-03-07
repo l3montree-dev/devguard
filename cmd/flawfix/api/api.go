@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
@@ -152,6 +153,29 @@ func projectAccessControl(projectRepository projectRepository, obj accesscontrol
 	}
 }
 
+// this middleware is used to set the project slug parameter based on an X-Asset-ID header.
+// it is useful for reusing the projectAccessControl middleware and rely on the rbac to determine if the user has access to an specific asset
+func assetNameMiddleware() core.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c core.Context) error {
+			// extract the asset id from the header
+			// asset name is <organization_slug>/<project_slug>/<asset_slug>
+			assetName := c.Request().Header.Get("X-Asset-Name")
+			if assetName == "" {
+				return echo.NewHTTPError(400, "no asset id provided")
+			}
+			// split the asset name
+			assetParts := strings.Split(assetName, "/")
+			if len(assetParts) != 3 {
+				return echo.NewHTTPError(400, "invalid asset name")
+			}
+			// set the project slug
+			c.Set("projectSlug", assetParts[1])
+			return next(c)
+		}
+	}
+}
+
 func multiTenantMiddleware(rbacProvider accesscontrol.RBACProvider, organizationRepo orgRepository) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c core.Context) (err error) {
@@ -233,7 +257,7 @@ func Start(db core.DB) {
 		})
 	})
 
-	apiV1Router.POST("/scan/", scanController.Scan)
+	sessionRouter.POST("/scan/", scanController.Scan, assetNameMiddleware(), core.AccessControlMiddleware(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	patRouter := sessionRouter.Group("/pats")
 	patRouter.POST("/", patController.Create)

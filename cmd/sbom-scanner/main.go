@@ -43,9 +43,9 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.PersistentFlags().String("assetId", "", "The id of the asset which is scanned")
+	rootCmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
 	rootCmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-	err := rootCmd.MarkPersistentFlagRequired("assetId")
+	err := rootCmd.MarkPersistentFlagRequired("assetName")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)
 		os.Exit(1)
@@ -73,7 +73,7 @@ func init() {
 				slog.Error("could not get token", "err", err)
 				os.Exit(1)
 			}
-			assetID, err := cmd.Flags().GetString("assetId")
+			assetName, err := cmd.Flags().GetString("assetName")
 			if err != nil {
 				slog.Error("could not get asset id", "err", err)
 				os.Exit(1)
@@ -103,7 +103,7 @@ func init() {
 			}
 
 			req.Header.Set("Authorization", "Bearer "+token)
-			req.Header.Set("X-Asset-ID", assetID)
+			req.Header.Set("X-Asset-Name", assetName)
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
