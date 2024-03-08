@@ -14,173 +14,173 @@ jobs:
   secret-scanning:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4  # Check out the repository content to the runner
-      - name: Run Gitleaks Scan
-        # Running Gitleaks to scan the code for secrets
-        run: |
-          docker run --rm -v $(pwd):/code -u $(id -u):$(id -g) zricethezav/gitleaks:v8.18.1 -s /code detect -f sarif -r /code/gitleaks.sarif.json
-      - name: Upload sarif file
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: gitleaks.sarif.json
-          category: secret-scanning
-  
+    - name: Checkout code
+      uses: actions/checkout@v4 # Check out the repository content to the runner
+    - name: Run Gitleaks Scan
+      # Running Gitleaks to scan the code for secrets
+      run: |
+        docker run --rm -v $(pwd):/code -u $(id -u):$(id -g) zricethezav/gitleaks:v8.18.1 -s /code detect -f sarif -r /code/gitleaks.sarif.json
+    - name: Upload sarif file
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: gitleaks.sarif.json
+        category: secret-scanning
+
   # Software Composition Analysis (SCA) to find vulnerabilities in project dependencies
   sca:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Run Trivy vulnerability scanner in fs mode
-        # Running Trivy to scan the filesystem for vulnerabilities
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: "fs"
-          scan-ref: "."
-          severity: "CRITICAL,HIGH"
-          format: "sarif"
-          output: "trivy-results.sarif"
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: "trivy-results.sarif"
-          category: "sca"
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Run Trivy vulnerability scanner in fs mode
+      # Running Trivy to scan the filesystem for vulnerabilities
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: "fs"
+        scan-ref: "."
+        severity: "CRITICAL,HIGH"
+        format: "sarif"
+        output: "trivy-results.sarif"
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: "trivy-results.sarif"
+        category: "sca"
 
   # Static Application Security Testing (SAST) to identify security vulnerabilities in source code
   sast:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Run Semgrep
-        # Running Semgrep for static code analysis to identify security issues
-        uses: docker://returntocorp/semgrep
-        with:
-          args: semgrep scan /github/workspace --sarif -o /github/workspace/semgrep.sarif.json
-      - name: Upload sarif file
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: semgrep.sarif.json
-          category: sast
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Run Semgrep
+      # Running Semgrep for static code analysis to identify security issues
+      uses: docker://returntocorp/semgrep
+      with:
+        args: semgrep scan /github/workspace --sarif -o /github/workspace/semgrep.sarif.json
+    - name: Upload sarif file
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: semgrep.sarif.json
+        category: sast
   golangci:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
-        with:
-          go-version: '1.22'
-          cache: false
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          # Require: The version of golangci-lint to use.
-          # When `install-mode` is `binary` (default) the value can be v1.2 or v1.2.3 or `latest` to use the latest version.
-          # When `install-mode` is `goinstall` the value can be v1.2.3, `latest`, or the hash of a commit.
-          version: v1.54
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v4
+      with:
+        go-version: '1.22'
+        cache: false
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        # Require: The version of golangci-lint to use.
+        # When `install-mode` is `binary` (default) the value can be v1.2 or v1.2.3 or `latest` to use the latest version.
+        # When `install-mode` is `goinstall` the value can be v1.2.3, `latest`, or the hash of a commit.
+        version: v1.54
 
-          # Optional: working directory, useful for monorepos
-          # working-directory: somedir
+        # Optional: working directory, useful for monorepos
+        # working-directory: somedir
 
-          # Optional: golangci-lint command line arguments.
-          #
-          # Note: By default, the `.golangci.yml` file should be at the root of the repository.
-          # The location of the configuration file can be changed by using `--config=`
-          # args: --timeout=30m --config=/my/path/.golangci.yml --issues-exit-code=0 
+        # Optional: golangci-lint command line arguments.
+        #
+        # Note: By default, the `.golangci.yml` file should be at the root of the repository.
+        # The location of the configuration file can be changed by using `--config=`
+        # args: --timeout=30m --config=/my/path/.golangci.yml --issues-exit-code=0 
 
-          # Optional: show only new issues if it's a pull request. The default value is `false`.
-          # only-new-issues: true
+        # Optional: show only new issues if it's a pull request. The default value is `false`.
+        # only-new-issues: true
 
-          # Optional: if set to true, then all caching functionality will be completely disabled,
-          #           takes precedence over all other caching options.
-          # skip-cache: true
+        # Optional: if set to true, then all caching functionality will be completely disabled,
+        #           takes precedence over all other caching options.
+        # skip-cache: true
 
-          # Optional: if set to true, then the action won't cache or restore ~/go/pkg.
-          # skip-pkg-cache: true
+        # Optional: if set to true, then the action won't cache or restore ~/go/pkg.
+        # skip-pkg-cache: true
 
-          # Optional: if set to true, then the action won't cache or restore ~/.cache/go-build.
-          # skip-build-cache: true
+        # Optional: if set to true, then the action won't cache or restore ~/.cache/go-build.
+        # skip-build-cache: true
 
-          # Optional: The mode to install golangci-lint. It can be 'binary' or 'goinstall'.
-          # install-mode: "goinstall"
+        # Optional: The mode to install golangci-lint. It can be 'binary' or 'goinstall'.
+        # install-mode: "goinstall"
   tests:
     name: Tests
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+    - name: Check out code
+      uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.22'
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22'
 
-      - name: Run unittests
-        run: go test ./... -cover
-    # Docker image build job
+    - name: Run unittests
+      run: go test ./... -cover
+  # Docker image build job
   build-image:
     runs-on: ubuntu-latest
     outputs:
       image_path: ${{ steps.build_output.outputs.image_path }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Set IMAGE_TAG if tagged
-        # Setting the image tag if the push is a tag push
-        run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-        if: startsWith(github.ref, 'refs/tags/')
-      - name: Build Docker image with Kaniko
-        # Building the Docker image using Kaniko
-        id: build_image
-        uses: docker://gcr.io/kaniko-project/executor:v1.9.2
-        with:
-          args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar
-      - name: Upload artifact
-        # Uploading the built Docker image as an artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image
-          path: image.tar
+    - uses: actions/checkout@v4
+    - name: Set IMAGE_TAG if tagged
+      # Setting the image tag if the push is a tag push
+      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      if: startsWith(github.ref, 'refs/tags/')
+    - name: Build Docker image with Kaniko
+      # Building the Docker image using Kaniko
+      id: build_image
+      uses: docker://gcr.io/kaniko-project/executor:v1.9.2
+      with:
+        args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar
+    - name: Upload artifact
+      # Uploading the built Docker image as an artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-image
+        path: image.tar
 
   # Image scanning job to detect vulnerabilities in the built Docker image
   image-scanning:
     needs: build-image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-          path: .
-      - name: Run Trivy vulnerability scanner in tarball mode
-        # Running Trivy to scan the Docker image for vulnerabilities
-        uses: aquasecurity/trivy-action@master
-        with:
-          input: /github/workspace/image.tar
-          severity: "CRITICAL,HIGH"
-          format: "sarif"
-          output: "trivy-results.sarif"
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: "trivy-results.sarif"
-          category: "image-scanning"
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with:
+        name: docker-image
+        path: .
+    - name: Run Trivy vulnerability scanner in tarball mode
+      # Running Trivy to scan the Docker image for vulnerabilities
+      uses: aquasecurity/trivy-action@master
+      with:
+        input: /github/workspace/image.tar
+        severity: "CRITICAL,HIGH"
+        format: "sarif"
+        output: "trivy-results.sarif"
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: "trivy-results.sarif"
+        category: "image-scanning"
 
   # Publish job to push the Docker image to a registry
   publish:
     needs: [build-image, image-scanning, secret-scanning, sca, sast]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-          path: .
-      - uses: imjasonh/setup-crane@v0.1
-      - name: Set IMAGE_TAG if tagged
-        # Setting the image tag if the push is a tag push
-        run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-        if: startsWith(github.ref, 'refs/tags/')
-      - name: Push Docker image to GitHub image Registry
-        # Pushing the Docker image to GitHub Container Registry
-        run: crane push image.tar ${{ env.IMAGE_TAG }}
+    - uses: actions/download-artifact@v4
+      with:
+        name: docker-image
+        path: .
+    - uses: imjasonh/setup-crane@v0.1
+    - name: Set IMAGE_TAG if tagged
+      # Setting the image tag if the push is a tag push
+      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      if: startsWith(github.ref, 'refs/tags/')
+    - name: Push Docker image to GitHub image Registry
+      # Pushing the Docker image to GitHub Container Registry
+      run: crane push image.tar ${{ env.IMAGE_TAG }}
