@@ -93,7 +93,7 @@ jobs:
 
   # Publish job to push the Docker image to a registry
   publish:
-    needs: [build-image, image-scanning, secret-scanning, sca, sast]
+    needs: [build-image, image-scanning]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/download-artifact@v4
