@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: postgresql
+  name: postgresql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+      - image: "{{ .Values.image.repository }}-postgresql:{{ .Values.image.tag }}"
+        name: postgresql
+        ports:
+        - containerPort: 5432
+          hostPort: 5432
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgresql-pv
+        - mountPath: /docker-entrypoint-initdb.d/initdb.sh
+          name: postgresql-initdb
+          subPath: initdb.sh
+        env:
+        - name: POSTGRES_DB
+          value: flawfix
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: postgres-password
+              name: db-secret
+        - name: POSTGRES_USER
+          value: flawfix
+        - name: KRATOS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: kratos-db-secret
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+      restartPolicy: Always
+      volumes:
+      - name: postgresql-pv
+        persistentVolumeClaim:
+          claimName: postgresql-pvc
+      - name: postgresql-initdb
+        configMap:
+          name: postgresql-initdb

@@ -3,3 +3,4 @@ report.sarif
 bom.json
 osv
 .DS_Store
+helm/charts/*.tgz
