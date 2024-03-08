@@ -1,0 +1,110 @@
+name: Create and publish the custom postgresql Docker image
+
+
+# Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/postgresql
+
+# There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      contents: read
+      packages: write
+      # 
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    # Uses the `docker/login-action` action to log in to the Container registry registry using the account and password that will publish the packages. Once published, the packages are scoped to the account defined here.
+    - name: Log in to the Container registry
+      uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    # This step uses [docker/metadata-action](https://github.com/docker/metadata-action#about) to extract tags and labels that will be applied to the specified image. The `id` "meta" allows the output of this step to be referenced in a subsequent step. The `images` value provides the base name for the tags and labels.
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+    # This step uses the `docker/build-push-action` action to build the image, based on your repository's `Dockerfile`. If the build succeeds, it pushes the image to GitHub Packages.
+    # It uses the `context` parameter to define the build's context as the set of files located in the specified path. For more information, see "[Usage](https://github.com/docker/build-push-action#usage)" in the README of the `docker/build-push-action` repository.
+    # It uses the `tags` and `labels` parameters to tag and label the image with the output from the "meta" step.
+    - name: Build and push Docker image
+      uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+  # Docker image build job
+  build-image:
+    runs-on: ubuntu-latest
+    outputs:
+      image_path: ${{ steps.build_output.outputs.image_path }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set IMAGE_TAG if tagged
+      # Setting the image tag if the push is a tag push
+      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      if: startsWith(github.ref, 'refs/tags/')
+    - name: Build Docker image with Kaniko
+      # Building the Docker image using Kaniko
+      id: build_image
+      uses: docker://gcr.io/kaniko-project/executor:v1.9.2
+      with:
+        args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile.postgresql --no-push --tarPath /github/workspace/image.tar
+    - name: Upload artifact
+      # Uploading the built Docker image as an artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-image
+        path: image.tar
+
+  # Image scanning job to detect vulnerabilities in the built Docker image
+  image-scanning:
+    needs: build-image
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with:
+        name: docker-image
+        path: .
+    - name: Run Trivy vulnerability scanner in tarball mode
+      # Running Trivy to scan the Docker image for vulnerabilities
+      uses: aquasecurity/trivy-action@master
+      with:
+        input: /github/workspace/image.tar
+        severity: "CRITICAL,HIGH"
+        format: "sarif"
+        output: "trivy-results.sarif"
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: "trivy-results.sarif"
+        category: "image-scanning"
+
+  # Publish job to push the Docker image to a registry
+  publish:
+    needs: [build-image, image-scanning, secret-scanning, sca, sast]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: docker-image
+        path: .
+    - uses: imjasonh/setup-crane@v0.1
+    - name: Set IMAGE_TAG if tagged
+      # Setting the image tag if the push is a tag push
+      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      if: startsWith(github.ref, 'refs/tags/')
+    - name: Push Docker image to GitHub image Registry
+      # Pushing the Docker image to GitHub Container Registry
+      run: crane push image.tar ${{ env.IMAGE_TAG }}
+
