@@ -5,7 +5,7 @@ on:
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/postgresql
+  IMAGE_NAME: ${{ github.repository }}/postgresql:unstable
 
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Set IMAGE_TAG if tagged
       # Setting the image tag if the push is a tag push
-      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}/postgresql:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       if: startsWith(github.ref, 'refs/tags/')
     - name: Build Docker image with Kaniko
       # Building the Docker image using Kaniko
