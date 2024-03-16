@@ -1,40 +1,43 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "flawfix.fullname" . }}
+  name: flawfix-api-deployment
   labels:
     {{- include "flawfix.labels" . | nindent 4 }}
+    app: flawfix-api
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
+  {{- if not .Values.api.autoscaling.enabled }}
+  replicas: {{ .Values.api.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "flawfix.selectorLabels" . | nindent 6 }}
+      app: flawfix-api
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- with .Values.api.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
         {{- include "flawfix.labels" . | nindent 8 }}
-        {{- with .Values.podLabels }}
+        {{- with .Values.api.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+        app: flawfix-api
+        version: {{ .Chart.AppVersion }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with .Values.api.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml .Values.api.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+            {{- toYaml .Values.api.securityContext | nindent 12 }}
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
           env:
           - name: POSTGRES_DB
             value: flawfix
@@ -46,35 +49,37 @@ spec:
           - name: POSTGRES_USER
             value: flawfix
           - name: POSTGRES_HOST
-            value: "postgresql"
+            value: postgresql
           ports:
             - name: http
-              containerPort: 3000
+              containerPort: 8080
               protocol: TCP
           livenessProbe:
             httpGet:
               path: /api/v1/health
               port: http
+            initialDelaySeconds: 10
           readinessProbe:
             httpGet:
               path: /api/v1/health
               port: http
+            initialDelaySeconds: 10
           resources:
             limits:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 4
+              memory: 1024Mi
             requests:
               cpu: 100m
               memory: 128Mi
-      {{- with .Values.nodeSelector }}
+      {{- with .Values.api.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with .Values.api.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.api.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

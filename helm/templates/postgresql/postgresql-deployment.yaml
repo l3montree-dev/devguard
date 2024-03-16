@@ -15,9 +15,10 @@ spec:
     metadata:
       labels:
         app: postgresql
+        version: {{ .Chart.AppVersion }}
     spec:
       containers:
-      - image: "{{ .Values.image.repository }}-postgresql:{{ .Values.image.tag }}"
+      - image: "{{ .Values.api.image.repository }}-postgresql:{{ .Values.api.image.tag }}"
         name: postgresql
         ports:
         - containerPort: 5432
@@ -46,11 +47,11 @@ spec:
               name: kratos-db-secret
         resources:
           limits:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 4000m
+            memory: 2056Mi
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 1000m
+            memory: 1028Mi
       restartPolicy: Always
       volumes:
       - name: postgresql-pv

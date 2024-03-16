@@ -4,7 +4,7 @@ metadata:
   name: postgresql
 spec:
   ports:
-  - name: "5432"
+  - name: tcp
     port: 5432
     targetPort: 5432
   selector:

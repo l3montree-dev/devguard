@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flawfix-web-deployment
+  labels:
+    {{- include "flawfix.labels" . | nindent 4 }}
+    app: flawfix-web
+spec:
+  {{- if not .Values.web.autoscaling.enabled }}
+  replicas: {{ .Values.web.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: flawfix-web
+  template:
+    metadata:
+      {{- with .Values.web.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "flawfix.labels" . | nindent 8 }}
+        {{- with .Values.web.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        app: flawfix-web
+        version: {{ .Chart.AppVersion }}
+    spec:
+      {{- with .Values.web.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.web.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.web.securityContext | nindent 12 }}
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          env:
+          - name: ORY_KRATOS_URL
+            value: http://kratos:4433
+          - name: NEXT_PUBLIC_FLAWFIX_API_URL
+            value: http://flawfix:8080
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          # livenessProbe:
+          #   httpGet:
+          #     path: /api/v1/health
+          #     port: http
+          #   initialDelaySeconds: 10
+          # readinessProbe:
+          #   httpGet:
+          #     path: /api/v1/health
+          #     port: http
+          #   initialDelaySeconds: 10
+          resources:
+            limits:
+              cpu: 4
+              memory: 1024Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+      {{- with .Values.web.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.web.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.web.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

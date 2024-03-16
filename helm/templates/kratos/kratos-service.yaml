@@ -4,8 +4,8 @@ metadata:
   name: kratos
 spec:
   ports:
-    - name: "4433"
-      port: 4433
-      targetPort: 4433
+  - name: http
+    port: 4433
+    targetPort: 4433
   selector:
     app.kubernetes.io/name: kratos

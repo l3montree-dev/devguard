@@ -1,62 +1,99 @@
 # Default values for flawfix.
 # This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# Declare variables to be passed into templates.
+api:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/l3montree-dev/flawfix
+    pullPolicy: Always
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: unstable
+  imagePullSecrets: []
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  # fsGroup: 2000
+  securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
 
-replicaCount: 1
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
 
-image:
-  repository: ghcr.io/l3montree-dev/flawfix
-  pullPolicy: Always
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: unstable
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
+  ingress:
+    enabled: true
+    className: "istio"
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-istio
+      kubernetes.io/ingress.class: istio
+    hosts:
+    - host: api.flawfix.dev-l3montree.cloud
+      paths:
+      - path: /
+        pathType: Prefix
+    tls:
+    - secretName: flawfix-api-cert
+      hosts:
+      - api.flawfix.dev-l3montree.cloud
 
-podAnnotations: {}
-podLabels: {}
 
-podSecurityContext: {}
-# fsGroup: 2000
+web:
+  image:
+    repository: ghcr.io/l3montree-dev/flawfix-web
+    pullPolicy: Always
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: unstable
+  imagePullSecrets: []
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  # fsGroup: 2000
+  securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
 
-securityContext: {}
-# capabilities:
-#   drop:
-#   - ALL
-# readOnlyRootFilesystem: true
-# runAsNonRoot: true
-# runAsUser: 1000
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
-service:
-  type: ClusterIP
-  port: 3000
+  ingress:
+    enabled: true
+    className: "istio"
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-istio
+      kubernetes.io/ingress.class: istio
+    hosts:
+    - host: flawfix.dev-l3montree.cloud
+      paths:
+      - path: /
+        pathType: Prefix
+    tls:
+    - secretName: flawfix-web-cert
+      hosts:
+      - flawfix.dev-l3montree.cloud
 
-ingress:
-  enabled: false
-  className: "istio"
-  annotations: {}
-  # kubernetes.io/ingress.class: nginx
-  # kubernetes.io/tls-acme: "true"
-  hosts:
-  - host: chart-example.local
-    paths:
-    - path: /
-      pathType: ImplementationSpecific
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
 
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
 
-nodeSelector: {}
 
-tolerations: []
-
-affinity: {}
