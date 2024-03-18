@@ -1,13 +1,17 @@
 # Default values for flawfix.
 # This is a YAML-formatted file.
 # Declare variables to be passed into templates.
+mail:
+  # needs to contain key: "uri". Format should be like: smtps://<user>@<your-domain.com>:<secret>@<mail-server.de>:465/?skip_ssl_verify=false
+  existingSMTPConnectionUriSecret:
+  fromAddress: ""
 api:
   replicaCount: 1
   image:
     repository: ghcr.io/l3montree-dev/flawfix
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: unstable
+    tag: v1.0.0
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
@@ -34,27 +38,22 @@ api:
 
   ingress:
     enabled: true
-    className: "istio"
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-istio
-      kubernetes.io/ingress.class: istio
+    className: ""
+    annotations: {}
     hosts:
-    - host: api.flawfix.dev-l3montree.cloud
+    - host: example.com
       paths:
       - path: /
         pathType: Prefix
-    tls:
-    - secretName: flawfix-api-cert
-      hosts:
-      - api.flawfix.dev-l3montree.cloud
+
 
 
 web:
   image:
     repository: ghcr.io/l3montree-dev/flawfix-web
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: unstable
+    tag: v1.0.0
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
@@ -80,20 +79,10 @@ web:
 
   ingress:
     enabled: true
-    className: "istio"
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-istio
-      kubernetes.io/ingress.class: istio
+    className: ""
+    annotations: {}
     hosts:
-    - host: flawfix.dev-l3montree.cloud
+    - host: app.example.com
       paths:
       - path: /
         pathType: Prefix
-    tls:
-    - secretName: flawfix-web-cert
-      hosts:
-      - flawfix.dev-l3montree.cloud
-
-
-
-

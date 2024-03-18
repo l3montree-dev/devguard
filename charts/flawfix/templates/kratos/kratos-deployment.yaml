@@ -1,0 +1,176 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kratos
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/name: kratos
+  annotations: {}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kratos
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kratos
+    spec:
+      initContainers:
+      - name: kratos-automigrate
+        image: "oryd/kratos:v1.1.0-distroless"
+        imagePullPolicy: IfNotPresent
+        command: ["kratos"]
+        args: ["migrate", "sql", "-e", "--yes", "--config", "/etc/config/kratos.yml"]
+        volumeMounts:
+        - name: kratos-config
+          mountPath: /etc/config
+          readOnly: true
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kratos-db-secret
+              key: password
+        - name: DSN
+          value: postgres://kratos:$(DB_PASSWORD)@postgresql:5432/kratos?sslmode=disable
+        - name: COURIER_SMTP_CONNECTION_URI
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Values.mail.existingSMTPConnectionUriSecret }}"
+              key: uri
+              optional: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+          seLinuxOptions:
+            level: s0:c123,c456
+          seccompProfile:
+            type: RuntimeDefault
+      volumes:
+      - name: kratos-config
+        configMap:
+          name: kratos-config
+          items:
+          - key: "kratos.yml"
+            path: "kratos.yml"
+          - key: "identity.schema.json"
+            path: "identity.schema.json"
+      containers:
+      - name: kratos
+        image: "oryd/kratos:v1.1.0-distroless"
+        imagePullPolicy: IfNotPresent
+        command:
+        - kratos
+        args:
+        - serve
+        - all
+        - --config
+        - /etc/config/kratos.yml
+        volumeMounts:
+        - name: kratos-config
+          mountPath: /etc/config
+          readOnly: true
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kratos-db-secret
+              key: password
+        - name: DSN
+          value: postgres://kratos:$(DB_PASSWORD)@postgresql:5432/kratos?sslmode=disable
+        - name: SECRETS_DEFAULT
+          valueFrom:
+            secretKeyRef:
+              name: kratos
+              key: secretsDefault
+        - name: SECRETS_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: kratos
+              key: secretsCookie
+        - name: SECRETS_CIPHER
+          valueFrom:
+            secretKeyRef:
+              name: kratos
+              key: secretsCipher
+        - name: COURIER_SMTP_CONNECTION_URI
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Values.mail.existingSMTPConnectionUriSecret }}"
+              key: uri
+              optional: true
+        ports:
+        - name: http-admin
+          containerPort: 4434
+          protocol: TCP
+        - name: http-public
+          containerPort: 4433
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /admin/health/alive
+            port: 4434
+            httpHeaders:
+            - name: Host
+              value: '127.0.0.1'
+          failureThreshold: 5
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /admin/health/ready
+            port: 4434
+            httpHeaders:
+            - name: Host
+              value: '127.0.0.1'
+          failureThreshold: 5
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        startupProbe:
+          httpGet:
+            path: /admin/health/ready
+            port: 4434
+            httpHeaders:
+            - name: Host
+              value: '127.0.0.1'
+          failureThreshold: 60
+          periodSeconds: 1
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: 2048Mi
+          requests:
+            cpu: "0.0001"
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+          seLinuxOptions:
+            level: s0:c123,c456
+          seccompProfile:
+            type: RuntimeDefault
+      securityContext:
+        fsGroup: 65534
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
