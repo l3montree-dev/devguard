@@ -1,0 +1,120 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kratos-config
+data:  
+  {{- $publicUrl := (index .Values.web.ingress.hosts 0).host }}
+  identity.schema.json: |
+    {
+      "$id": "https://schemas.ory.sh/presets/kratos/quickstart/email-password/identity.schema.json",
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Person",
+      "type": "object",
+      "properties": {
+          "traits": {
+              "type": "object",
+              "properties": {
+                  "email": {
+                      "type": "string",
+                      "format": "email",
+                      "title": "E-Mail",
+                      "minLength": 3,
+                      "ory.sh/kratos": {
+                          "credentials": {
+                              "password": {
+                                  "identifier": true
+                              }
+                          },
+                          "verification": {
+                              "via": "email"
+                          },
+                          "recovery": {
+                              "via": "email"
+                          }
+                      }
+                  },
+                  "name": {
+                      "type": "object",
+                      "properties": {
+                          "first": {
+                              "title": "First Name",
+                              "type": "string"
+                          },
+                          "last": {
+                              "title": "Last Name",
+                              "type": "string"
+                          }
+                      }
+                  }
+              },
+              "required": [
+                  "email"
+              ],
+              "additionalProperties": false
+          }
+      }
+    }
+
+  kratos.yml: |
+    serve: 
+      public: 
+        base_url: https://{{ $publicUrl }}/api/.ory/
+        cors:
+          enabled: true
+    identity:
+      default_schema_id: identity
+      schemas:
+      - id: identity
+        url: file:///etc/config/identity.schema.json
+    courier:
+      smtp:
+        from_address: {{ .Values.mail.fromAddress }}
+    selfservice:
+      default_browser_return_url: https://{{ $publicUrl }}/
+      allowed_return_urls: 
+      - https://{{ $publicUrl }}/
+      methods:
+        password:
+          enabled: true
+        totp:
+          config:
+            issuer: ArchRL-Kratos
+          enabled: true
+        lookup_secret:
+          enabled: false
+        link:
+          enabled: false
+        code:
+          enabled: true
+      flows:
+        error:
+          ui_url: https://{{ $publicUrl }}/error
+        settings:
+          ui_url: https://{{ $publicUrl }}/settings
+          privileged_session_max_age: 15m
+          required_aal: highest_available
+        recovery:
+          enabled: true
+          ui_url: https://{{ $publicUrl }}/recovery
+          use: code
+        verification:
+          enabled: true
+          ui_url: https://{{ $publicUrl }}/verification
+          use: code
+          after:
+            default_browser_return_url: https://{{ $publicUrl }}/
+        logout:
+          after:
+            default_browser_return_url: https://{{ $publicUrl }}/login
+        login:
+          ui_url: https://{{ $publicUrl }}/login
+          lifespan: 10m
+        registration:
+          lifespan: 10m
+          ui_url: https://{{ $publicUrl }}/registration
+          after:
+              password:
+                  hooks:
+                      - hook: session
+                      - hook: show_verification_ui
+

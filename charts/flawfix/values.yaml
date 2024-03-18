@@ -1,0 +1,88 @@
+# Default values for flawfix.
+# This is a YAML-formatted file.
+# Declare variables to be passed into templates.
+mail:
+  # needs to contain key: "uri". Format should be like: smtps://<user>@<your-domain.com>:<secret>@<mail-server.de>:465/?skip_ssl_verify=false
+  existingSMTPConnectionUriSecret:
+  fromAddress: ""
+api:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/l3montree-dev/flawfix
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: v1.0.0
+  imagePullSecrets: []
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  # fsGroup: 2000
+  securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  ingress:
+    enabled: true
+    className: ""
+    annotations: {}
+    hosts:
+    - host: example.com
+      paths:
+      - path: /
+        pathType: Prefix
+
+
+
+web:
+  image:
+    repository: ghcr.io/l3montree-dev/flawfix-web
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: v1.0.0
+  imagePullSecrets: []
+  podAnnotations: {}
+  podLabels: {}
+  podSecurityContext: {}
+  # fsGroup: 2000
+  securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  ingress:
+    enabled: true
+    className: ""
+    annotations: {}
+    hosts:
+    - host: app.example.com
+      paths:
+      - path: /
+        pathType: Prefix

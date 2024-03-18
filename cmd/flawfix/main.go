@@ -26,9 +26,7 @@ import (
 )
 
 func main() {
-	if err := core.LoadConfig(); err != nil {
-		panic(err)
-	}
+	core.LoadConfig() // nolint: errcheck
 	core.InitLogger()
 
 	db, err := core.DatabaseFactory()
