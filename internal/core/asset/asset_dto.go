@@ -9,8 +9,8 @@ type createRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 
-	Importance            int  `json:"importance" validate:"required"`
-	ReachableFromInternet bool `json:"reachableFromInternet" validate:"required"`
+	Importance            int  `json:"importance"`
+	ReachableFromInternet bool `json:"reachableFromInternet"`
 
 	ConfidentialityRequirement string `json:"confidentialityRequirement" validate:"required"`
 	IntegrityRequirement       string `json:"integrityRequirement" validate:"required"`

@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
@@ -41,6 +42,20 @@ func Execute() {
 	}
 }
 
+func generateSBOM() (*os.File, error) {
+	// run the sbom generator
+	cmd := exec.Command("cdxgen", "-o", "sbom.json")
+
+	err := cmd.Run()
+
+	if err != nil {
+		return nil, err
+	}
+
+	// open the file and return the path
+	return os.Open("sbom.json")
+}
+
 func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
@@ -57,17 +72,12 @@ func init() {
 	}
 
 	rootCmd.AddCommand(&cobra.Command{
-		Use:   "sca [path to SBOM file]",
+		Use:   "sca",
 		Short: "Software composition analysis",
 		Long:  `Scan a SBOM for vulnerabilities. This command will scan a SBOM for vulnerabilities and return a list of vulnerabilities found in the SBOM. The SBOM must be passed as an argument.`,
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			core.InitLogger()
-			// check if a single argument was passed
-			if len(args) != 1 {
-				cmd.Help() // nolint: errcheck
-				os.Exit(1)
-			}
 			token, err := cmd.Flags().GetString("token")
 			if err != nil {
 				slog.Error("could not get token", "err", err)
@@ -86,7 +96,7 @@ func init() {
 
 			// read the sbom file and post it to the scan endpoint
 			// get the flaws and print them to the console
-			file, err := os.Open(args[0])
+			file, err := generateSBOM()
 			if err != nil {
 				slog.Error("could not open file", "err", err)
 				os.Exit(1)
@@ -101,7 +111,6 @@ func init() {
 				slog.Error("could not create request", "err", err)
 				os.Exit(1)
 			}
-
 			req.Header.Set("Authorization", "Bearer "+token)
 			req.Header.Set("X-Asset-Name", assetName)
 
