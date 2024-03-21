@@ -136,7 +136,7 @@ func init() {
 			}
 
 			for _, f := range flaws {
-				slog.Info("flaw found", "cve", f.CVEID, "package", f.GetAdditionalData()["packageName"])
+				slog.Info("flaw found", "cve", f.CVEID, "package", f.GetAdditionalData()["packageName"], "severity", f.CVE.Severity)
 			}
 		},
 	})

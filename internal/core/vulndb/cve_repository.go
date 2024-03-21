@@ -47,6 +47,12 @@ func (g *gormRepository) FindByID(id string) (CVE, error) {
 	return t, err
 }
 
+func (g *gormRepository) FindAll(cveIDs []string) ([]CVE, error) {
+	var cves []CVE
+	err := g.db.Find(&cves, "cve IN ?", cveIDs).Error
+	return cves, err
+}
+
 func (g *gormRepository) createInBatches(tx core.DB, cves []CVE, batchSize int) error {
 	err := g.GetDB(tx).Session(
 		&gorm.Session{

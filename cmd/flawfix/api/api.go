@@ -30,6 +30,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core/org"
 	"github.com/l3montree-dev/flawfix/internal/core/pat"
 	"github.com/l3montree-dev/flawfix/internal/core/project"
+	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
 	"github.com/l3montree-dev/flawfix/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/flawfix/internal/echohttp"
 	"github.com/labstack/echo/v4"
@@ -171,6 +172,7 @@ func assetNameMiddleware() core.MiddlewareFunc {
 			}
 			// set the project slug
 			c.Set("projectSlug", assetParts[1])
+			c.Set("tenant", assetParts[0])
 			return next(c)
 		}
 	}
@@ -180,7 +182,7 @@ func multiTenantMiddleware(rbacProvider accesscontrol.RBACProvider, organization
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c core.Context) (err error) {
 			// get the tenant from the provided context
-			tenant := c.Param("tenant")
+			tenant := core.GetParam(c, "tenant")
 			if tenant == "" {
 				// if no tenant is provided, we can't continue
 				slog.Error("no tenant provided")
@@ -231,6 +233,7 @@ func Start(db core.DB) {
 	projectRepository := project.NewGormRepository(db)
 	projectScopedRBAC := projectAccessControlFactory(projectRepository)
 	orgRepository := org.NewGormRepository(db)
+	cveRepository := vulndb.NewGormRepository(db)
 	flawRepository := flaw.NewGormRepository(db)
 	flawController := flaw.NewHttpController(flawRepository)
 
@@ -239,7 +242,7 @@ func Start(db core.DB) {
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
 	assetController := asset.NewHttpController(assetRepository)
-	scanController := scan.NewHttpController(db)
+	scanController := scan.NewHttpController(db, cveRepository)
 
 	server := echohttp.Server()
 
@@ -257,7 +260,7 @@ func Start(db core.DB) {
 		})
 	})
 
-	sessionRouter.POST("/scan/", scanController.Scan, assetNameMiddleware(), core.AccessControlMiddleware(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	sessionRouter.POST("/scan/", scanController.Scan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	patRouter := sessionRouter.Group("/pats")
 	patRouter.POST("/", patController.Create)

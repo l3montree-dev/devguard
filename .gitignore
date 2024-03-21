@@ -4,3 +4,4 @@ bom.json
 osv
 .DS_Store
 helm/charts/*.tgz
+sbom.json
