@@ -220,4 +220,4 @@ jobs:
     - name: Sign the published Docker image
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-      run: cosign sign --yes --key cosign.key "${{ env.IMAGE_NAME }}@${{ env.IMAGE_DIGEST }}"
+      run: cosign sign --yes --key cosign.key "${{ env.IMAGE_TAG }}@${{ env.IMAGE_DIGEST }}"
