@@ -8,6 +8,7 @@ on: push
 # Environment variables used across multiple jobs
 env:
   IMAGE_TAG: ghcr.io/${{ github.repository }}:unstable
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
   # Secret scanning job to detect secrets in codebase
@@ -136,15 +137,18 @@ jobs:
       uses: docker://gcr.io/kaniko-project/executor:v1.9.2
       with:
         args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar --digest-file=/github/workspace/digest.txt
-    - name: Set IMAGE_DIGEST env
-      # Setting the image tag if the push is a tag push
-      run: echo "IMAGE_DIGEST=$(cat digest.txt)" >> $GITHUB_ENV
     - name: Upload artifact
       # Uploading the built Docker image as an artifact
       uses: actions/upload-artifact@v4
       with:
         name: docker-image
         path: image.tar
+    - name: Upload digest
+      # Uploading the built Docker image digest as an artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: digest
+        path: digest.txt
 
   # Image scanning job to detect vulnerabilities in the built Docker image
   image-scanning:
@@ -193,13 +197,27 @@ jobs:
     needs: publish
     steps:
     - name: cosign-installer
-      uses: sigstore/cosign-installer@v2.0.0
-    - name: Write signing key to disk
-      run: 'echo "$KEY" > cosign.key'
-      shell: bash
-      env:
-        KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      uses: sigstore/cosign-installer@v3.3.0
+      with:
+        cosign-release: 'v2.2.3' # optional
+    - name: Download digest
+      uses: actions/download-artifact@v4
+      with:
+        name: digest
+        path: .
+    - name: Read digest from file
+      run: |
+        export IMAGE_DIGEST=$(cat digest.txt)
+        echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2.1.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Write signing key to disk (only needed for `cosign sign --key`)
+      run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
     - name: Sign the published Docker image
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-      run: cosign sign --key cosign.key ${{ env.IMAGE_TAG }}@${{ env.IMAGE_DIGEST }}
+      run: cosign sign --yes --key cosign.key "${{ env.IMAGE_NAME }}@${{ env.IMAGE_DIGEST }}"
