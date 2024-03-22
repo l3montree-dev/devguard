@@ -190,6 +190,7 @@ jobs:
 
   sign-image:
     runs-on: ubuntu-latest
+    needs: publish
     steps:
     - name: cosign-installer
       uses: sigstore/cosign-installer@v2.0.0
