@@ -136,29 +136,23 @@ jobs:
       id: build_image
       uses: docker://gcr.io/kaniko-project/executor:v1.9.2
       with:
-        args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar --digest-file=/github/workspace/kaniko-digest.txt
+        args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar
     - name: Setup crane
       uses: imjasonh/setup-crane@v0.1
     - name: Use crane to get the digest
-      run: crane digest --tarball=image.tar > crane-digest.txt
+      run: crane digest --tarball=image.tar > digest.txt
     - name: Upload artifact
       # Uploading the built Docker image as an artifact
       uses: actions/upload-artifact@v4
       with:
         name: docker-image
         path: image.tar
-    - name: Upload crane-digest
+    - name: Upload digest
       # Uploading the built Docker image digest as an artifact
       uses: actions/upload-artifact@v4
       with:
-        name: crane-digest
-        path: crane-digest.txt
-    - name: Upload kaniko-digest
-      # Uploading the built Docker image digest as an artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: kaniko-digest
-        path: kaniko-digest.txt
+        name: digest
+        path: digest.txt
 
   # Image scanning job to detect vulnerabilities in the built Docker image
   image-scanning:
@@ -213,7 +207,7 @@ jobs:
     - name: Download digest
       uses: actions/download-artifact@v4
       with:
-        name: crane-digest
+        name: digest
         path: .
     - name: Read digest from file
       run: |
