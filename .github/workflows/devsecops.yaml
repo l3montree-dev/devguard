@@ -211,7 +211,7 @@ jobs:
         path: .
     - name: Read digest from file
       run: |
-        export IMAGE_DIGEST=$(cat crane-digest.txt)
+        export IMAGE_DIGEST=$(cat digest.txt)
         echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v2.1.0
