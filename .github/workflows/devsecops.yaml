@@ -106,7 +106,7 @@ jobs:
         # Optional: The mode to install golangci-lint. It can be 'binary' or 'goinstall'.
         # install-mode: "goinstall"
   tests:
-    name: Tests
+    name: tests
     runs-on: ubuntu-latest
 
     steps:
@@ -136,7 +136,7 @@ jobs:
       id: build_image
       uses: docker://gcr.io/kaniko-project/executor:v1.9.2
       with:
-        args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar --digest-file=/github/workspace/digest.txt
+        args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar --image-name-tag-with-digest-file=/github/workspace/digest.txt
     - name: Upload artifact
       # Uploading the built Docker image as an artifact
       uses: actions/upload-artifact@v4
