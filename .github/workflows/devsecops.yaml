@@ -8,6 +8,7 @@ on: push
 # Environment variables used across multiple jobs
 env:
   IMAGE_TAG: ghcr.io/${{ github.repository }}:unstable
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
 
 jobs:
   # Secret scanning job to detect secrets in codebase
@@ -105,7 +106,7 @@ jobs:
         # Optional: The mode to install golangci-lint. It can be 'binary' or 'goinstall'.
         # install-mode: "goinstall"
   tests:
-    name: Tests
+    name: tests
     runs-on: ubuntu-latest
 
     steps:
@@ -136,12 +137,22 @@ jobs:
       uses: docker://gcr.io/kaniko-project/executor:v1.9.2
       with:
         args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar
+    - name: Setup crane
+      uses: imjasonh/setup-crane@v0.1
+    - name: Use crane to get the digest
+      run: crane digest --tarball=image.tar > digest.txt
     - name: Upload artifact
       # Uploading the built Docker image as an artifact
       uses: actions/upload-artifact@v4
       with:
         name: docker-image
         path: image.tar
+    - name: Upload digest
+      # Uploading the built Docker image digest as an artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: digest
+        path: digest.txt
 
   # Image scanning job to detect vulnerabilities in the built Docker image
   image-scanning:
@@ -184,3 +195,33 @@ jobs:
     - name: Push Docker image to GitHub image Registry
       # Pushing the Docker image to GitHub Container Registry
       run: crane push image.tar ${{ env.IMAGE_TAG }}
+
+  sign-image:
+    runs-on: ubuntu-latest
+    needs: publish
+    steps:
+    - name: cosign-installer
+      uses: sigstore/cosign-installer@v3.3.0
+      with:
+        cosign-release: 'v2.2.3' # optional
+    - name: Download digest
+      uses: actions/download-artifact@v4
+      with:
+        name: digest
+        path: .
+    - name: Read digest from file
+      run: |
+        export IMAGE_DIGEST=$(cat digest.txt)
+        echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2.1.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Write signing key to disk (only needed for `cosign sign --key`)
+      run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+    - name: Sign the published Docker image
+      env:
+        COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+      run: cosign sign --yes --key cosign.key "${{ env.IMAGE_TAG }}@${{ env.IMAGE_DIGEST }}"
