@@ -6,15 +6,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type flawEventRepository interface {
+// we are using multiple definitions of the flawEventRepository interface in the same package
+// therefore prefixing the interface name with ctr
+type ctrFlawEventRepository interface {
 	Create(tx core.DB, flawEvent *models.FlawEvent) error
 }
 
 type FlawEventHttpController struct {
-	flawEventRepository flawEventRepository
+	flawEventRepository ctrFlawEventRepository
 }
 
-func NewEventHttpController(flawEventRepository flawEventRepository) *FlawEventHttpController {
+func NewEventHttpController(flawEventRepository ctrFlawEventRepository) *FlawEventHttpController {
 	return &FlawEventHttpController{
 		flawEventRepository: flawEventRepository,
 	}

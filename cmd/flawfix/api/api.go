@@ -234,18 +234,21 @@ func Start(db core.DB) {
 	assetRepository := repositories.NewAssetRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
+	flawEventRepository := repositories.NewFlawEventRepository(db)
 	projectScopedRBAC := projectAccessControlFactory(projectRepository)
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 	flawRepository := repositories.NewFlawRepository(db)
 	flawController := flaw.NewHttpController(flawRepository)
+	flawService := flaw.NewService(flawRepository, flawEventRepository)
+	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
 
 	// init all http controllers using the repositories
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
 	assetController := asset.NewHttpController(assetRepository)
-	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository)
+	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
 	server := echohttp.Server()
 

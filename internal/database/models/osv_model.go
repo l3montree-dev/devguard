@@ -81,7 +81,7 @@ func (osv OSV) IsCVE() bool {
 }
 
 type AffectedComponent struct {
-	ID               string  `json:"id" gorm:"primaryKey;varchar(255);"`
+	ID               string  `json:"id" gorm:"primaryKey;"`
 	PURL             string  `json:"purl" gorm:"type:text;column:purl"`
 	Ecosystem        string  `json:"ecosystem" gorm:"type:text;"`
 	Scheme           string  `json:"scheme" gorm:"type:text;"`
@@ -101,7 +101,7 @@ func (affectedComponent AffectedComponent) TableName() string {
 	return "affected_components"
 }
 
-func (affectedComponent *AffectedComponent) SetID() {
+func (affectedComponent *AffectedComponent) SetIdHash() {
 	hash, err := hashstructure.Hash(affectedComponent, hashstructure.FormatV2, nil)
 	if err != nil {
 		slog.Error("could not hash affected package", "err", err)
@@ -181,7 +181,7 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 
 					CVE: cves,
 				}
-				affectedComponent.SetID()
+				affectedComponent.SetIdHash()
 				affectedComponents = append(affectedComponents, affectedComponent)
 			}
 		}
@@ -203,7 +203,7 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 
 					CVE: cves,
 				}
-				affectedComponent.SetID()
+				affectedComponent.SetIdHash()
 				affectedComponents = append(affectedComponents, affectedComponent)
 			}
 		}

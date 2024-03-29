@@ -40,3 +40,34 @@ func Reduce[T, U any](s []T, f func(U, T) U, init U) U {
 	}
 	return r
 }
+
+type CompareResult[T any] struct {
+	OnlyInA []T
+	OnlyInB []T
+	InBoth  []T
+}
+
+func CompareSlices[T any, K comparable](a, b []T, serializer func(T) K) CompareResult[T] {
+	res := CompareResult[T]{}
+	seen := make(map[K]bool)
+
+	for _, v := range a {
+		seen[serializer(v)] = true
+	}
+
+	for _, v := range b {
+		if _, ok := seen[serializer(v)]; ok {
+			res.InBoth = append(res.InBoth, v)
+		} else {
+			res.OnlyInB = append(res.OnlyInB, v)
+		}
+	}
+
+	for _, v := range a {
+		if _, ok := seen[serializer(v)]; !ok {
+			res.OnlyInA = append(res.OnlyInA, v)
+		}
+	}
+
+	return res
+}

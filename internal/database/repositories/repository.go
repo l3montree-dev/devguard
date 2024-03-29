@@ -31,7 +31,6 @@ type Repository[ID any, T Tabler, Tx any] interface {
 	List(ids []ID) ([]T, error)
 	Transaction(func(tx Tx) error) error
 	GetDB(tx Tx) Tx
-
 	Save(tx Tx, t *T) error
 	SaveBatch(tx Tx, ts []T) error
 }

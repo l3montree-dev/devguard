@@ -35,6 +35,14 @@ func (r *flawRepository) GetByAssetId(
 	return flaws, nil
 }
 
+func (r *flawRepository) ListByScanner(assetID uuid.UUID, scannerID string) ([]models.Flaw, error) {
+	var flaws []models.Flaw = []models.Flaw{}
+	if err := r.Repository.GetDB(r.db).Where("asset_id = ? AND scanner_id = ?", assetID, scannerID).Find(&flaws).Error; err != nil {
+		return nil, err
+	}
+	return flaws, nil
+}
+
 func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error) {
 	var count int64
 	var flaws []models.Flaw = []models.Flaw{}

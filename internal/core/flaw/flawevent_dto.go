@@ -3,7 +3,6 @@ package flaw
 import (
 	"encoding/json"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"gorm.io/datatypes"
 )
@@ -17,8 +16,8 @@ type FlawEventDTO struct {
 }
 
 func (dto FlawEventDTO) ToModel() models.FlawEvent {
-	flawId := uuid.MustParse(dto.FlawID)
-	userId := uuid.MustParse(dto.UserID)
+	flawId := dto.FlawID
+	userId := dto.UserID
 
 	payload, err := json.Marshal(dto.Payload)
 

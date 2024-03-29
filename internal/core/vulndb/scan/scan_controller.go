@@ -17,7 +17,6 @@ package scan
 
 import (
 	"log/slog"
-	"net/url"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/flawfix/internal/core"
@@ -36,15 +35,20 @@ type assetRepository interface {
 	Save(tx core.DB, asset *models.Asset) error
 }
 
+type assetService interface {
+	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw)
+	UpdateSBOM(asset models.Asset, sbom *cdx.BOM)
+}
+
 type httpController struct {
 	db                  core.DB
 	sbomScanner         *sbomScanner
 	cveRepository       cveRepository
 	componentRepository componentRepository
-	assetRepository     assetRepository
+	assetService        assetService
 }
 
-func NewHttpController(db core.DB, cveRepository cveRepository, componentRepository componentRepository, assetRepository assetRepository) *httpController {
+func NewHttpController(db core.DB, cveRepository cveRepository, componentRepository componentRepository, assetService assetService) *httpController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -54,90 +58,12 @@ func NewHttpController(db core.DB, cveRepository cveRepository, componentReposit
 		sbomScanner:         scanner,
 		cveRepository:       cveRepository,
 		componentRepository: componentRepository,
-		assetRepository:     assetRepository,
+		assetService:        assetService,
 	}
 }
 
-func purlOrCpe(component cdx.Component) string {
-	if component.PackageURL != "" {
-		return component.PackageURL
-	}
-	return component.CPE
-}
+func (s *httpController) saveAssetComponents(asset models.Asset, sbom *cdx.BOM) {
 
-func urlDecode(purl string) (string, error) {
-	p, err := url.PathUnescape(purl)
-	if err != nil {
-		return "", err
-	}
-	return p, nil
-}
-
-func (s *httpController) saveAssetComponents(c core.Context, sbom *cdx.BOM) {
-	// update the sbom for the asset in the database.
-	asset := core.GetAsset(c)
-
-	components := make([]models.Component, 0)
-	// create all components
-	for _, component := range *sbom.Dependencies {
-		// check if this is the asset itself.
-		if component.Ref == sbom.Metadata.Component.BOMRef {
-			continue
-		}
-
-		dependencies := make([]models.Component, 0)
-		for _, dep := range *component.Dependencies {
-			p, err := urlDecode(dep)
-			if err != nil {
-				slog.Error("could not decode purl", "err", err)
-				continue
-			}
-			dependencies = append(dependencies, models.Component{
-				PurlOrCpe: p,
-			})
-		}
-		// check if the component is already in the database
-		// if not, create it
-		// if it is, update it
-		p, err := urlDecode(component.Ref)
-		if err != nil {
-			slog.Error("could not decode purl", "err", err)
-			continue
-		}
-		components = append(components, models.Component{
-			PurlOrCpe: p,
-			DependsOn: dependencies,
-		})
-	}
-	// save all components in the database
-	if err := s.componentRepository.SaveBatch(nil, components); err != nil {
-		slog.Error("could not save components", "err", err)
-	} else {
-		slog.Info("saved components", "asset", asset.GetID().String(), "count", len(components))
-	}
-
-	// get the direct dependencies of the asset
-	// ref: https://github.com/CycloneDX/cdxgen/issues/650
-	directDependencies := make([]models.Component, 0)
-	for _, component := range *sbom.Components {
-		if component.Scope == cdx.ScopeRequired {
-			p, err := urlDecode(purlOrCpe(component))
-			if err != nil {
-				slog.Error("could not decode purl", "err", err)
-				continue
-			}
-			directDependencies = append(directDependencies, models.Component{
-				PurlOrCpe: p,
-			})
-		}
-	}
-	asset.Components = directDependencies
-	// save the direct dependencies of the asset
-	if err := s.assetRepository.Save(nil, &asset); err != nil {
-		slog.Error("could not save direct dependencies", "err", err)
-	} else {
-		slog.Info("saved direct dependencies", "asset", asset.GetID().String(), "count", len(directDependencies))
-	}
 }
 
 func (s *httpController) Scan(c core.Context) error {
@@ -146,8 +72,12 @@ func (s *httpController) Scan(c core.Context) error {
 	if err := decoder.Decode(bom); err != nil {
 		return err
 	}
+	asset := core.GetAsset(c)
+
+	userID := core.GetSession(c).GetUserID()
+
 	// update the sbom in the database in parallel
-	go s.saveAssetComponents(c, bom)
+	go s.assetService.UpdateSBOM(asset, bom)
 
 	// scan the bom we just retrieved.
 	vulns, err := s.sbomScanner.Scan(bom)
@@ -156,22 +86,32 @@ func (s *httpController) Scan(c core.Context) error {
 		return c.JSON(500, map[string]string{"error": "could not scan file"})
 	}
 
+	scannerID := "github.com/l3montree-dev/flawfix/cmd/flawfind"
+
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}
 	cveIDs := []string{}
 	for _, vuln := range vulns {
 		cveIDs = append(cveIDs, vuln.CVEID)
 		flaw := models.Flaw{
+			AssetID:   asset.ID,
 			CVEID:     vuln.CVEID,
-			ScannerID: "github.com/l3montree-dev/flawfix/cmd/flawfind",
+			ScannerID: scannerID,
 		}
 		flaw.SetAdditionalData(map[string]any{
 			"introducedVersion": vuln.GetIntroducedVersion(),
 			"fixedVersion":      vuln.GetFixedVersion(),
 			"packageName":       vuln.PackageName,
+			"cveId":             vuln.CVEID,
 		})
 		flaws = append(flaws, flaw)
 	}
+
+	// let the asset service handle the new scan result - we do not need
+	// any return value from that process - even if it fails, we should return the current
+	// cves, we already know.
+	go s.assetService.HandleScanResult(userID, scannerID, asset, flaws)
+
 	// find all cves in our database and match them.
 	cves, err := s.cveRepository.FindAll(cveIDs)
 	if err != nil {

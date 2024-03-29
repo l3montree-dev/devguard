@@ -1,10 +1,16 @@
 package models
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
+
+	"github.com/l3montree-dev/flawfix/internal/utils"
 )
 
 type State string
@@ -18,14 +24,14 @@ const (
 )
 
 type Flaw struct {
-	Model
+	ID string `json:"id" gorm:"primaryKey;not null;"`
 	// the scanner which was used to detect this flaw
-	ScannerID string `json:"scanner" gorm:"uniqueIndex:idx_ruleId_scanner_asset;not null;"`
+	ScannerID string `json:"scanner" gorm:"not null;"`
 
 	Message  *string     `json:"message"`
 	Comments []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
 	Events   []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"events"`
-	AssetID  uuid.UUID   `json:"assetId" gorm:"uniqueIndex:idx_ruleId_scanner_asset;not null;"`
+	AssetID  uuid.UUID   `json:"assetId" gorm:"not null;"`
 	State    State       `json:"state" gorm:"default:'open';not null;type:text;"`
 
 	CVE   *CVE   `json:"cve"`
@@ -39,9 +45,15 @@ type Flaw struct {
 
 	AdditionalData string `json:"additionalData" gorm:"type:text;"`
 
+	LastDetected time.Time `json:"lastDetected" gorm:"default:now();not null;"`
+
 	// this is a map of additional data that is parsed from the AdditionalData field
 	// this is not stored in the database - it just caches the parsed data
 	additionalData map[string]any
+
+	CreatedAt time.Time    `json:"createdAt"`
+	UpdatedAt time.Time    `json:"updatedAt"`
+	DeletedAt sql.NullTime `gorm:"index" json:"-"`
 }
 
 func (m Flaw) TableName() string {
@@ -68,4 +80,20 @@ func (m *Flaw) SetAdditionalData(data map[string]any) {
 		slog.Error("could not marshal additional data", "err", err, "flawId", m.ID)
 	}
 	m.AdditionalData = string(dataBytes)
+}
+
+func (m *Flaw) CalculateHash() string {
+	// hash the additional data, scanner id and asset id to create a unique id - if there is a hash collision, we can be sure, that the flaw with all its data is the same
+	hash := utils.HashString(fmt.Sprintf("%s/%s/%s", m.ScannerID, m.AssetID.String(), m.AdditionalData))
+	return hash
+}
+
+func (m *Flaw) SetIdHash() {
+	hash := m.CalculateHash()
+	m.ID = hash
+}
+
+func (f *Flaw) BeforeCreate(tx *gorm.DB) (err error) {
+	f.SetIdHash()
+	return nil
 }

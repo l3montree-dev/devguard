@@ -1,7 +1,6 @@
 package models
 
 import (
-	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
@@ -17,8 +16,8 @@ const (
 type FlawEvent struct {
 	Model
 	Type   FlawEventType `json:"type" gorm:"type:text"`
-	FlawID uuid.UUID     `json:"flawId"`
-	UserID uuid.UUID     `json:"userId"`
+	FlawID string        `json:"flawId"`
+	UserID string        `json:"userId"`
 
 	Payload *datatypes.JSON `json:"payload" gorm:"type:jsonb"`
 }
@@ -36,4 +35,20 @@ func (e FlawEvent) Apply(flaw Flaw) Flaw {
 	}
 
 	return flaw
+}
+
+func NewFixedEvent(flawID string, userID string) FlawEvent {
+	return FlawEvent{
+		Type:   EventTypeFixed,
+		FlawID: flawID,
+		UserID: userID,
+	}
+}
+
+func NewDetectedEvent(flawID string, userID string) FlawEvent {
+	return FlawEvent{
+		Type:   EventTypeDetected,
+		FlawID: flawID,
+		UserID: userID,
+	}
 }
