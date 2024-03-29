@@ -11,10 +11,6 @@ type eventGormRepository struct {
 	Repository[uuid.UUID, models.FlawEvent, core.DB]
 }
 
-type eventRepository interface {
-	Repository[uuid.UUID, models.FlawEvent, core.DB]
-}
-
 func NewEventGormRepository(db core.DB) *eventGormRepository {
 	return &eventGormRepository{
 		db:         db,
