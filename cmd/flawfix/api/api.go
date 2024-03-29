@@ -174,6 +174,7 @@ func assetNameMiddleware() core.MiddlewareFunc {
 			// set the project slug
 			c.Set("projectSlug", assetParts[1])
 			c.Set("tenant", assetParts[0])
+			c.Set("assetSlug", assetParts[2])
 			return next(c)
 		}
 	}
@@ -232,6 +233,7 @@ func Start(db core.DB) {
 	patRepository := repositories.NewPATRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
+	componentRepository := repositories.NewComponentRepository(db)
 	projectScopedRBAC := projectAccessControlFactory(projectRepository)
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
@@ -243,7 +245,7 @@ func Start(db core.DB) {
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
 	assetController := asset.NewHttpController(assetRepository)
-	scanController := scan.NewHttpController(db, cveRepository)
+	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository)
 
 	server := echohttp.Server()
 
@@ -261,7 +263,7 @@ func Start(db core.DB) {
 		})
 	})
 
-	sessionRouter.POST("/scan/", scanController.Scan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	sessionRouter.POST("/scan/", scanController.Scan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
 	patRouter := sessionRouter.Group("/pats")
 	patRouter.POST("/", patController.Create)

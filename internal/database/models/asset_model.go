@@ -1,6 +1,8 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -24,7 +26,7 @@ type Asset struct {
 	Name string `json:"name" gorm:"type:text"`
 	Slug string `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
 
-	ProjectID   uuid.UUID `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;"`
+	ProjectID   uuid.UUID `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`
 	Description string    `json:"description" gorm:"type:text"`
 	Flaws       []Flaw    `json:"flaws" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
 
@@ -36,6 +38,11 @@ type Asset struct {
 	ConfidentialityRequirement RequirementLevel `json:"confidentialityRequirement" gorm:"default:'high';not null;type:text;"`
 	IntegrityRequirement       RequirementLevel `json:"integrityRequirement" gorm:"default:'high';not null;type:text;"`
 	AvailabilityRequirement    RequirementLevel `json:"availabilityRequirement" gorm:"default:'high';not null;type:text;"`
+
+	Components []Component `json:"components" gorm:"many2many:asset_components;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+
+	Version             string    `json:"version" gorm:"type:text;"`
+	LastComponentUpdate time.Time `json:"lastComponentUpdate"`
 }
 
 func (m Asset) TableName() string {

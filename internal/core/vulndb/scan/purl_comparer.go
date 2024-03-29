@@ -47,7 +47,7 @@ func (comparer *purlComparer) GetVulns(purl string) ([]vulnInPackage, error) {
 		return nil, err
 	}
 
-	affectedPackages := []models.AffectedPackage{}
+	affectedComponents := []models.AffectedComponent{}
 	p.Version = ""
 
 	pURL, err := url.PathUnescape(p.ToString())
@@ -55,25 +55,25 @@ func (comparer *purlComparer) GetVulns(purl string) ([]vulnInPackage, error) {
 		return nil, errors.Wrap(err, "could not unescape purl path")
 	}
 	// check if the package is present in the database
-	comparer.db.Model(&models.AffectedPackage{}).Where("p_url = ?", pURL).Where(
+	comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", pURL).Where(
 		comparer.db.Where(
 			"version = ?", version).
 			Or("semver_introduced IS NULL AND semver_fixed > ?", version).
 			Or("semver_introduced < ? AND semver_fixed IS NULL", version).
 			Or("semver_introduced < ? AND semver_fixed > ?", version, version),
-	).Preload("CVE").Find(&affectedPackages)
+	).Preload("CVE").Find(&affectedComponents)
 
 	vulnerabilities := []vulnInPackage{}
 
 	// transform the affected packages to the vulnInPackage struct
-	for _, affectedPackage := range affectedPackages {
-		for _, cve := range affectedPackage.CVE {
+	for _, affectedComponent := range affectedComponents {
+		for _, cve := range affectedComponent.CVE {
 			// append the cve to the vulnerabilities
 			vulnerabilities = append(vulnerabilities, vulnInPackage{
 				CVEID:             cve.CVE,
-				FixedVersion:      affectedPackage.SemverFixed,
-				IntroducedVersion: affectedPackage.SemverIntroduced,
-				PackageName:       affectedPackage.PURL,
+				FixedVersion:      affectedComponent.SemverFixed,
+				IntroducedVersion: affectedComponent.SemverIntroduced,
+				PackageName:       affectedComponent.PURL,
 			})
 		}
 	}

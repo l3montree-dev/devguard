@@ -80,9 +80,9 @@ func (osv OSV) IsCVE() bool {
 	return len(osv.GetCVE()) > 0
 }
 
-type AffectedPackage struct {
+type AffectedComponent struct {
 	ID               string  `json:"id" gorm:"primaryKey;varchar(255);"`
-	PURL             string  `json:"purl" gorm:"type:text;"`
+	PURL             string  `json:"purl" gorm:"type:text;column:purl"`
 	Ecosystem        string  `json:"ecosystem" gorm:"type:text;"`
 	Scheme           string  `json:"scheme" gorm:"type:text;"`
 	Type             string  `json:"type" gorm:"type:text;"`
@@ -94,25 +94,25 @@ type AffectedPackage struct {
 	SemverIntroduced *string `json:"semver_start" gorm:"type:semver;"`
 	SemverFixed      *string `json:"semver_end" gorm:"type:semver;"`
 
-	CVE []CVE `json:"cves" gorm:"many2many:cve_affected_package;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	CVE []CVE `json:"cves" gorm:"many2many:cve_affected_component;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
-func (affectedPackage AffectedPackage) TableName() string {
-	return "affected_packages"
+func (affectedComponent AffectedComponent) TableName() string {
+	return "affected_components"
 }
 
-func (affectedPackage *AffectedPackage) SetID() {
-	hash, err := hashstructure.Hash(affectedPackage, hashstructure.FormatV2, nil)
+func (affectedComponent *AffectedComponent) SetID() {
+	hash, err := hashstructure.Hash(affectedComponent, hashstructure.FormatV2, nil)
 	if err != nil {
 		slog.Error("could not hash affected package", "err", err)
 		return
 	}
 
-	affectedPackage.ID = fmt.Sprintf("%x", hash)
+	affectedComponent.ID = fmt.Sprintf("%x", hash)
 }
 
-func (osv OSV) GetAffectedPackages() []AffectedPackage {
-	affectedPackages := make([]AffectedPackage, 0)
+func (osv OSV) GetAffectedPackages() []AffectedComponent {
+	affectedComponents := make([]AffectedComponent, 0)
 
 	cveIds := osv.GetCVE()
 	cves := make([]CVE, len(cveIds))
@@ -166,7 +166,7 @@ func (osv OSV) GetAffectedPackages() []AffectedPackage {
 				}
 
 				// create the affected package
-				affectedPackage := AffectedPackage{
+				affectedComponent := AffectedComponent{
 					PURL:       affected.Package.Purl,
 					Ecosystem:  affected.Package.Ecosystem,
 					Scheme:     "pkg",
@@ -181,8 +181,8 @@ func (osv OSV) GetAffectedPackages() []AffectedPackage {
 
 					CVE: cves,
 				}
-				affectedPackage.SetID()
-				affectedPackages = append(affectedPackages, affectedPackage)
+				affectedComponent.SetID()
+				affectedComponents = append(affectedComponents, affectedComponent)
 			}
 		}
 
@@ -190,7 +190,7 @@ func (osv OSV) GetAffectedPackages() []AffectedPackage {
 			// create an affected package with a specific version
 			for _, v := range affected.Versions {
 				tmpV := v
-				affectedPackage := AffectedPackage{
+				affectedComponent := AffectedComponent{
 					PURL:       affected.Package.Purl,
 					Ecosystem:  affected.Package.Ecosystem,
 					Scheme:     "pkg",
@@ -203,10 +203,10 @@ func (osv OSV) GetAffectedPackages() []AffectedPackage {
 
 					CVE: cves,
 				}
-				affectedPackage.SetID()
-				affectedPackages = append(affectedPackages, affectedPackage)
+				affectedComponent.SetID()
+				affectedComponents = append(affectedComponents, affectedComponent)
 			}
 		}
 	}
-	return affectedPackages
+	return affectedComponents
 }

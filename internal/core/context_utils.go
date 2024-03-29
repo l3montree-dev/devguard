@@ -73,7 +73,7 @@ func GetProjectSlug(c Context) (string, error) {
 }
 
 func GetAssetSlug(c Context) (string, error) {
-	assetSlug := c.Param("assetSlug")
+	assetSlug := GetParam(c, "assetSlug")
 	if assetSlug == "" {
 		return "", fmt.Errorf("could not get asset slug")
 	}

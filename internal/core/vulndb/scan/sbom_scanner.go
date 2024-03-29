@@ -16,7 +16,6 @@
 package scan
 
 import (
-	"io"
 	"log/slog"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -62,13 +61,7 @@ func NewSBOMScanner(cpeComparer comparer, purlComparer comparer) *sbomScanner {
 	}
 }
 
-func (s *sbomScanner) Scan(reader io.Reader) ([]vulnInPackage, error) {
-	bom := new(cdx.BOM)
-	decoder := cdx.NewBOMDecoder(reader, cdx.BOMFileFormatJSON)
-	if err := decoder.Decode(bom); err != nil {
-		return nil, err
-	}
-
+func (s *sbomScanner) Scan(bom *cdx.BOM) ([]vulnInPackage, error) {
 	vulnerabilities := make([]vulnInPackage, 0)
 	// iterate through all components
 	for _, component := range *bom.Components {

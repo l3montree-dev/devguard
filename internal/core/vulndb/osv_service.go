@@ -31,18 +31,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-type affectedPkgRepository interface {
-	SaveBatch(tx database.DB, affectedPackages []models.AffectedPackage) error
+type affectedCmpRepository interface {
+	SaveBatch(tx database.DB, affectedComponents []models.AffectedComponent) error
 }
 type osvService struct {
 	httpClient            *http.Client
-	affectedPkgRepository affectedPkgRepository
+	affectedCmpRepository affectedCmpRepository
 }
 
-func newOSVService(affectedPkgRepository affectedPkgRepository) osvService {
+func newOSVService(affectedCmpRepository affectedCmpRepository) osvService {
 	return osvService{
 		httpClient:            &http.Client{},
-		affectedPkgRepository: affectedPkgRepository,
+		affectedCmpRepository: affectedCmpRepository,
 	}
 }
 
@@ -156,15 +156,15 @@ func (s osvService) mirror() error {
 			}
 
 			// convert the osv to affected packages
-			affectedPackages := osv.GetAffectedPackages()
+			affectedComponents := osv.GetAffectedPackages()
 			// save the affected packages
-			err = s.affectedPkgRepository.SaveBatch(nil, affectedPackages)
+			err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
 			if err != nil {
-				packageErrors += len(affectedPackages)
+				packageErrors += len(affectedComponents)
 				slog.Error("could not save affected packages", "err", err, "file", file.Name, "ecosystem", ecosystem)
 				continue
 			} else {
-				totalPackagesSaved += len(affectedPackages)
+				totalPackagesSaved += len(affectedComponents)
 			}
 		}
 		// add the affected packages to the list

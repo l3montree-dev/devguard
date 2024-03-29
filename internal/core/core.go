@@ -18,6 +18,10 @@ type MiddlewareFunc = echo.MiddlewareFunc
 type Context = echo.Context
 type DB = *gorm.DB
 
+func Ptr[T any](t T) *T {
+	return &t
+}
+
 func SanitizeParam(s string) string {
 	// remove trailing or leading slashes
 	return strings.Trim(s, "/")

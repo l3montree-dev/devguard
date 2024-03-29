@@ -24,22 +24,22 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type affectedPkgRepository struct {
-	Repository[string, models.AffectedPackage, core.DB]
+type affectedCmpRepository struct {
+	Repository[string, models.AffectedComponent, core.DB]
 }
 
-func NewAffectedPkgRepository(db core.DB) *affectedPkgRepository {
-	err := db.AutoMigrate(&models.AffectedPackage{})
+func NewAffectedCmpRepository(db core.DB) *affectedCmpRepository {
+	err := db.AutoMigrate(&models.AffectedComponent{})
 	if err != nil {
 		panic(err)
 	}
 
-	return &affectedPkgRepository{
-		Repository: newGormRepository[string, models.AffectedPackage](db),
+	return &affectedCmpRepository{
+		Repository: newGormRepository[string, models.AffectedComponent](db),
 	}
 }
 
-func (g *affectedPkgRepository) createInBatches(tx core.DB, pkgs []models.AffectedPackage, batchSize int) error {
+func (g *affectedCmpRepository) createInBatches(tx core.DB, pkgs []models.AffectedComponent, batchSize int) error {
 	err := g.GetDB(tx).Session(
 		&gorm.Session{
 			Logger: logger.Default.LogMode(logger.Silent),
@@ -77,6 +77,6 @@ func (g *affectedPkgRepository) createInBatches(tx core.DB, pkgs []models.Affect
 	return err
 }
 
-func (g *affectedPkgRepository) SaveBatch(tx core.DB, affectedPkgs []models.AffectedPackage) error {
+func (g *affectedCmpRepository) SaveBatch(tx core.DB, affectedPkgs []models.AffectedComponent) error {
 	return g.createInBatches(tx, affectedPkgs, 1000)
 }

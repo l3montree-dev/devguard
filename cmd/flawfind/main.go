@@ -85,17 +85,17 @@ func init() {
 			token, err := cmd.Flags().GetString("token")
 			if err != nil {
 				slog.Error("could not get token", "err", err)
-				os.Exit(1)
+				return
 			}
 			assetName, err := cmd.Flags().GetString("assetName")
 			if err != nil {
 				slog.Error("could not get asset id", "err", err)
-				os.Exit(1)
+				return
 			}
 			err = core.LoadConfig()
 			if err != nil {
 				slog.Error("could not initialize config", "err", err)
-				os.Exit(1)
+				return
 			}
 
 			// read the sbom file and post it to the scan endpoint
@@ -103,7 +103,7 @@ func init() {
 			file, err := generateSBOM()
 			if err != nil {
 				slog.Error("could not open file", "err", err)
-				os.Exit(1)
+				return
 			}
 			defer func() {
 				// remove the file after the scan
@@ -111,6 +111,7 @@ func init() {
 				if err != nil {
 					slog.Error("could not remove file", "err", err)
 				}
+
 			}()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -119,7 +120,7 @@ func init() {
 			req, err := http.NewRequestWithContext(ctx, "POST", "http://localhost:8080/api/v1/scan", file)
 			if err != nil {
 				slog.Error("could not create request", "err", err)
-				os.Exit(1)
+				return
 			}
 			req.Header.Set("Authorization", "Bearer "+token)
 			req.Header.Set("X-Asset-Name", assetName)
@@ -127,12 +128,12 @@ func init() {
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				slog.Error("could not send request", "err", err)
-				os.Exit(1)
+				return
 			}
 
 			if resp.StatusCode != http.StatusOK {
 				slog.Error("could not scan file", "status", resp.Status)
-				os.Exit(1)
+				return
 			}
 
 			// read and parse the body - it should be an array of flaws
@@ -142,7 +143,7 @@ func init() {
 			err = json.NewDecoder(resp.Body).Decode(&flaws)
 			if err != nil {
 				slog.Error("could not parse response", "err", err)
-				os.Exit(1)
+				return
 			}
 
 			for _, f := range flaws {

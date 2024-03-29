@@ -16,8 +16,6 @@
 package repositories
 
 import (
-	"sync"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database"
@@ -30,12 +28,10 @@ type assetRepository struct {
 }
 
 func NewAssetRepository(db core.DB) *assetRepository {
-	sync.OnceFunc(func() {
-		err := db.AutoMigrate(&models.Asset{})
-		if err != nil {
-			panic(err)
-		}
-	})
+	err := db.AutoMigrate(&models.Asset{})
+	if err != nil {
+		panic(err)
+	}
 
 	return &assetRepository{
 		db:         db,
