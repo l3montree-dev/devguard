@@ -64,6 +64,6 @@ func (a *httpController) Create(c core.Context) error {
 }
 
 func (a *httpController) Read(c core.Context) error {
-	app := core.GetAsset(c).(models.Asset)
+	app := core.GetAsset(c)
 	return c.JSON(200, app)
 }

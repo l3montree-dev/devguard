@@ -75,7 +75,7 @@ func urlDecode(purl string) (string, error) {
 
 func (s *httpController) saveAssetComponents(c core.Context, sbom *cdx.BOM) {
 	// update the sbom for the asset in the database.
-	asset := core.GetAsset(c).(models.Asset)
+	asset := core.GetAsset(c)
 
 	components := make([]models.Component, 0)
 	// create all components

@@ -22,15 +22,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
-
-type HasID interface {
-	GetID() uuid.UUID
-}
-
-type Tenant interface {
-	GetID() uuid.UUID
-}
 
 type AuthSession interface {
 	GetUserID() string
@@ -48,8 +41,8 @@ func GetRBAC(c Context) accesscontrol.AccessControl {
 	return c.Get("rbac").(accesscontrol.AccessControl)
 }
 
-func GetTenant(c Context) Tenant {
-	return c.Get("tenant").(Tenant)
+func GetTenant(c Context) models.Org {
+	return c.Get("tenant").(models.Org)
 }
 
 func GetSession(ctx Context) AuthSession {
@@ -80,12 +73,12 @@ func GetAssetSlug(c Context) (string, error) {
 	return assetSlug, nil
 }
 
-func GetAsset(c Context) HasID {
-	return c.Get("asset").(HasID)
+func GetAsset(c Context) models.Asset {
+	return c.Get("asset").(models.Asset)
 }
 
-func GetProject(c Context) HasID {
-	return c.Get("project").(HasID)
+func GetProject(c Context) models.Project {
+	return c.Get("project").(models.Project)
 }
 
 type PageInfo struct {
