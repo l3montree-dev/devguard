@@ -17,6 +17,7 @@ package project
 
 import (
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
 type CreateRequest struct {
@@ -24,9 +25,8 @@ type CreateRequest struct {
 	Description string `json:"description"`
 }
 
-func (p *CreateRequest) ToModel() Model {
-	return Model{
-		Name:        p.Name,
+func (p *CreateRequest) ToModel() models.Project {
+	return models.Project{Name: p.Name,
 		Slug:        slug.Make(p.Name),
 		Description: p.Description,
 	}

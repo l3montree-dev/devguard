@@ -1,17 +1,16 @@
-package comment
+package models
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/flawfix/internal/core"
 )
 
-type Model struct {
-	core.Model
+type Comment struct {
+	Model
 	FlawID  uuid.UUID `json:"flawId"`
 	UserID  uuid.UUID `json:"userId"`
 	Comment string    `json:"comment"`
 }
 
-func (m Model) TableName() string {
+func (m Comment) TableName() string {
 	return "comments"
 }

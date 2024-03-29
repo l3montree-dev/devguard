@@ -1,10 +1,23 @@
 package asset
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/database/repositories"
 
 	"github.com/labstack/echo/v4"
 )
+
+// we use this in multiple files in the asset package itself
+type repository interface {
+	repositories.Repository[uuid.UUID, models.Asset, core.DB]
+	FindByName(name string) (models.Asset, error)
+	FindOrCreate(tx core.DB, name string) (models.Asset, error)
+	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
+	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
+	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
+}
 
 type httpController struct {
 	assetRepository repository
@@ -51,6 +64,6 @@ func (a *httpController) Create(c core.Context) error {
 }
 
 func (a *httpController) Read(c core.Context) error {
-	app := core.GetAsset(c).(Model)
+	app := core.GetAsset(c).(models.Asset)
 	return c.JSON(200, app)
 }

@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package asset
+package repositories
 
 import (
 	"sync"
@@ -21,39 +21,30 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
-// we use this in multiple files in the asset package itself
-type repository interface {
-	database.Repository[uuid.UUID, Model, core.DB]
-	FindByName(name string) (Model, error)
-	FindOrCreate(tx core.DB, name string) (Model, error)
-	GetByProjectID(projectID uuid.UUID) ([]Model, error)
-	ReadBySlug(projectID uuid.UUID, slug string) (Model, error)
-	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
+type assetRepository struct {
+	db database.DB
+	Repository[uuid.UUID, models.Asset, core.DB]
 }
 
-type gormRepository struct {
-	db core.DB
-	database.Repository[uuid.UUID, Model, core.DB]
-}
-
-func NewGormRepository(db core.DB) *gormRepository {
+func NewAssetRepository(db core.DB) *assetRepository {
 	sync.OnceFunc(func() {
-		err := db.AutoMigrate(&Model{})
+		err := db.AutoMigrate(&models.Asset{})
 		if err != nil {
 			panic(err)
 		}
 	})
 
-	return &gormRepository{
+	return &assetRepository{
 		db:         db,
-		Repository: database.NewGormRepository[uuid.UUID, Model](db),
+		Repository: newGormRepository[uuid.UUID, models.Asset](db),
 	}
 }
 
-func (a *gormRepository) FindByName(name string) (Model, error) {
-	var app Model
+func (a *assetRepository) FindByName(name string) (models.Asset, error) {
+	var app models.Asset
 	err := a.db.Where("name = ?", name).First(&app).Error
 	if err != nil {
 		return app, err
@@ -61,10 +52,10 @@ func (a *gormRepository) FindByName(name string) (Model, error) {
 	return app, nil
 }
 
-func (a *gormRepository) FindOrCreate(tx core.DB, name string) (Model, error) {
+func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, error) {
 	app, err := a.FindByName(name)
 	if err != nil {
-		app = Model{Name: name}
+		app = models.Asset{Name: name}
 		err = a.Create(tx, &app)
 		if err != nil {
 			return app, err
@@ -73,8 +64,8 @@ func (a *gormRepository) FindOrCreate(tx core.DB, name string) (Model, error) {
 	return app, nil
 }
 
-func (a *gormRepository) GetByProjectID(projectID uuid.UUID) ([]Model, error) {
-	var apps []Model
+func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, error) {
+	var apps []models.Asset
 	err := a.db.Where("project_id = ?", projectID).Find(&apps).Error
 	if err != nil {
 		return nil, err
@@ -82,13 +73,13 @@ func (a *gormRepository) GetByProjectID(projectID uuid.UUID) ([]Model, error) {
 	return apps, nil
 }
 
-func (g *gormRepository) ReadBySlug(projectID uuid.UUID, slug string) (Model, error) {
-	var t Model
+func (g *assetRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error) {
+	var t models.Asset
 	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
 	return t, err
 }
 
-func (g *gormRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
+func (g *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
 	app, err := g.ReadBySlug(projectID, slug)
 	if err != nil {
 		return uuid.UUID{}, err

@@ -19,16 +19,17 @@ import (
 	"encoding/base64"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
 type CreateRequest struct {
 	Description string `json:"description"`
 }
 
-func (p CreateRequest) ToModel(userID string) (Model, string) {
+func (p CreateRequest) ToModel(userID string) (models.PAT, string) {
 	token := base64.StdEncoding.EncodeToString([]byte(uuid.New().String()))
 
-	pat := Model{
+	pat := models.PAT{
 		UserID:      uuid.MustParse(userID),
 		Description: p.Description,
 	}

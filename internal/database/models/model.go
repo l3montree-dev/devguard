@@ -1,10 +1,9 @@
-package core
+package models
 
 import (
 	"database/sql"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -18,5 +17,3 @@ type Model struct {
 func (a Model) GetID() uuid.UUID {
 	return a.ID
 }
-
-var V = validator.New()

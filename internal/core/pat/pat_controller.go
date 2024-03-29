@@ -20,9 +20,18 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/database/repositories"
 
 	"github.com/labstack/echo/v4"
 )
+
+type repository interface {
+	repositories.Repository[uuid.UUID, models.PAT, core.DB]
+	ReadByToken(token string) (models.PAT, error)
+	ListByUserID(userId string) ([]models.PAT, error)
+	GetUserIDByToken(token string) (string, error)
+}
 
 type PatController struct {
 	patRepository repository

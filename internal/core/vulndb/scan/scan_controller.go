@@ -19,22 +19,28 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/flaw"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
-type httpController struct {
-	db          core.DB
-	sbomScanner *sbomScanner
+type cveRepository interface {
+	FindAll(cveIDs []string) ([]models.CVE, error)
 }
 
-func NewHttpController(db core.DB) *httpController {
+type httpController struct {
+	db            core.DB
+	sbomScanner   *sbomScanner
+	cveRepository cveRepository
+}
+
+func NewHttpController(db core.DB, cveRepository cveRepository) *httpController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
 	scanner := NewSBOMScanner(cpeComparer, purlComparer)
 	return &httpController{
-		db:          db,
-		sbomScanner: scanner,
+		db:            db,
+		sbomScanner:   scanner,
+		cveRepository: cveRepository,
 	}
 }
 
@@ -46,9 +52,11 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// create flaws out of those vulnerabilities
-	flaws := []flaw.Model{}
+	flaws := []models.Flaw{}
+	cveIDs := []string{}
 	for _, vuln := range vulns {
-		flaw := flaw.Model{
+		cveIDs = append(cveIDs, vuln.CVEID)
+		flaw := models.Flaw{
 			CVEID:     vuln.CVEID,
 			ScannerID: "github.com/l3montree-dev/flawfix/cmd/sbom-scanner",
 		}
@@ -58,6 +66,22 @@ func (s *httpController) Scan(c core.Context) error {
 			"packageName":       vuln.PackageName,
 		})
 		flaws = append(flaws, flaw)
+	}
+	// find all cves in our database and match them.
+	cves, err := s.cveRepository.FindAll(cveIDs)
+	if err != nil {
+		slog.Error("could not find cves", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not find cves"})
+	}
+
+	// match the cves with the found vulnerabilities
+	for _, cve := range cves {
+		for j, flaw := range flaws {
+			if cve.CVE == flaw.CVEID {
+				tmp := cve
+				flaws[j].CVE = &tmp
+			}
+		}
 	}
 
 	return c.JSON(200, flaws)

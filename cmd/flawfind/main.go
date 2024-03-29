@@ -21,10 +21,12 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/flaw"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/spf13/cobra"
 )
 
@@ -39,6 +41,23 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
+}
+
+func generateSBOM() (*os.File, error) {
+	// generate random name
+	filename := uuid.New().String() + ".json"
+
+	// run the sbom generator
+	cmd := exec.Command("cdxgen", "-o", filename)
+
+	err := cmd.Run()
+
+	if err != nil {
+		return nil, err
+	}
+
+	// open the file and return the path
+	return os.Open(filename)
 }
 
 func init() {
@@ -57,17 +76,12 @@ func init() {
 	}
 
 	rootCmd.AddCommand(&cobra.Command{
-		Use:   "sca [path to SBOM file]",
+		Use:   "sca",
 		Short: "Software composition analysis",
 		Long:  `Scan a SBOM for vulnerabilities. This command will scan a SBOM for vulnerabilities and return a list of vulnerabilities found in the SBOM. The SBOM must be passed as an argument.`,
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			core.InitLogger()
-			// check if a single argument was passed
-			if len(args) != 1 {
-				cmd.Help() // nolint: errcheck
-				os.Exit(1)
-			}
 			token, err := cmd.Flags().GetString("token")
 			if err != nil {
 				slog.Error("could not get token", "err", err)
@@ -86,12 +100,18 @@ func init() {
 
 			// read the sbom file and post it to the scan endpoint
 			// get the flaws and print them to the console
-			file, err := os.Open(args[0])
+			file, err := generateSBOM()
 			if err != nil {
 				slog.Error("could not open file", "err", err)
 				os.Exit(1)
 			}
-			defer file.Close()
+			defer func() {
+				// remove the file after the scan
+				err := os.Remove(file.Name())
+				if err != nil {
+					slog.Error("could not remove file", "err", err)
+				}
+			}()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -101,7 +121,6 @@ func init() {
 				slog.Error("could not create request", "err", err)
 				os.Exit(1)
 			}
-
 			req.Header.Set("Authorization", "Bearer "+token)
 			req.Header.Set("X-Asset-Name", assetName)
 
@@ -118,7 +137,7 @@ func init() {
 
 			// read and parse the body - it should be an array of flaws
 			// print the flaws to the console
-			flaws := []flaw.Model{}
+			flaws := []models.Flaw{}
 
 			err = json.NewDecoder(resp.Body).Decode(&flaws)
 			if err != nil {
@@ -127,7 +146,7 @@ func init() {
 			}
 
 			for _, f := range flaws {
-				slog.Info("flaw found", "cve", f.CVEID, "package", f.GetAdditionalData()["packageName"])
+				slog.Info("flaw found", "cve", f.CVEID, "package", f.GetAdditionalData()["packageName"], "severity", f.CVE.Severity)
 			}
 		},
 	})

@@ -6,15 +6,19 @@ import (
 
 	"net/http"
 
-	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/utils"
 )
+
+type cweRepository interface {
+	SaveBatch(tx database.DB, cwes []models.CWE) error
+}
 
 type mitreService struct {
 	leaderElector leaderElector
 	httpClient    *http.Client
-	cweRepository database.Repository[string, CWE, core.DB]
+	cweRepository cweRepository
 }
 
 func (mitreService) parseCWEs(xmlBytes []byte) ([]*WeaknessType, error) {
@@ -64,7 +68,7 @@ func (mitreService mitreService) fetchCWEXML() ([]*WeaknessType, error) {
 	return cwes, nil
 }
 
-func newMitreService(leaderElector leaderElector, cweRepository database.Repository[string, CWE, core.DB]) mitreService {
+func newMitreService(leaderElector leaderElector, cweRepository cweRepository) mitreService {
 	return mitreService{
 		leaderElector: leaderElector,
 		cweRepository: cweRepository,
@@ -80,7 +84,7 @@ func (mitreService mitreService) mirror() error {
 		return err
 	}
 
-	models := make([]CWE, len(cwes))
+	models := make([]models.CWE, len(cwes))
 	// insert the CWEs into the database
 	for i, cwe := range cwes {
 		models[i] = cwe.toModel()

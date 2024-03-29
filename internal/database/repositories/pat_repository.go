@@ -13,48 +13,45 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package pat
+package repositories
 
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
 type gormPatRepository struct {
-	database.Repository[uuid.UUID, Model, core.DB]
+	Repository[uuid.UUID, models.PAT, core.DB]
 	db core.DB
 }
 
-type repository interface {
-	database.Repository[uuid.UUID, Model, core.DB]
-	ReadByToken(token string) (Model, error)
-	ListByUserID(userId string) ([]Model, error)
-	GetUserIDByToken(token string) (string, error)
-}
-
-func NewGormRepository(db core.DB) *gormPatRepository {
+func NewPATRepository(db core.DB) *gormPatRepository {
+	err := db.AutoMigrate(&models.PAT{})
+	if err != nil {
+		panic(err)
+	}
 	return &gormPatRepository{
 		db:         db,
-		Repository: database.NewGormRepository[uuid.UUID, Model](db),
+		Repository: newGormRepository[uuid.UUID, models.PAT](db),
 	}
 }
 
-func (g *gormPatRepository) ReadByToken(token string) (Model, error) {
-	var t Model
+func (g *gormPatRepository) ReadByToken(token string) (models.PAT, error) {
+	var t models.PAT
 	// make sure to hash the token before querying
 	err := g.db.First(&t, "token = ?", t.HashToken(token)).Error
 	return t, err
 }
 
-func (g *gormPatRepository) ListByUserID(userId string) ([]Model, error) {
-	var pats []Model
+func (g *gormPatRepository) ListByUserID(userId string) ([]models.PAT, error) {
+	var pats []models.PAT
 	err := g.db.Where("user_id = ?", userId).Find(&pats).Error
 	return pats, err
 }
 
 func (g *gormPatRepository) GetUserIDByToken(token string) (string, error) {
-	var t Model
+	var t models.PAT
 	err := g.db.First(&t, "token = ?", t.HashToken(token)).Error
 	return t.UserID.String(), err
 }

@@ -1,4 +1,4 @@
-package config
+package models
 
 type Config struct {
 	Key string `gorm:"primarykey"`

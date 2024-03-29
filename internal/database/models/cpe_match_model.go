@@ -1,6 +1,4 @@
-package vulndb
-
-import "strings"
+package models
 
 type CPEMatch struct {
 	MatchCriteriaID string `json:"matchCriteriaId" gorm:"primaryKey;type:text;"`
@@ -23,30 +21,4 @@ type CPEMatch struct {
 	Vulnerable bool `json:"vulnerable" gorm:"type:boolean;"`
 
 	CVEs []*CVE `json:"cve" gorm:"many2many:cve_cpe_match;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-}
-
-// criteria format:
-// cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
-func fromNVDCPEMatch(cpeMatch nvdCpeMatch) CPEMatch {
-	// split the criteria into its parts
-	parts := strings.Split(cpeMatch.Criteria, ":")
-
-	return CPEMatch{
-		Criteria:              cpeMatch.Criteria,
-		MatchCriteriaID:       cpeMatch.MatchCriteriaID,
-		Part:                  parts[2],
-		Vendor:                parts[3],
-		Product:               parts[4],
-		Version:               parts[5],
-		Update:                parts[6],
-		Edition:               parts[7],
-		Language:              parts[8],
-		SwEdition:             parts[9],
-		TargetSw:              parts[10],
-		TargetHw:              parts[11],
-		Other:                 parts[12],
-		VersionEndExcluding:   cpeMatch.VersionEndIncluding,
-		VersionStartIncluding: cpeMatch.VersionStartIncluding,
-		Vulnerable:            cpeMatch.Vulnerable,
-	}
 }

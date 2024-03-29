@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package vulndb
+package models
 
 import (
 	"fmt"
@@ -42,7 +42,7 @@ type rng struct {
 	Events []semverEvent `json:"events"`
 }
 
-type affected struct {
+type Affected struct {
 	Package          pkg      `json:"package"`
 	Ranges           []rng    `json:"ranges"`
 	Versions         []string `json:"versions"`
@@ -58,11 +58,11 @@ type OSV struct {
 	Published     time.Time  `json:"published"`
 	Related       []string   `json:"related"`
 	Aliases       []string   `json:"aliases"`
-	Affected      []affected `json:"affected"`
+	Affected      []Affected `json:"affected"`
 	SchemaVersion string     `json:"schema_version"`
 }
 
-func (osv OSV) getCVE() []string {
+func (osv OSV) GetCVE() []string {
 	cves := make([]string, 0)
 	for _, alias := range osv.Aliases {
 		if strings.HasPrefix(alias, "CVE-") {
@@ -76,8 +76,8 @@ func (osv OSV) getCVE() []string {
 
 	return cves
 }
-func (osv OSV) isCVE() bool {
-	return len(osv.getCVE()) > 0
+func (osv OSV) IsCVE() bool {
+	return len(osv.GetCVE()) > 0
 }
 
 type AffectedPackage struct {
@@ -111,10 +111,10 @@ func (affectedPackage *AffectedPackage) SetID() {
 	affectedPackage.ID = fmt.Sprintf("%x", hash)
 }
 
-func fromOSV(osv OSV) []AffectedPackage {
+func (osv OSV) GetAffectedPackages() []AffectedPackage {
 	affectedPackages := make([]AffectedPackage, 0)
 
-	cveIds := osv.getCVE()
+	cveIds := osv.GetCVE()
 	cves := make([]CVE, len(cveIds))
 	for i, cveID := range cveIds {
 		cves[i] = CVE{CVE: cveID}

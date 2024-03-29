@@ -56,8 +56,16 @@ func GetSession(ctx Context) AuthSession {
 	return ctx.Get("session").(AuthSession)
 }
 
+func GetParam(c Context, param string) string {
+	value := c.Param(param)
+	if value == "" {
+		return c.Get(param).(string)
+	}
+	return value
+}
+
 func GetProjectSlug(c Context) (string, error) {
-	projectID := c.Param("projectSlug")
+	projectID := GetParam(c, "projectSlug")
 	if projectID == "" {
 		return "", fmt.Errorf("could not get project id")
 	}

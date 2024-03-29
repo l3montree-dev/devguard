@@ -1,40 +1,33 @@
-package flaw
+package repositories
 
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"gorm.io/gorm"
 )
 
-type gormRepository struct {
+type flawRepository struct {
 	db core.DB
-	database.Repository[uuid.UUID, Model, core.DB]
+	Repository[uuid.UUID, models.Flaw, core.DB]
 }
 
-type repository interface {
-	database.Repository[uuid.UUID, Model, core.DB]
-
-	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]Model, error)
-	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[Model], error)
-}
-
-func NewGormRepository(db core.DB) *gormRepository {
-	if err := db.AutoMigrate(&Model{}); err != nil {
+func NewFlawRepository(db core.DB) *flawRepository {
+	if err := db.AutoMigrate(&models.Flaw{}); err != nil {
 		panic(err)
 	}
-	return &gormRepository{
+	return &flawRepository{
 		db:         db,
-		Repository: database.NewGormRepository[uuid.UUID, Model](db),
+		Repository: newGormRepository[uuid.UUID, models.Flaw](db),
 	}
 }
 
-func (r *gormRepository) GetByAssetId(
+func (r *flawRepository) GetByAssetId(
 	tx *gorm.DB,
 	assetId uuid.UUID,
-) ([]Model, error) {
+) ([]models.Flaw, error) {
 
-	var flaws []Model = []Model{}
+	var flaws []models.Flaw = []models.Flaw{}
 	// get all flaws of the asset
 	if err := r.Repository.GetDB(tx).Where("asset_id = ?", assetId).Find(&flaws).Error; err != nil {
 		return nil, err
@@ -42,9 +35,9 @@ func (r *gormRepository) GetByAssetId(
 	return flaws, nil
 }
 
-func (r *gormRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[Model], error) {
+func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error) {
 	var count int64
-	var flaws []Model = []Model{}
+	var flaws []models.Flaw = []models.Flaw{}
 
 	q := r.Repository.GetDB(tx).Joins("CVE").Where("asset_id = ?", assetId)
 
@@ -52,7 +45,7 @@ func (r *gormRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value)
 	}
-	q.Model(&Model{}).Count(&count)
+	q.Model(&models.Flaw{}).Count(&count)
 
 	// get all flaws of the asset
 	q = pageInfo.ApplyOnDB(r.Repository.GetDB(tx)).Joins("CVE").Where("asset_id = ?", assetId)
@@ -74,14 +67,14 @@ func (r *gormRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 	err := q.Find(&flaws).Error
 
 	if err != nil {
-		return core.Paged[Model]{}, err
+		return core.Paged[models.Flaw]{}, err
 	}
 
 	return core.NewPaged(pageInfo, count, flaws), nil
 }
 
-func (g gormRepository) Read(id uuid.UUID) (Model, error) {
-	var t Model
+func (g flawRepository) Read(id uuid.UUID) (models.Flaw, error) {
+	var t models.Flaw
 	err := g.db.Preload("CVE.CWEs").Preload("Events").Preload("CVE").First(&t, id).Error
 
 	return t, err

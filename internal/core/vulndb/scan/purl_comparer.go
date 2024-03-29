@@ -19,7 +19,7 @@ import (
 	"net/url"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
@@ -47,7 +47,7 @@ func (comparer *purlComparer) GetVulns(purl string) ([]vulnInPackage, error) {
 		return nil, err
 	}
 
-	affectedPackages := []vulndb.AffectedPackage{}
+	affectedPackages := []models.AffectedPackage{}
 	p.Version = ""
 
 	pURL, err := url.PathUnescape(p.ToString())
@@ -55,7 +55,7 @@ func (comparer *purlComparer) GetVulns(purl string) ([]vulnInPackage, error) {
 		return nil, errors.Wrap(err, "could not unescape purl path")
 	}
 	// check if the package is present in the database
-	comparer.db.Model(&vulndb.AffectedPackage{}).Where("p_url = ?", pURL).Where(
+	comparer.db.Model(&models.AffectedPackage{}).Where("p_url = ?", pURL).Where(
 		comparer.db.Where(
 			"version = ?", version).
 			Or("semver_introduced IS NULL AND semver_fixed > ?", version).

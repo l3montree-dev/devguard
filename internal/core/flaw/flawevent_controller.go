@@ -2,14 +2,19 @@ package flaw
 
 import (
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/labstack/echo/v4"
 )
 
-type FlawEventHttpController struct {
-	flawEventRepository eventRepository
+type flawEventRepository interface {
+	Create(tx core.DB, flawEvent *models.FlawEvent) error
 }
 
-func NewEventHttpController(flawEventRepository eventRepository) *FlawEventHttpController {
+type FlawEventHttpController struct {
+	flawEventRepository flawEventRepository
+}
+
+func NewEventHttpController(flawEventRepository flawEventRepository) *FlawEventHttpController {
 	return &FlawEventHttpController{
 		flawEventRepository: flawEventRepository,
 	}

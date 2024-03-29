@@ -1,10 +1,9 @@
-package mitigation
+package models
 
 import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/flawfix/internal/core"
 
 	"gorm.io/datatypes"
 )
@@ -21,7 +20,7 @@ const (
 )
 
 type Mitigation struct {
-	core.Model
+	Model
 	Type             Type      `json:"mitigationType"`
 	InitiatingUserID string    `json:"initiatingUserId"`
 	ResultID         uuid.UUID `json:"resultId"`

@@ -10,16 +10,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/pkg/errors"
 )
 
 type epssService struct {
 	nvdService    NVDService
-	cveRepository repository
+	cveRepository cveRepository
 	httpClient    *http.Client
 }
 
-func newEPSSService(nvdService NVDService, cveRepository repository) epssService {
+func newEPSSService(nvdService NVDService, cveRepository cveRepository) epssService {
 	return epssService{
 		nvdService:    nvdService,
 		cveRepository: cveRepository,
@@ -32,7 +33,7 @@ var epssURL = "https://epss.cyentia.com/epss_scores-current.csv.gz"
 func ptrFloat32(f float32) *float32 {
 	return &f
 }
-func (s *epssService) fetchCSV(ctx context.Context) ([]CVE, error) {
+func (s *epssService) fetchCSV(ctx context.Context) ([]models.CVE, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, epssURL, nil)
 
 	if err != nil {
@@ -56,7 +57,7 @@ func (s *epssService) fetchCSV(ctx context.Context) ([]CVE, error) {
 		return nil, errors.Wrap(err, "could not read body")
 	}
 
-	results := make([]CVE, 0)
+	results := make([]models.CVE, 0)
 	// parse the csv - we do not care about the first two lines
 	// the first line is information about the model,
 	// the second line is the header
@@ -74,7 +75,7 @@ func (s *epssService) fetchCSV(ctx context.Context) ([]CVE, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not parse percentile")
 		}
-		results = append(results, CVE{
+		results = append(results, models.CVE{
 			CVE:        columns[0],
 			EPSS:       ptrFloat32(float32(epss)),
 			Percentile: ptrFloat32(float32(percentile)),
@@ -94,7 +95,7 @@ func (s epssService) mirror() error {
 	} else {
 		for _, cve := range cves {
 			tmpCVE := cve
-			if err := s.cveRepository.GetDB(nil).Model(&CVE{}).Where("cve = ?", tmpCVE.CVE).Updates(map[string]interface{}{
+			if err := s.cveRepository.GetDB(nil).Model(&models.CVE{}).Where("cve = ?", tmpCVE.CVE).Updates(map[string]interface{}{
 				"epss":       tmpCVE.EPSS,
 				"percentile": tmpCVE.Percentile,
 			}).Error; err != nil {
