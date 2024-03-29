@@ -22,11 +22,14 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/utils"
 	"github.com/pkg/errors"
+	"gorm.io/datatypes"
 )
 
 var baseURL = url.URL{
@@ -37,13 +40,13 @@ var baseURL = url.URL{
 
 type NVDService struct {
 	httpClient    *http.Client
-	cveRepository repository
+	cveRepository cveRepository
 	leaderElector leaderElector
 	configService configService
 	lock          *sync.Mutex
 }
 
-func NewNVDService(leaderElector leaderElector, configService configService, cveRepository repository) NVDService {
+func NewNVDService(leaderElector leaderElector, configService configService, cveRepository cveRepository) NVDService {
 	return NVDService{
 		configService: configService,
 		cveRepository: cveRepository,
@@ -58,7 +61,7 @@ func NewNVDService(leaderElector leaderElector, configService configService, cve
 	}
 }
 
-func (nvdService NVDService) ImportCVE(cveID string) (CVE, error) {
+func (nvdService NVDService) ImportCVE(cveID string) (models.CVE, error) {
 	// make a copy of the base url
 	u := baseURL
 	q := u.Query()
@@ -68,16 +71,16 @@ func (nvdService NVDService) ImportCVE(cveID string) (CVE, error) {
 	resp, err := nvdService.fetchJSONFromNVD(u, 1)
 	if err != nil {
 		slog.Error("Could not fetch from NVD", "err", err)
-		return CVE{}, err
+		return models.CVE{}, err
 	}
 
 	if len(resp.Vulnerabilities) == 0 {
-		return CVE{}, fmt.Errorf("could not find CVE with id %s", cveID)
+		return models.CVE{}, fmt.Errorf("could not find CVE with id %s", cveID)
 	}
 
 	cve := fromNVDCVE(resp.Vulnerabilities[0].Cve)
 	if err := nvdService.cveRepository.Save(nil, &cve); err != nil {
-		return CVE{}, err
+		return models.CVE{}, err
 	}
 
 	return cve, nil
@@ -131,7 +134,7 @@ func (nvdService NVDService) fetchJSONFromNVD(url url.URL, currentTry int) (nist
 }
 
 func (nvdService NVDService) saveResponseInDB(resp nistResponse) error {
-	cves := make([]CVE, len(resp.Vulnerabilities))
+	cves := make([]models.CVE, len(resp.Vulnerabilities))
 	for i, v := range resp.Vulnerabilities {
 		cves[i] = fromNVDCVE(v.Cve)
 	}
@@ -170,7 +173,7 @@ func (nvdService NVDService) fetchAndSaveAllPages(url url.URL) error {
 
 		slog.Info("fetching all pages from nvd", "url", u.String())
 		resp, err := nvdService.fetchJSONFromNVD(u, 1)
-		// make sure to cancel the context
+
 		apiRequestFinished := time.Now()
 		if err != nil {
 			return err
@@ -230,4 +233,193 @@ func (nvdService NVDService) mirror() error {
 	}
 
 	return nvdService.fetchAfter(lastModDate)
+}
+
+type cvssMetric struct {
+	Severity              string
+	CVSS                  float32
+	ExploitabilityScore   float32
+	ImpactScore           float32
+	AttackVector          string
+	AttackComplexity      string
+	PrivilegesRequired    string
+	UserInteraction       string
+	Scope                 string
+	ConfidentialityImpact string
+	IntegrityImpact       string
+	AvailabilityImpact    string
+}
+
+func toDate(date *utils.Date) *datatypes.Date {
+	if date == nil {
+		return nil
+	}
+	t := datatypes.Date(*date)
+	return &t
+}
+
+func getCVSSMetric(nvdCVE nvdCVE) cvssMetric {
+	// check if cvss v3 is available
+	if len(nvdCVE.Metrics.CvssMetricV31) > 0 {
+		return cvssMetric{
+			Severity:              nvdCVE.Metrics.CvssMetricV31[0].CvssData.BaseSeverity,
+			CVSS:                  float32(nvdCVE.Metrics.CvssMetricV31[0].CvssData.BaseScore),
+			ExploitabilityScore:   float32(nvdCVE.Metrics.CvssMetricV31[0].ExploitabilityScore),
+			ImpactScore:           float32(nvdCVE.Metrics.CvssMetricV31[0].ImpactScore),
+			AttackVector:          nvdCVE.Metrics.CvssMetricV31[0].CvssData.AttackVector,
+			AttackComplexity:      nvdCVE.Metrics.CvssMetricV31[0].CvssData.AttackComplexity,
+			PrivilegesRequired:    nvdCVE.Metrics.CvssMetricV31[0].CvssData.PrivilegesRequired,
+			UserInteraction:       nvdCVE.Metrics.CvssMetricV31[0].CvssData.UserInteraction,
+			Scope:                 nvdCVE.Metrics.CvssMetricV31[0].CvssData.Scope,
+			ConfidentialityImpact: nvdCVE.Metrics.CvssMetricV31[0].CvssData.ConfidentialityImpact,
+			IntegrityImpact:       nvdCVE.Metrics.CvssMetricV31[0].CvssData.IntegrityImpact,
+			AvailabilityImpact:    nvdCVE.Metrics.CvssMetricV31[0].CvssData.AvailabilityImpact,
+		}
+	}
+	if len(nvdCVE.Metrics.CvssMetricV2) == 0 {
+		return cvssMetric{}
+	}
+
+	return cvssMetric{
+		Severity:              nvdCVE.Metrics.CvssMetricV2[0].BaseSeverity,
+		CVSS:                  float32(nvdCVE.Metrics.CvssMetricV2[0].CvssData.BaseScore),
+		ExploitabilityScore:   float32(nvdCVE.Metrics.CvssMetricV2[0].ExploitabilityScore),
+		ImpactScore:           float32(nvdCVE.Metrics.CvssMetricV2[0].ImpactScore),
+		AttackVector:          nvdCVE.Metrics.CvssMetricV2[0].CvssData.AccessVector,
+		AttackComplexity:      nvdCVE.Metrics.CvssMetricV2[0].CvssData.AccessComplexity,
+		PrivilegesRequired:    nvdCVE.Metrics.CvssMetricV2[0].CvssData.Authentication,
+		UserInteraction:       "",
+		Scope:                 "",
+		ConfidentialityImpact: nvdCVE.Metrics.CvssMetricV2[0].CvssData.ConfidentialityImpact,
+		IntegrityImpact:       nvdCVE.Metrics.CvssMetricV2[0].CvssData.IntegrityImpact,
+		AvailabilityImpact:    nvdCVE.Metrics.CvssMetricV2[0].CvssData.AvailabilityImpact,
+	}
+}
+
+func fromNVDCVE(nistCVE nvdCVE) models.CVE {
+	published, err := time.Parse(utils.ISO8601Format, nistCVE.Published)
+	if err != nil {
+		published = time.Now()
+	}
+
+	lastModified, err := time.Parse(utils.ISO8601Format, nistCVE.LastModified)
+	if err != nil {
+		slog.Error("Error while parsing last modified date", "err", err)
+		lastModified = time.Now()
+	}
+
+	description := ""
+
+	for _, d := range nistCVE.Descriptions {
+		if d.Lang == "en" {
+			description = d.Value
+			break
+		}
+	}
+
+	// build the cwe list
+	weaknesses := []*models.Weakness{}
+	configurations := []*models.CPEMatch{}
+
+	for _, w := range nistCVE.Weaknesses {
+		for _, d := range w.Description {
+			if !strings.HasPrefix(d.Value, "CWE-") {
+				// only handle CWES - just continue. The nist might give us other weaknesses
+				continue
+			}
+
+			if d.Lang == "en" {
+				weaknesses = append(weaknesses, &models.Weakness{
+					Source: w.Source,
+					Type:   w.Type,
+					CWEID:  d.Value,
+					CVEID:  nistCVE.ID,
+				})
+			}
+		}
+	}
+
+	matchCriteriaIds := make(map[string]struct{})
+
+	for _, c := range nistCVE.Configurations {
+		for _, n := range c.Nodes {
+			for _, m := range n.CpeMatch {
+				// check if we already have that criteria
+				if _, ok := matchCriteriaIds[m.MatchCriteriaID]; ok {
+					continue
+				}
+
+				matchCriteriaIds[m.MatchCriteriaID] = struct{}{}
+				cpe := fromNVDCPEMatch(m)
+				configurations = append(configurations, &cpe)
+			}
+		}
+	}
+
+	cvssMetric := getCVSSMetric(nistCVE)
+
+	// marshal the references
+	refs, err := json.Marshal(nistCVE.References)
+	if err != nil {
+		slog.Error("Error while marshaling references", "err", err)
+	}
+
+	return models.CVE{
+		CVE:              nistCVE.ID,
+		DatePublished:    published,
+		DateLastModified: lastModified,
+
+		Description: description,
+
+		Weaknesses: weaknesses,
+
+		Severity:              models.Severity(cvssMetric.Severity),
+		CVSS:                  cvssMetric.CVSS,
+		ExploitabilityScore:   cvssMetric.ExploitabilityScore,
+		ImpactScore:           cvssMetric.ImpactScore,
+		AttackVector:          cvssMetric.AttackVector,
+		AttackComplexity:      cvssMetric.AttackComplexity,
+		PrivilegesRequired:    cvssMetric.PrivilegesRequired,
+		UserInteraction:       cvssMetric.UserInteraction,
+		Scope:                 cvssMetric.Scope,
+		ConfidentialityImpact: cvssMetric.ConfidentialityImpact,
+		IntegrityImpact:       cvssMetric.IntegrityImpact,
+		AvailabilityImpact:    cvssMetric.AvailabilityImpact,
+
+		CISAExploitAdd:        toDate(nistCVE.CISAExploitAdd),
+		CISAActionDue:         toDate(nistCVE.CISAActionDue),
+		CISARequiredAction:    nistCVE.CISARequiredAction,
+		CISAVulnerabilityName: nistCVE.CISAVulnerabilityName,
+
+		Configurations: configurations,
+
+		References: string(refs),
+	}
+
+}
+
+// criteria format:
+// cpe:2.3:part:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
+func fromNVDCPEMatch(cpeMatch nvdCpeMatch) models.CPEMatch {
+	// split the criteria into its parts
+	parts := strings.Split(cpeMatch.Criteria, ":")
+
+	return models.CPEMatch{
+		Criteria:              cpeMatch.Criteria,
+		MatchCriteriaID:       cpeMatch.MatchCriteriaID,
+		Part:                  parts[2],
+		Vendor:                parts[3],
+		Product:               parts[4],
+		Version:               parts[5],
+		Update:                parts[6],
+		Edition:               parts[7],
+		Language:              parts[8],
+		SwEdition:             parts[9],
+		TargetSw:              parts[10],
+		TargetHw:              parts[11],
+		Other:                 parts[12],
+		VersionEndExcluding:   cpeMatch.VersionEndIncluding,
+		VersionStartIncluding: cpeMatch.VersionStartIncluding,
+		Vulnerable:            cpeMatch.Vulnerable,
+	}
 }

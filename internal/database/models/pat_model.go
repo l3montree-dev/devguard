@@ -1,4 +1,4 @@
-package pat
+package models
 
 import (
 	"crypto/sha256"
@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type Model struct {
+type PAT struct {
 	CreatedAt   time.Time `json:"createdAt"`
 	UserID      uuid.UUID `json:"userId"`
 	Token       string    `json:"-"`
@@ -16,17 +16,17 @@ type Model struct {
 	ID          uuid.UUID `json:"id" gorm:"type:uuid;default:gen_random_uuid()"`
 }
 
-func (p Model) TableName() string {
+func (p PAT) TableName() string {
 	return "pat"
 }
 
-func (p Model) HashToken(token string) string {
+func (p PAT) HashToken(token string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(token))
 	// make it base64
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil))
 }
 
-func (p Model) GetUserID() string {
+func (p PAT) GetUserID() string {
 	return p.UserID.String()
 }

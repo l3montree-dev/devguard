@@ -1,4 +1,4 @@
-package vulndb
+package models
 
 import (
 	"database/sql"

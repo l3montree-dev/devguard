@@ -4,18 +4,19 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"gorm.io/datatypes"
 )
 
 type FlawEventDTO struct {
-	Type   Type   `json:"type"`
-	FlawID string `json:"flawId"`
-	UserID string `json:"userId"`
+	Type   models.FlawEventType `json:"type"`
+	FlawID string               `json:"flawId"`
+	UserID string               `json:"userId"`
 
 	Payload interface{} `json:"payload"`
 }
 
-func (dto FlawEventDTO) ToModel() EventModel {
+func (dto FlawEventDTO) ToModel() models.FlawEvent {
 	flawId := uuid.MustParse(dto.FlawID)
 	userId := uuid.MustParse(dto.UserID)
 
@@ -27,7 +28,7 @@ func (dto FlawEventDTO) ToModel() EventModel {
 
 	jsonPayload := datatypes.JSON(payload)
 
-	return EventModel{
+	return models.FlawEvent{
 		Type:   dto.Type,
 		FlawID: flawId,
 		UserID: userId,

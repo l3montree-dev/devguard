@@ -19,21 +19,27 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/asset"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/database/repositories"
 
 	"github.com/labstack/echo/v4"
 )
 
+type projectRepository interface {
+	repositories.Repository[uuid.UUID, models.Project, core.DB]
+	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
+}
+
 type assetRepository interface {
-	GetByProjectID(projectID uuid.UUID) ([]asset.Model, error)
+	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 }
 
 type Controller struct {
-	projectRepository repository
+	projectRepository projectRepository
 	assetRepository   assetRepository
 }
 
-func NewHttpController(repository repository, assetRepository assetRepository) *Controller {
+func NewHttpController(repository projectRepository, assetRepository assetRepository) *Controller {
 	return &Controller{
 		projectRepository: repository,
 		assetRepository:   assetRepository,
@@ -65,7 +71,7 @@ func (p *Controller) Create(c core.Context) error {
 	return c.JSON(200, model)
 }
 
-func (p *Controller) bootstrapProject(c core.Context, project Model) error {
+func (p *Controller) bootstrapProject(c core.Context, project models.Project) error {
 	// get the rbac object
 	rbac := core.GetRBAC(c)
 	// make sure to keep the organization roles in sync
@@ -124,7 +130,7 @@ func (p *Controller) Delete(c core.Context) error {
 
 func (p *Controller) Read(c core.Context) error {
 	// just get the project from the context
-	project := core.GetProject(c).(Model)
+	project := core.GetProject(c).(models.Project)
 
 	// lets fetch the assets related to this project
 	assets, err := p.assetRepository.GetByProjectID(project.ID)

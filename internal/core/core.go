@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/labstack/echo/v4"
@@ -43,3 +44,5 @@ func InitLogger() {
 func LoadConfig() error {
 	return godotenv.Load()
 }
+
+var V = validator.New()

@@ -1,8 +1,19 @@
 package vulndb
 
 import (
+	"time"
+
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/database/repositories"
 )
+
+type cveRepository interface {
+	repositories.Repository[string, models.CVE, database.DB]
+	FindByID(id string) (models.CVE, error)
+	GetLastModDate() (time.Time, error)
+}
 
 type configService interface {
 	GetJSONConfig(key string, v any) error
@@ -14,9 +25,9 @@ type leaderElector interface {
 }
 
 func StartMirror(database core.DB, leaderElector leaderElector, configService configService) {
-	cveRepository := NewGormRepository(database)
-	cweRepository := newGormCWERepository(database)
-	affectedPkgRepository := newAffectedPkgGormRepository(database)
+	cveRepository := repositories.NewCVERepository(database)
+	cweRepository := repositories.NewCWERepository(database)
+	affectedPkgRepository := repositories.NewAffectedPkgRepository(database)
 
 	nvdService := NewNVDService(leaderElector, configService, cveRepository)
 	epssService := newEPSSService(nvdService, cveRepository)

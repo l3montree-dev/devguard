@@ -24,8 +24,9 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/flaw"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/spf13/cobra"
 )
 
@@ -43,8 +44,11 @@ func Execute() {
 }
 
 func generateSBOM() (*os.File, error) {
+	// generate random name
+	filename := uuid.New().String() + ".json"
+
 	// run the sbom generator
-	cmd := exec.Command("cdxgen", "-o", "sbom.json")
+	cmd := exec.Command("cdxgen", "-o", filename)
 
 	err := cmd.Run()
 
@@ -53,7 +57,7 @@ func generateSBOM() (*os.File, error) {
 	}
 
 	// open the file and return the path
-	return os.Open("sbom.json")
+	return os.Open(filename)
 }
 
 func init() {
@@ -101,7 +105,13 @@ func init() {
 				slog.Error("could not open file", "err", err)
 				os.Exit(1)
 			}
-			defer file.Close()
+			defer func() {
+				// remove the file after the scan
+				err := os.Remove(file.Name())
+				if err != nil {
+					slog.Error("could not remove file", "err", err)
+				}
+			}()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -127,7 +137,7 @@ func init() {
 
 			// read and parse the body - it should be an array of flaws
 			// print the flaws to the console
-			flaws := []flaw.Model{}
+			flaws := []models.Flaw{}
 
 			err = json.NewDecoder(resp.Body).Decode(&flaws)
 			if err != nil {

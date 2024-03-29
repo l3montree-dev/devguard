@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package database
+package repositories
 
 import (
 	"gorm.io/gorm"
@@ -40,7 +40,7 @@ type GormRepository[ID comparable, T Tabler] struct {
 	db *gorm.DB
 }
 
-func NewGormRepository[ID comparable, T Tabler](db *gorm.DB) Repository[ID, T, *gorm.DB] {
+func newGormRepository[ID comparable, T Tabler](db *gorm.DB) Repository[ID, T, *gorm.DB] {
 	return &GormRepository[ID, T]{
 		db: db,
 	}

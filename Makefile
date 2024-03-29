@@ -16,3 +16,6 @@ cli::
 
 run-cli::
 	go run ./cmd/flawfix-cli/main.go
+
+flawfind::
+	docker build -t flawfind -f Dockerfile.flawfind .

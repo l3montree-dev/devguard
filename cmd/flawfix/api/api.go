@@ -30,22 +30,23 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core/org"
 	"github.com/l3montree-dev/flawfix/internal/core/pat"
 	"github.com/l3montree-dev/flawfix/internal/core/project"
-	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
 	"github.com/l3montree-dev/flawfix/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/database/repositories"
 	"github.com/l3montree-dev/flawfix/internal/echohttp"
 	"github.com/labstack/echo/v4"
 )
 
 type assetRepository interface {
-	ReadBySlug(projectID uuid.UUID, slug string) (asset.Model, error)
+	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 }
 
 type orgRepository interface {
-	ReadBySlug(slug string) (org.Model, error)
+	ReadBySlug(slug string) (models.Org, error)
 }
 
 type projectRepository interface {
-	ReadBySlug(organizationID uuid.UUID, slug string) (project.Model, error)
+	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
 }
 
 func assetMiddleware(repository assetRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -228,13 +229,13 @@ func Start(db core.DB) {
 	}
 
 	// init all repositories using the provided database
-	patRepository := pat.NewGormRepository(db)
-	assetRepository := asset.NewGormRepository(db)
-	projectRepository := project.NewGormRepository(db)
+	patRepository := repositories.NewPATRepository(db)
+	assetRepository := repositories.NewAssetRepository(db)
+	projectRepository := repositories.NewProjectRepository(db)
 	projectScopedRBAC := projectAccessControlFactory(projectRepository)
-	orgRepository := org.NewGormRepository(db)
-	cveRepository := vulndb.NewGormRepository(db)
-	flawRepository := flaw.NewGormRepository(db)
+	orgRepository := repositories.NewOrgRepository(db)
+	cveRepository := repositories.NewCVERepository(db)
+	flawRepository := repositories.NewFlawRepository(db)
 	flawController := flaw.NewHttpController(flawRepository)
 
 	// init all http controllers using the repositories

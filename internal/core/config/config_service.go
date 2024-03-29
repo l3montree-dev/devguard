@@ -4,22 +4,27 @@ import (
 	"encoding/json"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/database/repositories"
 )
 
+type configRepository interface {
+	Save(tx core.DB, config *models.Config) error
+	GetDB(tx core.DB) core.DB
+}
 type Service struct {
-	repository database.Repository[string, Config, core.DB]
+	repository configRepository
 }
 
 func NewService(db core.DB) Service {
-	repository := NewGormRepository(db)
+	repository := repositories.NewConfigRepository(db)
 	return Service{
 		repository: repository,
 	}
 }
 
 func (service Service) GetJSONConfig(key string, v any) error {
-	var config Config
+	var config models.Config
 	if err := service.repository.GetDB(nil).Where("key = ?", key).First(&config).Error; err != nil {
 		return err
 	}
@@ -33,7 +38,7 @@ func (service Service) SetJSONConfig(key string, v any) error {
 		return err
 	}
 
-	config := Config{
+	config := models.Config{
 		Key: key,
 		Val: string(b),
 	}

@@ -8,6 +8,8 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+type DB = *gorm.DB
+
 func NewConnection(host, user, password, dbname, port string) (*gorm.DB, error) {
 	// https://github.com/go-gorm/postgres
 	db, err := gorm.Open(postgres.New(postgres.Config{

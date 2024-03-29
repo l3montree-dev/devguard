@@ -12,34 +12,34 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-package vulndb
+package repositories
 
 import (
 	"log/slog"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
 )
 
-type affectedPkgGormRepository struct {
-	database.Repository[string, AffectedPackage, core.DB]
+type affectedPkgRepository struct {
+	Repository[string, models.AffectedPackage, core.DB]
 }
 
-func newAffectedPkgGormRepository(db core.DB) affectedPkgGormRepository {
-	err := db.AutoMigrate(&AffectedPackage{})
+func NewAffectedPkgRepository(db core.DB) *affectedPkgRepository {
+	err := db.AutoMigrate(&models.AffectedPackage{})
 	if err != nil {
 		panic(err)
 	}
 
-	return affectedPkgGormRepository{
-		Repository: database.NewGormRepository[string, AffectedPackage](db),
+	return &affectedPkgRepository{
+		Repository: newGormRepository[string, models.AffectedPackage](db),
 	}
 }
 
-func (g *affectedPkgGormRepository) createInBatches(tx core.DB, pkgs []AffectedPackage, batchSize int) error {
+func (g *affectedPkgRepository) createInBatches(tx core.DB, pkgs []models.AffectedPackage, batchSize int) error {
 	err := g.GetDB(tx).Session(
 		&gorm.Session{
 			Logger: logger.Default.LogMode(logger.Silent),
@@ -77,6 +77,6 @@ func (g *affectedPkgGormRepository) createInBatches(tx core.DB, pkgs []AffectedP
 	return err
 }
 
-func (g *affectedPkgGormRepository) SaveBatch(tx core.DB, affectedPkgs []AffectedPackage) error {
+func (g *affectedPkgRepository) SaveBatch(tx core.DB, affectedPkgs []models.AffectedPackage) error {
 	return g.createInBatches(tx, affectedPkgs, 1000)
 }

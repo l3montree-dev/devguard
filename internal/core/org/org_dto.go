@@ -17,6 +17,7 @@ package org
 
 import (
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
 type createRequest struct {
@@ -32,8 +33,8 @@ type createRequest struct {
 	Description            string  `json:"description"`
 }
 
-func (c createRequest) toModel() Model {
-	return Model{
+func (c createRequest) toModel() models.Org {
+	return models.Org{
 		Name:                   c.Name,
 		ContactPhoneNumber:     c.ContactPhoneNumber,
 		NumberOfEmployees:      c.NumberOfEmployees,

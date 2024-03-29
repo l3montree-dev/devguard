@@ -20,7 +20,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_21.x | bash - && \
     apt-get install -y nodejs
 
 # install the cdxgen package
-RUN npm install -g @cyclonedx/cdxgen
+RUN npm install -g @cyclonedx/cdxgen@v10.2.5
 
 # set the working directory
 WORKDIR /app

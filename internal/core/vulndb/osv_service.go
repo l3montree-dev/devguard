@@ -25,16 +25,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/utils"
 	"github.com/pkg/errors"
 )
 
+type affectedPkgRepository interface {
+	SaveBatch(tx database.DB, affectedPackages []models.AffectedPackage) error
+}
 type osvService struct {
 	httpClient            *http.Client
-	affectedPkgRepository affectedPkgGormRepository
+	affectedPkgRepository affectedPkgRepository
 }
 
-func newOSVService(affectedPkgRepository affectedPkgGormRepository) osvService {
+func newOSVService(affectedPkgRepository affectedPkgRepository) osvService {
 	return osvService{
 		httpClient:            &http.Client{},
 		affectedPkgRepository: affectedPkgRepository,
@@ -139,19 +144,19 @@ func (s osvService) mirror() error {
 				continue
 			}
 
-			osv := OSV{}
+			osv := models.OSV{}
 			err = json.Unmarshal(unzippedFileBytes, &osv)
 			if err != nil {
 				slog.Error("could not unmarshal osv", "err", err)
 				continue
 			}
 
-			if !osv.isCVE() {
+			if !osv.IsCVE() {
 				continue
 			}
 
 			// convert the osv to affected packages
-			affectedPackages := fromOSV(osv)
+			affectedPackages := osv.GetAffectedPackages()
 			// save the affected packages
 			err = s.affectedPkgRepository.SaveBatch(nil, affectedPackages)
 			if err != nil {

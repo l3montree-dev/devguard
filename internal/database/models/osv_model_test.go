@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package vulndb
+package models
 
 import (
 	"encoding/json"
@@ -25,9 +25,9 @@ import (
 func TestFromOSV(t *testing.T) {
 	t.Run("empty OSV", func(t *testing.T) {
 		osv := OSV{
-			Affected: []affected{},
+			Affected: []Affected{},
 		}
-		affectedPackages := fromOSV(osv)
+		affectedPackages := osv.GetAffectedPackages()
 		if len(affectedPackages) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedPackages))
 		}
@@ -35,7 +35,7 @@ func TestFromOSV(t *testing.T) {
 
 	t.Run("affected package without purl", func(t *testing.T) {
 		osv := OSV{
-			Affected: []affected{
+			Affected: []Affected{
 				{
 					Package: pkg{
 						Purl: "",
@@ -44,7 +44,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedPackages := fromOSV(osv)
+		affectedPackages := osv.GetAffectedPackages()
 		if len(affectedPackages) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedPackages))
 		}
@@ -52,7 +52,7 @@ func TestFromOSV(t *testing.T) {
 
 	t.Run("affected package with invalid purl", func(t *testing.T) {
 		osv := OSV{
-			Affected: []affected{
+			Affected: []Affected{
 				{
 					Package: pkg{
 						Purl: "invalid_purl",
@@ -61,7 +61,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedPackages := fromOSV(osv)
+		affectedPackages := osv.GetAffectedPackages()
 		if len(affectedPackages) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedPackages))
 		}
@@ -69,7 +69,7 @@ func TestFromOSV(t *testing.T) {
 
 	t.Run("affected package with valid purl", func(t *testing.T) {
 		osv := OSV{
-			Affected: []affected{
+			Affected: []Affected{
 				{
 					Package: pkg{
 						Purl: "pkg:golang/toolchain",
@@ -90,7 +90,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedPackages := fromOSV(osv)
+		affectedPackages := osv.GetAffectedPackages()
 		if len(affectedPackages) != 1 {
 			t.Errorf("Expected 1 affected package, got %d", len(affectedPackages))
 		}
@@ -133,7 +133,7 @@ func TestFromOSV(t *testing.T) {
 
 	t.Run("affected package with multiple SEMVER ranges", func(t *testing.T) {
 		osv := OSV{
-			Affected: []affected{
+			Affected: []Affected{
 				{
 					Package: pkg{
 						Purl: "pkg:golang/toolchain",
@@ -161,7 +161,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedPackages := fromOSV(osv)
+		affectedPackages := osv.GetAffectedPackages()
 		if len(affectedPackages) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedPackages))
 		}
@@ -186,7 +186,7 @@ func TestFromOSV(t *testing.T) {
 
 	t.Run("affected package without SEMVER ranges but with versions", func(t *testing.T) {
 		osv := OSV{
-			Affected: []affected{
+			Affected: []Affected{
 				{
 					Package: pkg{
 						Purl: "pkg:golang/toolchain",
@@ -212,7 +212,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedPackages := fromOSV(osv)
+		affectedPackages := osv.GetAffectedPackages()
 		if len(affectedPackages) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedPackages))
 		}
@@ -238,7 +238,7 @@ func TestFromOSV(t *testing.T) {
 			t.Errorf("Could not unmarshal osv, got %s", err)
 		}
 
-		affectedPackages := fromOSV(osv)
+		affectedPackages := osv.GetAffectedPackages()
 		if len(affectedPackages) != 2 {
 			t.Errorf("Expected 2 affected package, got %d", len(affectedPackages))
 		}

@@ -19,10 +19,17 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/database/repositories"
 
 	"github.com/labstack/echo/v4"
 )
 
+type repository interface {
+	repositories.Repository[uuid.UUID, models.Org, core.DB]
+	// ReadBySlug reads an organization by its slug
+	ReadBySlug(slug string) (models.Org, error)
+}
 type httpController struct {
 	organizationRepository repository
 	rbacProvider           accesscontrol.RBACProvider
@@ -60,7 +67,7 @@ func (o *httpController) Create(c core.Context) error {
 	return c.JSON(200, org)
 }
 
-func (o *httpController) bootstrapOrg(c core.Context, organization Model) error {
+func (o *httpController) bootstrapOrg(c core.Context, organization models.Org) error {
 	// create the permissions for the organization
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
 	userId := core.GetSession(c).GetUserID()

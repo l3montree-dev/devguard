@@ -1,9 +1,7 @@
-package asset
+package models
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 )
 
 type AssetType string
@@ -21,14 +19,14 @@ const (
 	RequirementLevelHigh   RequirementLevel = "high"
 )
 
-type Model struct {
-	core.Model
+type Asset struct {
+	Model
 	Name string `json:"name" gorm:"type:text"`
 	Slug string `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
 
-	ProjectID   uuid.UUID    `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;"`
-	Description string       `json:"description" gorm:"type:text"`
-	Flaws       []flaw.Model `json:"flaws" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
+	ProjectID   uuid.UUID `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;"`
+	Description string    `json:"description" gorm:"type:text"`
+	Flaws       []Flaw    `json:"flaws" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
 
 	Type AssetType `json:"type" gorm:"type:text;not null;"`
 
@@ -40,6 +38,6 @@ type Model struct {
 	AvailabilityRequirement    RequirementLevel `json:"availabilityRequirement" gorm:"default:'high';not null;type:text;"`
 }
 
-func (m Model) TableName() string {
+func (m Asset) TableName() string {
 	return "assets"
 }

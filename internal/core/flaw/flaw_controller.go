@@ -1,9 +1,19 @@
 package flaw
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/database/repositories"
 	"github.com/labstack/echo/v4"
 )
+
+type repository interface {
+	repositories.Repository[uuid.UUID, models.Flaw, core.DB]
+
+	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.Flaw, error)
+	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error)
+}
 
 type flawHttpController struct {
 	flawRepository repository

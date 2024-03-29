@@ -13,37 +13,31 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package org
+package repositories
 
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
-type gormRepository struct {
+type orgRepository struct {
 	db core.DB
-	database.Repository[uuid.UUID, Model, core.DB]
+	Repository[uuid.UUID, models.Org, core.DB]
 }
 
-type repository interface {
-	database.Repository[uuid.UUID, Model, core.DB]
-	// ReadBySlug reads an organization by its slug
-	ReadBySlug(slug string) (Model, error)
-}
-
-func NewGormRepository(db core.DB) *gormRepository {
-	if err := db.AutoMigrate(&Model{}); err != nil {
+func NewOrgRepository(db core.DB) *orgRepository {
+	if err := db.AutoMigrate(&models.Org{}); err != nil {
 		panic(err)
 	}
-	return &gormRepository{
+	return &orgRepository{
 		db:         db,
-		Repository: database.NewGormRepository[uuid.UUID, Model](db),
+		Repository: newGormRepository[uuid.UUID, models.Org](db),
 	}
 }
 
-func (g *gormRepository) ReadBySlug(slug string) (Model, error) {
-	var t Model
+func (g *orgRepository) ReadBySlug(slug string) (models.Org, error) {
+	var t models.Org
 	err := g.db.Where("slug = ?", slug).First(&t).Error
 	return t, err
 }

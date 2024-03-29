@@ -19,12 +19,11 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
 type cveRepository interface {
-	FindAll(cveIDs []string) ([]vulndb.CVE, error)
+	FindAll(cveIDs []string) ([]models.CVE, error)
 }
 
 type httpController struct {
@@ -53,11 +52,11 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// create flaws out of those vulnerabilities
-	flaws := []flaw.Model{}
+	flaws := []models.Flaw{}
 	cveIDs := []string{}
 	for _, vuln := range vulns {
 		cveIDs = append(cveIDs, vuln.CVEID)
-		flaw := flaw.Model{
+		flaw := models.Flaw{
 			CVEID:     vuln.CVEID,
 			ScannerID: "github.com/l3montree-dev/flawfix/cmd/sbom-scanner",
 		}
