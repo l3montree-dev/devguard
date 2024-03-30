@@ -17,6 +17,7 @@ package scan
 
 import (
 	"log/slog"
+	"net/url"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/flawfix/internal/core"
@@ -62,10 +63,6 @@ func NewHttpController(db core.DB, cveRepository cveRepository, componentReposit
 	}
 }
 
-func (s *httpController) saveAssetComponents(asset models.Asset, sbom *cdx.BOM) {
-
-}
-
 func (s *httpController) Scan(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
@@ -93,12 +90,18 @@ func (s *httpController) Scan(c core.Context) error {
 	cveIDs := []string{}
 	for _, vuln := range vulns {
 		cveIDs = append(cveIDs, vuln.CVEID)
-		flaw := models.Flaw{
-			AssetID:   asset.ID,
-			CVEID:     vuln.CVEID,
-			ScannerID: scannerID,
+		purlWithVersion, err := url.PathUnescape(vuln.PurlWithVersion)
+		if err != nil {
+			slog.Error("could not unescape purl", "err", err)
+			continue
 		}
-		flaw.SetAdditionalData(map[string]any{
+		flaw := models.Flaw{
+			AssetID:            asset.ID,
+			CVEID:              vuln.CVEID,
+			ScannerID:          scannerID,
+			ComponentPurlOrCpe: purlWithVersion,
+		}
+		flaw.SetArbitraryJsonData(map[string]any{
 			"introducedVersion": vuln.GetIntroducedVersion(),
 			"fixedVersion":      vuln.GetFixedVersion(),
 			"packageName":       vuln.PackageName,

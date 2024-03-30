@@ -74,6 +74,7 @@ func (comparer *purlComparer) GetVulns(purl string) ([]vulnInPackage, error) {
 				FixedVersion:      affectedComponent.SemverFixed,
 				IntroducedVersion: affectedComponent.SemverIntroduced,
 				PackageName:       affectedComponent.PURL,
+				PurlWithVersion:   purl,
 			})
 		}
 	}

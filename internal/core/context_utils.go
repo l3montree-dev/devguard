@@ -96,6 +96,18 @@ type Paged[T any] struct {
 	Data  []T   `json:"data"`
 }
 
+func (p Paged[T]) Map(f func(T) any) Paged[any] {
+	data := make([]any, len(p.Data))
+	for i, d := range p.Data {
+		data[i] = f(d)
+	}
+	return Paged[any]{
+		PageInfo: p.PageInfo,
+		Total:    p.Total,
+		Data:     data,
+	}
+}
+
 func NewPaged[T any](pageInfo PageInfo, total int64, data []T) Paged[T] {
 	return Paged[T]{
 		PageInfo: pageInfo,

@@ -30,10 +30,11 @@ type sbomScanner struct {
 // it includes more than just the CVE ID to allow for more detailed information
 // like the affected package version and fixed version
 type vulnInPackage struct {
-	CVEID             string  `json:"cveId"`
-	FixedVersion      *string `json:"fixedVersion"`
-	IntroducedVersion *string `json:"introducedVersion"`
-	PackageName       string  `json:"packageName"`
+	CVEID             string
+	FixedVersion      *string
+	IntroducedVersion *string
+	PackageName       string
+	PurlWithVersion   string
 }
 
 func (v vulnInPackage) GetIntroducedVersion() string {

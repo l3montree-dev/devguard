@@ -13,14 +13,14 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/utils"
 )
 
-type State string
+type FlawState string
 
 const (
-	StateOpen                State = "open"
-	StateFixed               State = "fixed"
-	StateAccepted            State = "accepted"
-	StateMarkedForMitigation State = "markedForMitigation"
-	StateFalsePositive       State = "falsePositive"
+	FlawStateOpen                FlawState = "open"
+	FlawStateFixed               FlawState = "fixed"
+	FlawStateAccepted            FlawState = "accepted"
+	FlawStateMarkedForMitigation FlawState = "markedForMitigation"
+	FlawStateFalsePositive       FlawState = "falsePositive"
 )
 
 type Flaw struct {
@@ -32,10 +32,12 @@ type Flaw struct {
 	Comments []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
 	Events   []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"events"`
 	AssetID  uuid.UUID   `json:"assetId" gorm:"not null;"`
-	State    State       `json:"state" gorm:"default:'open';not null;type:text;"`
+	State    FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
 
-	CVE   *CVE   `json:"cve"`
-	CVEID string `json:"cveId" gorm:"null;type:text;default:null;"`
+	CVE                *CVE       `json:"cve"`
+	CVEID              string     `json:"cveId" gorm:"null;type:text;default:null;"`
+	Component          *Component `json:"component" gorm:"foreignKey:ComponentPurlOrCpe;constraint:OnDelete:CASCADE;"`
+	ComponentPurlOrCpe string     `json:"componentPurlOrCpe" gorm:"type:text;default:null;"`
 
 	Effort            *int `json:"effort" gorm:"default:null;"`
 	RiskAssessment    *int `json:"riskAssessment" gorm:"default:null;"`
@@ -43,13 +45,13 @@ type Flaw struct {
 
 	Priority *int `json:"priority" gorm:"default:null;"`
 
-	AdditionalData string `json:"additionalData" gorm:"type:text;"`
+	ArbitraryJsonData string `json:"arbitraryJsonData" gorm:"type:text;"`
 
 	LastDetected time.Time `json:"lastDetected" gorm:"default:now();not null;"`
 
-	// this is a map of additional data that is parsed from the AdditionalData field
+	// this is a map of additional data that is parsed from the ArbitraryJsonData field
 	// this is not stored in the database - it just caches the parsed data
-	additionalData map[string]any
+	arbitraryJsonData map[string]any
 
 	CreatedAt time.Time    `json:"createdAt"`
 	UpdatedAt time.Time    `json:"updatedAt"`
@@ -60,31 +62,31 @@ func (m Flaw) TableName() string {
 	return "flaws"
 }
 
-func (m *Flaw) GetAdditionalData() map[string]any {
+func (m *Flaw) GetArbitraryJsonData() map[string]any {
 	// parse the additional data
-	if m.additionalData == nil {
-		m.additionalData = make(map[string]any)
-		err := json.Unmarshal([]byte(m.AdditionalData), &m.additionalData)
+	if m.arbitraryJsonData == nil {
+		m.arbitraryJsonData = make(map[string]any)
+		err := json.Unmarshal([]byte(m.ArbitraryJsonData), &m.arbitraryJsonData)
 		if err != nil {
 			slog.Error("could not parse additional data", "err", err, "flawId", m.ID)
 		}
 	}
-	return m.additionalData
+	return m.arbitraryJsonData
 }
 
-func (m *Flaw) SetAdditionalData(data map[string]any) {
-	m.additionalData = data
+func (m *Flaw) SetArbitraryJsonData(data map[string]any) {
+	m.arbitraryJsonData = data
 	// parse the additional data
-	dataBytes, err := json.Marshal(m.additionalData)
+	dataBytes, err := json.Marshal(m.arbitraryJsonData)
 	if err != nil {
 		slog.Error("could not marshal additional data", "err", err, "flawId", m.ID)
 	}
-	m.AdditionalData = string(dataBytes)
+	m.ArbitraryJsonData = string(dataBytes)
 }
 
 func (m *Flaw) CalculateHash() string {
 	// hash the additional data, scanner id and asset id to create a unique id - if there is a hash collision, we can be sure, that the flaw with all its data is the same
-	hash := utils.HashString(fmt.Sprintf("%s/%s/%s", m.ScannerID, m.AssetID.String(), m.AdditionalData))
+	hash := utils.HashString(fmt.Sprintf("%s/%s/%s", m.ScannerID, m.AssetID.String(), m.ArbitraryJsonData))
 	return hash
 }
 

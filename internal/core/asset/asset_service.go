@@ -17,6 +17,7 @@ package asset
 
 import (
 	"log/slog"
+	"net/url"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -101,7 +102,7 @@ func (s *service) UpdateSBOM(asset models.Asset, sbom *cdx.BOM) {
 
 		dependencies := make([]models.Component, 0)
 		for _, dep := range *component.Dependencies {
-			p, err := urlDecode(dep)
+			p, err := url.PathUnescape(dep)
 			if err != nil {
 				slog.Error("could not decode purl", "err", err)
 				continue
@@ -113,7 +114,7 @@ func (s *service) UpdateSBOM(asset models.Asset, sbom *cdx.BOM) {
 		// check if the component is already in the database
 		// if not, create it
 		// if it is, update it
-		p, err := urlDecode(component.Ref)
+		p, err := url.PathUnescape(component.Ref)
 		if err != nil {
 			slog.Error("could not decode purl", "err", err)
 			continue
@@ -135,7 +136,7 @@ func (s *service) UpdateSBOM(asset models.Asset, sbom *cdx.BOM) {
 	directDependencies := make([]models.Component, 0)
 	for _, component := range *sbom.Components {
 		if component.Scope == cdx.ScopeRequired {
-			p, err := urlDecode(purlOrCpe(component))
+			p, err := url.PathUnescape(purlOrCpe(component))
 			if err != nil {
 				slog.Error("could not decode purl", "err", err)
 				continue

@@ -15,18 +15,8 @@
 package asset
 
 import (
-	"net/url"
-
 	cdx "github.com/CycloneDX/cyclonedx-go"
 )
-
-func urlDecode(purl string) (string, error) {
-	p, err := url.PathUnescape(purl)
-	if err != nil {
-		return "", err
-	}
-	return p, nil
-}
 
 func purlOrCpe(component cdx.Component) string {
 	if component.PackageURL != "" {

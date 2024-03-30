@@ -41,7 +41,43 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp)
+	return ctx.JSON(200, pagedResp.Map(func(flaw models.Flaw) interface{} {
+		/*
+			type pagedFlawDTO struct {
+				ID                string           `json:"id"`
+				ScannerID         string           `json:"scanner"`
+				Message           *string          `json:"message"`
+				AssetID           string           `json:"assetId"`
+				State             models.FlawState `json:"state"`
+				CVE               *models.CVE      `json:"cve"`
+				CVEID             string           `json:"cveId"`
+				Effort            *int             `json:"effort"`
+				RiskAssessment    *int             `json:"riskAssessment"`
+				RawRiskAssessment *int             `json:"rawRiskAssessment"`
+				Priority          *int             `json:"priority"`
+				ArbitraryJsonData    map[string]any   `json:"arbitraryJsonData"`
+				LastDetected      time.Time        `json:"lastDetected"`
+				CreatedAt         time.Time        `json:"createdAt"`
+			}
+
+		*/
+		return pagedFlawDTO{
+			ID:                flaw.ID,
+			ScannerID:         flaw.ScannerID,
+			Message:           flaw.Message,
+			AssetID:           flaw.AssetID.String(),
+			State:             flaw.State,
+			CVE:               flaw.CVE,
+			CVEID:             flaw.CVEID,
+			Effort:            flaw.Effort,
+			RiskAssessment:    flaw.RiskAssessment,
+			RawRiskAssessment: flaw.RawRiskAssessment,
+			Priority:          flaw.Priority,
+			ArbitraryJsonData: flaw.GetArbitraryJsonData(),
+			LastDetected:      flaw.LastDetected,
+			CreatedAt:         flaw.CreatedAt,
+		}
+	}))
 }
 
 func (c flawHttpController) Read(ctx core.Context) error {

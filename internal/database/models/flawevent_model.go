@@ -29,9 +29,9 @@ func (m FlawEvent) TableName() string {
 func (e FlawEvent) Apply(flaw Flaw) Flaw {
 	switch e.Type {
 	case EventTypeFixed:
-		flaw.State = StateFixed
+		flaw.State = FlawStateFixed
 	case EventTypeDetected:
-		flaw.State = StateOpen
+		flaw.State = FlawStateOpen
 	}
 
 	return flaw
