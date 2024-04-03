@@ -27,6 +27,11 @@ type assetRepository struct {
 	Repository[uuid.UUID, models.Asset, core.DB]
 }
 
+type ComponentDepth struct {
+	PurlOrCpe string `json:"purl_or_cpe" gorm:"column:purl_or_cpe"`
+	Depth     int    `json:"depth" gorm:"column:depth"`
+}
+
 func NewAssetRepository(db core.DB) *assetRepository {
 	err := db.AutoMigrate(&models.Asset{})
 	if err != nil {
@@ -46,6 +51,33 @@ func (a *assetRepository) FindByName(name string) (models.Asset, error) {
 		return app, err
 	}
 	return app, nil
+}
+
+func (a *assetRepository) GetComponentDepth(assetID uuid.UUID) []ComponentDepth {
+	var results []ComponentDepth
+	a.db.Raw(`
+        WITH RECURSIVE ComponentHierarchy AS (
+            SELECT c.purl_or_cpe, 1 AS depth
+            FROM asset_components ac
+            INNER JOIN components c ON ac.component_purl_or_cpe = c.purl_or_cpe
+            WHERE ac.asset_id = ?
+        
+            UNION ALL
+        
+            SELECT cd.depends_on_purl_or_cpe, ch.depth + 1 AS depth
+            FROM ComponentHierarchy ch
+            JOIN component_dependencies cd ON ch.purl_or_cpe = cd.component_purl_or_cpe
+            WHERE ch.depth < 100
+        )
+        SELECT DISTINCT purl_or_cpe, 
+            CASE 
+                WHEN depth > 100 THEN 100 
+                ELSE depth 
+            END AS depth
+        FROM ComponentHierarchy;
+    `, assetID).Scan(&results)
+
+	return results
 }
 
 func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, error) {

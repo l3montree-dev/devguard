@@ -239,7 +239,7 @@ func Start(db core.DB) {
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 	flawRepository := repositories.NewFlawRepository(db)
-	flawController := flaw.NewHttpController(flawRepository)
+	flawController := flaw.NewHttpController(flawRepository, assetRepository)
 	flawService := flaw.NewService(flawRepository, flawEventRepository)
 	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
 

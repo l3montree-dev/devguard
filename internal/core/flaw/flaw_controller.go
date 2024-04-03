@@ -15,19 +15,27 @@ type repository interface {
 	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error)
 }
 
-type flawHttpController struct {
-	flawRepository repository
+type assetRepository interface {
+	GetComponentDepth(assetID uuid.UUID) []repositories.ComponentDepth
 }
 
-func NewHttpController(flawRepository repository) *flawHttpController {
+type flawHttpController struct {
+	flawRepository  repository
+	assetRepository assetRepository
+}
+
+func NewHttpController(flawRepository repository, assetRepository assetRepository) *flawHttpController {
 	return &flawHttpController{
-		flawRepository: flawRepository,
+		flawRepository:  flawRepository,
+		assetRepository: assetRepository,
 	}
 }
 
 func (c flawHttpController) ListPaged(ctx core.Context) error {
 	// get the asset
 	asset := core.GetAsset(ctx)
+
+	c.assetRepository.GetComponentDepth(asset.GetID())
 
 	pagedResp, err := c.flawRepository.GetByAssetIdPaged(
 		nil,
@@ -62,20 +70,22 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 
 		*/
 		return pagedFlawDTO{
-			ID:                flaw.ID,
-			ScannerID:         flaw.ScannerID,
-			Message:           flaw.Message,
-			AssetID:           flaw.AssetID.String(),
-			State:             flaw.State,
-			CVE:               flaw.CVE,
-			CVEID:             flaw.CVEID,
-			Effort:            flaw.Effort,
-			RiskAssessment:    flaw.RiskAssessment,
-			RawRiskAssessment: flaw.RawRiskAssessment,
-			Priority:          flaw.Priority,
-			ArbitraryJsonData: flaw.GetArbitraryJsonData(),
-			LastDetected:      flaw.LastDetected,
-			CreatedAt:         flaw.CreatedAt,
+			ID:                 flaw.ID,
+			ScannerID:          flaw.ScannerID,
+			Message:            flaw.Message,
+			AssetID:            flaw.AssetID.String(),
+			State:              flaw.State,
+			CVE:                flaw.CVE,
+			Component:          flaw.Component,
+			CVEID:              flaw.CVEID,
+			ComponentPurlOrCpe: flaw.ComponentPurlOrCpe,
+			Effort:             flaw.Effort,
+			RiskAssessment:     flaw.RiskAssessment,
+			RawRiskAssessment:  flaw.RawRiskAssessment,
+			Priority:           flaw.Priority,
+			ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
+			LastDetected:       flaw.LastDetected,
+			CreatedAt:          flaw.CreatedAt,
 		}
 	}))
 }
