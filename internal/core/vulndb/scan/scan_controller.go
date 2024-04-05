@@ -32,9 +32,9 @@ type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
 }
 
-type assetRepository interface {
-	Save(tx core.DB, asset *models.Asset) error
-}
+// type assetRepository interface {
+// 	Save(tx core.DB, asset *models.Asset) error
+// }
 
 type assetService interface {
 	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw)
