@@ -291,6 +291,7 @@ func Start(db core.DB) {
 
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC("asset", accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
+	assetRouter.GET("/dependency-graph/", assetController.DependencyGraph)
 
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)

@@ -5,6 +5,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/database/repositories"
+	"github.com/l3montree-dev/flawfix/internal/obj"
 
 	"github.com/labstack/echo/v4"
 )
@@ -17,6 +18,7 @@ type repository interface {
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
+	GetTransitiveDependencies(assetID uuid.UUID) []obj.Dependency
 }
 
 type httpController struct {
@@ -66,4 +68,13 @@ func (a *httpController) Create(c core.Context) error {
 func (a *httpController) Read(c core.Context) error {
 	app := core.GetAsset(c)
 	return c.JSON(200, app)
+}
+
+func (a *httpController) DependencyGraph(c core.Context) error {
+	app := core.GetAsset(c)
+	dependencies := a.assetRepository.GetTransitiveDependencies(app.GetID())
+
+	tree := buildDependencyTree(dependencies)
+
+	return c.JSON(200, tree)
 }

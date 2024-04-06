@@ -5,6 +5,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/database/repositories"
+	"github.com/l3montree-dev/flawfix/internal/obj"
 	"github.com/labstack/echo/v4"
 )
 
@@ -16,7 +17,7 @@ type repository interface {
 }
 
 type assetRepository interface {
-	GetComponentDepth(assetID uuid.UUID) []repositories.ComponentDepth
+	GetComponentDepth(assetID uuid.UUID) []obj.ComponentDepth
 }
 
 type flawHttpController struct {
