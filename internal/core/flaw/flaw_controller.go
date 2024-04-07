@@ -5,7 +5,6 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/database/repositories"
-	"github.com/l3montree-dev/flawfix/internal/obj"
 	"github.com/labstack/echo/v4"
 )
 
@@ -16,27 +15,19 @@ type repository interface {
 	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error)
 }
 
-type assetRepository interface {
-	GetComponentDepth(assetID uuid.UUID) []obj.ComponentDepth
-}
-
 type flawHttpController struct {
-	flawRepository  repository
-	assetRepository assetRepository
+	flawRepository repository
 }
 
-func NewHttpController(flawRepository repository, assetRepository assetRepository) *flawHttpController {
+func NewHttpController(flawRepository repository) *flawHttpController {
 	return &flawHttpController{
-		flawRepository:  flawRepository,
-		assetRepository: assetRepository,
+		flawRepository: flawRepository,
 	}
 }
 
 func (c flawHttpController) ListPaged(ctx core.Context) error {
 	// get the asset
 	asset := core.GetAsset(ctx)
-
-	c.assetRepository.GetComponentDepth(asset.GetID())
 
 	pagedResp, err := c.flawRepository.GetByAssetIdPaged(
 		nil,

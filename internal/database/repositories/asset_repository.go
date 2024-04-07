@@ -51,7 +51,7 @@ func (a *assetRepository) FindByName(name string) (models.Asset, error) {
 	return app, nil
 }
 
-func (a *assetRepository) GetComponentDepth(assetID uuid.UUID) []obj.ComponentDepth {
+func (a *assetRepository) GetAllComponentsByAssetID(assetID uuid.UUID) []obj.ComponentDepth {
 	res := make([]obj.ComponentDepth, 0)
 	a.db.Raw(`
         WITH RECURSIVE ComponentHierarchy AS (
@@ -65,11 +65,11 @@ func (a *assetRepository) GetComponentDepth(assetID uuid.UUID) []obj.ComponentDe
             SELECT cd.depends_on_purl_or_cpe, ch.depth + 1 AS depth
             FROM ComponentHierarchy ch
             JOIN component_dependencies cd ON ch.purl_or_cpe = cd.component_purl_or_cpe
-            WHERE ch.depth < 100
+            WHERE ch.depth < 10
         )
         SELECT DISTINCT purl_or_cpe, 
             CASE 
-                WHEN depth > 100 THEN 100 
+                WHEN depth > 10 THEN 10 
                 ELSE depth 
             END AS depth
         FROM ComponentHierarchy;
@@ -104,12 +104,12 @@ func (a *assetRepository) GetTransitiveDependencies(assetID uuid.UUID) []obj.Dep
 			ComponentHierarchy ch
 		INNER JOIN component_dependencies cd ON ch.dep = cd.component_purl_or_cpe
 		WHERE
-			ch.depth < 100
+			ch.depth < 10
 	)
 	SELECT
 		DISTINCT source, dep,
 		CASE
-			WHEN depth > 100 THEN 100
+			WHEN depth > 10 THEN 10
 			ELSE depth
 		END AS depth
 	FROM

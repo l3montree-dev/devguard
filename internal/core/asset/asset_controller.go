@@ -6,6 +6,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/database/repositories"
 	"github.com/l3montree-dev/flawfix/internal/obj"
+	"github.com/l3montree-dev/flawfix/internal/utils"
 
 	"github.com/labstack/echo/v4"
 )
@@ -19,15 +20,22 @@ type repository interface {
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
 	GetTransitiveDependencies(assetID uuid.UUID) []obj.Dependency
+	GetAllComponentsByAssetID(assetID uuid.UUID) []obj.ComponentDepth
+}
+
+type vulnService interface {
+	GetVulnsForAll(purls []string) ([]models.VulnInPackage, error)
 }
 
 type httpController struct {
 	assetRepository repository
+	vulnService     vulnService
 }
 
-func NewHttpController(repository repository) *httpController {
+func NewHttpController(repository repository, vulnService vulnService) *httpController {
 	return &httpController{
 		assetRepository: repository,
+		vulnService:     vulnService,
 	}
 }
 
@@ -40,6 +48,20 @@ func (a *httpController) List(c core.Context) error {
 	}
 
 	return c.JSON(200, apps)
+}
+
+func (a *httpController) AffectedPackages(c core.Context) error {
+	components := a.assetRepository.GetAllComponentsByAssetID(core.GetAsset(c).GetID())
+	purls := utils.Map(components, func(c obj.ComponentDepth) string {
+		return c.PurlOrCpe
+	})
+
+	vulns, err := a.vulnService.GetVulnsForAll(purls)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, vulns)
 }
 
 func (a *httpController) Create(c core.Context) error {

@@ -19,6 +19,7 @@ import (
 	"log/slog"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
 type sbomScanner struct {
@@ -29,41 +30,20 @@ type sbomScanner struct {
 // the vulnInPackage interface is used to abstract the different types of vulnerabilities
 // it includes more than just the CVE ID to allow for more detailed information
 // like the affected package version and fixed version
-type vulnInPackage struct {
-	CVEID             string
-	FixedVersion      *string
-	IntroducedVersion *string
-	PackageName       string
-	PurlWithVersion   string
-}
-
-func (v vulnInPackage) GetIntroducedVersion() string {
-	if v.IntroducedVersion != nil {
-		return *v.IntroducedVersion
-	}
-	return ""
-}
-
-func (v vulnInPackage) GetFixedVersion() string {
-	if v.FixedVersion != nil {
-		return *v.FixedVersion
-	}
-	return ""
-}
 
 type comparer interface {
-	GetVulns(packageIdentifier string) ([]vulnInPackage, error)
+	GetVulns(packageIdentifier string) ([]models.VulnInPackage, error)
 }
 
-func NewSBOMScanner(cpeComparer comparer, purlComparer comparer) *sbomScanner {
+func NewSBOMScanner(cpeComparer comparer, purlComparer comparer, cveRepository cveRepository) *sbomScanner {
 	return &sbomScanner{
 		cpeComparer:  cpeComparer,
 		purlComparer: purlComparer,
 	}
 }
 
-func (s *sbomScanner) Scan(bom *cdx.BOM) ([]vulnInPackage, error) {
-	vulnerabilities := make([]vulnInPackage, 0)
+func (s *sbomScanner) Scan(bom *cdx.BOM) ([]models.VulnInPackage, error) {
+	vulnerabilities := make([]models.VulnInPackage, 0)
 	// iterate through all components
 	for _, component := range *bom.Components {
 		// check if CPE is present

@@ -24,3 +24,26 @@ type Component struct {
 func (c Component) TableName() string {
 	return "components"
 }
+
+type VulnInPackage struct {
+	CVEID             string
+	CVE               CVE
+	FixedVersion      *string
+	IntroducedVersion *string
+	PackageName       string
+	PurlWithVersion   string
+}
+
+func (v VulnInPackage) GetIntroducedVersion() string {
+	if v.IntroducedVersion != nil {
+		return *v.IntroducedVersion
+	}
+	return ""
+}
+
+func (v VulnInPackage) GetFixedVersion() string {
+	if v.FixedVersion != nil {
+		return *v.FixedVersion
+	}
+	return ""
+}

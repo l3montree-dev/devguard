@@ -17,6 +17,7 @@ package scan
 
 import (
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
 type cpeComparer struct {
@@ -29,6 +30,6 @@ func NewCPEComparer(db core.DB) *cpeComparer {
 	}
 }
 
-func (c *cpeComparer) GetVulns(cpe string) ([]vulnInPackage, error) {
+func (c *cpeComparer) GetVulns(cpe string) ([]models.VulnInPackage, error) {
 	return nil, nil
 }
