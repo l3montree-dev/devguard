@@ -125,6 +125,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image_path: ${{ steps.build_output.outputs.image_path }}
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/checkout@v4
     - name: Set IMAGE_TAG if tagged
@@ -158,6 +159,7 @@ jobs:
   image-scanning:
     needs: build-image
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/checkout@v4
     - uses: actions/download-artifact@v4
@@ -182,6 +184,7 @@ jobs:
   publish:
     needs: [build-image, image-scanning, secret-scanning, sca, sast]
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/download-artifact@v4
       with:
@@ -199,6 +202,7 @@ jobs:
   sign-image:
     runs-on: ubuntu-latest
     needs: publish
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
     - name: cosign-installer
       uses: sigstore/cosign-installer@v3.3.0
