@@ -16,7 +16,6 @@
 package asset
 
 import (
-	"fmt"
 	"slices"
 
 	"github.com/l3montree-dev/flawfix/internal/obj"
@@ -28,8 +27,8 @@ type treeNode struct {
 }
 
 type tree struct {
-	Root    *treeNode            `json:"root"`
-	cursors map[string]*treeNode `json:"levels"`
+	Root    *treeNode `json:"root"`
+	cursors map[string]*treeNode
 }
 
 func newNode(name string) *treeNode {
@@ -57,17 +56,6 @@ func (tree *tree) addNode(source string, dep string) {
 	}
 	// add connection
 	tree.cursors[source].Children = append(tree.cursors[source].Children, tree.cursors[dep])
-}
-
-func printTree(node *treeNode, depth int) {
-	padding := ""
-	for i := 0; i < depth; i++ {
-		padding += "  "
-	}
-	fmt.Println(padding + node.Name)
-	for _, child := range node.Children {
-		printTree(child, depth+1)
-	}
 }
 
 func buildDependencyTree(elements []obj.Dependency) tree {

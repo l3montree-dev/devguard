@@ -32,10 +32,6 @@ type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
 }
 
-type assetRepository interface {
-	Save(tx core.DB, asset *models.Asset) error
-}
-
 type assetService interface {
 	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw)
 	UpdateSBOM(asset models.Asset, sbom *cdx.BOM)
@@ -89,6 +85,8 @@ func (s *httpController) Scan(c core.Context) error {
 	flaws := []models.Flaw{}
 
 	for _, vuln := range vulns {
+		v := vuln
+
 		purlWithVersion, err := url.PathUnescape(vuln.PurlWithVersion)
 		if err != nil {
 			slog.Error("could not unescape purl", "err", err)
@@ -98,17 +96,17 @@ func (s *httpController) Scan(c core.Context) error {
 
 		flaw := models.Flaw{
 			AssetID:            asset.ID,
-			CVEID:              vuln.CVEID,
+			CVEID:              v.CVEID,
 			ScannerID:          scannerID,
 			ComponentPurlOrCpe: purlWithVersion,
-			CVE:                &vuln.CVE,
+			CVE:                &v.CVE,
 		}
 
 		flaw.SetArbitraryJsonData(map[string]any{
-			"introducedVersion": vuln.GetIntroducedVersion(),
-			"fixedVersion":      vuln.GetFixedVersion(),
-			"packageName":       vuln.PackageName,
-			"cveId":             vuln.CVEID,
+			"introducedVersion": v.GetIntroducedVersion(),
+			"fixedVersion":      v.GetFixedVersion(),
+			"packageName":       v.PackageName,
+			"cveId":             v.CVEID,
 		})
 		flaws = append(flaws, flaw)
 	}
