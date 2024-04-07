@@ -47,7 +47,7 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 	var count int64
 	var flaws []models.Flaw = []models.Flaw{}
 
-	q := r.Repository.GetDB(tx).Joins("CVE").Where("asset_id = ?", assetId)
+	q := r.Repository.GetDB(tx).Joins("CVE").Joins("Component").Where("asset_id = ?", assetId)
 
 	// apply filters
 	for _, f := range filter {
@@ -56,7 +56,7 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 	q.Model(&models.Flaw{}).Count(&count)
 
 	// get all flaws of the asset
-	q = pageInfo.ApplyOnDB(r.Repository.GetDB(tx)).Joins("CVE").Where("asset_id = ?", assetId)
+	q = pageInfo.ApplyOnDB(r.Repository.GetDB(tx)).Joins("CVE").Joins("Component").Where("asset_id = ?", assetId)
 
 	// apply filters
 	for _, f := range filter {

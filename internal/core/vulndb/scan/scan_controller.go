@@ -32,10 +32,6 @@ type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
 }
 
-// type assetRepository interface {
-// 	Save(tx core.DB, asset *models.Asset) error
-// }
-
 type assetService interface {
 	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw)
 	UpdateSBOM(asset models.Asset, sbom *cdx.BOM)
@@ -53,7 +49,7 @@ func NewHttpController(db core.DB, cveRepository cveRepository, componentReposit
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
-	scanner := NewSBOMScanner(cpeComparer, purlComparer)
+	scanner := NewSBOMScanner(cpeComparer, purlComparer, cveRepository)
 	return &httpController{
 		db:                  db,
 		sbomScanner:         scanner,
@@ -87,50 +83,37 @@ func (s *httpController) Scan(c core.Context) error {
 
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}
-	cveIDs := []string{}
+
 	for _, vuln := range vulns {
-		cveIDs = append(cveIDs, vuln.CVEID)
+		v := vuln
+
 		purlWithVersion, err := url.PathUnescape(vuln.PurlWithVersion)
 		if err != nil {
 			slog.Error("could not unescape purl", "err", err)
 			continue
 		}
+		// check if the component has an cve
+
 		flaw := models.Flaw{
 			AssetID:            asset.ID,
-			CVEID:              vuln.CVEID,
+			CVEID:              v.CVEID,
 			ScannerID:          scannerID,
 			ComponentPurlOrCpe: purlWithVersion,
+			CVE:                &v.CVE,
 		}
+
 		flaw.SetArbitraryJsonData(map[string]any{
-			"introducedVersion": vuln.GetIntroducedVersion(),
-			"fixedVersion":      vuln.GetFixedVersion(),
-			"packageName":       vuln.PackageName,
-			"cveId":             vuln.CVEID,
+			"introducedVersion": v.GetIntroducedVersion(),
+			"fixedVersion":      v.GetFixedVersion(),
+			"packageName":       v.PackageName,
+			"cveId":             v.CVEID,
 		})
 		flaws = append(flaws, flaw)
 	}
 
 	// let the asset service handle the new scan result - we do not need
-	// any return value from that process - even if it fails, we should return the current
-	// cves, we already know.
+	// any return value from that process - even if it fails, we should return the current flaws
 	go s.assetService.HandleScanResult(userID, scannerID, asset, flaws)
-
-	// find all cves in our database and match them.
-	cves, err := s.cveRepository.FindAll(cveIDs)
-	if err != nil {
-		slog.Error("could not find cves", "err", err)
-		return c.JSON(500, map[string]string{"error": "could not find cves"})
-	}
-
-	// match the cves with the found vulnerabilities
-	for _, cve := range cves {
-		for j, flaw := range flaws {
-			if cve.CVE == flaw.CVEID {
-				tmp := cve
-				flaws[j].CVE = &tmp
-			}
-		}
-	}
 
 	return c.JSON(200, flaws)
 }

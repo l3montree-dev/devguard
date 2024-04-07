@@ -62,20 +62,22 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 
 		*/
 		return pagedFlawDTO{
-			ID:                flaw.ID,
-			ScannerID:         flaw.ScannerID,
-			Message:           flaw.Message,
-			AssetID:           flaw.AssetID.String(),
-			State:             flaw.State,
-			CVE:               flaw.CVE,
-			CVEID:             flaw.CVEID,
-			Effort:            flaw.Effort,
-			RiskAssessment:    flaw.RiskAssessment,
-			RawRiskAssessment: flaw.RawRiskAssessment,
-			Priority:          flaw.Priority,
-			ArbitraryJsonData: flaw.GetArbitraryJsonData(),
-			LastDetected:      flaw.LastDetected,
-			CreatedAt:         flaw.CreatedAt,
+			ID:                 flaw.ID,
+			ScannerID:          flaw.ScannerID,
+			Message:            flaw.Message,
+			AssetID:            flaw.AssetID.String(),
+			State:              flaw.State,
+			CVE:                flaw.CVE,
+			Component:          flaw.Component,
+			CVEID:              flaw.CVEID,
+			ComponentPurlOrCpe: flaw.ComponentPurlOrCpe,
+			Effort:             flaw.Effort,
+			RiskAssessment:     flaw.RiskAssessment,
+			RawRiskAssessment:  flaw.RawRiskAssessment,
+			Priority:           flaw.Priority,
+			ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
+			LastDetected:       flaw.LastDetected,
+			CreatedAt:          flaw.CreatedAt,
 		}
 	}))
 }

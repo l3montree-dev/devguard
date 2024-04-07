@@ -22,18 +22,20 @@ import (
 )
 
 type pagedFlawDTO struct {
-	ID                string           `json:"id"`
-	ScannerID         string           `json:"scanner"`
-	Message           *string          `json:"message"`
-	AssetID           string           `json:"assetId"`
-	State             models.FlawState `json:"state"`
-	CVE               *models.CVE      `json:"cve"`
-	CVEID             string           `json:"cveId"`
-	Effort            *int             `json:"effort"`
-	RiskAssessment    *int             `json:"riskAssessment"`
-	RawRiskAssessment *int             `json:"rawRiskAssessment"`
-	Priority          *int             `json:"priority"`
-	ArbitraryJsonData map[string]any   `json:"arbitraryJsonData"`
-	LastDetected      time.Time        `json:"lastDetected"`
-	CreatedAt         time.Time        `json:"createdAt"`
+	ID                 string            `json:"id"`
+	ScannerID          string            `json:"scanner"`
+	Message            *string           `json:"message"`
+	AssetID            string            `json:"assetId"`
+	State              models.FlawState  `json:"state"`
+	CVE                *models.CVE       `json:"cve"`
+	CVEID              string            `json:"cveId"`
+	Component          *models.Component `json:"component"`
+	ComponentPurlOrCpe string            `json:"componentPurlOrCpe"`
+	Effort             *int              `json:"effort"`
+	RiskAssessment     *int              `json:"riskAssessment"`
+	RawRiskAssessment  *int              `json:"rawRiskAssessment"`
+	Priority           *int              `json:"priority"`
+	ArbitraryJsonData  map[string]any    `json:"arbitraryJsonData"`
+	LastDetected       time.Time         `json:"lastDetected"`
+	CreatedAt          time.Time         `json:"createdAt"`
 }

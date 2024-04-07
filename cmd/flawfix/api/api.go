@@ -247,7 +247,7 @@ func Start(db core.DB) {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
-	assetController := asset.NewHttpController(assetRepository)
+	assetController := asset.NewHttpController(assetRepository, scan.NewPurlComparer(db))
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
 	server := echohttp.Server()
@@ -291,6 +291,8 @@ func Start(db core.DB) {
 
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC("asset", accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
+	assetRouter.GET("/dependency-graph/", assetController.DependencyGraph)
+	assetRouter.GET("/affected-packages/", assetController.AffectedPackages)
 
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)

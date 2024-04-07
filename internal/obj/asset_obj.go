@@ -13,37 +13,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package models
+package obj
 
-type Component struct {
-	// either cpe or purl is set
-	PurlOrCpe string      `json:"purlOrCpe" gorm:"primaryKey;column:purl_or_cpe"`
-	DependsOn []Component `json:"dependsOn" gorm:"many2many:component_dependencies;"`
+type Dependency struct {
+	Source string `json:"source"`
+	Dep    string `json:"dep"`
+	Depth  int    `json:"depth"`
 }
 
-func (c Component) TableName() string {
-	return "components"
-}
-
-type VulnInPackage struct {
-	CVEID             string
-	CVE               CVE
-	FixedVersion      *string
-	IntroducedVersion *string
-	PackageName       string
-	PurlWithVersion   string
-}
-
-func (v VulnInPackage) GetIntroducedVersion() string {
-	if v.IntroducedVersion != nil {
-		return *v.IntroducedVersion
-	}
-	return ""
-}
-
-func (v VulnInPackage) GetFixedVersion() string {
-	if v.FixedVersion != nil {
-		return *v.FixedVersion
-	}
-	return ""
+type ComponentDepth struct {
+	PurlOrCpe string `json:"purl_or_cpe" gorm:"column:purl_or_cpe"`
+	Depth     int    `json:"depth" gorm:"column:depth"`
 }

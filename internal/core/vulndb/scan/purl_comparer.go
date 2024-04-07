@@ -35,7 +35,19 @@ func NewPurlComparer(db core.DB) *purlComparer {
 	}
 }
 
-func (comparer *purlComparer) GetVulns(purl string) ([]vulnInPackage, error) {
+func (comparer *purlComparer) GetVulnsForAll(purls []string) ([]models.VulnInPackage, error) {
+	vulnerabilities := []models.VulnInPackage{}
+	for _, purl := range purls {
+		vulns, err := comparer.GetVulns(purl)
+		if err != nil {
+			return nil, err
+		}
+		vulnerabilities = append(vulnerabilities, vulns...)
+	}
+	return vulnerabilities, nil
+}
+
+func (comparer *purlComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {
 	// parse the purl
 	p, err := packageurl.FromString(purl)
 	if err != nil {
@@ -63,18 +75,19 @@ func (comparer *purlComparer) GetVulns(purl string) ([]vulnInPackage, error) {
 			Or("semver_introduced < ? AND semver_fixed > ?", version, version),
 	).Preload("CVE").Find(&affectedComponents)
 
-	vulnerabilities := []vulnInPackage{}
+	vulnerabilities := []models.VulnInPackage{}
 
 	// transform the affected packages to the vulnInPackage struct
 	for _, affectedComponent := range affectedComponents {
 		for _, cve := range affectedComponent.CVE {
 			// append the cve to the vulnerabilities
-			vulnerabilities = append(vulnerabilities, vulnInPackage{
+			vulnerabilities = append(vulnerabilities, models.VulnInPackage{
 				CVEID:             cve.CVE,
 				FixedVersion:      affectedComponent.SemverFixed,
 				IntroducedVersion: affectedComponent.SemverIntroduced,
 				PackageName:       affectedComponent.PURL,
 				PurlWithVersion:   purl,
+				CVE:               cve,
 			})
 		}
 	}

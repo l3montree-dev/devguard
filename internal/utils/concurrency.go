@@ -13,37 +13,29 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package models
+package utils
 
-type Component struct {
-	// either cpe or purl is set
-	PurlOrCpe string      `json:"purlOrCpe" gorm:"primaryKey;column:purl_or_cpe"`
-	DependsOn []Component `json:"dependsOn" gorm:"many2many:component_dependencies;"`
+type concurrentResult struct {
+	index int
+	value any
 }
 
-func (c Component) TableName() string {
-	return "components"
-}
-
-type VulnInPackage struct {
-	CVEID             string
-	CVE               CVE
-	FixedVersion      *string
-	IntroducedVersion *string
-	PackageName       string
-	PurlWithVersion   string
-}
-
-func (v VulnInPackage) GetIntroducedVersion() string {
-	if v.IntroducedVersion != nil {
-		return *v.IntroducedVersion
+func Concurrently(fns ...func() any) []any {
+	results := make([]concurrentResult, len(fns))
+	ch := make(chan concurrentResult, len(fns))
+	for i, fn := range fns {
+		go func(i int, fn func() any) {
+			ch <- concurrentResult{i, fn()}
+		}(i, fn)
 	}
-	return ""
-}
-
-func (v VulnInPackage) GetFixedVersion() string {
-	if v.FixedVersion != nil {
-		return *v.FixedVersion
+	for i := 0; i < len(fns); i++ {
+		results[i] = <-ch
 	}
-	return ""
+
+	res := make([]any, len(fns))
+	for _, r := range results {
+		res[r.index] = r.value
+	}
+
+	return res
 }

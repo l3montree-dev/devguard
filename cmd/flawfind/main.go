@@ -94,8 +94,7 @@ func init() {
 			}
 			err = core.LoadConfig()
 			if err != nil {
-				slog.Error("could not initialize config", "err", err)
-				return
+				slog.Warn("could not initialize config", "err", err)
 			}
 
 			// read the sbom file and post it to the scan endpoint
