@@ -50,6 +50,8 @@ spec:
             value: flawfix
           - name: POSTGRES_HOST
             value: postgresql
+          - name: ORY_KRATOS
+            value: http://kratos:4433
           ports:
             - name: http
               containerPort: 8080
