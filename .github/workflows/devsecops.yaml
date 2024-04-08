@@ -128,7 +128,10 @@ jobs:
     - uses: actions/checkout@v4
     - name: Set IMAGE_TAG if tagged
       # Setting the image tag if the push is a tag push
-      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" > image-tag.txt
+      run: |
+        echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" > image-tag.txt
+        export IMAGE_TAG=$(cat image-tag.txt)
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
       if: startsWith(github.ref, 'refs/tags/')
     - name: Set IMAGE_TAG if not tagged
       run: |
@@ -136,13 +139,15 @@ jobs:
         sha=${GITHUB_SHA::8}
         ts=$(date +%s)
         echo "ghcr.io/${{ github.repository }}:${branch}-${sha}-${ts}" > image-tag.txt
+        export IMAGE_TAG=$(cat image-tag.txt)
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
       if: github.ref == 'refs/heads/main'
     - name: Build Docker image with Kaniko
       # Building the Docker image using Kaniko
       id: build_image
       uses: docker://gcr.io/kaniko-project/executor:v1.9.2
       with:
-        args: --destination=$(cat image-tag.txt) --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar
+        args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar
     - name: Setup crane
       uses: imjasonh/setup-crane@v0.1
     - name: Use crane to get the digest
@@ -204,10 +209,14 @@ jobs:
       with:
         name: image-tag
         path: .
+    - name: set IMAGE_TAG env
+      run: |
+        export IMAGE_TAG=$(cat image-tag.txt)
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
     - uses: imjasonh/setup-crane@v0.1
     - name: Push Docker image to GitHub image Registry
       # Pushing the Docker image to GitHub Container Registry
-      run: crane push image.tar $(cat image-tag.txt)
+      run: crane push image.tar ${{ env.IMAGE_TAG }}
 
   sign-image:
     runs-on: ubuntu-latest
@@ -228,10 +237,12 @@ jobs:
       with:
         name: image-tag
         path: .
-    - name: Read digest from file
+    - name: Read digest and image tag from file
       run: |
         export IMAGE_DIGEST=$(cat digest.txt)
         echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
+        export IMAGE_TAG=$(cat image-tag.txt)
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v2.1.0
       with:
