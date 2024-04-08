@@ -42,7 +42,7 @@ spec:
           - name: ORY_KRATOS_URL
             value: http://kratos:4433
           - name: NEXT_PUBLIC_FLAWFIX_API_URL
-            value: http://flawfix:8080
+            value: http://flawfix-api:8080
           ports:
             - name: http
               containerPort: 3000
