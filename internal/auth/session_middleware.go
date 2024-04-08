@@ -17,6 +17,7 @@ package auth
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -40,6 +41,7 @@ func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSe
 	// check if we have a session
 	session, _, err := oryApiClient.FrontendApi.ToSession(ctx).Cookie(oryKratosSessionCookie).Execute()
 	if err != nil {
+		slog.Error("could not get session from cookie", "err", err)
 		return "", err
 	}
 	return session.Identity.Id, nil
@@ -73,6 +75,7 @@ func SessionMiddleware(oryApiClient *client.APIClient, tokenRepository tokenRepo
 			}
 
 			if err != nil {
+				slog.Error("session authentication failed", "err", err)
 				return c.JSON(401, map[string]string{"error": "no session, could not authenticate"})
 			}
 
