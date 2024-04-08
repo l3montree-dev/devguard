@@ -18,7 +18,7 @@ spec:
         version: {? {.Chart.AppVersion: ''} : ''}
     spec:
       containers:
-      - image: "{{ .Values.api.image.repository }}-postgresql:v0.3.1"
+      - image: "{{ .Values.api.image.repository }}-postgresql:v0.4.0"
         name: postgresql
         ports:
         - containerPort: 5432
