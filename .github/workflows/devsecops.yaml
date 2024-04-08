@@ -123,21 +123,26 @@ jobs:
   # Docker image build job
   build-image:
     runs-on: ubuntu-latest
-    outputs:
-      image_path: ${{ steps.build_output.outputs.image_path }}
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/checkout@v4
     - name: Set IMAGE_TAG if tagged
       # Setting the image tag if the push is a tag push
-      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" > image-tag.txt
       if: startsWith(github.ref, 'refs/tags/')
+    - name: Set IMAGE_TAG if not tagged
+      run: |
+        branch=${GITHUB_REF##*/}
+        sha=${GITHUB_SHA::8}
+        ts=$(date +%s)
+        echo "ghcr.io/${{ github.repository }}:${branch}-${sha}-${ts}" > image-tag.txt
+      if: github.ref == 'refs/heads/main'
     - name: Build Docker image with Kaniko
       # Building the Docker image using Kaniko
       id: build_image
       uses: docker://gcr.io/kaniko-project/executor:v1.9.2
       with:
-        args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar
+        args: --destination=$(cat image-tag.txt) --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar
     - name: Setup crane
       uses: imjasonh/setup-crane@v0.1
     - name: Use crane to get the digest
@@ -154,6 +159,11 @@ jobs:
       with:
         name: digest
         path: digest.txt
+    - name: Upload image tag
+      uses: actions/upload-artifact@v4
+      with:
+        name: image-tag
+        path: image-tag.txt
 
   # Image scanning job to detect vulnerabilities in the built Docker image
   image-scanning:
@@ -190,14 +200,14 @@ jobs:
       with:
         name: docker-image
         path: .
+    - uses: actions/download-artifact@v4
+      with:
+        name: image-tag
+        path: .
     - uses: imjasonh/setup-crane@v0.1
-    - name: Set IMAGE_TAG if tagged
-      # Setting the image tag if the push is a tag push
-      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-      if: startsWith(github.ref, 'refs/tags/')
     - name: Push Docker image to GitHub image Registry
       # Pushing the Docker image to GitHub Container Registry
-      run: crane push image.tar ${{ env.IMAGE_TAG }}
+      run: crane push image.tar $(cat image-tag.txt)
 
   sign-image:
     runs-on: ubuntu-latest
@@ -212,6 +222,11 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: digest
+        path: .
+    - name: Download image tag
+      uses: actions/download-artifact@v4
+      with:
+        name: image-tag
         path: .
     - name: Read digest from file
       run: |
@@ -228,4 +243,4 @@ jobs:
     - name: Sign the published Docker image
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-      run: cosign sign --yes --key cosign.key "${{ env.IMAGE_TAG }}@${{ env.IMAGE_DIGEST }}"
+      run: cosign sign --yes --key cosign.key "$(cat image-tag.txt)@${{ env.IMAGE_DIGEST }}"
