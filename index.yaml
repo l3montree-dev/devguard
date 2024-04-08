@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   flawfix:
   - apiVersion: v2
+    appVersion: 0.4.6
+    created: "2024-04-08T16:06:02.716824142Z"
+    description: A Helm chart for Kubernetes
+    digest: e3fc7fa4d94b3036c422fdce76ea2ee727f48cd56c81199fc0b62556bae5761f
+    name: flawfix
+    type: application
+    urls:
+    - https://github.com/l3montree-dev/flawfix/releases/download/flawfix-0.4.6/flawfix-0.4.6.tgz
+    version: 0.4.6
+  - apiVersion: v2
     appVersion: 0.4.5
     created: "2024-04-08T14:28:47.883880796Z"
     description: A Helm chart for Kubernetes
@@ -51,4 +61,4 @@ entries:
     urls:
     - https://github.com/l3montree-dev/flawfix/releases/download/flawfix-0.2.0/flawfix-0.2.0.tgz
     version: 0.2.0
-generated: "2024-04-08T14:28:47.883921452Z"
+generated: "2024-04-08T16:06:02.716856272Z"
