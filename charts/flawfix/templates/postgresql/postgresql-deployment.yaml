@@ -15,10 +15,10 @@ spec:
     metadata:
       labels:
         app: postgresql
-        version: {{ .Chart.AppVersion }}
+        version: "{{ .Chart.AppVersion }}"
     spec:
       containers:
-      - image: "{{ .Values.api.image.repository }}-postgresql:v0.4.3"
+      - image: "{{ .Values.api.image.repository }}-postgresql:v0.4.4"
         name: postgresql
         ports:
         - containerPort: 5432
