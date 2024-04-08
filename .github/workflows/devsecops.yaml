@@ -3,7 +3,12 @@
 name: DevSecOps Workflow
 
 
-on: push
+on:
+  push:
+    branches:
+    - '*'
+    tags:
+    - '*'
 
 # Environment variables used across multiple jobs
 env:
