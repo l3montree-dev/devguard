@@ -66,6 +66,7 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			// check if after flag is set
 			after, _ := cmd.Flags().GetString("after")
+			startIndex, _ := cmd.Flags().GetInt("startIndex")
 
 			core.LoadConfig() // nolint
 			database, err := core.DatabaseFactory()
@@ -92,16 +93,25 @@ func init() {
 				}
 
 			} else {
-				// just redo the intitial sync
-				err = nvdService.InitialPopulation()
-				if err != nil {
-					slog.Error("could not do initial sync", "err", err)
-					return
+				if startIndex != 0 {
+					err = nvdService.FetchAfterIndex(startIndex)
+					if err != nil {
+						slog.Error("could not fetch after index", "err", err)
+						return
+					}
+				} else {
+					// just redo the intitial sync
+					err = nvdService.InitialPopulation()
+					if err != nil {
+						slog.Error("could not do initial sync", "err", err)
+						return
+					}
 				}
 			}
 		},
 	}
 	repairCmd.Flags().String("after", "", "allows to only repair a subset of data. This is used to identify the 'last correct' date in the nvd database. The sync will only include cve modifications in the interval [after, now]. Format: 2006-01-02")
+	repairCmd.Flags().Int("startIndex", 0, "provide a start index to fetch the data from. This is useful after an initial sync failed")
 
 	vulndbCmd.AddCommand(&repairCmd)
 	rootCmd.AddCommand(&vulndbCmd)

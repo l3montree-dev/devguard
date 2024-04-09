@@ -48,10 +48,10 @@ spec:
         resources:
           limits:
             cpu: 4000m
-            memory: 2056Mi
+            memory: 8024Mi
           requests:
             cpu: 1000m
-            memory: 1028Mi
+            memory: 2056Mi
       restartPolicy: Always
       volumes:
       - name: postgresql-pv

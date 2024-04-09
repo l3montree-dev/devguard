@@ -140,7 +140,7 @@ func (nvdService NVDService) saveResponseInDB(resp nistResponse) error {
 func (nvdService NVDService) InitialPopulation() error {
 	slog.Info("starting initial NVD population. This is a one time process and takes a while - we have to respect the NVD API rate limits.")
 
-	return nvdService.fetchAndSaveAllPages(baseURL)
+	return nvdService.fetchAndSaveAllPages(baseURL, 0)
 }
 
 func minTime(a, b time.Time) time.Time {
@@ -150,10 +150,9 @@ func minTime(a, b time.Time) time.Time {
 	return b
 }
 
-func (nvdService NVDService) fetchAndSaveAllPages(url url.URL) error {
+func (nvdService NVDService) fetchAndSaveAllPages(url url.URL, startIndex int) error {
 	u := url
 
-	startIndex := 0
 	totalResults := -1
 
 	for {
@@ -193,6 +192,11 @@ func (nvdService NVDService) fetchAndSaveAllPages(url url.URL) error {
 	return nil
 }
 
+func (nvdService NVDService) FetchAfterIndex(index int) error {
+	slog.Info("starting NVD population after index. This takes a while - we have to respect the NVD API rate limits.", "index", index)
+	return nvdService.fetchAndSaveAllPages(baseURL, index)
+}
+
 func (nvdService NVDService) FetchAfter(lastModDate time.Time) error {
 	slog.Info("starting to maintain NVD data", "lastModDate", lastModDate.String())
 	now := time.Now()
@@ -206,7 +210,7 @@ func (nvdService NVDService) FetchAfter(lastModDate time.Time) error {
 		q.Add("lastModEndDate", endDate.Format(utils.ISO8601Format))
 		u.RawQuery = q.Encode()
 
-		if err := nvdService.fetchAndSaveAllPages(u); err != nil {
+		if err := nvdService.fetchAndSaveAllPages(u, 0); err != nil {
 			return err
 		}
 
