@@ -31,9 +31,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "flawfix",
+	Use:   "flawfind",
 	Short: "Vulnerability management for devs.",
-	Long:  `Flawfix is a tool to manage vulnerabilities and other flaws in your software.`,
+	Long:  `Flawfind is a tool to identify vulnerabilities and flaws in a software. It communicates the result to a flawfix instance.`,
 }
 
 func Execute() {

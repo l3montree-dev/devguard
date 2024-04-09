@@ -29,7 +29,7 @@ func StartMirror(database core.DB, leaderElector leaderElector, configService co
 	cweRepository := repositories.NewCWERepository(database)
 	affectedCmpRepository := repositories.NewAffectedCmpRepository(database)
 
-	nvdService := NewNVDService(leaderElector, configService, cveRepository)
+	nvdService := NewNVDService(cveRepository)
 	epssService := newEPSSService(nvdService, cveRepository)
 	mitreService := newMitreService(leaderElector, cweRepository)
 

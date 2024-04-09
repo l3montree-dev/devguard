@@ -41,18 +41,13 @@ var baseURL = url.URL{
 type NVDService struct {
 	httpClient    *http.Client
 	cveRepository cveRepository
-	leaderElector leaderElector
-	configService configService
 	lock          *sync.Mutex
 }
 
-func NewNVDService(leaderElector leaderElector, configService configService, cveRepository cveRepository) NVDService {
+func NewNVDService(cveRepository cveRepository) NVDService {
 	return NVDService{
-		configService: configService,
 		cveRepository: cveRepository,
-		leaderElector: leaderElector,
 		lock:          &sync.Mutex{},
-
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				MaxIdleConnsPerHost: 3, // only allow 3 concurrent connections to the same host
@@ -142,7 +137,7 @@ func (nvdService NVDService) saveResponseInDB(resp nistResponse) error {
 	return nvdService.cveRepository.SaveBatch(nil, cves)
 }
 
-func (nvdService NVDService) initialPopulation() error {
+func (nvdService NVDService) InitialPopulation() error {
 	slog.Info("starting initial NVD population. This is a one time process and takes a while - we have to respect the NVD API rate limits.")
 
 	return nvdService.fetchAndSaveAllPages(baseURL)
@@ -198,8 +193,7 @@ func (nvdService NVDService) fetchAndSaveAllPages(url url.URL) error {
 	return nil
 }
 
-// return if there is more to fetch - and error if something went wrong
-func (nvdService NVDService) fetchAfter(lastModDate time.Time) error {
+func (nvdService NVDService) FetchAfter(lastModDate time.Time) error {
 	slog.Info("starting to maintain NVD data", "lastModDate", lastModDate.String())
 	now := time.Now()
 	// we can only fetch 120 days at a time
@@ -229,10 +223,10 @@ func (nvdService NVDService) mirror() error {
 	lastModDate, err := nvdService.cveRepository.GetLastModDate()
 	if err != nil {
 		// we are doing the initial population
-		return nvdService.initialPopulation()
+		return nvdService.InitialPopulation()
 	}
 
-	return nvdService.fetchAfter(lastModDate)
+	return nvdService.FetchAfter(lastModDate)
 }
 
 type cvssMetric struct {
