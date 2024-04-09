@@ -31,9 +31,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "flawfix",
+	Use:   "flawfind",
 	Short: "Vulnerability management for devs.",
-	Long:  `Flawfix is a tool to manage vulnerabilities and other flaws in your software.`,
+	Long:  `Flawfind is a tool to identify vulnerabilities and flaws in a software. It communicates the result to a flawfix instance.`,
 }
 
 func Execute() {
@@ -64,6 +64,7 @@ func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
 	rootCmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
+	rootCmd.PersistentFlags().String("apiUrl", "https://api.flawfix.dev", "The url of the API to send the scan request to")
 	err := rootCmd.MarkPersistentFlagRequired("assetName")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)
@@ -92,6 +93,12 @@ func init() {
 				slog.Error("could not get asset id", "err", err)
 				return
 			}
+			apiUrl, err := cmd.Flags().GetString("apiUrl")
+			if err != nil {
+				slog.Error("could not get api url", "err", err)
+				return
+			}
+
 			err = core.LoadConfig()
 			if err != nil {
 				slog.Warn("could not initialize config", "err", err)
@@ -116,7 +123,7 @@ func init() {
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
 
-			req, err := http.NewRequestWithContext(ctx, "POST", "http://localhost:8080/api/v1/scan", file)
+			req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/scan", file)
 			if err != nil {
 				slog.Error("could not create request", "err", err)
 				return
