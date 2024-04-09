@@ -67,7 +67,7 @@ func init() {
 			// check if after flag is set
 			after, _ := cmd.Flags().GetString("after")
 
-			core.LoadConfig()
+			core.LoadConfig() // nolint
 			database, err := core.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "err", err)
