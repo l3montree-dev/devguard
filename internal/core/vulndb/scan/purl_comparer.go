@@ -23,6 +23,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 type purlComparer struct {
@@ -36,15 +37,28 @@ func NewPurlComparer(db core.DB) *purlComparer {
 }
 
 func (comparer *purlComparer) GetVulnsForAll(purls []string) ([]models.VulnInPackage, error) {
-	vulnerabilities := []models.VulnInPackage{}
-	for _, purl := range purls {
-		vulns, err := comparer.GetVulns(purl)
-		if err != nil {
-			return nil, err
-		}
-		vulnerabilities = append(vulnerabilities, vulns...)
+
+	g := errgroup.Group{}
+	g.SetLimit(10) // magic concurrency number - this was just a quick test against a local installed postgresql
+	results := make([][]models.VulnInPackage, len(purls))
+	for i, purl := range purls {
+		p := purl
+		itmp := i
+		g.Go(func() error {
+			vulns, err := comparer.GetVulns(p)
+			if err != nil {
+				return err
+			}
+			results[itmp] = vulns
+			return nil
+		})
 	}
-	return vulnerabilities, nil
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	return utils.Flat(results), nil
 }
 
 func (comparer *purlComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {

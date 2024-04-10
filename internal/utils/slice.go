@@ -41,6 +41,14 @@ func Reduce[T, U any](s []T, f func(U, T) U, init U) U {
 	return r
 }
 
+func Flat[T any](s [][]T) []T {
+	res := make([]T, 0)
+	for _, subslice := range s {
+		res = append(res, subslice...)
+	}
+	return res
+}
+
 type CompareResult[T any] struct {
 	OnlyInA []T
 	OnlyInB []T

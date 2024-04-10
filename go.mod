@@ -5,6 +5,7 @@ go 1.21
 toolchain go1.21.0
 
 require (
+	github.com/CycloneDX/cyclonedx-go v0.8.0
 	github.com/casbin/casbin/v2 v2.72.1
 	github.com/casbin/gorm-adapter/v3 v3.18.0
 	github.com/go-playground/validator/v10 v10.14.1
@@ -14,17 +15,18 @@ require (
 	github.com/labstack/echo/v4 v4.11.1
 	github.com/lib/pq v1.10.9
 	github.com/lmittmann/tint v1.0.1
+	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/ory/client-go v1.1.41
 	github.com/package-url/packageurl-go v0.1.2
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.0
+	golang.org/x/sync v0.1.0
 	gorm.io/datatypes v1.2.0
 	gorm.io/driver/postgres v1.5.2
 	gorm.io/gorm v1.25.2
 )
 
 require (
-	github.com/CycloneDX/cyclonedx-go v0.8.0 // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
@@ -49,7 +51,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/microsoft/go-mssqldb v0.17.0 // indirect
-	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230126093431-47fa9a501578 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect

@@ -82,7 +82,7 @@ func (osv OSV) IsCVE() bool {
 
 type AffectedComponent struct {
 	ID               string  `json:"id" gorm:"primaryKey;"`
-	PURL             string  `json:"purl" gorm:"type:text;column:purl"`
+	PURL             string  `json:"purl" gorm:"type:text;column:purl;index"`
 	Ecosystem        string  `json:"ecosystem" gorm:"type:text;"`
 	Scheme           string  `json:"scheme" gorm:"type:text;"`
 	Type             string  `json:"type" gorm:"type:text;"`
@@ -90,9 +90,9 @@ type AffectedComponent struct {
 	Namespace        *string `json:"namespace" gorm:"type:text;"`
 	Qualifiers       *string `json:"qualifiers" gorm:"type:text;"`
 	Subpath          *string `json:"subpath" gorm:"type:text;"`
-	Version          *string `json:"version"` // either version or semver is defined
-	SemverIntroduced *string `json:"semver_start" gorm:"type:semver;"`
-	SemverFixed      *string `json:"semver_end" gorm:"type:semver;"`
+	Version          *string `json:"version" gorm:"index"` // either version or semver is defined
+	SemverIntroduced *string `json:"semver_start" gorm:"type:semver;index"`
+	SemverFixed      *string `json:"semver_end" gorm:"type:semver;index"`
 
 	CVE []CVE `json:"cves" gorm:"many2many:cve_affected_component;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
