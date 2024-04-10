@@ -16,7 +16,6 @@ type cweRepository interface {
 }
 
 type mitreService struct {
-	leaderElector leaderElector
 	httpClient    *http.Client
 	cweRepository cweRepository
 }
@@ -68,15 +67,14 @@ func (mitreService mitreService) fetchCWEXML() ([]*WeaknessType, error) {
 	return cwes, nil
 }
 
-func newMitreService(leaderElector leaderElector, cweRepository cweRepository) mitreService {
+func NewMitreService(cweRepository cweRepository) mitreService {
 	return mitreService{
-		leaderElector: leaderElector,
 		cweRepository: cweRepository,
 		httpClient:    &http.Client{},
 	}
 }
 
-func (mitreService mitreService) mirror() error {
+func (mitreService mitreService) Mirror() error {
 	// parse the CWEs
 	cwes, err := mitreService.fetchCWEXML()
 

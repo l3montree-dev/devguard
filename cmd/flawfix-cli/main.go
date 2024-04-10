@@ -76,8 +76,23 @@ func init() {
 			}
 
 			cveRepository := repositories.NewCVERepository(database)
+			cweRepository := repositories.NewCWERepository(database)
+			affectedCmpRepository := repositories.NewAffectedCmpRepository(database)
 			nvdService := vulndb.NewNVDService(cveRepository)
+			mitreService := vulndb.NewMitreService(cweRepository)
+			epssService := vulndb.NewEPSSService(nvdService, cveRepository)
+			osvService := vulndb.NewOSVService(affectedCmpRepository)
 
+			now := time.Now()
+			slog.Info("starting cwe database repair")
+			if err := mitreService.Mirror(); err != nil {
+				slog.Error("could not mirror cwe database", "err", err)
+				return
+			}
+			slog.Info("finished cwe database repair", "duration", time.Since(now))
+
+			slog.Info("starting cve database repair")
+			now = time.Now()
 			if after != "" {
 				// we do a partial repair
 				// try to parse the date
@@ -108,6 +123,22 @@ func init() {
 					}
 				}
 			}
+			slog.Info("finished cve database repair", "duration", time.Since(now))
+			slog.Info("starting epss database repair")
+			now = time.Now()
+
+			if err := epssService.Mirror(); err != nil {
+				slog.Error("could not repair epss database", "err", err)
+				return
+			}
+			slog.Info("finished epss database repair", "duration", time.Since(now))
+			slog.Info("starting osv database repair")
+			now = time.Now()
+			if err := osvService.Mirror(); err != nil {
+				slog.Error("could not repair osv database", "err", err)
+				return
+			}
+			slog.Info("finished osv database repair", "duration", time.Since(now))
 		},
 	}
 	repairCmd.Flags().String("after", "", "allows to only repair a subset of data. This is used to identify the 'last correct' date in the nvd database. The sync will only include cve modifications in the interval [after, now]. Format: 2006-01-02")

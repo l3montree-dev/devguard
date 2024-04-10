@@ -39,7 +39,7 @@ type osvService struct {
 	affectedCmpRepository affectedCmpRepository
 }
 
-func newOSVService(affectedCmpRepository affectedCmpRepository) osvService {
+func NewOSVService(affectedCmpRepository affectedCmpRepository) osvService {
 	return osvService{
 		httpClient:            &http.Client{},
 		affectedCmpRepository: affectedCmpRepository,
@@ -106,7 +106,7 @@ func (s osvService) getEcosystems() ([]string, error) {
 	return ecosystems, nil
 }
 
-func (s osvService) mirror() error {
+func (s osvService) Mirror() error {
 	ecosystems, err := s.getEcosystems()
 	if err != nil {
 		slog.Error("could not get ecosystems", "err", err)

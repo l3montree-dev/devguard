@@ -20,7 +20,7 @@ type epssService struct {
 	httpClient    *http.Client
 }
 
-func newEPSSService(nvdService NVDService, cveRepository cveRepository) epssService {
+func NewEPSSService(nvdService NVDService, cveRepository cveRepository) epssService {
 	return epssService{
 		nvdService:    nvdService,
 		cveRepository: cveRepository,
@@ -85,7 +85,7 @@ func (s *epssService) fetchCSV(ctx context.Context) ([]models.CVE, error) {
 	return results, nil
 }
 
-func (s epssService) mirror() error {
+func (s epssService) Mirror() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	cves, err := s.fetchCSV(ctx)
 	cancel()
