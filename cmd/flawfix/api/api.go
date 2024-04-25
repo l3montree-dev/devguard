@@ -278,6 +278,7 @@ func Start(db core.DB) {
 
 	cveRouter := apiV1Router.Group("/vulndb")
 	cveRouter.GET("/", vulndbController.ListPaged)
+	cveRouter.GET("/:cveId/", vulndbController.Read)
 
 	orgRouter := sessionRouter.Group("/organizations")
 	orgRouter.POST("/", orgController.Create)

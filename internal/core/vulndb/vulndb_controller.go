@@ -9,21 +9,22 @@ import (
 
 type repository interface {
 	FindAllListPaged(tx database.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error)
+	FindCVE(tx database.DB, cveId string) (models.CVE, error)
 }
 
 type flawHttpController struct {
-	flawRepository repository
+	cveRepository repository
 }
 
 func NewHttpController(cveRepository repository) *flawHttpController {
 	return &flawHttpController{
-		flawRepository: cveRepository,
+		cveRepository: cveRepository,
 	}
 }
 
 func (c flawHttpController) ListPaged(ctx core.Context) error {
 
-	pagedResp, err := c.flawRepository.FindAllListPaged(
+	pagedResp, err := c.cveRepository.FindAllListPaged(
 		nil,
 		core.GetPageInfo(ctx),
 		core.GetFilterQuery(ctx),
@@ -31,7 +32,20 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	)
 
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
+		return echo.NewHTTPError(500, "could not get CVEs").WithInternal(err)
+	}
+
+	return ctx.JSON(200, pagedResp)
+}
+
+func (c flawHttpController) Read(ctx core.Context) error {
+	pagedResp, err := c.cveRepository.FindCVE(
+		nil,
+		core.GetParam(ctx, "cveId"),
+	)
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get CVEs").WithInternal(err)
 	}
 
 	return ctx.JSON(200, pagedResp)
