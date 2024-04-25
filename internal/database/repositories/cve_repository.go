@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"gorm.io/gorm"
@@ -12,8 +13,8 @@ import (
 )
 
 type cveRepository struct {
-	Repository[string, models.CVE, database.DB]
 	db *gorm.DB
+	Repository[string, models.CVE, database.DB]
 }
 
 func NewCVERepository(db database.DB) *cveRepository {
@@ -100,4 +101,42 @@ func (g *cveRepository) Save(tx database.DB, cve *models.CVE) error {
 			UpdateAll: true,
 		},
 	).Save(cve).Error
+}
+
+func (g *cveRepository) FindAllListPaged(tx database.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error) {
+	var count int64
+	var cves []models.CVE = []models.CVE{}
+
+	q := g.GetDB(tx).Model(&models.CVE{})
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+	q.Count(&count)
+
+	// get all cves
+	q = pageInfo.ApplyOnDB(g.GetDB(tx))
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+
+	// apply sorting
+	if len(sort) > 0 {
+		for _, s := range sort {
+			q = q.Order(s.SQL())
+		}
+	} else {
+		q = q.Order("date_last_modified desc")
+	}
+
+	err := q.Find(&cves).Error
+
+	if err != nil {
+		return core.Paged[models.CVE]{}, err
+	}
+
+	return core.NewPaged(pageInfo, count, cves), nil
 }

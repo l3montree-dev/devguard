@@ -23,16 +23,33 @@ type Tabler interface {
 	TableName() string
 }
 
-type Repository[ID any, T Tabler, Tx any] interface {
+type ModelWriter[ID any, T Tabler, Tx any] interface {
 	Create(tx Tx, t *T) error
-	CreateBatch(tx Tx, ts []T) error
-	Read(id ID) (T, error)
+	Save(tx Tx, t *T) error
+
 	Delete(tx Tx, id ID) error
+}
+
+type ModelReader[ID any, T Tabler] interface {
+	Read(id ID) (T, error)
 	List(ids []ID) ([]T, error)
+}
+
+type BatchModelWriter[T Tabler, Tx any] interface {
+	CreateBatch(tx Tx, ts []T) error
+	SaveBatch(tx Tx, ts []T) error
+}
+
+type Transactioner[Tx any] interface {
 	Transaction(func(tx Tx) error) error
 	GetDB(tx Tx) Tx
-	Save(tx Tx, t *T) error
-	SaveBatch(tx Tx, ts []T) error
+}
+
+type Repository[ID any, T Tabler, Tx any] interface {
+	ModelWriter[ID, T, Tx]
+	ModelReader[ID, T]
+	BatchModelWriter[T, Tx]
+	Transactioner[Tx]
 }
 
 type GormRepository[ID comparable, T Tabler] struct {
