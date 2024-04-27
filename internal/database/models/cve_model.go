@@ -84,3 +84,8 @@ func (m CVE) GetReferences() ([]cveReference, error) {
 	}
 	return refs, nil
 }
+
+type CVEWithAffectedComponent struct {
+	CVE
+	AffectedComponent
+}
