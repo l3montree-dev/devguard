@@ -18,7 +18,7 @@ type cveRepository struct {
 }
 
 func NewCVERepository(db database.DB) *cveRepository {
-	if err := db.AutoMigrate(&models.CVE{}, &models.Weakness{}, &CveAffectedComponent{}); err != nil {
+	if err := db.AutoMigrate(&models.CVE{}, &models.Weakness{}); err != nil {
 		panic(err)
 	}
 
@@ -141,7 +141,7 @@ func (g *cveRepository) FindAllListPaged(tx database.DB, pageInfo core.PageInfo,
 	return core.NewPaged(pageInfo, count, cves), nil
 }
 
-func (g *cveRepository) FindCVE(tx database.DB, cveId string) (models.CVEWithAffectedComponent, error) {
+func (g *cveRepository) FindCVE(tx database.DB, cveId string) (any, error) {
 
 	var cves models.CVE = models.CVE{}
 
@@ -149,52 +149,11 @@ func (g *cveRepository) FindCVE(tx database.DB, cveId string) (models.CVEWithAff
 
 	q = q.Where("cve = ?", cveId)
 
-	err := q.First(&cves).Error
+	err := q.Preload("AffectedComponents").First(&cves).Error
 	if err != nil {
 		return models.CVEWithAffectedComponent{}, err
 	}
 
-	var cveAffectedComponent CveAffectedComponent = CveAffectedComponent{}
-	c := g.GetDB(tx).Model(&CveAffectedComponent{})
-	c = c.Where("cvecve = ?", cveId)
-	err = c.Find(&cveAffectedComponent).Error
-	if err != nil {
-		return models.CVEWithAffectedComponent{
-			CVE: cves,
-		}, nil //TODO: check if this is correct
-	}
+	return cves, nil
 
-	affectedComponentsID := cveAffectedComponent.AffectedComponentId
-	var affectedComponents models.AffectedComponent = models.AffectedComponent{}
-	qq := g.GetDB(tx).Model(&models.AffectedComponent{})
-	qq = qq.Where("id = ?", affectedComponentsID)
-	err = qq.First(&affectedComponents).Error
-	if err != nil {
-		return models.CVEWithAffectedComponent{
-			CVE: cves,
-		}, nil //TODO: check if this is correct
-	}
-
-	cveWithAffectedComponent := models.CVEWithAffectedComponent{
-		CVE:               cves,
-		AffectedComponent: affectedComponents,
-	}
-
-	//TODO: do it in a better way with joins
-
-	/*
-		var cveWithAffectedComponent models.CVEWithAffectedComponent = models.CVEWithAffectedComponent{}
-		g.GetDB(tx).Joins("JOIN cve_affected_component ON cve_affected_component.cvecve = cve.cve").Joins("JOIN affected_components ON affected_components.id = cve_affected_component.affected_component_id").First(&cveWithAffectedComponent)
-
-	*/
-	return cveWithAffectedComponent, nil
-}
-
-type CveAffectedComponent struct {
-	AffectedComponentId string
-	Cvecve              string
-}
-
-func (CveAffectedComponent) TableName() string {
-	return "cve_affected_component"
 }

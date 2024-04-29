@@ -9,7 +9,7 @@ import (
 
 type repository interface {
 	FindAllListPaged(tx database.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error)
-	FindCVE(tx database.DB, cveId string) (models.CVEWithAffectedComponent, error)
+	FindCVE(tx database.DB, cveId string) (any, error)
 }
 
 type flawHttpController struct {

@@ -59,6 +59,8 @@ type CVE struct {
 
 	EPSS       *float32 `json:"epss" gorm:"type:decimal(6,5);"`
 	Percentile *float32 `json:"percentile" gorm:"type:decimal(6,5);"`
+
+	AffectedComponents []AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component"`
 }
 
 type Weakness struct {
@@ -86,6 +88,6 @@ func (m CVE) GetReferences() ([]cveReference, error) {
 }
 
 type CVEWithAffectedComponent struct {
-	CVE
+	CVE any
 	AffectedComponent
 }
