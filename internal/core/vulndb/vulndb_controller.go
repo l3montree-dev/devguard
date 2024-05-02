@@ -12,17 +12,17 @@ type repository interface {
 	FindCVE(tx database.DB, cveId string) (any, error)
 }
 
-type flawHttpController struct {
+type cveHttpController struct {
 	cveRepository repository
 }
 
-func NewHttpController(cveRepository repository) *flawHttpController {
-	return &flawHttpController{
+func NewHttpController(cveRepository repository) *cveHttpController {
+	return &cveHttpController{
 		cveRepository: cveRepository,
 	}
 }
 
-func (c flawHttpController) ListPaged(ctx core.Context) error {
+func (c cveHttpController) ListPaged(ctx core.Context) error {
 
 	pagedResp, err := c.cveRepository.FindAllListPaged(
 		nil,
@@ -38,7 +38,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	return ctx.JSON(200, pagedResp)
 }
 
-func (c flawHttpController) Read(ctx core.Context) error {
+func (c cveHttpController) Read(ctx core.Context) error {
 	pagedResp, err := c.cveRepository.FindCVE(
 		nil,
 		core.GetParam(ctx, "cveId"),

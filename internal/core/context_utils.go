@@ -307,3 +307,19 @@ func (s SortQuery) SQL() string {
 		return s.Field + " asc"
 	}
 }
+
+type Environmental struct {
+	ConfidentialityRequirements string
+	IntegrityRequirements       string
+	AvailabilityRequirements    string
+	ExploitMaturity             string
+}
+
+func GetEnvironmental(ctx Context) Environmental {
+	return Environmental{
+		ConfidentialityRequirements: ctx.QueryParam("confidentialityRequirements"),
+		IntegrityRequirements:       ctx.QueryParam("integrityRequirements"),
+		AvailabilityRequirements:    ctx.QueryParam("availabilityRequirements"),
+		ExploitMaturity:             ctx.QueryParam("exploitMaturity"),
+	}
+}
