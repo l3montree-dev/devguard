@@ -43,6 +43,7 @@ type assetRepository interface {
 
 type orgRepository interface {
 	ReadBySlug(slug string) (models.Org, error)
+	GetSlug(orgID string) (models.Org, error)
 }
 
 type projectRepository interface {
@@ -276,6 +277,9 @@ func Start(db core.DB) {
 	orgRouter := sessionRouter.Group("/organizations")
 	orgRouter.POST("/", orgController.Create)
 	orgRouter.GET("/", orgController.List)
+
+	o := orgRouter.Group("/org/:orgID")
+	o.GET("/metrics/", orgController.Metrics)
 
 	tenantRouter := orgRouter.Group("/:tenant", multiTenantMiddleware(casbinRBACProvider, orgRepository))
 	tenantRouter.DELETE("/", orgController.Delete, core.AccessControlMiddleware("organization", accesscontrol.ActionDelete))
