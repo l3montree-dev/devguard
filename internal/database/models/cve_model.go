@@ -62,7 +62,9 @@ type CVE struct {
 
 	AffectedComponents []AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component"`
 
-	Risk int `json:"risk" gorm:"-"`
+	Vector string `json:"vector" gorm:"type:text;"`
+
+	Risk float64 `json:"risk" gorm:"-"`
 }
 
 type Weakness struct {

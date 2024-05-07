@@ -73,8 +73,8 @@ func (c cveHttpController) Read(ctx core.Context) error {
 	return ctx.JSON(200, pagedResp)
 }
 
-func riskCalculation(cve models.CVE, env core.Environmental) int {
-	risk := 5
+func riskCalculation(cve models.CVE, env core.Environmental) float64 {
+	risk := 999.999
 	/*
 	   availabilityRequirements := env.AvailabilityRequirements
 	   confidentialityRequirements := env.ConfidentialityRequirements
@@ -120,8 +120,18 @@ func riskCalculation(cve models.CVE, env core.Environmental) int {
 		//Threat Metrics
 		E := env.ExploitMaturity
 	*/
-	vector := "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/CR:L/IR:L/AR:L"
+	//vector := "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/CR:L/IR:L/AR:L"
 
+	vector := cve.Vector
+	if vector == "" {
+		return risk
+	}
+	if !strings.HasPrefix(vector, "CVSS") {
+		vector = "CVSS:4.0/" + vector
+		//fmt.Println("CVSS Version: ", vector)
+	}
+
+	fmt.Println("Vector: ", vector)
 	switch {
 	default: // Should be CVSS v2.0 or is invalid
 		cvss, err := gocvss20.ParseVector(vector)
@@ -142,15 +152,17 @@ func riskCalculation(cve models.CVE, env core.Environmental) int {
 			log.Fatal(err)
 		}
 		_ = cvss
+		risk = cvss.BaseScore()
 
 	case strings.HasPrefix(vector, "CVSS:4.0"):
 		cvss, err := gocvss40.ParseVector(vector)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			return risk
 		}
 		_ = cvss
-		s := cvss.Score()
-		fmt.Printf("%.1f\n", s)
+		risk = cvss.Score()
+		fmt.Printf("%.1f\n", risk)
 
 	}
 
