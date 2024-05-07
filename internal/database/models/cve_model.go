@@ -61,6 +61,8 @@ type CVE struct {
 	Percentile *float32 `json:"percentile" gorm:"type:decimal(6,5);"`
 
 	AffectedComponents []AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component"`
+
+	Risk int `json:"risk" gorm:"-"`
 }
 
 type Weakness struct {

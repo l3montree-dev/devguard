@@ -246,6 +246,7 @@ type cvssMetric struct {
 	ConfidentialityImpact string
 	IntegrityImpact       string
 	AvailabilityImpact    string
+	Vector                string
 }
 
 func toDate(date *utils.Date) *datatypes.Date {
@@ -272,6 +273,7 @@ func getCVSSMetric(nvdCVE nvdCVE) cvssMetric {
 			ConfidentialityImpact: nvdCVE.Metrics.CvssMetricV31[0].CvssData.ConfidentialityImpact,
 			IntegrityImpact:       nvdCVE.Metrics.CvssMetricV31[0].CvssData.IntegrityImpact,
 			AvailabilityImpact:    nvdCVE.Metrics.CvssMetricV31[0].CvssData.AvailabilityImpact,
+			Vector:                nvdCVE.Metrics.CvssMetricV31[0].CvssData.VectorString,
 		}
 	}
 	if len(nvdCVE.Metrics.CvssMetricV2) == 0 {
