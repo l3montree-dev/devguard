@@ -64,15 +64,11 @@
   </ol>
 </details>
 
-
-
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 Please refer to: [FlawFix-Web on Github](https://github.com/l3montree-dev/flawfix-web)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 ### Built With
 
@@ -86,14 +82,12 @@ FlawFix is divided into two projects: A frontend (FlawFix Web) and a backend (Fl
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
 <!-- USAGE EXAMPLES -->
 ## Usage
 
 _Please refer to the [Documentation](https://flawfix.dev/docs/getting-started)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -102,7 +96,6 @@ Please read our [contribution guide](CONTRIBUTING.md) if you would like to repor
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
 <!-- Code of Conduct -->
 ## Code of Conduct
 
@@ -110,16 +103,12 @@ Help us keep FlawFix open and inclusive. Please read and follow our [Code of Con
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
 <!-- LICENSE -->
 ## License
 
 Distributed under the AGPL-3.0-or-later License. See [`LICENSE.txt`](LICENSE.txt) for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
