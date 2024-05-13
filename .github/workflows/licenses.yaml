@@ -1,0 +1,22 @@
+# Licenses Check Workflow Definition
+# This workflow is triggered on every push to the repository
+name: Licenses Check Workflow
+
+
+on:
+  push:
+    branches:
+    - '*'
+    tags:
+    - '*'
+
+jobs:
+  license_check:
+    runs-on: ubuntu-latest
+    name: Check for unapproved licenses
+    steps:
+    - name: Checkout the code
+      uses: actions/checkout@v4
+    - uses: ralexander-phi/license_approval@master
+      with:
+        extra_flags: --decisions_file ./docs/dependency_decisions.yml
