@@ -46,6 +46,8 @@
   </p>
 </div>
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8928/badge)](https://www.bestpractices.dev/projects/8928)
+
 
 <!-- TABLE OF CONTENTS -->
 <details>
