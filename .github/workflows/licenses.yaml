@@ -21,6 +21,9 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.22'
+    - name: Install dependencies
+      run: go install ./...
     - uses: ralexander-phi/license_approval@master
       with:
+        working_directory: /
         extra_flags: --decisions_file ./docs/dependency_decisions.yml
