@@ -17,17 +17,13 @@ jobs:
     steps:
     - name: Checkout the code
       uses: actions/checkout@v4
-      with:
-        sparse-checkout: |
-          docs/dependency_decisions.yml
-          go.mod
-          go.sum
-        sparse-checkout-cone-mode: false
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
         go-version: '1.22'
+    - name: Install dependencies
+      run: go install ./...
     - uses: ralexander-phi/license_approval@master
       with:
         working_directory: ${{ github.workspace }}
-        extra_flags: --decisions_file ./docs/dependency_decisions.yml --enabled-package-managers gomodules
+        extra_flags: --decisions_file ./docs/dependency_decisions.yml
