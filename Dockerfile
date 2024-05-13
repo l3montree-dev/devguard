@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM golang:1.21.6 as build
+FROM golang:1.22.3 as build
 
 WORKDIR /go/src/app
 COPY . .
@@ -22,7 +22,7 @@ RUN go mod download
 RUN CGO_ENABLED=0 go build -o /go/bin/app cmd/flawfix/main.go
 RUN CGO_ENABLED=0 go build -o /go/bin/flawfix-cli cmd/flawfix-cli/main.go
 
-FROM gcr.io/distroless/static-debian11
+FROM gcr.io/distroless/static-debian12
 
 COPY config/rbac_model.conf /config/rbac_model.conf
 COPY --from=build /go/bin/app /
