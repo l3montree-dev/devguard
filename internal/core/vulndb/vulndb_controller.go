@@ -45,10 +45,12 @@ func (c cveHttpController) ListPaged(ctx core.Context) error {
 
 	env := core.GetEnvironmental(ctx)
 
+	e := envHandle(env)
+
 	if env.AvailabilityRequirements != "" || env.ConfidentialityRequirements != "" || env.IntegrityRequirements != "" || env.ExploitMaturity != "" {
 
 		for i, cve := range pagedResp.Data {
-			risk := riskCalculation(cve, env)
+			risk := riskCalculation(cve, e)
 
 			cve.Risk = risk
 
@@ -75,6 +77,7 @@ func (c cveHttpController) Read(ctx core.Context) error {
 
 func riskCalculation(cve models.CVE, env core.Environmental) float64 {
 	risk := 999.999
+
 	/*
 	   availabilityRequirements := env.AvailabilityRequirements
 	   confidentialityRequirements := env.ConfidentialityRequirements
@@ -126,10 +129,10 @@ func riskCalculation(cve models.CVE, env core.Environmental) float64 {
 	if vector == "" {
 		return risk
 	}
-	if !strings.HasPrefix(vector, "CVSS") {
-		vector = "CVSS:4.0/" + vector
-		//fmt.Println("CVSS Version: ", vector)
-	}
+	//if !strings.HasPrefix(vector, "CVSS") {
+	//vector = "CVSS:4.0/" + vector
+	//fmt.Println("CVSS Version: ", vector)
+	//}
 
 	fmt.Println("Vector: ", vector)
 	switch {
@@ -147,22 +150,36 @@ func riskCalculation(cve models.CVE, env core.Environmental) float64 {
 		_ = cvss
 
 	case strings.HasPrefix(vector, "CVSS:3.1"):
+		if env.ConfidentialityRequirements != "" {
+			vector = vector + "/CR:" + env.ConfidentialityRequirements
+		}
+		if env.IntegrityRequirements != "" {
+			vector = vector + "/IR:" + env.IntegrityRequirements
+		}
+		if env.AvailabilityRequirements != "" {
+			vector = vector + "/AR:" + env.AvailabilityRequirements
+		}
+		if env.ExploitMaturity != "" {
+			vector = vector + "/E:" + env.ExploitMaturity
+		}
+
 		cvss, err := gocvss31.ParseVector(vector)
 		if err != nil {
 			log.Fatal(err)
 		}
 		_ = cvss
-		risk = cvss.BaseScore()
+		//risk = cvss.BaseScore()
+		risk = cvss.EnvironmentalScore()
 
 	case strings.HasPrefix(vector, "CVSS:4.0"):
 		cvss, err := gocvss40.ParseVector(vector)
 		if err != nil {
-			fmt.Println(err)
+			//fmt.Println(err)
 			return risk
 		}
 		_ = cvss
 		risk = cvss.Score()
-		fmt.Printf("%.1f\n", risk)
+		//fmt.Printf("%.1f\n", risk)
 
 	}
 
@@ -175,4 +192,27 @@ func riskCalculation(cve models.CVE, env core.Environmental) float64 {
 	   fmt.Printf("%.1f %s\n", baseScore, rat)
 	*/
 	return risk
+}
+
+func envHandle(env core.Environmental) core.Environmental {
+
+	replacements := map[string]string{
+		"high":   "H",
+		"medium": "M",
+		"low":    "L",
+	}
+
+	replaceValue := func(value string) string {
+		if newValue, exists := replacements[value]; exists {
+			return newValue
+		}
+		return value
+	}
+
+	env.ConfidentialityRequirements = replaceValue(env.ConfidentialityRequirements)
+	env.IntegrityRequirements = replaceValue(env.IntegrityRequirements)
+	env.AvailabilityRequirements = replaceValue(env.AvailabilityRequirements)
+	env.ExploitMaturity = replaceValue(env.ExploitMaturity)
+
+	return env
 }
