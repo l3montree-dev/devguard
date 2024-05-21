@@ -12,7 +12,7 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-FROM golang:1.22-bookworm
+FROM golang:1.22.3-bookworm
 
 # install nodejs and npm
 RUN curl -fsSL https://deb.nodesource.com/setup_21.x | bash - && \
@@ -20,7 +20,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_21.x | bash - && \
     apt-get install -y nodejs
 
 # install the cdxgen package
-RUN npm install -g @cyclonedx/cdxgen@v10.2.5
+RUN npm install -g @cyclonedx/cdxgen@v10.5.1
 
 # set the working directory
 WORKDIR /app

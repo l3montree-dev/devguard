@@ -1,0 +1,33 @@
+---
+- - :permit
+  - Apache-2.0
+  - :who: Sebastian Kawelke
+    :why: OSI-approved OSS license, https://dwheeler.com/essays/floss-license-slide.html
+    :when: 2024-05-13 13:45:20.797550000 Z
+- - :permit
+  - New BSD
+  - :who: Sebastian Kawelke
+    :why: OSI-approved OSS license, https://dwheeler.com/essays/floss-license-slide.html
+    :when: 2024-05-13 13:45:20.797550000 Z
+- - :permit
+  - Mozilla Public License 2.0
+  - :who: Sebastian Kawelke
+    :why: OSI-approved OSS license, https://dwheeler.com/essays/floss-license-slide.html
+    :when: 2024-05-13 13:45:20.797550000 Z
+- - :permit
+  - MIT
+  - :who: Sebastian Kawelke
+    :why: OSI-approved OSS license, https://dwheeler.com/essays/floss-license-slide.html
+    :when: 2024-05-13 13:45:20.797550000 Z
+- - :permit
+  - Simplified BSD
+  - :who: Sebastian Kawelke
+    :why: OSI-approved OSS license, The 2-Clause BSD License, permissive, https://dwheeler.com/essays/floss-license-slide.html
+    :when: 2024-05-13 13:45:20.797550000 Z
+- - :approve
+  - modernc.org/mathutil
+  - :who: Sebastian Kawelke
+    :why: Is New BSD, OSI-approved OSS license, https://gitlab.com/cznic/mathutil, https://dwheeler.com/essays/floss-license-slide.html
+    :versions:
+    - v1.6.0
+    :when: 2024-05-13 13:45:20.797550000 Z

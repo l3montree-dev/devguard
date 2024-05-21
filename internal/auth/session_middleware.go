@@ -39,7 +39,7 @@ func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
 
 func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSessionCookie string) (string, error) {
 	// check if we have a session
-	session, _, err := oryApiClient.FrontendApi.ToSession(ctx).Cookie(oryKratosSessionCookie).Execute()
+	session, _, err := oryApiClient.FrontendAPI.ToSession(ctx).Cookie(oryKratosSessionCookie).Execute()
 	if err != nil {
 		slog.Error("could not get session from cookie", "err", err)
 		return "", err
