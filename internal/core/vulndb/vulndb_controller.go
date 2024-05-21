@@ -44,10 +44,12 @@ func (c cveHttpController) ListPaged(ctx core.Context) error {
 	}
 
 	env := core.GetEnvironmental(ctx)
+	fmt.Println("ENV", env)
 
 	e := envHandle(env)
 
-	if env.AvailabilityRequirements != "" || env.ConfidentialityRequirements != "" || env.IntegrityRequirements != "" || env.ExploitMaturity != "" {
+	if env.AvailabilityRequirements != "" || env.ConfidentialityRequirements != "" || env.IntegrityRequirements != "" {
+		fmt.Println("Environmental")
 
 		for i, cve := range pagedResp.Data {
 			risk := riskCalculation(cve, e)
@@ -71,19 +73,23 @@ func (c cveHttpController) Read(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get CVEs").WithInternal(err)
 	}
+	cve := pagedResp.(models.CVE)
 
-	return ctx.JSON(200, pagedResp)
+	env := core.GetEnvironmental(ctx)
+	fmt.Println("ENV", env)
+
+	e := envHandle(env)
+
+	if env.AvailabilityRequirements != "" || env.ConfidentialityRequirements != "" || env.IntegrityRequirements != "" {
+		fmt.Println("Environmental22222222")
+		risk := riskCalculation(cve, e)
+		cve.Risk = risk
+	}
+	return ctx.JSON(200, cve)
 }
 
 func riskCalculation(cve models.CVE, env core.Environmental) float64 {
-	risk := 999.999
-
-	/*
-	   availabilityRequirements := env.AvailabilityRequirements
-	   confidentialityRequirements := env.ConfidentialityRequirements
-	   integrityRequirements := env.IntegrityRequirements
-	   exploitMaturity := env.ExploitMaturity
-	*/
+	risk := 0.0
 
 	/*
 	   //Base Metrics
@@ -123,18 +129,21 @@ func riskCalculation(cve models.CVE, env core.Environmental) float64 {
 		//Threat Metrics
 		E := env.ExploitMaturity
 	*/
-	//vector := "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/CR:L/IR:L/AR:L"
 
 	vector := cve.Vector
 	if vector == "" {
 		return risk
 	}
-	//if !strings.HasPrefix(vector, "CVSS") {
-	//vector = "CVSS:4.0/" + vector
-	//fmt.Println("CVSS Version: ", vector)
-	//}
+	if env.ConfidentialityRequirements != "" {
+		vector = vector + "/CR:" + env.ConfidentialityRequirements
+	}
+	if env.IntegrityRequirements != "" {
+		vector = vector + "/IR:" + env.IntegrityRequirements
+	}
+	if env.AvailabilityRequirements != "" {
+		vector = vector + "/AR:" + env.AvailabilityRequirements
+	}
 
-	fmt.Println("Vector: ", vector)
 	switch {
 	default: // Should be CVSS v2.0 or is invalid
 		cvss, err := gocvss20.ParseVector(vector)
@@ -142,55 +151,34 @@ func riskCalculation(cve models.CVE, env core.Environmental) float64 {
 			log.Fatal(err)
 		}
 		_ = cvss
+		risk = cvss.EnvironmentalScore()
 	case strings.HasPrefix(vector, "CVSS:3.0"):
 		cvss, err := gocvss30.ParseVector(vector)
 		if err != nil {
 			log.Fatal(err)
 		}
-		_ = cvss
+
+		risk = cvss.EnvironmentalScore()
 
 	case strings.HasPrefix(vector, "CVSS:3.1"):
-		if env.ConfidentialityRequirements != "" {
-			vector = vector + "/CR:" + env.ConfidentialityRequirements
-		}
-		if env.IntegrityRequirements != "" {
-			vector = vector + "/IR:" + env.IntegrityRequirements
-		}
-		if env.AvailabilityRequirements != "" {
-			vector = vector + "/AR:" + env.AvailabilityRequirements
-		}
-		if env.ExploitMaturity != "" {
-			vector = vector + "/E:" + env.ExploitMaturity
-		}
 
 		cvss, err := gocvss31.ParseVector(vector)
 		if err != nil {
 			log.Fatal(err)
 		}
-		_ = cvss
-		//risk = cvss.BaseScore()
+
 		risk = cvss.EnvironmentalScore()
 
 	case strings.HasPrefix(vector, "CVSS:4.0"):
 		cvss, err := gocvss40.ParseVector(vector)
 		if err != nil {
-			//fmt.Println(err)
 			return risk
 		}
-		_ = cvss
+
 		risk = cvss.Score()
-		//fmt.Printf("%.1f\n", risk)
 
 	}
 
-	/*
-	   baseScore := c.BaseScore()
-	   rat, err := c.Rating(baseScore)
-	   if err != nil {
-	       log.Fatal(err)
-	   }
-	   fmt.Printf("%.1f %s\n", baseScore, rat)
-	*/
 	return risk
 }
 
@@ -212,7 +200,6 @@ func envHandle(env core.Environmental) core.Environmental {
 	env.ConfidentialityRequirements = replaceValue(env.ConfidentialityRequirements)
 	env.IntegrityRequirements = replaceValue(env.IntegrityRequirements)
 	env.AvailabilityRequirements = replaceValue(env.AvailabilityRequirements)
-	env.ExploitMaturity = replaceValue(env.ExploitMaturity)
 
 	return env
 }

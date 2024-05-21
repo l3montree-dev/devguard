@@ -312,7 +312,6 @@ type Environmental struct {
 	ConfidentialityRequirements string
 	IntegrityRequirements       string
 	AvailabilityRequirements    string
-	ExploitMaturity             string
 }
 
 func GetEnvironmental(ctx Context) Environmental {
@@ -320,6 +319,5 @@ func GetEnvironmental(ctx Context) Environmental {
 		ConfidentialityRequirements: ctx.QueryParam("confidentialityRequirements"),
 		IntegrityRequirements:       ctx.QueryParam("integrityRequirements"),
 		AvailabilityRequirements:    ctx.QueryParam("availabilityRequirements"),
-		ExploitMaturity:             ctx.QueryParam("exploitMaturity"),
 	}
 }
