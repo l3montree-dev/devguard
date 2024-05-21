@@ -44,12 +44,9 @@ func (c cveHttpController) ListPaged(ctx core.Context) error {
 	}
 
 	env := core.GetEnvironmental(ctx)
-	fmt.Println("ENV", env)
-
 	e := envHandle(env)
 
 	if env.AvailabilityRequirements != "" || env.ConfidentialityRequirements != "" || env.IntegrityRequirements != "" {
-		fmt.Println("Environmental")
 
 		for i, cve := range pagedResp.Data {
 			risk := riskCalculation(cve, e)
@@ -76,8 +73,6 @@ func (c cveHttpController) Read(ctx core.Context) error {
 	cve := pagedResp.(models.CVE)
 
 	env := core.GetEnvironmental(ctx)
-	fmt.Println("ENV", env)
-
 	e := envHandle(env)
 
 	if env.AvailabilityRequirements != "" || env.ConfidentialityRequirements != "" || env.IntegrityRequirements != "" {
