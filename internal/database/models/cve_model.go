@@ -59,6 +59,12 @@ type CVE struct {
 
 	EPSS       *float32 `json:"epss" gorm:"type:decimal(6,5);"`
 	Percentile *float32 `json:"percentile" gorm:"type:decimal(6,5);"`
+
+	ExploitPublished *datatypes.Date `json:"exploitPublished" gorm:"type:date;"`
+	ExploitAuthor    string          `json:"exploitAuthor" gorm:"type:text;"`
+	ExploitType      string          `json:"exploitType" gorm:"type:text;"`
+	ExploitVerified  bool            `json:"exploitVerified" gorm:"type:boolean;"`
+	ExploitURL       string          `json:"exploitURL" gorm:"type:text;"`
 }
 
 type Weakness struct {
