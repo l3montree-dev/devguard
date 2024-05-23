@@ -17,7 +17,6 @@ package org
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
@@ -171,18 +170,11 @@ func (o *httpController) List(c core.Context) error {
 }
 
 func (o *httpController) Metrics(c core.Context) error {
-
-	//Get the organization ID from the context
-	orgID := core.GetParam(c, "orgID")
-	if orgID == "" {
-		slog.Error("no orgID provided")
-		return c.JSON(400, map[string]string{"error": "no orgID"})
+	fmt.Println("metrics")
+	orgID := core.GetTenant(c).GetID().String()
+	owner, err := core.GetRBAC(c).GetOwnerOfOrganization(orgID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get owner of organization").WithInternal(err)
 	}
-
-	user := core.GetSession(c).GetUserID()
-	r := o.rbacProvider.GetDomainRBAC(orgID).GetAllRoles(user)
-
-	fmt.Println("HIER ist die Rolle von  ", user, "hat", r)
-
-	return c.JSON(200, map[string]string{"message": "metrics"})
+	return c.JSON(200, map[string]string{"ownerId": owner})
 }

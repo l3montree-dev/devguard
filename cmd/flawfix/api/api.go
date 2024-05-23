@@ -278,12 +278,11 @@ func Start(db core.DB) {
 	orgRouter.POST("/", orgController.Create)
 	orgRouter.GET("/", orgController.List)
 
-	o := orgRouter.Group("/org/:orgID")
-	o.GET("/metrics/", orgController.Metrics)
-
 	tenantRouter := orgRouter.Group("/:tenant", multiTenantMiddleware(casbinRBACProvider, orgRepository))
 	tenantRouter.DELETE("/", orgController.Delete, core.AccessControlMiddleware("organization", accesscontrol.ActionDelete))
 	tenantRouter.GET("/", orgController.Read, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
+
+	tenantRouter.GET("/metrics/", orgController.Metrics)
 
 	tenantRouter.GET("/projects/", projectController.List, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 	tenantRouter.POST("/projects/", projectController.Create, core.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
