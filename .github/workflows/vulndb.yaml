@@ -14,7 +14,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16.3-alpine3.20@sha256:e89da2c083a5405943408b6807cd1fd25dc9010c1294e30611b841778bedc653
+        image: ghcr.io/l3montree-dev/flawfix-postgresql:v0.4.7@sha256:09648eb4bf221b41df29ffd8cff70326735b1064f174d5e6742b80e5bd858d71
         env:
           POSTGRES_DB: flawfix
           POSTGRES_USER: flawfix
