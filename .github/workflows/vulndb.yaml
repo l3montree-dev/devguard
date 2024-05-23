@@ -16,16 +16,21 @@ jobs:
       postgres:
         image: ghcr.io/l3montree-dev/flawfix-postgresql:v0.4.7@sha256:09648eb4bf221b41df29ffd8cff70326735b1064f174d5e6742b80e5bd858d71
         env:
-          POSTGRES_DB: flawfix
-          POSTGRES_USER: flawfix
-          POSTGRES_PASSWORD: not_reachable_from_the_internet
+          POSTGRES_DB: ${{env.POSTGRES_DB}}
+          POSTGRES_USER: ${{env.POSTGRES_USER}}
+          POSTGRES_PASSWORD: ${{env.POSTGRES_PASSWORD}}
         ports:
         - 5432:5432
         options: "--health-cmd=\"pg_isready -U flawfix\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
     steps:
+    - name: Install postgresql client
+      run: |
+        sudo apt-get update
+        sudo apt-get install postgresql-client-16
+
     - name: Create semver extension
       run: |
-        psql -h localhost -U flawfix flawfix -c "CREATE EXTENSION IF NOT EXISTS semver;"
+        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U flawfix flawfix -c "CREATE EXTENSION IF NOT EXISTS semver;"
     - name: Checkout code
       uses: actions/checkout@v3
 
@@ -38,14 +43,10 @@ jobs:
       run: |
         go run ./cmd/flawfix-cli/main.go vulndb repair --startIndex=0
 
-    - name: Install postgresql client
-      run: |
-        sudo apt-get update
-        sudo apt-get install postgresql-client-16
 
     - name: Dump the PostgreSQL database
       # skip:checkov:CKV_SECRET_6
-      run: PGPASSWORD=not_reachable_from_the_internet pg_dump -h localhost -U flawfix flawfix > dump.sql
+      run: PGPASSWORD=${{env.POSTGRES_PASSWORD}} pg_dump -h localhost -U flawfix flawfix > dump.sql
 
     - name: Setup oras cli
       uses: oras-project/setup-oras@v1
