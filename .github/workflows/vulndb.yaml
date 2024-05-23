@@ -23,6 +23,9 @@ jobs:
         - 5432:5432
         options: "--health-cmd=\"pg_isready -U flawfix\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
     steps:
+    - name: Create semver extension
+      run: |
+        psql -h localhost -U flawfix flawfix -c "CREATE EXTENSION IF NOT EXISTS semver;"
     - name: Checkout code
       uses: actions/checkout@v3
 
