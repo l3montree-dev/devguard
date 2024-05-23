@@ -1,8 +1,6 @@
-name: PostgreSQL CI Workflow
+name: VulnDB Workflow
 
-on:
-  schedule:
-  - cron: '0 */2 * * *'
+on: workflow_dispatch
 
 env:
   POSTGRES_DB: flawfix
