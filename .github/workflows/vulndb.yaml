@@ -5,6 +5,7 @@ on: workflow_dispatch
 env:
   POSTGRES_DB: flawfix
   POSTGRES_USER: flawfix
+  POSTGRES_HOST: localhost
   POSTGRES_PASSWORD: not_reachable_from_the_internet
 
 jobs:
@@ -37,7 +38,7 @@ jobs:
     - name: Install postgresql client
       run: |
         sudo apt-get update
-        sudo apt-get install postgresql-client
+        sudo apt-get install postgresql-client-16
 
     - name: Dump the PostgreSQL database
       # skip:checkov:CKV_SECRET_6
@@ -45,7 +46,6 @@ jobs:
 
     - name: Setup oras cli
       uses: oras-project/setup-oras@v1
-
 
     - name: Push the database dump to OCI
       run: |
