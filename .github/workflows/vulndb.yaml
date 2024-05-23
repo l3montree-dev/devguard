@@ -20,7 +20,7 @@ jobs:
           POSTGRES_PASSWORD: not_reachable_from_the_internet
         ports:
         - 5432:5432
-        options: "--health-cmd=\"pg_isready -U ${{ secrets.POSTGRES_USER }}\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
+        options: "--health-cmd=\"pg_isready -U flawfix\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -41,7 +41,7 @@ jobs:
 
     - name: Dump the PostgreSQL database
       # skip:checkov:CKV_SECRET_6
-      run: PGPASSWORD=not_reachable_from_the_internet pg_dump -h localhost -U myuser mydatabase > dump.sql
+      run: PGPASSWORD=not_reachable_from_the_internet pg_dump -h localhost -U flawfix flawfix > dump.sql
 
     - name: Setup oras cli
       uses: oras-project/setup-oras@v1
