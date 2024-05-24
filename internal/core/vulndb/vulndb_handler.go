@@ -28,14 +28,17 @@ func StartMirror(database core.DB, leaderElector leaderElector, configService co
 	cveRepository := repositories.NewCVERepository(database)
 	cweRepository := repositories.NewCWERepository(database)
 	affectedCmpRepository := repositories.NewAffectedCmpRepository(database)
+	exploitRepository := repositories.NewExploitRepository(database)
 
 	nvdService := NewNVDService(cveRepository)
 	epssService := NewEPSSService(nvdService, cveRepository)
 	mitreService := NewMitreService(cweRepository)
 
+	exploitDBService := NewExploitDBService(nvdService, exploitRepository)
 	osvService := NewOSVService(affectedCmpRepository)
+
 	// start the mirror process.
-	vulnDBService := newVulnDBService(leaderElector, mitreService, epssService, nvdService, configService, osvService)
+	vulnDBService := newVulnDBService(leaderElector, mitreService, epssService, nvdService, configService, osvService, exploitDBService)
 
 	vulnDBService.startMirrorDaemon()
 }

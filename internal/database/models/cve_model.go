@@ -65,6 +65,7 @@ type CVE struct {
 	Vector string `json:"vector" gorm:"type:text;"`
 
 	Risk float64 `json:"risk" gorm:"-"`
+	Exploits []*Exploit `json:"exploits" gorm:"foreignKey:CVEID;"`
 }
 
 type Weakness struct {
