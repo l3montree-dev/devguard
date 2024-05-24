@@ -59,6 +59,8 @@ type CVE struct {
 
 	EPSS       *float32 `json:"epss" gorm:"type:decimal(6,5);"`
 	Percentile *float32 `json:"percentile" gorm:"type:decimal(6,5);"`
+
+	Exploits []*Exploit `json:"exploits" gorm:"foreignKey:CVEID;"`
 }
 
 type Weakness struct {
