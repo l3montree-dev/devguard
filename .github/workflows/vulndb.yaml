@@ -25,9 +25,16 @@ jobs:
     steps:
     - name: Install postgresql client
       run: |
-      
         sudo apt-get update
-        sudo apt-get install postgresql postgresql-client -y 
+        sudo apt-get install -y wget
+        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+        echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+        sudo apt-get update
+        sudo apt-get install -y postgresql-client-16
+
+    - name: Do a test dump
+      # skip:checkov:CKV_SECRET_6
+      run: PGPASSWORD=${{env.POSTGRES_PASSWORD}} pg_dump -h localhost -U flawfix flawfix > test_dump.sql
 
     - name: Create semver extension
       run: |
@@ -54,4 +61,4 @@ jobs:
 
     - name: Push the database dump to OCI
       run: |
-        oras push ghcr.io/flawfix/dump:$(date +%s) dump.sql
+        oras push ghcr.io/flawfix/vulndb:$(date +%s) dump.sql
