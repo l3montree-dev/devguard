@@ -32,10 +32,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y postgresql-client-16
 
-    - name: Do a test dump
-      # skip:checkov:CKV_SECRET_6
-      run: PGPASSWORD=${{env.POSTGRES_PASSWORD}} pg_dump -h localhost -U flawfix flawfix > test_dump.sql
-
     - name: Create semver extension
       run: |
         PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U flawfix flawfix -c "CREATE EXTENSION IF NOT EXISTS semver;"
@@ -54,7 +50,7 @@ jobs:
 
     - name: Dump the PostgreSQL database
       # skip:checkov:CKV_SECRET_6
-      run: PGPASSWORD=${{env.POSTGRES_PASSWORD}} pg_dump -h localhost -U flawfix flawfix -t cves -t affected_components -t component_dependencies -t components -t cpe_matches -t cve_affected_component -t cve_cpe_match -t cwes -t exploits -t weaknesses --on-conflict-do-nothing > dump.sql
+      run: PGPASSWORD=${{env.POSTGRES_PASSWORD}} pg_dump -h localhost -U flawfix flawfix -t cves -t affected_components -t component_dependencies -t components -t cpe_matches -t cve_affected_component -t cve_cpe_match -t cwes -t exploits -t weaknesses --on-conflict-do-nothing --column-inserts > dump.sql
 
     - name: Setup oras cli
       uses: oras-project/setup-oras@v1
