@@ -23,19 +23,6 @@ jobs:
         - 5432:5432
         options: "--health-cmd=\"pg_isready -U flawfix\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
     steps:
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Setup oras cli
-      uses: oras-project/setup-oras@v1
-    - name: create test file
-      run: echo "test" > test.txt
-    - name: Push the database dump to OCI
-      run: |
-        oras push ghcr.io/l3montree-dev/flawfix/vulndb-test:$(date +%s) test.txt
     - name: Install postgresql client
       run: |
         sudo apt-get update
@@ -44,23 +31,18 @@ jobs:
         echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
         sudo apt-get update
         sudo apt-get install -y postgresql-client-16
-
     - name: Create semver extension
       run: |
         PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U flawfix flawfix -c "CREATE EXTENSION IF NOT EXISTS semver;"
     - name: Checkout code
       uses: actions/checkout@v3
-
     - name: Install Golang
       uses: actions/setup-go@v5
       with:
         go-version: 1.22
-
     - name: Build the database (this takes some time)
       run: |
         go run ./cmd/flawfix-cli/main.go vulndb repair --startIndex=0
-
-
     - name: Dump the PostgreSQL database
       # skip:checkov:CKV_SECRET_6
       run: PGPASSWORD=${{env.POSTGRES_PASSWORD}} pg_dump -h localhost -U flawfix flawfix -t cves -t affected_components -t component_dependencies -t components -t cpe_matches -t cve_affected_component -t cve_cpe_match -t cwes -t exploits -t weaknesses --on-conflict-do-nothing --column-inserts > dump.sql
@@ -72,7 +54,6 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Setup oras cli
       uses: oras-project/setup-oras@v1
-
     - name: Push the database dump to OCI
       run: |
         oras push ghcr.io/l3montree-dev/flawfix/vulndb:$(date +%s) dump.sql
