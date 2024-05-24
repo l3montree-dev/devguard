@@ -23,6 +23,19 @@ jobs:
         - 5432:5432
         options: "--health-cmd=\"pg_isready -U flawfix\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
     steps:
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Setup oras cli
+      uses: oras-project/setup-oras@v1
+    - name: create test file
+      run: echo "test" > test.txt
+    - name: Push the database dump to OCI
+      run: |
+        oras push ghcr.io/flawfix/vulndb-test:$(date +%s) test.txt
     - name: Install postgresql client
       run: |
         sudo apt-get update
@@ -51,7 +64,12 @@ jobs:
     - name: Dump the PostgreSQL database
       # skip:checkov:CKV_SECRET_6
       run: PGPASSWORD=${{env.POSTGRES_PASSWORD}} pg_dump -h localhost -U flawfix flawfix -t cves -t affected_components -t component_dependencies -t components -t cpe_matches -t cve_affected_component -t cve_cpe_match -t cwes -t exploits -t weaknesses --on-conflict-do-nothing --column-inserts > dump.sql
-
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     - name: Setup oras cli
       uses: oras-project/setup-oras@v1
 
