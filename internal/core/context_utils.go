@@ -321,3 +321,25 @@ func GetEnvironmental(ctx Context) Environmental {
 		AvailabilityRequirements:    ctx.QueryParam("availabilityRequirements"),
 	}
 }
+
+func EnvHandle(env Environmental) Environmental {
+
+	replacements := map[string]string{
+		"high":   "H",
+		"medium": "M",
+		"low":    "L",
+	}
+
+	replaceValue := func(value string) string {
+		if newValue, exists := replacements[value]; exists {
+			return newValue
+		}
+		return value
+	}
+
+	env.ConfidentialityRequirements = replaceValue(env.ConfidentialityRequirements)
+	env.IntegrityRequirements = replaceValue(env.IntegrityRequirements)
+	env.AvailabilityRequirements = replaceValue(env.AvailabilityRequirements)
+
+	return env
+}

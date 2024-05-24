@@ -44,7 +44,7 @@ func (c cveHttpController) ListPaged(ctx core.Context) error {
 	}
 
 	env := core.GetEnvironmental(ctx)
-	e := envHandle(env)
+	e := core.EnvHandle(env)
 
 	if env.AvailabilityRequirements != "" || env.ConfidentialityRequirements != "" || env.IntegrityRequirements != "" {
 
@@ -73,7 +73,7 @@ func (c cveHttpController) Read(ctx core.Context) error {
 	cve := pagedResp.(models.CVE)
 
 	env := core.GetEnvironmental(ctx)
-	e := envHandle(env)
+	e := core.EnvHandle(env)
 
 	if env.AvailabilityRequirements != "" || env.ConfidentialityRequirements != "" || env.IntegrityRequirements != "" {
 		fmt.Println("Environmental22222222")
@@ -175,26 +175,4 @@ func riskCalculation(cve models.CVE, env core.Environmental) float64 {
 	}
 
 	return risk
-}
-
-func envHandle(env core.Environmental) core.Environmental {
-
-	replacements := map[string]string{
-		"high":   "H",
-		"medium": "M",
-		"low":    "L",
-	}
-
-	replaceValue := func(value string) string {
-		if newValue, exists := replacements[value]; exists {
-			return newValue
-		}
-		return value
-	}
-
-	env.ConfidentialityRequirements = replaceValue(env.ConfidentialityRequirements)
-	env.IntegrityRequirements = replaceValue(env.IntegrityRequirements)
-	env.AvailabilityRequirements = replaceValue(env.AvailabilityRequirements)
-
-	return env
 }
