@@ -35,7 +35,7 @@ jobs:
       run: echo "test" > test.txt
     - name: Push the database dump to OCI
       run: |
-        oras push ghcr.io/flawfix/vulndb-test:$(date +%s) test.txt
+        oras push ghcr.io/l3montree-dev/flawfix/vulndb-test:$(date +%s) test.txt
     - name: Install postgresql client
       run: |
         sudo apt-get update
@@ -75,4 +75,4 @@ jobs:
 
     - name: Push the database dump to OCI
       run: |
-        oras push ghcr.io/flawfix/vulndb:$(date +%s) dump.sql
+        oras push ghcr.io/l3montree-dev/flawfix/vulndb:$(date +%s) dump.sql
