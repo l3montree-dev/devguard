@@ -1,7 +1,6 @@
 package vulndb
 
 import (
-	"fmt"
 	"log"
 	"strings"
 
@@ -49,10 +48,9 @@ func (c cveHttpController) ListPaged(ctx core.Context) error {
 	if env.AvailabilityRequirements != "" || env.ConfidentialityRequirements != "" || env.IntegrityRequirements != "" {
 
 		for i, cve := range pagedResp.Data {
-			risk := riskCalculation(cve, e)
+			risk, vector := riskCalculation(cve, e)
 
-			cve.Risk = risk
-
+			pagedResp.Data[i].Vector = vector
 			pagedResp.Data[i].Risk = risk
 
 		}
@@ -75,15 +73,14 @@ func (c cveHttpController) Read(ctx core.Context) error {
 	env := core.GetEnvironmental(ctx)
 	e := core.EnvHandle(env)
 
-	if env.AvailabilityRequirements != "" || env.ConfidentialityRequirements != "" || env.IntegrityRequirements != "" {
-		fmt.Println("Environmental22222222")
-		risk := riskCalculation(cve, e)
-		cve.Risk = risk
-	}
+	risk, vector := riskCalculation(cve, e)
+	cve.Risk = risk
+	cve.Vector = vector
+
 	return ctx.JSON(200, cve)
 }
 
-func riskCalculation(cve models.CVE, env core.Environmental) float64 {
+func riskCalculation(cve models.CVE, env core.Environmental) (float64, string) {
 	risk := 0.0
 
 	/*
@@ -127,7 +124,7 @@ func riskCalculation(cve models.CVE, env core.Environmental) float64 {
 
 	vector := cve.Vector
 	if vector == "" {
-		return risk
+		return risk, vector
 	}
 	if env.ConfidentialityRequirements != "" {
 		vector = vector + "/CR:" + env.ConfidentialityRequirements
@@ -138,6 +135,38 @@ func riskCalculation(cve models.CVE, env core.Environmental) float64 {
 	if env.AvailabilityRequirements != "" {
 		vector = vector + "/AR:" + env.AvailabilityRequirements
 	}
+	// build up the temporal score
+	// if all affected components have a fixed version, we set it to official fix
+	if len(cve.AffectedComponents) > 0 {
+		officialFix := true
+		for _, component := range cve.AffectedComponents {
+			if component.SemverFixed != nil {
+				officialFix = false
+				break
+			}
+		}
+		if officialFix {
+			vector = vector + "/RL:OF"
+		} else {
+			vector = vector + "/RL:U"
+		}
+	}
+
+	exploitCodeMaturity := "/E:"
+	maturity := "U"
+	// check if exploit exist
+	if len(cve.Exploits) > 0 {
+		// check if there is a verified exploit
+		maturity = "F" // functionalv
+		for _, exploit := range cve.Exploits {
+			if exploit.Verified {
+				exploitCodeMaturity = "H"
+				break
+			}
+		}
+	}
+
+	vector = vector + exploitCodeMaturity + maturity + "/RC:C" // we trust the sources
 
 	switch {
 	default: // Should be CVSS v2.0 or is invalid
@@ -153,6 +182,7 @@ func riskCalculation(cve models.CVE, env core.Environmental) float64 {
 			log.Fatal(err)
 		}
 
+		vector = cvss.Vector()
 		risk = cvss.EnvironmentalScore()
 
 	case strings.HasPrefix(vector, "CVSS:3.1"):
@@ -162,17 +192,19 @@ func riskCalculation(cve models.CVE, env core.Environmental) float64 {
 			log.Fatal(err)
 		}
 
+		vector = cvss.Vector()
 		risk = cvss.EnvironmentalScore()
 
 	case strings.HasPrefix(vector, "CVSS:4.0"):
 		cvss, err := gocvss40.ParseVector(vector)
 		if err != nil {
-			return risk
+			return risk, vector
 		}
 
+		vector = cvss.Vector()
 		risk = cvss.Score()
 
 	}
 
-	return risk
+	return risk, vector
 }
