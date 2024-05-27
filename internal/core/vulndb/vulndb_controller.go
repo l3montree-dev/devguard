@@ -124,153 +124,96 @@ func riskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 	*/
 
 	vector := cve.Vector
-	if vector == "" {
-		return risk, vector
-	}
-	var envVector string = ""
-	if env.ConfidentialityRequirements != "" {
-		envVector = envVector + "/CR:" + env.ConfidentialityRequirements
-	}
-	if env.IntegrityRequirements != "" {
-		envVector = envVector + "/IR:" + env.IntegrityRequirements
-	}
-	if env.AvailabilityRequirements != "" {
-		envVector = envVector + "/AR:" + env.AvailabilityRequirements
-	}
-
 	switch {
-
-	case strings.HasPrefix(vector, "CVSS:3.0"):
-		cvss, err := gocvss30.ParseVector(vector)
+	case strings.HasPrefix(vector, "CVSS:3.0") || strings.HasPrefix(vector, "CVSS:3.1"):
+		var cvss cvssInterface
+		var err error
+		if strings.HasPrefix(vector, "CVSS:3.0") {
+			cvss, err = gocvss30.ParseVector(vector)
+		} else {
+			cvss, err = gocvss31.ParseVector(vector)
+		}
 		if err != nil {
 			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
 			return obj.RiskMetrics{}, vector
 		}
-
-		cvss.Set("RL", "X")
-
-		if len(cve.AffectedComponents) > 0 {
-			officialFix := true
-			for _, component := range cve.AffectedComponents {
-				if component.SemverFixed != nil {
-					officialFix = false
-					break
-				}
-			}
-			if officialFix {
-				cvss.Set("RL", "O")
-				//vector = vector + "/RL:OF"
-			} else {
-				cvss.Set("RL", "U")
-				//vector = vector + "/RL:U"
-			}
-		}
-
-		cvss.Set("RC", "C")
-		cvss.Set("E", "U")
-
-		// check if exploit exist
-		if len(cve.Exploits) > 0 {
-			cvss.Set("E", "P")
-
-			for _, exploit := range cve.Exploits {
-				if exploit.Verified {
-					cvss.Set("E", "F")
-					break
-				}
-			}
-		}
-		if env.ConfidentialityRequirements != "" {
-			cvss.Set("CR", env.ConfidentialityRequirements)
-		}
-		if env.IntegrityRequirements != "" {
-			cvss.Set("IR", env.IntegrityRequirements)
-		}
-		if env.AvailabilityRequirements != "" {
-			cvss.Set("AR", env.AvailabilityRequirements)
-		}
-
-		if env != (core.Environmental{}) {
-			risk.WithEnvironmentAndThreatIntelligence = cvss.EnvironmentalScore()
-		} else {
-			risk.WithEnvironmentAndThreatIntelligence = cvss.TemporalScore()
-		}
-
-		risk.WithEnvironment = cvss.EnvironmentalScore()
-		risk.WithThreatIntelligence = cvss.TemporalScore()
-		risk.WithEnvironmentAndThreatIntelligence = cvss.TemporalScore()
-
-		return risk, cvss.Vector()
-	case strings.HasPrefix(vector, "CVSS:3.1"):
 		// build up the temporal score
 		// if all affected components have a fixed version, we set it to official fix
 		if len(cve.AffectedComponents) > 0 {
 			officialFix := true
 			for _, component := range cve.AffectedComponents {
-				if component.SemverFixed != nil {
+				if component.SemverFixed == nil {
 					officialFix = false
 					break
 				}
 			}
 			if officialFix {
-				vector = vector + "/RL:O"
+				cvss.Set("RL", "O") // nolint:errcheck
 			} else {
-				vector = vector + "/RL:U"
+				cvss.Set("RL", "U") // nolint:errcheck
 			}
 		}
 
-		exploitCodeMaturity := "/E:"
-		maturity := "U"
+		cvss.Set("E", "U")  // nolint:errcheck
+		cvss.Set("RC", "C") // nolint:errcheck
 		// check if exploit exist
 		if len(cve.Exploits) > 0 {
 			// check if there is a verified exploit
-			maturity = "F" // functionalv
+			cvss.Set("E", "P") // nolint:errcheck
 			for _, exploit := range cve.Exploits {
 				if exploit.Verified {
-					exploitCodeMaturity = "H"
+					cvss.Set("E", "F") // nolint:errcheck
 					break
 				}
 			}
 		}
-
-		vector = vector + exploitCodeMaturity + maturity + "/RC:C" // we trust the sources
-		cvss, err := gocvss31.ParseVector(vector)
-		if err != nil {
-			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
-			return obj.RiskMetrics{}, vector
-		}
-
+		setEnv(cvss, env)
 		vector = cvss.Vector()
-		risk.WithEnvironment = cvss.EnvironmentalScore()
-		risk.WithThreatIntelligence = cvss.TemporalScore()
-		risk.WithEnvironmentAndThreatIntelligence = cvss.TemporalScore()
+		risk.WithEnvironment = getBaseAndEnvironmentalScore(cvss, "CVSS:3.0")
+		risk.WithThreatIntelligence = getBaseAndThreatIntelligenceScore(cvss, "CVSS:3.0")
+		risk.WithEnvironmentAndThreatIntelligence = cvss.EnvironmentalScore()
 
 		return risk, vector
 	case strings.HasPrefix(vector, "CVSS:4.0"):
-		exploitMaturity := "U"
-		if len(cve.Exploits) > 0 {
-			exploitMaturity = "P"
-		}
-		if cve.CISAActionDue != nil {
-			exploitMaturity = "A"
-		}
-		vector = vector + "/E:" + exploitMaturity
-
 		cvss, err := gocvss40.ParseVector(vector)
 		if err != nil {
 			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
 			return obj.RiskMetrics{}, vector
 		}
+		cvss.Set("E", "U") // nolint:errcheck
+		if len(cve.Exploits) > 0 {
+			cvss.Set("E", "P") // nolint:errcheck
+		}
+		if cve.CISAActionDue != nil {
+			cvss.Set("E", "A") // nolint:errcheck
+		}
+
+		temporalScore := cvss.Score()
+
+		// reset the temporal score again to calculate the environmental score
+		oldE, _ := cvss.Get("E")
+		cvss.Set("E", "X") // nolint:errcheck
+
+		environmentalScore := cvss.Score()
+		cvss.Set("E", oldE) // nolint:errcheck
+		// set the env manually
+		if env.ConfidentialityRequirements != "" {
+			cvss.Set("CR", env.ConfidentialityRequirements) // nolint:errcheck
+		}
+		if env.IntegrityRequirements != "" {
+			cvss.Set("IR", env.IntegrityRequirements) // nolint:errcheck
+		}
+		if env.AvailabilityRequirements != "" {
+			cvss.Set("AR", env.AvailabilityRequirements) // nolint:errcheck
+		}
 
 		vector = cvss.Vector()
+		risk.BaseScore = float64(cve.CVSS)
+		risk.WithEnvironment = environmentalScore
+		risk.WithThreatIntelligence = temporalScore
 		risk.WithEnvironmentAndThreatIntelligence = cvss.Score()
-		/*
-			default:
-				slog.Warn("Unknown CVSS version", "vector", vector)
-				return obj.RiskMetrics{}, vector
-		*/
+
 		return risk, vector
-		//case strings.HasPrefix(vector, "CVSS:2.0"):
 	default:
 		//vector = "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:U/RL:ND/RC:C"
 
@@ -282,56 +225,111 @@ func riskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
 			return obj.RiskMetrics{}, vector
 		}
-		cvss.Set("RL", "ND")
+		cvss.Set("RL", "ND") // nolint:errcheck
 
 		if len(cve.AffectedComponents) > 0 {
 			officialFix := true
 			for _, component := range cve.AffectedComponents {
-				if component.SemverFixed != nil {
+				if component.SemverFixed == nil {
 					officialFix = false
 					break
 				}
 			}
 			if officialFix {
-				cvss.Set("RL", "OF")
-				//vector = vector + "/RL:OF"
+				cvss.Set("RL", "OF") // nolint:errcheck
 			} else {
-				cvss.Set("RL", "U")
-				//vector = vector + "/RL:U"
+				cvss.Set("RL", "U") // nolint:errcheck
 			}
 		}
 
-		cvss.Set("RC", "C")
-		cvss.Set("E", "U")
+		cvss.Set("RC", "C") // nolint:errcheck
+		cvss.Set("E", "U")  // nolint:errcheck
 
 		// check if exploit exist
 		if len(cve.Exploits) > 0 {
-			cvss.Set("E", "POC")
+			cvss.Set("E", "POC") // nolint:errcheck
 
 			for _, exploit := range cve.Exploits {
 				if exploit.Verified {
-					cvss.Set("E", "F")
+					cvss.Set("E", "F") // nolint:errcheck
 					break
 				}
 			}
 		}
-		if env.ConfidentialityRequirements != "" {
-			cvss.Set("CR", env.ConfidentialityRequirements)
-		}
-		if env.IntegrityRequirements != "" {
-			cvss.Set("IR", env.IntegrityRequirements)
-		}
-		if env.AvailabilityRequirements != "" {
-			cvss.Set("AR", env.AvailabilityRequirements)
-		}
 
+		setEnv(cvss, env)
 		if env != (core.Environmental{}) {
 			risk.WithEnvironmentAndThreatIntelligence = cvss.EnvironmentalScore()
 		} else {
 			risk.WithEnvironmentAndThreatIntelligence = cvss.TemporalScore()
 		}
-		risk.WithEnvironment = cvss.EnvironmentalScore()
-		risk.WithThreatIntelligence = cvss.TemporalScore()
+		risk.WithEnvironment = getBaseAndEnvironmentalScore(cvss, "CVSS:2.0")
+		risk.WithThreatIntelligence = getBaseAndThreatIntelligenceScore(cvss, "CVSS:2.0")
 		return risk, cvss.Vector()
+	}
+}
+
+type cvssInterface interface {
+	Set(key, value string) error
+	Get(key string) (string, error)
+	EnvironmentalScore() float64
+	TemporalScore() float64
+	Vector() string
+}
+
+var undefinedMarker map[string]string = map[string]string{
+	"CVSS:3.0": "X",
+	"CVSS:2.0": "ND",
+}
+
+func getBaseAndThreatIntelligenceScore(cvss cvssInterface, version string) float64 {
+	// reset the env variables
+	oldCR, _ := cvss.Get("CR")
+	oldIR, _ := cvss.Get("IR")
+	oldAR, _ := cvss.Get("AR")
+
+	cvss.Set("CR", undefinedMarker[version]) // nolint:errcheck
+	cvss.Set("IR", undefinedMarker[version]) // nolint:errcheck
+	cvss.Set("AR", undefinedMarker[version]) // nolint:errcheck
+
+	score := cvss.TemporalScore()
+
+	// reset the env variables
+	cvss.Set("CR", oldCR) // nolint:errcheck
+	cvss.Set("IR", oldIR) // nolint:errcheck
+	cvss.Set("AR", oldAR) // nolint:errcheck
+
+	return score
+}
+
+func getBaseAndEnvironmentalScore(cvss cvssInterface, version string) float64 {
+	// reset the threat metrics
+	oldE, _ := cvss.Get("E")
+	oldRL, _ := cvss.Get("RL")
+	oldRC, _ := cvss.Get("RC")
+
+	cvss.Set("E", undefinedMarker[version])  // nolint:errcheck
+	cvss.Set("RL", undefinedMarker[version]) // nolint:errcheck
+	cvss.Set("RC", undefinedMarker[version]) // nolint:errcheck
+
+	score := cvss.EnvironmentalScore()
+
+	// reset the threat metrics
+	cvss.Set("E", oldE)   // nolint:errcheck
+	cvss.Set("RL", oldRL) // nolint:errcheck
+	cvss.Set("RC", oldRC) // nolint:errcheck
+
+	return score
+}
+
+func setEnv(cvss cvssInterface, env core.Environmental) {
+	if env.ConfidentialityRequirements != "" {
+		cvss.Set("CR", env.ConfidentialityRequirements) // nolint:errcheck
+	}
+	if env.IntegrityRequirements != "" {
+		cvss.Set("IR", env.IntegrityRequirements) // nolint:errcheck
+	}
+	if env.AvailabilityRequirements != "" {
+		cvss.Set("AR", env.AvailabilityRequirements) // nolint:errcheck
 	}
 }

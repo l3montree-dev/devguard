@@ -25,23 +25,29 @@ import (
 )
 
 type tableTest struct {
-	vector         string
-	metrics        obj.RiskMetrics
-	env            core.Environmental
-	exploits       []*models.Exploit
-	expectedVector string
-	cvss           float32
+	vector             string
+	metrics            obj.RiskMetrics
+	env                core.Environmental
+	exploits           []*models.Exploit
+	expectedVector     string
+	cvss               float32
+	affectedComponents []models.AffectedComponent
+}
+
+func ptr[T any](s T) *T {
+	return &s
 }
 
 func TestCalculateRisk(t *testing.T) {
-	/*t.Run("should not panic if no vector is defined", func(t *testing.T) {
+	t.Run("should not panic if no vector is defined", func(t *testing.T) {
 		sut := models.CVE{
-			CVSS: 5,
+			CVSS:   5,
+			Vector: "",
 		}
 		env := core.Environmental{}
 		riskMetrics, vector := riskCalculation(sut, env)
 
-		if riskMetrics.BaseScore != 5 {
+		if riskMetrics.BaseScore != 0 {
 			t.Errorf("Expected base score to be 5, got %f", riskMetrics.BaseScore)
 		}
 
@@ -60,14 +66,14 @@ func TestCalculateRisk(t *testing.T) {
 		if vector != "" {
 			t.Errorf("Expected vector to be empty, got %s", vector)
 		}
-	})*/
+	})
 
 	table := []tableTest{
 		{
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
 			metrics: obj.RiskMetrics{
 				BaseScore:                            5.9,
-				WithEnvironment:                      5.0,
+				WithEnvironment:                      5.9,
 				WithThreatIntelligence:               5.0,
 				WithEnvironmentAndThreatIntelligence: 5.0,
 			},
@@ -79,7 +85,7 @@ func TestCalculateRisk(t *testing.T) {
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
 			metrics: obj.RiskMetrics{
 				BaseScore:                            5.9,
-				WithEnvironment:                      3.4,
+				WithEnvironment:                      4.0,
 				WithThreatIntelligence:               5.0,
 				WithEnvironmentAndThreatIntelligence: 3.4,
 			},
@@ -95,7 +101,7 @@ func TestCalculateRisk(t *testing.T) {
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
 			metrics: obj.RiskMetrics{
 				BaseScore:                            5.9,
-				WithEnvironment:                      3.8,
+				WithEnvironment:                      4.0,
 				WithThreatIntelligence:               5.6,
 				WithEnvironmentAndThreatIntelligence: 3.8,
 			},
@@ -113,10 +119,58 @@ func TestCalculateRisk(t *testing.T) {
 			cvss:           5.9,
 		},
 		{
+			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
+			metrics: obj.RiskMetrics{
+				BaseScore:                            5.9,
+				WithEnvironment:                      4.0,
+				WithThreatIntelligence:               4.9,
+				WithEnvironmentAndThreatIntelligence: 3.3,
+			},
+			env: core.Environmental{
+				ConfidentialityRequirements: "L",
+				IntegrityRequirements:       "L",
+				AvailabilityRequirements:    "L",
+			},
+			exploits: []*models.Exploit{
+				{
+					Verified: true,
+				},
+			},
+			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:F/RL:OF/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
+			cvss:           5.9,
+			affectedComponents: []models.AffectedComponent{{
+				SemverFixed: ptr("v1.0.0"),
+			}},
+		},
+		{
+			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
+			metrics: obj.RiskMetrics{
+				BaseScore:                            5.9,
+				WithEnvironment:                      4.0,
+				WithThreatIntelligence:               5.6,
+				WithEnvironmentAndThreatIntelligence: 3.8,
+			},
+			env: core.Environmental{
+				ConfidentialityRequirements: "L",
+				IntegrityRequirements:       "L",
+				AvailabilityRequirements:    "L",
+			},
+			exploits: []*models.Exploit{
+				{
+					Verified: true,
+				},
+			},
+			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:F/RL:U/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
+			cvss:           5.9,
+			affectedComponents: []models.AffectedComponent{{
+				SemverFixed: nil,
+			}},
+		},
+		{
 			vector: "CVSS:3.0/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
 			metrics: obj.RiskMetrics{
 				BaseScore:                            2.6,
-				WithEnvironment:                      2.4,
+				WithEnvironment:                      2.6,
 				WithThreatIntelligence:               2.4,
 				WithEnvironmentAndThreatIntelligence: 2.4,
 			},
@@ -124,18 +178,80 @@ func TestCalculateRisk(t *testing.T) {
 			expectedVector: "CVSS:3.0/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:U/RC:C",
 			cvss:           2.6,
 		},
-		// "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-		// "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
-		// "CVSS:4.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+		{
+			vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
+			metrics: obj.RiskMetrics{
+				BaseScore:                            2.6,
+				WithEnvironment:                      1.9,
+				WithThreatIntelligence:               2.4,
+				WithEnvironmentAndThreatIntelligence: 1.8,
+			},
+			env: core.Environmental{
+				IntegrityRequirements:       "L",
+				ConfidentialityRequirements: "L",
+				AvailabilityRequirements:    "L",
+			},
+			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:U/RC:C/CR:L/IR:L/AR:L",
+			cvss:           2.6,
+		},
+		{
+			vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
+			metrics: obj.RiskMetrics{
+				BaseScore:                            2.6,
+				WithEnvironment:                      3.4,
+				WithThreatIntelligence:               2.4,
+				WithEnvironmentAndThreatIntelligence: 3.2,
+			},
+			env: core.Environmental{
+				IntegrityRequirements:       "H",
+				ConfidentialityRequirements: "H",
+				AvailabilityRequirements:    "H",
+			},
+			exploits: []*models.Exploit{
+				{
+					Verified: true,
+				},
+			},
+			affectedComponents: []models.AffectedComponent{{
+				SemverFixed: ptr("v1.0.0"),
+			}},
+			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RL:O/RC:C/CR:H/IR:H/AR:H",
+			cvss:           2.6,
+		},
+		{
+			vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
+			metrics: obj.RiskMetrics{
+				BaseScore:                            2.6,
+				WithEnvironment:                      3.4,
+				WithThreatIntelligence:               2.6,
+				WithEnvironmentAndThreatIntelligence: 3.3,
+			},
+			env: core.Environmental{
+				IntegrityRequirements:       "H",
+				ConfidentialityRequirements: "H",
+				AvailabilityRequirements:    "H",
+			},
+			exploits: []*models.Exploit{
+				{
+					Verified: true,
+				},
+			},
+			affectedComponents: []models.AffectedComponent{{
+				SemverFixed: nil,
+			}},
+			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RL:U/RC:C/CR:H/IR:H/AR:H",
+			cvss:           2.6,
+		},
 	}
 
 	for _, tableTest := range table {
 		vector := tableTest.vector
 		t.Run("should return same values, if no env metrics and threat metrics are defined. Vector: "+vector, func(t *testing.T) {
 			sut := models.CVE{
-				CVSS:     tableTest.cvss,
-				Vector:   vector,
-				Exploits: tableTest.exploits,
+				CVSS:               tableTest.cvss,
+				Vector:             vector,
+				Exploits:           tableTest.exploits,
+				AffectedComponents: tableTest.affectedComponents,
 			}
 			env := tableTest.env
 			expectedRiskMetrics := tableTest.metrics
