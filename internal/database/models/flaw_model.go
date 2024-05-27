@@ -22,8 +22,6 @@ const (
 	FlawStateMarkedForMitigation FlawState = "markedForMitigation"
 	FlawStateFalsePositive       FlawState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
 	FlawStateMarkedForTransfer   FlawState = "markedForTransfer"
-	FlawStateMarkedForAvoidance  FlawState = "markedForAvoidance"
-	FlawStateAvoid               FlawState = "avoid" // if we cannot find the dependency in the sbom, we set it to avoid
 )
 
 type Flaw struct {

@@ -242,6 +242,39 @@ func TestCalculateRisk(t *testing.T) {
 			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RL:U/RC:C/CR:H/IR:H/AR:H",
 			cvss:           2.6,
 		},
+		{
+			vector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+			metrics: obj.RiskMetrics{
+				BaseScore:                            7.5,
+				WithEnvironment:                      6.2,
+				WithThreatIntelligence:               4.8,
+				WithEnvironmentAndThreatIntelligence: 2.4,
+			},
+			env: core.Environmental{
+				IntegrityRequirements:       "L",
+				ConfidentialityRequirements: "L",
+				AvailabilityRequirements:    "L",
+			},
+			cvss:           7.5,
+			expectedVector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:U/CR:L/IR:L/AR:L",
+		},
+		{
+			vector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+			metrics: obj.RiskMetrics{
+				BaseScore:                            7.5,
+				WithEnvironment:                      6.2,
+				WithThreatIntelligence:               6.6,
+				WithEnvironmentAndThreatIntelligence: 5.1,
+			},
+			env: core.Environmental{
+				IntegrityRequirements:       "L",
+				ConfidentialityRequirements: "L",
+				AvailabilityRequirements:    "L",
+			},
+			exploits:       []*models.Exploit{{Verified: true}},
+			cvss:           7.5,
+			expectedVector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:P/CR:L/IR:L/AR:L",
+		},
 	}
 
 	for _, tableTest := range table {

@@ -193,9 +193,6 @@ func riskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 		// reset the temporal score again to calculate the environmental score
 		oldE, _ := cvss.Get("E")
 		cvss.Set("E", "X") // nolint:errcheck
-
-		environmentalScore := cvss.Score()
-		cvss.Set("E", oldE) // nolint:errcheck
 		// set the env manually
 		if env.ConfidentialityRequirements != "" {
 			cvss.Set("CR", env.ConfidentialityRequirements) // nolint:errcheck
@@ -206,6 +203,8 @@ func riskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 		if env.AvailabilityRequirements != "" {
 			cvss.Set("AR", env.AvailabilityRequirements) // nolint:errcheck
 		}
+		environmentalScore := cvss.Score()
+		cvss.Set("E", oldE) // nolint:errcheck
 
 		vector = cvss.Vector()
 		risk.BaseScore = float64(cve.CVSS)
