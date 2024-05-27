@@ -32,7 +32,6 @@ func NewHttpController(cveRepository repository) *cveHttpController {
 }
 
 func (c cveHttpController) ListPaged(ctx core.Context) error {
-
 	pagedResp, err := c.cveRepository.FindAllListPaged(
 		nil,
 		core.GetPageInfo(ctx),
@@ -45,15 +44,10 @@ func (c cveHttpController) ListPaged(ctx core.Context) error {
 
 	env := core.GetEnvironmental(ctx)
 
-	if env.AvailabilityRequirements != "" || env.ConfidentialityRequirements != "" || env.IntegrityRequirements != "" {
-
-		for i, cve := range pagedResp.Data {
-			risk, vector := riskCalculation(cve, env)
-
-			pagedResp.Data[i].Vector = vector
-			pagedResp.Data[i].Risk = risk
-
-		}
+	for i, cve := range pagedResp.Data {
+		risk, vector := riskCalculation(cve, env)
+		pagedResp.Data[i].Vector = vector
+		pagedResp.Data[i].Risk = risk
 	}
 
 	return ctx.JSON(200, pagedResp)
