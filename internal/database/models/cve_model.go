@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/l3montree-dev/flawfix/internal/obj"
 	"gorm.io/datatypes"
 )
 
@@ -64,8 +65,8 @@ type CVE struct {
 
 	Vector string `json:"vector" gorm:"type:text;"`
 
-	Risk float64 `json:"risk" gorm:"-"`
-	Exploits []*Exploit `json:"exploits" gorm:"foreignKey:CVEID;"`
+	Risk     obj.RiskMetrics `json:"risk" gorm:"-"`
+	Exploits []*Exploit      `json:"exploits" gorm:"foreignKey:CVEID;"`
 }
 
 type Weakness struct {
