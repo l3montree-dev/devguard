@@ -10,7 +10,12 @@ const (
 	EventTypeDetected FlawEventType = "detected"
 	EventTypeFixed    FlawEventType = "fixed"
 
-	EventTypeRiskAssessmentUpdated FlawEventType = "riskAssessmentUpdated"
+	//EventTypeRiskAssessmentUpdated FlawEventType = "riskAssessmentUpdated"
+	EventTypeMarkedForMitigation FlawEventType = "markedForMitigation"
+	EventTypeFalsePositive       FlawEventType = "falsePositive"
+	EventTypeMarkedForTransfer   FlawEventType = "markedForTransfer"
+	EventTypeMarkedForAvoidance  FlawEventType = "markedForAvoidance"
+	EventTypeAvoid               FlawEventType = "avoid"
 )
 
 type FlawEvent struct {
