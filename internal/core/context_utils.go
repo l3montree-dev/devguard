@@ -137,9 +137,9 @@ func GetPageInfo(ctx Context) PageInfo {
 }
 
 type FilterQuery struct {
-	Field    string
-	Value    string
-	Operator string
+	field    string
+	value    string
+	operator string
 }
 
 func GetFilterQuery(ctx Context) []FilterQuery {
@@ -167,12 +167,10 @@ func GetFilterQuery(ctx Context) []FilterQuery {
 		operator := strings.Split(key, "[")[2]
 		operator = strings.TrimSuffix(operator, "]")
 
-		fmt.Println(field, operator, value)
-
 		filterQuerys = append(filterQuerys, FilterQuery{
-			Field:    field,
-			Value:    value,
-			Operator: operator,
+			field:    field,
+			value:    value,
+			operator: operator,
 		})
 	}
 
@@ -255,9 +253,9 @@ func sanitizeField(field string) string {
 
 func (f FilterQuery) SQL() string {
 
-	field := sanitizeField(f.Field)
+	field := sanitizeField(f.field)
 
-	switch f.Operator {
+	switch f.operator {
 	case "is":
 		return field + " = ?"
 	case "is not":
@@ -270,9 +268,22 @@ func (f FilterQuery) SQL() string {
 		return field + " > ?"
 	case "is before":
 		return field + " < ?"
+	case "like":
+		return field + " LIKE ?"
+
 	default:
 		// default do an equals
-		return f.Field + " = ?"
+		return f.field + " = ?"
+	}
+}
+
+func (f FilterQuery) Value() any {
+	// convert the value to the correct type
+	switch f.operator {
+	case "like":
+		return "%" + f.value + "%"
+	default:
+		return f.value
 	}
 }
 
@@ -295,4 +306,41 @@ func (s SortQuery) SQL() string {
 		// default do an equals
 		return s.Field + " asc"
 	}
+}
+
+type Environmental struct {
+	ConfidentialityRequirements string
+	IntegrityRequirements       string
+	AvailabilityRequirements    string
+}
+
+func GetEnvironmental(ctx Context) Environmental {
+	env := Environmental{
+		ConfidentialityRequirements: ctx.QueryParam("confidentialityRequirements"),
+		IntegrityRequirements:       ctx.QueryParam("integrityRequirements"),
+		AvailabilityRequirements:    ctx.QueryParam("availabilityRequirements"),
+	}
+	return sanitizeEnv(env)
+}
+
+func sanitizeEnv(env Environmental) Environmental {
+
+	replacements := map[string]string{
+		"high":   "H",
+		"medium": "M",
+		"low":    "L",
+	}
+
+	replaceValue := func(value string) string {
+		if newValue, exists := replacements[value]; exists {
+			return newValue
+		}
+		return value
+	}
+
+	env.ConfidentialityRequirements = replaceValue(env.ConfidentialityRequirements)
+	env.IntegrityRequirements = replaceValue(env.IntegrityRequirements)
+	env.AvailabilityRequirements = replaceValue(env.AvailabilityRequirements)
+
+	return env
 }

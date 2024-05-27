@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/l3montree-dev/flawfix/internal/obj"
 	"gorm.io/datatypes"
 )
 
@@ -60,7 +61,12 @@ type CVE struct {
 	EPSS       *float32 `json:"epss" gorm:"type:decimal(6,5);"`
 	Percentile *float32 `json:"percentile" gorm:"type:decimal(6,5);"`
 
-	Exploits []*Exploit `json:"exploits" gorm:"foreignKey:CVEID;"`
+	AffectedComponents []AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component"`
+
+	Vector string `json:"vector" gorm:"type:text;"`
+
+	Risk     obj.RiskMetrics `json:"risk" gorm:"-"`
+	Exploits []*Exploit      `json:"exploits" gorm:"foreignKey:CVEID;"`
 }
 
 type Weakness struct {
@@ -85,4 +91,9 @@ func (m CVE) GetReferences() ([]cveReference, error) {
 		return nil, err
 	}
 	return refs, nil
+}
+
+type CVEWithAffectedComponent struct {
+	CVE any
+	AffectedComponent
 }

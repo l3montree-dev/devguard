@@ -17,10 +17,11 @@ type FlawState string
 
 const (
 	FlawStateOpen                FlawState = "open"
-	FlawStateFixed               FlawState = "fixed"
-	FlawStateAccepted            FlawState = "accepted"
+	FlawStateFixed               FlawState = "fixed"    // we did not find the flaw anymore in the last scan!
+	FlawStateAccepted            FlawState = "accepted" // like ignore
 	FlawStateMarkedForMitigation FlawState = "markedForMitigation"
-	FlawStateFalsePositive       FlawState = "falsePositive"
+	FlawStateFalsePositive       FlawState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
+	FlawStateMarkedForTransfer   FlawState = "markedForTransfer"
 )
 
 type Flaw struct {

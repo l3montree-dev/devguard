@@ -149,5 +149,6 @@ func init() {
 }
 
 func main() {
+	core.InitLogger()
 	Execute()
 }
