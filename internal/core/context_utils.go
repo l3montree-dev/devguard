@@ -315,14 +315,15 @@ type Environmental struct {
 }
 
 func GetEnvironmental(ctx Context) Environmental {
-	return Environmental{
+	env := Environmental{
 		ConfidentialityRequirements: ctx.QueryParam("confidentialityRequirements"),
 		IntegrityRequirements:       ctx.QueryParam("integrityRequirements"),
 		AvailabilityRequirements:    ctx.QueryParam("availabilityRequirements"),
 	}
+	return sanitizeEnv(env)
 }
 
-func EnvHandle(env Environmental) Environmental {
+func sanitizeEnv(env Environmental) Environmental {
 
 	replacements := map[string]string{
 		"high":   "H",
