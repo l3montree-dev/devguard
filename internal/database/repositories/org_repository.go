@@ -41,9 +41,3 @@ func (g *orgRepository) ReadBySlug(slug string) (models.Org, error) {
 	err := g.db.Where("slug = ?", slug).First(&t).Error
 	return t, err
 }
-
-func (g *orgRepository) GetSlug(orgID string) (models.Org, error) {
-	var t models.Org
-	err := g.db.Where("id = ?", orgID).First(&t).Error
-	return t, err
-}

@@ -16,8 +16,6 @@
 package org
 
 import (
-	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/core"
@@ -170,7 +168,6 @@ func (o *httpController) List(c core.Context) error {
 }
 
 func (o *httpController) Metrics(c core.Context) error {
-	fmt.Println("metrics")
 	orgID := core.GetTenant(c).GetID().String()
 	owner, err := core.GetRBAC(c).GetOwnerOfOrganization(orgID)
 	if err != nil {

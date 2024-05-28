@@ -43,7 +43,6 @@ type assetRepository interface {
 
 type orgRepository interface {
 	ReadBySlug(slug string) (models.Org, error)
-	GetSlug(orgID string) (models.Org, error)
 }
 
 type projectRepository interface {
