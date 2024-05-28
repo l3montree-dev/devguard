@@ -1,6 +1,8 @@
 package flaw
 
 import (
+	"encoding/json"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
@@ -14,14 +16,24 @@ type repository interface {
 	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.Flaw, error)
 	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error)
 }
+type flawService interface {
+	UpdateFlawStatus(tx core.DB, userID string, flaw models.Flaw, statusType string, justification *string) error
+}
 
 type flawHttpController struct {
 	flawRepository repository
+	flawService    flawService
 }
 
-func NewHttpController(flawRepository repository) *flawHttpController {
+type FlawStatus struct {
+	StatusType    string `json:"status"`
+	Justification string `json:"justification"`
+}
+
+func NewHttpController(flawRepository repository, flawService flawService) *flawHttpController {
 	return &flawHttpController{
 		flawRepository: flawRepository,
+		flawService:    flawService,
 	}
 }
 
@@ -92,8 +104,37 @@ func (c flawHttpController) Read(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find flaw")
 	}
-
 	// get all the associated cwes
 
 	return ctx.JSON(200, flaw)
+}
+
+func (c flawHttpController) CreateEvent(ctx core.Context) error {
+	flawId, err := core.GetFlawID(ctx)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid flaw id")
+	}
+
+	flaw, err := c.flawRepository.Read(flawId)
+	if err != nil {
+		return echo.NewHTTPError(404, "could not find flaw")
+	}
+	userID := core.GetSession(ctx).GetUserID()
+
+	var status FlawStatus
+	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
+	statusType := status.StatusType
+	justification := status.Justification
+
+	err = c.flawService.UpdateFlawStatus(nil, userID, flaw, statusType, &justification)
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not create flaw event").WithInternal(err)
+	}
+
+	return ctx.NoContent(200)
 }

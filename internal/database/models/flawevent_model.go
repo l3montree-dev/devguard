@@ -31,6 +31,12 @@ func (e FlawEvent) Apply(flaw Flaw) Flaw {
 		flaw.State = FlawStateFixed
 	case EventTypeDetected:
 		flaw.State = FlawStateOpen
+	case EventTypeMarkedForMitigation:
+		flaw.State = FlawStateMarkedForMitigation
+	case EventTypeFalsePositive:
+		flaw.State = FlawStateFalsePositive
+	case EventTypeMarkedForTransfer:
+		flaw.State = FlawStateMarkedForTransfer
 	}
 
 	return flaw
@@ -49,5 +55,32 @@ func NewDetectedEvent(flawID string, userID string) FlawEvent {
 		Type:   EventTypeDetected,
 		FlawID: flawID,
 		UserID: userID,
+	}
+}
+
+func NewMarkedForMitigationEvent(flawID string, userID string, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeMarkedForMitigation,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+}
+
+func NewFalsePositiveEvent(flawID string, userID string, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeFalsePositive,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+}
+
+func NewMarkedForTransferEvent(flawID string, userID string, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeMarkedForTransfer,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 }
