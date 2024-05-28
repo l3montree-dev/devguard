@@ -131,6 +131,10 @@ func (r *RBACMock) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvide
 	return nil
 }
 
+func (r *RBACMock) GetOwnerOfOrganization(organization string) (string, error) {
+	return "", nil
+}
+
 func (r RBACProviderMock) GetDomainRBAC(domain string) accesscontrol.AccessControl {
 	return &RBACMock{
 		roles: map[string][]string{},

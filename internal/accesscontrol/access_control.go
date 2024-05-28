@@ -62,6 +62,8 @@ type AccessControl interface {
 	AllowRoleInProject(project string, role string, object string, action []Action) error
 
 	GetAllProjectsForUser(user string) []string
+
+	GetOwnerOfOrganization(organizationID string) (string, error)
 }
 
 type RBACProvider interface {
