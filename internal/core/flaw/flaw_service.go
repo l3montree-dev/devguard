@@ -84,7 +84,7 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 	return s.flawEventRepository.SaveBatch(tx, events)
 }
 
-func (s *service) UpdateFlawStatus(tx core.DB, userID string, flaw models.Flaw, statusType string, justification *string) error {
+func (s *service) UpdateFlawState(tx core.DB, userID string, flaw models.Flaw, statusType string, justification *string) error {
 
 	ev := models.FlawEvent{
 		Type:          models.FlawEventType(statusType),

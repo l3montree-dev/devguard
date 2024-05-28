@@ -17,7 +17,7 @@ type repository interface {
 	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error)
 }
 type flawService interface {
-	UpdateFlawStatus(tx core.DB, userID string, flaw models.Flaw, statusType string, justification *string) error
+	UpdateFlawState(tx core.DB, userID string, flaw models.Flaw, statusType string, justification *string) error
 }
 
 type flawHttpController struct {
@@ -130,7 +130,7 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 	statusType := status.StatusType
 	justification := status.Justification
 
-	err = c.flawService.UpdateFlawStatus(nil, userID, flaw, statusType, &justification)
+	err = c.flawService.UpdateFlawState(nil, userID, flaw, statusType, &justification)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not create flaw event").WithInternal(err)
