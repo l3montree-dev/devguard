@@ -51,7 +51,7 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 
 	// apply filters
 	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value)
+		q = q.Where(f.SQL(), f.Value())
 	}
 	q.Model(&models.Flaw{}).Count(&count)
 
@@ -60,7 +60,7 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 
 	// apply filters
 	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value)
+		q = q.Where(f.SQL(), f.Value())
 	}
 
 	// apply sorting

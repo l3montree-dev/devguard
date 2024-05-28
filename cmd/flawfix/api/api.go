@@ -30,6 +30,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core/org"
 	"github.com/l3montree-dev/flawfix/internal/core/pat"
 	"github.com/l3montree-dev/flawfix/internal/core/project"
+	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
 	"github.com/l3montree-dev/flawfix/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/database/repositories"
@@ -250,6 +251,8 @@ func Start(db core.DB) {
 	assetController := asset.NewHttpController(assetRepository, scan.NewPurlComparer(db))
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
+	vulndbController := vulndb.NewHttpController(cveRepository)
+
 	server := echohttp.Server()
 
 	apiV1Router := server.Group("/api/v1")
@@ -272,6 +275,10 @@ func Start(db core.DB) {
 	patRouter.POST("/", patController.Create)
 	patRouter.GET("/", patController.List)
 	patRouter.DELETE("/:tokenId/", patController.Delete)
+
+	cveRouter := apiV1Router.Group("/vulndb")
+	cveRouter.GET("/", vulndbController.ListPaged)
+	cveRouter.GET("/:cveId/", vulndbController.Read)
 
 	orgRouter := sessionRouter.Group("/organizations")
 	orgRouter.POST("/", orgController.Create)

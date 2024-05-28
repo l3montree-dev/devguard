@@ -11,22 +11,24 @@ import (
 type vulnDBService struct {
 	leaderElector leaderElector
 
-	mitreService mitreService
-	epssService  epssService
-	nvdService   NVDService
-	osvService   osvService
+	mitreService     mitreService
+	epssService      epssService
+	nvdService       NVDService
+	osvService       osvService
+	exploitDBService exploitDBService
 
 	configService configService
 }
 
-func newVulnDBService(leaderElector leaderElector, mitreService mitreService, epssService epssService, nvdService NVDService, configService configService, osvService osvService) *vulnDBService {
+func newVulnDBService(leaderElector leaderElector, mitreService mitreService, epssService epssService, nvdService NVDService, configService configService, osvService osvService, exploitDBService exploitDBService) *vulnDBService {
 	return &vulnDBService{
 		leaderElector: leaderElector,
 
-		osvService:   osvService,
-		mitreService: mitreService,
-		epssService:  epssService,
-		nvdService:   nvdService,
+		osvService:       osvService,
+		mitreService:     mitreService,
+		epssService:      epssService,
+		nvdService:       nvdService,
+		exploitDBService: exploitDBService,
 
 		configService: configService,
 	}
@@ -64,6 +66,11 @@ func (v *vulnDBService) mirror() {
 					slog.Error("could not mirror nvd", "err", err)
 				} else {
 					slog.Info("successfully mirrored nvd")
+				}
+				if err := v.exploitDBService.Mirror(); err != nil {
+					slog.Error("could not mirror exploitdb", "err", err)
+				} else {
+					slog.Info("successfully mirrored exploitdb")
 				}
 				if err := v.epssService.Mirror(); err != nil {
 					slog.Error("could not mirror epss", "err", err)

@@ -37,7 +37,6 @@ func NewPurlComparer(db core.DB) *purlComparer {
 }
 
 func (comparer *purlComparer) GetVulnsForAll(purls []string) ([]models.VulnInPackage, error) {
-
 	g := errgroup.Group{}
 	g.SetLimit(10) // magic concurrency number - this was just a quick test against a local installed postgresql
 	results := make([][]models.VulnInPackage, len(purls))

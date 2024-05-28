@@ -1,16 +1,15 @@
 package models
 
-import (
-	"gorm.io/datatypes"
-)
-
 type FlawEventType string
 
 const (
 	EventTypeDetected FlawEventType = "detected"
 	EventTypeFixed    FlawEventType = "fixed"
 
-	EventTypeRiskAssessmentUpdated FlawEventType = "riskAssessmentUpdated"
+	//EventTypeRiskAssessmentUpdated FlawEventType = "riskAssessmentUpdated"
+	EventTypeMarkedForMitigation FlawEventType = "markedForMitigation"
+	EventTypeFalsePositive       FlawEventType = "falsePositive"
+	EventTypeMarkedForTransfer   FlawEventType = "markedForTransfer"
 )
 
 type FlawEvent struct {
@@ -19,7 +18,7 @@ type FlawEvent struct {
 	FlawID string        `json:"flawId"`
 	UserID string        `json:"userId"`
 
-	Payload *datatypes.JSON `json:"payload" gorm:"type:jsonb"`
+	Justification *string `json:"justification" gorm:"type:text;"`
 }
 
 func (m FlawEvent) TableName() string {
