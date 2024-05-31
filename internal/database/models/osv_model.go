@@ -16,13 +16,14 @@
 package models
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/l3montree-dev/flawfix/internal/utils"
-	"github.com/mitchellh/hashstructure/v2"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -101,14 +102,30 @@ func (affectedComponent AffectedComponent) TableName() string {
 	return "affected_components"
 }
 
-func (affectedComponent *AffectedComponent) SetIdHash() {
-	hash, err := hashstructure.Hash(affectedComponent, hashstructure.FormatV2, nil)
-	if err != nil {
-		slog.Error("could not hash affected package", "err", err)
-		return
+func safeDereference(s *string) string {
+	if s == nil {
+		return ""
 	}
+	return *s
+}
 
-	affectedComponent.ID = fmt.Sprintf("%x", hash)
+func (affectedComponent *AffectedComponent) SetIdHash() {
+	// build the stable map
+	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s",
+		affectedComponent.PURL,
+		affectedComponent.Ecosystem,
+		affectedComponent.Name,
+		safeDereference(affectedComponent.Namespace),
+		safeDereference(affectedComponent.Qualifiers),
+		safeDereference(affectedComponent.Subpath),
+		safeDereference(affectedComponent.Version),
+		safeDereference(affectedComponent.SemverIntroduced),
+		safeDereference(affectedComponent.SemverFixed))
+
+	hash := sha256.Sum256([]byte(toHash))
+	hashString := hex.EncodeToString(hash[:])
+
+	affectedComponent.ID = hashString
 }
 
 func (osv OSV) GetAffectedPackages() []AffectedComponent {

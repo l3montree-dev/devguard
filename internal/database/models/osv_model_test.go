@@ -244,3 +244,31 @@ func TestFromOSV(t *testing.T) {
 		}
 	})
 }
+
+func ptr[T any](t T) *T {
+	return &t
+}
+
+func TestSetIdHash(t *testing.T) {
+	t.Run("should always set the same hash for the same input, even if cves get updated", func(t *testing.T) {
+		affectedComponent := AffectedComponent{
+			PURL:      "pkg:golang/toolchain",
+			Namespace: ptr("golang"),
+			CVE: []CVE{
+				{},
+			},
+		}
+		affectedComponent.SetIdHash()
+
+		otherAffectedComponent := AffectedComponent{
+			PURL:      "pkg:golang/toolchain",
+			Namespace: ptr("golang"),
+			CVE:       make([]CVE, 0),
+		}
+
+		otherAffectedComponent.SetIdHash()
+		if affectedComponent.ID != otherAffectedComponent.ID {
+			t.Errorf("Expected the same hash, got %s and %s", affectedComponent.ID, otherAffectedComponent.ID)
+		}
+	})
+}
