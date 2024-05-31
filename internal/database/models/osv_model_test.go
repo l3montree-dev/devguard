@@ -126,7 +126,8 @@ func TestFromOSV(t *testing.T) {
 		}
 
 		// check the hash
-		if affectedComponents[0].ID != "fa69db493788baa6560d6986aba5612b80fadc3ea89752dcc0ff4096b14833da" {
+
+		if affectedComponents[0].ID != "fa69db493788baa6560d6986aba5612b80fadc3ea89752dcc0ff4096b14833da" { // nolint:all
 			t.Errorf("Expected ID to be set, got %s", affectedComponents[0].ID)
 		}
 	})
