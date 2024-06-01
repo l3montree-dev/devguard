@@ -114,5 +114,5 @@ func (s epssService) Mirror() error {
 
 		}
 	}
-	return nil
+	return group.Wait()
 }
