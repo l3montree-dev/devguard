@@ -126,7 +126,8 @@ func TestFromOSV(t *testing.T) {
 		}
 
 		// check the hash
-		if affectedComponents[0].ID != "d78f69f109c8083a" {
+
+		if affectedComponents[0].ID != "fa69db493788baa6560d6986aba5612b80fadc3ea89752dcc0ff4096b14833da" { // nolint:all
 			t.Errorf("Expected ID to be set, got %s", affectedComponents[0].ID)
 		}
 	})
@@ -241,6 +242,34 @@ func TestFromOSV(t *testing.T) {
 		affectedComponents := osv.GetAffectedPackages()
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected package, got %d", len(affectedComponents))
+		}
+	})
+}
+
+func ptr[T any](t T) *T {
+	return &t
+}
+
+func TestSetIdHash(t *testing.T) {
+	t.Run("should always set the same hash for the same input, even if cves get updated", func(t *testing.T) {
+		affectedComponent := AffectedComponent{
+			PURL:      "pkg:golang/toolchain",
+			Namespace: ptr("golang"),
+			CVE: []CVE{
+				{},
+			},
+		}
+		affectedComponent.SetIdHash()
+
+		otherAffectedComponent := AffectedComponent{
+			PURL:      "pkg:golang/toolchain",
+			Namespace: ptr("golang"),
+			CVE:       make([]CVE, 0),
+		}
+
+		otherAffectedComponent.SetIdHash()
+		if affectedComponent.ID != otherAffectedComponent.ID {
+			t.Errorf("Expected the same hash, got %s and %s", affectedComponent.ID, otherAffectedComponent.ID)
 		}
 	})
 }

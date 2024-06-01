@@ -15,6 +15,7 @@
 package accesscontrol
 
 import (
+	"fmt"
 	"log"
 	"log/slog"
 	"strings"
@@ -42,6 +43,19 @@ func (c casbinRBACProvider) GetDomainRBAC(domain string) AccessControl {
 		domain:   domain,
 		enforcer: c.enforcer,
 	}
+}
+
+func (c *casbinRBAC) GetOwnerOfOrganization(orgID string) (string, error) {
+	listOfUsers := c.enforcer.GetUsersForRoleInDomain("role::owner", "domain::"+orgID)
+	if len(listOfUsers) == 0 {
+		// TODO: Add alerting
+		return "", fmt.Errorf("no owner found for organization")
+	}
+	if len(listOfUsers) > 1 {
+		// TODO: Add alerting
+		return "", fmt.Errorf("more than one owner found for organization")
+	}
+	return strings.TrimPrefix(listOfUsers[0], "user::"), nil
 }
 
 func (c *casbinRBAC) HasAccess(user string) bool {

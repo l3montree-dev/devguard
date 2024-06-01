@@ -166,3 +166,12 @@ func (o *httpController) List(c core.Context) error {
 
 	return c.JSON(200, organizations)
 }
+
+func (o *httpController) Metrics(c core.Context) error {
+	orgID := core.GetTenant(c).GetID().String()
+	owner, err := core.GetRBAC(c).GetOwnerOfOrganization(orgID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get owner of organization").WithInternal(err)
+	}
+	return c.JSON(200, map[string]string{"ownerId": owner})
+}
