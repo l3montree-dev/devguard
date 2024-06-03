@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
@@ -29,12 +28,12 @@ type AuthSession interface {
 	GetUserID() string
 }
 
-func GetFlawID(c Context) (uuid.UUID, error) {
+func GetFlawID(c Context) (string, error) {
 	flawID := c.Param("flawId")
 	if flawID == "" {
-		return uuid.UUID{}, fmt.Errorf("could not get flaw id")
+		return "", fmt.Errorf("could not get flaw id")
 	}
-	return uuid.Parse(flawID)
+	return flawID, nil
 }
 
 func GetRBAC(c Context) accesscontrol.AccessControl {

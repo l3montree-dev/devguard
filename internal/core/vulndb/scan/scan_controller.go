@@ -113,7 +113,7 @@ func (s *httpController) Scan(c core.Context) error {
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current flaws
-	go s.assetService.HandleScanResult(userID, scannerID, asset, flaws)
+	s.assetService.HandleScanResult(userID, scannerID, asset, flaws)
 
 	return c.JSON(200, flaws)
 }

@@ -9,7 +9,7 @@ import (
 
 type flawRepository struct {
 	db core.DB
-	Repository[uuid.UUID, models.Flaw, core.DB]
+	Repository[string, models.Flaw, core.DB]
 }
 
 func NewFlawRepository(db core.DB) *flawRepository {
@@ -18,7 +18,7 @@ func NewFlawRepository(db core.DB) *flawRepository {
 	}
 	return &flawRepository{
 		db:         db,
-		Repository: newGormRepository[uuid.UUID, models.Flaw](db),
+		Repository: newGormRepository[string, models.Flaw](db),
 	}
 }
 
@@ -81,9 +81,9 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 	return core.NewPaged(pageInfo, count, flaws), nil
 }
 
-func (g flawRepository) Read(id uuid.UUID) (models.Flaw, error) {
+func (g flawRepository) Read(id string) (models.Flaw, error) {
 	var t models.Flaw
-	err := g.db.Preload("CVE.CWEs").Preload("Events").Preload("CVE").First(&t, id).Error
+	err := g.db.Preload("CVE.Weaknesses").Preload("Events").Preload("CVE").First(&t, "id = ?", id).Error
 
 	return t, err
 }

@@ -4,6 +4,7 @@ name: DevSecOps Workflow
 
 
 on:
+  pull_request:
   push:
     branches:
     - '*'

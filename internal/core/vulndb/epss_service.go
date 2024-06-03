@@ -97,7 +97,8 @@ func (s epssService) Mirror() error {
 		slog.Error("Could not fetch EPSS data", "error", err)
 		return err
 	} else {
-		for _, cve := range cves {
+		start := time.Now()
+		for i, cve := range cves {
 			tmpCVE := cve
 			group.Go(
 				func() error {
@@ -111,7 +112,9 @@ func (s epssService) Mirror() error {
 					return nil
 				},
 			)
-
+			if i > 0 && i%1000 == 0 {
+				slog.Info("Processed CVEs", "amount", i, "duration", time.Since(start))
+			}
 		}
 	}
 	return group.Wait()
