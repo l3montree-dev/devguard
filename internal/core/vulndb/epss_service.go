@@ -12,6 +12,7 @@ import (
 
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 type epssService struct {
@@ -89,20 +90,29 @@ func (s epssService) Mirror() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	cves, err := s.fetchCSV(ctx)
 	cancel()
+
+	group := errgroup.Group{}
+	group.SetLimit(10) // 10 because, i do not really know.
 	if err != nil {
 		slog.Error("Could not fetch EPSS data", "error", err)
 		return err
 	} else {
 		for _, cve := range cves {
 			tmpCVE := cve
-			if err := s.cveRepository.GetDB(nil).Model(&models.CVE{}).Where("cve = ?", tmpCVE.CVE).Updates(map[string]interface{}{
-				"epss":       tmpCVE.EPSS,
-				"percentile": tmpCVE.Percentile,
-			}).Error; err != nil {
-				slog.Error("could not save EPSS data", "err", err, "cve", tmpCVE.CVE)
-				// just swallow the error
-			}
+			group.Go(
+				func() error {
+					if err := s.cveRepository.GetDB(nil).Model(&models.CVE{}).Where("cve = ?", tmpCVE.CVE).Updates(map[string]interface{}{
+						"epss":       tmpCVE.EPSS,
+						"percentile": tmpCVE.Percentile,
+					}).Error; err != nil {
+						slog.Error("could not save EPSS data", "err", err, "cve", tmpCVE.CVE)
+						// just swallow the error
+					}
+					return nil
+				},
+			)
+
 		}
 	}
-	return nil
+	return group.Wait()
 }

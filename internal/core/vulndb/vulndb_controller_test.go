@@ -275,6 +275,23 @@ func TestCalculateRisk(t *testing.T) {
 			cvss:           7.5,
 			expectedVector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:P/CR:L/IR:L/AR:L",
 		},
+		{
+			vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+			metrics: obj.RiskMetrics{
+				BaseScore:                            6.1,
+				WithEnvironment:                      6.8,
+				WithThreatIntelligence:               6.0,
+				WithEnvironmentAndThreatIntelligence: 6.6,
+			},
+			env: core.Environmental{
+				IntegrityRequirements:       "M",
+				ConfidentialityRequirements: "H",
+				AvailabilityRequirements:    "M",
+			},
+			expectedVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N/E:F/RC:C/CR:H/IR:M/AR:M",
+			cvss:           6.1,
+			exploits:       []*models.Exploit{{Verified: true}},
+		},
 	}
 
 	for _, tableTest := range table {

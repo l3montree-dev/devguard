@@ -301,10 +301,10 @@ func (s SortQuery) SQL() string {
 	case "asc":
 		return field + " asc"
 	case "desc":
-		return field + " desc"
+		return field + " desc NULLS LAST"
 	default:
 		// default do an equals
-		return s.Field + " asc"
+		return s.Field + " asc NULLS LAST"
 	}
 }
 
