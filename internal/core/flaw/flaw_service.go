@@ -16,6 +16,8 @@
 package flaw
 
 import (
+	"fmt"
+
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
@@ -86,6 +88,7 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 
 func (s *service) UpdateFlawState(tx core.DB, userID string, flaw models.Flaw, statusType string, justification *string) error {
 
+	fmt.Println("UpdateFlawState", statusType, justification)
 	ev := models.FlawEvent{
 		Type:          models.FlawEventType(statusType),
 		FlawID:        flaw.CalculateHash(),

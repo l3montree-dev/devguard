@@ -7,6 +7,7 @@ const (
 	EventTypeFixed    FlawEventType = "fixed"
 
 	//EventTypeRiskAssessmentUpdated FlawEventType = "riskAssessmentUpdated"
+	EventTypeAccepted            FlawEventType = "accepted"
 	EventTypeMarkedForMitigation FlawEventType = "markedForMitigation"
 	EventTypeFalsePositive       FlawEventType = "falsePositive"
 	EventTypeMarkedForTransfer   FlawEventType = "markedForTransfer"
@@ -31,6 +32,8 @@ func (e FlawEvent) Apply(flaw Flaw) Flaw {
 		flaw.State = FlawStateFixed
 	case EventTypeDetected:
 		flaw.State = FlawStateOpen
+	case EventTypeAccepted:
+		flaw.State = FlawStateAccepted
 	case EventTypeMarkedForMitigation:
 		flaw.State = FlawStateMarkedForMitigation
 	case EventTypeFalsePositive:
@@ -55,6 +58,15 @@ func NewDetectedEvent(flawID string, userID string) FlawEvent {
 		Type:   EventTypeDetected,
 		FlawID: flawID,
 		UserID: userID,
+	}
+}
+
+func NewAcceptedEvent(flawID string, userID string, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeFixed,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 }
 

@@ -2,6 +2,7 @@ package flaw
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
@@ -52,6 +53,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 	}
+	fmt.Println("Oben")
 
 	return ctx.JSON(200, pagedResp.Map(func(flaw models.Flaw) interface{} {
 		/*
@@ -104,29 +106,34 @@ func (c flawHttpController) Read(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find flaw")
 	}
+	fmt.Println("aufgerufen")
 	// get all the associated cwes
 
-	return ctx.JSON(200, flawDTO{
-		ID:                 flaw.ID,
-		ScannerID:          flaw.ScannerID,
-		Message:            flaw.Message,
-		AssetID:            flaw.AssetID.String(),
-		State:              flaw.State,
-		CVE:                flaw.CVE,
-		Component:          flaw.Component,
-		CVEID:              flaw.CVEID,
-		ComponentPurlOrCpe: flaw.ComponentPurlOrCpe,
-		Effort:             flaw.Effort,
-		RiskAssessment:     flaw.RiskAssessment,
-		RawRiskAssessment:  flaw.RawRiskAssessment,
-		Priority:           flaw.Priority,
-		ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
-		LastDetected:       flaw.LastDetected,
-		CreatedAt:          flaw.CreatedAt,
+	return ctx.JSON(200, detailedFlawDTO{
+		flawDTO: flawDTO{
+			ID:                 flaw.ID,
+			ScannerID:          flaw.ScannerID,
+			Message:            flaw.Message,
+			AssetID:            flaw.AssetID.String(),
+			State:              flaw.State,
+			CVE:                flaw.CVE,
+			Component:          flaw.Component,
+			CVEID:              flaw.CVEID,
+			ComponentPurlOrCpe: flaw.ComponentPurlOrCpe,
+			Effort:             flaw.Effort,
+			RiskAssessment:     flaw.RiskAssessment,
+			RawRiskAssessment:  flaw.RawRiskAssessment,
+			Priority:           flaw.Priority,
+			ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
+			LastDetected:       flaw.LastDetected,
+			CreatedAt:          flaw.CreatedAt,
+		},
+		Events: flaw.Events,
 	})
 }
 
 func (c flawHttpController) CreateEvent(ctx core.Context) error {
+
 	flawId, err := core.GetFlawID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid flaw id")
@@ -146,6 +153,8 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 
 	statusType := status.StatusType
 	justification := status.Justification
+
+	fmt.Println("CreateEvent", statusType, justification)
 
 	err = c.flawService.UpdateFlawState(nil, userID, flaw, statusType, &justification)
 
