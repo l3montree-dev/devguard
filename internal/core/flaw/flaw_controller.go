@@ -9,7 +9,7 @@ import (
 )
 
 type repository interface {
-	repositories.Repository[uuid.UUID, models.Flaw, core.DB]
+	repositories.Repository[string, models.Flaw, core.DB]
 
 	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.Flaw, error)
 	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error)
@@ -61,7 +61,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 			}
 
 		*/
-		return pagedFlawDTO{
+		return flawDTO{
 			ID:                 flaw.ID,
 			ScannerID:          flaw.ScannerID,
 			Message:            flaw.Message,
@@ -95,5 +95,22 @@ func (c flawHttpController) Read(ctx core.Context) error {
 
 	// get all the associated cwes
 
-	return ctx.JSON(200, flaw)
+	return ctx.JSON(200, flawDTO{
+		ID:                 flaw.ID,
+		ScannerID:          flaw.ScannerID,
+		Message:            flaw.Message,
+		AssetID:            flaw.AssetID.String(),
+		State:              flaw.State,
+		CVE:                flaw.CVE,
+		Component:          flaw.Component,
+		CVEID:              flaw.CVEID,
+		ComponentPurlOrCpe: flaw.ComponentPurlOrCpe,
+		Effort:             flaw.Effort,
+		RiskAssessment:     flaw.RiskAssessment,
+		RawRiskAssessment:  flaw.RawRiskAssessment,
+		Priority:           flaw.Priority,
+		ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
+		LastDetected:       flaw.LastDetected,
+		CreatedAt:          flaw.CreatedAt,
+	})
 }

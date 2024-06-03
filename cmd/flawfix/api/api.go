@@ -169,6 +169,14 @@ func assetNameMiddleware() core.MiddlewareFunc {
 			}
 			// split the asset name
 			assetParts := strings.Split(assetName, "/")
+			if len(assetParts) == 5 {
+				// the user probably provided the full url
+				// check if projects and assets is part of the asset parts - if so, remove them
+				// <tenant>/projects/<project>/assets/<asset>
+				if assetParts[1] == "projects" && assetParts[3] == "assets" {
+					assetParts = []string{assetParts[0], assetParts[2], assetParts[4]}
+				}
+			}
 			if len(assetParts) != 3 {
 				return echo.NewHTTPError(400, "invalid asset name")
 			}

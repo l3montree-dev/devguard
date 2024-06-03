@@ -21,7 +21,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
-type pagedFlawDTO struct {
+type flawDTO struct {
 	ID                 string            `json:"id"`
 	ScannerID          string            `json:"scanner"`
 	Message            *string           `json:"message"`

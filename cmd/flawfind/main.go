@@ -152,6 +152,11 @@ func init() {
 				return
 			}
 
+			if len(flaws) == 0 {
+				slog.Info("no flaws found")
+				return
+			}
+
 			for _, f := range flaws {
 				slog.Info("flaw found", "cve", f.CVEID, "package", f.GetArbitraryJsonData()["packageName"], "severity", f.CVE.Severity, "introduced", f.GetArbitraryJsonData()["introducedVersion"], "fixed", f.GetArbitraryJsonData()["fixedVersion"])
 			}
