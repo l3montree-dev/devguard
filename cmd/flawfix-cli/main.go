@@ -82,11 +82,7 @@ func init() {
 			mitreService := vulndb.NewMitreService(cweRepository)
 			epssService := vulndb.NewEPSSService(nvdService, cveRepository)
 			osvService := vulndb.NewOSVService(affectedCmpRepository)
-			if err := osvService.Mirror(); err != nil {
-				slog.Error("could not repair osv database", "err", err)
-				return
-			}
-			return
+
 			now := time.Now()
 			slog.Info("starting cwe database repair")
 			if err := mitreService.Mirror(); err != nil {
