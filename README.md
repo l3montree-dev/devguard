@@ -58,6 +58,7 @@
         <li><a href="#dynamic-application-security-testing-dast">Dynamic Application Security Testing (DAST) (Coming Soon)</a></li>
       </ul>
     </li>
+    <li><a href="#joint-vulnerability-management---the-strength-of-exchange">Joint vulnerability management - the strength of exchange</a></li>
     <li><a href="#local-quickstart">Local Quickstart</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#code-of-conduct">Code of Conduct</a></li>
@@ -97,6 +98,8 @@ To further illustrate the importance of prioritizing vulnerabilities, consider o
 4. **Compliance:** Ensures your projects meet security standards like ISO/IEC 27001 and PCI-DSS.
 5. **Security and confidentiality:** We prioritize the security of this software! In an expansion stage and in cooperation with research institutions, we want to make confidential data processing usable for the secure handling of sensitive information (confidential computing).
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 ## Understanding the OWASP DevSecOps Pipeline
 
 > FlawFix aims to accompany developers in implementing the OWASP-DevSecOps pipeline in the best way possible, without requiring extensive cybersecurity knowledge. We plan provide a wrapper CLI to a curated list of scanners for different stages and seamless integration with the management backend, ensuring that security is integrated smoothly into the development workflow.
@@ -106,10 +109,12 @@ To further illustrate the importance of prioritizing vulnerabilities, consider o
 The OWASP DevSecOps pipeline integrates security practices into the DevOps process, ensuring that security is an integral part of the software development lifecycle. The pipeline includes the following key stages and practices:
 
 ### Secret Scanning (Coming Soon)
+
 - Detects and manages sensitive information such as API keys and passwords that may be accidentally committed to the codebase.
 - Helps prevent security breaches by identifying secrets early in the development process.
 
 ### Software Composition Analysis (SCA)
+
 - Utilizes Software Bill of Materials (SBOMs) to conduct thorough software composition analysis.
 - Helps in identifying and managing dependencies and their associated vulnerabilities.
 - Prioritizes CVEs using various threat intelligence sources such as EPSS and ExploitDB.
@@ -117,31 +122,33 @@ The OWASP DevSecOps pipeline integrates security practices into the DevOps proce
 - Syncs with the National Vulnerability Database (NVD) to ensure up-to-date information on vulnerabilities.
 
 #### Crowdsourced Vulnerability Management
+
 - Supports a crowdsourced approach to vulnerability management.
 - If a dependency (A) has another dependency (B) with a CVE, users can consult A to determine the relevance of B's CVE to their project.
 - Allows marking vulnerabilities as false positives, sharing this information across the user community for the same A -> B relationship.
 
 ### Static Application Security Testing (SAST) (Coming Soon)
+
 - Analyzes source code to identify security vulnerabilities early in the development process.
 - Provides developers with actionable insights to fix vulnerabilities before they become critical issues.
 
 
 ### Infrastructure as Code (IaC) Scanning (Coming Soon)
+
 - Ensures that infrastructure definitions and configurations adhere to security best practices.
 - Detects misconfigurations and vulnerabilities in IaC templates early in the development cycle.
 
 ### Container Scanning (Coming Soon)
+
 - Scans container images for vulnerabilities, ensuring that the containerized applications are secure.
 - Helps maintain the security of containerized environments by identifying and mitigating risks in container images.
 
 ### Dynamic Application Security Testing (DAST) (Coming Soon)
+
 - Tests running applications to identify vulnerabilities that may not be visible in the source code.
 - Simulates real-world attacks to uncover potential security weaknesses in live environments.
 
-
-<!-- USAGE EXAMPLES -->
-
-
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Joint vulnerability management - the strength of exchange
 
@@ -164,6 +171,8 @@ For instance, consider an open-source project, “XY-Example,” which detects a
 ### Crowdsourced
 
 If the VEX is not available and in its addition, we can also use the knowledge of the crowd. If enough users confirm that a vulnerability in a software is not relevant, we can make this information available to others as a preset. In this way, we expand the foundation for joint vulnerability management and make it even easier.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Local Quickstart
 
