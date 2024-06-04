@@ -1,20 +1,4 @@
 <!--
- Copyright (C) 2023 Sebastian Kawelke, l3montree UG (haftungsbeschraenkt)
- 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as
- published by the Free Software Foundation, either version 3 of the
- License, or (at your option) any later version.
- 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU Affero General Public License for more details.
- 
- You should have received a copy of the GNU Affero General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
--->
-
 <!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
 <a name="readme-top"></a>
 <!--
@@ -156,16 +140,46 @@ The OWASP DevSecOps pipeline integrates security practices into the DevOps proce
 
 
 <!-- USAGE EXAMPLES -->
+
+
+
+## Joint vulnerability management - the strength of exchange
+
+Based on emerging standards such as the Vulnerability Exploitability eXchange (VEX) and our goal of increasing overall software security through the dissemination of FlawFix, we want to make expert information available from the source.  
+
+![Depiction of a dependency graph with vulnerabilities (CVEs) of a software and the integration of VEX and crowd-based information as well as the FlawFix standard management process. The representation is ASCII art.](./docs/assets/vex-crowd-ascii.png)
+
+### Vulnerability Exploitability eXchange (VEX) 
+
+> “The goal of Vulnerability Exploitability eXchange (VEX) is to allow a software supplier or other parties to assert the status of specific vulnerabilities in a particular product.” ([CISA](https://www.cisa.gov/sites/default/files/publications/VEX_Use_Cases_Apr22.pdf))
+
+VEX is an advanced form of security advisory that provides several key advantages over conventional methods:
+
+1. Machine Readability
+2. Enhanced SBOM Integration
+3. Automation Support
+
+For instance, consider an open-source project, “XY-Example,” which detects a vulnerability through a dependency. Upon closer inspection, the developers determine that the specific conditions required to exploit this vulnerability are not present in their software. This expert assessment can be recorded and disseminated through VEX, making it accessible and usable for all users of the “XY-Example” software. This exchange of vulnerability information drastically reduces the effort required for vulnerability management, as users can rely on expert evaluations to determine their exposure to potential threats.
+
+### Crowdsourced
+
+If the VEX is not available and in its addition, we can also use the knowledge of the crowd. If enough users confirm that a vulnerability in a software is not relevant, we can make this information available to others as a preset. In this way, we expand the foundation for joint vulnerability management and make it even easier.
+
 ## Local Quickstart
 
 1. Clone the repo
 
    ```sh
-   git clone git@github.com:l3montree-dev/flawfix.git
-    ```
+   git clone git@github.com:l3montree-dev/flawfix.git && cd flawfix
+   ```
 
 2. Install Go, Docker & Docker-Compose
 3. Copy the `.env.example` file to `.env` and adjust the values to your needs
+
+    ```sh
+    cp .env.example .env
+    ```
+
 4. Run the following command to start the necessary services
 
    ```sh
