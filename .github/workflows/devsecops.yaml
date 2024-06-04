@@ -4,6 +4,7 @@ name: DevSecOps Workflow
 
 
 on:
+  pull_request:
   push:
     branches:
     - '*'
@@ -25,7 +26,7 @@ jobs:
     - name: Run Gitleaks Scan
       # Running Gitleaks to scan the code for secrets
       run: |
-        docker run --rm -v $(pwd):/code -u $(id -u):$(id -g) zricethezav/gitleaks:v8.18.1 -s /code detect -f sarif -r /code/gitleaks.sarif.json
+        docker run --rm -v $(pwd):/code -u $(id -u):$(id -g) zricethezav/gitleaks:v8.18.3 -s /code detect -f sarif -r /code/gitleaks.sarif.json
     - name: Upload sarif file
       uses: github/codeql-action/upload-sarif@v3
       with:
@@ -150,7 +151,7 @@ jobs:
     - name: Build Docker image with Kaniko
       # Building the Docker image using Kaniko
       id: build_image
-      uses: docker://gcr.io/kaniko-project/executor:v1.9.2
+      uses: docker://gcr.io/kaniko-project/executor:v1.23.0
       with:
         args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar
     - name: Setup crane
