@@ -16,8 +16,6 @@
 package pat
 
 import (
-	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
@@ -60,8 +58,6 @@ func (p *PatController) Create(c core.Context) error {
 	}
 
 	patStruct, token := req.ToModel(userID)
-
-	fmt.Println(patStruct)
 
 	err := p.patRepository.Create(nil, &patStruct)
 	if err != nil {

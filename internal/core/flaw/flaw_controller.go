@@ -53,7 +53,6 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 	}
-	fmt.Println("Oben")
 
 	return ctx.JSON(200, pagedResp.Map(func(flaw models.Flaw) interface{} {
 		/*
@@ -106,7 +105,7 @@ func (c flawHttpController) Read(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find flaw")
 	}
-	fmt.Println("aufgerufen")
+
 	// get all the associated cwes
 
 	return ctx.JSON(200, detailedFlawDTO{

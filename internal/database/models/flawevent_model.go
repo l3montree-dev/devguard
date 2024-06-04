@@ -63,7 +63,7 @@ func NewDetectedEvent(flawID string, userID string) FlawEvent {
 
 func NewAcceptedEvent(flawID string, userID string, justification string) FlawEvent {
 	return FlawEvent{
-		Type:          EventTypeFixed,
+		Type:          EventTypeAccepted,
 		FlawID:        flawID,
 		UserID:        userID,
 		Justification: &justification,

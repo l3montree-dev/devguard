@@ -16,8 +16,6 @@
 package repositories
 
 import (
-	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database"
@@ -81,7 +79,7 @@ func (a *assetRepository) GetAllComponentsByAssetID(assetID uuid.UUID) []obj.Com
 func (a *assetRepository) GetTransitiveDependencies(assetID uuid.UUID) []obj.Dependency {
 	var results []obj.Dependency
 
-	fmt.Println("assetID", assetID.String())
+	//fmt.Println("assetID", assetID.String())
 	a.db.Raw(`
 	WITH RECURSIVE ComponentHierarchy AS (
 		SELECT
