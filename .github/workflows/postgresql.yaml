@@ -2,8 +2,6 @@ name: Create and publish the custom postgresql Docker image
 
 on:
   push:
-    branches:
-    - main
     tags:
     - '*'
 
