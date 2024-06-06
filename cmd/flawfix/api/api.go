@@ -230,6 +230,29 @@ func multiTenantMiddleware(rbacProvider accesscontrol.RBACProvider, organization
 	}
 }
 
+// @Summary      Get user info
+// @Description  Retrieves the user ID from the session
+// @Tags         session
+// @Produce      json
+// @Success      200  {object} object{userId=string}
+// @Failure      401  {object}  object{error=string}
+// @Router       /whoami/ [get]
+func whoami(c echo.Context) error {
+	return c.JSON(200, map[string]string{
+		"userId": core.GetSession(c).GetUserID(),
+	})
+}
+
+// @Summary      Health Check
+// @Description  Indicating the service is running
+// @Tags         health
+// @Produce      json
+// @Success      200  {string}  string "ok"
+// @Router       /health [get]
+func health(c echo.Context) error {
+	return c.String(200, "ok")
+}
+
 func Start(db core.DB) {
 	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS"))
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
@@ -265,17 +288,11 @@ func Start(db core.DB) {
 
 	apiV1Router := server.Group("/api/v1")
 	// apply the health route without any session or multi tenant middleware
-	apiV1Router.GET("/health/", func(c echo.Context) error {
-		return c.String(200, "ok")
-	})
+	apiV1Router.GET("/health/", health)
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patRepository))
 	// register a simple whoami route for testing purposes
-	sessionRouter.GET("/whoami/", func(c echo.Context) error {
-		return c.JSON(200, map[string]string{
-			"userId": core.GetSession(c).GetUserID(),
-		})
-	})
+	sessionRouter.GET("/whoami/", whoami)
 
 	sessionRouter.POST("/scan/", scanController.Scan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 

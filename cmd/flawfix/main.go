@@ -25,6 +25,18 @@ import (
 	_ "github.com/lib/pq"
 )
 
+//	@title			FlawFix API
+//	@version		v1
+//	@description	FlawFix API
+
+//	@contact.name	Support
+//	@contact.url	https://github.com/l3montree-dev/flawfix/issues
+
+//	@license.name	AGPL-3
+//	@license.url	https://github.com/l3montree-dev/flawfix/blob/main/LICENSE.txt
+
+// @host		localhost:8080
+// @BasePath	/api/v1
 func main() {
 	core.LoadConfig() // nolint: errcheck
 	core.InitLogger()
