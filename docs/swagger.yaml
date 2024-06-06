@@ -1,0 +1,357 @@
+basePath: /api/v1
+definitions:
+  github_com_l3montree-dev_flawfix_internal_database_models.AffectedComponent:
+    properties:
+      cves:
+        items:
+          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+        type: array
+      ecosystem:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      namespace:
+        type: string
+      purl:
+        type: string
+      qualifiers:
+        type: string
+      scheme:
+        type: string
+      semver_end:
+        type: string
+      semver_start:
+        type: string
+      subpath:
+        type: string
+      type:
+        type: string
+      version:
+        description: either version or semver is defined
+        type: string
+    type: object
+  github_com_l3montree-dev_flawfix_internal_database_models.CPEMatch:
+    properties:
+      criteria:
+        type: string
+      cve:
+        items:
+          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+        type: array
+      edition:
+        type: string
+      language:
+        type: string
+      matchCriteriaId:
+        type: string
+      other:
+        type: string
+      part:
+        type: string
+      product:
+        type: string
+      swEdition:
+        type: string
+      targetHw:
+        type: string
+      targetSw:
+        type: string
+      update:
+        type: string
+      vendor:
+        type: string
+      version:
+        type: string
+      versionEndExcluding:
+        type: string
+      versionStartIncluding:
+        type: string
+      vulnerable:
+        type: boolean
+    type: object
+  github_com_l3montree-dev_flawfix_internal_database_models.CVE:
+    properties:
+      affectedComponents:
+        items:
+          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.AffectedComponent'
+        type: array
+      attackComplexity:
+        type: string
+      attackVector:
+        type: string
+      availabilityImpact:
+        type: string
+      cisaActionDue:
+        type: string
+      cisaExploitAdd:
+        type: string
+      cisaRequiredAction:
+        type: string
+      cisaVulnerabilityName:
+        type: string
+      confidentialityImpact:
+        type: string
+      configurations:
+        items:
+          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CPEMatch'
+        type: array
+      createdAt:
+        type: string
+      cve:
+        type: string
+      cvss:
+        type: number
+      dateLastModified:
+        type: string
+      datePublished:
+        type: string
+      description:
+        type: string
+      epss:
+        type: number
+      exploitabilityScore:
+        type: number
+      exploits:
+        items:
+          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.Exploit'
+        type: array
+      impactScore:
+        type: number
+      integrityImpact:
+        type: string
+      percentile:
+        type: number
+      privilegesRequired:
+        type: string
+      references:
+        type: string
+      risk:
+        $ref: '#/definitions/obj.RiskMetrics'
+      scope:
+        type: string
+      severity:
+        $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.Severity'
+      updatedAt:
+        type: string
+      userInteractionRequired:
+        type: string
+      vector:
+        type: string
+      weaknesses:
+        items:
+          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.Weakness'
+        type: array
+    type: object
+  github_com_l3montree-dev_flawfix_internal_database_models.Exploit:
+    properties:
+      author:
+        type: string
+      cve:
+        $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+      cveID:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      published:
+        type: string
+      sourceURL:
+        type: string
+      tags:
+        type: string
+      type:
+        type: string
+      updated:
+        type: string
+      verified:
+        type: boolean
+    type: object
+  github_com_l3montree-dev_flawfix_internal_database_models.Severity:
+    enum:
+    - critical
+    - high
+    - medium
+    - low
+    - info
+    type: string
+    x-enum-varnames:
+    - SeverityCritical
+    - SeverityHigh
+    - SeverityMedium
+    - SeverityLow
+    - SeverityInfo
+  github_com_l3montree-dev_flawfix_internal_database_models.Weakness:
+    properties:
+      cve:
+        $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+      cwe:
+        type: string
+      source:
+        type: string
+      type:
+        type: string
+    type: object
+  obj.RiskMetrics:
+    properties:
+      baseScore:
+        type: number
+      withEnvironment:
+        type: number
+      withEnvironmentAndThreatIntelligence:
+        type: number
+      withThreatIntelligence:
+        type: number
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Support
+    url: https://github.com/l3montree-dev/flawfix/issues
+  description: FlawFix API
+  license:
+    name: AGPL-3
+    url: https://github.com/l3montree-dev/flawfix/blob/main/LICENSE.txt
+  title: FlawFix API
+  version: v1
+paths:
+  /health:
+    get:
+      description: Indicating the service is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+      summary: Health Check
+      tags:
+      - health
+  /vulndb:
+    get:
+      description: Get a paginated list of CVEs with optional filtering and sorting
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Sort by field, e.g. 'sort[cve]=asc
+        in: query
+        name: sort
+        type: string
+      - description: Filter query, e.g. 'filterQuery[cvss][is greater than]=4'
+        in: query
+        name: filter
+        type: string
+      - description: Confidentiality Requirements (low, medium, high), default is
+          medium
+        in: query
+        name: confidentialityRequirements
+        type: string
+      - description: Integrity Requirements (low, medium, high), default is medium
+        in: query
+        name: integrityRequirements
+        type: string
+      - description: Availability Requirements (low, medium, high), default is medium
+        in: query
+        name: availabilityRequirements
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: A paginated list of CVEs
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+                type: array
+              page:
+                type: integer
+              pageSize:
+                type: integer
+              total:
+                type: integer
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+      summary: List all CVEs with pagination
+      tags:
+      - CVE
+  /vulndb/{cveId}/:
+    get:
+      description: Retrieve details of a specific CVE by its ID, including risk and
+        vector calculations
+      parameters:
+      - description: CVE ID
+        in: path
+        name: cveId
+        required: true
+        type: string
+      - description: Confidentiality Requirements (low, medium, high), default is
+          medium
+        in: query
+        name: confidentialityRequirements
+        type: string
+      - description: Integrity Requirements (low, medium, high), default is medium
+        in: query
+        name: integrityRequirements
+        type: string
+      - description: Availability Requirements (low, medium, high), default is medium
+        in: query
+        name: availabilityRequirements
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Details of the specified CVE
+          schema:
+            $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+        "500":
+          description: Internal server error
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+      summary: Get a specific CVE by ID
+      tags:
+      - CVE
+  /whoami/:
+    get:
+      description: Retrieves the user ID from the session
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              userId:
+                type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: Get user info
+      tags:
+      - session
+swagger: "2.0"
