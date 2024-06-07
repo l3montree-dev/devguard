@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"gorm.io/gorm"
@@ -27,7 +28,7 @@ type componentRepository struct {
 }
 
 func NewComponentRepository(db database.DB) *componentRepository {
-	if err := db.AutoMigrate(&models.Component{}); err != nil {
+	if err := db.AutoMigrate(&models.Component{}, &models.AssetComponent{}); err != nil {
 		panic(err)
 	}
 
@@ -35,4 +36,21 @@ func NewComponentRepository(db database.DB) *componentRepository {
 		Repository: newGormRepository[string, models.Component](db),
 		db:         db,
 	}
+}
+
+func (c *componentRepository) UpdateSemverEnd(tx database.DB, assetID uuid.UUID, componentPurlOrCpe []string, version string) error {
+	return c.GetDB(tx).Model(&models.AssetComponent{}).Where("asset_id = ? AND component_purl_or_cpe IN ?", assetID.String(), componentPurlOrCpe).Update("semver_end", version).Error
+}
+
+func (c *componentRepository) CreateAssetComponents(tx database.DB, components []models.AssetComponent) error {
+	if len(components) == 0 {
+		return nil
+	}
+	return c.GetDB(tx).Create(&components).Error
+}
+
+func (c *componentRepository) LoadAssetComponents(tx database.DB, asset models.Asset) ([]models.AssetComponent, error) {
+	var components []models.AssetComponent
+	err := c.GetDB(tx).Where("asset_id = ?", asset.ID).Find(&components).Error
+	return components, err
 }

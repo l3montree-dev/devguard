@@ -16,8 +16,15 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"log"
+	"regexp"
+	"strconv"
+	"strings"
+
 	"log/slog"
 	"net/http"
 	"os"
@@ -26,7 +33,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/core/vulndb/scan"
 	"github.com/spf13/cobra"
 )
 
@@ -58,6 +65,49 @@ func generateSBOM() (*os.File, error) {
 
 	// open the file and return the path
 	return os.Open(filename)
+}
+
+func getCurrentVersion() (string, int, error) {
+	cmd := exec.Command("git", "tag", "--sort=-v:refname")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Filter using regex
+	tagList := out.String()
+	tags := strings.Split(tagList, "\n")
+	semverRegex := regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$`)
+	var latestTag string
+	for _, tag := range tags {
+		if semverRegex.MatchString(tag) {
+			latestTag = tag
+			break
+		}
+	}
+
+	// Check and print the latest semver tag
+	if latestTag == "" {
+		return "", 0, fmt.Errorf("no semver tag found")
+	} else {
+		cmd = exec.Command("git", "rev-list", "--count", latestTag+"..HEAD") // nolint:all:Latest Tag is already checked against a semver regex.
+		var commitOut bytes.Buffer
+		cmd.Stdout = &commitOut
+		err = cmd.Run()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		commitCount := strings.TrimSpace(commitOut.String())
+		commitCountInt, err := strconv.Atoi(commitCount)
+		if err != nil {
+			return "", 0, err
+		}
+
+		return latestTag, commitCountInt, nil
+	}
 }
 
 func init() {
@@ -103,7 +153,45 @@ func init() {
 			if err != nil {
 				slog.Warn("could not initialize config", "err", err)
 			}
+			// we use the commit count, to check if we should create a new version - or if its dirty.
+			// v1.0.0 - . . . . . . . . . . - v1.0.1
+			// all commits after v1.0.0 are part of v1.0.1
+			// if there are no commits after the tag, we are on a clean tag
+			version, commitAfterTag, err := getCurrentVersion()
+			if err != nil {
+				// do a detailed explaination on how to version the software using git tags
 
+				slog.Error("could not get semver version", "err", err)
+				slog.Info(`1. What is SemVer:
+   Semantic Versioning (SemVer) uses a version number format: MAJOR.MINOR.PATCH
+   - MAJOR: Incompatible API changes
+   - MINOR: Backward-compatible new features
+   - PATCH: Backward-compatible bug fixes
+
+2. How to do it:
+   - Initial tag:
+     git tag -a v1.0.0 -m "Initial release"
+     git push origin v1.0.0
+
+   - New versions:
+     - Breaking changes:
+       git tag -a v2.0.0 -m "Breaking changes"
+       git push origin v2.0.0
+
+     - New features:
+       git tag -a v1.1.0 -m "New features"
+       git push origin v1.1.0
+
+     - Bug fixes:
+       git tag -a v1.0.1 -m "Bug fixes"
+       git push origin v1.0.1
+`)
+			}
+			if commitAfterTag != 0 {
+				version = version + "-" + strconv.Itoa(commitAfterTag)
+			}
+
+			slog.Info("starting scan", "version", version, "asset", assetName)
 			// read the sbom file and post it to the scan endpoint
 			// get the flaws and print them to the console
 			file, err := generateSBOM()
@@ -130,6 +218,7 @@ func init() {
 			}
 			req.Header.Set("Authorization", "Bearer "+token)
 			req.Header.Set("X-Asset-Name", assetName)
+			req.Header.Set("X-Asset-Version", version)
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
@@ -144,21 +233,21 @@ func init() {
 
 			// read and parse the body - it should be an array of flaws
 			// print the flaws to the console
-			flaws := []models.Flaw{}
+			var scanResponse scan.ScanResponse
 
-			err = json.NewDecoder(resp.Body).Decode(&flaws)
+			err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 			if err != nil {
 				slog.Error("could not parse response", "err", err)
 				return
 			}
+			slog.Info("Scan completed successfully", "flawAmount", len(scanResponse.Flaws), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
-			if len(flaws) == 0 {
-				slog.Info("no flaws found")
+			if len(scanResponse.Flaws) == 0 {
 				return
 			}
 
-			for _, f := range flaws {
-				slog.Info("flaw found", "cve", f.CVEID, "package", f.GetArbitraryJsonData()["packageName"], "severity", f.CVE.Severity, "introduced", f.GetArbitraryJsonData()["introducedVersion"], "fixed", f.GetArbitraryJsonData()["fixedVersion"])
+			for _, f := range scanResponse.Flaws {
+				slog.Info("flaw found", "cve", f.CVEID, "package", f.ArbitraryJsonData["packageName"], "severity", f.CVE.Severity, "introduced", f.ArbitraryJsonData["introducedVersion"], "fixed", f.ArbitraryJsonData["fixedVersion"])
 			}
 		},
 	})

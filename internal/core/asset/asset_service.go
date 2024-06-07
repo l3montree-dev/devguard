@@ -22,6 +22,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/utils"
 )
@@ -33,6 +34,9 @@ type flawRepository interface {
 
 type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
+	UpdateSemverEnd(tx database.DB, assetID uuid.UUID, componentPurlOrCpes []string, version string) error
+	CreateAssetComponents(tx database.DB, components []models.AssetComponent) error
+	LoadAssetComponents(tx core.DB, asset models.Asset) ([]models.AssetComponent, error)
 }
 
 type assetRepository interface {
@@ -60,12 +64,12 @@ func NewService(assetRepository assetRepository, componentRepository componentRe
 	}
 }
 
-func (s *service) HandleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw) {
+func (s *service) HandleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw) (int, int, error) {
 	// get all existing flaws from the database - this is the old state
 	existingFlaws, err := s.flawRepository.ListByScanner(asset.GetID(), scannerID)
 	if err != nil {
 		slog.Error("could not get existing flaws", "err", err)
-		return
+		return 0, 0, err
 	}
 
 	comparison := utils.CompareSlices(existingFlaws, flaws, func(flaw models.Flaw) string {
@@ -85,10 +89,58 @@ func (s *service) HandleScanResult(userID string, scannerID string, asset models
 		return s.flawService.UserFixedFlaws(tx, userID, fixedFlaws)
 	}); err != nil {
 		slog.Error("could not save flaws", "err", err)
+		return 0, 0, err
 	}
+	return len(newFlaws), len(fixedFlaws), nil
 }
 
-func (s *service) UpdateSBOM(asset models.Asset, sbom *cdx.BOM) {
+// we have an asset, which already has some components defined.
+// components will be the components, we have RIGHT NOW.
+// they might be new or previously existing.
+// this function will update the components of the asset.
+//
+// it might even happen, that we have a new release.
+// if so, we need to fix the semverStart of the already existing asset components.
+func (s *service) updateAssetComponents(asset models.Asset, components []models.AssetComponent, currentVersion string) error {
+	// 1. Remove all "latest" components in the asset. The components parameter is the "current truth". It might happen,
+	// that a user introduces a new component and removes it, before making the release
+	// if this case happens, we just need to delete it again
+	return s.flawRepository.Transaction(func(tx core.DB) error {
+		comparison := utils.CompareSlices(asset.GetCurrentAssetComponents(), components, func(c models.AssetComponent) string {
+			return c.ComponentPurlOrCpe
+		})
+		removedComponents := comparison.OnlyInA
+		newComponents := comparison.OnlyInB
+
+		if err := s.componentRepository.UpdateSemverEnd(tx, asset.GetID(), utils.Map(removedComponents, func(c models.AssetComponent) string {
+			return c.ComponentPurlOrCpe
+		}), currentVersion); err != nil {
+			return err
+		}
+
+		// create the new components
+		if err := s.componentRepository.CreateAssetComponents(tx, utils.Map(newComponents, func(a models.AssetComponent) models.AssetComponent {
+			// make sure, that the semver start version is set correctly
+			a.SemverStart = currentVersion
+			a.SemverEnd = nil
+			return a
+		})); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (s *service) UpdateSBOM(asset models.Asset, currentVersion string, sbom *cdx.BOM) {
+	// load the asset components
+	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, asset)
+	if err != nil {
+		slog.Error("could not load asset components", "err", err)
+		return
+	}
+
+	asset.Components = assetComponents
+
 	// we need to check if the SBOM is new or if it already exists.
 	// if it already exists, we need to update the existing SBOM
 	// update the sbom for the asset in the database.
@@ -133,7 +185,7 @@ func (s *service) UpdateSBOM(asset models.Asset, sbom *cdx.BOM) {
 
 	// get the direct dependencies of the asset
 	// ref: https://github.com/CycloneDX/cdxgen/issues/650
-	directDependencies := make([]models.Component, 0)
+	directDependencies := make([]models.AssetComponent, 0)
 	for _, component := range *sbom.Components {
 		if component.Scope == cdx.ScopeRequired {
 			p, err := url.PathUnescape(purlOrCpe(component))
@@ -141,14 +193,13 @@ func (s *service) UpdateSBOM(asset models.Asset, sbom *cdx.BOM) {
 				slog.Error("could not decode purl", "err", err)
 				continue
 			}
-			directDependencies = append(directDependencies, models.Component{
-				PurlOrCpe: p,
+			directDependencies = append(directDependencies, models.AssetComponent{
+				ComponentPurlOrCpe: p,
+				AssetID:            asset.ID,
 			})
 		}
 	}
-	asset.Components = directDependencies
-	// save the direct dependencies of the asset
-	if err := s.assetRepository.Save(nil, &asset); err != nil {
+	if err := s.updateAssetComponents(asset, directDependencies, currentVersion); err != nil {
 		slog.Error("could not save direct dependencies", "err", err)
 	} else {
 		slog.Info("saved direct dependencies", "asset", asset.GetID().String(), "count", len(directDependencies))

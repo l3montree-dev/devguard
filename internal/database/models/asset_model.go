@@ -39,12 +39,38 @@ type Asset struct {
 	IntegrityRequirement       RequirementLevel `json:"integrityRequirement" gorm:"default:'high';not null;type:text;"`
 	AvailabilityRequirement    RequirementLevel `json:"availabilityRequirement" gorm:"default:'high';not null;type:text;"`
 
-	Components []Component `json:"components" gorm:"many2many:asset_components;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Components []AssetComponent `json:"components" gorm:"hasMany;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 
 	Version             string    `json:"version" gorm:"type:text;"`
 	LastComponentUpdate time.Time `json:"lastComponentUpdate"`
 }
 
+type AssetComponent struct {
+	ID                 uuid.UUID `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
+	AssetID            uuid.UUID `json:"assetId" gorm:"type:uuid;"`
+	ComponentPurlOrCpe string    `json:"componentPurlOrCpe" gorm:"type:text;"`
+
+	Component Component `json:"component" gorm:"foreignKey:ComponentPurlOrCpe;references:PurlOrCpe;constraint:OnDelete:CASCADE;"`
+	Asset     Asset     `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
+
+	SemverStart string  `json:"semver_start" gorm:"type:semver;index;"` // might be nil, if the component was introduced in the latest version, which does not have a tag or name yet.
+	SemverEnd   *string `json:"semver_end" gorm:"type:semver;index"`    // will be nil if the component is still used in latest
+}
+
 func (m Asset) TableName() string {
 	return "assets"
+}
+
+func (m AssetComponent) TableName() string {
+	return "asset_components"
+}
+
+func (m Asset) GetCurrentAssetComponents() []AssetComponent {
+	assetComponents := make([]AssetComponent, 0)
+	for _, assetComponent := range m.Components {
+		if assetComponent.SemverEnd == nil {
+			assetComponents = append(assetComponents, assetComponent)
+		}
+	}
+	return assetComponents
 }
