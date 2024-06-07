@@ -54,7 +54,7 @@ data:
           }
       }
     }
-
+    
   kratos.yml: |
     serve: 
       public: 
@@ -74,11 +74,26 @@ data:
       allowed_return_urls: 
       - https://{{ $publicUrl }}/
       methods:
+        webauthn:
+          enabled: true
+          config:
+            # If set to true will use WebAuthn for passwordless flows intead of multi-factor authentication.
+            passwordless: true
+            rp:
+              # This MUST be your root domain (not a subdomain)
+              id: {{ $publicUrl }}
+              # This MUST be the exact URL of the page which will prompt for WebAuthn!
+              # Only the scheme (https / http), host (auth.example.org), and port (4455) are relevant. The
+              # path is irrelevant.
+              origins:
+              - {{ $publicUrl }}
+              # A display name which will be shown to the user on her/his device.
+              display_name: FlawFix
         password:
           enabled: true
         totp:
           config:
-            issuer: ArchRL-Kratos
+            issuer: FlawFix
           enabled: true
         lookup_secret:
           enabled: false
