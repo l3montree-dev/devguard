@@ -18,7 +18,7 @@ package asset
 import (
 	"slices"
 
-	"github.com/l3montree-dev/flawfix/internal/obj"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
 type treeNode struct {
@@ -54,13 +54,13 @@ func (tree *tree) addNode(source string, dep string) {
 			return
 		}
 	}
-	// add connection
+
 	tree.cursors[source].Children = append(tree.cursors[source].Children, tree.cursors[dep])
 }
 
-func buildDependencyTree(elements []obj.Dependency) tree {
+func buildDependencyTree(elements []models.ComponentDependency) tree {
 	// sort by depth
-	slices.SortFunc(elements, func(a, b obj.Dependency) int {
+	slices.SortFunc(elements, func(a, b models.ComponentDependency) int {
 		return a.Depth - b.Depth
 	})
 
@@ -74,9 +74,9 @@ func buildDependencyTree(elements []obj.Dependency) tree {
 
 	for _, element := range elements {
 		if element.Depth == 1 {
-			tree.addNode("root", element.Source)
+			tree.addNode("root", element.ComponentPurlOrCpe)
 		}
-		tree.addNode(element.Source, element.Dep)
+		tree.addNode(element.ComponentPurlOrCpe, element.DependencyPurlOrCpe)
 	}
 
 	return tree

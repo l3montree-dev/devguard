@@ -256,7 +256,7 @@ func Start(db core.DB) {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
-	assetController := asset.NewHttpController(assetRepository, scan.NewPurlComparer(db))
+	assetController := asset.NewHttpController(assetRepository, componentRepository, scan.NewPurlComparer(db))
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
 	vulndbController := vulndb.NewHttpController(cveRepository)

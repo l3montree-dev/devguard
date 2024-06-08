@@ -5,7 +5,6 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/database/repositories"
-	"github.com/l3montree-dev/flawfix/internal/obj"
 	"github.com/l3montree-dev/flawfix/internal/utils"
 
 	"github.com/labstack/echo/v4"
@@ -19,23 +18,26 @@ type repository interface {
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
-	GetTransitiveDependencies(assetID uuid.UUID) []obj.Dependency
-	GetAllComponentsByAssetID(assetID uuid.UUID) []obj.ComponentDepth
 }
 
 type vulnService interface {
 	GetVulnsForAll(purls []string) ([]models.VulnInPackage, error)
 }
 
+type assetComponentsLoader interface {
+	LoadAssetComponents(tx core.DB, asset models.Asset, version string) ([]models.ComponentDependency, error)
+}
 type httpController struct {
-	assetRepository repository
-	vulnService     vulnService
+	assetRepository       repository
+	assetComponentsLoader assetComponentsLoader
+	vulnService           vulnService
 }
 
-func NewHttpController(repository repository, vulnService vulnService) *httpController {
+func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, vulnService vulnService) *httpController {
 	return &httpController{
-		assetRepository: repository,
-		vulnService:     vulnService,
+		assetRepository:       repository,
+		assetComponentsLoader: assetComponentsLoader,
+		vulnService:           vulnService,
 	}
 }
 
@@ -51,9 +53,14 @@ func (a *httpController) List(c core.Context) error {
 }
 
 func (a *httpController) AffectedPackages(c core.Context) error {
-	components := a.assetRepository.GetAllComponentsByAssetID(core.GetAsset(c).GetID())
-	purls := utils.Map(components, func(c obj.ComponentDepth) string {
-		return c.PurlOrCpe
+	components, err := a.assetComponentsLoader.LoadAssetComponents(nil, core.GetAsset(c), models.LatestVersion)
+	if err != nil {
+		return err
+	}
+	componentsSlice := models.FlatDependencyGraph(components)
+
+	purls := utils.Map(componentsSlice, func(c models.ComponentDependency) string {
+		return c.ComponentPurlOrCpe
 	})
 
 	vulns, err := a.vulnService.GetVulnsForAll(purls)
@@ -94,9 +101,12 @@ func (a *httpController) Read(c core.Context) error {
 
 func (a *httpController) DependencyGraph(c core.Context) error {
 	app := core.GetAsset(c)
-	dependencies := a.assetRepository.GetTransitiveDependencies(app.GetID())
+	components, err := a.assetComponentsLoader.LoadAssetComponents(nil, app, models.LatestVersion)
+	if err != nil {
+		return err
+	}
 
-	tree := buildDependencyTree(dependencies)
+	tree := buildDependencyTree(models.FlatDependencyGraph(components))
 
 	return c.JSON(200, tree)
 }

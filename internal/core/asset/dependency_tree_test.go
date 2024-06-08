@@ -17,17 +17,17 @@ package asset
 import (
 	"testing"
 
-	"github.com/l3montree-dev/flawfix/internal/obj"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
 func TestDependencyTree(t *testing.T) {
-	graph := []obj.Dependency{
-		{Source: "a", Dep: "b", Depth: 1},
-		{Source: "a", Dep: "c", Depth: 1},
-		{Source: "b", Dep: "d", Depth: 2},
-		{Source: "b", Dep: "e", Depth: 2},
-		{Source: "c", Dep: "f", Depth: 3},
-		{Source: "c", Dep: "g", Depth: 3},
+	graph := []models.ComponentDependency{
+		{ComponentPurlOrCpe: "a", DependencyPurlOrCpe: "b", Depth: 1},
+		{ComponentPurlOrCpe: "a", DependencyPurlOrCpe: "c", Depth: 1},
+		{ComponentPurlOrCpe: "b", DependencyPurlOrCpe: "d", Depth: 2},
+		{ComponentPurlOrCpe: "b", DependencyPurlOrCpe: "e", Depth: 2},
+		{ComponentPurlOrCpe: "c", DependencyPurlOrCpe: "f", Depth: 3},
+		{ComponentPurlOrCpe: "c", DependencyPurlOrCpe: "g", Depth: 3},
 	}
 	tree := buildDependencyTree(graph)
 

@@ -36,7 +36,7 @@ type componentRepository interface {
 
 type assetService interface {
 	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw) (amountOpened int, amountClosed int, err error)
-	UpdateSBOM(asset models.Asset, version string, sbom *cdx.BOM)
+	UpdateSBOM(asset models.Asset, version string, sbom *cdx.BOM) error
 }
 
 type httpController struct {

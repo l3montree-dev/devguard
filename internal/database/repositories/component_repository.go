@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -28,7 +29,7 @@ type componentRepository struct {
 }
 
 func NewComponentRepository(db database.DB) *componentRepository {
-	if err := db.AutoMigrate(&models.Component{}, &models.AssetComponent{}); err != nil {
+	if err := db.AutoMigrate(&models.Component{}, &models.ComponentDependency{}); err != nil {
 		panic(err)
 	}
 
@@ -38,19 +39,103 @@ func NewComponentRepository(db database.DB) *componentRepository {
 	}
 }
 
-func (c *componentRepository) UpdateSemverEnd(tx database.DB, assetID uuid.UUID, componentPurlOrCpe []string, version string) error {
-	return c.GetDB(tx).Model(&models.AssetComponent{}).Where("asset_id = ? AND component_purl_or_cpe IN ?", assetID.String(), componentPurlOrCpe).Update("semver_end", version).Error
+func (c *componentRepository) UpdateSemverEnd(tx database.DB, ids []uuid.UUID, version string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	return c.GetDB(tx).Model(&models.ComponentDependency{}).Where("id IN ?", ids).Update("semver_end", version).Error
 }
 
-func (c *componentRepository) CreateAssetComponents(tx database.DB, components []models.AssetComponent) error {
+func (c *componentRepository) CreateAssetComponents(tx database.DB, components []models.ComponentDependency) error {
 	if len(components) == 0 {
 		return nil
 	}
 	return c.GetDB(tx).Create(&components).Error
 }
 
-func (c *componentRepository) LoadAssetComponents(tx database.DB, asset models.Asset) ([]models.AssetComponent, error) {
-	var components []models.AssetComponent
-	err := c.GetDB(tx).Where("asset_id = ?", asset.ID).Find(&components).Error
+func (c *componentRepository) LoadAssetComponents(tx database.DB, asset models.Asset, version string) ([]models.ComponentDependency, error) {
+	var components []models.ComponentDependency
+	var err error
+	if version == models.LatestVersion {
+		err = c.GetDB(tx).Raw(`WITH RECURSIVE dependency_tree AS (
+			SELECT
+			asset_id, 
+			component_purl_or_cpe, 
+			dependency_purl_or_cpe, 
+			is_direct_asset_dependency, 
+			semver_start, 
+			semver_end, 
+			1 AS depth  FROM component_dependencies
+			WHERE asset_id = $1 AND is_direct_asset_dependency = true AND semver_end IS NULL
+			UNION ALL
+			SELECT 
+			dt1.asset_id, 
+			dt1.component_purl_or_cpe, 
+			dt1.dependency_purl_or_cpe, 
+			dt1.is_direct_asset_dependency, 
+			dt1.semver_start, 
+			dt1.semver_end, 
+        	dt.depth + 1 FROM component_dependencies dt1
+			JOIN dependency_tree dt ON dt1.asset_id = dt.asset_id AND dt1.component_purl_or_cpe = dt.dependency_purl_or_cpe WHERE dt.depth < 100 AND dt1.semver_end IS NULL
+		)
+		SELECT * FROM dependency_tree;`, asset.ID).Scan(&components).Error
+	} else {
+		err = c.GetDB(tx).Raw(`WITH RECURSIVE dependency_tree AS (
+			SELECT
+			asset_id, 
+			component_purl_or_cpe, 
+			dependency_purl_or_cpe, 
+			is_direct_asset_dependency, 
+			semver_start, 
+			semver_end, 
+			1 AS depth  FROM component_dependencies
+			WHERE asset_id = $1 AND is_direct_asset_dependency = true AND semver_start <= $2 AND (semver_end IS NULL OR semver_end >= $2)
+			UNION ALL
+			SELECT 
+			dt1.asset_id, 
+			dt1.component_purl_or_cpe, 
+			dt1.dependency_purl_or_cpe, 
+			dt1.is_direct_asset_dependency, 
+			dt1.semver_start, 
+			dt1.semver_end, 
+        	dt.depth + 1 FROM component_dependencies dt1
+			JOIN dependency_tree dt ON dt1.asset_id = dt.asset_id AND dt1.component_purl_or_cpe = dt.dependency_purl_or_cpe WHERE dt.depth < 100 AND (dt1.semver_end IS NULL OR dt1.semver_end >= $2)
+		)
+		SELECT * FROM dependency_tree;`, asset.ID, version).Scan(&components).Error
+	}
+
+	if err != nil {
+		return nil, err
+	}
 	return components, err
+}
+
+func (c *componentRepository) FindByPurl(tx database.DB, purl string) (models.Component, error) {
+	var component models.Component
+	err := c.GetDB(tx).Where("purl_or_cpe = ?", purl).First(&component).Error
+	return component, err
+}
+
+func (c *componentRepository) HandleStateDiff(tx database.DB, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
+	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
+		return dep.ComponentPurlOrCpe + "->" + dep.DependencyPurlOrCpe
+	})
+
+	removed := comparison.OnlyInA
+	added := comparison.OnlyInB
+
+	return c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
+		if err := c.UpdateSemverEnd(tx, utils.Map(removed, func(el models.ComponentDependency) uuid.UUID {
+			return el.ID
+		}), version); err != nil {
+			return err
+		}
+		// make sure the asset id is set
+		for i := range added {
+			added[i].AssetID = assetID
+		}
+
+		return c.CreateAssetComponents(tx, added)
+	})
 }
