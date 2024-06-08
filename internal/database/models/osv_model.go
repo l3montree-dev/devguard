@@ -102,25 +102,18 @@ func (affectedComponent AffectedComponent) TableName() string {
 	return "affected_components"
 }
 
-func safeDereference(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
 func (affectedComponent *AffectedComponent) SetIdHash() {
 	// build the stable map
 	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s",
 		affectedComponent.PURL,
 		affectedComponent.Ecosystem,
 		affectedComponent.Name,
-		safeDereference(affectedComponent.Namespace),
-		safeDereference(affectedComponent.Qualifiers),
-		safeDereference(affectedComponent.Subpath),
-		safeDereference(affectedComponent.Version),
-		safeDereference(affectedComponent.SemverIntroduced),
-		safeDereference(affectedComponent.SemverFixed))
+		utils.SafeDereference(affectedComponent.Namespace),
+		utils.SafeDereference(affectedComponent.Qualifiers),
+		utils.SafeDereference(affectedComponent.Subpath),
+		utils.SafeDereference(affectedComponent.Version),
+		utils.SafeDereference(affectedComponent.SemverIntroduced),
+		utils.SafeDereference(affectedComponent.SemverFixed))
 
 	hash := sha256.Sum256([]byte(toHash))
 	hashString := hex.EncodeToString(hash[:])

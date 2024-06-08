@@ -18,16 +18,18 @@ import (
 	"testing"
 
 	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/utils"
 )
 
 func TestDependencyTree(t *testing.T) {
 	graph := []models.ComponentDependency{
-		{ComponentPurlOrCpe: "a", DependencyPurlOrCpe: "b", Depth: 1},
-		{ComponentPurlOrCpe: "a", DependencyPurlOrCpe: "c", Depth: 1},
-		{ComponentPurlOrCpe: "b", DependencyPurlOrCpe: "d", Depth: 2},
-		{ComponentPurlOrCpe: "b", DependencyPurlOrCpe: "e", Depth: 2},
-		{ComponentPurlOrCpe: "c", DependencyPurlOrCpe: "f", Depth: 3},
-		{ComponentPurlOrCpe: "c", DependencyPurlOrCpe: "g", Depth: 3},
+		{ComponentPurlOrCpe: nil, DependencyPurlOrCpe: "a", Depth: 0},
+		{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "b", Depth: 1},
+		{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "c", Depth: 1},
+		{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "d", Depth: 2},
+		{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "e", Depth: 2},
+		{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "f", Depth: 3},
+		{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "g", Depth: 3},
 	}
 	tree := buildDependencyTree(graph)
 

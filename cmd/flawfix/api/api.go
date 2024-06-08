@@ -310,6 +310,10 @@ func Start(db core.DB) {
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.GET("/dependency-graph/", assetController.DependencyGraph)
 	assetRouter.GET("/affected-packages/", assetController.AffectedPackages)
+	assetRouter.GET("/sbom.json/", assetController.SBOMJSON)
+	assetRouter.GET("/sbom.xml/", assetController.SBOMXML)
+
+	assetRouter.GET("/versions/", assetController.Versions)
 
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)

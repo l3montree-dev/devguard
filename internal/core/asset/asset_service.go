@@ -127,52 +127,66 @@ func (s *service) UpdateSBOM(asset models.Asset, currentVersion string, sbom *cd
 		return errors.Wrap(err, "could not load asset components")
 	}
 
-	flatDependencyGraph := models.FlatDependencyGraph(assetComponents)
 	// we need to check if the SBOM is new or if it already exists.
 	// if it already exists, we need to update the existing SBOM
 	// update the sbom for the asset in the database.
 	components := make([]models.Component, 0)
 	dependencies := make([]models.ComponentDependency, 0)
 	// create all components
-	for _, component := range *sbom.Dependencies {
+	for _, component := range *sbom.Components {
 		// check if this is the asset itself.
-		if component.Ref == sbom.Metadata.Component.BOMRef {
+		if component.BOMRef == sbom.Metadata.Component.BOMRef {
 			continue
 		}
 
-		isDirect := false
-		for _, c := range *sbom.Components {
-			if c.BOMRef == component.Ref && c.Scope == cdx.ScopeRequired {
-				isDirect = true
-				break
-			}
-		}
-
-		for _, dep := range *component.Dependencies {
-			p, err := url.PathUnescape(dep)
-			if err != nil {
-				slog.Error("could not decode purl", "err", err)
-				continue
-			}
+		if component.Scope == cdx.ScopeRequired {
+			// create the direct dependency edge.
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					Component: models.Component{
-						PurlOrCpe: component.Ref,
-					},
-					ComponentPurlOrCpe: component.Ref,
+					ComponentPurlOrCpe: nil, // direct dependency - therefore set it to nil
 					Dependency: models.Component{
-						PurlOrCpe: p,
+						PurlOrCpe: component.BOMRef,
 					},
-					DependencyPurlOrCpe:     p,
-					AssetSemverStart:        currentVersion,
-					IsDirectAssetDependency: isDirect,
+					DependencyPurlOrCpe: component.BOMRef,
+					AssetSemverStart:    currentVersion,
 				},
 			)
+		}
+
+		// find all dependencies from this component
+
+		for _, c := range *sbom.Dependencies {
+			if c.Ref != component.BOMRef {
+				continue
+			}
+
+			for _, dep := range *c.Dependencies {
+				p, err := url.PathUnescape(dep)
+
+				if err != nil {
+					slog.Error("could not decode purl", "err", err)
+					continue
+				}
+				dependencies = append(dependencies,
+					models.ComponentDependency{
+						Component: models.Component{
+							PurlOrCpe: component.BOMRef,
+						},
+						ComponentPurlOrCpe: utils.Ptr(component.BOMRef),
+						Dependency: models.Component{
+							PurlOrCpe: p,
+						},
+						DependencyPurlOrCpe: p,
+						AssetSemverStart:    currentVersion,
+					},
+				)
+			}
+
 		}
 		// check if the component is already in the database
 		// if not, create it
 		// if it is, update it
-		p, err := url.PathUnescape(component.Ref)
+		p, err := url.PathUnescape(component.BOMRef)
 		if err != nil {
 			slog.Error("could not decode purl", "err", err)
 			continue
@@ -190,5 +204,5 @@ func (s *service) UpdateSBOM(asset models.Asset, currentVersion string, sbom *cd
 		return err
 	}
 
-	return s.componentRepository.HandleStateDiff(nil, asset.ID, currentVersion, flatDependencyGraph, dependencies)
+	return s.componentRepository.HandleStateDiff(nil, asset.ID, currentVersion, assetComponents, dependencies)
 }
