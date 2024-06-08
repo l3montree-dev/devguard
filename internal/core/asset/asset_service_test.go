@@ -97,7 +97,7 @@ func TestUpdateSBOM(t *testing.T) {
 
 		componentRepository.On("SaveBatch", (*gorm.DB)(nil), components).Return(nil)
 
-		componentRepository.On("HandleStateDiff", (*gorm.DB)(nil), asset.GetID(), "1.0.0", []models.ComponentDependency(nil), expectedNewState).Return(nil)
+		componentRepository.On("HandleStateDiff", (*gorm.DB)(nil), asset.GetID(), "1.0.0", []models.ComponentDependency{}, expectedNewState).Return(nil)
 
 		assetService := service{
 			componentRepository: componentRepository,

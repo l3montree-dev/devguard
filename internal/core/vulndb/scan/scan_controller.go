@@ -93,7 +93,10 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// update the sbom in the database in parallel
-	s.assetService.UpdateSBOM(asset, version, bom)
+	if err := s.assetService.UpdateSBOM(asset, version, bom); err != nil {
+		slog.Error("could not update sbom", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not update sbom"})
+	}
 
 	// scan the bom we just retrieved.
 	vulns, err := s.sbomScanner.Scan(bom)
