@@ -17,10 +17,25 @@ serve:
 selfservice:
   default_browser_return_url: http://127.0.0.1:3000/
   allowed_return_urls:
-    - http://127.0.0.1:3000
-    - http://localhost:3000
+  - http://127.0.0.1:3000
+  - http://localhost:3000
 
   methods:
+    webauthn:
+      enabled: true
+      config:
+        # If set to true will use WebAuthn for passwordless flows intead of multi-factor authentication.
+        passwordless: true
+        rp:
+          # This MUST be your root domain (not a subdomain)
+          id: localhost:3000
+          # This MUST be the exact URL of the page which will prompt for WebAuthn!
+          # Only the scheme (https / http), host (auth.example.org), and port (4455) are relevant. The
+          # path is irrelevant.
+          origins:
+          - http://localhost:3000
+          # A display name which will be shown to the user on her/his device.
+          display_name: FlawFix
     password:
       enabled: true
     totp:
@@ -69,8 +84,8 @@ selfservice:
       after:
         password:
           hooks:
-            - hook: session
-            - hook: show_verification_ui
+          - hook: session
+          - hook: show_verification_ui
 
 log:
   level: debug
@@ -79,9 +94,9 @@ log:
 
 secrets:
   cookie:
-    - PLEASE-CHANGE-ME-I-AM-VERY-INSECURE
+  - PLEASE-CHANGE-ME-I-AM-VERY-INSECURE
   cipher:
-    - 32-LONG-SECRET-NOT-SECURE-AT-ALL
+  - 32-LONG-SECRET-NOT-SECURE-AT-ALL
 
 ciphers:
   algorithm: xchacha20-poly1305
@@ -94,8 +109,8 @@ hashers:
 identity:
   default_schema_id: default
   schemas:
-    - id: default
-      url: file:///etc/config/kratos/identity.schema.json
+  - id: default
+    url: file:///etc/config/kratos/identity.schema.json
 
 courier:
   smtp:
