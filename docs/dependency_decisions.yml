@@ -31,3 +31,8 @@
     :versions:
     - v1.6.0
     :when: 2024-05-13 13:45:20.797550000 Z
+- - :permit
+  - ISC
+  - :who: Sebastian Kawelke
+    :why: OSI-approved OSS license, permissive, GPL compatible
+    :when: 2024-06-10 13:45:20.797550000 Z
