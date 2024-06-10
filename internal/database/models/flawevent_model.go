@@ -28,7 +28,7 @@ func (m FlawEvent) TableName() string {
 	return "flaw_events"
 }
 
-func (e FlawEvent) Apply(flaw Flaw) Flaw {
+func (e FlawEvent) Apply(flaw *Flaw) {
 	switch e.Type {
 	case EventTypeFixed:
 		flaw.State = FlawStateFixed
@@ -43,8 +43,6 @@ func (e FlawEvent) Apply(flaw Flaw) Flaw {
 	case EventTypeMarkedForTransfer:
 		flaw.State = FlawStateMarkedForTransfer
 	}
-
-	return flaw
 }
 
 func NewFixedEvent(flawID string, userID string) FlawEvent {
