@@ -8,3 +8,4 @@ sbom.json
 .git-template
 csv
 datascience.ipynb
+bom.xml

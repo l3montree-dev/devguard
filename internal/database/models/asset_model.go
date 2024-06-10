@@ -39,7 +39,7 @@ type Asset struct {
 	IntegrityRequirement       RequirementLevel `json:"integrityRequirement" gorm:"default:'high';not null;type:text;"`
 	AvailabilityRequirement    RequirementLevel `json:"availabilityRequirement" gorm:"default:'high';not null;type:text;"`
 
-	Components []Component `json:"components" gorm:"many2many:asset_components;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Components []ComponentDependency `json:"components" gorm:"hasMany;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 
 	Version             string    `json:"version" gorm:"type:text;"`
 	LastComponentUpdate time.Time `json:"lastComponentUpdate"`
@@ -47,4 +47,14 @@ type Asset struct {
 
 func (m Asset) TableName() string {
 	return "assets"
+}
+
+func (m Asset) GetCurrentAssetComponents() []ComponentDependency {
+	assetComponents := make([]ComponentDependency, 0)
+	for _, assetComponent := range m.Components {
+		if assetComponent.AssetSemverEnd == nil {
+			assetComponents = append(assetComponents, assetComponent)
+		}
+	}
+	return assetComponents
 }

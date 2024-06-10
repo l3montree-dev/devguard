@@ -14,11 +14,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 with-expecter: true
 packages:
-    github.com/l3montree-dev/flawfix/internal/core:
-      config:
-        recursive: true
-        all: true
-        filename: "mock_{{.PackageName}}_{{.InterfaceName}}.go"
-        mockName: "{{.PackageName | firstUpper}}{{.InterfaceName}}"
-        outpkg: "mocks"
-        dir: "mocks"
+  github.com/l3montree-dev/flawfix/internal/core:
+    config:
+      recursive: true
+      all: true
+      filename: "mock_{{.PackageName}}_{{.InterfaceName}}.go"
+      mockName: "{{.PackageName | firstUpper}}{{.InterfaceName | firstUpper}}"
+      outpkg: "mocks"
+      dir: "mocks"

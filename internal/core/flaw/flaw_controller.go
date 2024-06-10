@@ -73,7 +73,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 			}
 
 		*/
-		return flawDTO{
+		return FlawDTO{
 			ID:                 flaw.ID,
 			ScannerID:          flaw.ScannerID,
 			Message:            flaw.Message,
@@ -108,7 +108,7 @@ func (c flawHttpController) Read(ctx core.Context) error {
 	// get all the associated cwes
 
 	return ctx.JSON(200, detailedFlawDTO{
-		flawDTO: flawDTO{
+		flawDTO: FlawDTO{
 			ID:                 flaw.ID,
 			ScannerID:          flaw.ScannerID,
 			Message:            flaw.Message,
