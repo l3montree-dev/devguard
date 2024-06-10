@@ -316,7 +316,7 @@ func Start(db core.DB) {
 	flawRouter.GET("/", flawController.ListPaged)
 	flawRouter.GET("/:flawId/", flawController.Read)
 
-	flawRouter.POST("/:flawId/", flawController.CreateEvent)
+	flawRouter.POST("/:flawId/", flawController.CreateEvent, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

@@ -22,11 +22,13 @@ import (
 
 type flawRepository interface {
 	SaveBatch(db core.DB, flaws []models.Flaw) error
+	Save(db core.DB, flaws []models.Flaw) error
 	Transaction(txFunc func(core.DB) error) error
 }
 
 type flawEventRepository interface {
 	SaveBatch(db core.DB, events []models.FlawEvent) error
+	Save(db core.DB, event models.FlawEvent) error
 }
 
 type service struct {
@@ -96,9 +98,9 @@ func (s *service) UpdateFlawState(tx core.DB, userID string, flaw models.Flaw, s
 	flaw = ev.Apply(flaw)
 
 	// run the updates in the transaction to keep a valid state
-	err := s.flawRepository.SaveBatch(tx, []models.Flaw{flaw})
+	err := s.flawRepository.Save(tx, []models.Flaw{flaw})
 	if err != nil {
 		return err
 	}
-	return s.flawEventRepository.SaveBatch(tx, []models.FlawEvent{ev})
+	return s.flawEventRepository.Save(tx, ev)
 }

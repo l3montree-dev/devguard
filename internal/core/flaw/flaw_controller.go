@@ -2,7 +2,6 @@ package flaw
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
@@ -151,12 +150,15 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 	}
 
 	statusType := status.StatusType
+	err = models.CheckStatusType(statusType)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid status type")
+	}
 	justification := status.Justification
 
-	fmt.Println("CreateEvent", statusType, justification)
-
-	err = c.flawService.UpdateFlawState(nil, userID, flaw, statusType, &justification)
-
+	err = c.flawRepository.Transaction(func(tx core.DB) error {
+		return c.flawService.UpdateFlawState(tx, userID, flaw, statusType, &justification)
+	})
 	if err != nil {
 		return echo.NewHTTPError(500, "could not create flaw event").WithInternal(err)
 	}

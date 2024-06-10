@@ -1,5 +1,7 @@
 package models
 
+import "fmt"
+
 type FlawEventType string
 
 const (
@@ -61,38 +63,21 @@ func NewDetectedEvent(flawID string, userID string) FlawEvent {
 	}
 }
 
-func NewAcceptedEvent(flawID string, userID string, justification string) FlawEvent {
-	return FlawEvent{
-		Type:          EventTypeAccepted,
-		FlawID:        flawID,
-		UserID:        userID,
-		Justification: &justification,
-	}
-}
-
-func NewMarkedForMitigationEvent(flawID string, userID string, justification string) FlawEvent {
-	return FlawEvent{
-		Type:          EventTypeMarkedForMitigation,
-		FlawID:        flawID,
-		UserID:        userID,
-		Justification: &justification,
-	}
-}
-
-func NewFalsePositiveEvent(flawID string, userID string, justification string) FlawEvent {
-	return FlawEvent{
-		Type:          EventTypeFalsePositive,
-		FlawID:        flawID,
-		UserID:        userID,
-		Justification: &justification,
-	}
-}
-
-func NewMarkedForTransferEvent(flawID string, userID string, justification string) FlawEvent {
-	return FlawEvent{
-		Type:          EventTypeMarkedForTransfer,
-		FlawID:        flawID,
-		UserID:        userID,
-		Justification: &justification,
+func CheckStatusType(statusType string) error {
+	switch statusType {
+	case "fixed":
+		return nil
+	case "detected":
+		return nil
+	case "accepted":
+		return nil
+	case "markedForMitigation":
+		return nil
+	case "falsePositive":
+		return nil
+	case "markedForTransfer":
+		return nil
+	default:
+		return fmt.Errorf("invalid status type")
 	}
 }
