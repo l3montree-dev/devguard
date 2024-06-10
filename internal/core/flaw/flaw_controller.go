@@ -108,9 +108,8 @@ func (c flawHttpController) Read(ctx core.Context) error {
 	// get all the associated cwes
 
 	return ctx.JSON(200, detailedFlawDTO{
-		flawDTO: FlawDTO{
+		FlawDTO: FlawDTO{
 			ID:                 flaw.ID,
-			ScannerID:          flaw.ScannerID,
 			Message:            flaw.Message,
 			AssetID:            flaw.AssetID.String(),
 			State:              flaw.State,
