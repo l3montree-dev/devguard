@@ -12,15 +12,16 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-package asset
 
-import (
-	cdx "github.com/CycloneDX/cyclonedx-go"
-)
+package utils
 
-func purlOrCpe(component cdx.Component) string {
-	if component.PackageURL != "" {
-		return component.PackageURL
+func Ptr[T any](t T) *T {
+	return &t
+}
+
+func SafeDereference(s *string) string {
+	if s == nil {
+		return ""
 	}
-	return component.CPE
+	return *s
 }

@@ -279,7 +279,7 @@ func Start(db core.DB) {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
-	assetController := asset.NewHttpController(assetRepository, scan.NewPurlComparer(db))
+	assetController := asset.NewHttpController(assetRepository, componentRepository, scan.NewPurlComparer(db))
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
 	vulndbController := vulndb.NewHttpController(cveRepository)
@@ -327,6 +327,10 @@ func Start(db core.DB) {
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.GET("/dependency-graph/", assetController.DependencyGraph)
 	assetRouter.GET("/affected-packages/", assetController.AffectedPackages)
+	assetRouter.GET("/sbom.json/", assetController.SBOMJSON)
+	assetRouter.GET("/sbom.xml/", assetController.SBOMXML)
+
+	assetRouter.GET("/versions/", assetController.Versions)
 
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)

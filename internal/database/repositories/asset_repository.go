@@ -16,13 +16,10 @@
 package repositories
 
 import (
-	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
-	"github.com/l3montree-dev/flawfix/internal/obj"
 )
 
 type assetRepository struct {
@@ -49,74 +46,6 @@ func (a *assetRepository) FindByName(name string) (models.Asset, error) {
 		return app, err
 	}
 	return app, nil
-}
-
-func (a *assetRepository) GetAllComponentsByAssetID(assetID uuid.UUID) []obj.ComponentDepth {
-	res := make([]obj.ComponentDepth, 0)
-	a.db.Raw(`
-        WITH RECURSIVE ComponentHierarchy AS (
-            SELECT c.purl_or_cpe, 1 AS depth
-            FROM asset_components ac
-            INNER JOIN components c ON ac.component_purl_or_cpe = c.purl_or_cpe
-            WHERE ac.asset_id = ?
-        
-            UNION ALL
-        
-            SELECT cd.depends_on_purl_or_cpe, ch.depth + 1 AS depth
-            FROM ComponentHierarchy ch
-            JOIN component_dependencies cd ON ch.purl_or_cpe = cd.component_purl_or_cpe
-            WHERE ch.depth < 10
-        )
-        SELECT DISTINCT purl_or_cpe, 
-            CASE 
-                WHEN depth > 10 THEN 10 
-                ELSE depth 
-            END AS depth
-        FROM ComponentHierarchy;
-    `, assetID).Scan(&res)
-
-	return res
-}
-
-func (a *assetRepository) GetTransitiveDependencies(assetID uuid.UUID) []obj.Dependency {
-	var results []obj.Dependency
-
-	fmt.Println("assetID", assetID.String())
-	a.db.Raw(`
-	WITH RECURSIVE ComponentHierarchy AS (
-		SELECT
-			source.purl_or_cpe AS source,
-			dependencies.depends_on_purl_or_cpe AS dep,
-			1 AS depth
-		FROM
-			components source
-		LEFT JOIN component_dependencies dependencies ON source.purl_or_cpe = dependencies.component_purl_or_cpe
-		WHERE EXISTS (
-		   SELECT 1 from asset_components WHERE asset_components.asset_id = ? AND asset_components.component_purl_or_cpe = source.purl_or_cpe
-		)
-		UNION ALL
-	
-		SELECT
-			ch.source,
-			cd.depends_on_purl_or_cpe,
-			ch.depth + 1
-		FROM
-			ComponentHierarchy ch
-		INNER JOIN component_dependencies cd ON ch.dep = cd.component_purl_or_cpe
-		WHERE
-			ch.depth < 10
-	)
-	SELECT
-		DISTINCT source, dep,
-		CASE
-			WHEN depth > 10 THEN 10
-			ELSE depth
-		END AS depth
-	FROM
-		ComponentHierarchy;
-	`, assetID).Scan(&results)
-
-	return results
 }
 
 func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, error) {

@@ -21,7 +21,9 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/flawfix/internal/utils"
 )
 
 type cveRepository interface {
@@ -33,8 +35,8 @@ type componentRepository interface {
 }
 
 type assetService interface {
-	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw)
-	UpdateSBOM(asset models.Asset, sbom *cdx.BOM)
+	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw) (amountOpened int, amountClosed int, err error)
+	UpdateSBOM(asset models.Asset, version string, sbom *cdx.BOM) error
 }
 
 type httpController struct {
@@ -59,6 +61,12 @@ func NewHttpController(db core.DB, cveRepository cveRepository, componentReposit
 	}
 }
 
+type ScanResponse struct {
+	AmountOpened int            `json:"amountOpened"`
+	AmountClosed int            `json:"amountClosed"`
+	Flaws        []flaw.FlawDTO `json:"flaws"`
+}
+
 func (s *httpController) Scan(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
@@ -69,8 +77,26 @@ func (s *httpController) Scan(c core.Context) error {
 
 	userID := core.GetSession(c).GetUserID()
 
+	// get the X-Asset-Version header
+	version := c.Request().Header.Get("X-Asset-Version")
+	if version == "" {
+		slog.Error("no version header found")
+		return c.JSON(400, map[string]string{"error": "no version header found"})
+	}
+
+	var err error
+	version, err = utils.SemverFix(version)
+	// check if valid semver
+	if err != nil {
+		slog.Error("invalid semver version", "version", version)
+		return c.JSON(400, map[string]string{"error": "invalid semver version"})
+	}
+
 	// update the sbom in the database in parallel
-	go s.assetService.UpdateSBOM(asset, bom)
+	if err := s.assetService.UpdateSBOM(asset, version, bom); err != nil {
+		slog.Error("could not update sbom", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not update sbom"})
+	}
 
 	// scan the bom we just retrieved.
 	vulns, err := s.sbomScanner.Scan(bom)
@@ -113,7 +139,31 @@ func (s *httpController) Scan(c core.Context) error {
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current flaws
-	s.assetService.HandleScanResult(userID, scannerID, asset, flaws)
+	amountOpened, amountClose, err := s.assetService.HandleScanResult(userID, scannerID, asset, flaws)
+	if err != nil {
+		slog.Error("could not handle scan result", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
+	}
 
-	return c.JSON(200, flaws)
+	return c.JSON(200, ScanResponse{
+		AmountOpened: amountOpened,
+		AmountClosed: amountClose,
+		Flaws: utils.Map(flaws, func(f models.Flaw) flaw.FlawDTO {
+			return flaw.FlawDTO{
+				ID:                 f.ID,
+				ScannerID:          f.AssetID.String(),
+				State:              f.State,
+				CVE:                f.CVE,
+				Component:          f.Component,
+				CVEID:              f.CVEID,
+				ComponentPurlOrCpe: f.ComponentPurlOrCpe,
+				Effort:             f.Effort,
+				RiskAssessment:     f.RiskAssessment,
+				RawRiskAssessment:  f.RawRiskAssessment,
+				Priority:           f.Priority,
+				ArbitraryJsonData:  f.GetArbitraryJsonData(),
+				LastDetected:       f.LastDetected,
+				CreatedAt:          f.CreatedAt,
+			}
+		})})
 }
