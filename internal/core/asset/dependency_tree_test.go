@@ -22,38 +22,70 @@ import (
 )
 
 func TestDependencyTree(t *testing.T) {
-	graph := []models.ComponentDependency{
-		{ComponentPurlOrCpe: nil, DependencyPurlOrCpe: "a", Depth: 0},
-		{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "b", Depth: 1},
-		{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "c", Depth: 1},
-		{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "d", Depth: 2},
-		{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "e", Depth: 2},
-		{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "f", Depth: 3},
-		{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "g", Depth: 3},
-	}
-	tree := buildDependencyTree(graph)
+	t.Run("buildDependencyTree", func(t *testing.T) {
+		graph := []models.ComponentDependency{
+			{ComponentPurlOrCpe: nil, DependencyPurlOrCpe: "a", Depth: 0},
+			{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "b", Depth: 1},
+			{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "c", Depth: 1},
+			{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "d", Depth: 2},
+			{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "e", Depth: 2},
+			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "f", Depth: 3},
+			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "g", Depth: 3},
+		}
+		tree, _ := buildDependencyTree(graph)
 
-	// expect root node to be created with a single child: a
-	if len(tree.Root.Children) != 1 {
-		t.Errorf("expected 1 root child, got %d", len(tree.Root.Children))
-	}
-	// expect a to have two children: b and c
-	if len(tree.Root.Children[0].Children) != 2 {
-		t.Errorf("expected 2 children for a, got %d", len(tree.Root.Children[0].Children))
-	}
+		// expect root node to be created with a single child: a
+		if len(tree.Root.Children) != 1 {
+			t.Errorf("expected 1 root child, got %d", len(tree.Root.Children))
+		}
+		// expect a to have two children: b and c
+		if len(tree.Root.Children[0].Children) != 2 {
+			t.Errorf("expected 2 children for a, got %d", len(tree.Root.Children[0].Children))
+		}
 
-	// expect b to have two children: d and e
-	if len(tree.Root.Children[0].Children[0].Children) != 2 {
-		t.Errorf("expected 2 children for b, got %d", len(tree.Root.Children[0].Children[0].Children))
-	}
+		// expect b to have two children: d and e
+		if len(tree.Root.Children[0].Children[0].Children) != 2 {
+			t.Errorf("expected 2 children for b, got %d", len(tree.Root.Children[0].Children[0].Children))
+		}
 
-	// expect c to have two children: f and g
-	if len(tree.Root.Children[0].Children[1].Children) != 2 {
-		t.Errorf("expected 2 children for c, got %d", len(tree.Root.Children[0].Children[1].Children))
-	}
+		// expect c to have two children: f and g
+		if len(tree.Root.Children[0].Children[1].Children) != 2 {
+			t.Errorf("expected 2 children for c, got %d", len(tree.Root.Children[0].Children[1].Children))
+		}
 
-	// expect d to have no children
-	if len(tree.Root.Children[0].Children[0].Children[0].Children) != 0 {
-		t.Errorf("expected 0 children for d, got %d", len(tree.Root.Children[0].Children[0].Children[0].Children))
-	}
+		// expect d to have no children
+		if len(tree.Root.Children[0].Children[0].Children[0].Children) != 0 {
+			t.Errorf("expected 0 children for d, got %d", len(tree.Root.Children[0].Children[0].Children[0].Children))
+		}
+	})
+
+	t.Run("test removes cycles", func(t *testing.T) {
+		graph := []models.ComponentDependency{
+			{ComponentPurlOrCpe: nil, DependencyPurlOrCpe: "a", Depth: 0},
+			{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "b", Depth: 1},
+			{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "a", Depth: 2},
+		}
+		tree, removedEdges := buildDependencyTree(graph)
+
+		// expect root node to be created with a single child: a
+		if len(tree.Root.Children) != 1 {
+			t.Errorf("expected 1 root child, got %d", len(tree.Root.Children))
+		}
+		// expect a to have a single child: b
+		if len(tree.Root.Children[0].Children) != 1 {
+			t.Errorf("expected 1 children for a, got %d", len(tree.Root.Children[0].Children))
+		}
+		// expect b to have no children
+		if len(tree.Root.Children[0].Children[0].Children) != 0 {
+			t.Errorf("expected 0 children for b, got %d", len(tree.Root.Children[0].Children[0].Children))
+		}
+
+		// expect the cycle to be removed - b -> a completes the cycle
+		if len(removedEdges["b"]) != 1 {
+			t.Errorf("expected 1 removed edge for b, got %d", len(removedEdges["b"]))
+			if removedEdges["b"][0] != "a" {
+				t.Errorf("expected removed edge to be a, got %s", removedEdges["b"][0])
+			}
+		}
+	})
 }
