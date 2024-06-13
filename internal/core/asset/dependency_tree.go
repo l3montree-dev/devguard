@@ -74,7 +74,7 @@ func cutCycles(tree *tree, removedEdges map[string][]string) {
 	var dfs func(node *treeNode) bool
 
 	dfs = func(node *treeNode) bool {
-		if visited[node.Name] == false {
+		if !visited[node.Name] {
 			// Mark the current node as visited and part of recursion stack
 			visited[node.Name] = true
 			recStack[node.Name] = true
