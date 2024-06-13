@@ -17,6 +17,7 @@ package flaw
 
 import (
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
@@ -63,7 +64,7 @@ func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw)
 }
 
 // expect a transaction to be passed
-func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw) error {
+func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error {
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -74,6 +75,13 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 		// apply the event on the flaw
 		flaws[i] = ev.Apply(flaw)
 		events[i] = ev
+
+		e := core.Environmental{
+			ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
+			IntegrityRequirements:       string(asset.IntegrityRequirement),
+			AvailabilityRequirements:    string(asset.AvailabilityRequirement),
+		}
+		flaws[i].Risk, _ = vulndb.RiskCalculation(*flaw.CVE, e)
 	}
 
 	// run the updates in the transaction to keep a valid state

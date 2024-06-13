@@ -1,13 +1,18 @@
 package asset
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
+	"log/slog"
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
+	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/database/repositories"
 	"github.com/l3montree-dev/flawfix/internal/utils"
@@ -24,6 +29,7 @@ type repository interface {
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
+	Update(tx core.DB, asset *models.Asset) error
 }
 
 type vulnService interface {
@@ -34,21 +40,31 @@ type assetComponentsLoader interface {
 	GetVersions(tx core.DB, asset models.Asset) ([]string, error)
 	LoadAssetComponents(tx core.DB, asset models.Asset, version string) ([]models.ComponentDependency, error)
 }
+
+type cveRepository interface {
+	FindCVE(tx database.DB, cveId string) (any, error)
+}
+
 type httpController struct {
 	assetRepository       repository
 	assetComponentsLoader assetComponentsLoader
 	vulnService           vulnService
+	flawRepository        flawRepository
+	cveRepository         cveRepository
 }
 
-func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, vulnService vulnService) *httpController {
+func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, vulnService vulnService, flawRepository flawRepository, cveRepository cveRepository) *httpController {
 	return &httpController{
 		assetRepository:       repository,
 		assetComponentsLoader: assetComponentsLoader,
 		vulnService:           vulnService,
+		flawRepository:        flawRepository,
+		cveRepository:         cveRepository,
 	}
 }
 
 func (a *httpController) List(c core.Context) error {
+
 	project := core.GetProject(c)
 
 	apps, err := a.assetRepository.GetByProjectID(project.GetID())
@@ -127,6 +143,7 @@ func (a *httpController) Create(c core.Context) error {
 
 func (a *httpController) Read(c core.Context) error {
 	app := core.GetAsset(c)
+	fmt.Println("Read vom Asset-controller", app)
 	return c.JSON(200, app)
 }
 
@@ -287,4 +304,91 @@ func buildSBOM(asset models.Asset, version string, organizationName string, comp
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 	return &bom
+}
+
+func (c *httpController) UpdateRrequirements(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	fmt.Println("old Asset: ", asset)
+
+	req := ctx.Request().Body
+	defer req.Close()
+
+	var assetNew models.Asset
+	err := json.NewDecoder(req).Decode(&assetNew)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("new Asset: ", assetNew)
+
+	if assetNew.ConfidentialityRequirement != asset.ConfidentialityRequirement || assetNew.IntegrityRequirement != asset.IntegrityRequirement || assetNew.AvailabilityRequirement != asset.AvailabilityRequirement {
+		asset.ConfidentialityRequirement = assetNew.ConfidentialityRequirement
+		asset.IntegrityRequirement = assetNew.IntegrityRequirement
+		asset.AvailabilityRequirement = assetNew.AvailabilityRequirement
+
+		//save the asset inside the database
+		err = c.assetRepository.Update(nil, &asset)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("UpdateRequirements vom Asset-controller", assetNew)
+
+		e := core.Environmental{
+			ConfidentialityRequirements: string(assetNew.ConfidentialityRequirement),
+			IntegrityRequirements:       string(assetNew.IntegrityRequirement),
+			AvailabilityRequirements:    string(assetNew.AvailabilityRequirement),
+		}
+
+		ee := core.SanitizeEnv(e)
+		fmt.Println("UpdateRequirements vom Asset-controller", ee)
+
+		// get the flaws
+		flaws, err := c.flawRepository.GetAllFlawsByAssetID(nil, asset.GetID())
+		if err != nil {
+			log.Printf("Error getting flaws: %v", err)
+			return err
+		}
+		if flaws == nil {
+			slog.Info("No flaws found")
+			return nil
+		}
+		for i, flaw := range flaws {
+			cviID := flaw.CVEID
+			cve, err := c.cveRepository.FindCVE(nil, cviID)
+			if err != nil {
+				slog.Info("Error getting CVE: %v", err)
+				continue
+			}
+
+			// Perform type assertion to convert cve to models.CVE
+			cve2 := cve.(models.CVE)
+
+			// calculate the risk value
+			flaws[i].Risk, _ = vulndb.RiskCalculation(cve2, ee)
+
+			risk := flaws[i].Risk.WithEnvironmentAndThreatIntelligence
+			fmt.Println("Risk: ", risk)
+			//TODO: check if its correct
+			one := float64(1)
+			epss := float64(*cve2.EPSS)
+			temp := risk * (epss + one)
+			flaws[i].RawRiskAssessment = &temp
+
+			// Log the updated flaw
+			log.Printf("Updated flaw with ID: %s -  Risk is: %f", flaw.ID, *flaws[i].RawRiskAssessment)
+
+		}
+
+		// save the flaws inside the database
+
+		err = c.flawRepository.SaveBatch(nil, flaws)
+		if err != nil {
+			log.Printf("Error saving flaws: %v", err)
+			return err
+		}
+
+	}
+
+	return nil
 }

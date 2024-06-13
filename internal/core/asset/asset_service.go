@@ -32,6 +32,9 @@ import (
 type flawRepository interface {
 	Transaction(txFunc func(core.DB) error) error
 	ListByScanner(assetID uuid.UUID, scannerID string) ([]models.Flaw, error)
+
+	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
+	SaveBatch(db core.DB, flaws []models.Flaw) error
 }
 
 type componentRepository interface {
@@ -47,7 +50,7 @@ type assetRepository interface {
 
 type flawService interface {
 	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw) error
-	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw) error
+	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error
 }
 
 type service struct {
@@ -85,7 +88,7 @@ func (s *service) HandleScanResult(userID string, scannerID string, asset models
 
 	// get a transaction
 	if err := s.flawRepository.Transaction(func(tx core.DB) error {
-		if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws); err != nil {
+		if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, asset); err != nil {
 			// this will cancel the transaction
 			return err
 		}

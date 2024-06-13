@@ -27,6 +27,10 @@ func recovermiddleware() echo.MiddlewareFunc {
 					length = runtime.Stack(stack, false)
 
 					fmt.Println(err, string(stack[:length]))
+
+					// Log the error and stack trace for debugging
+					fmt.Println("Recovered from panic:", err)
+					fmt.Println("Stack trace:", string(stack[:length]))
 				}
 			}()
 			return next(c)

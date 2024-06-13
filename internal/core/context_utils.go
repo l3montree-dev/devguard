@@ -319,10 +319,10 @@ func GetEnvironmental(ctx Context) Environmental {
 		IntegrityRequirements:       ctx.QueryParam("integrityRequirements"),
 		AvailabilityRequirements:    ctx.QueryParam("availabilityRequirements"),
 	}
-	return sanitizeEnv(env)
+	return SanitizeEnv(env)
 }
 
-func sanitizeEnv(env Environmental) Environmental {
+func SanitizeEnv(env Environmental) Environmental {
 
 	replacements := map[string]string{
 		"high":   "H",

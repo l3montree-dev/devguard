@@ -1,6 +1,7 @@
 package vulndb
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -59,7 +60,7 @@ func (c cveHttpController) ListPaged(ctx core.Context) error {
 	env := core.GetEnvironmental(ctx)
 
 	for i, cve := range pagedResp.Data {
-		risk, vector := riskCalculation(cve, env)
+		risk, vector := RiskCalculation(cve, env)
 		pagedResp.Data[i].Vector = vector
 		pagedResp.Data[i].Risk = risk
 	}
@@ -91,18 +92,18 @@ func (c cveHttpController) Read(ctx core.Context) error {
 
 	e := core.GetEnvironmental(ctx)
 
-	risk, vector := riskCalculation(cve, e)
+	risk, vector := RiskCalculation(cve, e)
 	cve.Risk = risk
 	cve.Vector = vector
 
 	return ctx.JSON(200, cve)
 }
 
-func riskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, string) {
+func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, string) {
 	risk := obj.RiskMetrics{
 		BaseScore: float64(cve.CVSS),
 	}
-
+	fmt.Println("RiskCalculation", cve.Vector, env)
 	/*
 	   //Base Metrics
 	   AV : Attack Vector

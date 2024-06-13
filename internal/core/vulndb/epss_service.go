@@ -34,6 +34,9 @@ var epssURL = "https://epss.cyentia.com/epss_scores-current.csv.gz"
 func ptrFloat32(f float32) *float32 {
 	return &f
 }
+func ptrFloat64(f float64) *float64 {
+	return &f
+}
 func (s *epssService) fetchCSV(ctx context.Context) ([]models.CVE, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, epssURL, nil)
 
@@ -78,7 +81,7 @@ func (s *epssService) fetchCSV(ctx context.Context) ([]models.CVE, error) {
 		}
 		results = append(results, models.CVE{
 			CVE:        columns[0],
-			EPSS:       ptrFloat32(float32(epss)),
+			EPSS:       ptrFloat64(float64(epss)),
 			Percentile: ptrFloat32(float32(percentile)),
 		})
 	}

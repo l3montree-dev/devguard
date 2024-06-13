@@ -28,7 +28,6 @@ func NewHttpController(flawRepository repository) *flawHttpController {
 func (c flawHttpController) ListPaged(ctx core.Context) error {
 	// get the asset
 	asset := core.GetAsset(ctx)
-
 	pagedResp, err := c.flawRepository.GetByAssetIdPaged(
 		nil,
 		core.GetPageInfo(ctx),
@@ -78,6 +77,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 			ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
 			LastDetected:       flaw.LastDetected,
 			CreatedAt:          flaw.CreatedAt,
+			Risk:               flaw.Risk,
 		}
 	}))
 }

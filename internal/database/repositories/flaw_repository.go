@@ -81,6 +81,14 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 	return core.NewPaged(pageInfo, count, flaws), nil
 }
 
+func (r *flawRepository) GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error) {
+	var flaws []models.Flaw = []models.Flaw{}
+	if err := r.Repository.GetDB(tx).Where("asset_id = ?", assetID).Find(&flaws).Error; err != nil {
+		return nil, err
+	}
+	return flaws, nil
+}
+
 func (g flawRepository) Read(id string) (models.Flaw, error) {
 	var t models.Flaw
 	err := g.db.Preload("CVE.Weaknesses").Preload("Events").Preload("CVE").First(&t, "id = ?", id).Error
