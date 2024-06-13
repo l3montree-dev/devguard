@@ -271,8 +271,9 @@ func Start(db core.DB) {
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 	flawRepository := repositories.NewFlawRepository(db)
-	flawController := flaw.NewHttpController(flawRepository)
 	flawService := flaw.NewService(flawRepository, flawEventRepository)
+	flawController := flaw.NewHttpController(flawRepository, flawService)
+
 	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
 
 	// init all http controllers using the repositories
@@ -335,6 +336,8 @@ func Start(db core.DB) {
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)
 	flawRouter.GET("/:flawId/", flawController.Read)
+
+	flawRouter.POST("/:flawId/", flawController.CreateEvent, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {
