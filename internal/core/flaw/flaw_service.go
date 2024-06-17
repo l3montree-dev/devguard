@@ -17,7 +17,7 @@ package flaw
 
 import (
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
+	"github.com/l3montree-dev/flawfix/internal/core/risk"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
@@ -81,7 +81,8 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 			IntegrityRequirements:       string(asset.IntegrityRequirement),
 			AvailabilityRequirements:    string(asset.AvailabilityRequirement),
 		}
-		flaws[i].Risk, _ = vulndb.RiskCalculation(*flaw.CVE, e)
+
+		flaws[i].RawRiskAssessment = risk.RowRisk(*flaw.CVE, e)
 	}
 
 	// run the updates in the transaction to keep a valid state

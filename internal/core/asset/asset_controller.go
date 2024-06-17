@@ -11,7 +11,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
+	"github.com/l3montree-dev/flawfix/internal/core/risk"
 	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/database/repositories"
@@ -308,7 +308,6 @@ func buildSBOM(asset models.Asset, version string, organizationName string, comp
 
 func (c *httpController) UpdateRrequirements(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
-	fmt.Println("old Asset: ", asset)
 
 	req := ctx.Request().Body
 	defer req.Close()
@@ -318,8 +317,6 @@ func (c *httpController) UpdateRrequirements(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("new Asset: ", assetNew)
 
 	if assetNew.ConfidentialityRequirement != asset.ConfidentialityRequirement || assetNew.IntegrityRequirement != asset.IntegrityRequirement || assetNew.AvailabilityRequirement != asset.AvailabilityRequirement {
 		asset.ConfidentialityRequirement = assetNew.ConfidentialityRequirement
@@ -332,21 +329,16 @@ func (c *httpController) UpdateRrequirements(ctx core.Context) error {
 			return err
 		}
 
-		fmt.Println("UpdateRequirements vom Asset-controller", assetNew)
-
-		e := core.Environmental{
+		env := core.Environmental{
 			ConfidentialityRequirements: string(assetNew.ConfidentialityRequirement),
 			IntegrityRequirements:       string(assetNew.IntegrityRequirement),
 			AvailabilityRequirements:    string(assetNew.AvailabilityRequirement),
 		}
 
-		ee := core.SanitizeEnv(e)
-		fmt.Println("UpdateRequirements vom Asset-controller", ee)
-
 		// get the flaws
 		flaws, err := c.flawRepository.GetAllFlawsByAssetID(nil, asset.GetID())
 		if err != nil {
-			log.Printf("Error getting flaws: %v", err)
+			slog.Info("Error getting flaws: %v", err)
 			return err
 		}
 		if flaws == nil {
@@ -361,19 +353,8 @@ func (c *httpController) UpdateRrequirements(ctx core.Context) error {
 				continue
 			}
 
-			// Perform type assertion to convert cve to models.CVE
 			cve2 := cve.(models.CVE)
-
-			// calculate the risk value
-			flaws[i].Risk, _ = vulndb.RiskCalculation(cve2, ee)
-
-			risk := flaws[i].Risk.WithEnvironmentAndThreatIntelligence
-			fmt.Println("Risk: ", risk)
-			//TODO: check if its correct
-			one := float64(1)
-			epss := float64(*cve2.EPSS)
-			temp := risk * (epss + one)
-			flaws[i].RawRiskAssessment = &temp
+			flaws[i].RawRiskAssessment = risk.RowRisk(cve2, env)
 
 			// Log the updated flaw
 			log.Printf("Updated flaw with ID: %s -  Risk is: %f", flaw.ID, *flaws[i].RawRiskAssessment)

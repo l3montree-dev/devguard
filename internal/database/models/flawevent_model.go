@@ -10,6 +10,8 @@ const (
 	EventTypeMarkedForMitigation FlawEventType = "markedForMitigation"
 	EventTypeFalsePositive       FlawEventType = "falsePositive"
 	EventTypeMarkedForTransfer   FlawEventType = "markedForTransfer"
+
+	EventTypeRowRiskAssessmentUpdated FlawEventType = "rawRiskAssessmentUpdated"
 )
 
 type FlawEvent struct {

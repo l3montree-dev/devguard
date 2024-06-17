@@ -1,7 +1,6 @@
 package vulndb
 
 import (
-	"fmt"
 	"log/slog"
 	"strings"
 
@@ -103,7 +102,6 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 	risk := obj.RiskMetrics{
 		BaseScore: float64(cve.CVSS),
 	}
-	fmt.Println("RiskCalculation", cve.Vector, env)
 	/*
 	   //Base Metrics
 	   AV : Attack Vector

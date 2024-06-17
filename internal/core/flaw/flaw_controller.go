@@ -77,7 +77,6 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 			ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
 			LastDetected:       flaw.LastDetected,
 			CreatedAt:          flaw.CreatedAt,
-			Risk:               flaw.Risk,
 		}
 	}))
 }

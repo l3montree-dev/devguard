@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/l3montree-dev/flawfix/internal/obj"
 	"github.com/l3montree-dev/flawfix/internal/utils"
 )
 
@@ -44,8 +43,6 @@ type Flaw struct {
 	Effort            *int     `json:"effort" gorm:"default:null;"`
 	RiskAssessment    *int     `json:"riskAssessment" gorm:"default:null;"`
 	RawRiskAssessment *float64 `json:"rawRiskAssessment" gorm:"default:null;"`
-
-	Risk obj.RiskMetrics `json:"risk" gorm:"-"`
 
 	Priority *int `json:"priority" gorm:"default:null;"`
 
