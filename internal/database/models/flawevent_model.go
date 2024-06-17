@@ -1,6 +1,8 @@
 package models
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type FlawEventType string
 
@@ -14,7 +16,7 @@ const (
 	EventTypeFalsePositive       FlawEventType = "falsePositive"
 	EventTypeMarkedForTransfer   FlawEventType = "markedForTransfer"
 
-	EventTypeRowRiskAssessmentUpdated FlawEventType = "rawRiskAssessmentUpdated"
+	EventTypeRawRiskAssessmentUpdated FlawEventType = "rawRiskAssessmentUpdated"
 )
 
 type FlawEvent struct {
@@ -44,7 +46,11 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 		flaw.State = FlawStateFalsePositive
 	case EventTypeMarkedForTransfer:
 		flaw.State = FlawStateMarkedForTransfer
+	case EventTypeRawRiskAssessmentUpdated:
+		//do nothing
+
 	}
+
 }
 
 func NewFixedEvent(flawID string, userID string) FlawEvent {

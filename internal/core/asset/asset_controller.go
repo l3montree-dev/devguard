@@ -45,21 +45,27 @@ type cveRepository interface {
 	FindCVE(tx database.DB, cveId string) (any, error)
 }
 
+type assetService interface {
+	UpdateEvents(asset models.Asset, responsibility string, justification string) error
+}
+
 type httpController struct {
 	assetRepository       repository
 	assetComponentsLoader assetComponentsLoader
 	vulnService           vulnService
 	flawRepository        flawRepository
 	cveRepository         cveRepository
+	assetService          assetService
 }
 
-func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, vulnService vulnService, flawRepository flawRepository, cveRepository cveRepository) *httpController {
+func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, vulnService vulnService, flawRepository flawRepository, cveRepository cveRepository, assetService assetService) *httpController {
 	return &httpController{
 		assetRepository:       repository,
 		assetComponentsLoader: assetComponentsLoader,
 		vulnService:           vulnService,
 		flawRepository:        flawRepository,
 		cveRepository:         cveRepository,
+		assetService:          assetService,
 	}
 }
 
@@ -143,7 +149,6 @@ func (a *httpController) Create(c core.Context) error {
 
 func (a *httpController) Read(c core.Context) error {
 	app := core.GetAsset(c)
-	fmt.Println("Read vom Asset-controller", app)
 	return c.JSON(200, app)
 }
 
@@ -319,6 +324,10 @@ func (c *httpController) UpdateRrequirements(ctx core.Context) error {
 	}
 
 	if assetNew.ConfidentialityRequirement != asset.ConfidentialityRequirement || assetNew.IntegrityRequirement != asset.IntegrityRequirement || assetNew.AvailabilityRequirement != asset.AvailabilityRequirement {
+
+		justification := "Requirements Level updated: " + "AvailabilityRequirement: " + asset.AvailabilityRequirement + " -> " + assetNew.AvailabilityRequirement + ", ConfidentialityRequirement: " + asset.ConfidentialityRequirement + " -> " + assetNew.ConfidentialityRequirement + ", IntegrityRequirement: " + asset.IntegrityRequirement + " -> " + assetNew.IntegrityRequirement
+		justificationStr := string(justification)
+
 		asset.ConfidentialityRequirement = assetNew.ConfidentialityRequirement
 		asset.IntegrityRequirement = assetNew.IntegrityRequirement
 		asset.AvailabilityRequirement = assetNew.AvailabilityRequirement
@@ -366,6 +375,13 @@ func (c *httpController) UpdateRrequirements(ctx core.Context) error {
 		err = c.flawRepository.SaveBatch(nil, flaws)
 		if err != nil {
 			log.Printf("Error saving flaws: %v", err)
+			return err
+		}
+
+		userID := core.GetSession(ctx).GetUserID()
+		//update event for all flaws
+		err = c.assetService.UpdateEvents(asset, userID, justificationStr)
+		if err != nil {
 			return err
 		}
 

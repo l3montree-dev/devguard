@@ -51,6 +51,7 @@ type assetRepository interface {
 type flawService interface {
 	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw) error
 	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error
+	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification *string) error
 }
 
 type service struct {
@@ -208,4 +209,21 @@ func (s *service) UpdateSBOM(asset models.Asset, currentVersion string, sbom *cd
 	}
 
 	return s.componentRepository.HandleStateDiff(nil, asset.ID, currentVersion, assetComponents, dependencies)
+}
+
+func (s *service) UpdateEvents(asset models.Asset, responsibility string, justification string) error {
+	// get all existing flaws from the database - this is the old state
+	flaws, err := s.flawRepository.GetAllFlawsByAssetID(nil, asset.ID)
+	if err != nil {
+		slog.Error("could not get existing flaws", "err", err)
+		return err
+	}
+	for _, flaw := range flaws {
+		err = s.flawService.UpdateFlawState(nil, responsibility, &flaw, "rowRiskAssessmentUpdated", &justification)
+		if err != nil {
+			slog.Error("could not update flaw state", "err", err)
+			return err
+		}
+	}
+	return nil
 }
