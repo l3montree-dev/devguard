@@ -166,7 +166,7 @@ func (a *httpController) DependencyGraph(c core.Context) error {
 		return err
 	}
 
-	tree := buildDependencyTree(components)
+	tree, _ := buildDependencyTree(components)
 
 	return c.JSON(200, tree)
 }

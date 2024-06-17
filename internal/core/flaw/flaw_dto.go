@@ -41,3 +41,8 @@ type FlawDTO struct {
 	LastDetected       time.Time         `json:"lastDetected"`
 	CreatedAt          time.Time         `json:"createdAt"`
 }
+
+type detailedFlawDTO struct {
+	FlawDTO
+	Events []models.FlawEvent `json:"events"`
+}

@@ -58,7 +58,54 @@ func (tree *tree) addNode(source string, dep string) {
 	tree.cursors[source].Children = append(tree.cursors[source].Children, tree.cursors[dep])
 }
 
-func buildDependencyTree(elements []models.ComponentDependency) tree {
+func removeEdge(node *treeNode, childName string) {
+	for i, child := range node.Children {
+		if child.Name == childName {
+			node.Children = append(node.Children[:i], node.Children[i+1:]...)
+			return
+		}
+	}
+}
+
+func cutCycles(tree *tree, removedEdges map[string][]string) {
+	visited := make(map[string]bool)
+	recStack := make(map[string]bool)
+
+	var dfs func(node *treeNode) bool
+
+	dfs = func(node *treeNode) bool {
+		if !visited[node.Name] {
+			// Mark the current node as visited and part of recursion stack
+			visited[node.Name] = true
+			recStack[node.Name] = true
+
+			// Recur for all the vertices adjacent to this vertex
+			for _, child := range node.Children {
+				if !visited[child.Name] && dfs(child) {
+					return true
+				} else if recStack[child.Name] {
+					// If the node is in the recStack, then there is a cycle
+					// Remove the edge that closes the cycle
+					removeEdge(node, child.Name)
+					removedEdges[node.Name] = append(removedEdges[node.Name], child.Name)
+					return true
+				}
+			}
+
+		}
+		recStack[node.Name] = false // remove the vertex from recursion stack
+		return false
+	}
+
+	// Iterate over all nodes in the graph and apply DFS
+	for _, node := range tree.cursors {
+		if !visited[node.Name] {
+			dfs(node)
+		}
+	}
+}
+
+func buildDependencyTree(elements []models.ComponentDependency) (tree, map[string][]string) {
 	// sort by depth
 	slices.SortFunc(elements, func(a, b models.ComponentDependency) int {
 		return a.Depth - b.Depth
@@ -80,5 +127,9 @@ func buildDependencyTree(elements []models.ComponentDependency) tree {
 		}
 	}
 
-	return tree
+	// remove cycles
+	removedEdges := make(map[string][]string)
+	cutCycles(&tree, removedEdges)
+
+	return tree, removedEdges
 }
