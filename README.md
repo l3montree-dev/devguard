@@ -187,6 +187,7 @@ If the VEX is not available and in its addition, we can also use the knowledge o
 
     ```sh
     cp .env.example .env
+    cp .kratos/kratos.example.yml .kratos/kratos.yml
     ```
 
 4. Run the following command to start the necessary services
