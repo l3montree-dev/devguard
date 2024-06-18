@@ -57,7 +57,7 @@ func (p *PatController) Create(c core.Context) error {
 		return echo.NewHTTPError(400, err.Error())
 	}
 
-	patStruct, token := req.ToModel(userID)
+	patStruct := req.ToModel(userID)
 
 	err := p.patRepository.Create(nil, &patStruct)
 	if err != nil {
@@ -67,8 +67,10 @@ func (p *PatController) Create(c core.Context) error {
 	return c.JSON(200, map[string]string{
 		"createdAt":   patStruct.CreatedAt.String(),
 		"description": patStruct.Description,
-		"token":       token,
+		"token":       "Token",
 		"userId":      patStruct.UserID.String(),
+		"pubKey":      patStruct.PubKey,
+		"fingerprint": patStruct.Fingerprint,
 	})
 }
 

@@ -18,6 +18,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -217,6 +219,11 @@ func init() {
 				return
 			}
 			req.Header.Set("Authorization", "Bearer "+token)
+			// token =^= Private Key
+			// get public key from private key
+			privKey, _ := x509.ParsePKCS8PrivateKey([]byte(token))
+			privKey.(*ecdsa.PrivateKey).PublicKey
+			// req.Header.Set("HTTP-Sig", )
 			req.Header.Set("X-Asset-Name", assetName)
 			req.Header.Set("X-Asset-Version", version)
 
