@@ -44,7 +44,8 @@ spec:
         - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_SECRET"
           valueFrom:
             secretKeyRef:
-              key: "{{ .Values.oidc.github.existingClientSecret }}"
+              name: "{{ .Values.oidc.github.existingClientSecret }}"
+              key: "secret" 
         {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
