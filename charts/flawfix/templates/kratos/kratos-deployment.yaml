@@ -114,6 +114,13 @@ spec:
               name: "{{ .Values.mail.existingSMTPConnectionUriSecret }}"
               key: uri
               optional: true
+        {{- if .Values.oidc.github.enabled }}
+        - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_SECRET"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Values.oidc.github.existingClientSecret }}"
+              key: "secret" 
+        {{- end }}
         ports:
         - name: http-admin
           containerPort: 4434
