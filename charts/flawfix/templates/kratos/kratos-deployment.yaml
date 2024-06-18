@@ -40,6 +40,12 @@ spec:
               name: "{{ .Values.mail.existingSMTPConnectionUriSecret }}"
               key: uri
               optional: true
+        {{- if .Values.oidc.github.enabled }}
+        - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_SECRET"
+          valueFrom:
+            secretKeyRef:
+              key: "{{ .Values.oidc.github.existingClientSecret }}"
+        {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
