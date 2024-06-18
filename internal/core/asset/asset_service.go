@@ -218,8 +218,8 @@ func (s *service) UpdateEvents(asset models.Asset, responsibility string, justif
 		slog.Error("could not get existing flaws", "err", err)
 		return err
 	}
-	for _, flaw := range flaws {
-		err = s.flawService.UpdateFlawState(nil, responsibility, &flaw, "rowRiskAssessmentUpdated", &justification)
+	for i := range flaws {
+		err = s.flawService.UpdateFlawState(nil, responsibility, &flaws[i], "rowRiskAssessmentUpdated", &justification)
 		if err != nil {
 			slog.Error("could not update flaw state", "err", err)
 			return err
