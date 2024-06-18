@@ -87,7 +87,7 @@ data:
               scope:
               - user:email
               - read:user
-            {{ - end}}
+            {{- end}}
         webauthn:
           enabled: true
           config:
