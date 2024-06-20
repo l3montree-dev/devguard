@@ -34,7 +34,7 @@ echo "New version: $NEW_VERSION"
 
 # Update Chart.yaml with the new version
 sed -i '' -e "s/version: .*/version: $NEW_VERSION/" charts/flawfix/Chart.yaml
-sed -i '' -e "s/appVersion: .*/appVersion: $NEW_APP_VERSION/" charts/flawfix/Chart.yaml
+sed -i '' -e "s/appVersion: .*/appVersion: $NEW_VERSION/" charts/flawfix/Chart.yaml
 
 # Commit and tag the new version
 git add .
