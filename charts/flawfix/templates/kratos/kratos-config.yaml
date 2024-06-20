@@ -23,6 +23,9 @@ data:
                           "credentials": {
                               "password": {
                                   "identifier": true
+                              },
+                              "webauthn": {
+                                "identifier": true
                               }
                           },
                           "verification": {
