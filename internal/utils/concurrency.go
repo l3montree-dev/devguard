@@ -15,9 +15,68 @@
 
 package utils
 
+import (
+	"golang.org/x/sync/errgroup"
+)
+
 type concurrentResult struct {
 	index int
 	value any
+}
+
+type errGroup[T any] struct {
+	ch    chan T
+	group errgroup.Group
+}
+
+func (eg *errGroup[T]) Go(fn func() (T, error)) {
+	eg.group.Go(func() error {
+		r, err := fn()
+		if err != nil {
+			return err
+		}
+		eg.ch <- r
+		return nil
+	})
+}
+
+func (eg *errGroup[T]) SetLimit(limit int) {
+	eg.group.SetLimit(limit)
+}
+
+func (eg *errGroup[T]) WaitAndCollect() ([]T, error) {
+	var res []T
+
+	var errChan = make(chan error, 1)
+	defer close(errChan)
+
+	go func() {
+		err := eg.group.Wait()
+		if err != nil {
+			errChan <- err
+		}
+		close(eg.ch)
+	}()
+
+	for r := range eg.ch {
+		res = append(res, r)
+	}
+
+	// Reset the channel
+	eg.ch = make(chan T)
+
+	select {
+	case err := <-errChan:
+		return nil, err
+	default:
+		return res, nil
+	}
+}
+
+func ErrGroup[T any](limit int) *errGroup[T] {
+	g := errGroup[T]{ch: make(chan T), group: errgroup.Group{}}
+	g.group.SetLimit(limit)
+	return &g
 }
 
 func Concurrently(fns ...func() any) []any {
