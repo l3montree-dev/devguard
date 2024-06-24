@@ -61,7 +61,7 @@ func TestHexPrivKeyToPubKey(t *testing.T) {
 
 func TestPubKeyToFingerprint(t *testing.T) {
 	t.Run("test pubKey to fingerprint", func(t *testing.T) {
-		pubKey := "c600494b2ba7254dbfc160ea9f36dbe8b111e7170592f95dba2c2f6ca64caf4aa4e5e6f9b6d82e7b1376fad7c418831689182832f7e25f15fa2a2b6dcb5159eb"
+		pubKey := "c600494b2ba7254dbfc160ea9f36dbe8b111e7170592f95dba2c2f6ca64caf4aa4e5e6f9b6d82e7b1376fad7c418831689182832f7e25f15fa2a2b6dcb5159eb" //nolint
 
 		fingerprint := "a888cdf9fba93f6e2d1b3aa799204eb22f820b2e58519d5573062590895fd184"
 		fingerprintCheck, err := PubKeyToFingerprint(pubKey)
