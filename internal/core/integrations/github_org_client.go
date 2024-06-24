@@ -16,29 +16,32 @@
 package integrations
 
 import (
-	"github.com/l3montree-dev/flawfix/internal/core"
+	"context"
+
+	"github.com/google/go-github/v62/github"
+	"github.com/l3montree-dev/flawfix/internal/utils"
 )
 
-type integrationController struct {
-	githubIntegration *githubIntegration
+type githubOrgClient struct {
+	clients []*github.Client
 }
 
-func NewIntegrationController(gh *githubIntegration) *integrationController {
-	return &integrationController{
-		githubIntegration: gh,
-	}
-}
+func (githubOrgClient *githubOrgClient) ListRepositories() ([]*github.Repository, error) {
+	wg := utils.ErrGroup[[]*github.Repository](10)
 
-func (c *integrationController) ListRepositories(ctx core.Context) error {
-	githubClient, err := c.githubIntegration.GetGithubOrgClientFromContext(ctx)
+	for _, client := range githubOrgClient.clients {
+		wg.Go(func() ([]*github.Repository, error) {
+			result, _, err := client.Apps.ListRepos(context.Background(), nil)
+			if err != nil {
+				return nil, err
+			}
+			return result.Repositories, nil
+		})
+	}
+
+	results, err := wg.WaitAndCollect()
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	repos, err := githubClient.ListRepositories()
-	if err != nil {
-		return err
-	}
-
-	return ctx.JSON(200, repos)
+	return utils.Flat(results), nil
 }

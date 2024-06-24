@@ -16,8 +16,6 @@
 package integrations
 
 import (
-	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -29,7 +27,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
-	"github.com/l3montree-dev/flawfix/internal/utils"
 )
 
 type githubAppInstallationRepository interface {
@@ -59,33 +56,7 @@ func NewGithubIntegration(githubInstallationRepository githubAppInstallationRepo
 	}
 }
 
-var githubNotConnectedError = fmt.Errorf("github not connected")
-
-type orgGithubClient struct {
-	clients []*github.Client
-}
-
-func (orgGithubClient *orgGithubClient) ListRepositories() ([]*github.Repository, error) {
-	wg := utils.ErrGroup[[]*github.Repository](10)
-
-	for _, client := range orgGithubClient.clients {
-		wg.Go(func() ([]*github.Repository, error) {
-			result, _, err := client.Apps.ListRepos(context.Background(), nil)
-			if err != nil {
-				return nil, err
-			}
-			return result.Repositories, nil
-		})
-	}
-
-	results, err := wg.WaitAndCollect()
-	if err != nil {
-		return nil, err
-	}
-	return utils.Flat(results), nil
-}
-
-func (githubIntegration *githubIntegration) GetOrgGithubClientFromContext(ctx core.Context) (*orgGithubClient, error) {
+func (githubIntegration *githubIntegration) GetGithubOrgClientFromContext(ctx core.Context) (*githubOrgClient, error) {
 	tenant := core.GetTenant(ctx)
 
 	// get the installation id from the database
@@ -111,7 +82,7 @@ func (githubIntegration *githubIntegration) GetOrgGithubClientFromContext(ctx co
 		clients = append(clients, client)
 	}
 
-	return &orgGithubClient{
+	return &githubOrgClient{
 		clients: clients,
 	}, nil
 }
