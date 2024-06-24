@@ -27,8 +27,9 @@ type treeNode struct {
 }
 
 type tree struct {
-	Root    *treeNode `json:"root"`
-	cursors map[string]*treeNode
+	Root           *treeNode `json:"root"`
+	cursors        map[string]*treeNode
+	insertionOrder []string
 }
 
 func newNode(name string) *treeNode {
@@ -42,10 +43,12 @@ func (tree *tree) addNode(source string, dep string) {
 	// check if source does exist
 	if _, ok := tree.cursors[source]; !ok {
 		tree.cursors[source] = newNode(source)
+		tree.insertionOrder = append(tree.insertionOrder, source)
 	}
 	// check if dep does already exist
 	if _, ok := tree.cursors[dep]; !ok {
 		tree.cursors[dep] = newNode(dep)
+		tree.insertionOrder = append(tree.insertionOrder, source)
 	}
 
 	// check if connection does already exist
@@ -98,7 +101,8 @@ func cutCycles(tree *tree, removedEdges map[string][]string) {
 	}
 
 	// Iterate over all nodes in the graph and apply DFS
-	for _, node := range tree.cursors {
+	for _, nodeKey := range tree.insertionOrder {
+		node := tree.cursors[nodeKey]
 		if !visited[node.Name] {
 			dfs(node)
 		}
@@ -107,14 +111,15 @@ func cutCycles(tree *tree, removedEdges map[string][]string) {
 
 func buildDependencyTree(elements []models.ComponentDependency) (tree, map[string][]string) {
 	// sort by depth
-	slices.SortFunc(elements, func(a, b models.ComponentDependency) int {
+	slices.SortStableFunc(elements, func(a, b models.ComponentDependency) int {
 		return a.Depth - b.Depth
 	})
 
 	// create a new tree
 	tree := tree{
-		Root:    &treeNode{Name: "root"},
-		cursors: make(map[string]*treeNode),
+		Root:           &treeNode{Name: "root"},
+		cursors:        make(map[string]*treeNode),
+		insertionOrder: make([]string, 0),
 	}
 
 	tree.cursors["root"] = tree.Root

@@ -1,6 +1,13 @@
 # Default values for flawfix.
 # This is a YAML-formatted file.
 # Declare variables to be passed into templates.
+oidc:
+  enabled: false
+  github:
+    enabled: false
+    clientId:
+    existingClientSecret: github-client-secret # needs to contain key "secret"
+
 mail:
   # needs to contain key: "uri". Format should be like: smtps://<user>@<your-domain.com>:<secret>@<mail-server.de>:465/?skip_ssl_verify=false
   existingSMTPConnectionUriSecret:
@@ -45,8 +52,6 @@ api:
       paths:
       - path: /
         pathType: Prefix
-
-
 
 web:
   image:
