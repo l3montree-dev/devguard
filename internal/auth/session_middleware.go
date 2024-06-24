@@ -24,8 +24,8 @@ import (
 	"github.com/ory/client-go"
 )
 
-type tokenRepository interface {
-	GetUserIDByToken(tokenStr string) (string, error)
+type verifier interface {
+	VerifyCryptoChallenge(req *http.Request) (string, error)
 }
 
 func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
@@ -47,16 +47,7 @@ func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSe
 	return session.Identity.Id, nil
 }
 
-func tokenAuth(tokenRepository tokenRepository, header string) (string, error) {
-	// get the user id from the database.
-	// check if we need to strip a bearer prefix
-	if len(header) > 7 && header[:7] == "Bearer " {
-		header = header[7:]
-	}
-	return tokenRepository.GetUserIDByToken(header)
-}
-
-func SessionMiddleware(oryApiClient *client.APIClient, tokenRepository tokenRepository) echo.MiddlewareFunc {
+func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
 			oryKratosSessionCookie := getCookie("ory_kratos_session", c.Cookies())
@@ -64,12 +55,7 @@ func SessionMiddleware(oryApiClient *client.APIClient, tokenRepository tokenRepo
 			var userID string
 
 			if oryKratosSessionCookie == nil {
-				// check for authorization header
-				authorizationHeader := c.Request().Header.Get("Authorization")
-				if authorizationHeader == "" {
-					return c.JSON(401, map[string]string{"error": "no session, missing authorization header"})
-				}
-				userID, err = tokenAuth(tokenRepository, authorizationHeader)
+				userID, err = verifier.VerifyCryptoChallenge(c.Request())
 			} else {
 				userID, err = cookieAuth(c.Request().Context(), oryApiClient, oryKratosSessionCookie.String())
 			}

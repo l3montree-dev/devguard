@@ -55,3 +55,9 @@ func (g *gormPatRepository) GetUserIDByToken(token string) (string, error) {
 	err := g.db.First(&t, "token = ?", t.HashToken(token)).Error
 	return t.UserID.String(), err
 }
+
+func (g *gormPatRepository) GetByFingerprint(fingerprint string) (models.PAT, error) {
+	var t models.PAT
+	err := g.db.First(&t, "fingerprint = ?", fingerprint).Error
+	return t, err
+}

@@ -29,6 +29,7 @@ type repository interface {
 	ReadByToken(token string) (models.PAT, error)
 	ListByUserID(userId string) ([]models.PAT, error)
 	GetUserIDByToken(token string) (string, error)
+	GetByFingerprint(fingerprint string) (models.PAT, error)
 }
 
 type PatController struct {
@@ -67,7 +68,6 @@ func (p *PatController) Create(c core.Context) error {
 	return c.JSON(200, map[string]string{
 		"createdAt":   patStruct.CreatedAt.String(),
 		"description": patStruct.Description,
-		"token":       "Token",
 		"userId":      patStruct.UserID.String(),
 		"pubKey":      patStruct.PubKey,
 		"fingerprint": patStruct.Fingerprint,

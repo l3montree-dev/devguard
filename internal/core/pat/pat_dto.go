@@ -16,6 +16,8 @@
 package pat
 
 import (
+	"log/slog"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
@@ -23,17 +25,20 @@ import (
 type CreateRequest struct {
 	Description string `json:"description"`
 	PubKey      string `json:"pubKey"`
-	Fingerprint string `json:"fingerprint"`
 }
 
 func (p CreateRequest) ToModel(userID string) models.PAT {
 	//token := base64.StdEncoding.EncodeToString([]byte(uuid.New().String()))
-
+	fingerprint, err := PubKeyToFingerprint(p.PubKey)
+	if err != nil {
+		slog.Error("could not convert public key to fingerprint", "err", err)
+		return models.PAT{}
+	}
 	pat := models.PAT{
 		UserID:      uuid.MustParse(userID),
 		Description: p.Description,
 		PubKey:      p.PubKey,
-		Fingerprint: p.Fingerprint,
+		Fingerprint: fingerprint,
 	}
 
 	//pat.Token = pat.HashToken(token)
