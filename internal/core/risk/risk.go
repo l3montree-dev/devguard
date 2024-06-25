@@ -6,7 +6,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
 
-func RowRisk(cve models.CVE, env core.Environmental) *float64 {
+func RawRisk(cve models.CVE, env core.Environmental) *float64 {
 	e := core.SanitizeEnv(env)
 	r, _ := vulndb.RiskCalculation(cve, e)
 	risk := r.WithEnvironmentAndThreatIntelligence

@@ -3,7 +3,6 @@ package asset
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"time"
 
@@ -46,7 +45,7 @@ type cveRepository interface {
 }
 
 type assetService interface {
-	UpdateEvents(asset models.Asset, responsibility string, justification string) error
+	CreateRawRiskAssessmentUpdatedEvents(asset models.Asset, responsible string, justification string) error
 }
 
 type httpController struct {
@@ -311,7 +310,7 @@ func buildSBOM(asset models.Asset, version string, organizationName string, comp
 	return &bom
 }
 
-func (c *httpController) UpdateRrequirements(ctx core.Context) error {
+func (c *httpController) UpdateRequirements(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 
 	req := ctx.Request().Body
@@ -363,10 +362,7 @@ func (c *httpController) UpdateRrequirements(ctx core.Context) error {
 			}
 
 			cve2 := cve.(models.CVE)
-			flaws[i].RawRiskAssessment = risk.RowRisk(cve2, env)
-
-			// Log the updated flaw
-			log.Printf("Updated flaw with ID: %s -  Risk is: %f", flaw.ID, *flaws[i].RawRiskAssessment)
+			flaws[i].RawRiskAssessment = risk.RawRisk(cve2, env)
 
 		}
 
@@ -374,13 +370,13 @@ func (c *httpController) UpdateRrequirements(ctx core.Context) error {
 
 		err = c.flawRepository.SaveBatch(nil, flaws)
 		if err != nil {
-			log.Printf("Error saving flaws: %v", err)
+			slog.Info("Error saving flaws: %v", err)
 			return err
 		}
 
 		userID := core.GetSession(ctx).GetUserID()
 		//update event for all flaws
-		err = c.assetService.UpdateEvents(asset, userID, justificationStr)
+		err = c.assetService.CreateRawRiskAssessmentUpdatedEvents(asset, userID, justificationStr)
 		if err != nil {
 			return err
 		}

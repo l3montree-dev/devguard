@@ -84,7 +84,7 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 			AvailabilityRequirements:    string(asset.AvailabilityRequirement),
 		}
 
-		flaws[i].RawRiskAssessment = risk.RowRisk(*flaw.CVE, e)
+		flaws[i].RawRiskAssessment = risk.RawRisk(*flaw.CVE, e)
 	}
 
 	// run the updates in the transaction to keep a valid state

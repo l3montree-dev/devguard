@@ -211,7 +211,7 @@ func (s *service) UpdateSBOM(asset models.Asset, currentVersion string, sbom *cd
 	return s.componentRepository.HandleStateDiff(nil, asset.ID, currentVersion, assetComponents, dependencies)
 }
 
-func (s *service) UpdateEvents(asset models.Asset, responsibility string, justification string) error {
+func (s *service) CreateRawRiskAssessmentUpdatedEvents(asset models.Asset, responsible string, justification string) error {
 	// get all existing flaws from the database - this is the old state
 	flaws, err := s.flawRepository.GetAllFlawsByAssetID(nil, asset.ID)
 	if err != nil {
@@ -219,7 +219,7 @@ func (s *service) UpdateEvents(asset models.Asset, responsibility string, justif
 		return err
 	}
 	for i := range flaws {
-		err = s.flawService.UpdateFlawState(nil, responsibility, &flaws[i], "rowRiskAssessmentUpdated", &justification)
+		err = s.flawService.UpdateFlawState(nil, responsible, &flaws[i], "rawRiskAssessmentUpdated", &justification)
 		if err != nil {
 			slog.Error("could not update flaw state", "err", err)
 			return err

@@ -333,7 +333,7 @@ func Start(db core.DB) {
 
 	assetRouter.GET("/versions/", assetController.Versions)
 
-	assetRouter.PATCH("/", assetController.UpdateRrequirements)
+	assetRouter.PATCH("/", assetController.UpdateRequirements)
 
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)
