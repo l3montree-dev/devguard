@@ -71,7 +71,7 @@ func (githubIntegration *githubIntegration) GetGithubOrgClientFromContext(ctx co
 		// Wrap the shared transport for use with the integration ID 1 authenticating with installation ID 99.
 		// itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, 923505, 52040746, "flawfix.2024-06-20.private-key.pem")
 		// Or for endpoints that require JWT authentication
-		itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, githubIntegration.githubAppId, int64(appInstallation.InstallationID), "flawfix.2024-06-20.private-key.pem")
+		itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, githubIntegration.githubAppId, int64(appInstallation.InstallationID), os.Getenv("GITHUB_PRIVATE_KEY"))
 
 		if err != nil {
 			return nil, err
