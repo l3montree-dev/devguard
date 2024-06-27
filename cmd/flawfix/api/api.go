@@ -285,6 +285,8 @@ func Start(db core.DB) {
 	assetController := asset.NewHttpController(assetRepository, componentRepository, scan.NewPurlComparer(db), flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
+	patService := pat.NewPatService(patRepository)
+
 	vulndbController := vulndb.NewHttpController(cveRepository)
 
 	server := echohttp.Server()
@@ -298,7 +300,7 @@ func Start(db core.DB) {
 	// apply the health route without any session or multi tenant middleware
 	apiV1Router.GET("/health/", health)
 	// everything below this line is protected by the session middleware
-	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patRepository))
+	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
 	// register a simple whoami route for testing purposes
 	sessionRouter.GET("/whoami/", whoami)
 

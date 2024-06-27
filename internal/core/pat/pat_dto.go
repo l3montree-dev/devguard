@@ -16,7 +16,7 @@
 package pat
 
 import (
-	"encoding/base64"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
@@ -24,16 +24,23 @@ import (
 
 type CreateRequest struct {
 	Description string `json:"description"`
+	PubKey      string `json:"pubKey"`
 }
 
-func (p CreateRequest) ToModel(userID string) (models.PAT, string) {
-	token := base64.StdEncoding.EncodeToString([]byte(uuid.New().String()))
-
+func (p CreateRequest) ToModel(userID string) models.PAT {
+	//token := base64.StdEncoding.EncodeToString([]byte(uuid.New().String()))
+	fingerprint, err := pubKeyToFingerprint(p.PubKey)
+	if err != nil {
+		slog.Error("could not convert public key to fingerprint", "err", err)
+		return models.PAT{}
+	}
 	pat := models.PAT{
 		UserID:      uuid.MustParse(userID),
 		Description: p.Description,
+		PubKey:      p.PubKey,
+		Fingerprint: fingerprint,
 	}
 
-	pat.Token = pat.HashToken(token)
-	return pat, token // return the unhashed token. This is the token that will be sent to the user
+	//pat.Token = pat.HashToken(token)
+	return pat // return the unhashed token. This is the token that will be sent to the user
 }
