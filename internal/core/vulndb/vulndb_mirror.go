@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/database/repositories"
@@ -37,8 +38,14 @@ func StartMirror(database core.DB, leaderElector leaderElector, configService co
 	exploitDBService := NewExploitDBService(nvdService, exploitRepository)
 	osvService := NewOSVService(affectedCmpRepository)
 
+	//for flaw service
+	flawRepository := repositories.NewFlawRepository(database)
+	flawEventRepository := repositories.NewFlawEventRepository(database)
+	assetRepository := repositories.NewAssetRepository(database)
+	flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
+
 	// start the mirror process.
-	vulnDBService := newVulnDBService(leaderElector, mitreService, epssService, nvdService, configService, osvService, exploitDBService)
+	vulnDBService := newVulnDBService(leaderElector, mitreService, epssService, nvdService, configService, osvService, exploitDBService, flawService)
 
 	vulnDBService.startMirrorDaemon()
 }

@@ -67,6 +67,10 @@ func (g *GormRepository[ID, T]) Save(tx *gorm.DB, t *T) error {
 }
 
 func (g *GormRepository[ID, T]) SaveBatch(tx *gorm.DB, ts []T) error {
+	if len(ts) == 0 {
+		return nil
+	}
+
 	return g.GetDB(tx).Save(ts).Error
 }
 

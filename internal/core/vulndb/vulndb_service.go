@@ -8,6 +8,10 @@ import (
 	"gorm.io/gorm"
 )
 
+type flawService interface {
+	RecalculateRawRiskAssessmentSystem() error
+}
+
 type vulnDBService struct {
 	leaderElector leaderElector
 
@@ -18,9 +22,11 @@ type vulnDBService struct {
 	exploitDBService exploitDBService
 
 	configService configService
+
+	flawService flawService
 }
 
-func newVulnDBService(leaderElector leaderElector, mitreService mitreService, epssService epssService, nvdService NVDService, configService configService, osvService osvService, exploitDBService exploitDBService) *vulnDBService {
+func newVulnDBService(leaderElector leaderElector, mitreService mitreService, epssService epssService, nvdService NVDService, configService configService, osvService osvService, exploitDBService exploitDBService, flawService flawService) *vulnDBService {
 	return &vulnDBService{
 		leaderElector: leaderElector,
 
@@ -31,6 +37,8 @@ func newVulnDBService(leaderElector leaderElector, mitreService mitreService, ep
 		exploitDBService: exploitDBService,
 
 		configService: configService,
+
+		flawService: flawService,
 	}
 }
 
@@ -91,6 +99,10 @@ func (v *vulnDBService) mirror() {
 				}
 			} else {
 				slog.Info("last mirror was less than 2 hours ago. Not mirroring", "lastMirror", lastMirror.Time, "now", time.Now())
+			}
+			err = v.flawService.RecalculateRawRiskAssessmentSystem()
+			if err != nil {
+				slog.Error("could not recalculate raw risk assessment", "err", err)
 			}
 			slog.Info("done. Waiting for 2 hours to check again")
 			time.Sleep(2 * time.Hour)

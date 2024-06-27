@@ -14,6 +14,8 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/obj"
 )
 
+func RecalculateRawRisk(cve models.CVE, env core.Environmental) {}
+
 func RawRisk(cve models.CVE, env core.Environmental) *float64 {
 	e := core.SanitizeEnv(env)
 	r, _ := RiskCalculation(cve, e)
@@ -159,6 +161,7 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 		risk.WithEnvironmentAndThreatIntelligence = cvss.Score()
 
 		return risk, vector
+
 	default:
 		//vector = "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:U/RL:ND/RC:C"
 

@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/flaw"
 	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
 	"github.com/l3montree-dev/flawfix/internal/database/repositories"
 	"github.com/spf13/cobra"
@@ -55,6 +56,36 @@ func Execute() {
 }
 
 func init() {
+	riskCmd := cobra.Command{
+		Use:   "risk",
+		Short: "Risk Assessment",
+	}
+
+	calculateCmd := cobra.Command{
+		Use:   "calculate",
+		Short: "Will recalculate the risk assessments",
+		Args:  cobra.ExactArgs(0),
+		Run: func(cmd *cobra.Command, args []string) {
+			core.LoadConfig() // nolint
+			database, err := core.DatabaseFactory()
+			if err != nil {
+				slog.Error("could not connect to database", "err", err)
+				return
+			}
+
+			flawRepository := repositories.NewFlawRepository(database)
+			flawEventRepository := repositories.NewFlawEventRepository(database)
+			cveRepository := repositories.NewCVERepository(database)
+			assetRepository := repositories.NewAssetRepository(database)
+			flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
+
+			if err := flawService.RecalculateRawRiskAssessmentSystem(); err != nil {
+				slog.Error("could not recalculate risk assessments", "err", err)
+				return
+			}
+		},
+	}
+
 	vulndbCmd := cobra.Command{
 		Use:   "vulndb",
 		Short: "Vulnerability Database",
@@ -144,8 +175,11 @@ func init() {
 	repairCmd.Flags().String("after", "", "allows to only repair a subset of data. This is used to identify the 'last correct' date in the nvd database. The sync will only include cve modifications in the interval [after, now]. Format: 2006-01-02")
 	repairCmd.Flags().Int("startIndex", 0, "provide a start index to fetch the data from. This is useful after an initial sync failed")
 
+	riskCmd.AddCommand(&calculateCmd)
+
 	vulndbCmd.AddCommand(&repairCmd)
 	rootCmd.AddCommand(&vulndbCmd)
+	rootCmd.AddCommand(&riskCmd)
 }
 
 func main() {
