@@ -1,6 +1,7 @@
 package asset
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -24,6 +25,7 @@ type repository interface {
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
+	Update(tx core.DB, asset *models.Asset) error
 }
 
 type vulnService interface {
@@ -34,21 +36,31 @@ type assetComponentsLoader interface {
 	GetVersions(tx core.DB, asset models.Asset) ([]string, error)
 	LoadAssetComponents(tx core.DB, asset models.Asset, version string) ([]models.ComponentDependency, error)
 }
+
+type assetService interface {
+	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
+}
+
 type httpController struct {
 	assetRepository       repository
 	assetComponentsLoader assetComponentsLoader
 	vulnService           vulnService
+	flawRepository        flawRepository
+	assetService          assetService
 }
 
-func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, vulnService vulnService) *httpController {
+func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, vulnService vulnService, flawRepository flawRepository, assetService assetService) *httpController {
 	return &httpController{
 		assetRepository:       repository,
 		assetComponentsLoader: assetComponentsLoader,
 		vulnService:           vulnService,
+		flawRepository:        flawRepository,
+		assetService:          assetService,
 	}
 }
 
 func (a *httpController) List(c core.Context) error {
+
 	project := core.GetProject(c)
 
 	apps, err := a.assetRepository.GetByProjectID(project.GetID())
@@ -287,4 +299,36 @@ func buildSBOM(asset models.Asset, version string, organizationName string, comp
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 	return &bom
+}
+
+func (c *httpController) UpdateRequirements(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+
+	req := ctx.Request().Body
+	defer req.Close()
+
+	var assetNew models.Asset
+	err := json.NewDecoder(req).Decode(&assetNew)
+	if err != nil {
+		return fmt.Errorf("Error decoding request: %v", err)
+	}
+
+	if assetNew.ConfidentialityRequirement != asset.ConfidentialityRequirement || assetNew.IntegrityRequirement != asset.IntegrityRequirement || assetNew.AvailabilityRequirement != asset.AvailabilityRequirement {
+		justification := "Requirements Level updated: " + "AvailabilityRequirement: " + asset.AvailabilityRequirement + " -> " + assetNew.AvailabilityRequirement + ", ConfidentialityRequirement: " + asset.ConfidentialityRequirement + " -> " + assetNew.ConfidentialityRequirement + ", IntegrityRequirement: " + asset.IntegrityRequirement + " -> " + assetNew.IntegrityRequirement
+		justificationStr := string(justification)
+
+		asset.ConfidentialityRequirement = assetNew.ConfidentialityRequirement
+		asset.IntegrityRequirement = assetNew.IntegrityRequirement
+		asset.AvailabilityRequirement = assetNew.AvailabilityRequirement
+
+		err = c.assetService.UpdateAssetRequirements(asset, core.GetSession(ctx).GetUserID(), justificationStr)
+		if err != nil {
+			return fmt.Errorf("Error updating requirements: %v", err)
+		}
+
+		return ctx.JSON(200, asset)
+
+	}
+
+	return ctx.JSON(304, asset)
 }

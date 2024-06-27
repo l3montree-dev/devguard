@@ -45,7 +45,7 @@ func TestCalculateRisk(t *testing.T) {
 			Vector: "",
 		}
 		env := core.Environmental{}
-		riskMetrics, vector := riskCalculation(sut, env)
+		riskMetrics, vector := RiskCalculation(sut, env)
 
 		if riskMetrics.BaseScore != 0 {
 			t.Errorf("Expected base score to be 5, got %f", riskMetrics.BaseScore)
@@ -305,7 +305,7 @@ func TestCalculateRisk(t *testing.T) {
 			}
 			env := tableTest.env
 			expectedRiskMetrics := tableTest.metrics
-			riskMetrics, vector := riskCalculation(sut, env)
+			riskMetrics, vector := RiskCalculation(sut, env)
 
 			if !floatsEqual(riskMetrics.BaseScore, expectedRiskMetrics.BaseScore) {
 				t.Errorf("Expected base score to be %f, got %f", expectedRiskMetrics.BaseScore, riskMetrics.BaseScore)

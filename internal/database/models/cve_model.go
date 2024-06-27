@@ -58,7 +58,7 @@ type CVE struct {
 
 	Configurations []*CPEMatch `json:"configurations" gorm:"many2many:cve_cpe_match;"`
 
-	EPSS       *float32 `json:"epss" gorm:"type:decimal(6,5);"`
+	EPSS       *float64 `json:"epss" gorm:"type:decimal(6,5);"`
 	Percentile *float32 `json:"percentile" gorm:"type:decimal(6,5);"`
 
 	AffectedComponents []AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component"`

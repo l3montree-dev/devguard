@@ -82,3 +82,7 @@ func (g *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uu
 	}
 	return app.ID, nil
 }
+
+func (g *assetRepository) Update(tx core.DB, asset *models.Asset) error {
+	return g.db.Save(asset).Error
+}

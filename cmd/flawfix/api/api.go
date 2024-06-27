@@ -272,7 +272,7 @@ func Start(db core.DB) {
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 	flawRepository := repositories.NewFlawRepository(db)
-	flawService := flaw.NewService(flawRepository, flawEventRepository)
+	flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 	flawController := flaw.NewHttpController(flawRepository, flawService)
 	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
 
@@ -282,7 +282,7 @@ func Start(db core.DB) {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
-	assetController := asset.NewHttpController(assetRepository, componentRepository, scan.NewPurlComparer(db))
+	assetController := asset.NewHttpController(assetRepository, componentRepository, scan.NewPurlComparer(db), flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
 	vulndbController := vulndb.NewHttpController(cveRepository)
@@ -341,6 +341,8 @@ func Start(db core.DB) {
 	assetRouter.GET("/sbom.xml/", assetController.SBOMXML)
 
 	assetRouter.GET("/versions/", assetController.Versions)
+
+	assetRouter.PATCH("/", assetController.UpdateRequirements)
 
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)
