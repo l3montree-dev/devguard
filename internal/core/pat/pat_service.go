@@ -44,7 +44,7 @@ func hexPrivKeyToPubKey(hexPrivKey string) (ecdsa.PublicKey, error) {
 	return *pubKey, nil
 }
 
-func PubKeyToFingerprint(pubKey string) (string, error) {
+func pubKeyToFingerprint(pubKey string) (string, error) {
 	fingerprint := sha256.New()
 	_, err := fingerprint.Write([]byte(pubKey))
 	if err != nil {
@@ -71,7 +71,7 @@ func hexPrivKeyToPrivKeyECDSA(hexPrivKey string) ecdsa.PrivateKey {
 	return *privKeyECDSA
 }
 
-func DoCryptoChallenge(hexPrivKey string, req *http.Request) error {
+func SignRequest(hexPrivKey string, req *http.Request) error {
 
 	pubKey, err := hexPrivKeyToPubKey(hexPrivKey)
 	if err != nil {
@@ -82,7 +82,7 @@ func DoCryptoChallenge(hexPrivKey string, req *http.Request) error {
 
 	pubKeyString := hex.EncodeToString(pubKey.X.Bytes()) + hex.EncodeToString(pubKey.Y.Bytes())
 
-	fingerprint, err := PubKeyToFingerprint(pubKeyString)
+	fingerprint, err := pubKeyToFingerprint(pubKeyString)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (p *PatService) getPubKeyAndUserIdUsingFingerprint(fingerprint string) (ecd
 	return pubKeyECDSA, pat.UserID, nil
 }
 
-func (p *PatService) VerifyCryptoChallenge(req *http.Request) (string, error) {
+func (p *PatService) VerifyRequestSignature(req *http.Request) (string, error) {
 	fingerprint := req.Header.Get("X-Fingerprint")
 	pubKey, userId, err := p.getPubKeyAndUserIdUsingFingerprint(fingerprint)
 

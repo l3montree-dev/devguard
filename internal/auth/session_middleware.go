@@ -25,7 +25,7 @@ import (
 )
 
 type verifier interface {
-	VerifyCryptoChallenge(req *http.Request) (string, error)
+	VerifyRequestSignature(req *http.Request) (string, error)
 }
 
 func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
@@ -55,7 +55,7 @@ func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.M
 			var userID string
 
 			if oryKratosSessionCookie == nil {
-				userID, err = verifier.VerifyCryptoChallenge(c.Request())
+				userID, err = verifier.VerifyRequestSignature(c.Request())
 			} else {
 				userID, err = cookieAuth(c.Request().Context(), oryApiClient, oryKratosSessionCookie.String())
 			}

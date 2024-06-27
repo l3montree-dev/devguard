@@ -29,7 +29,7 @@ type CreateRequest struct {
 
 func (p CreateRequest) ToModel(userID string) models.PAT {
 	//token := base64.StdEncoding.EncodeToString([]byte(uuid.New().String()))
-	fingerprint, err := PubKeyToFingerprint(p.PubKey)
+	fingerprint, err := pubKeyToFingerprint(p.PubKey)
 	if err != nil {
 		slog.Error("could not convert public key to fingerprint", "err", err)
 		return models.PAT{}

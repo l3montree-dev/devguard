@@ -218,7 +218,7 @@ func init() {
 				return
 			}
 
-			err = pat.DoCryptoChallenge(token, req)
+			err = pat.SignRequest(token, req)
 			if err != nil {
 				slog.Error("could not sign request", "err", err)
 				return

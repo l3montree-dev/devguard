@@ -64,7 +64,7 @@ func TestPubKeyToFingerprint(t *testing.T) {
 		pubKey := "c600494b2ba7254dbfc160ea9f36dbe8b111e7170592f95dba2c2f6ca64caf4aa4e5e6f9b6d82e7b1376fad7c418831689182832f7e25f15fa2a2b6dcb5159eb" //nolint
 
 		fingerprint := "a888cdf9fba93f6e2d1b3aa799204eb22f820b2e58519d5573062590895fd184"
-		fingerprintCheck, err := PubKeyToFingerprint(pubKey)
+		fingerprintCheck, err := pubKeyToFingerprint(pubKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -74,7 +74,7 @@ func TestPubKeyToFingerprint(t *testing.T) {
 	})
 }
 
-func TestDoCryptoChallenge(t *testing.T) {
+func TestSignRequest(t *testing.T) {
 	t.Run("test signing and verifying", func(t *testing.T) {
 
 		var pat models.PAT = models.PAT{
@@ -91,7 +91,7 @@ func TestDoCryptoChallenge(t *testing.T) {
 		reader := bufio.NewReader(strings.NewReader(`{"user": "test"}`))
 		req := httptest.NewRequest("GET", "/", reader)
 
-		err := DoCryptoChallenge(privKey, req)
+		err := SignRequest(privKey, req)
 		if err != nil {
 			t.Fatal("error", err)
 		}
@@ -99,7 +99,7 @@ func TestDoCryptoChallenge(t *testing.T) {
 		//privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
 		//pubKey := "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"
 
-		_, err = patService.VerifyCryptoChallenge(req)
+		_, err = patService.VerifyRequestSignature(req)
 		if err != nil {
 			t.Fatal("error", err)
 		}
@@ -120,13 +120,13 @@ func TestDoCryptoChallenge(t *testing.T) {
 		reader := bufio.NewReader(strings.NewReader(`{"user": "test"}`))
 		req := httptest.NewRequest("GET", "/", reader)
 
-		err := DoCryptoChallenge(privKey, req)
+		err := SignRequest(privKey, req)
 		if err != nil {
 			t.Fatal("error", err)
 		}
 		req.Header.Set("Content-Digest", "POST")
 
-		_, err = patService.VerifyCryptoChallenge(req)
+		_, err = patService.VerifyRequestSignature(req)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -148,7 +148,7 @@ func TestDoCryptoChallenge(t *testing.T) {
 		reader := bufio.NewReader(strings.NewReader(`{"user": "test"}`))
 		req := httptest.NewRequest("GET", "/", reader)
 
-		err := DoCryptoChallenge(privKey, req)
+		err := SignRequest(privKey, req)
 		if err != nil {
 			t.Fatal("error", err)
 		}
@@ -162,7 +162,7 @@ func TestDoCryptoChallenge(t *testing.T) {
 
 		req.Method = "POST"
 
-		_, err = patService.VerifyCryptoChallenge(req)
+		_, err = patService.VerifyRequestSignature(req)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
