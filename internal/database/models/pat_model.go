@@ -11,9 +11,10 @@ import (
 type PAT struct {
 	CreatedAt   time.Time `json:"createdAt"`
 	UserID      uuid.UUID `json:"userId"`
-	Token       string    `json:"-"`
+	PubKey      string    `json:"pubKey"`
 	Description string    `json:"description" gorm:"type:text"`
 	ID          uuid.UUID `json:"id" gorm:"type:uuid;default:gen_random_uuid()"`
+	Fingerprint string    `json:"fingerprint"`
 }
 
 func (p PAT) TableName() string {

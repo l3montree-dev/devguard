@@ -11,6 +11,7 @@ import (
 )
 
 func registerMiddlewares(e *echo.Echo) {
+
 	e.Pre(middleware.AddTrailingSlash())
 	e.Use(middleware.CORSWithConfig(
 		middleware.CORSConfig{
@@ -31,7 +32,7 @@ func registerMiddlewares(e *echo.Echo) {
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
 		// do the logging straight inside the error handler
 		// this keeps controller methods clean
-		slog.Error(err.Error())
+		slog.Error(err.Error(), "status", c.Response().Status)
 
 		if c.Response().Committed {
 			return

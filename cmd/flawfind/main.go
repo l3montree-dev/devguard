@@ -33,6 +33,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/pat"
 	"github.com/l3montree-dev/flawfix/internal/core/vulndb/scan"
 	"github.com/spf13/cobra"
 )
@@ -216,7 +217,13 @@ func init() {
 				slog.Error("could not create request", "err", err)
 				return
 			}
-			req.Header.Set("Authorization", "Bearer "+token)
+
+			err = pat.SignRequest(token, req)
+			if err != nil {
+				slog.Error("could not sign request", "err", err)
+				return
+			}
+
 			req.Header.Set("X-Asset-Name", assetName)
 			req.Header.Set("X-Asset-Version", version)
 
