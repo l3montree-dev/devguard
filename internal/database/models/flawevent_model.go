@@ -35,6 +35,9 @@ type FlawEvent struct {
 
 func (e *FlawEvent) GetArbitraryJsonData() map[string]any {
 	// parse the additional data
+	if e.ArbitraryJsonData == "" {
+		return make(map[string]any)
+	}
 	if e.arbitraryJsonData == nil {
 		e.arbitraryJsonData = make(map[string]any)
 		err := json.Unmarshal([]byte(e.ArbitraryJsonData), &e.arbitraryJsonData)
