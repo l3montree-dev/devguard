@@ -44,5 +44,5 @@ type FlawDTO struct {
 
 type detailedFlawDTO struct {
 	FlawDTO
-	Events []models.FlawEvent `json:"events"`
+	Events []FlawEventDTO `json:"events"`
 }

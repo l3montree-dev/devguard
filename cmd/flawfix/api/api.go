@@ -271,7 +271,7 @@ func Start(db core.DB) {
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 	flawRepository := repositories.NewFlawRepository(db)
-	flawService := flaw.NewService(flawRepository, flawEventRepository)
+	flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 	flawController := flaw.NewHttpController(flawRepository, flawService)
 
 	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
@@ -280,7 +280,7 @@ func Start(db core.DB) {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
-	assetController := asset.NewHttpController(assetRepository, componentRepository, scan.NewPurlComparer(db), flawRepository, cveRepository, assetService)
+	assetController := asset.NewHttpController(assetRepository, componentRepository, scan.NewPurlComparer(db), flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
 	vulndbController := vulndb.NewHttpController(cveRepository)

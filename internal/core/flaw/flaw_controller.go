@@ -7,6 +7,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/database/repositories"
+	"github.com/l3montree-dev/flawfix/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -124,7 +125,17 @@ func (c flawHttpController) Read(ctx core.Context) error {
 			LastDetected:       flaw.LastDetected,
 			CreatedAt:          flaw.CreatedAt,
 		},
-		Events: flaw.Events,
+		Events: utils.Map(flaw.Events, func(ev models.FlawEvent) FlawEventDTO {
+			return FlawEventDTO{
+				ID:                ev.ID,
+				Type:              ev.Type,
+				FlawID:            ev.FlawID,
+				UserID:            ev.UserID,
+				Justification:     ev.Justification,
+				ArbitraryJsonData: ev.GetArbitraryJsonData(),
+				CreatedAt:         ev.CreatedAt,
+			}
+		}),
 	})
 }
 

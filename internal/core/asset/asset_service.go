@@ -16,6 +16,7 @@
 package asset
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -52,6 +53,8 @@ type flawService interface {
 	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw) error
 	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error
 	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification *string) error
+
+	UserRawRiskAssessmentUpdated(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error
 }
 
 type service struct {
@@ -211,19 +214,32 @@ func (s *service) UpdateSBOM(asset models.Asset, currentVersion string, sbom *cd
 	return s.componentRepository.HandleStateDiff(nil, asset.ID, currentVersion, assetComponents, dependencies)
 }
 
-func (s *service) CreateRawRiskAssessmentUpdatedEvents(asset models.Asset, responsible string, justification string) error {
-	// get all existing flaws from the database - this is the old state
-	flaws, err := s.flawRepository.GetAllFlawsByAssetID(nil, asset.ID)
-	if err != nil {
-		slog.Error("could not get existing flaws", "err", err)
-		return err
-	}
-	for i := range flaws {
-		err = s.flawService.UpdateFlawState(nil, responsible, &flaws[i], "rawRiskAssessmentUpdated", &justification)
+func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error {
+	err := s.flawRepository.Transaction(func(tx core.DB) error {
+
+		err := s.assetRepository.Save(tx, &asset)
 		if err != nil {
-			slog.Error("could not update flaw state", "err", err)
-			return err
+			slog.Info("Error saving asset: %v", err)
+			return fmt.Errorf("could not save asset: %v", err)
 		}
+		// get the flaws
+		flaws, err := s.flawRepository.GetAllFlawsByAssetID(tx, asset.GetID())
+		if err != nil {
+			slog.Info("Error getting flaws: %v", err)
+			return fmt.Errorf("could not get flaws: %v", err)
+		}
+
+		err = s.flawService.UserRawRiskAssessmentUpdated(tx, responsible, flaws, justification, asset)
+		if err != nil {
+			slog.Info("Error updating raw risk assessment: %v", err)
+			return fmt.Errorf("could not update raw risk assessment: %v", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("could not update asset: %v", err)
 	}
+
 	return nil
 }
