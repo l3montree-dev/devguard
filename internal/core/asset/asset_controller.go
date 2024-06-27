@@ -326,9 +326,9 @@ func (c *httpController) UpdateRequirements(ctx core.Context) error {
 			return fmt.Errorf("Error updating requirements: %v", err)
 		}
 
-		return nil
+		return ctx.JSON(200, asset)
 
 	}
 
-	return nil
+	return ctx.JSON(304, asset)
 }

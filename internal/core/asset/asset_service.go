@@ -54,7 +54,7 @@ type flawService interface {
 	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error
 	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification *string) error
 
-	UserRawRiskAssessmentUpdated(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error
+	RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error
 }
 
 type service struct {
@@ -229,7 +229,7 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 			return fmt.Errorf("could not get flaws: %v", err)
 		}
 
-		err = s.flawService.UserRawRiskAssessmentUpdated(tx, responsible, flaws, justification, asset)
+		err = s.flawService.RecalculateRawRiskAssessment(tx, responsible, flaws, justification, asset)
 		if err != nil {
 			slog.Info("Error updating raw risk assessment: %v", err)
 			return fmt.Errorf("could not update raw risk assessment: %v", err)

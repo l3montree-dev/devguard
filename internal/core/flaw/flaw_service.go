@@ -111,7 +111,7 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 	return s.flawEventRepository.SaveBatch(tx, events)
 }
 
-func (s *service) UserRawRiskAssessmentUpdated(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error {
+func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error {
 
 	/*
 		if len(flaws) == 0 {
