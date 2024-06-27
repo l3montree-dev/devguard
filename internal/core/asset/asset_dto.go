@@ -23,7 +23,7 @@ func sanitizeRequirementLevel(level string) models.RequirementLevel {
 	case "low", "medium", "high":
 		return models.RequirementLevel(level)
 	default:
-		return "high"
+		return "medium"
 	}
 }
 

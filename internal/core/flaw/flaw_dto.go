@@ -33,7 +33,7 @@ type FlawDTO struct {
 	ComponentPurlOrCpe string            `json:"componentPurlOrCpe"`
 	Effort             *int              `json:"effort"`
 	RiskAssessment     *int              `json:"riskAssessment"`
-	RawRiskAssessment  *int              `json:"rawRiskAssessment"`
+	RawRiskAssessment  *float64          `json:"rawRiskAssessment"`
 	Priority           *int              `json:"priority"`
 	ArbitraryJsonData  map[string]any    `json:"arbitraryJsonData"`
 	LastDetected       time.Time         `json:"lastDetected"`
@@ -42,5 +42,5 @@ type FlawDTO struct {
 
 type detailedFlawDTO struct {
 	FlawDTO
-	Events []models.FlawEvent `json:"events"`
+	Events []FlawEventDTO `json:"events"`
 }

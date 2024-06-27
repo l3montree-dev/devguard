@@ -16,6 +16,7 @@
 package asset
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -32,6 +33,9 @@ import (
 type flawRepository interface {
 	Transaction(txFunc func(core.DB) error) error
 	ListByScanner(assetID uuid.UUID, scannerID string) ([]models.Flaw, error)
+
+	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
+	SaveBatch(db core.DB, flaws []models.Flaw) error
 }
 
 type componentRepository interface {
@@ -47,7 +51,10 @@ type assetRepository interface {
 
 type flawService interface {
 	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw) error
-	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw) error
+	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error
+	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification *string) error
+
+	RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error
 }
 
 type service struct {
@@ -85,7 +92,7 @@ func (s *service) HandleScanResult(userID string, scannerID string, asset models
 
 	// get a transaction
 	if err := s.flawRepository.Transaction(func(tx core.DB) error {
-		if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws); err != nil {
+		if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, asset); err != nil {
 			// this will cancel the transaction
 			return err
 		}
@@ -205,4 +212,34 @@ func (s *service) UpdateSBOM(asset models.Asset, currentVersion string, sbom *cd
 	}
 
 	return s.componentRepository.HandleStateDiff(nil, asset.ID, currentVersion, assetComponents, dependencies)
+}
+
+func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error {
+	err := s.flawRepository.Transaction(func(tx core.DB) error {
+
+		err := s.assetRepository.Save(tx, &asset)
+		if err != nil {
+			slog.Info("Error saving asset: %v", err)
+			return fmt.Errorf("could not save asset: %v", err)
+		}
+		// get the flaws
+		flaws, err := s.flawRepository.GetAllFlawsByAssetID(tx, asset.GetID())
+		if err != nil {
+			slog.Info("Error getting flaws: %v", err)
+			return fmt.Errorf("could not get flaws: %v", err)
+		}
+
+		err = s.flawService.RecalculateRawRiskAssessment(tx, responsible, flaws, justification, asset)
+		if err != nil {
+			slog.Info("Error updating raw risk assessment: %v", err)
+			return fmt.Errorf("could not update raw risk assessment: %v", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("could not update asset: %v", err)
+	}
+
+	return nil
 }

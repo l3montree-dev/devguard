@@ -40,9 +40,9 @@ type Flaw struct {
 	Component          *Component `json:"component" gorm:"foreignKey:ComponentPurlOrCpe;constraint:OnDelete:CASCADE;"`
 	ComponentPurlOrCpe string     `json:"componentPurlOrCpe" gorm:"type:text;default:null;"`
 
-	Effort            *int `json:"effort" gorm:"default:null;"`
-	RiskAssessment    *int `json:"riskAssessment" gorm:"default:null;"`
-	RawRiskAssessment *int `json:"rawRiskAssessment" gorm:"default:null;"`
+	Effort            *int     `json:"effort" gorm:"default:null;"`
+	RiskAssessment    *int     `json:"riskAssessment" gorm:"default:null;"`
+	RawRiskAssessment *float64 `json:"rawRiskAssessment" gorm:"default:null;"`
 
 	Priority *int `json:"priority" gorm:"default:null;"`
 

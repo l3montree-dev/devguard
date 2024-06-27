@@ -8,6 +8,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 	"github.com/l3montree-dev/flawfix/internal/database"
+	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/labstack/echo/v4"
 	"github.com/lmittmann/tint"
 	"gorm.io/gorm"
@@ -50,3 +51,11 @@ func LoadConfig() error {
 }
 
 var V = validator.New()
+
+func GetEnvironmentalFromAsset(m models.Asset) Environmental {
+	return SanitizeEnv(Environmental{
+		ConfidentialityRequirements: string(m.ConfidentialityRequirement),
+		AvailabilityRequirements:    string(m.AvailabilityRequirement),
+		IntegrityRequirements:       string(m.IntegrityRequirement),
+	})
+}

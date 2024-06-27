@@ -13,13 +13,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package vulndb
+package risk_test
 
 import (
 	"math"
 	"testing"
 
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/risk"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 	"github.com/l3montree-dev/flawfix/internal/obj"
 )
@@ -45,7 +46,7 @@ func TestCalculateRisk(t *testing.T) {
 			Vector: "",
 		}
 		env := core.Environmental{}
-		riskMetrics, vector := riskCalculation(sut, env)
+		riskMetrics, vector := risk.RiskCalculation(sut, env)
 
 		if riskMetrics.BaseScore != 0 {
 			t.Errorf("Expected base score to be 5, got %f", riskMetrics.BaseScore)
@@ -305,7 +306,7 @@ func TestCalculateRisk(t *testing.T) {
 			}
 			env := tableTest.env
 			expectedRiskMetrics := tableTest.metrics
-			riskMetrics, vector := riskCalculation(sut, env)
+			riskMetrics, vector := risk.RiskCalculation(sut, env)
 
 			if !floatsEqual(riskMetrics.BaseScore, expectedRiskMetrics.BaseScore) {
 				t.Errorf("Expected base score to be %f, got %f", expectedRiskMetrics.BaseScore, riskMetrics.BaseScore)

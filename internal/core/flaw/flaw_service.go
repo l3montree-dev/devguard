@@ -16,30 +16,47 @@
 package flaw
 
 import (
+	"fmt"
+	"log/slog"
+
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/flawfix/internal/core/risk"
+	"github.com/l3montree-dev/flawfix/internal/database"
 	"github.com/l3montree-dev/flawfix/internal/database/models"
 )
+
+type assetRepository interface {
+	Update(tx core.DB, asset *models.Asset) error
+}
 
 type flawRepository interface {
 	SaveBatch(db core.DB, flaws []models.Flaw) error
 	Save(db core.DB, flaws *models.Flaw) error
 	Transaction(txFunc func(core.DB) error) error
+	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 }
 
 type flawEventRepository interface {
 	SaveBatch(db core.DB, events []models.FlawEvent) error
 	Save(db core.DB, event *models.FlawEvent) error
 }
-
+type cveRepository interface {
+	FindCVE(tx database.DB, cveId string) (any, error)
+}
 type service struct {
 	flawRepository      flawRepository
 	flawEventRepository flawEventRepository
+	assetRepository     assetRepository
+	cveRepository       cveRepository
 }
 
-func NewService(flawRepository flawRepository, flawEventRepository flawEventRepository) *service {
+func NewService(flawRepository flawRepository, flawEventRepository flawEventRepository, assetRepository assetRepository, cveRepository cveRepository) *service {
 	return &service{
 		flawRepository:      flawRepository,
 		flawEventRepository: flawEventRepository,
+		assetRepository:     assetRepository,
+		cveRepository:       cveRepository,
 	}
 }
 
@@ -65,7 +82,7 @@ func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw)
 }
 
 // expect a transaction to be passed
-func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw) error {
+func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error {
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -76,6 +93,14 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 		// apply the event on the flaw
 		ev.Apply(&flaws[i])
 		events[i] = ev
+
+		e := core.Environmental{
+			ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
+			IntegrityRequirements:       string(asset.IntegrityRequirement),
+			AvailabilityRequirements:    string(asset.AvailabilityRequirement),
+		}
+
+		flaws[i].RawRiskAssessment = risk.RawRisk(*flaw.CVE, e)
 	}
 
 	// run the updates in the transaction to keep a valid state
@@ -84,6 +109,52 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 		return err
 	}
 	return s.flawEventRepository.SaveBatch(tx, events)
+}
+
+func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error {
+
+	/*
+		if len(flaws) == 0 {
+			return fmt.Errorf("no flaws to update")
+		}
+	*/
+	env := core.Environmental{
+		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
+		IntegrityRequirements:       string(asset.IntegrityRequirement),
+		AvailabilityRequirements:    string(asset.AvailabilityRequirement),
+	}
+
+	// create a new flawevent for each updated flaw
+	events := make([]models.FlawEvent, len(flaws))
+	for i, flaw := range flaws {
+		cviID := flaw.CVEID
+		cve, err := s.cveRepository.FindCVE(nil, cviID)
+		if err != nil {
+			slog.Info("Error getting CVE: %v", err)
+			continue
+		}
+
+		cve2 := cve.(models.CVE)
+		oldRiskAssessment := flaw.RawRiskAssessment
+		newRiskAssessment := risk.RawRisk(cve2, env)
+
+		ev := models.NewRawRiskAssessmentUpdatedEvent(flaw.CalculateHash(), userID, justification, *oldRiskAssessment, *newRiskAssessment)
+		// apply the event on the flaw
+		ev.Apply(&flaws[i])
+		events[i] = ev
+	}
+
+	err := s.flawRepository.SaveBatch(tx, flaws)
+	if err != nil {
+		return fmt.Errorf("could not save flaws: %v", err)
+	}
+
+	err = s.flawEventRepository.SaveBatch(tx, events)
+	if err != nil {
+		return fmt.Errorf("could not save events: %v", err)
+
+	}
+	return nil
 }
 
 func (s *service) UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification *string) error {
