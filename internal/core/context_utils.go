@@ -23,6 +23,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
 
 	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/ory/client-go"
 )
 
 type AuthSession interface {
@@ -43,6 +44,10 @@ func GetRBAC(c Context) accesscontrol.AccessControl {
 
 func GetTenant(c Context) models.Org {
 	return c.Get("tenant").(models.Org)
+}
+
+func GetOryClient(c Context) *client.APIClient {
+	return c.Get("ory").(*client.APIClient)
 }
 
 func GetSession(ctx Context) AuthSession {

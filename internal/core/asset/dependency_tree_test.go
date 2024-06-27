@@ -60,31 +60,61 @@ func TestDependencyTree(t *testing.T) {
 	})
 
 	t.Run("test removes cycles", func(t *testing.T) {
+		/*
+				a
+			|       |
+			b <---> c # here is the cycle in the tree
+		*/
 		graph := []models.ComponentDependency{
 			{ComponentPurlOrCpe: nil, DependencyPurlOrCpe: "a", Depth: 0},
 			{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "b", Depth: 1},
-			{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "a", Depth: 2},
+			{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "c", Depth: 1},
+			{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "c", Depth: 2},
+			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "b", Depth: 2}, // closes the cycle
 		}
 		tree, removedEdges := buildDependencyTree(graph)
 
 		// expect root node to be created with a single child: a
 		if len(tree.Root.Children) != 1 {
-			t.Errorf("expected 1 root child, got %d", len(tree.Root.Children))
+			t.Fatalf("expected 1 root child, got %d", len(tree.Root.Children))
 		}
-		// expect a to have a single child: b
-		if len(tree.Root.Children[0].Children) != 1 {
-			t.Errorf("expected 1 children for a, got %d", len(tree.Root.Children[0].Children))
+		// expect a to have a two children b and c
+		if len(tree.Root.Children[0].Children) != 2 {
+			t.Fatalf("expected 2 children for a, got %d", len(tree.Root.Children[0].Children))
 		}
-		// expect b to have no children
-		if len(tree.Root.Children[0].Children[0].Children) != 0 {
-			t.Errorf("expected 0 children for b, got %d", len(tree.Root.Children[0].Children[0].Children))
+		// get b and c
+		var b, c *treeNode
+		for _, child := range tree.Root.Children[0].Children {
+			if child.Name == "b" {
+				b = child
+			} else if child.Name == "c" {
+				c = child
+			}
 		}
 
-		// expect the cycle to be removed - b -> a completes the cycle
-		if len(removedEdges["b"]) != 1 {
-			t.Errorf("expected 1 removed edge for b, got %d", len(removedEdges["b"]))
-			if removedEdges["b"][0] != "a" {
-				t.Errorf("expected removed edge to be a, got %s", removedEdges["b"][0])
+		// expect either b or c to have no children
+		if len(b.Children) != 0 && len(c.Children) != 0 {
+			t.Fatalf("expected either b or c to have no children, got %d and %d", len(b.Children), len(c.Children))
+		}
+
+		// check if b has children
+		if len(b.Children) == 0 {
+			// expect the edge between b and c to be removed
+			if len(removedEdges["b"]) != 1 {
+				t.Fatalf("expected 1 removed edge for b, got %d", len(removedEdges["b"]))
+			}
+			// expect the removed edge to be c
+			if removedEdges["b"][0] != "c" {
+				t.Fatalf("expected removed edge to be c, got %s", removedEdges["b"][0])
+			}
+		} else {
+			// expect the edge between c and b to be removed
+			if len(removedEdges["c"]) != 1 {
+				t.Fatalf("expected 1 removed edge for c, got %d", len(removedEdges["c"]))
+			}
+			// expect the removed edge to be b
+			if removedEdges["c"][0] != "b" {
+				t.Fatalf("expected removed edge to be b, got %s", removedEdges["c"][0])
 			}
 		}
 	})

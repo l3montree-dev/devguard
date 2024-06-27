@@ -10,3 +10,4 @@ csv
 datascience.ipynb
 bom.xml
 .kratos/kratos.yml
+*.private-key.pem

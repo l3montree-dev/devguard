@@ -3,5 +3,8 @@
     "licenser.license": "AGPLv3",
     "licenser.projectName": "FlawFix",
     "licenser.disableAutoHeaderInsertion": false,
-    "go.lintTool": "golangci-lint"
+    "go.lintTool": "golangci-lint",
+    "cSpell.words": [
+        "ghinstallation"
+    ]
 }
