@@ -27,6 +27,7 @@ import (
 	"github.com/l3montree-dev/flawfix/internal/core"
 	"github.com/l3montree-dev/flawfix/internal/core/asset"
 	"github.com/l3montree-dev/flawfix/internal/core/flaw"
+	"github.com/l3montree-dev/flawfix/internal/core/integrations"
 	"github.com/l3montree-dev/flawfix/internal/core/org"
 	"github.com/l3montree-dev/flawfix/internal/core/pat"
 	"github.com/l3montree-dev/flawfix/internal/core/project"
@@ -43,7 +44,7 @@ type assetRepository interface {
 }
 
 type orgRepository interface {
-	ReadBySlug(slug string) (models.Org, error)
+	ReadBySlug(slugOrId string) (models.Org, error)
 }
 
 type projectRepository interface {
@@ -271,8 +272,9 @@ func Start(db core.DB) {
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 	flawRepository := repositories.NewFlawRepository(db)
-	flawService := flaw.NewService(flawRepository, flawEventRepository)
+	flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 	flawController := flaw.NewHttpController(flawRepository, flawService)
+	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
 
 	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
 
@@ -280,14 +282,19 @@ func Start(db core.DB) {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
-	assetController := asset.NewHttpController(assetRepository, componentRepository, scan.NewPurlComparer(db), flawRepository, cveRepository, assetService)
+	assetController := asset.NewHttpController(assetRepository, componentRepository, scan.NewPurlComparer(db), flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
 	vulndbController := vulndb.NewHttpController(cveRepository)
 
 	server := echohttp.Server()
 
+	githubIntegration := integrations.NewGithubIntegration(githubAppInstallationRepository)
+	integrationController := integrations.NewIntegrationController(githubIntegration)
+
 	apiV1Router := server.Group("/api/v1")
+
+	apiV1Router.POST("/gh-webhook/", githubIntegration.Webhook)
 	// apply the health route without any session or multi tenant middleware
 	apiV1Router.GET("/health/", health)
 	// everything below this line is protected by the session middleware
@@ -315,6 +322,8 @@ func Start(db core.DB) {
 	tenantRouter.GET("/", orgController.Read, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 
 	tenantRouter.GET("/metrics/", orgController.Metrics)
+	tenantRouter.GET("/integrations/github/finish-installation/", githubIntegration.FinishInstallation)
+	tenantRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
 	tenantRouter.GET("/projects/", projectController.List, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 	tenantRouter.POST("/projects/", projectController.Create, core.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
