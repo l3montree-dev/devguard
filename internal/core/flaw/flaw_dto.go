@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/flawfix/internal/database/models"
-	"github.com/l3montree-dev/flawfix/internal/obj"
 )
 
 type FlawDTO struct {
@@ -35,7 +34,6 @@ type FlawDTO struct {
 	Effort             *int              `json:"effort"`
 	RiskAssessment     *int              `json:"riskAssessment"`
 	RawRiskAssessment  *float64          `json:"rawRiskAssessment"`
-	Risk               obj.RiskMetrics   `json:"risk" gorm:"-"`
 	Priority           *int              `json:"priority"`
 	ArbitraryJsonData  map[string]any    `json:"arbitraryJsonData"`
 	LastDetected       time.Time         `json:"lastDetected"`
