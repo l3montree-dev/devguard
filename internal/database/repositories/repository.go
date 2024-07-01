@@ -43,6 +43,7 @@ type BatchModelWriter[T Tabler, Tx any] interface {
 type Transactioner[Tx any] interface {
 	Transaction(func(tx Tx) error) error
 	GetDB(tx Tx) Tx
+	Begin() Tx
 }
 
 type Repository[ID any, T Tabler, Tx any] interface {
@@ -67,6 +68,10 @@ func (g *GormRepository[ID, T]) Save(tx *gorm.DB, t *T) error {
 }
 
 func (g *GormRepository[ID, T]) SaveBatch(tx *gorm.DB, ts []T) error {
+	if len(ts) == 0 {
+		return nil
+	}
+
 	return g.GetDB(tx).Save(ts).Error
 }
 
@@ -78,6 +83,10 @@ func (g *GormRepository[ID, T]) Transaction(f func(tx *gorm.DB) error) error {
 		return err
 	}
 	return tx.Commit().Error
+}
+
+func (g *GormRepository[ID, T]) Begin() *gorm.DB {
+	return g.db.Begin()
 }
 
 func (g *GormRepository[ID, T]) GetDB(tx *gorm.DB) *gorm.DB {

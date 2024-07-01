@@ -23,6 +23,53 @@ func (_m *AssetRepository) EXPECT() *AssetRepository_Expecter {
 	return &AssetRepository_Expecter{mock: &_m.Mock}
 }
 
+// Begin provides a mock function with given fields:
+func (_m *AssetRepository) Begin() *gorm.DB {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Begin")
+	}
+
+	var r0 *gorm.DB
+	if rf, ok := ret.Get(0).(func() *gorm.DB); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gorm.DB)
+		}
+	}
+
+	return r0
+}
+
+// AssetRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
+type AssetRepository_Begin_Call struct {
+	*mock.Call
+}
+
+// Begin is a helper method to define mock.On call
+func (_e *AssetRepository_Expecter) Begin() *AssetRepository_Begin_Call {
+	return &AssetRepository_Begin_Call{Call: _e.mock.On("Begin")}
+}
+
+func (_c *AssetRepository_Begin_Call) Run(run func()) *AssetRepository_Begin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AssetRepository_Begin_Call) Return(_a0 *gorm.DB) *AssetRepository_Begin_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *AssetRepository_Begin_Call) RunAndReturn(run func() *gorm.DB) *AssetRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function with given fields: tx, t
 func (_m *AssetRepository) Create(tx *gorm.DB, t *models.Asset) error {
 	ret := _m.Called(tx, t)
@@ -749,6 +796,53 @@ func (_c *AssetRepository_Transaction_Call) Return(_a0 error) *AssetRepository_T
 }
 
 func (_c *AssetRepository_Transaction_Call) RunAndReturn(run func(func(*gorm.DB) error) error) *AssetRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function with given fields: tx, _a1
+func (_m *AssetRepository) Update(tx *gorm.DB, _a1 *models.Asset) error {
+	ret := _m.Called(tx, _a1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.Asset) error); ok {
+		r0 = rf(tx, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AssetRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type AssetRepository_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - _a1 *models.Asset
+func (_e *AssetRepository_Expecter) Update(tx interface{}, _a1 interface{}) *AssetRepository_Update_Call {
+	return &AssetRepository_Update_Call{Call: _e.mock.On("Update", tx, _a1)}
+}
+
+func (_c *AssetRepository_Update_Call) Run(run func(tx *gorm.DB, _a1 *models.Asset)) *AssetRepository_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(*models.Asset))
+	})
+	return _c
+}
+
+func (_c *AssetRepository_Update_Call) Return(_a0 error) *AssetRepository_Update_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *AssetRepository_Update_Call) RunAndReturn(run func(*gorm.DB, *models.Asset) error) *AssetRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

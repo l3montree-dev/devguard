@@ -23,6 +23,53 @@ func (_m *VulndbCveRepository) EXPECT() *VulndbCveRepository_Expecter {
 	return &VulndbCveRepository_Expecter{mock: &_m.Mock}
 }
 
+// Begin provides a mock function with given fields:
+func (_m *VulndbCveRepository) Begin() *gorm.DB {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Begin")
+	}
+
+	var r0 *gorm.DB
+	if rf, ok := ret.Get(0).(func() *gorm.DB); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gorm.DB)
+		}
+	}
+
+	return r0
+}
+
+// VulndbCveRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
+type VulndbCveRepository_Begin_Call struct {
+	*mock.Call
+}
+
+// Begin is a helper method to define mock.On call
+func (_e *VulndbCveRepository_Expecter) Begin() *VulndbCveRepository_Begin_Call {
+	return &VulndbCveRepository_Begin_Call{Call: _e.mock.On("Begin")}
+}
+
+func (_c *VulndbCveRepository_Begin_Call) Run(run func()) *VulndbCveRepository_Begin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *VulndbCveRepository_Begin_Call) Return(_a0 *gorm.DB) *VulndbCveRepository_Begin_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *VulndbCveRepository_Begin_Call) RunAndReturn(run func() *gorm.DB) *VulndbCveRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function with given fields: tx, t
 func (_m *VulndbCveRepository) Create(tx *gorm.DB, t *models.CVE) error {
 	ret := _m.Called(tx, t)
