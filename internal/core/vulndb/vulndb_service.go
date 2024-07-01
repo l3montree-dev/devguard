@@ -9,7 +9,7 @@ import (
 )
 
 type flawService interface {
-	RecalculateRawRiskAssessmentSystem() error
+	RecalculateAllRawRiskAssessments() error
 }
 
 type vulnDBService struct {
@@ -100,7 +100,7 @@ func (v *vulnDBService) mirror() {
 			} else {
 				slog.Info("last mirror was less than 2 hours ago. Not mirroring", "lastMirror", lastMirror.Time, "now", time.Now())
 			}
-			err = v.flawService.RecalculateRawRiskAssessmentSystem()
+			err = v.flawService.RecalculateAllRawRiskAssessments()
 			if err != nil {
 				slog.Error("could not recalculate raw risk assessment", "err", err)
 			}

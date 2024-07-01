@@ -35,6 +35,7 @@ type flawRepository interface {
 	SaveBatch(db core.DB, flaws []models.Flaw) error
 	Save(db core.DB, flaws *models.Flaw) error
 	Transaction(txFunc func(core.DB) error) error
+	Begin() core.DB
 	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 }
 
@@ -112,7 +113,7 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 	return s.flawEventRepository.SaveBatch(tx, events)
 }
 
-func (s *service) RecalculateRawRiskAssessmentSystem() error {
+func (s *service) RecalculateAllRawRiskAssessments() error {
 	userID := "system"
 	justification := "System recalculated raw risk assessment"
 
@@ -187,6 +188,25 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 		}
 
 	}
+
+	// saving the flaws and the events HAS to be done in the same transaction
+	// it is crucial to maintain a consistent audit log of events
+	if tx == nil {
+		err := s.flawRepository.Transaction(func(tx core.DB) error {
+			if err := s.flawRepository.SaveBatch(tx, flaws); err != nil {
+				return fmt.Errorf("could not save flaws: %v", err)
+			}
+			if err := s.flawEventRepository.SaveBatch(tx, events); err != nil {
+				return fmt.Errorf("could not save events: %v", err)
+			}
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
+		}
+		return nil
+	}
+
 	err := s.flawRepository.SaveBatch(tx, flaws)
 	if err != nil {
 		return fmt.Errorf("could not save flaws: %v", err)
@@ -195,7 +215,6 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 	err = s.flawEventRepository.SaveBatch(tx, events)
 	if err != nil {
 		return fmt.Errorf("could not save events: %v", err)
-
 	}
 	return nil
 }

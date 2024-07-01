@@ -79,7 +79,7 @@ func init() {
 			assetRepository := repositories.NewAssetRepository(database)
 			flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 
-			if err := flawService.RecalculateRawRiskAssessmentSystem(); err != nil {
+			if err := flawService.RecalculateAllRawRiskAssessments(); err != nil {
 				slog.Error("could not recalculate risk assessments", "err", err)
 				return
 			}
