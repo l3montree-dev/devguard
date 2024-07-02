@@ -23,6 +23,53 @@ func (_m *FlawFlawRepository) EXPECT() *FlawFlawRepository_Expecter {
 	return &FlawFlawRepository_Expecter{mock: &_m.Mock}
 }
 
+// Begin provides a mock function with given fields:
+func (_m *FlawFlawRepository) Begin() *gorm.DB {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Begin")
+	}
+
+	var r0 *gorm.DB
+	if rf, ok := ret.Get(0).(func() *gorm.DB); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gorm.DB)
+		}
+	}
+
+	return r0
+}
+
+// FlawFlawRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
+type FlawFlawRepository_Begin_Call struct {
+	*mock.Call
+}
+
+// Begin is a helper method to define mock.On call
+func (_e *FlawFlawRepository_Expecter) Begin() *FlawFlawRepository_Begin_Call {
+	return &FlawFlawRepository_Begin_Call{Call: _e.mock.On("Begin")}
+}
+
+func (_c *FlawFlawRepository_Begin_Call) Run(run func()) *FlawFlawRepository_Begin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *FlawFlawRepository_Begin_Call) Return(_a0 *gorm.DB) *FlawFlawRepository_Begin_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *FlawFlawRepository_Begin_Call) RunAndReturn(run func() *gorm.DB) *FlawFlawRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllFlawsByAssetID provides a mock function with given fields: tx, assetID
 func (_m *FlawFlawRepository) GetAllFlawsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.Flaw, error) {
 	ret := _m.Called(tx, assetID)

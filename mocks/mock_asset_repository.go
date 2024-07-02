@@ -23,6 +23,53 @@ func (_m *AssetRepository) EXPECT() *AssetRepository_Expecter {
 	return &AssetRepository_Expecter{mock: &_m.Mock}
 }
 
+// Begin provides a mock function with given fields:
+func (_m *AssetRepository) Begin() *gorm.DB {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Begin")
+	}
+
+	var r0 *gorm.DB
+	if rf, ok := ret.Get(0).(func() *gorm.DB); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gorm.DB)
+		}
+	}
+
+	return r0
+}
+
+// AssetRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
+type AssetRepository_Begin_Call struct {
+	*mock.Call
+}
+
+// Begin is a helper method to define mock.On call
+func (_e *AssetRepository_Expecter) Begin() *AssetRepository_Begin_Call {
+	return &AssetRepository_Begin_Call{Call: _e.mock.On("Begin")}
+}
+
+func (_c *AssetRepository_Begin_Call) Run(run func()) *AssetRepository_Begin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AssetRepository_Begin_Call) Return(_a0 *gorm.DB) *AssetRepository_Begin_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *AssetRepository_Begin_Call) RunAndReturn(run func() *gorm.DB) *AssetRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function with given fields: tx, t
 func (_m *AssetRepository) Create(tx *gorm.DB, t *models.Asset) error {
 	ret := _m.Called(tx, t)
