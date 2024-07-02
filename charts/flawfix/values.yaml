@@ -53,6 +53,12 @@ api:
       - path: /
         pathType: Prefix
 
+  github:
+      appId: abc
+      # needs to contain "webhookSecret"
+      existingWebhookSecretSecretName: github-app-webhook-secret
+      # needs to contain key "privateKey"
+      existingPrivateKeySecretName: github-app-private-key
 web:
   image:
     repository: ghcr.io/l3montree-dev/flawfix-web

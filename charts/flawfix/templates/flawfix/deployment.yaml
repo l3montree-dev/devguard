@@ -52,6 +52,15 @@ spec:
             value: postgresql
           - name: ORY_KRATOS
             value: http://kratos:4433
+          - name: GITHUB_APP_ID
+            value: {{ .Values.api.github.appId }}
+          - name: GITHUB_PRIVATE_KEY
+            value: /github-app-private-key
+          - name: GITHUB_WEBHOOK_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: webhookSecret
+                name: {{ .Values.api.github.existingWebhookSecretSecretName }}
           ports:
             - name: http
               containerPort: 8080
@@ -73,6 +82,14 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
+          volumeMounts:
+          - mountPath: /github-app-private-key
+            name: github-app-private-key
+            subPath: privateKey
+      volumes:
+      - name: github-app-private-key
+        secret:
+          secretName: {{ .Values.api.github.existingPrivateKeySecretName }}
       {{- with .Values.api.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
