@@ -53,7 +53,7 @@ spec:
           - name: ORY_KRATOS
             value: http://kratos:4433
           - name: GITHUB_APP_ID
-            value: {{ .Values.api.github.appId }}
+            value: {{ .Values.api.github.appId | quote }}
           - name: GITHUB_PRIVATE_KEY
             value: /github-app-private-key
           - name: GITHUB_WEBHOOK_SECRET
