@@ -66,7 +66,9 @@ func (v *vulnDBService) mirror() {
 			}
 
 			if time.Since(lastMirror.Time) > 2*time.Hour {
+
 				slog.Info("last mirror was more than 2 hours ago. Starting mirror process")
+
 				if err := v.mitreService.Mirror(); err != nil {
 					slog.Error("could not mirror mitre cwes", "err", err)
 				} else {
@@ -78,6 +80,7 @@ func (v *vulnDBService) mirror() {
 				} else {
 					slog.Info("successfully mirrored nvd")
 				}
+
 				if err := v.exploitDBService.Mirror(); err != nil {
 					slog.Error("could not mirror exploitdb", "err", err)
 				} else {
