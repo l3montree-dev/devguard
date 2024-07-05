@@ -17,7 +17,7 @@ package models
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/flawfix/internal/utils"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type Component struct {

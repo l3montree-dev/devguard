@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: flawfix-web-service
+  name: devguard-web-service
   labels:
-    {{- include "flawfix.labels" . | nindent 4 }}
+    {{- include "devguard.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
@@ -12,4 +12,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    app: flawfix-web
+    app: devguard-web

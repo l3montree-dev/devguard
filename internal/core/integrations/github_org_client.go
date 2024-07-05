@@ -19,7 +19,7 @@ import (
 	"context"
 
 	"github.com/google/go-github/v62/github"
-	"github.com/l3montree-dev/flawfix/internal/utils"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type githubOrgClient struct {

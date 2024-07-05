@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: flawfix-api-deployment
+  name: devguard-api-deployment
   labels:
-    {{- include "flawfix.labels" . | nindent 4 }}
-    app: flawfix-api
+    {{- include "devguard.labels" . | nindent 4 }}
+    app: devguard-api
 spec:
   {{- if not .Values.api.autoscaling.enabled }}
   replicas: {{ .Values.api.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      app: flawfix-api
+      app: devguard-api
   template:
     metadata:
       {{- with .Values.api.podAnnotations }}
@@ -19,11 +19,11 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "flawfix.labels" . | nindent 8 }}
+        {{- include "devguard.labels" . | nindent 8 }}
         {{- with .Values.api.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        app: flawfix-api
+        app: devguard-api
         version: {{ .Chart.AppVersion }}
     spec:
       {{- with .Values.api.imagePullSecrets }}
@@ -40,14 +40,14 @@ spec:
           imagePullPolicy: {{ .Values.api.image.pullPolicy }}
           env:
           - name: POSTGRES_DB
-            value: flawfix
+            value: devguard
           - name: POSTGRES_PASSWORD
             valueFrom:
               secretKeyRef:
                 key: postgres-password
                 name: db-secret
           - name: POSTGRES_USER
-            value: flawfix
+            value: devguard
           - name: POSTGRES_HOST
             value: postgresql
           - name: ORY_KRATOS

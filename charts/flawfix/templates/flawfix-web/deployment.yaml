@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: flawfix-web-deployment
+  name: devguard-web-deployment
   labels:
-    {{- include "flawfix.labels" . | nindent 4 }}
-    app: flawfix-web
+    {{- include "devguard.labels" . | nindent 4 }}
+    app: devguard-web
 spec:
   {{- if not .Values.web.autoscaling.enabled }}
   replicas: {{ .Values.web.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      app: flawfix-web
+      app: devguard-web
   template:
     metadata:
       {{- with .Values.web.podAnnotations }}
@@ -19,11 +19,11 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "flawfix.labels" . | nindent 8 }}
+        {{- include "devguard.labels" . | nindent 8 }}
         {{- with .Values.web.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        app: flawfix-web
+        app: devguard-web
         version: {{ .Chart.AppVersion }}
     spec:
       {{- with .Values.web.imagePullSecrets }}
@@ -41,8 +41,8 @@ spec:
           env:
           - name: ORY_KRATOS_URL
             value: http://kratos:4433
-          - name: NEXT_PUBLIC_FLAWFIX_API_URL
-            value: http://flawfix-api-service:8080
+          - name: NEXT_PUBLIC_devguard_API_URL
+            value: http://devguard-api-service:8080
           ports:
             - name: http
               containerPort: 3000

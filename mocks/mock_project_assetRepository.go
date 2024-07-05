@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	models "github.com/l3montree-dev/flawfix/internal/database/models"
+	models "github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
 
 	uuid "github.com/google/uuid"

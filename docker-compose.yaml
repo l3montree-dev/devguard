@@ -3,7 +3,7 @@ version: '3.7'
 # postgresql database for local development
 services:
   postgresql:
-    image: ghcr.io/l3montree-dev/flawfix-postgresql:unstable
+    image: ghcr.io/l3montree-dev/devguard-postgresql:unstable
     # If you want to build the image locally, uncomment the following lines
     #build:
     #  context: .

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/l3montree-dev/flawfix/internal/obj"
+	"github.com/l3montree-dev/devguard/internal/obj"
 	"gorm.io/datatypes"
 )
 

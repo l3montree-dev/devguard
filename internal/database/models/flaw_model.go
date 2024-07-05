@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/l3montree-dev/flawfix/internal/utils"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type FlawState string

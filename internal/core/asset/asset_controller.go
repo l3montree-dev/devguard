@@ -8,10 +8,10 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/database/models"
-	"github.com/l3montree-dev/flawfix/internal/database/repositories"
-	"github.com/l3montree-dev/flawfix/internal/utils"
+	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
 
 	"github.com/labstack/echo/v4"
@@ -217,7 +217,7 @@ func buildSBOM(asset models.Asset, version string, organizationName string, comp
 				Name:      asset.Name,
 				Version:   version,
 				Author:    organizationName,
-				Publisher: "github.com/l3montree-dev/flawfix",
+				Publisher: "github.com/l3montree-dev/devguard",
 			},
 		},
 	}

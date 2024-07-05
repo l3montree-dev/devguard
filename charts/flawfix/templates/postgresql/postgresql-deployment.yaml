@@ -32,14 +32,14 @@ spec:
           subPath: initdb.sh
         env:
         - name: POSTGRES_DB
-          value: flawfix
+          value: devguard
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               key: postgres-password
               name: db-secret
         - name: POSTGRES_USER
-          value: flawfix
+          value: devguard
         - name: KRATOS_PASSWORD
           valueFrom:
             secretKeyRef:

@@ -16,7 +16,7 @@
 package integrations
 
 import (
-	"github.com/l3montree-dev/flawfix/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core"
 )
 
 type integrationController struct {

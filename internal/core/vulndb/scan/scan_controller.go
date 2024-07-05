@@ -20,10 +20,10 @@ import (
 	"net/url"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/database/models"
-	"github.com/l3montree-dev/flawfix/internal/utils"
+	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type cveRepository interface {
@@ -105,7 +105,7 @@ func (s *httpController) Scan(c core.Context) error {
 		return c.JSON(500, map[string]string{"error": "could not scan file"})
 	}
 
-	scannerID := "github.com/l3montree-dev/flawfix/cmd/flawfind"
+	scannerID := "github.com/l3montree-dev/devguard/cmd/flawfind"
 
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}

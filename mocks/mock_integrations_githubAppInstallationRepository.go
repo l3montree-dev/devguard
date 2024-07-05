@@ -7,7 +7,7 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 
-	models "github.com/l3montree-dev/flawfix/internal/database/models"
+	models "github.com/l3montree-dev/devguard/internal/database/models"
 
 	uuid "github.com/google/uuid"
 )

@@ -35,17 +35,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
-	"github.com/l3montree-dev/flawfix/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/vulndb"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "flawfix-cli",
+	Use:   "devguard-cli",
 	Short: "Management cli",
-	Long:  `The flawfix cli can be used to interact with a running flawfix instance.`,
+	Long:  `The devguard cli can be used to interact with a running devguard instance.`,
 }
 
 func Execute() {

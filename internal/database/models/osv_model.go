@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/flawfix/internal/utils"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
 )
 

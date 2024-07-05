@@ -13,9 +13,9 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: flawfix-api-ingress
+  name: devguard-api-ingress
   labels:
-    {{- include "flawfix.labels" . | nindent 4 }}
+    {{- include "devguard.labels" . | nindent 4 }}
   {{- with .Values.api.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -47,11 +47,11 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: flawfix-api-service
+                name: devguard-api-service
                 port:
                   number: 8080
               {{- else }}
-              serviceName: flawfix-api-service
+              serviceName: devguard-api-service
               servicePort: 8080
               {{- end }}
           {{- end }}
