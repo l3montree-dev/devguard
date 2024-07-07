@@ -15,26 +15,28 @@ type flawService interface {
 type vulnDBService struct {
 	leaderElector leaderElector
 
-	mitreService     mitreService
-	epssService      epssService
-	nvdService       NVDService
-	osvService       osvService
-	exploitDBService exploitDBService
+	mitreService           mitreService
+	epssService            epssService
+	nvdService             NVDService
+	osvService             osvService
+	exploitDBService       exploitDBService
+	githubExploitDBService githubExploitDBService
 
 	configService configService
 
 	flawService flawService
 }
 
-func newVulnDBService(leaderElector leaderElector, mitreService mitreService, epssService epssService, nvdService NVDService, configService configService, osvService osvService, exploitDBService exploitDBService, flawService flawService) *vulnDBService {
+func newVulnDBService(leaderElector leaderElector, mitreService mitreService, epssService epssService, nvdService NVDService, configService configService, osvService osvService, exploitDBService exploitDBService, githubExploitDBService githubExploitDBService, flawService flawService) *vulnDBService {
 	return &vulnDBService{
 		leaderElector: leaderElector,
-
-		osvService:       osvService,
-		mitreService:     mitreService,
-		epssService:      epssService,
-		nvdService:       nvdService,
-		exploitDBService: exploitDBService,
+		// Add a comma after leaderElector
+		osvService:             osvService,
+		mitreService:           mitreService,
+		epssService:            epssService,
+		nvdService:             nvdService,
+		exploitDBService:       exploitDBService,
+		githubExploitDBService: githubExploitDBService,
 
 		configService: configService,
 
@@ -64,21 +66,30 @@ func (v *vulnDBService) mirror() {
 			}
 
 			if time.Since(lastMirror.Time) > 2*time.Hour {
+
 				slog.Info("last mirror was more than 2 hours ago. Starting mirror process")
+
 				if err := v.mitreService.Mirror(); err != nil {
 					slog.Error("could not mirror mitre cwes", "err", err)
 				} else {
 					slog.Info("successfully mirrored mitre cwes")
 				}
+
 				if err := v.nvdService.mirror(); err != nil {
 					slog.Error("could not mirror nvd", "err", err)
 				} else {
 					slog.Info("successfully mirrored nvd")
 				}
+
 				if err := v.exploitDBService.Mirror(); err != nil {
 					slog.Error("could not mirror exploitdb", "err", err)
 				} else {
 					slog.Info("successfully mirrored exploitdb")
+				}
+				if err := v.githubExploitDBService.Mirror(); err != nil {
+					slog.Error("could not mirror github exploitdb", "err", err)
+				} else {
+					slog.Info("successfully mirrored github exploitdb")
 				}
 				if err := v.epssService.Mirror(); err != nil {
 					slog.Error("could not mirror epss", "err", err)
@@ -97,6 +108,7 @@ func (v *vulnDBService) mirror() {
 				}); err != nil {
 					slog.Error("could not set last mirror time", "err", err)
 				}
+
 			} else {
 				slog.Info("last mirror was less than 2 hours ago. Not mirroring", "lastMirror", lastMirror.Time, "now", time.Now())
 			}
