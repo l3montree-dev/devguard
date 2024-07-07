@@ -19,13 +19,13 @@ WORKDIR /go/src/app
 COPY . .
 
 RUN go mod download
-RUN CGO_ENABLED=0 go build -o /go/bin/app cmd/flawfix/main.go
-RUN CGO_ENABLED=0 go build -o /go/bin/flawfix-cli cmd/flawfix-cli/main.go
+RUN CGO_ENABLED=0 go build -o /go/bin/app cmd/devguard/main.go
+RUN CGO_ENABLED=0 go build -o /go/bin/devguard-cli cmd/devguard-cli/main.go
 
 FROM gcr.io/distroless/static-debian12
 
 COPY config/rbac_model.conf /config/rbac_model.conf
 COPY --from=build /go/bin/app /
-COPY --from=build /go/bin/flawfix-cli /
+COPY --from=build /go/bin/devguard-cli /
 
 CMD ["/app"]

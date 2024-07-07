@@ -19,9 +19,9 @@ import (
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/flawfix/internal/database/models"
-	"github.com/l3montree-dev/flawfix/internal/utils"
-	"github.com/l3montree-dev/flawfix/mocks"
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/stretchr/testify/mock"
 	"gorm.io/gorm"
 )

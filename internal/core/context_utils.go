@@ -20,9 +20,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
+	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 
-	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/ory/client-go"
 )
 

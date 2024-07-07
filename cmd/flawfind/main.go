@@ -32,16 +32,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/pat"
-	"github.com/l3montree-dev/flawfix/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "flawfind",
 	Short: "Vulnerability management for devs.",
-	Long:  `Flawfind is a tool to identify vulnerabilities and flaws in a software. It communicates the result to a flawfix instance.`,
+	Long:  `Flawfind is a tool to identify vulnerabilities and flaws in a software. It communicates the result to a devguard instance.`,
 }
 
 func Execute() {
@@ -115,7 +115,7 @@ func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
 	rootCmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-	rootCmd.PersistentFlags().String("apiUrl", "https://api.flawfix.dev", "The url of the API to send the scan request to")
+	rootCmd.PersistentFlags().String("apiUrl", "https://api.devguard.dev", "The url of the API to send the scan request to")
 	err := rootCmd.MarkPersistentFlagRequired("assetName")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)

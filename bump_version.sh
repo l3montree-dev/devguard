@@ -25,7 +25,7 @@ fi
 BUMP_TYPE=$1
 
 # Extract current version from Chart.yaml
-CURRENT_VERSION=$(grep '^version:' charts/flawfix/Chart.yaml | awk '{print $2}')
+CURRENT_VERSION=$(grep '^version:' charts/devguard/Chart.yaml | awk '{print $2}')
 echo "Current version: $CURRENT_VERSION"
 
 # Use semver tool to get the new version
@@ -33,8 +33,8 @@ NEW_VERSION=$(semver -i "$CURRENT_VERSION" "$BUMP_TYPE")
 echo "New version: $NEW_VERSION"
 
 # Update Chart.yaml with the new version
-sed -i '' -e "s/version: .*/version: $NEW_VERSION/" charts/flawfix/Chart.yaml
-sed -i '' -e "s/appVersion: .*/appVersion: $NEW_VERSION/" charts/flawfix/Chart.yaml
+sed -i '' -e "s/version: .*/version: $NEW_VERSION/" charts/devguard/Chart.yaml
+sed -i '' -e "s/appVersion: .*/appVersion: $NEW_VERSION/" charts/devguard/Chart.yaml
 
 # Commit and tag the new version
 git add .

@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 with-expecter: true
 packages:
-  github.com/l3montree-dev/flawfix/internal/core:
+  github.com/l3montree-dev/devguard/internal/core:
     config:
       recursive: true
       all: true

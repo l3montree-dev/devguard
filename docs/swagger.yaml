@@ -1,10 +1,10 @@
 basePath: /api/v1
 definitions:
-  github_com_l3montree-dev_flawfix_internal_database_models.AffectedComponent:
+  github_com_l3montree-dev_devguard_internal_database_models.AffectedComponent:
     properties:
       cves:
         items:
-          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+          $ref: '#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE'
         type: array
       ecosystem:
         type: string
@@ -32,13 +32,13 @@ definitions:
         description: either version or semver is defined
         type: string
     type: object
-  github_com_l3montree-dev_flawfix_internal_database_models.CPEMatch:
+  github_com_l3montree-dev_devguard_internal_database_models.CPEMatch:
     properties:
       criteria:
         type: string
       cve:
         items:
-          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+          $ref: '#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE'
         type: array
       edition:
         type: string
@@ -71,11 +71,11 @@ definitions:
       vulnerable:
         type: boolean
     type: object
-  github_com_l3montree-dev_flawfix_internal_database_models.CVE:
+  github_com_l3montree-dev_devguard_internal_database_models.CVE:
     properties:
       affectedComponents:
         items:
-          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.AffectedComponent'
+          $ref: '#/definitions/github_com_l3montree-dev_devguard_internal_database_models.AffectedComponent'
         type: array
       attackComplexity:
         type: string
@@ -95,7 +95,7 @@ definitions:
         type: string
       configurations:
         items:
-          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CPEMatch'
+          $ref: '#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CPEMatch'
         type: array
       createdAt:
         type: string
@@ -115,7 +115,7 @@ definitions:
         type: number
       exploits:
         items:
-          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.Exploit'
+          $ref: '#/definitions/github_com_l3montree-dev_devguard_internal_database_models.Exploit'
         type: array
       impactScore:
         type: number
@@ -132,7 +132,7 @@ definitions:
       scope:
         type: string
       severity:
-        $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.Severity'
+        $ref: '#/definitions/github_com_l3montree-dev_devguard_internal_database_models.Severity'
       updatedAt:
         type: string
       userInteractionRequired:
@@ -141,15 +141,15 @@ definitions:
         type: string
       weaknesses:
         items:
-          $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.Weakness'
+          $ref: '#/definitions/github_com_l3montree-dev_devguard_internal_database_models.Weakness'
         type: array
     type: object
-  github_com_l3montree-dev_flawfix_internal_database_models.Exploit:
+  github_com_l3montree-dev_devguard_internal_database_models.Exploit:
     properties:
       author:
         type: string
       cve:
-        $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+        $ref: '#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE'
       cveID:
         type: string
       description:
@@ -169,7 +169,7 @@ definitions:
       verified:
         type: boolean
     type: object
-  github_com_l3montree-dev_flawfix_internal_database_models.Severity:
+  github_com_l3montree-dev_devguard_internal_database_models.Severity:
     enum:
     - critical
     - high
@@ -183,10 +183,10 @@ definitions:
     - SeverityMedium
     - SeverityLow
     - SeverityInfo
-  github_com_l3montree-dev_flawfix_internal_database_models.Weakness:
+  github_com_l3montree-dev_devguard_internal_database_models.Weakness:
     properties:
       cve:
-        $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+        $ref: '#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE'
       cwe:
         type: string
       source:
@@ -209,12 +209,12 @@ host: localhost:8080
 info:
   contact:
     name: Support
-    url: https://github.com/l3montree-dev/flawfix/issues
-  description: FlawFix API
+    url: https://github.com/l3montree-dev/devguard/issues
+  description: devguard API
   license:
     name: AGPL-3
-    url: https://github.com/l3montree-dev/flawfix/blob/main/LICENSE.txt
-  title: FlawFix API
+    url: https://github.com/l3montree-dev/devguard/blob/main/LICENSE.txt
+  title: devguard API
   version: v1
 paths:
   /health:
@@ -272,7 +272,7 @@ paths:
             properties:
               data:
                 items:
-                  $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+                  $ref: '#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE'
                 type: array
               page:
                 type: integer
@@ -320,7 +320,7 @@ paths:
         "200":
           description: Details of the specified CVE
           schema:
-            $ref: '#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE'
+            $ref: '#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE'
         "500":
           description: Internal server error
           schema:

@@ -1,6 +1,6 @@
 # Motivation, topic, and objectives
 
-_Note: FlawFix is a central component of the DevGuard Suite. Reference is made to the overall ‘DevGuard’ project in some places in this documentation. The assumptions made also apply to the specific FlawFix project._
+_Note: DevGuard is a central component of the DevGuard Suite. Reference is made to the overall ‘DevGuard’ project in some places in this documentation. The assumptions made also apply to the specific DevGuard project._
 
 Software holds a fundamental role in all areas of society and the economy. At the same time, the threat of cyberattacks is growing rapidly. The industry association Bitkom estimates the damage caused by cyberattacks in 2023 in Germany alone at around 206 billion euros [1]. Vulnerabilities in software products are responsible for a significant proportion of these successful attacks. According to the 2023 status report of the Federal Office for Information Security (BSI) [2], an average of more than 2,000 new vulnerabilities per month became known in the reporting period alone, of which 15% were classified as critical [2]. This represents an increase of 24% compared to the previous year.
 
@@ -14,10 +14,10 @@ In addition, traditional vulnerability management and software scanning systems,
 
 DevGuard pursues the following main objectives:
 
-- **Developer-centredness and appropriateness** Developers are the best line of defence against software vulnerabilities. They are faced with a task from the IT security field for which they are generally not trained. FlawFix is designed to support and relieve developers by focussing on user-friendliness, simplicity and automation. Only the realisation of these goals makes vulnerability management an integral part of IT security processes in software development.
+- **Developer-centredness and appropriateness** Developers are the best line of defence against software vulnerabilities. They are faced with a task from the IT security field for which they are generally not trained. DevGuard is designed to support and relieve developers by focussing on user-friendliness, simplicity and automation. Only the realisation of these goals makes vulnerability management an integral part of IT security processes in software development.
 - **Automated and continuous security monitoring:** By setting up the DevGuard Suite, security checks can be carried out systematically, automatically and continuously (e.g. using SBOMs). The prioritisation of the risks found should be highly automated, making risk handling much easier.
 - **Harmonisation, risk assessment and standard-compliant logging:** DevGuard strives for structured harmonisation and preparation of the data obtained from security checks. The use of innovative algorithms enables application-specific and automated risk assessment, which enables efficient prioritisation and treatment of security risks. Furthermore, the standard-compliant logging of the recorded data ensures a high level of transparency and traceability of the security processes, which supports compliance with regulatory requirements as well as internal and external auditability.
-- **Confidentiality:** Since information about specific vulnerabilities and risks of a project or organisation is to be processed in FlawFix, technological approaches are required to manage vulnerabilities with the highest levels of confidentiality. To this end, the application of research results, e.g. from the areas of confidential computing and homomorphic encryption, should be tested.
+- **Confidentiality:** Since information about specific vulnerabilities and risks of a project or organisation is to be processed in DevGuard, technological approaches are required to manage vulnerabilities with the highest levels of confidentiality. To this end, the application of research results, e.g. from the areas of confidential computing and homomorphic encryption, should be tested.
 
 [1]: https://www.bitkom.org/Bitkom/Publikationen/Studie-Wirtschaftsschutz
 [2]: https://www.bsi.bund.de/SharedDocs/Downloads/DE/BSI/Publikationen/Lageberichte/Lagebericht2023.pdf?__blob=publicationFile&v=7

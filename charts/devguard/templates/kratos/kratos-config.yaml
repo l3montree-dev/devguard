@@ -106,12 +106,12 @@ data:
               origins:
               - https://{{ $publicUrl }}
               # A display name which will be shown to the user on her/his device.
-              display_name: FlawFix
+              display_name: DevGuard
         password:
           enabled: true
         totp:
           config:
-            issuer: FlawFix
+            issuer: devguard
           enabled: true
         lookup_secret:
           enabled: false

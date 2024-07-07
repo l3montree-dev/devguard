@@ -1,15 +1,15 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "FlawFix API",
-        "title": "FlawFix API",
+        "description": "devguard API",
+        "title": "devguard API",
         "contact": {
             "name": "Support",
-            "url": "https://github.com/l3montree-dev/flawfix/issues"
+            "url": "https://github.com/l3montree-dev/devguard/issues"
         },
         "license": {
             "name": "AGPL-3",
-            "url": "https://github.com/l3montree-dev/flawfix/blob/main/LICENSE.txt"
+            "url": "https://github.com/l3montree-dev/devguard/blob/main/LICENSE.txt"
         },
         "version": "v1"
     },
@@ -99,7 +99,7 @@
                                 "data": {
                                     "type": "array",
                                     "items": {
-                                        "$ref": "#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE"
+                                        "$ref": "#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE"
                                     }
                                 },
                                 "page": {
@@ -169,7 +169,7 @@
                     "200": {
                         "description": "Details of the specified CVE",
                         "schema": {
-                            "$ref": "#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE"
+                            "$ref": "#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE"
                         }
                     },
                     "500": {
@@ -224,13 +224,13 @@
         }
     },
     "definitions": {
-        "github_com_l3montree-dev_flawfix_internal_database_models.AffectedComponent": {
+        "github_com_l3montree-dev_devguard_internal_database_models.AffectedComponent": {
             "type": "object",
             "properties": {
                 "cves": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE"
+                        "$ref": "#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE"
                     }
                 },
                 "ecosystem": {
@@ -272,7 +272,7 @@
                 }
             }
         },
-        "github_com_l3montree-dev_flawfix_internal_database_models.CPEMatch": {
+        "github_com_l3montree-dev_devguard_internal_database_models.CPEMatch": {
             "type": "object",
             "properties": {
                 "criteria": {
@@ -281,7 +281,7 @@
                 "cve": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE"
+                        "$ref": "#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE"
                     }
                 },
                 "edition": {
@@ -331,13 +331,13 @@
                 }
             }
         },
-        "github_com_l3montree-dev_flawfix_internal_database_models.CVE": {
+        "github_com_l3montree-dev_devguard_internal_database_models.CVE": {
             "type": "object",
             "properties": {
                 "affectedComponents": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.AffectedComponent"
+                        "$ref": "#/definitions/github_com_l3montree-dev_devguard_internal_database_models.AffectedComponent"
                     }
                 },
                 "attackComplexity": {
@@ -367,7 +367,7 @@
                 "configurations": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CPEMatch"
+                        "$ref": "#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CPEMatch"
                     }
                 },
                 "createdAt": {
@@ -397,7 +397,7 @@
                 "exploits": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.Exploit"
+                        "$ref": "#/definitions/github_com_l3montree-dev_devguard_internal_database_models.Exploit"
                     }
                 },
                 "impactScore": {
@@ -422,7 +422,7 @@
                     "type": "string"
                 },
                 "severity": {
-                    "$ref": "#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.Severity"
+                    "$ref": "#/definitions/github_com_l3montree-dev_devguard_internal_database_models.Severity"
                 },
                 "updatedAt": {
                     "type": "string"
@@ -436,19 +436,19 @@
                 "weaknesses": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.Weakness"
+                        "$ref": "#/definitions/github_com_l3montree-dev_devguard_internal_database_models.Weakness"
                     }
                 }
             }
         },
-        "github_com_l3montree-dev_flawfix_internal_database_models.Exploit": {
+        "github_com_l3montree-dev_devguard_internal_database_models.Exploit": {
             "type": "object",
             "properties": {
                 "author": {
                     "type": "string"
                 },
                 "cve": {
-                    "$ref": "#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE"
+                    "$ref": "#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE"
                 },
                 "cveID": {
                     "type": "string"
@@ -479,7 +479,7 @@
                 }
             }
         },
-        "github_com_l3montree-dev_flawfix_internal_database_models.Severity": {
+        "github_com_l3montree-dev_devguard_internal_database_models.Severity": {
             "type": "string",
             "enum": [
                 "critical",
@@ -496,11 +496,11 @@
                 "SeverityInfo"
             ]
         },
-        "github_com_l3montree-dev_flawfix_internal_database_models.Weakness": {
+        "github_com_l3montree-dev_devguard_internal_database_models.Weakness": {
             "type": "object",
             "properties": {
                 "cve": {
-                    "$ref": "#/definitions/github_com_l3montree-dev_flawfix_internal_database_models.CVE"
+                    "$ref": "#/definitions/github_com_l3montree-dev_devguard_internal_database_models.CVE"
                 },
                 "cwe": {
                     "type": "string"

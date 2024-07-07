@@ -1,7 +1,8 @@
-{{- if .Values.api.ingress.enabled -}}
-{{- if and .Values.api.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
-  {{- if not (hasKey .Values.api.ingress.annotations "kubernetes.io/ingress.class") }}
-  {{- $_ := set .Values.api.ingress.annotations "kubernetes.io/ingress.class" .Values.api.ingress.className}}
+{{- if .Values.web.ingress.enabled -}}
+
+{{- if and .Values.web.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
+  {{- if not (hasKey .Values.web.ingress.annotations "kubernetes.io/ingress.class") }}
+  {{- $_ := set .Values.web.ingress.annotations "kubernetes.io/ingress.class" .Values.web.ingress.className}}
   {{- end }}
 {{- end }}
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
@@ -13,20 +14,20 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: flawfix-api-ingress
+  name: devguard-web-ingress
   labels:
-    {{- include "flawfix.labels" . | nindent 4 }}
-  {{- with .Values.api.ingress.annotations }}
+    {{- include "devguard.labels" . | nindent 4 }}
+  {{- with .Values.web.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if and .Values.api.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
-  ingressClassName: {{ .Values.api.ingress.className }}
+  {{- if and .Values.web.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.web.ingress.className }}
   {{- end }}
-  {{- if .Values.api.ingress.tls }}
+  {{- if .Values.web.ingress.tls }}
   tls:
-    {{- range .Values.api.ingress.tls }}
+    {{- range .Values.web.ingress.tls }}
     - hosts:
         {{- range .hosts }}
         - {{ . | quote }}
@@ -35,7 +36,7 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    {{- range .Values.api.ingress.hosts }}
+    {{- range .Values.web.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
@@ -47,12 +48,12 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: flawfix-api-service
+                name: devguard-web-service
                 port:
-                  number: 8080
+                  number: 3000
               {{- else }}
-              serviceName: flawfix-api-service
-              servicePort: 8080
+              serviceName: devguard-web-service
+              servicePort: 3000
               {{- end }}
           {{- end }}
     {{- end }}
