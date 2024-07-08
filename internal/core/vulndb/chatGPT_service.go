@@ -14,6 +14,7 @@ const (
 )
 
 func AskChatGPT(question string) (string, error) {
+
 	// Get the API key from the environment
 	apiKey := os.Getenv("CHATGPT_API_KEY")
 	fmt.Println(apiKey)
@@ -34,25 +35,28 @@ func AskChatGPT(question string) (string, error) {
 	}
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
 	// Create the HTTP request
 	req, err := http.NewRequest("POST", apiEndpoint, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	fmt.Println("req:", req)
 
 	// Send the HTTP request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to send HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
+	fmt.Println("res:", resp)
 	// Read the response body
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -71,7 +75,8 @@ func AskChatGPT(question string) (string, error) {
 		return "", err
 	}
 
-	fmt.Println(data.Choices[0].Text)
+	fmt.Println(data)
 	// Return the generated text
 	return data.Choices[0].Text, nil
+
 }
