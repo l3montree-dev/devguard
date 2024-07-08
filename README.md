@@ -12,28 +12,28 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://flawfix.dev">
-    <img src="images/logo_horizontal.svg" alt="FlawFix by L3montree Logo" width="240" height="80">
-  </a>
-
-  <h3 align="center">FlawFix - Vulnerability Management - Backend</h3>
+  
+  <picture>
+    <source srcset="images/logo_inverse_horizontal.svg"  media="(prefers-color-scheme: dark)">
+    <img src="images/logo_horizontal.svg" alt="DevGuard by L3montree Logo" width="240" height="80">
+  </picture>
+  
+  <h3 align="center">DevGuard - Develop Secure Software - Backend</h3>
 
   <p align="center">
     Manage your CVEs seamlessly, Integrate your Vulnerability Scanners, Documentation made easy, Compliance to security Frameworks
     <br />
-    <a href="https://flawfix.dev/docs/getting-started"><strong>Explore the docs »</strong></a>
     <br />
-    <br />
-    <a href="https://github.com/l3montree-dev/flawfix/issues">Report Bug</a>
+    <a href="https://github.com/l3montree-dev/devguard/issues">Report Bug</a>
     ·
-    <a href="https://github.com/l3montree-dev/flawfix/issues">Request Feature</a>
+    <a href="https://github.com/l3montree-dev/devguard/issues">Request Feature</a>
   </p>
 </div>
 
 <p align="center">
    <a href="https://www.bestpractices.dev/projects/8928"><img src="https://www.bestpractices.dev/projects/8928/badge" alt="OpenSSF Badge"></a>
    <a href="https://github.com/calcom/cal.com/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-AGPLv3-purple" alt="License"></a>
-   <a href="https://github.com/l3montree-dev/flawfix/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22"><img src="https://img.shields.io/badge/Help%20Wanted-Contribute-blue"></a>
+   <a href="https://github.com/l3montree-dev/devguard/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22"><img src="https://img.shields.io/badge/Help%20Wanted-Contribute-blue"></a>
 </p>
 
 
@@ -48,7 +48,7 @@
       <a href="#the-problem-we-solve">The Problem We Solve</a>
     </li>
     <li><a href="#key-features">Key Features</a></li>
-    <li><a href="#understanding-the-owasp-devsecops-pipeline">FlawFix supports developers in the implementation of the DevSecOps-Pipeline</a>
+    <li><a href="#understanding-the-owasp-devsecops-pipeline">DevGuard supports developers in the implementation of the DevSecOps-Pipeline</a>
       <ul>
         <li><a href="#secret-scanning">Secret Scanning (Coming Soon)</a></li>
          <li><a href="#software-composition-analysis-sca">Software Composition Analysis (SCA)</a></li>
@@ -70,17 +70,17 @@
 <!-- ABOUT THE PROJECT -->
 ## Mission
 
-FlawFix is built by developers, for developers, aiming to simplify the complex world of vulnerability management. Our goal is to integrate security seamlessly into the software development lifecycle, ensuring that security practices are accessible and efficient for everyone, regardless of their security expertise.
+DevGuard is built by developers, for developers, aiming to simplify the complex world of vulnerability management. Our goal is to integrate security seamlessly into the software development lifecycle, ensuring that security practices are accessible and efficient for everyone, regardless of their security expertise.
 
 ### The problem we solve
 
-Identifying and managing software vulnerabilities is an increasingly critical challenge. Developers often face security issues without the proper training or tools that fit into their everyday workflows. FlawFix is a developer-centered software designed to provide simple, modern solutions for vulnerability detection and management, compliant with common security frameworks.
+Identifying and managing software vulnerabilities is an increasingly critical challenge. Developers often face security issues without the proper training or tools that fit into their everyday workflows. DevGuard is a developer-centered software designed to provide simple, modern solutions for vulnerability detection and management, compliant with common security frameworks.
 
-In 2023 alone, cyberattacks caused approximately 206 billion euros in damage only in Germany. Many of these attacks exploited software vulnerabilities. With agile and DevOps methodologies becoming standard, the need for integrating security into the development process has never been greater. We aim to fill this gap with FlawFix, offering a seamless integration of vulnerability management into development workflows.
+In 2023 alone, cyberattacks caused approximately 206 billion euros in damage only in Germany. Many of these attacks exploited software vulnerabilities. With agile and DevOps methodologies becoming standard, the need for integrating security into the development process has never been greater. We aim to fill this gap with DevGuard, offering a seamless integration of vulnerability management into development workflows.
 
 #### Prioritizing Vulnerabilities
 
-Not all vulnerabilities pose the same level of risk to your project. Effective prioritization of vulnerabilities is crucial to ensure that resources are focused on addressing the most critical issues. FlawFix helps you focus on what truly matters by providing risk assessments based on CVSS scores, exploit availability (ExploitDB), and real-world threat data (EPSS). This approach converts a generic `--exit-code 1 --severity CRITICAL` (like trivy has it) to a more practical `--exit-code 1 --risk CRITICAL` strategy, ensuring that you address vulnerabilities that could have the most significant impact on your software.
+Not all vulnerabilities pose the same level of risk to your project. Effective prioritization of vulnerabilities is crucial to ensure that resources are focused on addressing the most critical issues. DevGuard helps you focus on what truly matters by providing risk assessments based on CVSS scores, exploit availability (ExploitDB), and real-world threat data (EPSS). This approach converts a generic `--exit-code 1 --severity CRITICAL` (like trivy has it) to a more practical `--exit-code 1 --risk CRITICAL` strategy, ensuring that you address vulnerabilities that could have the most significant impact on your software.
 
 To further illustrate the importance of prioritizing vulnerabilities, consider our Sankey diagram, which demonstrates how many high CVSS vulnerabilities are reassessed and reprioritized. The diagram shows that a significant portion of these vulnerabilities are mapped to EPSS scores in the 0-10% range, indicating a lower likelihood of exploitation. This visual representation underscores the necessity of a nuanced approach to vulnerability management, where not all "critical" CVEs are treated equally, but rather prioritized based on their actual risk.
 
@@ -92,7 +92,7 @@ To further illustrate the importance of prioritizing vulnerabilities, consider o
 
 ## Key Features
 
-1. **Developer-Centric Integration:** FlawFix fits naturally into your existing CI/CD workflows, reducing friction and enhancing productivity. It supports the OWASP DevSecOps pipeline, offering tools (we just reuse open source tools but provide a simplified wrapper cli) for secret scanning (coming soon), SAST (coming soon), SCA, IaC scanning (coming soon), container scanning (coming soon), and DAST (coming soon).
+1. **Developer-Centric Integration:** DevGuard fits naturally into your existing CI/CD workflows, reducing friction and enhancing productivity. It supports the OWASP DevSecOps pipeline, offering tools (we just reuse open source tools but provide a simplified wrapper cli) for secret scanning (coming soon), SAST (coming soon), SCA, IaC scanning (coming soon), container scanning (coming soon), and DAST (coming soon).
 2. **Automated Security Monitoring:** Continuous monitoring using Software Bill of Materials (SBOMs) to keep your projects secure.
 3. **Risk Assessment:** Automatically assesses and prioritizes risks to help you address the most critical vulnerabilities first — no really, we do this pragmatically and automate where possible! (Our base: CVSS, exploitdb, EPSS)
 4. **Compliance:** Ensures your projects meet security standards like ISO/IEC 27001 and PCI-DSS.
@@ -102,7 +102,7 @@ To further illustrate the importance of prioritizing vulnerabilities, consider o
 
 ## Understanding the OWASP DevSecOps Pipeline
 
-> FlawFix aims to accompany developers in implementing the OWASP-DevSecOps pipeline in the best way possible, without requiring extensive cybersecurity knowledge. We plan provide a wrapper CLI to a curated list of scanners for different stages and seamless integration with the management backend, ensuring that security is integrated smoothly into the development workflow.
+> DevGuard aims to accompany developers in implementing the OWASP-DevSecOps pipeline in the best way possible, without requiring extensive cybersecurity knowledge. We plan provide a wrapper CLI to a curated list of scanners for different stages and seamless integration with the management backend, ensuring that security is integrated smoothly into the development workflow.
 
 <img src="docs/devsecops-pipeline.png">
 
@@ -152,9 +152,9 @@ The OWASP DevSecOps pipeline integrates security practices into the DevOps proce
 
 ## Joint vulnerability management - the strength of exchange
 
-Based on emerging standards such as the Vulnerability Exploitability eXchange (VEX) and our goal of increasing overall software security through the dissemination of FlawFix, we want to make expert information available from the source.  
+Based on emerging standards such as the Vulnerability Exploitability eXchange (VEX) and our goal of increasing overall software security through the dissemination of DevGuard, we want to make expert information available from the source.  
 
-![Depiction of a dependency graph with vulnerabilities (CVEs) of a software and the integration of VEX and crowd-based information as well as the FlawFix standard management process. The representation is ASCII art.](./docs/assets/vex-crowd-ascii.png)
+![Depiction of a dependency graph with vulnerabilities (CVEs) of a software and the integration of VEX and crowd-based information as well as the DevGuard standard management process. The representation is ASCII art.](./docs/assets/vex-crowd-ascii.png)
 
 ### Vulnerability Exploitability eXchange (VEX) 
 
@@ -179,7 +179,7 @@ If the VEX is not available and in its addition, we can also use the knowledge o
 1. Clone the repo
 
    ```sh
-   git clone git@github.com:l3montree-dev/flawfix.git && cd flawfix
+   git clone git@github.com:l3montree-dev/devguard.git && cd devguard
    ```
 
 2. Install Go, Docker & Docker-Compose
@@ -214,19 +214,19 @@ We welcome contributions! Please read our [contribution guide](./CONTRIBUTING.md
 <!-- Code of Conduct -->
 ## Code of Conduct
 
-Help us keep FlawFix open and inclusive. Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+Help us keep DevGuard open and inclusive. Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Built With
 
-FlawFix is divided into two projects: A frontend (FlawFix Web) and a backend (FlawFix Backend). 
+DevGuard is divided into two projects: A frontend (DevGuard Web) and a backend (DevGuard Backend). 
 
 **Backend (this project):**
 * [![Go][go.dev]][go-url]
 
 **Frontend:**
-* Please refer to: [FlawFix-Web on Github](https://github.com/l3montree-dev/flawfix-web)
+* Please refer to: [DevGuard-Web on Github](https://github.com/l3montree-dev/devguard-web)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

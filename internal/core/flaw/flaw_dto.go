@@ -18,7 +18,7 @@ package flaw
 import (
 	"time"
 
-	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type FlawDTO struct {

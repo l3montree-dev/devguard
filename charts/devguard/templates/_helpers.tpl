@@ -1,15 +1,15 @@
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "flawfix.chart" -}}
+{{- define "devguard.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "flawfix.labels" -}}
-helm.sh/chart: {{ include "flawfix.chart" . }}
+{{- define "devguard.labels" -}}
+helm.sh/chart: {{ include "devguard.chart" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}

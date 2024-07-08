@@ -4,9 +4,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/database"
-	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"

@@ -1,8 +1,8 @@
-# Contributing to FlawFix
+# Contributing to DevGuard
 
 ## Code of Conduct
 
-The FlawFix project has a [Code of Conduct](./CODE_OF_CONDUCT.md) to which all contributors must adhere.
+The DevGuard project has a [Code of Conduct](./CODE_OF_CONDUCT.md) to which all contributors must adhere.
 
 ## Overview
 
@@ -19,11 +19,11 @@ Here's help on how to make contributions, divided into the following sections:
 ## General information
 
 For specific proposals, please provide them as
-[pull requests](https://github.com/l3montree-dev/flawfix/pulls)
+[pull requests](https://github.com/l3montree-dev/devguard/pulls)
 or
-[issues](https://github.com/l3montree-dev/flawfix/issues)
+[issues](https://github.com/l3montree-dev/devguard/issues)
 via our
-[GitHub site](https://github.com/l3montree-dev/flawfix).
+[GitHub site](https://github.com/l3montree-dev/devguard).
 
 We use GitHub. You may find
 [GitHub CLI (`gh`)](https://cli.github.com/)
@@ -40,7 +40,7 @@ The [INSTALL.md](docs/INSTALL.md) file explains how to install the program
 locally (highly recommended if you're going to make code changes).
 
 If you're new to the project (or FLOSS in general), the
-[Good first issues](https://github.com/l3montree-dev/flawfix/labels/good%20first%20issue) are smaller tasks that may typically take 1-3 days.
+[Good first issues](https://github.com/l3montree-dev/devguard/labels/good%20first%20issue) are smaller tasks that may typically take 1-3 days.
 You are welcome aboard!
 
 See [CODE OF CONDUCT](./CODE_OF_CONDUCT.md) for our code of conduct;
@@ -62,8 +62,8 @@ and
 ### How we handle proposals
 
 We use GitHub to track proposed changes via its
-[issue tracker](https://github.com/l3montree-dev/flawfix/issues) and
-[pull requests](https://github.com/l3montree-dev/flawfix/pulls).
+[issue tracker](https://github.com/l3montree-dev/devguard/issues) and
+[pull requests](https://github.com/l3montree-dev/devguard/pulls).
 Specific changes are proposed using those mechanisms.
 Issues are assigned to an individual, who works it and then marks it complete.
 If there are questions or objections, the conversation area of that

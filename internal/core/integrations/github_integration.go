@@ -25,8 +25,8 @@ import (
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type githubAppInstallationRepository interface {
@@ -69,7 +69,7 @@ func (githubIntegration *githubIntegration) GetGithubOrgClientFromContext(ctx co
 	clients := make([]*github.Client, 0)
 	for _, appInstallation := range appInstallations {
 		// Wrap the shared transport for use with the integration ID 1 authenticating with installation ID 99.
-		// itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, 923505, 52040746, "flawfix.2024-06-20.private-key.pem")
+		// itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, 923505, 52040746, "devguard.2024-06-20.private-key.pem")
 		// Or for endpoints that require JWT authentication
 		itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, githubIntegration.githubAppId, int64(appInstallation.InstallationID), os.Getenv("GITHUB_PRIVATE_KEY"))
 

@@ -1,5 +1,5 @@
 run::
-	go run ./cmd/flawfix/main.go
+	go run ./cmd/devguard/main.go
 
 clean::
 	docker compose down -v && docker compose up -d

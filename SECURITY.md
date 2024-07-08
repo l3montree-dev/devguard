@@ -14,7 +14,7 @@ Older tags need manual updating, as we do not usually release an updated image f
 
 ## Reporting a Vulnerability
 
-When reporting a vulnerability, you can use GitHub's "Private Vulnerability Reporting". Just navigate to the [Report a vulnerability](https://github.com/l3montree-dev/flawfix/security/advisories/new) page. This way, maintainers will privately notified first. Afterwards, in a best-case scenario, if the vulnerability is fixed, the report will be made public.
+When reporting a vulnerability, you can use GitHub's "Private Vulnerability Reporting". Just navigate to the [Report a vulnerability](https://github.com/l3montree-dev/devguard/security/advisories/new) page. This way, maintainers will privately notified first. Afterwards, in a best-case scenario, if the vulnerability is fixed, the report will be made public.
 
 Alternatively, you can report a vulnerability or anomaly to the L3montree development team. This initiates the procedure of a Coordinated Vulnerability Disclosure. The team will then endeavour to develop security patches within a week if possible. The vulnerability is then made public in the course of their publication. If you wish, you can also be published as a reporter.
 

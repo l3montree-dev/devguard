@@ -1,4 +1,4 @@
-# Default values for flawfix.
+# Default values for devguard.
 # This is a YAML-formatted file.
 # Declare variables to be passed into templates.
 oidc:
@@ -15,7 +15,7 @@ mail:
 api:
   replicaCount: 1
   image:
-    repository: ghcr.io/l3montree-dev/flawfix
+    repository: ghcr.io/l3montree-dev/devguard
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
     tag: v1.0.0
@@ -61,7 +61,7 @@ api:
     existingPrivateKeySecretName: github-app-private-key
 web:
   image:
-    repository: ghcr.io/l3montree-dev/flawfix-web
+    repository: ghcr.io/l3montree-dev/devguard-web
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
     tag: v1.0.0

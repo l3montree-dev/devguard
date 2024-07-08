@@ -3,8 +3,8 @@ name: VulnDB Workflow
 on: workflow_dispatch
 
 env:
-  POSTGRES_DB: flawfix
-  POSTGRES_USER: flawfix
+  POSTGRES_DB: devguard
+  POSTGRES_USER: devguard
   POSTGRES_HOST: localhost
   POSTGRES_PASSWORD: not_reachable_from_the_internet
 
@@ -14,14 +14,14 @@ jobs:
 
     services:
       postgres:
-        image: ghcr.io/l3montree-dev/flawfix-postgresql:v0.4.7@sha256:09648eb4bf221b41df29ffd8cff70326735b1064f174d5e6742b80e5bd858d71
+        image: ghcr.io/l3montree-dev/devguard-postgresql:v0.4.7@sha256:09648eb4bf221b41df29ffd8cff70326735b1064f174d5e6742b80e5bd858d71
         env:
           POSTGRES_DB: ${{env.POSTGRES_DB}}
           POSTGRES_USER: ${{env.POSTGRES_USER}}
           POSTGRES_PASSWORD: ${{env.POSTGRES_PASSWORD}}
         ports:
         - 5432:5432
-        options: "--health-cmd=\"pg_isready -U flawfix\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
+        options: "--health-cmd=\"pg_isready -U devguard\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
     steps:
     - name: Install postgresql client
       run: |
@@ -33,7 +33,7 @@ jobs:
         sudo apt-get install -y postgresql-client-16
     - name: Create semver extension
       run: |
-        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U flawfix flawfix -c "CREATE EXTENSION IF NOT EXISTS semver;"
+        PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "CREATE EXTENSION IF NOT EXISTS semver;"
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Install Golang
@@ -42,10 +42,10 @@ jobs:
         go-version: 1.22
     - name: Build the database (this takes some time)
       run: |
-        go run ./cmd/flawfix-cli/main.go vulndb repair --startIndex=0
+        go run ./cmd/devguard-cli/main.go vulndb repair --startIndex=0
     - name: Dump the PostgreSQL database
       # skip:checkov:CKV_SECRET_6
-      run: PGPASSWORD=${{env.POSTGRES_PASSWORD}} pg_dump -h localhost -U flawfix flawfix -t cves -t affected_components -t component_dependencies -t components -t cpe_matches -t cve_affected_component -t cve_cpe_match -t cwes -t exploits -t weaknesses --on-conflict-do-nothing --column-inserts > dump.sql
+      run: PGPASSWORD=${{env.POSTGRES_PASSWORD}} pg_dump -h localhost -U devguard devguard -t cves -t affected_components -t component_dependencies -t components -t cpe_matches -t cve_affected_component -t cve_cpe_match -t cwes -t exploits -t weaknesses --on-conflict-do-nothing --column-inserts > dump.sql
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v3
       with:
@@ -56,4 +56,4 @@ jobs:
       uses: oras-project/setup-oras@v1
     - name: Push the database dump to OCI
       run: |
-        oras push ghcr.io/l3montree-dev/flawfix/vulndb:$(date +%s) dump.sql
+        oras push ghcr.io/l3montree-dev/devguard/vulndb:$(date +%s) dump.sql

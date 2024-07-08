@@ -16,7 +16,7 @@
 package core
 
 import (
-	"github.com/l3montree-dev/flawfix/internal/accesscontrol"
+	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 
 	"github.com/labstack/echo/v4"
 )

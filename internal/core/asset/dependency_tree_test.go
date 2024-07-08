@@ -17,8 +17,8 @@ package asset
 import (
 	"testing"
 
-	"github.com/l3montree-dev/flawfix/internal/database/models"
-	"github.com/l3montree-dev/flawfix/internal/utils"
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 func TestDependencyTree(t *testing.T) {

@@ -16,24 +16,24 @@
 package main
 
 import (
-	"github.com/l3montree-dev/flawfix/cmd/flawfix/api"
-	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/config"
-	"github.com/l3montree-dev/flawfix/internal/core/leaderelection"
-	"github.com/l3montree-dev/flawfix/internal/core/vulndb"
+	"github.com/l3montree-dev/devguard/cmd/devguard/api"
+	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/config"
+	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
+	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 
 	_ "github.com/lib/pq"
 )
 
-//	@title			FlawFix API
+//	@title			devguard API
 //	@version		v1
-//	@description	FlawFix API
+//	@description	devguard API
 
 //	@contact.name	Support
-//	@contact.url	https://github.com/l3montree-dev/flawfix/issues
+//	@contact.url	https://github.com/l3montree-dev/devguard/issues
 
 //	@license.name	AGPL-3
-//	@license.url	https://github.com/l3montree-dev/flawfix/blob/main/LICENSE.txt
+//	@license.url	https://github.com/l3montree-dev/devguard/blob/main/LICENSE.txt
 
 // @host		localhost:8080
 // @BasePath	/api/v1

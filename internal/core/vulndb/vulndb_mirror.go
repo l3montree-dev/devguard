@@ -3,11 +3,11 @@ package vulndb
 import (
 	"time"
 
-	"github.com/l3montree-dev/flawfix/internal/core"
-	"github.com/l3montree-dev/flawfix/internal/core/flaw"
-	"github.com/l3montree-dev/flawfix/internal/database"
-	"github.com/l3montree-dev/flawfix/internal/database/models"
-	"github.com/l3montree-dev/flawfix/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
 )
 
 type cveRepository interface {
@@ -36,6 +36,8 @@ func StartMirror(database core.DB, leaderElector leaderElector, configService co
 	mitreService := NewMitreService(cweRepository)
 
 	exploitDBService := NewExploitDBService(nvdService, exploitRepository)
+	githubExploitDBService := NewGithubExploitDBService(exploitRepository)
+
 	osvService := NewOSVService(affectedCmpRepository)
 
 	//for flaw service
@@ -45,7 +47,7 @@ func StartMirror(database core.DB, leaderElector leaderElector, configService co
 	flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 
 	// start the mirror process.
-	vulnDBService := newVulnDBService(leaderElector, mitreService, epssService, nvdService, configService, osvService, exploitDBService, flawService)
+	vulnDBService := newVulnDBService(leaderElector, mitreService, epssService, nvdService, configService, osvService, exploitDBService, githubExploitDBService, flawService)
 
 	vulnDBService.startMirrorDaemon()
 }

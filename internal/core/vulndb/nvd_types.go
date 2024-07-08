@@ -1,6 +1,6 @@
 package vulndb
 
-import "github.com/l3montree-dev/flawfix/internal/utils"
+import "github.com/l3montree-dev/devguard/internal/utils"
 
 type nvdCpeMatch struct {
 	Vulnerable            bool   `json:"vulnerable"`

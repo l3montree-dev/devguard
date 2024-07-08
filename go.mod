@@ -1,4 +1,4 @@
-module github.com/l3montree-dev/flawfix
+module github.com/l3montree-dev/devguard
 
 go 1.22
 

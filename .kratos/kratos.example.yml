@@ -33,7 +33,7 @@ selfservice:
           origins:
           - http://localhost:3000
           # A display name which will be shown to the user on her/his device.
-          display_name: FlawFix
+          display_name: DevGuard
     password:
       enabled: true
     totp:
