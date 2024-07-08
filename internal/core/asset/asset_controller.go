@@ -162,6 +162,9 @@ func (a *httpController) DependencyGraph(c core.Context) error {
 	}
 
 	tree, _ := buildDependencyTree(components)
+	if tree.Root.Children == nil {
+		tree.Root.Children = make([]*treeNode, 0)
+	}
 
 	return c.JSON(200, tree)
 }
