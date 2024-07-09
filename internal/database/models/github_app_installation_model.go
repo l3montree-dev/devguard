@@ -28,6 +28,9 @@ type GithubAppInstallation struct {
 	OrgID *uuid.UUID `json:"orgId" gorm:"column:org_id"`
 
 	InstallationCreatedWebhookReceivedTime time.Time `json:"installationCreatedWebhookReceivedTime"`
+
+	TargetType  string `json:"targetType"`
+	SettingsURL string `json:"settingsUrl"`
 }
 
 func (GithubAppInstallation) TableName() string {

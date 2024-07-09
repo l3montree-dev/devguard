@@ -11,9 +11,11 @@ type Org struct {
 	ISO27001               bool      `json:"iso27001"`
 	NIST                   bool      `json:"nist"`
 	Grundschutz            bool      `json:"grundschutz"`
-	Projects               []Project `json:"projects" gorm:"foreignKey:OrganizationID;constraint:OnDelete:CASCADE;"`
+	Projects               []Project `json:"projects" gorm:"foreignKey:OrganizationID;"`
 	Slug                   string    `json:"slug" gorm:"type:text;unique;not null;index"`
 	Description            string    `json:"description" gorm:"type:text"`
+
+	GithubAppInstallations []GithubAppInstallation `json:"githubAppInstallations" gorm:"foreignKey:OrgID;"`
 }
 
 func (m Model) TableName() string {

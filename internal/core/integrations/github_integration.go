@@ -16,6 +16,8 @@
 package integrations
 
 import (
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -56,6 +58,8 @@ func NewGithubIntegration(githubInstallationRepository githubAppInstallationRepo
 	}
 }
 
+var NoGithubAppInstallationError = fmt.Errorf("no github app installations found")
+
 func (githubIntegration *githubIntegration) GetGithubOrgClientFromContext(ctx core.Context) (*githubOrgClient, error) {
 	tenant := core.GetTenant(ctx)
 
@@ -64,6 +68,11 @@ func (githubIntegration *githubIntegration) GetGithubOrgClientFromContext(ctx co
 	if err != nil {
 		slog.Error("could not find github app installations", "err", err)
 		return nil, err
+	}
+
+	if len(appInstallations) == 0 {
+		slog.Error("no github app installations found")
+		return nil, NoGithubAppInstallationError
 	}
 
 	clients := make([]*github.Client, 0)
@@ -104,12 +113,22 @@ func (githubIntegration *githubIntegration) Webhook(ctx core.Context) error {
 	case *github.InstallationEvent:
 		slog.Info("new app installation", "installationId", *event.Installation.ID, "senderId", *event.Sender.ID)
 
+		// print to the console as json string
+		payloadJson, err := json.Marshal(event)
+		if err != nil {
+			slog.Error("could not marshal payload to json", "err", err)
+			return err
+		}
+		fmt.Println("payload", "payload", string(payloadJson))
+
 		githubAppInstallation := models.GithubAppInstallation{
 			InstallationID:                         int(*event.Installation.ID),
 			InstallationCreatedWebhookReceivedTime: time.Now(),
+			SettingsURL:                            *event.Installation.HTMLURL,
+			TargetType:                             *event.Installation.TargetType,
 		}
 		// save the new installation to the database
-		err := githubIntegration.githubAppInstallationRepository.Save(nil, &githubAppInstallation)
+		err = githubIntegration.githubAppInstallationRepository.Save(nil, &githubAppInstallation)
 		if err != nil {
 			slog.Error("could not save github app installation", "err", err)
 			return err

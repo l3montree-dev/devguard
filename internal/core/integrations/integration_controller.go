@@ -16,6 +16,8 @@
 package integrations
 
 import (
+	"errors"
+
 	"github.com/l3montree-dev/devguard/internal/core"
 )
 
@@ -31,7 +33,11 @@ func NewIntegrationController(gh *githubIntegration) *integrationController {
 
 func (c *integrationController) ListRepositories(ctx core.Context) error {
 	githubClient, err := c.githubIntegration.GetGithubOrgClientFromContext(ctx)
+
 	if err != nil {
+		if errors.Is(err, NoGithubAppInstallationError) {
+			return ctx.JSON(404, []string{})
+		}
 		return err
 	}
 

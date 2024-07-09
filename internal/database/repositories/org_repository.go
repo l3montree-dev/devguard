@@ -38,6 +38,14 @@ func NewOrgRepository(db core.DB) *orgRepository {
 
 func (g *orgRepository) ReadBySlug(slug string) (models.Org, error) {
 	var t models.Org
-	err := g.db.Where("slug = ?", slug).First(&t).Error
+	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Where("slug = ?", slug).First(&t).Error
 	return t, err
+}
+
+func (g *orgRepository) List(
+	ids []uuid.UUID,
+) ([]models.Org, error) {
+	var ts []models.Org
+	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Where("id IN ?", ids).Find(&ts).Error
+	return ts, err
 }

@@ -304,34 +304,48 @@ func buildSBOM(asset models.Asset, version string, organizationName string, comp
 	return &bom
 }
 
-func (c *httpController) UpdateRequirements(ctx core.Context) error {
+func (c *httpController) Update(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 
 	req := ctx.Request().Body
 	defer req.Close()
 
-	var assetNew models.Asset
-	err := json.NewDecoder(req).Decode(&assetNew)
+	var patchRequest patchRequest
+	err := json.NewDecoder(req).Decode(&patchRequest)
 	if err != nil {
 		return fmt.Errorf("Error decoding request: %v", err)
 	}
 
-	if assetNew.ConfidentialityRequirement != asset.ConfidentialityRequirement || assetNew.IntegrityRequirement != asset.IntegrityRequirement || assetNew.AvailabilityRequirement != asset.AvailabilityRequirement {
-		justification := "Requirements Level updated: " + "AvailabilityRequirement: " + asset.AvailabilityRequirement + " -> " + assetNew.AvailabilityRequirement + ", ConfidentialityRequirement: " + asset.ConfidentialityRequirement + " -> " + assetNew.ConfidentialityRequirement + ", IntegrityRequirement: " + asset.IntegrityRequirement + " -> " + assetNew.IntegrityRequirement
-		justificationStr := string(justification)
+	var justification string = ""
+	if patchRequest.ConfidentialityRequirement != nil && *patchRequest.ConfidentialityRequirement != asset.ConfidentialityRequirement {
+		justification += "Confidentiality Requirement updated: " + string(asset.ConfidentialityRequirement) + " -> " + string(*patchRequest.ConfidentialityRequirement)
+		asset.ConfidentialityRequirement = *patchRequest.ConfidentialityRequirement
+	}
 
-		asset.ConfidentialityRequirement = assetNew.ConfidentialityRequirement
-		asset.IntegrityRequirement = assetNew.IntegrityRequirement
-		asset.AvailabilityRequirement = assetNew.AvailabilityRequirement
+	if patchRequest.IntegrityRequirement != nil && *patchRequest.IntegrityRequirement != asset.IntegrityRequirement {
+		justification += ", Integrity Requirement updated: " + string(asset.IntegrityRequirement) + " -> " + string(*patchRequest.IntegrityRequirement)
+		asset.IntegrityRequirement = *patchRequest.IntegrityRequirement
+	}
 
-		err = c.assetService.UpdateAssetRequirements(asset, core.GetSession(ctx).GetUserID(), justificationStr)
+	if patchRequest.AvailabilityRequirement != nil && *patchRequest.AvailabilityRequirement != asset.AvailabilityRequirement {
+		justification += ", Availability Requirement updated: " + string(asset.AvailabilityRequirement) + " -> " + string(*patchRequest.AvailabilityRequirement)
+		asset.AvailabilityRequirement = *patchRequest.AvailabilityRequirement
+	}
+
+	if justification != "" {
+		err = c.assetService.UpdateAssetRequirements(asset, core.GetSession(ctx).GetUserID(), justification)
 		if err != nil {
 			return fmt.Errorf("Error updating requirements: %v", err)
 		}
+	}
+	updated := patchRequest.applyToModel(&asset)
 
-		return ctx.JSON(200, asset)
-
+	if updated {
+		err = c.assetRepository.Update(nil, &asset)
+		if err != nil {
+			return fmt.Errorf("Error updating asset: %v", err)
+		}
 	}
 
-	return ctx.JSON(304, asset)
+	return ctx.JSON(200, asset)
 }

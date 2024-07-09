@@ -344,7 +344,7 @@ func Start(db core.DB) {
 
 	assetRouter.GET("/versions/", assetController.Versions)
 
-	assetRouter.PATCH("/", assetController.UpdateRequirements)
+	assetRouter.PATCH("/", assetController.Update, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)

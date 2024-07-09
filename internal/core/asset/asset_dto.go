@@ -42,3 +42,48 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 		AvailabilityRequirement:    sanitizeRequirementLevel(a.AvailabilityRequirement),
 	}
 }
+
+type patchRequest struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+
+	ReachableFromInternet *bool `json:"reachableFromInternet"`
+
+	ConfidentialityRequirement *models.RequirementLevel `json:"confidentialityRequirement"`
+	IntegrityRequirement       *models.RequirementLevel `json:"integrityRequirement"`
+	AvailabilityRequirement    *models.RequirementLevel `json:"availabilityRequirement"`
+
+	RepositoryID *string `json:"repositoryId"`
+}
+
+func (a *patchRequest) applyToModel(
+	asset *models.Asset,
+) bool {
+	updated := false
+	if a.Name != nil {
+		updated = true
+		asset.Name = *a.Name
+		asset.Slug = slug.Make(*a.Name)
+	}
+
+	if a.Description != nil {
+		updated = true
+		asset.Description = *a.Description
+	}
+
+	if a.ReachableFromInternet != nil {
+		updated = true
+		asset.ReachableFromInternet = *a.ReachableFromInternet
+	}
+
+	if a.RepositoryID != nil {
+		updated = true
+		if *a.RepositoryID == "" {
+			asset.RepositoryID = nil
+		} else {
+			asset.RepositoryID = a.RepositoryID
+		}
+	}
+
+	return updated
+}
