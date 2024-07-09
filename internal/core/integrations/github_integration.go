@@ -16,7 +16,6 @@
 package integrations
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -35,6 +34,7 @@ type githubAppInstallationRepository interface {
 	Save(tx core.DB, model *models.GithubAppInstallation) error
 	Read(installationID int) (models.GithubAppInstallation, error)
 	FindByOrganizationId(orgID uuid.UUID) ([]models.GithubAppInstallation, error)
+	Delete(tx core.DB, installationID int) error
 }
 
 type githubIntegration struct {
@@ -111,30 +111,35 @@ func (githubIntegration *githubIntegration) Webhook(ctx core.Context) error {
 
 	switch event := event.(type) {
 	case *github.InstallationEvent:
-		slog.Info("new app installation", "installationId", *event.Installation.ID, "senderId", *event.Sender.ID)
+		// check what type of action is being performed
+		switch *event.Action {
+		case "created":
+			slog.Info("new app installation", "installationId", *event.Installation.ID, "senderId", *event.Sender.ID)
 
-		// print to the console as json string
-		payloadJson, err := json.Marshal(event)
-		if err != nil {
-			slog.Error("could not marshal payload to json", "err", err)
-			return err
+			githubAppInstallation := models.GithubAppInstallation{
+				InstallationID:                         int(*event.Installation.ID),
+				InstallationCreatedWebhookReceivedTime: time.Now(),
+				SettingsURL:                            *event.Installation.HTMLURL,
+				TargetType:                             *event.Installation.TargetType,
+				TargetLogin:                            *event.Installation.Account.Login,
+				TargetAvatarURL:                        *event.Installation.Account.AvatarURL,
+			}
+			// save the new installation to the database
+			err := githubIntegration.githubAppInstallationRepository.Save(nil, &githubAppInstallation)
+			if err != nil {
+				slog.Error("could not save github app installation", "err", err)
+				return err
+			}
+		case "deleted":
+			slog.Info("app installation deleted", "installationId", *event.Installation.ID, "senderId", *event.Sender.ID)
+			// delete the installation from the database
+			err := githubIntegration.githubAppInstallationRepository.Delete(nil, int(*event.Installation.ID))
+			if err != nil {
+				slog.Error("could not delete github app installation", "err", err)
+				return err
+			}
 		}
-		fmt.Println("payload", "payload", string(payloadJson))
 
-		githubAppInstallation := models.GithubAppInstallation{
-			InstallationID:                         int(*event.Installation.ID),
-			InstallationCreatedWebhookReceivedTime: time.Now(),
-			SettingsURL:                            *event.Installation.HTMLURL,
-			TargetType:                             *event.Installation.TargetType,
-		}
-		// save the new installation to the database
-		err = githubIntegration.githubAppInstallationRepository.Save(nil, &githubAppInstallation)
-		if err != nil {
-			slog.Error("could not save github app installation", "err", err)
-			return err
-		}
-		// save to payload as json to file
-		return nil
 	}
 
 	return ctx.JSON(200, "ok")

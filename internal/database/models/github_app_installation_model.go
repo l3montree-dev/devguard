@@ -29,8 +29,11 @@ type GithubAppInstallation struct {
 
 	InstallationCreatedWebhookReceivedTime time.Time `json:"installationCreatedWebhookReceivedTime"`
 
-	TargetType  string `json:"targetType"`
 	SettingsURL string `json:"settingsUrl"`
+
+	TargetType      string `json:"targetType"`
+	TargetLogin     string `json:"targetLogin"`
+	TargetAvatarURL string `json:"targetAvatarUrl"`
 }
 
 func (GithubAppInstallation) TableName() string {
