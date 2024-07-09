@@ -18,17 +18,31 @@ package integrations
 import (
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"strconv"
 	"time"
 
-	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
+
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/obj"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
+
+type githubRepository struct {
+	*github.Repository
+	GithubAppInstallationID int `json:"githubAppInstallationId"`
+}
+
+func (g githubRepository) toRepository() obj.Repository {
+	return obj.Repository{
+		ID:    fmt.Sprintf("github:%d:%d", g.GithubAppInstallationID, *g.ID),
+		Label: *g.FullName,
+	}
+}
 
 type githubAppInstallationRepository interface {
 	Save(tx core.DB, model *models.GithubAppInstallation) error
@@ -38,65 +52,64 @@ type githubAppInstallationRepository interface {
 }
 
 type githubIntegration struct {
-	githubAppId                     int64
 	githubAppInstallationRepository githubAppInstallationRepository
 }
 
-func NewGithubIntegration(githubInstallationRepository githubAppInstallationRepository) *githubIntegration {
-	appId := os.Getenv("GITHUB_APP_ID")
-	if appId == "" {
-		panic("GITHUB_APP_ID is not set")
-	}
-	appIdInt, err := strconv.Atoi(appId)
-	if err != nil {
-		panic("Could not convert GITHUB_APP_ID to int: " + appId + ", " + err.Error())
-	}
-
-	return &githubIntegration{
-		githubAppId:                     int64(appIdInt),
-		githubAppInstallationRepository: githubInstallationRepository,
-	}
-}
+var _ thirdPartyIntegration = &githubIntegration{}
 
 var NoGithubAppInstallationError = fmt.Errorf("no github app installations found")
 
-func (githubIntegration *githubIntegration) GetGithubOrgClientFromContext(ctx core.Context) (*githubOrgClient, error) {
+func NewGithubIntegration(db core.DB) *githubIntegration {
+	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
+
+	return &githubIntegration{
+		githubAppInstallationRepository: githubAppInstallationRepository,
+	}
+}
+
+func (githubIntegration *githubIntegration) IntegrationEnabled(ctx core.Context) bool {
+	// check if the github app installation exists in the database
+	tenant := core.GetTenant(ctx)
+	return tenant.GithubAppInstallations != nil && len(tenant.GithubAppInstallations) > 0
+}
+
+func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) ([]obj.Repository, error) {
+	// check if we have integrations
+	if !githubIntegration.IntegrationEnabled(ctx) {
+		return nil, nil
+	}
+
 	tenant := core.GetTenant(ctx)
 
-	// get the installation id from the database
-	appInstallations, err := githubIntegration.githubAppInstallationRepository.FindByOrganizationId(tenant.GetID())
-	if err != nil {
-		slog.Error("could not find github app installations", "err", err)
-		return nil, err
-	}
-
-	if len(appInstallations) == 0 {
-		slog.Error("no github app installations found")
-		return nil, NoGithubAppInstallationError
-	}
-
-	clients := make([]*github.Client, 0)
-	for _, appInstallation := range appInstallations {
-		// Wrap the shared transport for use with the integration ID 1 authenticating with installation ID 99.
-		// itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, 923505, 52040746, "devguard.2024-06-20.private-key.pem")
-		// Or for endpoints that require JWT authentication
-		itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, githubIntegration.githubAppId, int64(appInstallation.InstallationID), os.Getenv("GITHUB_PRIVATE_KEY"))
-
+	repos := []obj.Repository{}
+	// check if a github integration exists on that org
+	if tenant.GithubAppInstallations != nil {
+		// get the github integration
+		githubClient, err := newGithubBatchClient(tenant.GithubAppInstallations)
 		if err != nil {
 			return nil, err
 		}
 
-		// Use installation transport with client.
-		client := github.NewClient(&http.Client{Transport: itr})
-		clients = append(clients, client)
+		// get the repositories
+		r, err := githubClient.ListRepositories()
+		if err != nil {
+			return nil, err
+		}
+
+		repos = append(repos, utils.Map(r, func(repo githubRepository) obj.Repository {
+			return repo.toRepository()
+		})...)
+		return repos, nil
 	}
 
-	return &githubOrgClient{
-		clients: clients,
-	}, nil
+	return []obj.Repository{}, nil
 }
 
-func (githubIntegration *githubIntegration) Webhook(ctx core.Context) error {
+func (githubIntegration *githubIntegration) WantsToHandleWebhook(ctx core.Context) bool {
+	return true
+}
+
+func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) error {
 	payload, err := github.ValidatePayload(ctx.Request(), []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))
 	if err != nil {
 		slog.Error("could not validate github webhook", "err", err)
@@ -143,6 +156,10 @@ func (githubIntegration *githubIntegration) Webhook(ctx core.Context) error {
 	}
 
 	return ctx.JSON(200, "ok")
+}
+
+func (githubIntegration *githubIntegration) WantsToFinishInstallation(ctx core.Context) bool {
+	return true
 }
 
 func (githubIntegration *githubIntegration) FinishInstallation(ctx core.Context) error {

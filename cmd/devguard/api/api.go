@@ -274,7 +274,6 @@ func Start(db core.DB) {
 	flawRepository := repositories.NewFlawRepository(db)
 	flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 	flawController := flaw.NewHttpController(flawRepository, flawService)
-	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
 
 	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
 
@@ -291,12 +290,13 @@ func Start(db core.DB) {
 
 	server := echohttp.Server()
 
-	githubIntegration := integrations.NewGithubIntegration(githubAppInstallationRepository)
+	githubIntegration := integrations.NewGithubIntegration(db)
+
 	integrationController := integrations.NewIntegrationController(githubIntegration)
 
 	apiV1Router := server.Group("/api/v1")
 
-	apiV1Router.POST("/gh-webhook/", githubIntegration.Webhook)
+	apiV1Router.POST("/webhook/", integrationController.HandleWebhook)
 	// apply the health route without any session or multi tenant middleware
 	apiV1Router.GET("/health/", health)
 	// everything below this line is protected by the session middleware
@@ -324,7 +324,7 @@ func Start(db core.DB) {
 	tenantRouter.GET("/", orgController.Read, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 
 	tenantRouter.GET("/metrics/", orgController.Metrics)
-	tenantRouter.GET("/integrations/github/finish-installation/", githubIntegration.FinishInstallation)
+	tenantRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 	tenantRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
 	tenantRouter.GET("/projects/", projectController.List, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))

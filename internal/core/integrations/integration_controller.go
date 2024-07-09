@@ -16,35 +16,65 @@
 package integrations
 
 import (
-	"errors"
+	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/obj"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type integrationController struct {
-	githubIntegration *githubIntegration
+	integrations []thirdPartyIntegration
 }
 
-func NewIntegrationController(gh *githubIntegration) *integrationController {
+func NewIntegrationController(integrations ...thirdPartyIntegration) *integrationController {
 	return &integrationController{
-		githubIntegration: gh,
+		integrations: integrations,
 	}
 }
 
 func (c *integrationController) ListRepositories(ctx core.Context) error {
-	githubClient, err := c.githubIntegration.GetGithubOrgClientFromContext(ctx)
-
-	if err != nil {
-		if errors.Is(err, NoGithubAppInstallationError) {
-			return ctx.JSON(404, []string{})
-		}
-		return err
+	if !utils.Any(c.integrations, func(i thirdPartyIntegration) bool {
+		return i.IntegrationEnabled(ctx)
+	}) {
+		return ctx.JSON(404, []string{})
 	}
 
-	repos, err := githubClient.ListRepositories()
-	if err != nil {
-		return err
+	repos := []obj.Repository{}
+
+	for _, i := range c.integrations {
+		if i.IntegrationEnabled(ctx) {
+			r, err := i.ListRepositories(ctx)
+			if err != nil {
+				return err
+			}
+			repos = append(repos, r...)
+		}
 	}
 
 	return ctx.JSON(200, repos)
+}
+
+func (c *integrationController) FinishInstallation(ctx core.Context) error {
+	for _, i := range c.integrations {
+		if i.WantsToFinishInstallation(ctx) {
+			if err := i.FinishInstallation(ctx); err != nil {
+				slog.Error("could not finish installation", "err", err)
+			}
+		}
+	}
+
+	return ctx.JSON(200, "Installation finished")
+}
+
+func (c *integrationController) HandleWebhook(ctx core.Context) error {
+	for _, i := range c.integrations {
+		if i.WantsToHandleWebhook(ctx) {
+			if err := i.HandleWebhook(ctx); err != nil {
+				slog.Error("could not handle webhook", "err", err)
+			}
+		}
+	}
+
+	return ctx.JSON(200, "Webhook handled")
 }
