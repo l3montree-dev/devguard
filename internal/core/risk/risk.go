@@ -115,6 +115,10 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 				}
 			}
 		}
+
+		if cve.CISAActionDue != nil {
+			cvss.Set("E", "H") // nolint:errcheck
+		}
 		setEnv(cvss, env)
 		vector = cvss.Vector()
 		risk.WithEnvironment = getBaseAndEnvironmentalScore(cvss, "CVSS:3.0")

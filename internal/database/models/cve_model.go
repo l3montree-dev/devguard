@@ -65,6 +65,8 @@ type CVE struct {
 
 	Vector string `json:"vector" gorm:"type:text;"`
 
+	ChatGPTDescription string `json:"chatGPTDescription" gorm:"type:text;"`
+
 	Risk     obj.RiskMetrics `json:"risk" gorm:"-"`
 	Exploits []*Exploit      `json:"exploits" gorm:"foreignKey:CVEID;"`
 }
