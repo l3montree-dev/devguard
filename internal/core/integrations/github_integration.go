@@ -16,19 +16,20 @@
 package integrations
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
 
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -37,9 +38,9 @@ type githubRepository struct {
 	GithubAppInstallationID int `json:"githubAppInstallationId"`
 }
 
-func (g githubRepository) toRepository() obj.Repository {
-	return obj.Repository{
-		ID:    fmt.Sprintf("github:%d:%d", g.GithubAppInstallationID, *g.ID),
+func (g githubRepository) toRepository() core.Repository {
+	return core.Repository{
+		ID:    fmt.Sprintf("github:%d:%s", g.GithubAppInstallationID, *g.FullName),
 		Label: *g.FullName,
 	}
 }
@@ -55,7 +56,7 @@ type githubIntegration struct {
 	githubAppInstallationRepository githubAppInstallationRepository
 }
 
-var _ thirdPartyIntegration = &githubIntegration{}
+var _ core.ThirdPartyIntegration = &githubIntegration{}
 
 var NoGithubAppInstallationError = fmt.Errorf("no github app installations found")
 
@@ -73,7 +74,7 @@ func (githubIntegration *githubIntegration) IntegrationEnabled(ctx core.Context)
 	return tenant.GithubAppInstallations != nil && len(tenant.GithubAppInstallations) > 0
 }
 
-func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) ([]obj.Repository, error) {
+func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	// check if we have integrations
 	if !githubIntegration.IntegrationEnabled(ctx) {
 		return nil, nil
@@ -81,7 +82,7 @@ func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) (
 
 	tenant := core.GetTenant(ctx)
 
-	repos := []obj.Repository{}
+	repos := []core.Repository{}
 	// check if a github integration exists on that org
 	if tenant.GithubAppInstallations != nil {
 		// get the github integration
@@ -96,13 +97,13 @@ func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) (
 			return nil, err
 		}
 
-		repos = append(repos, utils.Map(r, func(repo githubRepository) obj.Repository {
+		repos = append(repos, utils.Map(r, func(repo githubRepository) core.Repository {
 			return repo.toRepository()
 		})...)
 		return repos, nil
 	}
 
-	return []obj.Repository{}, nil
+	return []core.Repository{}, nil
 }
 
 func (githubIntegration *githubIntegration) WantsToHandleWebhook(ctx core.Context) bool {
@@ -208,4 +209,59 @@ func (githubIntegration *githubIntegration) FinishInstallation(ctx core.Context)
 	// update the installation with the webhook received time
 	// save the installation to the database
 	return ctx.JSON(200, "ok")
+}
+
+func installationIdFromRepositoryID(repositoryID string) int {
+	split := strings.Split(repositoryID, ":")
+	if len(split) != 3 {
+		return 0
+	}
+	installationID, err := strconv.Atoi(split[1])
+	if err != nil {
+		return 0
+	}
+	return installationID
+}
+
+func ownerAndRepoFromRepositoryID(repositoryID string) (string, string, error) {
+	split := strings.Split(repositoryID, ":")
+	if len(split) != 3 {
+		return "", "", fmt.Errorf("could not split repository id")
+	}
+
+	split = strings.Split(split[2], "/")
+	if len(split) != 2 {
+		return "", "", fmt.Errorf("could not split repository id")
+	}
+
+	return split[0], split[1], nil
+}
+
+func (g *githubIntegration) HandleEvent(event any) error {
+	switch event := event.(type) {
+	case core.FlawDetectedEvent:
+		if !strings.HasPrefix(event.RepositoryID, "github:") {
+			// this integration only handles github repositories.
+			return nil
+		}
+		// we create a new ticket in github
+		client, err := NewGithubClient(installationIdFromRepositoryID(event.RepositoryID))
+		if err != nil {
+			return err
+		}
+
+		// create a new issue
+		issue := &github.IssueRequest{
+			Title: github.String("Flaw detected"),
+			Body:  github.String("A flaw has been detected in your repository"),
+		}
+
+		owner, repo, err := ownerAndRepoFromRepositoryID(event.RepositoryID)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = client.Issues.Create(context.Background(), owner, repo, issue)
+	}
+	return nil
 }

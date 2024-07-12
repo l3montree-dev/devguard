@@ -38,14 +38,6 @@ type githubBatchClient struct {
 
 // groups multiple github client - since an org can have multiple installations
 func newGithubBatchClient(appInstallations []models.GithubAppInstallation) (*githubBatchClient, error) {
-	appId := os.Getenv("GITHUB_APP_ID")
-	if appId == "" {
-		panic("GITHUB_APP_ID is not set")
-	}
-	appIdInt, err := strconv.Atoi(appId)
-	if err != nil {
-		return nil, err
-	}
 
 	if len(appInstallations) == 0 {
 		slog.Error("no github app installations found")
@@ -54,21 +46,9 @@ func newGithubBatchClient(appInstallations []models.GithubAppInstallation) (*git
 
 	clients := make([]githubClient, 0)
 	for _, appInstallation := range appInstallations {
-		// Wrap the shared transport for use with the integration ID 1 authenticating with installation ID 99.
-		// itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, 923505, 52040746, "devguard.2024-06-20.private-key.pem")
-		// Or for endpoints that require JWT authentication
-		itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, int64(appIdInt), int64(appInstallation.InstallationID), os.Getenv("GITHUB_PRIVATE_KEY"))
+		client, _ := NewGithubClient(appInstallation.InstallationID)
 
-		if err != nil {
-			return nil, err
-		}
-
-		// Use installation transport with client.
-		client := github.NewClient(&http.Client{Transport: itr})
-		clients = append(clients, githubClient{
-			Client:                  client,
-			githubAppInstallationID: appInstallation.InstallationID,
-		})
+		clients = append(clients, client)
 	}
 
 	return &githubBatchClient{
@@ -96,4 +76,32 @@ func (githubOrgClient *githubBatchClient) ListRepositories() ([]githubRepository
 		return nil, err
 	}
 	return utils.Flat(results), nil
+}
+
+func NewGithubClient(installationID int) (githubClient, error) {
+	appId := os.Getenv("GITHUB_APP_ID")
+	if appId == "" {
+		panic("GITHUB_APP_ID is not set")
+	}
+	appIdInt, err := strconv.Atoi(appId)
+	if err != nil {
+		return githubClient{}, err
+	}
+
+	// Wrap the shared transport for use with the integration ID 1 authenticating with installation ID 99.
+	// itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, 923505, 52040746, "devguard.2024-06-20.private-key.pem")
+	// Or for endpoints that require JWT authentication
+	itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, int64(appIdInt), int64(installationID), os.Getenv("GITHUB_PRIVATE_KEY"))
+
+	if err != nil {
+		return githubClient{}, err
+	}
+
+	// Use installation transport with client.
+	client := github.NewClient(&http.Client{Transport: itr})
+
+	return githubClient{
+		Client:                  client,
+		githubAppInstallationID: installationID,
+	}, nil
 }

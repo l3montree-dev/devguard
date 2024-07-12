@@ -292,9 +292,17 @@ func Start(db core.DB) {
 
 	githubIntegration := integrations.NewGithubIntegration(db)
 
-	integrationController := integrations.NewIntegrationController(githubIntegration)
+	integrationController := integrations.NewIntegrationController()
 
 	apiV1Router := server.Group("/api/v1")
+
+	// this makes the third party integrations available to all controllers
+	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c core.Context) error {
+			core.SetThirdPartyIntegration(c, integrations.NewThirdPartyIntegrations(githubIntegration))
+			return next(c)
+		}
+	})
 
 	apiV1Router.POST("/webhook/", integrationController.HandleWebhook)
 	// apply the health route without any session or multi tenant middleware
@@ -316,6 +324,7 @@ func Start(db core.DB) {
 	cveRouter.GET("/:cveId/", vulndbController.Read)
 
 	orgRouter := sessionRouter.Group("/organizations")
+
 	orgRouter.POST("/", orgController.Create)
 	orgRouter.GET("/", orgController.List)
 

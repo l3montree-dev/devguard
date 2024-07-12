@@ -19,61 +19,41 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/obj"
-	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type integrationController struct {
-	integrations []thirdPartyIntegration
 }
 
-func NewIntegrationController(integrations ...thirdPartyIntegration) *integrationController {
-	return &integrationController{
-		integrations: integrations,
-	}
+func NewIntegrationController() *integrationController {
+	return &integrationController{}
 }
 
 func (c *integrationController) ListRepositories(ctx core.Context) error {
-	if !utils.Any(c.integrations, func(i thirdPartyIntegration) bool {
-		return i.IntegrationEnabled(ctx)
-	}) {
-		return ctx.JSON(404, []string{})
-	}
-
-	repos := []obj.Repository{}
-
-	for _, i := range c.integrations {
-		if i.IntegrationEnabled(ctx) {
-			r, err := i.ListRepositories(ctx)
-			if err != nil {
-				return err
-			}
-			repos = append(repos, r...)
-		}
+	ThirdPartyIntegration := core.GetThirdPartyIntegration(ctx).(core.ThirdPartyIntegration)
+	repos, err := ThirdPartyIntegration.ListRepositories(ctx)
+	if err != nil {
+		return err
 	}
 
 	return ctx.JSON(200, repos)
 }
 
 func (c *integrationController) FinishInstallation(ctx core.Context) error {
-	for _, i := range c.integrations {
-		if i.WantsToFinishInstallation(ctx) {
-			if err := i.FinishInstallation(ctx); err != nil {
-				slog.Error("could not finish installation", "err", err)
-			}
-		}
+
+	ThirdPartyIntegration := core.GetThirdPartyIntegration(ctx).(core.ThirdPartyIntegration)
+	if err := ThirdPartyIntegration.FinishInstallation(ctx); err != nil {
+		slog.Error("could not finish installation", "err", err)
+		return err
 	}
 
 	return ctx.JSON(200, "Installation finished")
 }
 
 func (c *integrationController) HandleWebhook(ctx core.Context) error {
-	for _, i := range c.integrations {
-		if i.WantsToHandleWebhook(ctx) {
-			if err := i.HandleWebhook(ctx); err != nil {
-				slog.Error("could not handle webhook", "err", err)
-			}
-		}
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx).(core.ThirdPartyIntegration)
+	if err := thirdPartyIntegration.HandleWebhook(ctx); err != nil {
+		slog.Error("could not handle webhook", "err", err)
+		return err
 	}
 
 	return ctx.JSON(200, "Webhook handled")

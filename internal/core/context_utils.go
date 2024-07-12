@@ -21,13 +21,20 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
-
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/ory/client-go"
 )
 
 type AuthSession interface {
 	GetUserID() string
+}
+
+func GetThirdPartyIntegration(c Context) any {
+	return c.Get("thirdPartyIntegration")
+}
+
+func SetThirdPartyIntegration(c Context, i any) {
+	c.Set("thirdPartyIntegration", i)
 }
 
 func GetFlawID(c Context) (string, error) {
