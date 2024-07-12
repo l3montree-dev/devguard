@@ -82,3 +82,16 @@ func CompareSlices[T any, K comparable](a, b []T, serializer func(T) K) CompareR
 
 	return res
 }
+
+func Any[T any](s []T, f func(T) bool) bool {
+	for _, v := range s {
+		if f(v) {
+			return true
+		}
+	}
+	return false
+}
+
+func Some[T any](s []T, f func(T) bool) bool {
+	return Any(s, f)
+}

@@ -16,35 +16,45 @@
 package integrations
 
 import (
-	"errors"
+	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 )
 
 type integrationController struct {
-	githubIntegration *githubIntegration
 }
 
-func NewIntegrationController(gh *githubIntegration) *integrationController {
-	return &integrationController{
-		githubIntegration: gh,
-	}
+func NewIntegrationController() *integrationController {
+	return &integrationController{}
 }
 
 func (c *integrationController) ListRepositories(ctx core.Context) error {
-	githubClient, err := c.githubIntegration.GetGithubOrgClientFromContext(ctx)
-
-	if err != nil {
-		if errors.Is(err, NoGithubAppInstallationError) {
-			return ctx.JSON(404, []string{})
-		}
-		return err
-	}
-
-	repos, err := githubClient.ListRepositories()
+	ThirdPartyIntegration := core.GetThirdPartyIntegration(ctx).(core.ThirdPartyIntegration)
+	repos, err := ThirdPartyIntegration.ListRepositories(ctx)
 	if err != nil {
 		return err
 	}
 
 	return ctx.JSON(200, repos)
+}
+
+func (c *integrationController) FinishInstallation(ctx core.Context) error {
+
+	ThirdPartyIntegration := core.GetThirdPartyIntegration(ctx).(core.ThirdPartyIntegration)
+	if err := ThirdPartyIntegration.FinishInstallation(ctx); err != nil {
+		slog.Error("could not finish installation", "err", err)
+		return err
+	}
+
+	return ctx.JSON(200, "Installation finished")
+}
+
+func (c *integrationController) HandleWebhook(ctx core.Context) error {
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx).(core.ThirdPartyIntegration)
+	if err := thirdPartyIntegration.HandleWebhook(ctx); err != nil {
+		slog.Error("could not handle webhook", "err", err)
+		return err
+	}
+
+	return ctx.JSON(200, "Webhook handled")
 }
