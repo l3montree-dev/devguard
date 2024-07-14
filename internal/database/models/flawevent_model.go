@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+
+	"github.com/l3montree-dev/devguard/internal/obj"
 )
 
 type FlawEventType string
@@ -67,6 +69,12 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 		flaw.State = FlawStateFixed
 	case EventTypeDetected:
 		flaw.State = FlawStateOpen
+		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
+		if !ok {
+			slog.Error("could not parse risk assessment", "flawId", e.FlawID)
+			return
+		}
+		flaw.RawRiskAssessment = &f
 	case EventTypeAccepted:
 		flaw.State = FlawStateAccepted
 	case EventTypeMarkedForMitigation:
@@ -76,9 +84,9 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 	case EventTypeMarkedForTransfer:
 		flaw.State = FlawStateMarkedForTransfer
 	case EventTypeRawRiskAssessmentUpdated:
-		f, ok := (e.GetArbitraryJsonData()["newRiskAssessment"]).(float64)
+		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
 		if !ok {
-			slog.Error("could not parse newRiskAssessment", "flawId", e.FlawID)
+			slog.Error("could not parse risk assessment", "flawId", e.FlawID)
 			return
 		}
 		flaw.RawRiskAssessment = &f
@@ -95,25 +103,26 @@ func NewFixedEvent(flawID string, userID string) FlawEvent {
 	}
 }
 
-func NewDetectedEvent(flawID string, userID string) FlawEvent {
-	return FlawEvent{
+func NewDetectedEvent(flawID string, userID string, riskCalculationReport obj.RiskCalculationReport) FlawEvent {
+	ev := FlawEvent{
 		Type:   EventTypeDetected,
 		FlawID: flawID,
 		UserID: userID,
 	}
+
+	ev.SetArbitraryJsonData(riskCalculationReport.Map())
+
+	return ev
 }
 
-func NewRawRiskAssessmentUpdatedEvent(flawID string, userID string, justification string, oldRiskAssessment float64, newRiskAssessment float64) FlawEvent {
+func NewRawRiskAssessmentUpdatedEvent(flawID string, userID string, justification string, report obj.RiskCalculationReport) FlawEvent {
 	event := FlawEvent{
 		Type:          EventTypeRawRiskAssessmentUpdated,
 		FlawID:        flawID,
 		UserID:        userID,
 		Justification: &justification,
 	}
-	event.SetArbitraryJsonData(map[string]any{
-		"oldRiskAssessment": oldRiskAssessment,
-		"newRiskAssessment": newRiskAssessment,
-	})
+	event.SetArbitraryJsonData(report.Map())
 	return event
 }
 

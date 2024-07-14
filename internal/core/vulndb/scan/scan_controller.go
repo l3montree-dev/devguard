@@ -105,7 +105,7 @@ func (s *httpController) Scan(c core.Context) error {
 		return c.JSON(500, map[string]string{"error": "could not scan file"})
 	}
 
-	scannerID := "github.com/l3montree-dev/devguard/cmd/flawfind"
+	scannerID := "github.com/l3montree-dev/devguard/cmd/devguard-scanner"
 
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}

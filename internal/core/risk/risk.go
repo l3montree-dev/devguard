@@ -11,12 +11,12 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
+
 	"github.com/l3montree-dev/devguard/internal/obj"
 )
 
-func RecalculateRawRisk(cve models.CVE, env core.Environmental) {}
-
-func RawRisk(cve models.CVE, env core.Environmental) *float64 {
+func RawRisk(cve models.CVE, env core.Environmental) obj.RiskCalculationReport {
 	e := core.SanitizeEnv(env)
 	r, _ := RiskCalculation(cve, e)
 	risk := r.WithEnvironmentAndThreatIntelligence
@@ -25,7 +25,25 @@ func RawRisk(cve models.CVE, env core.Environmental) *float64 {
 	tmp := risk * (epss + one)
 	// return the risk with 2 decimal places
 	tmp = float64(int(tmp*100)) / 100
-	return &tmp
+	return obj.RiskCalculationReport{
+		Risk: tmp,
+
+		EPSS:      *cve.EPSS,
+		BaseScore: float64(cve.CVSS),
+
+		UnderAttack:   cve.CISAActionDue != nil,
+		ExploitExists: len(cve.Exploits) > 0,
+		VerifiedExploitExists: utils.Any(
+			cve.Exploits,
+			func(e *models.Exploit) bool {
+				return e.Verified
+			},
+		),
+
+		ConfidentialityRequirement: e.ConfidentialityRequirements,
+		IntegrityRequirement:       e.IntegrityRequirements,
+		AvailabilityRequirement:    e.AvailabilityRequirements,
+	}
 }
 
 func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, string) {

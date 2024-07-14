@@ -91,7 +91,7 @@ func (r *flawRepository) GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]
 
 func (g flawRepository) Read(id string) (models.Flaw, error) {
 	var t models.Flaw
-	err := g.db.Preload("CVE.Weaknesses").Preload("Events").Preload("CVE").First(&t, "id = ?", id).Error
+	err := g.db.Preload("CVE.Weaknesses").Preload("Events").Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", id).Error
 
 	return t, err
 }

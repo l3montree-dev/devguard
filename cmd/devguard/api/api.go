@@ -255,7 +255,8 @@ func health(c echo.Context) error {
 }
 
 func Start(db core.DB) {
-	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS"))
+	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_PUBLIC"))
+	oryAdmin := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_ADMIN"))
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
 
 	if err != nil {
@@ -304,6 +305,14 @@ func Start(db core.DB) {
 		}
 	})
 
+	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c core.Context) error {
+			// set the ory admin client to the context
+			core.SetAuthAdminClient(c, oryAdmin)
+			return next(c)
+		}
+	})
+
 	apiV1Router.POST("/webhook/", integrationController.HandleWebhook)
 	// apply the health route without any session or multi tenant middleware
 	apiV1Router.GET("/health/", health)
@@ -333,6 +342,8 @@ func Start(db core.DB) {
 	tenantRouter.GET("/", orgController.Read, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 
 	tenantRouter.GET("/metrics/", orgController.Metrics)
+
+	tenantRouter.GET("/members/", orgController.Members)
 	tenantRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 	tenantRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 

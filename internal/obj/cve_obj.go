@@ -23,3 +23,32 @@ type RiskMetrics struct {
 }
 
 const CannotCalculateRisk float64 = 0
+
+type RiskCalculationReport struct {
+	EPSS                  float64 `json:"epss"`
+	BaseScore             float64 `json:"baseScore"`
+	ExploitExists         bool    `json:"exploitExists"`
+	VerifiedExploitExists bool    `json:"verifiedExploitExists"`
+	UnderAttack           bool    `json:"underAttack"`
+
+	// environment information
+	ConfidentialityRequirement string `json:"confidentialityRequirement"`
+	IntegrityRequirement       string `json:"integrityRequirement"`
+	AvailabilityRequirement    string `json:"availabilityRequirement"`
+
+	Risk float64 `json:"risk"`
+}
+
+func (r RiskCalculationReport) Map() map[string]any {
+	return map[string]any{
+		"epss":                       r.EPSS,
+		"baseScore":                  r.BaseScore,
+		"exploitExists":              r.ExploitExists,
+		"verifiedExploitExists":      r.VerifiedExploitExists,
+		"underAttack":                r.UnderAttack,
+		"confidentialityRequirement": r.ConfidentialityRequirement,
+		"integrityRequirement":       r.IntegrityRequirement,
+		"availabilityRequirement":    r.AvailabilityRequirement,
+		"risk":                       r.Risk,
+	}
+}
