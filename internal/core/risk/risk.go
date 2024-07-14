@@ -25,6 +25,9 @@ func RawRisk(cve models.CVE, env core.Environmental) obj.RiskCalculationReport {
 	tmp := risk * (epss + one)
 	// return the risk with 2 decimal places
 	tmp = float64(int(tmp*100)) / 100
+	// the risk might be in the range of 0.0 to 20.0
+	// crop that down to 0.0 to 10.0
+	tmp = tmp / 2
 	return obj.RiskCalculationReport{
 		Risk: tmp,
 
