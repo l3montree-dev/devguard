@@ -29,7 +29,7 @@ func NewIntegrationController() *integrationController {
 }
 
 func (c *integrationController) ListRepositories(ctx core.Context) error {
-	ThirdPartyIntegration := core.GetThirdPartyIntegration(ctx).(core.ThirdPartyIntegration)
+	ThirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	repos, err := ThirdPartyIntegration.ListRepositories(ctx)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (c *integrationController) ListRepositories(ctx core.Context) error {
 
 func (c *integrationController) FinishInstallation(ctx core.Context) error {
 
-	ThirdPartyIntegration := core.GetThirdPartyIntegration(ctx).(core.ThirdPartyIntegration)
+	ThirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	if err := ThirdPartyIntegration.FinishInstallation(ctx); err != nil {
 		slog.Error("could not finish installation", "err", err)
 		return err
@@ -50,7 +50,7 @@ func (c *integrationController) FinishInstallation(ctx core.Context) error {
 }
 
 func (c *integrationController) HandleWebhook(ctx core.Context) error {
-	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx).(core.ThirdPartyIntegration)
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	if err := thirdPartyIntegration.HandleWebhook(ctx); err != nil {
 		slog.Error("could not handle webhook", "err", err)
 		return err

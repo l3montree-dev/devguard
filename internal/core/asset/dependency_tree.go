@@ -61,15 +61,6 @@ func (tree *tree) addNode(source string, dep string) {
 	tree.cursors[source].Children = append(tree.cursors[source].Children, tree.cursors[dep])
 }
 
-func removeEdge(node *treeNode, childName string) {
-	for i, child := range node.Children {
-		if child.Name == childName {
-			node.Children = append(node.Children[:i], node.Children[i+1:]...)
-			return
-		}
-	}
-}
-
 // Helper function to detect and cut cycles
 func cutCycles(node *treeNode, visited map[*treeNode]bool) {
 	// Mark the current node as visited
