@@ -168,6 +168,7 @@ func convertToDetailedDTO(flaw models.Flaw) detailedFlawDTO {
 			ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
 			LastDetected:       flaw.LastDetected,
 			CreatedAt:          flaw.CreatedAt,
+			ScannerID:          flaw.ScannerID,
 		},
 		Events: utils.Map(flaw.Events, func(ev models.FlawEvent) FlawEventDTO {
 			return FlawEventDTO{
