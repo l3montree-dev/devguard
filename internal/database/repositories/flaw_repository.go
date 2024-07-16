@@ -95,3 +95,16 @@ func (g flawRepository) Read(id string) (models.Flaw, error) {
 
 	return t, err
 }
+
+func (r *flawRepository) GetFlawsByPurlOrCpe(tx core.DB, purlOrCpe []string) ([]models.Flaw, error) {
+
+	var flaws []models.Flaw = []models.Flaw{}
+	if len(purlOrCpe) == 0 {
+		return flaws, nil
+	}
+
+	if err := r.Repository.GetDB(tx).Where("component_purl_or_cpe IN (?)", purlOrCpe).Find(&flaws).Error; err != nil {
+		return nil, err
+	}
+	return flaws, nil
+}

@@ -36,6 +36,8 @@ type flawRepository interface {
 
 	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 	SaveBatch(db core.DB, flaws []models.Flaw) error
+
+	GetFlawsByPurlOrCpe(tx core.DB, purlOrCpe []string) ([]models.Flaw, error)
 }
 
 type componentRepository interface {
