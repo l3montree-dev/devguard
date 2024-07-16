@@ -16,7 +16,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/obj"
 )
 
-func RawRisk(cve models.CVE, env core.Environmental) obj.RiskCalculationReport {
+func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int) obj.RiskCalculationReport {
 	e := core.SanitizeEnv(env)
 	r, _ := RiskCalculation(cve, e)
 	risk := r.WithEnvironmentAndThreatIntelligence
@@ -28,6 +28,10 @@ func RawRisk(cve models.CVE, env core.Environmental) obj.RiskCalculationReport {
 	// the risk might be in the range of 0.0 to 20.0
 	// crop that down to 0.0 to 10.0
 	tmp = tmp / 2
+	// use the affectedComponent depth to further decrease the risk, if its deep inside the dependency tree
+	tmp = tmp / float64(affectedComponentDepth)
+	// round to 2 decimal places
+	tmp = float64(int(tmp*100)) / 100
 	return obj.RiskCalculationReport{
 		Risk: tmp,
 

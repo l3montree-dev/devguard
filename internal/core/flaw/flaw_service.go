@@ -97,7 +97,7 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 	}
 
 	for i, flaw := range flaws {
-		riskReport := risk.RawRisk(*flaw.CVE, e)
+		riskReport := risk.RawRisk(*flaw.CVE, e, flaw.GetComponentDepth())
 
 		ev := models.NewDetectedEvent(flaw.CalculateHash(), userID, riskReport)
 		// apply the event on the flaw
@@ -175,7 +175,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 		}
 
 		oldRiskAssessment := flaw.RawRiskAssessment
-		newRiskAssessment := risk.RawRisk(cve, env)
+		newRiskAssessment := risk.RawRisk(cve, env, flaw.GetComponentDepth())
 
 		if *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(flaw.CalculateHash(), userID, justification, newRiskAssessment)

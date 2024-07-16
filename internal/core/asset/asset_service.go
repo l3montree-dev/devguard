@@ -84,6 +84,10 @@ func (s *service) HandleScanResult(userID string, scannerID string, asset models
 		slog.Error("could not get existing flaws", "err", err)
 		return 0, 0, []models.Flaw{}, err
 	}
+	// remove all fixed flaws from the existing flaws
+	existingFlaws = utils.Filter(existingFlaws, func(flaw models.Flaw) bool {
+		return flaw.State != models.FlawStateFixed
+	})
 
 	comparison := utils.CompareSlices(existingFlaws, flaws, func(flaw models.Flaw) string {
 		return flaw.CalculateHash()
@@ -98,7 +102,12 @@ func (s *service) HandleScanResult(userID string, scannerID string, asset models
 			// this will cancel the transaction
 			return err
 		}
-		return s.flawService.UserFixedFlaws(tx, userID, fixedFlaws)
+		return s.flawService.UserFixedFlaws(tx, userID, utils.Filter(
+			fixedFlaws,
+			func(flaw models.Flaw) bool {
+				return flaw.State == models.FlawStateOpen
+			},
+		))
 	}); err != nil {
 		slog.Error("could not save flaws", "err", err)
 		return 0, 0, []models.Flaw{}, err
