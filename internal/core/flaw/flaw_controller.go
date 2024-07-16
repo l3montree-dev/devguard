@@ -111,36 +111,7 @@ func (c flawHttpController) Read(ctx core.Context) error {
 	flaw.CVE.Risk = risk
 	flaw.CVE.Vector = vector
 
-	return ctx.JSON(200, detailedFlawDTO{
-		FlawDTO: FlawDTO{
-			ID:                 flaw.ID,
-			Message:            flaw.Message,
-			AssetID:            flaw.AssetID.String(),
-			State:              flaw.State,
-			CVE:                flaw.CVE,
-			Component:          flaw.Component,
-			CVEID:              flaw.CVEID,
-			ComponentPurlOrCpe: flaw.ComponentPurlOrCpe,
-			Effort:             flaw.Effort,
-			RiskAssessment:     flaw.RiskAssessment,
-			RawRiskAssessment:  flaw.RawRiskAssessment,
-			Priority:           flaw.Priority,
-			ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
-			LastDetected:       flaw.LastDetected,
-			CreatedAt:          flaw.CreatedAt,
-		},
-		Events: utils.Map(flaw.Events, func(ev models.FlawEvent) FlawEventDTO {
-			return FlawEventDTO{
-				ID:                ev.ID,
-				Type:              ev.Type,
-				FlawID:            ev.FlawID,
-				UserID:            ev.UserID,
-				Justification:     ev.Justification,
-				ArbitraryJsonData: ev.GetArbitraryJsonData(),
-				CreatedAt:         ev.CreatedAt,
-			}
-		}),
-	})
+	return ctx.JSON(200, convertToDetailedDTO(flaw))
 }
 
 func (c flawHttpController) CreateEvent(ctx core.Context) error {
@@ -176,5 +147,38 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not create flaw event").WithInternal(err)
 	}
 
-	return ctx.JSON(200, flaw)
+	return ctx.JSON(200, convertToDetailedDTO(flaw))
+}
+
+func convertToDetailedDTO(flaw models.Flaw) detailedFlawDTO {
+	return detailedFlawDTO{
+		FlawDTO: FlawDTO{
+			ID:                 flaw.ID,
+			Message:            flaw.Message,
+			AssetID:            flaw.AssetID.String(),
+			State:              flaw.State,
+			CVE:                flaw.CVE,
+			Component:          flaw.Component,
+			CVEID:              flaw.CVEID,
+			ComponentPurlOrCpe: flaw.ComponentPurlOrCpe,
+			Effort:             flaw.Effort,
+			RiskAssessment:     flaw.RiskAssessment,
+			RawRiskAssessment:  flaw.RawRiskAssessment,
+			Priority:           flaw.Priority,
+			ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
+			LastDetected:       flaw.LastDetected,
+			CreatedAt:          flaw.CreatedAt,
+		},
+		Events: utils.Map(flaw.Events, func(ev models.FlawEvent) FlawEventDTO {
+			return FlawEventDTO{
+				ID:                ev.ID,
+				Type:              ev.Type,
+				FlawID:            ev.FlawID,
+				UserID:            ev.UserID,
+				Justification:     ev.Justification,
+				ArbitraryJsonData: ev.GetArbitraryJsonData(),
+				CreatedAt:         ev.CreatedAt,
+			}
+		}),
+	}
 }

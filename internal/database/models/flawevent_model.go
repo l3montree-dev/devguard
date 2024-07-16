@@ -13,6 +13,7 @@ type FlawEventType string
 const (
 	EventTypeDetected FlawEventType = "detected"
 	EventTypeFixed    FlawEventType = "fixed"
+	EventTypeReopened FlawEventType = "reopened"
 
 	//EventTypeRiskAssessmentUpdated FlawEventType = "riskAssessmentUpdated"
 	EventTypeAccepted            FlawEventType = "accepted"
@@ -67,6 +68,8 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 	switch e.Type {
 	case EventTypeFixed:
 		flaw.State = FlawStateFixed
+	case EventTypeReopened:
+		flaw.State = FlawStateOpen
 	case EventTypeDetected:
 		flaw.State = FlawStateOpen
 		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
@@ -133,6 +136,8 @@ func CheckStatusType(statusType string) error {
 	case "detected":
 		return nil
 	case "accepted":
+		return nil
+	case "reopened":
 		return nil
 	case "markedForMitigation":
 		return nil
