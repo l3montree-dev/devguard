@@ -23,6 +23,7 @@ import (
 	"log"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -34,9 +35,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -199,6 +203,17 @@ func init() {
 				slog.Error("could not get api url", "err", err)
 				return
 			}
+			failOnRisk, err := cmd.Flags().GetString("fail-on-risk")
+			if err != nil {
+				slog.Error("could not get fail-on-risk", "err", err)
+				return
+			}
+
+			webUI, err := cmd.Flags().GetString("webUI")
+			if err != nil {
+				slog.Error("could not get webUI", "err", err)
+				return
+			}
 
 			err = core.LoadConfig()
 			if err != nil {
@@ -315,12 +330,57 @@ func init() {
 				return
 			}
 
-			for _, f := range scanResponse.Flaws {
-				slog.Info("flaw found", "cve", f.CVEID, "package", f.ArbitraryJsonData["packageName"], "risk", *f.RawRiskAssessment, "introduced", f.ArbitraryJsonData["introducedVersion"], "installed", f.ArbitraryJsonData["installedVersion"], "fixed", f.ArbitraryJsonData["fixedVersion"])
+			// order the flaws by their risk
+			slices.SortFunc(scanResponse.Flaws, func(a, b flaw.FlawDTO) int {
+				return int(*(a.RawRiskAssessment)*100) - int(*b.RawRiskAssessment*100)
+			})
+
+			// get the max risk
+			maxRisk := scanResponse.Flaws[len(scanResponse.Flaws)-1].RawRiskAssessment
+
+			tw := table.NewWriter()
+			tw.AppendHeader(table.Row{"CVE", "Package", "Risk", "Introduced", "Installed", "Fixed", "URL"})
+			tw.AppendRows(utils.Map(
+				scanResponse.Flaws,
+				func(f flaw.FlawDTO) table.Row {
+					cleanPkgName := strings.ReplaceAll(f.ArbitraryJsonData["packageName"].(string), "pkg:", "")
+					// remove the ecosystem from the package name
+					// pkg:ecosystem/package -> package
+					// pkg:ecosystem/package@version -> package
+					cleanPkgName = strings.Join(strings.Split(cleanPkgName, "/")[1:], "/")
+
+					clickableLink := fmt.Sprintf("\033]8;;%s/%s/flaws/%s\033\\View in Web UI\033]8;;\033\\", webUI, assetName, f.ID)
+					return table.Row{f.CVEID, cleanPkgName, *f.RawRiskAssessment, f.ArbitraryJsonData["introducedVersion"], f.ArbitraryJsonData["installedVersion"], f.ArbitraryJsonData["fixedVersion"], clickableLink}
+				},
+			))
+
+			fmt.Println(tw.Render())
+
+			switch failOnRisk {
+			case "low":
+				if *maxRisk > 0.1 {
+					os.Exit(1)
+				}
+			case "medium":
+				if *maxRisk >= 4 {
+					os.Exit(1)
+				}
+
+			case "high":
+				if *maxRisk >= 7 {
+					os.Exit(1)
+				}
+
+			case "critical":
+				if *maxRisk >= 9 {
+					os.Exit(1)
+				}
 			}
 		},
 	}
 	scaCommand.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
+	scaCommand.Flags().String("fail-on-risk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
+	scaCommand.Flags().String("webUI", "http://localhost:3000", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")
 
 	rootCmd.AddCommand(scaCommand)
 }
