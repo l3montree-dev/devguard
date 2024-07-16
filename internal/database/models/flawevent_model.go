@@ -22,6 +22,8 @@ const (
 	EventTypeMarkedForTransfer   FlawEventType = "markedForTransfer"
 
 	EventTypeRawRiskAssessmentUpdated FlawEventType = "rawRiskAssessmentUpdated"
+
+	EventTypeComment FlawEventType = "comment"
 )
 
 type FlawEvent struct {
@@ -132,6 +134,8 @@ func NewRawRiskAssessmentUpdatedEvent(flawID string, userID string, justificatio
 func CheckStatusType(statusType string) error {
 	switch statusType {
 	case "fixed":
+		return nil
+	case "comment":
 		return nil
 	case "detected":
 		return nil
