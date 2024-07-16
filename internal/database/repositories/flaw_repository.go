@@ -37,7 +37,7 @@ func (r *flawRepository) GetByAssetId(
 
 func (r *flawRepository) ListByScanner(assetID uuid.UUID, scannerID string) ([]models.Flaw, error) {
 	var flaws []models.Flaw = []models.Flaw{}
-	if err := r.Repository.GetDB(r.db).Where("asset_id = ? AND scanner_id = ?", assetID, scannerID).Find(&flaws).Error; err != nil {
+	if err := r.Repository.GetDB(r.db).Preload("CVE").Where("asset_id = ? AND scanner_id = ?", assetID, scannerID).Find(&flaws).Error; err != nil {
 		return nil, err
 	}
 	return flaws, nil

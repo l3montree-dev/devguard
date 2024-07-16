@@ -77,12 +77,12 @@ func NewService(assetRepository assetRepository, componentRepository componentRe
 	}
 }
 
-func (s *service) HandleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw) (int, int, error) {
+func (s *service) HandleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw) (int, int, []models.Flaw, error) {
 	// get all existing flaws from the database - this is the old state
 	existingFlaws, err := s.flawRepository.ListByScanner(asset.GetID(), scannerID)
 	if err != nil {
 		slog.Error("could not get existing flaws", "err", err)
-		return 0, 0, err
+		return 0, 0, []models.Flaw{}, err
 	}
 
 	comparison := utils.CompareSlices(existingFlaws, flaws, func(flaw models.Flaw) string {
@@ -101,13 +101,13 @@ func (s *service) HandleScanResult(userID string, scannerID string, asset models
 		return s.flawService.UserFixedFlaws(tx, userID, fixedFlaws)
 	}); err != nil {
 		slog.Error("could not save flaws", "err", err)
-		return 0, 0, err
+		return 0, 0, []models.Flaw{}, err
 	}
 	// the amount we actually fixed, is the amount that was open before
 	fixedFlaws = utils.Filter(fixedFlaws, func(flaw models.Flaw) bool {
 		return flaw.State == models.FlawStateOpen
 	})
-	return len(newFlaws), len(fixedFlaws), nil
+	return len(newFlaws), len(fixedFlaws), append(newFlaws, comparison.InBoth...), nil
 }
 
 type DepsDevResponse struct {
@@ -227,13 +227,13 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 		// get the flaws
 		flaws, err := s.flawRepository.GetAllFlawsByAssetID(tx, asset.GetID())
 		if err != nil {
-			slog.Info("Error getting flaws: %v", err)
+			slog.Info("error getting flaws", "err", err)
 			return fmt.Errorf("could not get flaws: %v", err)
 		}
 
 		err = s.flawService.RecalculateRawRiskAssessment(tx, responsible, flaws, justification, asset)
 		if err != nil {
-			slog.Info("Error updating raw risk assessment: %v", err)
+			slog.Info("error updating raw risk assessment", "err", err)
 			return fmt.Errorf("could not update raw risk assessment: %v", err)
 		}
 

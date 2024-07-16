@@ -16,8 +16,6 @@
 package asset
 
 import (
-	"slices"
-
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -85,12 +83,20 @@ func cutCycles(node *treeNode, visited map[*treeNode]bool) {
 	delete(visited, node)
 }
 
-func buildDependencyTree(elements []models.ComponentDependency) tree {
-	// sort by depth
-	slices.SortStableFunc(elements, func(a, b models.ComponentDependency) int {
-		return a.Depth - b.Depth
-	})
+func CalculateDepth(node *treeNode, currentDepth int, depthMap map[string]int) {
 
+	if _, ok := depthMap[node.Name]; !ok {
+		depthMap[node.Name] = currentDepth
+	} else if depthMap[node.Name] > currentDepth {
+		// use the shortest path
+		depthMap[node.Name] = currentDepth
+	}
+	for _, child := range node.Children {
+		CalculateDepth(child, currentDepth+1, depthMap)
+	}
+}
+
+func BuildDependencyTree(elements []models.ComponentDependency) tree {
 	// create a new tree
 	tree := tree{
 		Root:           &treeNode{Name: "root"},

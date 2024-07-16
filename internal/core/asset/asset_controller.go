@@ -164,7 +164,7 @@ func (a *httpController) DependencyGraph(c core.Context) error {
 		return err
 	}
 
-	tree := buildDependencyTree(components)
+	tree := BuildDependencyTree(components)
 	if tree.Root.Children == nil {
 		tree.Root.Children = make([]*treeNode, 0)
 	}

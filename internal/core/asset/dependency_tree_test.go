@@ -32,7 +32,7 @@ func TestDependencyTree(t *testing.T) {
 			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "f", Depth: 3},
 			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "g", Depth: 3},
 		}
-		tree := buildDependencyTree(graph)
+		tree := BuildDependencyTree(graph)
 
 		// expect root node to be created with a single child: a
 		if len(tree.Root.Children) != 1 {
@@ -72,7 +72,7 @@ func TestDependencyTree(t *testing.T) {
 			{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "c", Depth: 2},
 			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "b", Depth: 2}, // closes the cycle
 		}
-		tree := buildDependencyTree(graph)
+		tree := BuildDependencyTree(graph)
 
 		// expect root node to be created with a single child: a
 		if len(tree.Root.Children) != 1 {

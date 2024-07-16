@@ -316,7 +316,7 @@ func init() {
 			}
 
 			for _, f := range scanResponse.Flaws {
-				slog.Info("flaw found", "cve", f.CVEID, "package", f.ArbitraryJsonData["packageName"], "severity", f.CVE.Severity, "introduced", f.ArbitraryJsonData["introducedVersion"], "fixed", f.ArbitraryJsonData["fixedVersion"])
+				slog.Info("flaw found", "cve", f.CVEID, "package", f.ArbitraryJsonData["packageName"], "risk", *f.RawRiskAssessment, "introduced", f.ArbitraryJsonData["introducedVersion"], "installed", f.ArbitraryJsonData["installedVersion"], "fixed", f.ArbitraryJsonData["fixedVersion"])
 			}
 		},
 	}
