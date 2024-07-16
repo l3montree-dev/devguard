@@ -67,6 +67,7 @@ type VulnInPackage struct {
 	IntroducedVersion *string
 	PackageName       string
 	PurlWithVersion   string
+	InstalledVersion  string
 }
 
 func (v VulnInPackage) GetIntroducedVersion() string {

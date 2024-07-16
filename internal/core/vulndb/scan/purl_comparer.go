@@ -101,6 +101,7 @@ func (comparer *purlComparer) GetVulns(purl string) ([]models.VulnInPackage, err
 				PackageName:       affectedComponent.PURL,
 				PurlWithVersion:   purl,
 				CVE:               cve,
+				InstalledVersion:  version,
 			})
 		}
 	}

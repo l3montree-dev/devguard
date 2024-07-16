@@ -133,6 +133,7 @@ func (s *httpController) Scan(c core.Context) error {
 			"fixedVersion":      v.GetFixedVersion(),
 			"packageName":       v.PackageName,
 			"cveId":             v.CVEID,
+			"installedVersion":  v.InstalledVersion,
 		})
 		flaws = append(flaws, flaw)
 	}
