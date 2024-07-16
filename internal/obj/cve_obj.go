@@ -37,6 +37,8 @@ type RiskCalculationReport struct {
 	AvailabilityRequirement    string `json:"availabilityRequirement"`
 
 	Risk float64 `json:"risk"`
+
+	Vector string `json:"vector"`
 }
 
 func (r RiskCalculationReport) Map() map[string]any {
@@ -50,5 +52,6 @@ func (r RiskCalculationReport) Map() map[string]any {
 		"integrityRequirement":       r.IntegrityRequirement,
 		"availabilityRequirement":    r.AvailabilityRequirement,
 		"risk":                       r.Risk,
+		"vector":                     r.Vector,
 	}
 }

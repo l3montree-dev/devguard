@@ -18,7 +18,7 @@ import (
 
 func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int) obj.RiskCalculationReport {
 	e := core.SanitizeEnv(env)
-	r, _ := RiskCalculation(cve, e)
+	r, vector := RiskCalculation(cve, e)
 	risk := r.WithEnvironmentAndThreatIntelligence
 	one := float64(1)
 	epss := float64(*cve.EPSS)
@@ -50,6 +50,8 @@ func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int)
 		ConfidentialityRequirement: e.ConfidentialityRequirements,
 		IntegrityRequirement:       e.IntegrityRequirements,
 		AvailabilityRequirement:    e.AvailabilityRequirements,
+
+		Vector: vector,
 	}
 }
 
@@ -112,7 +114,12 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 		}
 		// build up the temporal score
 		// if all affected components have a fixed version, we set it to official fix
-		if len(cve.AffectedComponents) > 0 {
+
+		/**
+		Currently this is disabled.
+		It does not make any sense, to reduce the risk score, if the affected components have an official fix available.
+		Actually those components should be updated to the fixed version first. Low hanging fruits.
+		/*if len(cve.AffectedComponents) > 0 {
 			officialFix := true
 			for _, component := range cve.AffectedComponents {
 				if component.SemverFixed == nil {
@@ -125,7 +132,7 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 			} else {
 				cvss.Set("RL", "U") // nolint:errcheck
 			}
-		}
+		}*/
 
 		cvss.Set("E", "U")  // nolint:errcheck
 		cvss.Set("RC", "C") // nolint:errcheck
