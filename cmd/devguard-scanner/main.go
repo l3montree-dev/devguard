@@ -166,20 +166,34 @@ func getCurrentVersion(path string) (string, int, error) {
 
 func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
-	rootCmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-	rootCmd.PersistentFlags().String("apiUrl", "https://api.devguard.dev", "The url of the API to send the scan request to")
 
-	err := rootCmd.MarkPersistentFlagRequired("assetName")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		os.Exit(1)
+	healthCheckCommand := &cobra.Command{
+		Use:   "health",
+		Short: "Check the health of the scanner",
+		Long:  `Check if all dependencies are installed for the scanner to function`,
+		Args:  cobra.ExactArgs(0),
+		Run: func(cmd *cobra.Command, args []string) {
+			// execute cdxgen and git help commands. If they throw an error, print it to the console
+			// if they don't, print a success message
+
+			for _, command := range []string{"cdxgen", "git"} {
+				cmd := exec.Command(command, "--help")
+				// get the output
+				var out bytes.Buffer
+				cmd.Stdout = &out
+
+				err := cmd.Run()
+				if err != nil {
+					slog.Error("could not execute command", "command", command, "err", err)
+					return
+				}
+				// read the output
+				slog.Info("command executed successfully", "command", command)
+			}
+		},
 	}
-	err = rootCmd.MarkPersistentFlagRequired("token")
-	if err != nil {
-		slog.Error("could not mark flag as required", "err", err)
-		os.Exit(1)
-	}
+
+	rootCmd.AddCommand(healthCheckCommand)
 
 	scaCommand := &cobra.Command{
 		Use:   "sca",
@@ -277,14 +291,13 @@ func init() {
 				slog.Error("could not open file", "err", err)
 				return
 			}
-			defer func() {
+			removeFile := func() {
 				// remove the file after the scan
 				err := os.Remove(file.Name())
 				if err != nil {
 					slog.Error("could not remove file", "err", err)
 				}
-
-			}()
+			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -309,6 +322,7 @@ func init() {
 				slog.Error("could not send request", "err", err)
 				return
 			}
+			removeFile()
 
 			if resp.StatusCode != http.StatusOK {
 				slog.Error("could not scan file", "status", resp.Status)
@@ -389,6 +403,21 @@ func init() {
 			}
 		},
 	}
+	scaCommand.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
+	scaCommand.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
+	scaCommand.PersistentFlags().String("apiUrl", "https://api.devguard.dev", "The url of the API to send the scan request to")
+
+	err := scaCommand.MarkPersistentFlagRequired("assetName")
+	if err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+		os.Exit(1)
+	}
+	err = scaCommand.MarkPersistentFlagRequired("token")
+	if err != nil {
+		slog.Error("could not mark flag as required", "err", err)
+		os.Exit(1)
+	}
+
 	scaCommand.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	scaCommand.Flags().String("fail-on-risk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	scaCommand.Flags().String("webUI", "http://localhost:3000", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")

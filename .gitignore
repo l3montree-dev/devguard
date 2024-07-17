@@ -11,3 +11,4 @@ datascience.ipynb
 bom.xml
 .kratos/kratos.yml
 *.private-key.pem
+node_modules
