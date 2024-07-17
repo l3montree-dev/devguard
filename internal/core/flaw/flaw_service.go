@@ -44,7 +44,7 @@ type flawEventRepository interface {
 	Save(db core.DB, event *models.FlawEvent) error
 }
 type cveRepository interface {
-	FindCVE(tx database.DB, cveId string) (any, error)
+	FindCVE(tx database.DB, cveId string) (models.CVE, error)
 }
 type service struct {
 	flawRepository      flawRepository
@@ -90,19 +90,19 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 	}
 	// create a new flawevent for each detected flaw
 	events := make([]models.FlawEvent, len(flaws))
+	e := core.Environmental{
+		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
+		IntegrityRequirements:       string(asset.IntegrityRequirement),
+		AvailabilityRequirements:    string(asset.AvailabilityRequirement),
+	}
+
 	for i, flaw := range flaws {
-		ev := models.NewDetectedEvent(flaw.CalculateHash(), userID)
+		riskReport := risk.RawRisk(*flaw.CVE, e, flaw.GetComponentDepth())
+
+		ev := models.NewDetectedEvent(flaw.CalculateHash(), userID, riskReport)
 		// apply the event on the flaw
 		ev.Apply(&flaws[i])
 		events[i] = ev
-
-		e := core.Environmental{
-			ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
-			IntegrityRequirements:       string(asset.IntegrityRequirement),
-			AvailabilityRequirements:    string(asset.AvailabilityRequirement),
-		}
-
-		flaws[i].RawRiskAssessment = risk.RawRisk(*flaw.CVE, e)
 	}
 
 	// run the updates in the transaction to keep a valid state
@@ -170,21 +170,20 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 		cviID := flaw.CVEID
 		cve, err := s.cveRepository.FindCVE(nil, cviID)
 		if err != nil {
-			slog.Info("Error getting CVE: %v", err)
+			slog.Info("error getting cve", "err", err)
 			continue
 		}
 
-		cve2 := cve.(models.CVE)
 		oldRiskAssessment := flaw.RawRiskAssessment
-		newRiskAssessment := risk.RawRisk(cve2, env)
+		newRiskAssessment := risk.RawRisk(cve, env, flaw.GetComponentDepth())
 
-		if *oldRiskAssessment != *newRiskAssessment {
-			ev := models.NewRawRiskAssessmentUpdatedEvent(flaw.CalculateHash(), userID, justification, *oldRiskAssessment, *newRiskAssessment)
+		if *oldRiskAssessment != newRiskAssessment.Risk {
+			ev := models.NewRawRiskAssessmentUpdatedEvent(flaw.CalculateHash(), userID, justification, newRiskAssessment)
 			// apply the event on the flaw
 			ev.Apply(&flaws[i])
 			events = append(events, ev)
 
-			slog.Info("Recalculated raw risk assessment", "cve:", cve2.CVE)
+			slog.Info("recalculated raw risk assessment", "cve", cve.CVE)
 		}
 
 	}

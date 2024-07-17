@@ -60,23 +60,23 @@ func CompareSlices[T any, K comparable](a, b []T, serializer func(T) K) CompareR
 	inA := make(map[K]bool)
 	inB := make(map[K]bool)
 
-	for _, v := range a {
-		inA[serializer(v)] = true
-	}
-
 	for _, v := range b {
 		inB[serializer(v)] = true
+	}
 
-		if _, ok := inA[serializer(v)]; ok {
+	for _, v := range a {
+		inA[serializer(v)] = true
+
+		if _, ok := inB[serializer(v)]; ok {
 			res.InBoth = append(res.InBoth, v)
 		} else {
-			res.OnlyInB = append(res.OnlyInB, v)
+			res.OnlyInA = append(res.OnlyInB, v)
 		}
 	}
 
-	for _, v := range a {
-		if _, ok := inB[serializer(v)]; !ok {
-			res.OnlyInA = append(res.OnlyInA, v)
+	for _, v := range b {
+		if _, ok := inA[serializer(v)]; !ok {
+			res.OnlyInB = append(res.OnlyInA, v)
 		}
 	}
 

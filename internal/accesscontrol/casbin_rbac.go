@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	gormadapter "github.com/casbin/gorm-adapter/v3"
+	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/casbin/casbin/v2"
 	"gorm.io/gorm"
@@ -56,6 +57,18 @@ func (c *casbinRBAC) GetOwnerOfOrganization(orgID string) (string, error) {
 		return "", fmt.Errorf("more than one owner found for organization")
 	}
 	return strings.TrimPrefix(listOfUsers[0], "user::"), nil
+}
+
+func (c *casbinRBAC) GetAllMembersOfOrganization(orgID string) ([]string, error) {
+	users, err := c.enforcer.GetAllUsersByDomain("domain::" + orgID)
+	if err != nil {
+		return nil, err
+	}
+	return utils.Map(utils.Filter(users, func(u string) bool {
+		return strings.HasPrefix(u, "user::")
+	}), func(u string) string {
+		return strings.TrimPrefix(u, "user::")
+	}), nil
 }
 
 func (c *casbinRBAC) HasAccess(user string) bool {

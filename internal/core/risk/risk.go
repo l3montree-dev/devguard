@@ -11,21 +11,48 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
+
 	"github.com/l3montree-dev/devguard/internal/obj"
 )
 
-func RecalculateRawRisk(cve models.CVE, env core.Environmental) {}
-
-func RawRisk(cve models.CVE, env core.Environmental) *float64 {
+func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int) obj.RiskCalculationReport {
 	e := core.SanitizeEnv(env)
-	r, _ := RiskCalculation(cve, e)
+	r, vector := RiskCalculation(cve, e)
 	risk := r.WithEnvironmentAndThreatIntelligence
 	one := float64(1)
 	epss := float64(*cve.EPSS)
 	tmp := risk * (epss + one)
 	// return the risk with 2 decimal places
 	tmp = float64(int(tmp*100)) / 100
-	return &tmp
+	// the risk might be in the range of 0.0 to 20.0
+	// crop that down to 0.0 to 10.0
+	tmp = tmp / 2
+	// use the affectedComponent depth to further decrease the risk, if its deep inside the dependency tree
+	tmp = tmp / float64(affectedComponentDepth)
+	// round to 2 decimal places
+	tmp = float64(int(tmp*100)) / 100
+	return obj.RiskCalculationReport{
+		Risk: tmp,
+
+		EPSS:      *cve.EPSS,
+		BaseScore: float64(cve.CVSS),
+
+		UnderAttack:   cve.CISAActionDue != nil,
+		ExploitExists: len(cve.Exploits) > 0,
+		VerifiedExploitExists: utils.Any(
+			cve.Exploits,
+			func(e *models.Exploit) bool {
+				return e.Verified
+			},
+		),
+
+		ConfidentialityRequirement: e.ConfidentialityRequirements,
+		IntegrityRequirement:       e.IntegrityRequirements,
+		AvailabilityRequirement:    e.AvailabilityRequirements,
+
+		Vector: vector,
+	}
 }
 
 func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, string) {
@@ -87,7 +114,12 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 		}
 		// build up the temporal score
 		// if all affected components have a fixed version, we set it to official fix
-		if len(cve.AffectedComponents) > 0 {
+
+		/**
+		Currently this is disabled.
+		It does not make any sense, to reduce the risk score, if the affected components have an official fix available.
+		Actually those components should be updated to the fixed version first. Low hanging fruits.
+		/*if len(cve.AffectedComponents) > 0 {
 			officialFix := true
 			for _, component := range cve.AffectedComponents {
 				if component.SemverFixed == nil {
@@ -100,7 +132,7 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 			} else {
 				cvss.Set("RL", "U") // nolint:errcheck
 			}
-		}
+		}*/
 
 		cvss.Set("E", "U")  // nolint:errcheck
 		cvss.Set("RC", "C") // nolint:errcheck
@@ -173,9 +205,9 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
 			return obj.RiskMetrics{}, vector
 		}
-		cvss.Set("RL", "ND") // nolint:errcheck
+		// cvss.Set("RL", "ND") // nolint:errcheck
 
-		if len(cve.AffectedComponents) > 0 {
+		/*if len(cve.AffectedComponents) > 0 {
 			officialFix := true
 			for _, component := range cve.AffectedComponents {
 				if component.SemverFixed == nil {
@@ -188,7 +220,7 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 			} else {
 				cvss.Set("RL", "U") // nolint:errcheck
 			}
-		}
+		}*/
 
 		cvss.Set("RC", "C") // nolint:errcheck
 		cvss.Set("E", "U")  // nolint:errcheck

@@ -47,3 +47,18 @@ func (c createRequest) toModel() models.Org {
 		Slug:                   slug.Make(c.Name),
 	}
 }
+
+type name struct {
+	First string `json:"first"`
+	Last  string `json:"last"`
+}
+
+type orgMember struct {
+	ID   string `json:"id"`
+	Name name   `json:"name"`
+}
+
+type orgDetails struct {
+	models.Org
+	Members []orgMember `json:"members"`
+}

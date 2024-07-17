@@ -21,9 +21,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"log/slog"
 	"net/http"
@@ -32,16 +35,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "flawfind",
+	Use:   "devguard-scanner",
 	Short: "Vulnerability management for devs.",
-	Long:  `Flawfind is a tool to identify vulnerabilities and flaws in a software. It communicates the result to a devguard instance.`,
+	Long:  `Devguard-Scanner is a tool to identify vulnerabilities and flaws in a software. It communicates the result to a devguard instance.`,
 }
 
 func Execute() {
@@ -51,12 +57,13 @@ func Execute() {
 	}
 }
 
-func generateSBOM() (*os.File, error) {
+func generateSBOM(path string) (*os.File, error) {
 	// generate random name
 	filename := uuid.New().String() + ".json"
 
 	// run the sbom generator
 	cmd := exec.Command("cdxgen", "-o", filename)
+	cmd.Dir = path
 
 	err := cmd.Run()
 
@@ -65,13 +72,58 @@ func generateSBOM() (*os.File, error) {
 	}
 
 	// open the file and return the path
-	return os.Open(filename)
+	return os.Open(filepath.Join(path, filename))
 }
 
-func getCurrentVersion() (string, int, error) {
+// containsRune checks if a string contains a specific rune
+func containsRune(s string, r rune) bool {
+	for _, char := range s {
+		if char == r {
+			return true
+		}
+	}
+	return false
+}
+
+// IsValidPath checks if a string is a valid file path
+func isValidPath(path string) (bool, error) {
+	// Check for null bytes
+	if !utf8.ValidString(path) || len(path) == 0 {
+		return false, fmt.Errorf("path contains null bytes")
+	}
+
+	// Check for invalid characters
+	invalidChars := `<>:"\|?*`
+	for _, char := range invalidChars {
+		if containsRune(path, char) {
+			return false, fmt.Errorf("invalid character '%c' in path", char)
+		}
+	}
+
+	// Check if the path length is within the acceptable limit
+	if len(path) > 260 {
+		return false, fmt.Errorf("path length exceeds 260 characters")
+	}
+
+	// Check if the path is either absolute or relative
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return false, err
+	}
+
+	// Check if the path exists
+	if _, err := os.Stat(absPath); os.IsNotExist(err) {
+		return false, fmt.Errorf("path does not exist")
+	}
+
+	return true, nil
+}
+
+func getCurrentVersion(path string) (string, int, error) {
 	cmd := exec.Command("git", "tag", "--sort=-v:refname")
 	var out bytes.Buffer
 	cmd.Stdout = &out
+	cmd.Dir = path
 	err := cmd.Run()
 	if err != nil {
 		log.Fatal(err)
@@ -96,6 +148,7 @@ func getCurrentVersion() (string, int, error) {
 		cmd = exec.Command("git", "rev-list", "--count", latestTag+"..HEAD") // nolint:all:Latest Tag is already checked against a semver regex.
 		var commitOut bytes.Buffer
 		cmd.Stdout = &commitOut
+		cmd.Dir = path
 		err = cmd.Run()
 		if err != nil {
 			log.Fatal(err)
@@ -116,6 +169,7 @@ func init() {
 	rootCmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
 	rootCmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
 	rootCmd.PersistentFlags().String("apiUrl", "https://api.devguard.dev", "The url of the API to send the scan request to")
+
 	err := rootCmd.MarkPersistentFlagRequired("assetName")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)
@@ -127,11 +181,11 @@ func init() {
 		os.Exit(1)
 	}
 
-	rootCmd.AddCommand(&cobra.Command{
+	scaCommand := &cobra.Command{
 		Use:   "sca",
 		Short: "Software composition analysis",
 		Long:  `Scan a SBOM for vulnerabilities. This command will scan a SBOM for vulnerabilities and return a list of vulnerabilities found in the SBOM. The SBOM must be passed as an argument.`,
-		Args:  cobra.ExactArgs(0),
+		// Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			core.InitLogger()
 			token, err := cmd.Flags().GetString("token")
@@ -149,16 +203,39 @@ func init() {
 				slog.Error("could not get api url", "err", err)
 				return
 			}
+			failOnRisk, err := cmd.Flags().GetString("fail-on-risk")
+			if err != nil {
+				slog.Error("could not get fail-on-risk", "err", err)
+				return
+			}
+
+			webUI, err := cmd.Flags().GetString("webUI")
+			if err != nil {
+				slog.Error("could not get webUI", "err", err)
+				return
+			}
 
 			err = core.LoadConfig()
 			if err != nil {
 				slog.Warn("could not initialize config", "err", err)
 			}
+
+			path, err := cmd.Flags().GetString("path")
+			if err != nil {
+				slog.Error("could not get path", "err", err)
+				return
+			}
+
+			if isValid, err := isValidPath(path); !isValid && err != nil {
+				slog.Error("invalid path", "err", err)
+				return
+			}
+
 			// we use the commit count, to check if we should create a new version - or if its dirty.
 			// v1.0.0 - . . . . . . . . . . - v1.0.1
 			// all commits after v1.0.0 are part of v1.0.1
 			// if there are no commits after the tag, we are on a clean tag
-			version, commitAfterTag, err := getCurrentVersion()
+			version, commitAfterTag, err := getCurrentVersion(path)
 			if err != nil {
 				// do a detailed explaination on how to version the software using git tags
 
@@ -195,7 +272,7 @@ func init() {
 			slog.Info("starting scan", "version", version, "asset", assetName)
 			// read the sbom file and post it to the scan endpoint
 			// get the flaws and print them to the console
-			file, err := generateSBOM()
+			file, err := generateSBOM(path)
 			if err != nil {
 				slog.Error("could not open file", "err", err)
 				return
@@ -253,11 +330,70 @@ func init() {
 				return
 			}
 
-			for _, f := range scanResponse.Flaws {
-				slog.Info("flaw found", "cve", f.CVEID, "package", f.ArbitraryJsonData["packageName"], "severity", f.CVE.Severity, "introduced", f.ArbitraryJsonData["introducedVersion"], "fixed", f.ArbitraryJsonData["fixedVersion"])
+			// order the flaws by their risk
+			slices.SortFunc(scanResponse.Flaws, func(a, b flaw.FlawDTO) int {
+				return int(*(a.RawRiskAssessment)*100) - int(*b.RawRiskAssessment*100)
+			})
+
+			// get the max risk of open!!! flaws
+			openRisks := utils.Map(utils.Filter(scanResponse.Flaws, func(f flaw.FlawDTO) bool {
+				return f.State == "open"
+			}), func(f flaw.FlawDTO) float64 {
+				return *f.RawRiskAssessment
+			})
+
+			maxRisk := 0.
+			for _, risk := range openRisks {
+				if risk > maxRisk {
+					maxRisk = risk
+				}
+			}
+
+			tw := table.NewWriter()
+			tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status", "URL"})
+			tw.AppendRows(utils.Map(
+				scanResponse.Flaws,
+				func(f flaw.FlawDTO) table.Row {
+					cleanPkgName := strings.ReplaceAll(f.ArbitraryJsonData["packageName"].(string), "pkg:", "")
+					// remove the ecosystem from the package name
+					// pkg:ecosystem/package -> package
+					// pkg:ecosystem/package@version -> package
+					cleanPkgName = strings.Join(strings.Split(cleanPkgName, "/")[1:], "/")
+
+					clickableLink := fmt.Sprintf("\033]8;;%s/%s/flaws/%s\033\\View in Web UI\033]8;;\033\\", webUI, assetName, f.ID)
+					return table.Row{cleanPkgName, f.CVEID, *f.RawRiskAssessment, f.ArbitraryJsonData["installedVersion"], f.ArbitraryJsonData["fixedVersion"], f.State, clickableLink}
+				},
+			))
+
+			fmt.Println(tw.Render())
+
+			switch failOnRisk {
+			case "low":
+				if maxRisk > 0.1 {
+					os.Exit(1)
+				}
+			case "medium":
+				if maxRisk >= 4 {
+					os.Exit(1)
+				}
+
+			case "high":
+				if maxRisk >= 7 {
+					os.Exit(1)
+				}
+
+			case "critical":
+				if maxRisk >= 9 {
+					os.Exit(1)
+				}
 			}
 		},
-	})
+	}
+	scaCommand.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
+	scaCommand.Flags().String("fail-on-risk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
+	scaCommand.Flags().String("webUI", "http://localhost:3000", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")
+
+	rootCmd.AddCommand(scaCommand)
 }
 
 func main() {

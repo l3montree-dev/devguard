@@ -9,6 +9,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -106,12 +107,14 @@ func (a *httpController) AffectedPackages(c core.Context) error {
 		return *c.ComponentPurlOrCpe
 	})
 
-	vulns, err := a.vulnService.GetVulnsForAll(purls)
+	flaws, err := a.flawRepository.GetFlawsByPurlOrCpe(nil, purls)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, vulns)
+	return c.JSON(200, utils.Map(flaws, func(m models.Flaw) flaw.FlawDTO {
+		return flaw.FlawToDto(m)
+	}))
 }
 
 func (a *httpController) Create(c core.Context) error {
@@ -161,7 +164,7 @@ func (a *httpController) DependencyGraph(c core.Context) error {
 		return err
 	}
 
-	tree, _ := buildDependencyTree(components)
+	tree := BuildDependencyTree(components)
 	if tree.Root.Children == nil {
 		tree.Root.Children = make([]*treeNode, 0)
 	}

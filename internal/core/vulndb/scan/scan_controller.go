@@ -21,6 +21,7 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -32,10 +33,11 @@ type cveRepository interface {
 
 type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
+	LoadAssetComponents(tx core.DB, asset models.Asset, version string) ([]models.ComponentDependency, error)
 }
 
 type assetService interface {
-	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw) (amountOpened int, amountClosed int, err error)
+	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw) (amountOpened int, amountClosed int, newState []models.Flaw, err error)
 	UpdateSBOM(asset models.Asset, version string, sbom *cdx.BOM) error
 }
 
@@ -73,7 +75,7 @@ func (s *httpController) Scan(c core.Context) error {
 	if err := decoder.Decode(bom); err != nil {
 		return err
 	}
-	asset := core.GetAsset(c)
+	assetObj := core.GetAsset(c)
 
 	userID := core.GetSession(c).GetUserID()
 
@@ -93,7 +95,7 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// update the sbom in the database in parallel
-	if err := s.assetService.UpdateSBOM(asset, version, bom); err != nil {
+	if err := s.assetService.UpdateSBOM(assetObj, version, bom); err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not update sbom"})
 	}
@@ -105,10 +107,24 @@ func (s *httpController) Scan(c core.Context) error {
 		return c.JSON(500, map[string]string{"error": "could not scan file"})
 	}
 
-	scannerID := "github.com/l3montree-dev/devguard/cmd/flawfind"
+	scannerID := "github.com/l3montree-dev/devguard/cmd/devguard-scanner"
 
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}
+
+	// load all asset components again and build a dependency tree
+	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, assetObj, version)
+	if err != nil {
+		slog.Error("could not load asset components", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not load asset components"})
+	}
+	// build a dependency tree
+	tree := asset.BuildDependencyTree(assetComponents)
+	// calculate the depth of each component
+	depthMap := make(map[string]int)
+
+	asset.CalculateDepth(tree.Root, 0, depthMap)
+	// now we have the depth.
 
 	for _, vuln := range vulns {
 		v := vuln
@@ -121,7 +137,7 @@ func (s *httpController) Scan(c core.Context) error {
 		// check if the component has an cve
 
 		flaw := models.Flaw{
-			AssetID:            asset.ID,
+			AssetID:            assetObj.ID,
 			CVEID:              v.CVEID,
 			ScannerID:          scannerID,
 			ComponentPurlOrCpe: purlWithVersion,
@@ -133,13 +149,15 @@ func (s *httpController) Scan(c core.Context) error {
 			"fixedVersion":      v.GetFixedVersion(),
 			"packageName":       v.PackageName,
 			"cveId":             v.CVEID,
+			"installedVersion":  v.InstalledVersion,
+			"componentDepth":    depthMap[purlWithVersion],
 		})
 		flaws = append(flaws, flaw)
 	}
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current flaws
-	amountOpened, amountClose, err := s.assetService.HandleScanResult(userID, scannerID, asset, flaws)
+	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(userID, scannerID, assetObj, flaws)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
@@ -148,7 +166,7 @@ func (s *httpController) Scan(c core.Context) error {
 	return c.JSON(200, ScanResponse{
 		AmountOpened: amountOpened,
 		AmountClosed: amountClose,
-		Flaws: utils.Map(flaws, func(f models.Flaw) flaw.FlawDTO {
+		Flaws: utils.Map(newState, func(f models.Flaw) flaw.FlawDTO {
 			return flaw.FlawDTO{
 				ID:                 f.ID,
 				ScannerID:          f.AssetID.String(),

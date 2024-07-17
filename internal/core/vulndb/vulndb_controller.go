@@ -10,7 +10,7 @@ import (
 
 type repository interface {
 	FindAllListPaged(tx database.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error)
-	FindCVE(tx database.DB, cveId string) (any, error)
+	FindCVE(tx database.DB, cveId string) (models.CVE, error)
 }
 
 type cveHttpController struct {
@@ -71,7 +71,7 @@ func (c cveHttpController) ListPaged(ctx core.Context) error {
 // @Failure 500 {object} object{message=string} "Internal server error"
 // @Router /vulndb/{cveId}/ [get]
 func (c cveHttpController) Read(ctx core.Context) error {
-	pagedResp, err := c.cveRepository.FindCVE(
+	cve, err := c.cveRepository.FindCVE(
 		nil,
 		core.GetParam(ctx, "cveId"),
 	)
@@ -79,7 +79,6 @@ func (c cveHttpController) Read(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get CVEs").WithInternal(err)
 	}
-	cve := pagedResp.(models.CVE)
 
 	e := core.GetEnvironmental(ctx)
 

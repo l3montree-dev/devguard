@@ -37,7 +37,7 @@ func (r *flawRepository) GetByAssetId(
 
 func (r *flawRepository) ListByScanner(assetID uuid.UUID, scannerID string) ([]models.Flaw, error) {
 	var flaws []models.Flaw = []models.Flaw{}
-	if err := r.Repository.GetDB(r.db).Where("asset_id = ? AND scanner_id = ?", assetID, scannerID).Find(&flaws).Error; err != nil {
+	if err := r.Repository.GetDB(r.db).Preload("CVE").Where("asset_id = ? AND scanner_id = ?", assetID, scannerID).Find(&flaws).Error; err != nil {
 		return nil, err
 	}
 	return flaws, nil
@@ -91,7 +91,22 @@ func (r *flawRepository) GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]
 
 func (g flawRepository) Read(id string) (models.Flaw, error) {
 	var t models.Flaw
-	err := g.db.Preload("CVE.Weaknesses").Preload("Events").Preload("CVE").First(&t, "id = ?", id).Error
+	err := g.db.Preload("CVE.Weaknesses").Preload("Events", func(db core.DB) core.DB {
+		return db.Order("created_at ASC")
+	}).Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", id).Error
 
 	return t, err
+}
+
+func (r *flawRepository) GetFlawsByPurlOrCpe(tx core.DB, purlOrCpe []string) ([]models.Flaw, error) {
+
+	var flaws []models.Flaw = []models.Flaw{}
+	if len(purlOrCpe) == 0 {
+		return flaws, nil
+	}
+
+	if err := r.Repository.GetDB(tx).Where("component_purl_or_cpe IN (?)", purlOrCpe).Find(&flaws).Error; err != nil {
+		return nil, err
+	}
+	return flaws, nil
 }

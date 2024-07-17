@@ -142,9 +142,9 @@ func (g *cveRepository) FindAllListPaged(tx database.DB, pageInfo core.PageInfo,
 	return core.NewPaged(pageInfo, count, cves), nil
 }
 
-func (g *cveRepository) FindCVE(tx database.DB, cveId string) (any, error) {
+func (g *cveRepository) FindCVE(tx database.DB, cveId string) (models.CVE, error) {
 
-	var cves models.CVE = models.CVE{}
+	var cves models.CVE
 
 	q := g.GetDB(tx).Model(&models.CVE{})
 
@@ -152,7 +152,7 @@ func (g *cveRepository) FindCVE(tx database.DB, cveId string) (any, error) {
 
 	err := q.Preload("AffectedComponents").Preload("Exploits").First(&cves).Error
 	if err != nil {
-		return models.CVEWithAffectedComponent{}, err
+		return models.CVE{}, err
 	}
 
 	return cves, nil

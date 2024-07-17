@@ -22,6 +22,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+
 	"github.com/ory/client-go"
 )
 
@@ -29,12 +30,20 @@ type AuthSession interface {
 	GetUserID() string
 }
 
-func GetThirdPartyIntegration(c Context) any {
-	return c.Get("thirdPartyIntegration")
+func GetThirdPartyIntegration(c Context) ThirdPartyIntegration {
+	return c.Get("thirdPartyIntegration").(ThirdPartyIntegration)
 }
 
-func SetThirdPartyIntegration(c Context, i any) {
+func SetThirdPartyIntegration(c Context, i ThirdPartyIntegration) {
 	c.Set("thirdPartyIntegration", i)
+}
+
+func SetAuthAdminClient(c Context, i *client.APIClient) {
+	c.Set("authAdminClient", i)
+}
+
+func GetAuthAdminClient(c Context) *client.APIClient {
+	return c.Get("authAdminClient").(*client.APIClient)
 }
 
 func GetFlawID(c Context) (string, error) {

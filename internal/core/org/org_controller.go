@@ -21,6 +21,8 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/ory/client-go"
 
 	"github.com/labstack/echo/v4"
 )
@@ -130,10 +132,68 @@ func (o *httpController) Delete(c core.Context) error {
 	return c.NoContent(200)
 }
 
+func fetchMembersOfOrganization(ctx core.Context) ([]client.Identity, error) {
+	// get all members from the organization
+	organization := core.GetTenant(ctx)
+	accessControl := core.GetRBAC(ctx)
+
+	members, err := accessControl.GetAllMembersOfOrganization(organization.GetID().String())
+
+	if err != nil {
+		return nil, err
+	}
+
+	// get the auth admin client from the context
+	authAdminClient := core.GetAuthAdminClient(ctx)
+	// fetch the users from the auth service
+	users, _, err := authAdminClient.IdentityAPI.ListIdentitiesExecute(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
+
+	return users, err
+}
+
+func (o *httpController) Members(c core.Context) error {
+	users, err := fetchMembersOfOrganization(c)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
+	}
+
+	return c.JSON(200, users)
+}
+
 func (o *httpController) Read(c core.Context) error {
 	// get the organization from the context
 	organization := core.GetTenant(c)
-	return c.JSON(200, organization)
+	members, err := fetchMembersOfOrganization(c)
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
+	}
+
+	resp := orgDetails{
+		Org: organization,
+		Members: utils.Map(
+			members, func(i client.Identity) orgMember {
+				nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
+				var first, last string
+				if nameMap != nil {
+					if nameMap["first"] != nil {
+						first = nameMap["first"].(string)
+					}
+					if nameMap["last"] != nil {
+						last = nameMap["last"].(string)
+					}
+				}
+				return orgMember{
+					ID: i.Id,
+					Name: name{
+						First: first,
+						Last:  last,
+					},
+				}
+			}),
+	}
+
+	return c.JSON(200, resp)
 }
 
 func (o *httpController) List(c core.Context) error {

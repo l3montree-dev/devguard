@@ -262,6 +262,9 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		}
 
 		_, _, err = client.Issues.Create(context.Background(), owner, repo, issue)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

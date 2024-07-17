@@ -44,3 +44,24 @@ type detailedFlawDTO struct {
 	FlawDTO
 	Events []FlawEventDTO `json:"events"`
 }
+
+func FlawToDto(f models.Flaw) FlawDTO {
+	return FlawDTO{
+		ID:                 f.ID,
+		ScannerID:          f.ScannerID,
+		Message:            f.Message,
+		AssetID:            f.AssetID.String(),
+		State:              f.State,
+		CVE:                f.CVE,
+		CVEID:              f.CVEID,
+		Component:          f.Component,
+		ComponentPurlOrCpe: f.ComponentPurlOrCpe,
+		Effort:             f.Effort,
+		RiskAssessment:     f.RiskAssessment,
+		RawRiskAssessment:  f.RawRiskAssessment,
+		Priority:           f.Priority,
+		ArbitraryJsonData:  f.GetArbitraryJsonData(),
+		LastDetected:       f.LastDetected,
+		CreatedAt:          f.CreatedAt,
+	}
+}

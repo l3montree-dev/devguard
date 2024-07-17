@@ -92,8 +92,8 @@ type AffectedComponent struct {
 	Qualifiers       *string `json:"qualifiers" gorm:"type:text;"`
 	Subpath          *string `json:"subpath" gorm:"type:text;"`
 	Version          *string `json:"version" gorm:"index"` // either version or semver is defined
-	SemverIntroduced *string `json:"semver_start" gorm:"type:semver;index"`
-	SemverFixed      *string `json:"semver_end" gorm:"type:semver;index"`
+	SemverIntroduced *string `json:"semverStart" gorm:"type:semver;index"`
+	SemverFixed      *string `json:"semverEnd" gorm:"type:semver;index"`
 
 	CVE []CVE `json:"cves" gorm:"many2many:cve_affected_component;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }

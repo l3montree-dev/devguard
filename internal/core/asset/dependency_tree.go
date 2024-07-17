@@ -16,8 +16,6 @@
 package asset
 
 import (
-	"slices"
-
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -61,60 +59,44 @@ func (tree *tree) addNode(source string, dep string) {
 	tree.cursors[source].Children = append(tree.cursors[source].Children, tree.cursors[dep])
 }
 
-func removeEdge(node *treeNode, childName string) {
-	for i, child := range node.Children {
-		if child.Name == childName {
+// Helper function to detect and cut cycles
+func cutCycles(node *treeNode, visited map[*treeNode]bool) {
+	// Mark the current node as visited
+	visited[node] = true
+
+	// Iterate over the children
+	for i := 0; i < len(node.Children); i++ {
+		child := node.Children[i]
+		if visited[child] {
+			// If the child is already visited, we have found a cycle
+			// Remove the child reference to cut the cycle
 			node.Children = append(node.Children[:i], node.Children[i+1:]...)
-			return
+			i-- // Adjust index due to slice modification
+		} else {
+			// Recursively check the child
+			cutCycles(child, visited)
 		}
+	}
+
+	// Unmark the current node before returning to allow different paths
+	// to explore this node without falsely detecting a cycle
+	delete(visited, node)
+}
+
+func CalculateDepth(node *treeNode, currentDepth int, depthMap map[string]int) {
+
+	if _, ok := depthMap[node.Name]; !ok {
+		depthMap[node.Name] = currentDepth
+	} else if depthMap[node.Name] > currentDepth {
+		// use the shortest path
+		depthMap[node.Name] = currentDepth
+	}
+	for _, child := range node.Children {
+		CalculateDepth(child, currentDepth+1, depthMap)
 	}
 }
 
-func cutCycles(tree *tree, removedEdges map[string][]string) {
-	visited := make(map[string]bool)
-	recStack := make(map[string]bool)
-
-	var dfs func(node *treeNode) bool
-
-	dfs = func(node *treeNode) bool {
-		if !visited[node.Name] {
-			// Mark the current node as visited and part of recursion stack
-			visited[node.Name] = true
-			recStack[node.Name] = true
-
-			// Recur for all the vertices adjacent to this vertex
-			for _, child := range node.Children {
-				if !visited[child.Name] && dfs(child) {
-					return true
-				} else if recStack[child.Name] {
-					// If the node is in the recStack, then there is a cycle
-					// Remove the edge that closes the cycle
-					removeEdge(node, child.Name)
-					removedEdges[node.Name] = append(removedEdges[node.Name], child.Name)
-					return true
-				}
-			}
-
-		}
-		recStack[node.Name] = false // remove the vertex from recursion stack
-		return false
-	}
-
-	// Iterate over all nodes in the graph and apply DFS
-	for _, nodeKey := range tree.insertionOrder {
-		node := tree.cursors[nodeKey]
-		if !visited[node.Name] {
-			dfs(node)
-		}
-	}
-}
-
-func buildDependencyTree(elements []models.ComponentDependency) (tree, map[string][]string) {
-	// sort by depth
-	slices.SortStableFunc(elements, func(a, b models.ComponentDependency) int {
-		return a.Depth - b.Depth
-	})
-
+func BuildDependencyTree(elements []models.ComponentDependency) tree {
 	// create a new tree
 	tree := tree{
 		Root:           &treeNode{Name: "root"},
@@ -132,9 +114,7 @@ func buildDependencyTree(elements []models.ComponentDependency) (tree, map[strin
 		}
 	}
 
-	// remove cycles
-	removedEdges := make(map[string][]string)
-	cutCycles(&tree, removedEdges)
+	cutCycles(tree.Root, make(map[*treeNode]bool))
 
-	return tree, removedEdges
+	return tree
 }

@@ -146,6 +146,10 @@ func (r RBACMock) GetAllProjectsForUser(user string) []string {
 	return []string{}
 }
 
+func (r RBACMock) GetAllMembersOfOrganization(organization string) ([]string, error) {
+	return []string{}, nil
+}
+
 func (r RBACProviderMock) DomainsOfUser(user string) ([]string, error) {
 	return []string{"domain::" + user}, nil
 }

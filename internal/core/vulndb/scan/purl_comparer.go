@@ -86,7 +86,7 @@ func (comparer *purlComparer) GetVulns(purl string) ([]models.VulnInPackage, err
 			Or("semver_introduced IS NULL AND semver_fixed > ?", version).
 			Or("semver_introduced < ? AND semver_fixed IS NULL", version).
 			Or("semver_introduced < ? AND semver_fixed > ?", version, version),
-	).Preload("CVE").Find(&affectedComponents)
+	).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)
 
 	vulnerabilities := []models.VulnInPackage{}
 
@@ -101,6 +101,7 @@ func (comparer *purlComparer) GetVulns(purl string) ([]models.VulnInPackage, err
 				PackageName:       affectedComponent.PURL,
 				PurlWithVersion:   purl,
 				CVE:               cve,
+				InstalledVersion:  version,
 			})
 		}
 	}

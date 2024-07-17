@@ -100,3 +100,16 @@ func (f *Flaw) BeforeCreate(tx *gorm.DB) (err error) {
 	f.SetIdHash()
 	return nil
 }
+
+func (f *Flaw) GetComponentDepth() int {
+	if v, ok := f.GetArbitraryJsonData()["componentDepth"]; ok {
+		// make sure to return an int
+		if i, ok := v.(int); ok {
+			return i
+		}
+		if f, ok := v.(float64); ok {
+			return int(f)
+		}
+	}
+	return 0
+}

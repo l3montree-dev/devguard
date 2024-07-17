@@ -64,6 +64,8 @@ type AccessControl interface {
 	GetAllProjectsForUser(user string) []string
 
 	GetOwnerOfOrganization(organizationID string) (string, error)
+
+	GetAllMembersOfOrganization(organizationID string) ([]string, error)
 }
 
 type RBACProvider interface {

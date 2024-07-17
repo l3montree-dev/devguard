@@ -32,7 +32,7 @@ func TestDependencyTree(t *testing.T) {
 			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "f", Depth: 3},
 			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "g", Depth: 3},
 		}
-		tree, _ := buildDependencyTree(graph)
+		tree := BuildDependencyTree(graph)
 
 		// expect root node to be created with a single child: a
 		if len(tree.Root.Children) != 1 {
@@ -72,7 +72,7 @@ func TestDependencyTree(t *testing.T) {
 			{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "c", Depth: 2},
 			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "b", Depth: 2}, // closes the cycle
 		}
-		tree, removedEdges := buildDependencyTree(graph)
+		tree := BuildDependencyTree(graph)
 
 		// expect root node to be created with a single child: a
 		if len(tree.Root.Children) != 1 {
@@ -97,25 +97,5 @@ func TestDependencyTree(t *testing.T) {
 			t.Fatalf("expected either b or c to have no children, got %d and %d", len(b.Children), len(c.Children))
 		}
 
-		// check if b has children
-		if len(b.Children) == 0 {
-			// expect the edge between b and c to be removed
-			if len(removedEdges["b"]) != 1 {
-				t.Fatalf("expected 1 removed edge for b, got %d", len(removedEdges["b"]))
-			}
-			// expect the removed edge to be c
-			if removedEdges["b"][0] != "c" {
-				t.Fatalf("expected removed edge to be c, got %s", removedEdges["b"][0])
-			}
-		} else {
-			// expect the edge between c and b to be removed
-			if len(removedEdges["c"]) != 1 {
-				t.Fatalf("expected 1 removed edge for c, got %d", len(removedEdges["c"]))
-			}
-			// expect the removed edge to be b
-			if removedEdges["c"][0] != "b" {
-				t.Fatalf("expected removed edge to be b, got %s", removedEdges["c"][0])
-			}
-		}
 	})
 }
