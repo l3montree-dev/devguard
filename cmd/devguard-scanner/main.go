@@ -335,11 +335,22 @@ func init() {
 				return int(*(a.RawRiskAssessment)*100) - int(*b.RawRiskAssessment*100)
 			})
 
-			// get the max risk
-			maxRisk := scanResponse.Flaws[len(scanResponse.Flaws)-1].RawRiskAssessment
+			// get the max risk of open!!! flaws
+			openRisks := utils.Map(utils.Filter(scanResponse.Flaws, func(f flaw.FlawDTO) bool {
+				return f.State == "open"
+			}), func(f flaw.FlawDTO) float64 {
+				return *f.RawRiskAssessment
+			})
+
+			maxRisk := 0.
+			for _, risk := range openRisks {
+				if risk > maxRisk {
+					maxRisk = risk
+				}
+			}
 
 			tw := table.NewWriter()
-			tw.AppendHeader(table.Row{"CVE", "Package", "Risk", "Introduced", "Installed", "Fixed", "URL"})
+			tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status", "URL"})
 			tw.AppendRows(utils.Map(
 				scanResponse.Flaws,
 				func(f flaw.FlawDTO) table.Row {
@@ -350,7 +361,7 @@ func init() {
 					cleanPkgName = strings.Join(strings.Split(cleanPkgName, "/")[1:], "/")
 
 					clickableLink := fmt.Sprintf("\033]8;;%s/%s/flaws/%s\033\\View in Web UI\033]8;;\033\\", webUI, assetName, f.ID)
-					return table.Row{f.CVEID, cleanPkgName, *f.RawRiskAssessment, f.ArbitraryJsonData["introducedVersion"], f.ArbitraryJsonData["installedVersion"], f.ArbitraryJsonData["fixedVersion"], clickableLink}
+					return table.Row{cleanPkgName, f.CVEID, *f.RawRiskAssessment, f.ArbitraryJsonData["installedVersion"], f.ArbitraryJsonData["fixedVersion"], f.State, clickableLink}
 				},
 			))
 
@@ -358,21 +369,21 @@ func init() {
 
 			switch failOnRisk {
 			case "low":
-				if *maxRisk > 0.1 {
+				if maxRisk > 0.1 {
 					os.Exit(1)
 				}
 			case "medium":
-				if *maxRisk >= 4 {
+				if maxRisk >= 4 {
 					os.Exit(1)
 				}
 
 			case "high":
-				if *maxRisk >= 7 {
+				if maxRisk >= 7 {
 					os.Exit(1)
 				}
 
 			case "critical":
-				if *maxRisk >= 9 {
+				if maxRisk >= 9 {
 					os.Exit(1)
 				}
 			}
