@@ -253,7 +253,7 @@ jobs:
         category: "image-scanning"
 
   scanner-image-scanning:
-    needs: build-image
+    needs: build-scanner-image
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
