@@ -205,9 +205,9 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
 			return obj.RiskMetrics{}, vector
 		}
-		cvss.Set("RL", "ND") // nolint:errcheck
+		// cvss.Set("RL", "ND") // nolint:errcheck
 
-		if len(cve.AffectedComponents) > 0 {
+		/*if len(cve.AffectedComponents) > 0 {
 			officialFix := true
 			for _, component := range cve.AffectedComponents {
 				if component.SemverFixed == nil {
@@ -220,7 +220,7 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 			} else {
 				cvss.Set("RL", "U") // nolint:errcheck
 			}
-		}
+		}*/
 
 		cvss.Set("RC", "C") // nolint:errcheck
 		cvss.Set("E", "U")  // nolint:errcheck

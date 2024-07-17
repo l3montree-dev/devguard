@@ -124,8 +124,8 @@ func TestCalculateRisk(t *testing.T) {
 			metrics: obj.RiskMetrics{
 				BaseScore:                            5.9,
 				WithEnvironment:                      4.0,
-				WithThreatIntelligence:               4.9,
-				WithEnvironmentAndThreatIntelligence: 3.3,
+				WithThreatIntelligence:               5.6,
+				WithEnvironmentAndThreatIntelligence: 3.8,
 			},
 			env: core.Environmental{
 				ConfidentialityRequirements: "L",
@@ -137,10 +137,10 @@ func TestCalculateRisk(t *testing.T) {
 					Verified: true,
 				},
 			},
-			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:F/RL:OF/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
+			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:F/RL:ND/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
 			cvss:           5.9,
 			affectedComponents: []models.AffectedComponent{{
-				SemverFixed: ptr("v1.0.0"),
+				SemverFixed: ptr("v1.0.0"), // this should not matter. Reducing the score, since a fix is available, makes no sense in this application. Actually we want those cves to be handled first, since they are easy to handle.
 			}},
 		},
 		{
@@ -161,7 +161,7 @@ func TestCalculateRisk(t *testing.T) {
 					Verified: true,
 				},
 			},
-			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:F/RL:U/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
+			expectedVector: "AV:L/AC:H/Au:M/C:C/I:C/A:C/E:F/RL:ND/RC:C/CDP:ND/TD:ND/CR:L/IR:L/AR:L",
 			cvss:           5.9,
 			affectedComponents: []models.AffectedComponent{{
 				SemverFixed: nil,
@@ -200,8 +200,8 @@ func TestCalculateRisk(t *testing.T) {
 			metrics: obj.RiskMetrics{
 				BaseScore:                            2.6,
 				WithEnvironment:                      3.4,
-				WithThreatIntelligence:               2.4,
-				WithEnvironmentAndThreatIntelligence: 3.2,
+				WithThreatIntelligence:               2.6,
+				WithEnvironmentAndThreatIntelligence: 3.3,
 			},
 			env: core.Environmental{
 				IntegrityRequirements:       "H",
@@ -216,7 +216,7 @@ func TestCalculateRisk(t *testing.T) {
 			affectedComponents: []models.AffectedComponent{{
 				SemverFixed: ptr("v1.0.0"),
 			}},
-			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RL:O/RC:C/CR:H/IR:H/AR:H",
+			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RC:C/CR:H/IR:H/AR:H",
 			cvss:           2.6,
 		},
 		{
@@ -240,7 +240,7 @@ func TestCalculateRisk(t *testing.T) {
 			affectedComponents: []models.AffectedComponent{{
 				SemverFixed: nil,
 			}},
-			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RL:U/RC:C/CR:H/IR:H/AR:H",
+			expectedVector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L/E:F/RC:C/CR:H/IR:H/AR:H",
 			cvss:           2.6,
 		},
 		{
