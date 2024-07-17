@@ -278,7 +278,7 @@ jobs:
 
   # Publish job to push the Docker image to a registry
   publish:
-    needs: [build-image, image-scanning, secret-scanning, sca, sast, lint, tests]
+    needs: [build-image, image-scanning, secret-scanning, sca, sast, golangci, tests]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
@@ -300,7 +300,7 @@ jobs:
       run: crane push image.tar ${{ env.IMAGE_TAG }}
   
   publish-scanner:
-    needs: [build-scanner-image, scanner-image-scanning, secret-scanning, sca, sast, lint, tests]
+    needs: [build-scanner-image, scanner-image-scanning, secret-scanning, sca, sast, golangci, tests]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
