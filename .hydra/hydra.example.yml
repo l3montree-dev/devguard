@@ -1,0 +1,20 @@
+serve:
+  cookies:
+    same_site_mode: Lax
+
+urls:
+  self:
+    issuer: http://127.0.0.1:4444
+
+secrets:
+  system:
+    - youReallyNeedToChangeThis
+
+oauth2:
+  client_credentials:
+    default_grant_allowed_scope: false
+  grant:
+    jwt:
+      jti_optional: false
+      iat_optional: false
+      max_ttl: 1h

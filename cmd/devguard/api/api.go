@@ -255,8 +255,20 @@ func health(c echo.Context) error {
 }
 
 func Start(db core.DB) {
+	for _, env := range []string{"ORY_KRATOS_PUBLIC", "ORY_KRATOS_ADMIN", "ORY_KRATOS_CLIENT_ID", "ORY_KRATOS_CLIENT_SECRET", "ORY_KRATOS_TOKEN_URL"} {
+		if os.Getenv(env) == "" {
+			slog.Error("missing environment variable", "env", env)
+			//os.Exit(1)
+		}
+	}
+
 	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_PUBLIC"))
-	oryAdmin := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_ADMIN"))
+	oryAdmin, err := auth.GetOryApiAdminClient(os.Getenv("ORY_KRATOS_ADMIN"), os.Getenv("ORY_KRATOS_CLIENT_ID"), os.Getenv("ORY_KRATOS_CLIENT_SECRET"), os.Getenv("ORY_KRATOS_TOKEN_URL"))
+	if err != nil {
+		slog.Error("could not create ory admin client")
+		panic(err)
+	}
+
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
 
 	if err != nil {

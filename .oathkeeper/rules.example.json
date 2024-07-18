@@ -1,0 +1,30 @@
+[
+    {
+        "id": "default",
+        "version": "v0.1.0",
+        "upstream": {
+        "url": "http://kratos:4434"
+        },
+        "match": {
+        "url": "http://<127.0.0.1|localhost>:4455/admin/<.*>",
+        "methods": [
+            "GET"
+        ]
+        },
+        "authenticators": [
+        {
+            "handler": "oauth2_introspection",
+            "config": {
+            "required_scope": ["devguard-m2m"]
+            }
+        }
+        ],
+        "authorizer": { "handler": "allow" },
+        "mutators": [{ "handler": "noop" }],
+        "errors": [
+        {
+            "handler": "json"
+        }
+        ]
+    }
+]

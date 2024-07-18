@@ -11,3 +11,7 @@ datascience.ipynb
 bom.xml
 .kratos/kratos.yml
 *.private-key.pem
+.hydra/hydra.yml
+.oathkeeper/jwks.json
+.oathkeeper/config.yml
+.oathkeeper/rules.json

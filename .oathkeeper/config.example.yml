@@ -1,0 +1,38 @@
+serve:
+  proxy:
+    port: 4455 # run the proxy at port 4455
+  api:
+    port: 4456 # run the api at port 4456
+
+access_rules:
+  repositories:
+    - file:///etc/config/oathkeeper/rules.json
+
+errors:
+  fallback:
+    - json
+  handlers:
+    json:
+      enabled: true
+      config:
+        verbose: true
+
+mutators:
+  noop:
+    enabled: true
+
+authorizers:
+  allow:
+    enabled: true
+  deny:
+    enabled: true
+
+authenticators:
+  oauth2_introspection:
+    enabled: true
+    config: 
+      introspection_url: http://hydra:4445/admin/oauth2/introspect
+      required_scope: 
+      - "devguard-m2m"
+      target_audience:
+      - "devguard-m2m"

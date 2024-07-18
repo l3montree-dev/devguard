@@ -7,3 +7,12 @@ GRANT ALL PRIVILEGES ON DATABASE kratos to kratos;
 \c kratos
 
 GRANT USAGE, CREATE ON SCHEMA public TO kratos;
+
+
+CREATE DATABASE hydra;
+CREATE USER hydra PASSWORD 'secret';
+GRANT ALL PRIVILEGES ON DATABASE hydra to hydra;
+
+\c hydra
+
+GRANT USAGE, CREATE ON SCHEMA public TO hydra;

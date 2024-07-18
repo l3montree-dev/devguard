@@ -3,7 +3,7 @@ version: '3.7'
 # postgresql database for local development
 services:
   postgresql:
-    image: ghcr.io/l3montree-dev/devguard-postgresql:v0.4.16
+    image: ghcr.io/l3montree-dev/devguard-postgresql:v0.4.18
     # If you want to build the image locally, uncomment the following lines
     #build:
     #  context: .
@@ -16,7 +16,7 @@ services:
     - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
 
   kratos-migrate:
-    image: oryd/kratos:v1.1.0
+    image: oryd/kratos:v1.2.0
     depends_on:
     - postgresql
     environment:
@@ -28,7 +28,7 @@ services:
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
 
   kratos:
-    image: oryd/kratos:v1.1.0
+    image: oryd/kratos:v1.2.0
     depends_on:
     - kratos-migrate
     - postgresql
@@ -43,5 +43,44 @@ services:
     - type: bind
       source: ./.kratos
       target: /etc/config/kratos
+
+  hydra-migrate:
+    image: oryd/hydra:v2.2.0
+    depends_on:
+    - postgresql
+    environment:
+    - DSN=postgres://hydra:secret@postgresql:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
+    command: migrate -c /etc/config/hydra/hydra.yml sql -e --yes
+    volumes:
+    - type: bind
+      source: ./.hydra
+      target: /etc/config/hydra
+
+  hydra:
+    depends_on:
+    - hydra-migrate
+    - postgresql
+    image: oryd/hydra:v2.2.0
+    ports:
+    - "4444:4444" # Public port
+    - "4445:4445" # Admin port
+    command: serve -c /etc/config/hydra/hydra.yml all --dev
+    volumes:
+    - type: bind
+      source: ./.hydra
+      target: /etc/config/hydra
+    environment:
+    - DSN=postgres://hydra:secret@postgresql:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4
+
+  oathkeeper:
+    image: oryd/oathkeeper:v0.40.7
+    ports:
+    - "4455:4455" # Public port
+    - "4456:4456" # Admin port
+    command: serve --config /etc/config/oathkeeper/config.yml
+    volumes:
+      - type: bind
+        source: ./.oathkeeper
+        target: /etc/config/oathkeeper
 volumes:
   postgres:
