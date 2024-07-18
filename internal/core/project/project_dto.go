@@ -31,3 +31,22 @@ func (p *CreateRequest) ToModel() models.Project {
 		Description: p.Description,
 	}
 }
+
+type PatchRequest struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+}
+
+func (p *PatchRequest) ApplyToModel(project *models.Project) bool {
+	updated := false
+	if p.Name != nil {
+		project.Name = *p.Name
+		project.Slug = slug.Make(*p.Name)
+		updated = true
+	}
+	if p.Description != nil {
+		project.Description = *p.Description
+		updated = true
+	}
+	return updated
+}
