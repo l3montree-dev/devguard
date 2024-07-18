@@ -54,13 +54,13 @@ func (c *componentRepository) CreateAssetComponents(tx database.DB, components [
 	return c.GetDB(tx).Create(&components).Error
 }
 
-func (c *componentRepository) LoadAssetComponents(tx database.DB, asset models.Asset, version string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadAssetComponents(tx database.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 	if version == models.LatestVersion {
-		err = c.GetDB(tx).Where("asset_id = ? AND semver_end is NULL", asset.ID).Find(&components).Error
+		err = c.GetDB(tx).Where("asset_id = ? AND scan_type = ? AND semver_end is NULL", asset.ID, scanType).Find(&components).Error
 	} else {
-		err = c.GetDB(tx).Where(`asset_id = ? AND semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)`, asset.ID, version, version).Find(&components).Error
+		err = c.GetDB(tx).Where(`asset_id = ? AND scan_type = ? AND semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)`, asset.ID, scanType, version, version).Find(&components).Error
 	}
 
 	if err != nil {

@@ -42,7 +42,7 @@ type flawRepository interface {
 
 type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
-	LoadAssetComponents(tx core.DB, asset models.Asset, version string) ([]models.ComponentDependency, error)
+	LoadAssetComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
 	FindByPurl(tx core.DB, purl string) (models.Component, error)
 	HandleStateDiff(tx database.DB, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error
 }
@@ -138,9 +138,9 @@ type DepsDevResponse struct {
 	Error string `json:"error"`
 }
 
-func (s *service) UpdateSBOM(asset models.Asset, currentVersion string, sbom *cdx.BOM) error {
+func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom *cdx.BOM) error {
 	// load the asset components
-	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, asset, currentVersion)
+	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, asset, scanType, currentVersion)
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
 	}
@@ -157,7 +157,9 @@ func (s *service) UpdateSBOM(asset models.Asset, currentVersion string, sbom *cd
 			continue
 		}
 
-		if component.Scope == cdx.ScopeRequired {
+		// the sbom of a container image does not contain the scope. In a container image, we do not have
+		// anything like a deep nested dependency tree. Everything is a direct dependency.
+		if component.Scope == cdx.ScopeRequired || component.Scope == "" {
 			// create the direct dependency edge.
 			dependencies = append(dependencies,
 				models.ComponentDependency{
@@ -165,6 +167,7 @@ func (s *service) UpdateSBOM(asset models.Asset, currentVersion string, sbom *cd
 					Dependency: models.Component{
 						PurlOrCpe: component.BOMRef,
 					},
+					ScanType:            scanType,
 					DependencyPurlOrCpe: component.BOMRef,
 					AssetSemverStart:    currentVersion,
 				},
@@ -194,16 +197,14 @@ func (s *service) UpdateSBOM(asset models.Asset, currentVersion string, sbom *cd
 						Dependency: models.Component{
 							PurlOrCpe: p,
 						},
+						ScanType:            scanType,
 						DependencyPurlOrCpe: p,
 						AssetSemverStart:    currentVersion,
 					},
 				)
 			}
-
 		}
-		// check if the component is already in the database
-		// if not, create it
-		// if it is, update it
+
 		p, err := url.PathUnescape(component.BOMRef)
 		if err != nil {
 			slog.Error("could not decode purl", "err", err)

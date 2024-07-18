@@ -25,6 +25,53 @@ func (_m *IntegrationsGithubAppInstallationRepository) EXPECT() *IntegrationsGit
 	return &IntegrationsGithubAppInstallationRepository_Expecter{mock: &_m.Mock}
 }
 
+// Delete provides a mock function with given fields: tx, installationID
+func (_m *IntegrationsGithubAppInstallationRepository) Delete(tx *gorm.DB, installationID int) error {
+	ret := _m.Called(tx, installationID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, int) error); ok {
+		r0 = rf(tx, installationID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// IntegrationsGithubAppInstallationRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type IntegrationsGithubAppInstallationRepository_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - installationID int
+func (_e *IntegrationsGithubAppInstallationRepository_Expecter) Delete(tx interface{}, installationID interface{}) *IntegrationsGithubAppInstallationRepository_Delete_Call {
+	return &IntegrationsGithubAppInstallationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, installationID)}
+}
+
+func (_c *IntegrationsGithubAppInstallationRepository_Delete_Call) Run(run func(tx *gorm.DB, installationID int)) *IntegrationsGithubAppInstallationRepository_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(int))
+	})
+	return _c
+}
+
+func (_c *IntegrationsGithubAppInstallationRepository_Delete_Call) Return(_a0 error) *IntegrationsGithubAppInstallationRepository_Delete_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *IntegrationsGithubAppInstallationRepository_Delete_Call) RunAndReturn(run func(*gorm.DB, int) error) *IntegrationsGithubAppInstallationRepository_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByOrganizationId provides a mock function with given fields: orgID
 func (_m *IntegrationsGithubAppInstallationRepository) FindByOrganizationId(orgID uuid.UUID) ([]models.GithubAppInstallation, error) {
 	ret := _m.Called(orgID)

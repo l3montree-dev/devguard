@@ -33,12 +33,12 @@ type cveRepository interface {
 
 type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
-	LoadAssetComponents(tx core.DB, asset models.Asset, version string) ([]models.ComponentDependency, error)
+	LoadAssetComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
 }
 
 type assetService interface {
 	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw) (amountOpened int, amountClosed int, newState []models.Flaw, err error)
-	UpdateSBOM(asset models.Asset, version string, sbom *cdx.BOM) error
+	UpdateSBOM(asset models.Asset, scanType string, version string, sbom *cdx.BOM) error
 }
 
 type httpController struct {
@@ -86,6 +86,14 @@ func (s *httpController) Scan(c core.Context) error {
 		return c.JSON(400, map[string]string{"error": "no version header found"})
 	}
 
+	scanType := c.Request().Header.Get("X-Scan-Type")
+	if scanType == "" {
+		slog.Error("no scan type header found")
+		return c.JSON(400, map[string]string{
+			"error": "no scan type header found",
+		})
+	}
+
 	var err error
 	version, err = utils.SemverFix(version)
 	// check if valid semver
@@ -95,7 +103,7 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// update the sbom in the database in parallel
-	if err := s.assetService.UpdateSBOM(assetObj, version, bom); err != nil {
+	if err := s.assetService.UpdateSBOM(assetObj, scanType, version, bom); err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not update sbom"})
 	}
@@ -113,7 +121,7 @@ func (s *httpController) Scan(c core.Context) error {
 	flaws := []models.Flaw{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, assetObj, version)
+	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, assetObj, scanType, version)
 	if err != nil {
 		slog.Error("could not load asset components", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not load asset components"})
