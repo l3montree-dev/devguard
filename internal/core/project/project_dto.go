@@ -32,12 +32,12 @@ func (p *CreateRequest) ToModel() models.Project {
 	}
 }
 
-type PatchRequest struct {
+type patchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 }
 
-func (p *PatchRequest) ApplyToModel(project *models.Project) bool {
+func (p *patchRequest) applyToModel(project *models.Project) bool {
 	updated := false
 	if p.Name != nil {
 		project.Name = *p.Name

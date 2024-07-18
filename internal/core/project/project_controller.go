@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -179,7 +178,7 @@ func (p *Controller) List(c core.Context) error {
 func (p *Controller) Update(c core.Context) error {
 	req := c.Request().Body
 	defer req.Close()
-	var patchRequest PatchRequest
+	var patchRequest patchRequest
 	err := json.NewDecoder(req).Decode(&patchRequest)
 	if err != nil {
 		return fmt.Errorf("could not decode request: %w", err)
@@ -187,16 +186,7 @@ func (p *Controller) Update(c core.Context) error {
 
 	project := core.GetProject(c)
 
-	if patchRequest.Name != nil && *patchRequest.Name != project.Name {
-		project.Name = *patchRequest.Name
-		project.Slug = slug.Make(project.Name)
-	}
-
-	if patchRequest.Description != nil && *patchRequest.Description != project.Description {
-		project.Description = *patchRequest.Description
-	}
-
-	updated := patchRequest.ApplyToModel(&project)
+	updated := patchRequest.applyToModel(&project)
 	if updated {
 		err = p.projectRepository.Update(nil, &project)
 		if err != nil {
