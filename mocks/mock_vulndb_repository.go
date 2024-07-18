@@ -84,24 +84,22 @@ func (_c *VulndbRepository_FindAllListPaged_Call) RunAndReturn(run func(*gorm.DB
 }
 
 // FindCVE provides a mock function with given fields: tx, cveId
-func (_m *VulndbRepository) FindCVE(tx *gorm.DB, cveId string) (interface{}, error) {
+func (_m *VulndbRepository) FindCVE(tx *gorm.DB, cveId string) (models.CVE, error) {
 	ret := _m.Called(tx, cveId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindCVE")
 	}
 
-	var r0 interface{}
+	var r0 models.CVE
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string) (interface{}, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string) (models.CVE, error)); ok {
 		return rf(tx, cveId)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string) interface{}); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string) models.CVE); ok {
 		r0 = rf(tx, cveId)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(interface{})
-		}
+		r0 = ret.Get(0).(models.CVE)
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, string) error); ok {
@@ -132,12 +130,12 @@ func (_c *VulndbRepository_FindCVE_Call) Run(run func(tx *gorm.DB, cveId string)
 	return _c
 }
 
-func (_c *VulndbRepository_FindCVE_Call) Return(_a0 interface{}, _a1 error) *VulndbRepository_FindCVE_Call {
+func (_c *VulndbRepository_FindCVE_Call) Return(_a0 models.CVE, _a1 error) *VulndbRepository_FindCVE_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *VulndbRepository_FindCVE_Call) RunAndReturn(run func(*gorm.DB, string) (interface{}, error)) *VulndbRepository_FindCVE_Call {
+func (_c *VulndbRepository_FindCVE_Call) RunAndReturn(run func(*gorm.DB, string) (models.CVE, error)) *VulndbRepository_FindCVE_Call {
 	_c.Call.Return(run)
 	return _c
 }

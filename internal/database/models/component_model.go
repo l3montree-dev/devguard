@@ -40,6 +40,7 @@ type ComponentDependency struct {
 	DependencyPurlOrCpe string    `json:"dependencyPurlOrCpe" gorm:"column:dependency_purl_or_cpe;"`
 	AssetID             uuid.UUID `json:"assetId" gorm:"column:asset_id;type:uuid;"`
 	Asset               Asset     `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
+	ScanType            string    `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
 
 	Depth int `json:"depth" gorm:"column:depth"`
 }

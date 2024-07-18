@@ -103,7 +103,7 @@ func TestUpdateSBOM(t *testing.T) {
 			componentRepository: componentRepository,
 		}
 
-		if err := assetService.UpdateSBOM(asset, "1.0.0", &bom); err != nil {
+		if err := assetService.UpdateSBOM(asset, "sca", "1.0.0", &bom); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
@@ -131,7 +131,7 @@ func TestUpdateSBOM(t *testing.T) {
 			componentRepository: componentRepository,
 		}
 
-		if err := assetService.UpdateSBOM(asset, "1.0.0", &bom); err != nil {
+		if err := assetService.UpdateSBOM(asset, "sca", "1.0.0", &bom); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
