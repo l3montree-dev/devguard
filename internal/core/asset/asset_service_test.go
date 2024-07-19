@@ -43,6 +43,7 @@ func TestUpdateSBOM(t *testing.T) {
 			AssetSemverStart:    "1.0.0",
 			AssetSemverEnd:      nil,
 			Dependency:          components[0],
+			ScanType:            "sca",
 		},
 		{
 			ComponentPurlOrCpe:  utils.Ptr("a@1.0.0"),
@@ -51,6 +52,7 @@ func TestUpdateSBOM(t *testing.T) {
 			AssetSemverEnd:      nil,
 			Component:           components[0],
 			Dependency:          components[1],
+			ScanType:            "sca",
 		},
 	}
 
@@ -93,7 +95,7 @@ func TestUpdateSBOM(t *testing.T) {
 	t.Run("update sbom with empty old state", func(t *testing.T) {
 		componentRepository := &mocks.AssetComponentRepository{}
 		componentRepository.
-			On("LoadAssetComponents", mock.Anything, asset, "1.0.0").Return([]models.ComponentDependency{}, nil)
+			On("LoadAssetComponents", mock.Anything, asset, "sca", "1.0.0").Return([]models.ComponentDependency{}, nil)
 
 		componentRepository.On("SaveBatch", (*gorm.DB)(nil), components).Return(nil)
 
@@ -121,7 +123,7 @@ func TestUpdateSBOM(t *testing.T) {
 
 		componentRepository := &mocks.AssetComponentRepository{}
 		componentRepository.
-			On("LoadAssetComponents", mock.Anything, asset, "1.0.0").Return(oldState, nil)
+			On("LoadAssetComponents", mock.Anything, asset, "sca", "1.0.0").Return(oldState, nil)
 
 		componentRepository.On("SaveBatch", (*gorm.DB)(nil), components).Return(nil)
 
