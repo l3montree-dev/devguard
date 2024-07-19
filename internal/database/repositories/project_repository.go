@@ -26,3 +26,6 @@ func (g *projectRepository) ReadBySlug(organizationID uuid.UUID, slug string) (m
 	err := g.db.Where("slug = ? AND organization_id = ?", slug, organizationID).First(&t).Error
 	return t, err
 }
+func (g *projectRepository) Update(tx core.DB, project *models.Project) error {
+	return g.db.Save(project).Error
+}

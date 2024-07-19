@@ -16,6 +16,9 @@
 package project
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -28,6 +31,7 @@ import (
 type projectRepository interface {
 	repositories.Repository[uuid.UUID, models.Project, core.DB]
 	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
+	Update(tx core.DB, project *models.Project) error
 }
 
 type assetRepository interface {
@@ -100,6 +104,13 @@ func (p *Controller) bootstrapProject(c core.Context, project models.Project) er
 		return err
 	}
 
+	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "project", []accesscontrol.Action{
+		accesscontrol.ActionDelete,
+		accesscontrol.ActionUpdate,
+	}); err != nil {
+		return err
+	}
+
 	if err := rbac.AllowRoleInProject(project.ID.String(), "member", "project", []accesscontrol.Action{
 		accesscontrol.ActionRead,
 	}); err != nil {
@@ -162,4 +173,25 @@ func (p *Controller) List(c core.Context) error {
 	}
 
 	return c.JSON(200, projects)
+}
+
+func (p *Controller) Update(c core.Context) error {
+	req := c.Request().Body
+	defer req.Close()
+	var patchRequest patchRequest
+	err := json.NewDecoder(req).Decode(&patchRequest)
+	if err != nil {
+		return fmt.Errorf("could not decode request: %w", err)
+	}
+
+	project := core.GetProject(c)
+
+	updated := patchRequest.applyToModel(&project)
+	if updated {
+		err = p.projectRepository.Update(nil, &project)
+		if err != nil {
+			return fmt.Errorf("could not update project: %w", err)
+		}
+	}
+	return c.JSON(200, project)
 }
