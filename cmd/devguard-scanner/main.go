@@ -81,12 +81,12 @@ func generateSBOM(path string) (*os.File, error) {
 		slog.Info("scanning directory", "dir", path)
 		// scanning a dir
 		// cdxgenCmd = exec.Command("cdxgen", "-o", filename)
-		trivyCmd = exec.Command("trivy", "fs", path, "--format", "cyclonedx", "--output", filename+".1")
+		trivyCmd = exec.Command("trivy", "fs", path, "--format", "cyclonedx", "--output", filename)
 	} else {
 		slog.Info("scanning single file", "file", maybeFilename)
 		// scanning a single file
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
-		trivyCmd = exec.Command("trivy", "image", path, "--format", "cyclonedx", "--output", filename+".1")
+		trivyCmd = exec.Command("trivy", "image", path, "--format", "cyclonedx", "--output", filename)
 	}
 
 	// cdxgenCmd.Dir = getDirFromPath(path)
@@ -103,7 +103,7 @@ func generateSBOM(path string) (*os.File, error) {
 		return nil, err
 	}
 	// trivy generates the cyclonedx spec in version 1.6, while cdxgen generates version 1.5
-	jsonData, err := os.ReadFile(filepath.Join(getDirFromPath(path), filename+".1"))
+	jsonData, err := os.ReadFile(filepath.Join(getDirFromPath(path), filename))
 	if err != nil {
 		return nil, err
 	}
