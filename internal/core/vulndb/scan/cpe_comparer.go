@@ -16,8 +16,11 @@
 package scan
 
 import (
+	"strings"
+
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type cpeComparer struct {
@@ -30,6 +33,39 @@ func NewCPEComparer(db core.DB) *cpeComparer {
 	}
 }
 
-func (c *cpeComparer) GetVulns(cpe string) ([]models.VulnInPackage, error) {
-	return nil, nil
+func (c *cpeComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {
+	// convert the purl to a cpe
+	cpe, err := utils.PurlToCPE(purl)
+	if err != nil {
+		return nil, err
+	}
+
+	// parse the cpe
+	// split the criteria into its parts
+	parts := strings.Split(cpe, ":")
+	part := parts[2]
+	vendor := parts[3]
+	product := parts[4]
+	version := parts[5]
+
+	cpeMatches := []models.CPEMatch{}
+
+	c.db.Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (vendor = ? OR vendor = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding = '') AND (version_start_including <= ? OR version_start_including = '')", part, vendor, product, version, version, version).Preload("CVEs").Find(&cpeMatches)
+
+	vulns := []models.VulnInPackage{}
+	for _, cpeMatch := range cpeMatches {
+		tmp := cpeMatch
+		for _, cve := range cpeMatch.CVEs {
+			vulns = append(vulns, models.VulnInPackage{
+				CVEID:             cve.CVE,
+				Purl:              purl,
+				FixedVersion:      &tmp.VersionEndExcluding,
+				IntroducedVersion: &tmp.VersionStartIncluding,
+				InstalledVersion:  version,
+				CVE:               *cve,
+				PackageName:       purl,
+			})
+		}
+	}
+	return vulns, nil
 }

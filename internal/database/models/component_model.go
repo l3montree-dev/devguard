@@ -24,6 +24,9 @@ type Component struct {
 	// either cpe or purl is set
 	PurlOrCpe    string                `json:"purlOrCpe" gorm:"primaryKey;column:purl_or_cpe"`
 	Dependencies []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
+	Asset        Asset                 `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
+	AssetID      uuid.UUID             `json:"assetId" gorm:"column:asset_id;type:uuid;"`
+	ScanType     string                `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
 }
 
 type ComponentDependency struct {
@@ -67,7 +70,7 @@ type VulnInPackage struct {
 	FixedVersion      *string
 	IntroducedVersion *string
 	PackageName       string
-	PurlWithVersion   string
+	Purl              string
 	InstalledVersion  string
 	Depth             int
 }

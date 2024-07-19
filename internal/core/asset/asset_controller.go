@@ -106,10 +106,7 @@ func (a *httpController) AffectedPackages(c core.Context) error {
 	}
 
 	purls := utils.Map(components, func(c models.ComponentDependency) string {
-		if c.ComponentPurlOrCpe == nil {
-			return c.DependencyPurlOrCpe
-		}
-		return *c.ComponentPurlOrCpe
+		return c.DependencyPurlOrCpe
 	})
 
 	flaws, err := a.flawRepository.GetFlawsByPurlOrCpe(nil, purls)

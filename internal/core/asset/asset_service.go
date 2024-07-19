@@ -58,7 +58,6 @@ type flawService interface {
 
 	RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error
 }
-
 type service struct {
 	flawRepository      flawRepository
 	componentRepository componentRepository
@@ -138,6 +137,46 @@ type DepsDevResponse struct {
 	Error string `json:"error"`
 }
 
+func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
+	res := make(map[string]cdx.Component)
+	if component.Components == nil {
+		return res
+	}
+
+	for _, c := range *component.Components {
+		res[c.BOMRef] = c
+		for k, v := range recursiveBuildBomRefMap(c) {
+			res[k] = v
+		}
+	}
+	return res
+}
+
+func buildBomRefMap(bom *cdx.BOM) map[string]cdx.Component {
+	res := make(map[string]cdx.Component)
+	if bom.Components == nil {
+		return res
+	}
+
+	for _, c := range *bom.Components {
+		res[c.BOMRef] = c
+		for k, v := range recursiveBuildBomRefMap(c) {
+			res[k] = v
+		}
+	}
+	return res
+}
+
+func purlOrCpe(component cdx.Component) (string, error) {
+	if component.PackageURL != "" {
+		return url.PathUnescape(component.PackageURL)
+	}
+	if component.CPE != "" {
+		return component.CPE, nil
+	}
+	return component.Name, nil
+}
+
 func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom *cdx.BOM) error {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, asset, scanType, currentVersion)
@@ -148,78 +187,91 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 	// we need to check if the SBOM is new or if it already exists.
 	// if it already exists, we need to update the existing SBOM
 	// update the sbom for the asset in the database.
-	components := make([]models.Component, 0)
+	components := make(map[string]models.Component)
 	dependencies := make([]models.ComponentDependency, 0)
-	// create all components
-	for _, component := range *sbom.Components {
-		// check if this is the asset itself.
-		if component.BOMRef == sbom.Metadata.Component.BOMRef {
-			continue
+
+	// build a map of all components
+	bomRefMap := buildBomRefMap(sbom)
+
+	// create all direct dependencies
+	root := sbom.Metadata.Component.BOMRef
+	for _, c := range *sbom.Dependencies {
+		if c.Ref != root {
+			continue // no direct dependency
 		}
-
-		// the sbom of a container image does not contain the scope. In a container image, we do not have
-		// anything like a deep nested dependency tree. Everything is a direct dependency.
-		if component.Scope == cdx.ScopeRequired || component.Scope == "" {
-			// create the direct dependency edge.
-			dependencies = append(dependencies,
-				models.ComponentDependency{
-					ComponentPurlOrCpe: nil, // direct dependency - therefore set it to nil
-					Dependency: models.Component{
-						PurlOrCpe: component.BOMRef,
-					},
-					ScanType:            scanType,
-					DependencyPurlOrCpe: component.BOMRef,
-					AssetSemverStart:    currentVersion,
-				},
-			)
-		}
-
-		// find all dependencies from this component
-
-		for _, c := range *sbom.Dependencies {
-			if c.Ref != component.BOMRef {
+		// we found it.
+		for _, directDependency := range *c.Dependencies {
+			component := bomRefMap[directDependency]
+			// the sbom of a container image does not contain the scope. In a container image, we do not have
+			// anything like a deep nested dependency tree. Everything is a direct dependency.
+			componentPackageUrl, err := purlOrCpe(component)
+			if err != nil {
+				slog.Error("could not decode purl", "err", err)
 				continue
 			}
 
-			for _, dep := range *c.Dependencies {
-				p, err := url.PathUnescape(dep)
-
-				if err != nil {
-					slog.Error("could not decode purl", "err", err)
-					continue
-				}
-				dependencies = append(dependencies,
-					models.ComponentDependency{
-						Component: models.Component{
-							PurlOrCpe: component.BOMRef,
-						},
-						ComponentPurlOrCpe: utils.Ptr(component.BOMRef),
-						Dependency: models.Component{
-							PurlOrCpe: p,
-						},
-						ScanType:            scanType,
-						DependencyPurlOrCpe: p,
-						AssetSemverStart:    currentVersion,
-					},
-				)
+			// create the direct dependency edge.
+			dependencies = append(dependencies,
+				models.ComponentDependency{
+					ComponentPurlOrCpe:  nil, // direct dependency - therefore set it to nil
+					ScanType:            scanType,
+					DependencyPurlOrCpe: componentPackageUrl,
+					AssetSemverStart:    currentVersion,
+				},
+			)
+			components[componentPackageUrl] = models.Component{
+				PurlOrCpe: componentPackageUrl,
+				AssetID:   asset.GetID(),
+				ScanType:  scanType,
 			}
 		}
+	}
 
-		p, err := url.PathUnescape(component.BOMRef)
+	// find all dependencies from this component
+
+	for _, c := range *sbom.Dependencies {
+		comp := bomRefMap[c.Ref]
+		compPackageUrl, err := purlOrCpe(comp)
 		if err != nil {
-			slog.Error("could not decode purl", "err", err)
+			slog.Warn("could not decode purl", "err", err)
 			continue
 		}
 
-		components = append(components,
-			models.Component{
-				PurlOrCpe: p,
-			},
-		)
+		for _, d := range *c.Dependencies {
+			dep := bomRefMap[d]
+			depPurlOrName, err := purlOrCpe(dep)
+			if err != nil {
+				slog.Error("could not decode purl", "err", err)
+				continue
+			}
+			dependencies = append(dependencies,
+				models.ComponentDependency{
+					ComponentPurlOrCpe:  utils.Ptr(compPackageUrl),
+					ScanType:            scanType,
+					DependencyPurlOrCpe: depPurlOrName,
+					AssetSemverStart:    currentVersion,
+				},
+			)
+			components[depPurlOrName] = models.Component{
+				PurlOrCpe: depPurlOrName,
+				AssetID:   asset.GetID(),
+				ScanType:  scanType,
+			}
+			components[compPackageUrl] = models.Component{
+				PurlOrCpe: compPackageUrl,
+				AssetID:   asset.GetID(),
+				ScanType:  scanType,
+			}
+		}
+	}
+
+	componentsSlice := make([]models.Component, 0, len(components))
+	for _, c := range components {
+		componentsSlice = append(componentsSlice, c)
 	}
 
 	// make sure, that the components exist
-	if err := s.componentRepository.SaveBatch(nil, components); err != nil {
+	if err := s.componentRepository.SaveBatch(nil, componentsSlice); err != nil {
 		return err
 	}
 

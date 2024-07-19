@@ -95,3 +95,15 @@ func Any[T any](s []T, f func(T) bool) bool {
 func Some[T any](s []T, f func(T) bool) bool {
 	return Any(s, f)
 }
+
+func UniqBy[T any, K comparable](s []T, f func(T) K) []T {
+	seen := make(map[K]bool)
+	res := make([]T, 0)
+	for _, v := range s {
+		if _, ok := seen[f(v)]; !ok {
+			seen[f(v)] = true
+			res = append(res, v)
+		}
+	}
+	return res
+}
