@@ -341,6 +341,8 @@ func Start(db core.DB) {
 	tenantRouter.DELETE("/", orgController.Delete, core.AccessControlMiddleware("organization", accesscontrol.ActionDelete))
 	tenantRouter.GET("/", orgController.Read, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 
+	tenantRouter.PATCH("/", orgController.Update, core.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
+
 	tenantRouter.GET("/metrics/", orgController.Metrics)
 
 	tenantRouter.GET("/members/", orgController.Members)
