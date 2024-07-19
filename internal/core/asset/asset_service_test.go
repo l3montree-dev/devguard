@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -27,8 +28,17 @@ import (
 )
 
 func TestUpdateSBOM(t *testing.T) {
+	asset := models.Asset{
+		Model: models.Model{
+			ID: uuid.New(),
+		},
+	}
+
 	// expect those components to get created
 	components := []models.Component{
+		{
+			PurlOrCpe: asset.ID.String() + "/package-lock.json",
+		},
 		{
 			PurlOrCpe: "a@1.0.0",
 		},
@@ -39,10 +49,16 @@ func TestUpdateSBOM(t *testing.T) {
 	expectedNewState := []models.ComponentDependency{
 		{
 			ComponentPurlOrCpe:  nil,
+			DependencyPurlOrCpe: asset.ID.String() + "/package-lock.json",
+			AssetSemverStart:    "1.0.0",
+			AssetSemverEnd:      nil,
+			ScanType:            "sca",
+		},
+		{
+			ComponentPurlOrCpe:  utils.Ptr(asset.ID.String() + "/package-lock.json"),
 			DependencyPurlOrCpe: "a@1.0.0",
 			AssetSemverStart:    "1.0.0",
 			AssetSemverEnd:      nil,
-			Dependency:          components[0],
 			ScanType:            "sca",
 		},
 		{
@@ -50,37 +66,42 @@ func TestUpdateSBOM(t *testing.T) {
 			DependencyPurlOrCpe: "b@1.0.1",
 			AssetSemverStart:    "1.0.0",
 			AssetSemverEnd:      nil,
-			Component:           components[0],
-			Dependency:          components[1],
 			ScanType:            "sca",
 		},
 	}
 
 	bom := cdx.BOM{
-		Metadata: &cdx.Metadata{
-			Component: &cdx.Component{
-				Type:    "application",
-				Name:    "test",
-				Version: "1.0.0",
-			},
-		},
 		Components: &[]cdx.Component{
 			{
-				BOMRef:  "a@1.0.0",
-				Type:    "library",
-				Name:    "a",
+				BOMRef:  "package-lock.json",
+				Type:    "application",
+				Name:    "package-lock.json",
 				Version: "1.0.0",
-				Scope:   cdx.ScopeRequired,
 			},
 			{
-				BOMRef:  "b@1.0.1",
-				Type:    "library",
-				Name:    "b",
-				Version: "1.0.1",
-				Scope:   cdx.ScopeOptional,
+				BOMRef:     "a@1.0.0",
+				Type:       "library",
+				Name:       "a",
+				Version:    "1.0.0",
+				PackageURL: "a@1.0.0",
+				Scope:      cdx.ScopeRequired,
+			},
+			{
+				BOMRef:     "b@1.0.1",
+				Type:       "library",
+				Name:       "b",
+				Version:    "1.0.1",
+				PackageURL: "b@1.0.1",
+				Scope:      cdx.ScopeOptional,
 			},
 		},
 		Dependencies: &[]cdx.Dependency{
+			{
+				Ref: "package-lock.json",
+				Dependencies: &[]string{
+					"a@1.0.0",
+				},
+			},
 			{
 				Ref: "a@1.0.0",
 				Dependencies: &[]string{
@@ -89,8 +110,6 @@ func TestUpdateSBOM(t *testing.T) {
 			},
 		},
 	}
-
-	asset := models.Asset{}
 
 	t.Run("update sbom with empty old state", func(t *testing.T) {
 		componentRepository := &mocks.AssetComponentRepository{}

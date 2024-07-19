@@ -188,7 +188,7 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 	// we need to check if the SBOM is new or if it already exists.
 	// if it already exists, we need to update the existing SBOM
 	// update the sbom for the asset in the database.
-	components := make([]models.Component, 0)
+	components := make(map[string]models.Component)
 	dependencies := make([]models.ComponentDependency, 0)
 
 	// build a map of all components
@@ -216,11 +216,9 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 				AssetSemverStart:    currentVersion,
 			},
 		)
-		components = append(components,
-			models.Component{
-				PurlOrCpe: componentPackageUrl,
-			},
-		)
+		components[componentPackageUrl] = models.Component{
+			PurlOrCpe: componentPackageUrl,
+		}
 	}
 
 	// find all dependencies from this component
@@ -242,27 +240,28 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 			}
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-
-					ComponentPurlOrCpe: utils.Ptr(compPackageUrl),
-
+					ComponentPurlOrCpe:  utils.Ptr(compPackageUrl),
 					ScanType:            scanType,
 					DependencyPurlOrCpe: depPurlOrName,
 					AssetSemverStart:    currentVersion,
 				},
 			)
-			components = append(components,
-				models.Component{
-					PurlOrCpe: depPurlOrName,
-				},
-				models.Component{
-					PurlOrCpe: compPackageUrl,
-				},
-			)
+			components[depPurlOrName] = models.Component{
+				PurlOrCpe: depPurlOrName,
+			}
+			components[compPackageUrl] = models.Component{
+				PurlOrCpe: compPackageUrl,
+			}
 		}
 	}
 
+	componentsSlice := make([]models.Component, 0, len(components))
+	for _, c := range components {
+		componentsSlice = append(componentsSlice, c)
+	}
+
 	// make sure, that the components exist
-	if err := s.componentRepository.SaveBatch(nil, components); err != nil {
+	if err := s.componentRepository.SaveBatch(nil, componentsSlice); err != nil {
 		return err
 	}
 
