@@ -27,6 +27,7 @@ type concurrentResult struct {
 type errGroup[T any] struct {
 	ch    chan T
 	group errgroup.Group
+	res   []T
 }
 
 func (eg *errGroup[T]) Go(fn func() (T, error)) {
@@ -35,9 +36,21 @@ func (eg *errGroup[T]) Go(fn func() (T, error)) {
 		if err != nil {
 			return err
 		}
+
 		eg.ch <- r
+
 		return nil
 	})
+}
+
+func (eg *errGroup[T]) startCollecting() {
+	// reset the result slice
+	eg.res = make([]T, 0)
+	go func() {
+		for r := range eg.ch {
+			eg.res = append(eg.res, r)
+		}
+	}()
 }
 
 func (eg *errGroup[T]) SetLimit(limit int) {
@@ -45,37 +58,23 @@ func (eg *errGroup[T]) SetLimit(limit int) {
 }
 
 func (eg *errGroup[T]) WaitAndCollect() ([]T, error) {
-	var res []T
-
-	var errChan = make(chan error, 1)
-	defer close(errChan)
-
-	go func() {
-		err := eg.group.Wait()
-		if err != nil {
-			errChan <- err
-		}
-		close(eg.ch)
-	}()
-
-	for r := range eg.ch {
-		res = append(res, r)
+	err := eg.group.Wait()
+	close(eg.ch)
+	if err != nil {
+		return nil, err
 	}
-
 	// Reset the channel
 	eg.ch = make(chan T)
+	res := eg.res
+	eg.startCollecting()
 
-	select {
-	case err := <-errChan:
-		return nil, err
-	default:
-		return res, nil
-	}
+	return res, nil
 }
 
 func ErrGroup[T any](limit int) *errGroup[T] {
 	g := errGroup[T]{ch: make(chan T), group: errgroup.Group{}}
 	g.group.SetLimit(limit)
+	g.startCollecting() // otherwise a call to .Go will block, since we are not reading from the channel
 	return &g
 }
 

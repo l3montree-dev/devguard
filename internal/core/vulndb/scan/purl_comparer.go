@@ -16,6 +16,7 @@
 package scan
 
 import (
+	"log/slog"
 	"net/url"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -69,6 +70,7 @@ func (comparer *purlComparer) GetVulns(purl string) ([]models.VulnInPackage, err
 
 	version, err := utils.SemverFix(p.Version)
 	if err != nil {
+		slog.Info("could not parse version", "version", p.Version, "purl", purl)
 		return nil, err
 	}
 
@@ -99,7 +101,7 @@ func (comparer *purlComparer) GetVulns(purl string) ([]models.VulnInPackage, err
 				FixedVersion:      affectedComponent.SemverFixed,
 				IntroducedVersion: affectedComponent.SemverIntroduced,
 				PackageName:       affectedComponent.PURL,
-				PurlWithVersion:   purl,
+				Purl:              purl,
 				CVE:               cve,
 				InstalledVersion:  version,
 			})

@@ -51,6 +51,7 @@ func (c *componentRepository) CreateAssetComponents(tx database.DB, components [
 	if len(components) == 0 {
 		return nil
 	}
+
 	return c.GetDB(tx).Create(&components).Error
 }
 

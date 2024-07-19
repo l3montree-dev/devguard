@@ -57,11 +57,16 @@ func Execute() {
 	}
 }
 
-func maybeGetFileName(path string) string {
-	if strings.Contains(path, ".") {
-		return filepath.Base(path)
+func maybeGetFileName(path string) (string, bool) {
+	l, err := os.Stat(path)
+	if err != nil {
+		return "", false
 	}
-	return ""
+
+	if l.IsDir() {
+		return path, true
+	}
+	return filepath.Base(path), false
 }
 
 func generateSBOM(path string) (*os.File, error) {
@@ -69,23 +74,77 @@ func generateSBOM(path string) (*os.File, error) {
 	filename := uuid.New().String() + ".json"
 
 	// check if we are scanning a dir or a single file
-	maybeFilename := maybeGetFileName(path)
-	var cmd *exec.Cmd
-	if maybeFilename == "" || maybeFilename == "." {
+	maybeFilename, isDir := maybeGetFileName(path)
+	// var cdxgenCmd *exec.Cmd
+	var trivyCmd *exec.Cmd
+	if isDir {
+		slog.Info("scanning directory", "dir", path)
 		// scanning a dir
-		cmd = exec.Command("cdxgen", "-o", filename)
+		// cdxgenCmd = exec.Command("cdxgen", "-o", filename)
+		trivyCmd = exec.Command("trivy", "fs", path, "--format", "cyclonedx", "--output", filename)
 	} else {
 		slog.Info("scanning single file", "file", maybeFilename)
 		// scanning a single file
-		cmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
+		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
+		trivyCmd = exec.Command("trivy", "image", "--input", path, "--format", "cyclonedx", "--output", filename)
 	}
-	cmd.Stdout = os.Stdout
-	cmd.Dir = getDirFromPath(path)
-	err := cmd.Run()
 
+	// cdxgenCmd.Dir = getDirFromPath(path)
+	trivyCmd.Dir = getDirFromPath(path)
+
+	// run the commands
+	/*err := cdxgenCmd.Run()
+	if err != nil {
+		return nil, err
+	}*/
+
+	err := trivyCmd.Run()
 	if err != nil {
 		return nil, err
 	}
+	// trivy generates the cyclonedx spec in version 1.6, while cdxgen generates version 1.5
+	jsonData, err := os.ReadFile(filepath.Join(getDirFromPath(path), filename))
+	if err != nil {
+		return nil, err
+	}
+	// unmashal the json data
+	var data map[string]interface{}
+	err = json.Unmarshal(jsonData, &data)
+	if err != nil {
+		return nil, err
+	}
+	// change the spec version to 1.5
+	data["specVersion"] = "1.5"
+	// marshal the data back to json
+	newJsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	// write the data back to the file
+	err = os.WriteFile(filepath.Join(getDirFromPath(path), filename), newJsonData, 0600)
+	if err != nil {
+		return nil, err
+	}
+	// merge the two files
+	// mergeCommand := exec.Command("cyclonedx", "merge", "--hierarchical", "--name", "devguard", "--version", "v1.0.0", "--input-files", filename, filename+".1", "--input-format", "json", "--output-format", "json", "--output-file", strings.Replace(filename, ".json", "", 1)+".merged.json")
+	/*mergeCommand.Dir = getDirFromPath(path)
+
+	err = mergeCommand.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	// remove the files
+
+	err = os.Remove(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	err = os.Remove(filename + ".1")
+	if err != nil {
+		return nil, err
+	}*/
 
 	// open the file and return the path
 	return os.Open(filepath.Join(getDirFromPath(path), filename))
@@ -142,7 +201,8 @@ func getCurrentVersion(path string) (string, int, error) {
 	cmd.Dir = getDirFromPath(path)
 	err := cmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		slog.Info("could not run git tag", "err", err, "path", getDirFromPath(path))
+		return "", 0, err
 	}
 
 	// Filter using regex
@@ -272,14 +332,8 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	tw.AppendRows(utils.Map(
 		scanResponse.Flaws,
 		func(f flaw.FlawDTO) table.Row {
-			cleanPkgName := strings.ReplaceAll(f.ArbitraryJsonData["packageName"].(string), "pkg:", "")
-			// remove the ecosystem from the package name
-			// pkg:ecosystem/package -> package
-			// pkg:ecosystem/package@version -> package
-			cleanPkgName = strings.Join(strings.Split(cleanPkgName, "/")[1:], "/")
-
 			clickableLink := fmt.Sprintf("\033]8;;%s/%s/flaws/%s\033\\View in Web UI\033]8;;\033\\", webUI, assetName, f.ID)
-			return table.Row{cleanPkgName, f.CVEID, *f.RawRiskAssessment, f.ArbitraryJsonData["installedVersion"], f.ArbitraryJsonData["fixedVersion"], f.State, clickableLink}
+			return table.Row{f.ArbitraryJsonData["packageName"].(string), f.CVEID, *f.RawRiskAssessment, f.ArbitraryJsonData["installedVersion"], f.ArbitraryJsonData["fixedVersion"], f.State, clickableLink}
 		},
 	))
 
@@ -329,8 +383,15 @@ func addScanFlags(cmd *cobra.Command) {
 }
 
 func getDirFromPath(path string) string {
-	// if its point to a file, just return the path to the containing directory.
-	if strings.Contains(path, ".") {
+
+	fi, err := os.Stat(path)
+	if err != nil {
+		return path
+	}
+	switch mode := fi.Mode(); {
+	case mode.IsDir():
+		return path
+	case mode.IsRegular():
 		return filepath.Dir(path)
 	}
 	return path
@@ -365,6 +426,7 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 		if err != nil {
 			printGitHelp(err)
 		}
+
 		if commitAfterTag != 0 {
 			version = version + "-" + strconv.Itoa(commitAfterTag)
 		}
@@ -373,16 +435,10 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 		// read the sbom file and post it to the scan endpoint
 		// get the flaws and print them to the console
 		file, err := generateSBOM(path)
+
 		if err != nil {
 			slog.Error("could not open file", "err", err)
 			return
-		}
-		removeFile := func() {
-			// remove the file after the scan
-			err := os.Remove(file.Name())
-			if err != nil {
-				slog.Error("could not remove file", "err", err)
-			}
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -403,13 +459,18 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 		req.Header.Set("X-Asset-Name", assetName)
 		req.Header.Set("X-Asset-Version", version)
 		req.Header.Set("X-Scan-Type", scanType)
+		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanType)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			slog.Error("could not send request", "err", err)
 			return
 		}
-		removeFile()
+
+		err = os.Remove(file.Name())
+		if err != nil {
+			slog.Error("could not remove file", "err", err)
+		}
 
 		if resp.StatusCode != http.StatusOK {
 			slog.Error("could not scan file", "status", resp.Status)

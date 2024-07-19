@@ -47,7 +47,7 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 	var count int64
 	var flaws []models.Flaw = []models.Flaw{}
 
-	q := r.Repository.GetDB(tx).Joins("CVE").Joins("Component").Where("asset_id = ?", assetId)
+	q := r.Repository.GetDB(tx).Joins("CVE").Joins("Component").Where("flaws.asset_id = ?", assetId)
 
 	// apply filters
 	for _, f := range filter {
@@ -56,7 +56,7 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 	q.Model(&models.Flaw{}).Count(&count)
 
 	// get all flaws of the asset
-	q = pageInfo.ApplyOnDB(r.Repository.GetDB(tx)).Joins("CVE").Joins("Component").Where("asset_id = ?", assetId)
+	q = pageInfo.ApplyOnDB(r.Repository.GetDB(tx)).Joins("CVE").Joins("Component").Where("flaws.asset_id = ?", assetId)
 
 	// apply filters
 	for _, f := range filter {
@@ -105,8 +105,9 @@ func (r *flawRepository) GetFlawsByPurlOrCpe(tx core.DB, purlOrCpe []string) ([]
 		return flaws, nil
 	}
 
-	if err := r.Repository.GetDB(tx).Where("component_purl_or_cpe IN (?)", purlOrCpe).Find(&flaws).Error; err != nil {
+	if err := r.Repository.GetDB(tx).Where("component_purl_or_cpe IN ?", purlOrCpe).Find(&flaws).Error; err != nil {
 		return nil, err
 	}
+
 	return flaws, nil
 }
