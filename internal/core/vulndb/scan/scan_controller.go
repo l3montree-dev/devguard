@@ -115,7 +115,10 @@ func (s *httpController) Scan(c core.Context) error {
 		return c.JSON(500, map[string]string{"error": "could not scan file"})
 	}
 
-	scannerID := "github.com/l3montree-dev/devguard/cmd/devguard-scanner"
+	scannerID := c.Request().Header.Get("X-Scanner")
+	if scannerID == "" {
+		scannerID = "github.com/l3montree-dev/devguard/cmd/devguard-scanner"
+	}
 
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}
@@ -131,24 +134,28 @@ func (s *httpController) Scan(c core.Context) error {
 	// calculate the depth of each component
 	depthMap := make(map[string]int)
 
-	asset.CalculateDepth(tree.Root, 0, depthMap)
-	// now we have the depth.
+	// our dependency tree has a "fake" root node.
+	//  the first - 0 - element is just the name of the application
+	// therefore we start at -1 to get the correct depth. The fake node will be 0, the first real node will be 1
+	asset.CalculateDepth(tree.Root, -1, depthMap)
 
+	// now we have the depth.
 	for _, vuln := range vulns {
 		v := vuln
 
-		purlWithVersion, err := url.PathUnescape(vuln.PurlWithVersion)
+		componentPurlOrCpe, err := url.PathUnescape(v.Purl)
 		if err != nil {
 			slog.Error("could not unescape purl", "err", err)
 			continue
 		}
+
 		// check if the component has an cve
 
 		flaw := models.Flaw{
 			AssetID:            assetObj.ID,
 			CVEID:              v.CVEID,
 			ScannerID:          scannerID,
-			ComponentPurlOrCpe: purlWithVersion,
+			ComponentPurlOrCpe: componentPurlOrCpe,
 			CVE:                &v.CVE,
 		}
 
@@ -158,10 +165,15 @@ func (s *httpController) Scan(c core.Context) error {
 			"packageName":       v.PackageName,
 			"cveId":             v.CVEID,
 			"installedVersion":  v.InstalledVersion,
-			"componentDepth":    depthMap[purlWithVersion],
+			"componentDepth":    depthMap[componentPurlOrCpe],
+			"scanType":          scanType,
 		})
 		flaws = append(flaws, flaw)
 	}
+
+	flaws = utils.UniqBy(flaws, func(f models.Flaw) string {
+		return f.CalculateHash()
+	})
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current flaws

@@ -84,7 +84,6 @@ func cutCycles(node *treeNode, visited map[*treeNode]bool) {
 }
 
 func CalculateDepth(node *treeNode, currentDepth int, depthMap map[string]int) {
-
 	if _, ok := depthMap[node.Name]; !ok {
 		depthMap[node.Name] = currentDepth
 	} else if depthMap[node.Name] > currentDepth {

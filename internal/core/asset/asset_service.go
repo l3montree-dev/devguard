@@ -58,7 +58,6 @@ type flawService interface {
 
 	RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error
 }
-
 type service struct {
 	flawRepository      flawRepository
 	componentRepository componentRepository
@@ -168,14 +167,14 @@ func buildBomRefMap(bom *cdx.BOM) map[string]cdx.Component {
 	return res
 }
 
-func purlOrName(asset models.Asset, component cdx.Component) (string, error) {
+func purlOrCpe(component cdx.Component) (string, error) {
 	if component.PackageURL != "" {
 		return url.PathUnescape(component.PackageURL)
 	}
-	if component.Name == "" {
-		return "", errors.New("no name or purl found")
+	if component.CPE != "" {
+		return component.CPE, nil
 	}
-	return fmt.Sprintf("%s/%s", asset.ID.String(), component.Name), nil
+	return component.Name, nil
 }
 
 func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom *cdx.BOM) error {
@@ -194,30 +193,37 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 	// build a map of all components
 	bomRefMap := buildBomRefMap(sbom)
 
-	// create all components
-	for _, component := range *sbom.Components {
-		if component.Type != cdx.ComponentTypeApplication {
-			continue
+	// create all direct dependencies
+	root := sbom.Metadata.Component.BOMRef
+	for _, c := range *sbom.Dependencies {
+		if c.Ref != root {
+			continue // no direct dependency
 		}
-		// the sbom of a container image does not contain the scope. In a container image, we do not have
-		// anything like a deep nested dependency tree. Everything is a direct dependency.
-		componentPackageUrl, err := purlOrName(asset, component)
-		if err != nil {
-			slog.Error("could not decode purl", "err", err)
-			continue
-		}
+		// we found it.
+		for _, directDependency := range *c.Dependencies {
+			component := bomRefMap[directDependency]
+			// the sbom of a container image does not contain the scope. In a container image, we do not have
+			// anything like a deep nested dependency tree. Everything is a direct dependency.
+			componentPackageUrl, err := purlOrCpe(component)
+			if err != nil {
+				slog.Error("could not decode purl", "err", err)
+				continue
+			}
 
-		// create the direct dependency edge.
-		dependencies = append(dependencies,
-			models.ComponentDependency{
-				ComponentPurlOrCpe:  nil, // direct dependency - therefore set it to nil
-				ScanType:            scanType,
-				DependencyPurlOrCpe: componentPackageUrl,
-				AssetSemverStart:    currentVersion,
-			},
-		)
-		components[componentPackageUrl] = models.Component{
-			PurlOrCpe: componentPackageUrl,
+			// create the direct dependency edge.
+			dependencies = append(dependencies,
+				models.ComponentDependency{
+					ComponentPurlOrCpe:  nil, // direct dependency - therefore set it to nil
+					ScanType:            scanType,
+					DependencyPurlOrCpe: componentPackageUrl,
+					AssetSemverStart:    currentVersion,
+				},
+			)
+			components[componentPackageUrl] = models.Component{
+				PurlOrCpe: componentPackageUrl,
+				AssetID:   asset.GetID(),
+				ScanType:  scanType,
+			}
 		}
 	}
 
@@ -225,15 +231,15 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 
 	for _, c := range *sbom.Dependencies {
 		comp := bomRefMap[c.Ref]
-		compPackageUrl, err := purlOrName(asset, comp)
+		compPackageUrl, err := purlOrCpe(comp)
 		if err != nil {
-			slog.Error("could not decode purl", "err", err)
+			slog.Warn("could not decode purl", "err", err)
 			continue
 		}
 
 		for _, d := range *c.Dependencies {
 			dep := bomRefMap[d]
-			depPurlOrName, err := purlOrName(asset, dep)
+			depPurlOrName, err := purlOrCpe(dep)
 			if err != nil {
 				slog.Error("could not decode purl", "err", err)
 				continue
@@ -248,9 +254,13 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 			)
 			components[depPurlOrName] = models.Component{
 				PurlOrCpe: depPurlOrName,
+				AssetID:   asset.GetID(),
+				ScanType:  scanType,
 			}
 			components[compPackageUrl] = models.Component{
 				PurlOrCpe: compPackageUrl,
+				AssetID:   asset.GetID(),
+				ScanType:  scanType,
 			}
 		}
 	}

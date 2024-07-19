@@ -86,7 +86,7 @@ func generateSBOM(path string) (*os.File, error) {
 		slog.Info("scanning single file", "file", maybeFilename)
 		// scanning a single file
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
-		trivyCmd = exec.Command("trivy", "image", path, "--format", "cyclonedx", "--output", filename)
+		trivyCmd = exec.Command("trivy", "image", "--input", path, "--format", "cyclonedx", "--output", filename)
 	}
 
 	// cdxgenCmd.Dir = getDirFromPath(path)
@@ -121,7 +121,7 @@ func generateSBOM(path string) (*os.File, error) {
 		return nil, err
 	}
 	// write the data back to the file
-	err = os.WriteFile(filepath.Join(getDirFromPath(path), filename+".1"), newJsonData, 0600)
+	err = os.WriteFile(filepath.Join(getDirFromPath(path), filename), newJsonData, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func generateSBOM(path string) (*os.File, error) {
 	}*/
 
 	// open the file and return the path
-	return os.Open(filepath.Join(getDirFromPath(path), filename+".1"))
+	return os.Open(filepath.Join(getDirFromPath(path), filename))
 }
 
 // containsRune checks if a string contains a specific rune
@@ -332,14 +332,8 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	tw.AppendRows(utils.Map(
 		scanResponse.Flaws,
 		func(f flaw.FlawDTO) table.Row {
-			cleanPkgName := strings.ReplaceAll(f.ArbitraryJsonData["packageName"].(string), "pkg:", "")
-			// remove the ecosystem from the package name
-			// pkg:ecosystem/package -> package
-			// pkg:ecosystem/package@version -> package
-			cleanPkgName = strings.Join(strings.Split(cleanPkgName, "/")[1:], "/")
-
 			clickableLink := fmt.Sprintf("\033]8;;%s/%s/flaws/%s\033\\View in Web UI\033]8;;\033\\", webUI, assetName, f.ID)
-			return table.Row{cleanPkgName, f.CVEID, *f.RawRiskAssessment, f.ArbitraryJsonData["installedVersion"], f.ArbitraryJsonData["fixedVersion"], f.State, clickableLink}
+			return table.Row{f.ArbitraryJsonData["packageName"].(string), f.CVEID, *f.RawRiskAssessment, f.ArbitraryJsonData["installedVersion"], f.ArbitraryJsonData["fixedVersion"], f.State, clickableLink}
 		},
 	))
 
@@ -446,13 +440,6 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 			slog.Error("could not open file", "err", err)
 			return
 		}
-		removeFile := func() {
-			/*// remove the file after the scan
-			err := os.Remove(file.Name())
-			if err != nil {
-				slog.Error("could not remove file", "err", err)
-			}*/
-		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
@@ -472,13 +459,18 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 		req.Header.Set("X-Asset-Name", assetName)
 		req.Header.Set("X-Asset-Version", version)
 		req.Header.Set("X-Scan-Type", scanType)
+		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanType)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			slog.Error("could not send request", "err", err)
 			return
 		}
-		removeFile()
+
+		err = os.Remove(file.Name())
+		if err != nil {
+			slog.Error("could not remove file", "err", err)
+		}
 
 		if resp.StatusCode != http.StatusOK {
 			slog.Error("could not scan file", "status", resp.Status)
