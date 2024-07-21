@@ -53,6 +53,10 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, s
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value())
 	}
+	if search != "" && len(search) > 2 {
+		q = q.Where("(\"CVE\".description ILIKE ?  OR description ILIKE ? OR component_purl_or_cpe ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+
 	q.Model(&models.Flaw{}).Count(&count)
 
 	// get all flaws of the asset
@@ -76,7 +80,7 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, s
 		q = q.Order("state DESC, raw_risk_assessment DESC")
 	}
 
-	err := q.Debug().Find(&flaws).Error
+	err := q.Find(&flaws).Error
 
 	if err != nil {
 		return core.Paged[models.Flaw]{}, err
