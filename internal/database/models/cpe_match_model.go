@@ -18,7 +18,6 @@ type CPEMatch struct {
 	VersionEndExcluding string `json:"versionEndExcluding" gorm:"index;type:text;"`
 	VersionEndIncluding string `json:"versionEndIncluding" gorm:"index;type:text;"`
 
-	VersionStartExcluding string `json:"versionStartExcluding" gorm:"index;type:text;"`
 	VersionStartIncluding string `json:"versionStartIncluding" gorm:"index;type:text;"`
 
 	Vulnerable bool `json:"vulnerable" gorm:"type:boolean;"`

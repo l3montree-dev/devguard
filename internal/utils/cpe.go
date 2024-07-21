@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 
 	"github.com/package-url/packageurl-go"
 )
@@ -30,6 +31,20 @@ func IsDistroPurl(purl string) (bool, error) {
 	return true, nil
 }
 
+func removeDigitSuffix(s string) string {
+	reg := regexp.MustCompile(`\.\d+$`)
+	s = reg.ReplaceAllString(s, "")
+	reg = regexp.MustCompile(`\d+$`)
+	return reg.ReplaceAllString(s, "")
+}
+
+func normalizePackageName(packageName string) string {
+	// remove the version from the package name
+	// like python3.11
+	// we only want python
+	return removeDigitSuffix(packageName)
+}
+
 // PurlToCPE maps a package URL (purl) to a Common Platform Enumeration (CPE)
 func PurlToCPE(purl string) (string, error) {
 	// Parse the purl
@@ -40,7 +55,7 @@ func PurlToCPE(purl string) (string, error) {
 
 	// Extract components
 	// namespace := parsedPurl.Namespace
-	name := parsedPurl.Name
+	name := normalizePackageName(parsedPurl.Name)
 	version := parsedPurl.Version
 
 	// Construct the CPE string

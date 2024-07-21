@@ -108,6 +108,7 @@ func init() {
 							slog.Error("could not load asset components", "err", err)
 							continue
 						}
+
 						sbom := assetService.BuildSBOM(asset, version, "", components)
 						vulns, err := sbomScanner.Scan(sbom)
 						if err != nil {

@@ -395,41 +395,31 @@ func (s *service) BuildSBOM(asset models.Asset, version string, organizationName
 	for _, cLoop := range components {
 		c := cLoop
 
-		scope := cdx.ScopeOptional
 		var p packageurl.PackageURL
 		var err error
-		if c.ComponentPurlOrCpe == nil {
-			scope = cdx.ScopeRequired
-			p, err = packageurl.FromString(c.DependencyPurlOrCpe)
-			if err != nil {
-				continue
-			}
-		} else {
-			p, err = packageurl.FromString(*c.ComponentPurlOrCpe)
-			if err != nil {
-				continue
-			}
-		}
-
-		if _, ok := alreadyIncluded[c.DependencyPurlOrCpe]; !ok {
-			alreadyIncluded[c.DependencyPurlOrCpe] = true
-			bomComponents = append(bomComponents, cdx.Component{
-				BOMRef:     c.DependencyPurlOrCpe,
-				Type:       cdx.ComponentTypeLibrary,
-				PackageURL: c.DependencyPurlOrCpe,
-				Scope:      scope,
-				Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
-			})
-		}
-
 		if c.ComponentPurlOrCpe != nil {
-			if _, ok := alreadyIncluded[*c.ComponentPurlOrCpe]; !ok {
-				alreadyIncluded[*c.ComponentPurlOrCpe] = true
+			p, err = packageurl.FromString(*c.ComponentPurlOrCpe)
+			if err == nil {
+				if _, ok := alreadyIncluded[*c.ComponentPurlOrCpe]; !ok {
+					alreadyIncluded[*c.ComponentPurlOrCpe] = true
+					bomComponents = append(bomComponents, cdx.Component{
+						BOMRef:     *c.ComponentPurlOrCpe,
+						Type:       cdx.ComponentTypeLibrary,
+						PackageURL: *c.ComponentPurlOrCpe,
+						Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
+					})
+				}
+			}
+		}
+
+		if c.DependencyPurlOrCpe != "" {
+			p, err = packageurl.FromString(c.DependencyPurlOrCpe)
+			if err == nil {
+				alreadyIncluded[c.DependencyPurlOrCpe] = true
 				bomComponents = append(bomComponents, cdx.Component{
-					BOMRef:     *c.ComponentPurlOrCpe,
+					BOMRef:     c.DependencyPurlOrCpe,
 					Type:       cdx.ComponentTypeLibrary,
-					PackageURL: *c.ComponentPurlOrCpe,
-					Scope:      scope,
+					PackageURL: c.DependencyPurlOrCpe,
 					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
 				})
 			}

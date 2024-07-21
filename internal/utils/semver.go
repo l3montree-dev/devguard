@@ -46,6 +46,15 @@ func SemverFix(version string) (string, error) {
 		return "", ErrInvalidVersion
 	}
 
+	// remove anything after "~"
+	if strings.Contains(version, "~") {
+		version = strings.Split(version, "~")[0]
+	}
+
+	if strings.Contains(version, "+") {
+		version = strings.Split(version, "+")[0]
+	}
+
 	// lets check if we need to fix the semver - there are some cases where the semver is not valid
 	// examples are: "1.5", "1.0", "19.03.9", "3.0-beta1"
 	// we need to fix these to be valid semver

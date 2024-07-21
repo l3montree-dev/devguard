@@ -45,40 +45,41 @@ func NewSBOMScanner(cpeComparer comparer, purlComparer comparer, cveRepository c
 
 func (s *sbomScanner) Scan(bom *cdx.BOM) ([]models.VulnInPackage, error) {
 	errgroup := utils.ErrGroup[[]models.VulnInPackage](10)
+
 	// iterate through all components
 	for _, c := range *bom.Components {
 		component := c
+
 		errgroup.Go(
 			func() ([]models.VulnInPackage, error) {
 				// check if CPE is present
+				vulns := []models.VulnInPackage{}
 				if component.CPE != "" {
 					res, err := s.cpeComparer.GetVulns(component.CPE)
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "cpe", component.CPE)
 						return nil, nil
 					}
-					return res, nil
-				} else if component.PackageURL != "" {
-					vulns := []models.VulnInPackage{}
-
+					vulns = append(vulns, res...)
+				}
+				if component.PackageURL != "" {
 					if isDistroPurl, err := utils.IsDistroPurl(component.PackageURL); err == nil && isDistroPurl {
 						// try to convert the purl to a CPE
 						res, err := s.cpeComparer.GetVulns(component.PackageURL)
 						if err != nil {
 							slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
-							return nil, nil
+						} else {
+							vulns = append(vulns, res...)
 						}
-						vulns = append(vulns, res...)
 					}
 
 					res, err := s.purlComparer.GetVulns(component.PackageURL)
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
-						return nil, nil
 					}
-					return append(vulns, res...), nil
+					vulns = append(vulns, res...)
 				}
-				return nil, nil
+				return vulns, nil
 			})
 	}
 
