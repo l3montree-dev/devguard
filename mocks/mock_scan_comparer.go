@@ -20,9 +20,9 @@ func (_m *ScanComparer) EXPECT() *ScanComparer_Expecter {
 	return &ScanComparer_Expecter{mock: &_m.Mock}
 }
 
-// GetVulns provides a mock function with given fields: packageIdentifier
-func (_m *ScanComparer) GetVulns(packageIdentifier string) ([]models.VulnInPackage, error) {
-	ret := _m.Called(packageIdentifier)
+// GetVulns provides a mock function with given fields: purl
+func (_m *ScanComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {
+	ret := _m.Called(purl)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetVulns")
@@ -31,10 +31,10 @@ func (_m *ScanComparer) GetVulns(packageIdentifier string) ([]models.VulnInPacka
 	var r0 []models.VulnInPackage
 	var r1 error
 	if rf, ok := ret.Get(0).(func(string) ([]models.VulnInPackage, error)); ok {
-		return rf(packageIdentifier)
+		return rf(purl)
 	}
 	if rf, ok := ret.Get(0).(func(string) []models.VulnInPackage); ok {
-		r0 = rf(packageIdentifier)
+		r0 = rf(purl)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VulnInPackage)
@@ -42,7 +42,7 @@ func (_m *ScanComparer) GetVulns(packageIdentifier string) ([]models.VulnInPacka
 	}
 
 	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(packageIdentifier)
+		r1 = rf(purl)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -56,12 +56,12 @@ type ScanComparer_GetVulns_Call struct {
 }
 
 // GetVulns is a helper method to define mock.On call
-//   - packageIdentifier string
-func (_e *ScanComparer_Expecter) GetVulns(packageIdentifier interface{}) *ScanComparer_GetVulns_Call {
-	return &ScanComparer_GetVulns_Call{Call: _e.mock.On("GetVulns", packageIdentifier)}
+//   - purl string
+func (_e *ScanComparer_Expecter) GetVulns(purl interface{}) *ScanComparer_GetVulns_Call {
+	return &ScanComparer_GetVulns_Call{Call: _e.mock.On("GetVulns", purl)}
 }
 
-func (_c *ScanComparer_GetVulns_Call) Run(run func(packageIdentifier string)) *ScanComparer_GetVulns_Call {
+func (_c *ScanComparer_GetVulns_Call) Run(run func(purl string)) *ScanComparer_GetVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string))
 	})

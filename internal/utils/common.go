@@ -25,3 +25,10 @@ func SafeDereference(s *string) string {
 	}
 	return *s
 }
+
+func OrDefault[T any](val *T, def T) T {
+	if val == nil {
+		return def
+	}
+	return *val
+}

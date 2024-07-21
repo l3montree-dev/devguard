@@ -21,7 +21,7 @@ func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int)
 	r, vector := RiskCalculation(cve, e)
 	risk := r.WithEnvironmentAndThreatIntelligence
 	one := float64(1)
-	epss := float64(*cve.EPSS)
+	epss := float64(utils.OrDefault(cve.EPSS, 0))
 	tmp := risk * (epss + one)
 	// return the risk with 2 decimal places
 	tmp = float64(int(tmp*100)) / 100
@@ -35,7 +35,7 @@ func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int)
 	return obj.RiskCalculationReport{
 		Risk: tmp,
 
-		EPSS:      *cve.EPSS,
+		EPSS:      utils.OrDefault(cve.EPSS, 0),
 		BaseScore: float64(cve.CVSS),
 
 		UnderAttack:   cve.CISAActionDue != nil,
