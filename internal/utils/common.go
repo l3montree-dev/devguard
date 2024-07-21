@@ -32,3 +32,13 @@ func OrDefault[T any](val *T, def T) T {
 	}
 	return *val
 }
+
+func Or[T any](
+	val *T,
+	fallback *T,
+) *T {
+	if val == nil {
+		return fallback
+	}
+	return val
+}

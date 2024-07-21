@@ -20,13 +20,16 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"time"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
 )
 
@@ -76,7 +79,68 @@ func NewService(assetRepository assetRepository, componentRepository componentRe
 	}
 }
 
-func (s *service) HandleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw) (int, int, []models.Flaw, error) {
+func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanType string, version string, scannerID string, userID string) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
+
+	// create flaws out of those vulnerabilities
+	flaws := []models.Flaw{}
+
+	// load all asset components again and build a dependency tree
+	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, asset, scanType, version)
+	if err != nil {
+		return 0, 0, []models.Flaw{}, errors.Wrap(err, "could not load asset components")
+	}
+	// build a dependency tree
+	tree := BuildDependencyTree(assetComponents)
+	// calculate the depth of each component
+	depthMap := make(map[string]int)
+
+	// our dependency tree has a "fake" root node.
+	//  the first - 0 - element is just the name of the application
+	// therefore we start at -1 to get the correct depth. The fake node will be 0, the first real node will be 1
+	CalculateDepth(tree.Root, -1, depthMap)
+
+	// now we have the depth.
+	for _, vuln := range vulns {
+		v := vuln
+
+		componentPurlOrCpe, err := url.PathUnescape(v.Purl)
+		if err != nil {
+			slog.Error("could not unescape purl", "err", err)
+			continue
+		}
+
+		// check if the component has an cve
+
+		flaw := models.Flaw{
+			AssetID:            asset.ID,
+			CVEID:              v.CVEID,
+			ScannerID:          scannerID,
+			ComponentPurlOrCpe: componentPurlOrCpe,
+			CVE:                &v.CVE,
+		}
+
+		flaw.SetArbitraryJsonData(map[string]any{
+			"introducedVersion": v.GetIntroducedVersion(),
+			"fixedVersion":      v.GetFixedVersion(),
+			"packageName":       v.PackageName,
+			"cveId":             v.CVEID,
+			"installedVersion":  v.InstalledVersion,
+			"componentDepth":    depthMap[componentPurlOrCpe],
+			"scanType":          scanType,
+		})
+		flaws = append(flaws, flaw)
+	}
+
+	flaws = utils.UniqBy(flaws, func(f models.Flaw) string {
+		return f.CalculateHash()
+	})
+
+	// let the asset service handle the new scan result - we do not need
+	// any return value from that process - even if it fails, we should return the current flaws
+	return s.handleScanResult(userID, scannerID, asset, flaws)
+}
+
+func (s *service) handleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw) (int, int, []models.Flaw, error) {
 	// get all existing flaws from the database - this is the old state
 	existingFlaws, err := s.flawRepository.ListByScanner(asset.GetID(), scannerID)
 	if err != nil {
@@ -306,4 +370,101 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 	}
 
 	return nil
+}
+
+func (s *service) BuildSBOM(asset models.Asset, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {
+	bom := cdx.BOM{
+		BOMFormat:   "CycloneDX",
+		SpecVersion: cyclonedx.SpecVersion1_5,
+		Version:     1,
+		Metadata: &cdx.Metadata{
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Component: &cdx.Component{
+				BOMRef:    asset.Slug,
+				Type:      cdx.ComponentTypeApplication,
+				Name:      asset.Name,
+				Version:   version,
+				Author:    organizationName,
+				Publisher: "github.com/l3montree-dev/devguard",
+			},
+		},
+	}
+
+	bomComponents := make([]cdx.Component, 0)
+	alreadyIncluded := make(map[string]bool)
+	for _, cLoop := range components {
+		c := cLoop
+
+		scope := cdx.ScopeOptional
+		var p packageurl.PackageURL
+		var err error
+		if c.ComponentPurlOrCpe == nil {
+			scope = cdx.ScopeRequired
+			p, err = packageurl.FromString(c.DependencyPurlOrCpe)
+			if err != nil {
+				continue
+			}
+		} else {
+			p, err = packageurl.FromString(*c.ComponentPurlOrCpe)
+			if err != nil {
+				continue
+			}
+		}
+
+		if _, ok := alreadyIncluded[c.DependencyPurlOrCpe]; !ok {
+			alreadyIncluded[c.DependencyPurlOrCpe] = true
+			bomComponents = append(bomComponents, cdx.Component{
+				BOMRef:     c.DependencyPurlOrCpe,
+				Type:       cdx.ComponentTypeLibrary,
+				PackageURL: c.DependencyPurlOrCpe,
+				Scope:      scope,
+				Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
+			})
+		}
+
+		if c.ComponentPurlOrCpe != nil {
+			if _, ok := alreadyIncluded[*c.ComponentPurlOrCpe]; !ok {
+				alreadyIncluded[*c.ComponentPurlOrCpe] = true
+				bomComponents = append(bomComponents, cdx.Component{
+					BOMRef:     *c.ComponentPurlOrCpe,
+					Type:       cdx.ComponentTypeLibrary,
+					PackageURL: *c.ComponentPurlOrCpe,
+					Scope:      scope,
+					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
+				})
+			}
+		}
+	}
+
+	// build up the dependency map
+	dependencyMap := make(map[string][]string)
+	for _, c := range components {
+		if c.ComponentPurlOrCpe == nil {
+			if _, ok := dependencyMap[asset.Slug]; !ok {
+				dependencyMap[asset.Slug] = []string{c.DependencyPurlOrCpe}
+				continue
+			}
+			dependencyMap[asset.Slug] = append(dependencyMap[asset.Slug], c.DependencyPurlOrCpe)
+			continue
+		}
+		if _, ok := dependencyMap[*c.ComponentPurlOrCpe]; !ok {
+			dependencyMap[*c.ComponentPurlOrCpe] = make([]string, 0)
+		}
+		dependencyMap[*c.ComponentPurlOrCpe] = append(dependencyMap[*c.ComponentPurlOrCpe], c.DependencyPurlOrCpe)
+	}
+
+	// build up the dependencies
+	bomDependencies := make([]cdx.Dependency, len(dependencyMap))
+	i := 0
+	for k, v := range dependencyMap {
+		vtmp := v
+		bomDependencies[i] = cdx.Dependency{
+			Ref:          k,
+			Dependencies: &vtmp,
+		}
+		i++
+	}
+	bom.Dependencies = &bomDependencies
+	bom.Components = &bomComponents
+	return &bom
 }

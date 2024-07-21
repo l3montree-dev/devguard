@@ -16,7 +16,7 @@ type repository interface {
 	repositories.Repository[string, models.Flaw, core.DB]
 
 	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.Flaw, error)
-	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error)
+	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error)
 }
 type flawService interface {
 	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification *string) error
@@ -45,6 +45,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	pagedResp, err := c.flawRepository.GetByAssetIdPaged(
 		nil,
 		core.GetPageInfo(ctx),
+		ctx.QueryParam("search"),
 		core.GetFilterQuery(ctx),
 		core.GetSortQuery(ctx),
 		asset.GetID(),

@@ -43,7 +43,7 @@ func (r *flawRepository) ListByScanner(assetID uuid.UUID, scannerID string) ([]m
 	return flaws, nil
 }
 
-func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error) {
+func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error) {
 	var count int64
 	var flaws []models.Flaw = []models.Flaw{}
 
@@ -63,16 +63,20 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, f
 		q = q.Where(f.SQL(), f.Value())
 	}
 
+	if search != "" && len(search) > 2 {
+		q = q.Where("(\"CVE\".description ILIKE ?  OR description ILIKE ? OR component_purl_or_cpe ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+
 	// apply sorting
 	if len(sort) > 0 {
 		for _, s := range sort {
 			q = q.Order(s.SQL())
 		}
 	} else {
-		q = q.Order("\"CVE\".\"cvss\" desc")
+		q = q.Order("state DESC, raw_risk_assessment DESC")
 	}
 
-	err := q.Find(&flaws).Error
+	err := q.Debug().Find(&flaws).Error
 
 	if err != nil {
 		return core.Paged[models.Flaw]{}, err
