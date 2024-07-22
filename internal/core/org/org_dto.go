@@ -39,6 +39,7 @@ func (c createRequest) toModel() models.Org {
 		Name:                   c.Name,
 		ContactPhoneNumber:     c.ContactPhoneNumber,
 		NumberOfEmployees:      c.NumberOfEmployees,
+		Country:                c.Country,
 		Industry:               c.Industry,
 		CriticalInfrastructure: c.CriticalInfrastructure,
 		ISO27001:               c.ISO27001,
