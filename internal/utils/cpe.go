@@ -45,8 +45,18 @@ func normalizePackageName(packageName string) string {
 	return removeDigitSuffix(packageName)
 }
 
+func componentTypeToPart(componentType string) string {
+	// This is a simplified mapping; adjust based on your specific requirements
+	switch componentType {
+	case "operating-system":
+		return "o"
+	default:
+		return "a"
+	}
+}
+
 // PurlToCPE maps a package URL (purl) to a Common Platform Enumeration (CPE)
-func PurlToCPE(purl string) (string, error) {
+func PurlToCPE(purl string, componentType string) (string, error) {
 	// Parse the purl
 	parsedPurl, err := packageurl.FromString(purl)
 	if err != nil {
@@ -60,8 +70,8 @@ func PurlToCPE(purl string) (string, error) {
 
 	// Construct the CPE string
 	// This is a simplified mapping; adjust based on your specific requirements
-	cpe := fmt.Sprintf("cpe:2.3:a:%s:%s:%s:*:*:*:*:*:*:*",
-		url.PathEscape(name), url.PathEscape(name), url.PathEscape(version))
+	cpe := fmt.Sprintf("cpe:2.3:%s:%s:%s:%s:*:*:*:*:*:*:*",
+		componentTypeToPart(componentType), url.PathEscape(name), url.PathEscape(name), url.PathEscape(version))
 
 	return cpe, nil
 }

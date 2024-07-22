@@ -26,10 +26,6 @@ type repository interface {
 	Update(tx core.DB, asset *models.Asset) error
 }
 
-type vulnService interface {
-	GetVulnsForAll(purls []string) ([]models.VulnInPackage, error)
-}
-
 type assetComponentsLoader interface {
 	GetVersions(tx core.DB, asset models.Asset) ([]string, error)
 	LoadAssetComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
@@ -43,18 +39,18 @@ type assetService interface {
 type httpController struct {
 	assetRepository       repository
 	assetComponentsLoader assetComponentsLoader
-	vulnService           vulnService
-	flawRepository        flawRepository
-	assetService          assetService
+
+	flawRepository flawRepository
+	assetService   assetService
 }
 
-func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, vulnService vulnService, flawRepository flawRepository, assetService assetService) *httpController {
+func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, flawRepository flawRepository, assetService assetService) *httpController {
 	return &httpController{
 		assetRepository:       repository,
 		assetComponentsLoader: assetComponentsLoader,
-		vulnService:           vulnService,
-		flawRepository:        flawRepository,
-		assetService:          assetService,
+
+		flawRepository: flawRepository,
+		assetService:   assetService,
 	}
 }
 

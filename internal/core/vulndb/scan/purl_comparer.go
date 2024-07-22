@@ -45,7 +45,7 @@ func (comparer *purlComparer) GetVulnsForAll(purls []string) ([]models.VulnInPac
 		p := purl
 		itmp := i
 		g.Go(func() error {
-			vulns, err := comparer.GetVulns(p)
+			vulns, err := comparer.GetVulns(p, "")
 			if err != nil {
 				return err
 			}
@@ -61,7 +61,7 @@ func (comparer *purlComparer) GetVulnsForAll(purls []string) ([]models.VulnInPac
 	return utils.Flat(results), nil
 }
 
-func (comparer *purlComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {
+func (comparer *purlComparer) GetVulns(purl string, _ string) ([]models.VulnInPackage, error) {
 	// parse the purl
 	p, err := packageurl.FromString(purl)
 	if err != nil {

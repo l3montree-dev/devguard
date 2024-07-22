@@ -20,13 +20,31 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
+type ComponentType string
+
+const (
+	ComponentTypeApplication          ComponentType = "application"
+	ComponentTypeContainer            ComponentType = "container"
+	ComponentTypeData                 ComponentType = "data"
+	ComponentTypeDevice               ComponentType = "device"
+	ComponentTypeDeviceDriver         ComponentType = "device-driver"
+	ComponentTypeFile                 ComponentType = "file"
+	ComponentTypeFirmware             ComponentType = "firmware"
+	ComponentTypeFramework            ComponentType = "framework"
+	ComponentTypeLibrary              ComponentType = "library"
+	ComponentTypeMachineLearningModel ComponentType = "machine-learning-model"
+	ComponentTypeOS                   ComponentType = "operating-system"
+	ComponentTypePlatform             ComponentType = "platform"
+)
+
 type Component struct {
 	// either cpe or purl is set
-	PurlOrCpe    string                `json:"purlOrCpe" gorm:"primaryKey;column:purl_or_cpe"`
-	Dependencies []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
-	Asset        Asset                 `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
-	AssetID      uuid.UUID             `json:"assetId" gorm:"column:asset_id;type:uuid;"`
-	ScanType     string                `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
+	PurlOrCpe     string                `json:"purlOrCpe" gorm:"primaryKey;column:purl_or_cpe"`
+	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
+	Asset         Asset                 `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
+	AssetID       uuid.UUID             `json:"assetId" gorm:"column:asset_id;type:uuid;"`
+	ScanType      string                `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
+	ComponentType ComponentType         `json:"componentType"`
 }
 
 type ComponentDependency struct {

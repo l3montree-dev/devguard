@@ -238,7 +238,7 @@ func purlOrCpe(component cdx.Component) (string, error) {
 	if component.CPE != "" {
 		return component.CPE, nil
 	}
-	return component.Name, nil
+	return component.Name + "@" + component.Version, nil
 }
 
 func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom *cdx.BOM) error {
@@ -284,9 +284,10 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 				},
 			)
 			components[componentPackageUrl] = models.Component{
-				PurlOrCpe: componentPackageUrl,
-				AssetID:   asset.GetID(),
-				ScanType:  scanType,
+				PurlOrCpe:     componentPackageUrl,
+				ComponentType: models.ComponentType(component.Type),
+				AssetID:       asset.GetID(),
+				ScanType:      scanType,
 			}
 		}
 	}
@@ -317,14 +318,16 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 				},
 			)
 			components[depPurlOrName] = models.Component{
-				PurlOrCpe: depPurlOrName,
-				AssetID:   asset.GetID(),
-				ScanType:  scanType,
+				PurlOrCpe:     depPurlOrName,
+				AssetID:       asset.GetID(),
+				ScanType:      scanType,
+				ComponentType: models.ComponentType(dep.Type),
 			}
 			components[compPackageUrl] = models.Component{
-				PurlOrCpe: compPackageUrl,
-				AssetID:   asset.GetID(),
-				ScanType:  scanType,
+				PurlOrCpe:     compPackageUrl,
+				AssetID:       asset.GetID(),
+				ScanType:      scanType,
+				ComponentType: models.ComponentType(comp.Type),
 			}
 		}
 	}
@@ -347,7 +350,7 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 
 		err := s.assetRepository.Save(tx, &asset)
 		if err != nil {
-			slog.Info("Error saving asset: %v", err)
+			slog.Info("error saving asset", "err", err)
 			return fmt.Errorf("could not save asset: %v", err)
 		}
 		// get the flaws

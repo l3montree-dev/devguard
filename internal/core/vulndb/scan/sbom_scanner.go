@@ -33,7 +33,7 @@ type sbomScanner struct {
 // like the affected package version and fixed version
 
 type comparer interface {
-	GetVulns(purl string) ([]models.VulnInPackage, error)
+	GetVulns(purl string, componentType string) ([]models.VulnInPackage, error)
 }
 
 func NewSBOMScanner(cpeComparer comparer, purlComparer comparer, cveRepository cveRepository) *sbomScanner {
@@ -55,7 +55,7 @@ func (s *sbomScanner) Scan(bom *cdx.BOM) ([]models.VulnInPackage, error) {
 				// check if CPE is present
 				vulns := []models.VulnInPackage{}
 				if component.CPE != "" {
-					res, err := s.cpeComparer.GetVulns(component.CPE)
+					res, err := s.cpeComparer.GetVulns(component.CPE, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "cpe", component.CPE)
 						return nil, nil
@@ -65,7 +65,7 @@ func (s *sbomScanner) Scan(bom *cdx.BOM) ([]models.VulnInPackage, error) {
 				if component.PackageURL != "" {
 					if isDistroPurl, err := utils.IsDistroPurl(component.PackageURL); err == nil && isDistroPurl {
 						// try to convert the purl to a CPE
-						res, err := s.cpeComparer.GetVulns(component.PackageURL)
+						res, err := s.cpeComparer.GetVulns(component.PackageURL, string(component.Type))
 						if err != nil {
 							slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
 						} else {
@@ -73,7 +73,7 @@ func (s *sbomScanner) Scan(bom *cdx.BOM) ([]models.VulnInPackage, error) {
 						}
 					}
 
-					res, err := s.purlComparer.GetVulns(component.PackageURL)
+					res, err := s.purlComparer.GetVulns(component.PackageURL, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
 					}
