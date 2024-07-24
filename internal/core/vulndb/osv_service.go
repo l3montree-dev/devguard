@@ -51,6 +51,30 @@ var osvBaseURL string = "https://storage.googleapis.com/osv-vulnerabilities"
 var importEcosystems = []string{
 	"Go",
 	"npm",
+	"AlmaLinux",
+	"Alpine",
+	"Android",
+	"Bitnami",
+	"Chainguard",
+	"CRAN",
+	"crates.io",
+	"Debian",
+	"GIT",
+	"Github Actions",
+	"Hackage",
+	"Hex",
+	"Linux",
+	"Maven",
+	"NuGet",
+	"OSS-Fuzz",
+	"Packagist",
+	"Pub",
+	"PyPI",
+	"Rocky Linux",
+	"RubyGems",
+	"SwiftURL",
+	"Ubuntu",
+	"Wolfi",
 }
 
 func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader, error) {
@@ -99,6 +123,7 @@ func (s osvService) getEcosystems() ([]string, error) {
 			if s == e {
 				return true
 			}
+			slog.Warn("skipping ecosystem", "ecosystem", s)
 		}
 		return false
 	})

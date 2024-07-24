@@ -238,7 +238,10 @@ func purlOrCpe(component cdx.Component) (string, error) {
 	if component.CPE != "" {
 		return component.CPE, nil
 	}
-	return component.Name + "@" + component.Version, nil
+	if component.Version != "" {
+		return component.Name + "@" + component.Version, nil
+	}
+	return component.Name, nil
 }
 
 func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom *cdx.BOM) error {
