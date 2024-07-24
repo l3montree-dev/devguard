@@ -36,7 +36,7 @@ func NewCPEComparer(db core.DB) *cpeComparer {
 	}
 }
 
-func (c *cpeComparer) GetVulns(purl string, componentType string) ([]models.VulnInPackage, error) {
+func (c *cpeComparer) GetVulns(purl string, notASemverVersion string, componentType string) ([]models.VulnInPackage, error) {
 	// convert the purl to a cpe
 	cpe, err := utils.PurlToCPE(purl, componentType)
 	if err != nil {
@@ -56,28 +56,28 @@ func (c *cpeComparer) GetVulns(purl string, componentType string) ([]models.Vuln
 
 	debug := false
 
-	/*if strings.Contains(purl, "debian/python") {
+	if strings.Contains(purl, "debian/git@") {
 		fmt.Println("purl", purl)
 		fmt.Println("cpe", cpe)
 
 		debug = true
-	}*/
+	}
 
 	cpeMatches := []models.CPEMatch{}
 
 	if debug {
-		c.db.Debug().Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (vendor = ? OR vendor = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding = '') AND (version_end_including >= ? OR version_end_including = '') AND (version_start_including <= ? OR version_start_including = '')", part, vendor, product, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
+		c.db.Debug().Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (vendor = ? OR vendor = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding IS NULL) AND (version_end_including >= ? OR version_end_including IS NULL) AND (version_start_including <= ? OR version_start_including IS NULL) AND (version_start_excluding < ? OR version_start_excluding IS NULL)", part, vendor, product, version, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
 	} else {
-		c.db.Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (vendor = ? OR vendor = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding = '') AND (version_end_including >= ? OR version_end_including = '') AND (version_start_including <= ? OR version_start_including = '')", part, vendor, product, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
+		c.db.Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (vendor = ? OR vendor = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding IS NULL) AND (version_end_including >= ? OR version_end_including IS NULL) AND (version_start_including <= ? OR version_start_including IS NULL) AND (version_start_excluding < ? OR version_start_excluding IS NULL)", part, vendor, product, version, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
 	}
 	// pg_semver sometimes gets the versions wrong. Lets use Go, which is more reliable todo a version check
 	filteredMatches := []models.CPEMatch{}
 	for _, cpeMatch := range cpeMatches {
 		if debug {
-			fmt.Println("found cpe match", cpeMatch.VersionStartIncluding, cpeMatch.VersionEndExcluding, cpeMatch.VersionEndIncluding, version, semver.IsValid("v"+cpeMatch.VersionStartIncluding), semver.IsValid("v"+cpeMatch.VersionEndExcluding), semver.IsValid("v"+cpeMatch.VersionEndIncluding), semver.IsValid("v"+version))
+			fmt.Println("found cpe match", cpeMatch.VersionStartIncluding, cpeMatch.VersionEndExcluding, cpeMatch.VersionEndIncluding, version, semver.IsValid("v"+utils.SafeDereference(cpeMatch.VersionStartIncluding)), semver.IsValid("v"+utils.SafeDereference(cpeMatch.VersionEndExcluding)), semver.IsValid("v"+utils.SafeDereference(cpeMatch.VersionEndIncluding)), semver.IsValid("v"+version))
 		}
-		if cpeMatch.VersionStartIncluding != "" {
-			if semver.Compare("v"+cpeMatch.VersionStartIncluding, "v"+version) > 0 {
+		if cpeMatch.VersionStartIncluding != nil {
+			if semver.Compare("v"+*cpeMatch.VersionStartIncluding, "v"+version) > 0 {
 				// version start including has to be smaller or equal to the version
 				if debug {
 					fmt.Println("version start including has to be smaller or equal to the version", "cpeMatch", cpeMatch.VersionStartIncluding, "version", version)
@@ -86,8 +86,8 @@ func (c *cpeComparer) GetVulns(purl string, componentType string) ([]models.Vuln
 			}
 		}
 
-		if cpeMatch.VersionEndExcluding != "" {
-			if semver.Compare("v"+cpeMatch.VersionEndExcluding, "v"+version) <= 0 {
+		if cpeMatch.VersionEndExcluding != nil {
+			if semver.Compare("v"+*cpeMatch.VersionEndExcluding, "v"+version) <= 0 {
 				// version end excluding has to be bigger than the version
 				if debug {
 					fmt.Println("version end excluding has to be bigger than the version", "cpeMatch", cpeMatch.VersionEndExcluding, "version", version)
@@ -99,8 +99,8 @@ func (c *cpeComparer) GetVulns(purl string, componentType string) ([]models.Vuln
 			}
 		}
 
-		if cpeMatch.VersionEndIncluding != "" {
-			if semver.Compare("v"+cpeMatch.VersionEndIncluding, "v"+version) < 0 {
+		if cpeMatch.VersionEndIncluding != nil {
+			if semver.Compare("v"+*cpeMatch.VersionEndIncluding, "v"+version) < 0 {
 				// version end including has to be bigger or equal to the version
 				if debug {
 					fmt.Println("version end including has to be bigger or equal to the version", "cpeMatch", cpeMatch.VersionEndIncluding, "version", version)
@@ -123,7 +123,7 @@ func (c *cpeComparer) GetVulns(purl string, componentType string) ([]models.Vuln
 	for _, cpeMatch := range filteredMatches {
 		tmp := cpeMatch
 		fixedVersion := tmp.VersionEndExcluding
-		if fixedVersion == "" {
+		if fixedVersion == nil {
 			fixedVersion = tmp.VersionEndIncluding
 		}
 
@@ -140,8 +140,8 @@ func (c *cpeComparer) GetVulns(purl string, componentType string) ([]models.Vuln
 			vulns = append(vulns, models.VulnInPackage{
 				CVEID:             cve.CVE,
 				Purl:              unescapedPurl,
-				FixedVersion:      &fixedVersion,
-				IntroducedVersion: &tmp.VersionStartIncluding,
+				FixedVersion:      fixedVersion,
+				IntroducedVersion: tmp.VersionStartIncluding,
 				InstalledVersion:  version,
 				CVE:               *cve,
 				PackageName:       unescapedPurl,

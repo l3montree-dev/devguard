@@ -259,7 +259,7 @@ func TestSetIdHash(t *testing.T) {
 				{},
 			},
 		}
-		affectedComponent.SetIdHash()
+		affectedComponent.BeforeSave(nil)
 
 		otherAffectedComponent := AffectedComponent{
 			PURL:      "pkg:golang/toolchain",
@@ -267,7 +267,7 @@ func TestSetIdHash(t *testing.T) {
 			CVE:       make([]CVE, 0),
 		}
 
-		otherAffectedComponent.SetIdHash()
+		otherAffectedComponent.BeforeSave(nil)
 		if affectedComponent.ID != otherAffectedComponent.ID {
 			t.Errorf("Expected the same hash, got %s and %s", affectedComponent.ID, otherAffectedComponent.ID)
 		}

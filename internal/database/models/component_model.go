@@ -39,12 +39,13 @@ const (
 
 type Component struct {
 	// either cpe or purl is set
-	PurlOrCpe     string                `json:"purlOrCpe" gorm:"primaryKey;column:purl_or_cpe"`
+	PurlOrCpe     string                `json:"purlOrCpe" gorm:"primaryKey;column:purl_or_cpe"` // without qualifiers!
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	Asset         Asset                 `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
 	AssetID       uuid.UUID             `json:"assetId" gorm:"column:asset_id;type:uuid;"`
 	ScanType      string                `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
 	ComponentType ComponentType         `json:"componentType"`
+	Version       string                `json:"version"`
 }
 
 type ComponentDependency struct {

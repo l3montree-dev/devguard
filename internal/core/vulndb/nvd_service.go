@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
@@ -73,8 +74,18 @@ func (nvdService NVDService) ImportCVE(cveID string) (models.CVE, error) {
 		return models.CVE{}, fmt.Errorf("could not find CVE with id %s", cveID)
 	}
 
-	cve := fromNVDCVE(resp.Vulnerabilities[0].Cve)
-	if err := nvdService.cveRepository.Save(nil, &cve); err != nil {
+	var cve models.CVE
+	var cpes []models.CPEMatch
+	err = nvdService.cveRepository.Transaction(func(tx database.DB) error {
+		cve, cpes = fromNVDCVE(resp.Vulnerabilities[0].Cve)
+		if err := nvdService.cveRepository.Save(tx, &cve); err != nil {
+			return err
+		}
+		// save the cpes
+		return nvdService.cveRepository.GetDB(tx).Model(&cve).Association("Configurations").Append(cpes)
+	})
+
+	if err != nil {
 		return models.CVE{}, err
 	}
 
@@ -130,11 +141,25 @@ func (nvdService NVDService) fetchJSONFromNVD(url url.URL, currentTry int) (nist
 
 func (nvdService NVDService) saveResponseInDB(resp nistResponse) error {
 	cves := make([]models.CVE, len(resp.Vulnerabilities))
+	cpes := make([][]models.CPEMatch, len(resp.Vulnerabilities))
 	for i, v := range resp.Vulnerabilities {
-		cves[i] = fromNVDCVE(v.Cve)
+		cves[i], cpes[i] = fromNVDCVE(v.Cve)
 	}
 
-	return nvdService.cveRepository.SaveBatch(nil, cves)
+	for i, cve := range cves {
+		tmp := cve
+		err := nvdService.cveRepository.Transaction(func(tx database.DB) error {
+			if err := nvdService.cveRepository.Save(tx, &tmp); err != nil {
+				return err
+			}
+			// save the cpes
+			return nvdService.cveRepository.GetDB(tx).Model(&tmp).Association("Configurations").Append(cpes[i])
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (nvdService NVDService) InitialPopulation() error {
@@ -297,7 +322,7 @@ func getCVSSMetric(nvdCVE nvdCVE) cvssMetric {
 	}
 }
 
-func fromNVDCVE(nistCVE nvdCVE) models.CVE {
+func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.CPEMatch) {
 	published, err := time.Parse(utils.ISO8601Format, nistCVE.Published)
 	if err != nil {
 		published = time.Now()
@@ -320,7 +345,7 @@ func fromNVDCVE(nistCVE nvdCVE) models.CVE {
 
 	// build the cwe list
 	weaknesses := []*models.Weakness{}
-	configurations := []*models.CPEMatch{}
+	configurations := []models.CPEMatch{}
 
 	for _, w := range nistCVE.Weaknesses {
 		for _, d := range w.Description {
@@ -352,7 +377,7 @@ func fromNVDCVE(nistCVE nvdCVE) models.CVE {
 
 				matchCriteriaIds[m.MatchCriteriaID] = struct{}{}
 				cpe := fromNVDCPEMatch(m)
-				configurations = append(configurations, &cpe)
+				configurations = append(configurations, cpe)
 			}
 		}
 	}
@@ -394,10 +419,8 @@ func fromNVDCVE(nistCVE nvdCVE) models.CVE {
 
 		Vector: cvssMetric.Vector,
 
-		Configurations: configurations,
-
 		References: string(refs),
-	}
+	}, configurations
 
 }
 
@@ -407,9 +430,8 @@ func fromNVDCPEMatch(cpeMatch nvdCpeMatch) models.CPEMatch {
 	// split the criteria into its parts
 	parts := strings.Split(cpeMatch.Criteria, ":")
 
-	return models.CPEMatch{
+	match := models.CPEMatch{
 		Criteria:              cpeMatch.Criteria,
-		MatchCriteriaID:       cpeMatch.MatchCriteriaID,
 		Part:                  parts[2],
 		Vendor:                parts[3],
 		Product:               parts[4],
@@ -421,9 +443,10 @@ func fromNVDCPEMatch(cpeMatch nvdCpeMatch) models.CPEMatch {
 		TargetSw:              parts[10],
 		TargetHw:              parts[11],
 		Other:                 parts[12],
-		VersionEndExcluding:   cpeMatch.VersionEndExcluding,
-		VersionEndIncluding:   cpeMatch.VersionEndIncluding,
-		VersionStartIncluding: cpeMatch.VersionStartIncluding,
+		VersionEndExcluding:   utils.EmptyThenNil(cpeMatch.VersionEndExcluding),
+		VersionEndIncluding:   utils.EmptyThenNil(cpeMatch.VersionEndIncluding),
+		VersionStartIncluding: utils.EmptyThenNil(cpeMatch.VersionStartIncluding),
 		Vulnerable:            cpeMatch.Vulnerable,
 	}
+	return match
 }

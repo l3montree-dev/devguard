@@ -91,13 +91,10 @@ func (m *Flaw) CalculateHash() string {
 	return hash
 }
 
-func (m *Flaw) SetIdHash() {
-	hash := m.CalculateHash()
-	m.ID = hash
-}
-
-func (f *Flaw) BeforeCreate(tx *gorm.DB) (err error) {
-	f.SetIdHash()
+// hook to calculate the hash before creating the flaw
+func (f *Flaw) BeforeSave(tx *gorm.DB) (err error) {
+	hash := f.CalculateHash()
+	f.ID = hash
 	return nil
 }
 

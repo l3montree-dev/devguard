@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/CycloneDX/cyclonedx-go"
@@ -109,6 +110,10 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 			continue
 		}
 
+		// remove any qualifiers from the purl
+		parts := strings.Split(componentPurlOrCpe, "?")
+		componentPurlOrCpe = parts[0]
+
 		// check if the component has an cve
 
 		flaw := models.Flaw{
@@ -122,7 +127,7 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 		flaw.SetArbitraryJsonData(map[string]any{
 			"introducedVersion": v.GetIntroducedVersion(),
 			"fixedVersion":      v.GetFixedVersion(),
-			"packageName":       v.PackageName,
+			"packageName":       componentPurlOrCpe,
 			"cveId":             v.CVEID,
 			"installedVersion":  v.InstalledVersion,
 			"componentDepth":    depthMap[componentPurlOrCpe],
@@ -231,19 +236,6 @@ func buildBomRefMap(bom *cdx.BOM) map[string]cdx.Component {
 	return res
 }
 
-func purlOrCpe(component cdx.Component) (string, error) {
-	if component.PackageURL != "" {
-		return url.PathUnescape(component.PackageURL)
-	}
-	if component.CPE != "" {
-		return component.CPE, nil
-	}
-	if component.Version != "" {
-		return component.Name + "@" + component.Version, nil
-	}
-	return component.Name, nil
-}
-
 func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom *cdx.BOM) error {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, asset, scanType, currentVersion)
@@ -271,7 +263,7 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 			component := bomRefMap[directDependency]
 			// the sbom of a container image does not contain the scope. In a container image, we do not have
 			// anything like a deep nested dependency tree. Everything is a direct dependency.
-			componentPackageUrl, err := purlOrCpe(component)
+			componentPackageUrl, err := utils.PurlOrCpe(component)
 			if err != nil {
 				slog.Error("could not decode purl", "err", err)
 				continue
@@ -291,15 +283,15 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 				ComponentType: models.ComponentType(component.Type),
 				AssetID:       asset.GetID(),
 				ScanType:      scanType,
+				Version:       component.Version,
 			}
 		}
 	}
 
 	// find all dependencies from this component
-
 	for _, c := range *sbom.Dependencies {
 		comp := bomRefMap[c.Ref]
-		compPackageUrl, err := purlOrCpe(comp)
+		compPackageUrl, err := utils.PurlOrCpe(comp)
 		if err != nil {
 			slog.Warn("could not decode purl", "err", err)
 			continue
@@ -307,14 +299,14 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 
 		for _, d := range *c.Dependencies {
 			dep := bomRefMap[d]
-			depPurlOrName, err := purlOrCpe(dep)
+			depPurlOrName, err := utils.PurlOrCpe(dep)
 			if err != nil {
 				slog.Error("could not decode purl", "err", err)
 				continue
 			}
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurlOrCpe:  utils.Ptr(compPackageUrl),
+					ComponentPurlOrCpe:  utils.EmptyThenNil(compPackageUrl),
 					ScanType:            scanType,
 					DependencyPurlOrCpe: depPurlOrName,
 					AssetSemverStart:    currentVersion,
@@ -325,12 +317,14 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 				AssetID:       asset.GetID(),
 				ScanType:      scanType,
 				ComponentType: models.ComponentType(dep.Type),
+				Version:       dep.Version,
 			}
 			components[compPackageUrl] = models.Component{
 				PurlOrCpe:     compPackageUrl,
 				AssetID:       asset.GetID(),
 				ScanType:      scanType,
 				ComponentType: models.ComponentType(comp.Type),
+				Version:       comp.Version,
 			}
 		}
 	}
@@ -410,8 +404,9 @@ func (s *service) BuildSBOM(asset models.Asset, version string, organizationName
 					alreadyIncluded[*c.ComponentPurlOrCpe] = true
 					bomComponents = append(bomComponents, cdx.Component{
 						BOMRef:     *c.ComponentPurlOrCpe,
-						Type:       cdx.ComponentTypeLibrary,
+						Type:       cdx.ComponentType(c.Component.ComponentType),
 						PackageURL: *c.ComponentPurlOrCpe,
+						Version:    c.Component.Version,
 						Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
 					})
 				}
@@ -424,9 +419,10 @@ func (s *service) BuildSBOM(asset models.Asset, version string, organizationName
 				alreadyIncluded[c.DependencyPurlOrCpe] = true
 				bomComponents = append(bomComponents, cdx.Component{
 					BOMRef:     c.DependencyPurlOrCpe,
-					Type:       cdx.ComponentTypeLibrary,
+					Type:       cdx.ComponentType(c.Dependency.ComponentType),
 					PackageURL: c.DependencyPurlOrCpe,
 					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
+					Version:    c.Dependency.Version,
 				})
 			}
 		}

@@ -45,7 +45,7 @@ func (g *affectedCmpRepository) createInBatches(tx core.DB, pkgs []models.Affect
 			Logger: logger.Default.LogMode(logger.Silent),
 		}).Clauses(
 		clause.OnConflict{
-			UpdateAll: true,
+			DoNothing: true,
 		},
 	).CreateInBatches(&pkgs, batchSize).Error
 	// check if we got a protocol error since we are inserting more than 65535 parameters
@@ -62,7 +62,7 @@ func (g *affectedCmpRepository) createInBatches(tx core.DB, pkgs []models.Affect
 						// Logger: logger.Default.LogMode(logger.Silent),
 					}).Clauses(
 					clause.OnConflict{
-						UpdateAll: true,
+						DoNothing: true,
 					},
 				).Create(&tmpPkg).Error; err != nil {
 					// log, that we werent able to save the CVE

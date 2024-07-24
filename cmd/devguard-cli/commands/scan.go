@@ -12,18 +12,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewFlawCommand() *cobra.Command {
-	flawCmd := cobra.Command{
-		Use:   "sbom",
-		Short: "Software Bill of Materials",
+func NewScanCommand() *cobra.Command {
+	scanCmd := cobra.Command{
+		Use:   "scan",
+		Short: "Perform a vulnerability scan",
 	}
-	flawCmd.AddCommand(newRescanCommand())
-	return &flawCmd
+	scanCmd.AddCommand(newSbomCommand())
+	return &scanCmd
 }
 
-func newRescanCommand() *cobra.Command {
-	rescan := cobra.Command{
-		Use:   "scan",
+func newSbomCommand() *cobra.Command {
+	sbom := cobra.Command{
+		Use:   "sbom",
 		Short: "Will rescan all sboms using the current available affected package and cpe information",
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -58,7 +58,7 @@ func newRescanCommand() *cobra.Command {
 					continue
 				}
 
-				for _, scanType := range []string{"sca", "container-scanning"} {
+				for _, scanType := range []string{"container-scanning"} {
 					for _, version := range versions {
 						now := time.Now()
 						// build the sbom of the asset
@@ -69,6 +69,7 @@ func newRescanCommand() *cobra.Command {
 						}
 
 						sbom := assetService.BuildSBOM(asset, version, "", components)
+
 						vulns, err := sbomScanner.Scan(sbom)
 						if err != nil {
 							slog.Error("could not scan sbom", "err", err)
@@ -96,5 +97,5 @@ func newRescanCommand() *cobra.Command {
 			}
 		},
 	}
-	return &rescan
+	return &sbom
 }

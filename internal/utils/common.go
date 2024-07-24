@@ -26,6 +26,13 @@ func SafeDereference(s *string) string {
 	return *s
 }
 
+func EmptyThenNil(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return Ptr(s)
+}
+
 func OrDefault[T any](val *T, def T) T {
 	if val == nil {
 		return def

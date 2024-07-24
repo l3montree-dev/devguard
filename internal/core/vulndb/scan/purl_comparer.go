@@ -24,7 +24,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
 )
 
 type purlComparer struct {
@@ -37,31 +36,9 @@ func NewPurlComparer(db core.DB) *purlComparer {
 	}
 }
 
-func (comparer *purlComparer) GetVulnsForAll(purls []string) ([]models.VulnInPackage, error) {
-	g := errgroup.Group{}
-	g.SetLimit(10) // magic concurrency number - this was just a quick test against a local installed postgresql
-	results := make([][]models.VulnInPackage, len(purls))
-	for i, purl := range purls {
-		p := purl
-		itmp := i
-		g.Go(func() error {
-			vulns, err := comparer.GetVulns(p, "")
-			if err != nil {
-				return err
-			}
-			results[itmp] = vulns
-			return nil
-		})
-	}
-
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-
-	return utils.Flat(results), nil
-}
-
-func (comparer *purlComparer) GetVulns(purl string, _ string) ([]models.VulnInPackage, error) {
+// some purls do contain versions, which cannot be found in the database. An example is git.
+// the purl looks like: pkg:deb/debian/git@v2.30.2-1, while the version we would like it to match is: 1:2.30.2-1 ("1:" prefix)
+func (comparer *purlComparer) GetVulns(purl string, notASemverVersion string, _ string) ([]models.VulnInPackage, error) {
 	// parse the purl
 	p, err := packageurl.FromString(purl)
 	if err != nil {
@@ -84,7 +61,7 @@ func (comparer *purlComparer) GetVulns(purl string, _ string) ([]models.VulnInPa
 	// check if the package is present in the database
 	comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", pURL).Where(
 		comparer.db.Where(
-			"version = ?", version).
+			"version = ?", notASemverVersion).
 			Or("semver_introduced IS NULL AND semver_fixed > ?", version).
 			Or("semver_introduced < ? AND semver_fixed IS NULL", version).
 			Or("semver_introduced < ? AND semver_fixed > ?", version, version),

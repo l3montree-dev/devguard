@@ -54,7 +54,7 @@ func Execute() {
 func init() {
 	rootCmd.AddCommand(commands.NewVulndbCommand())
 	rootCmd.AddCommand(commands.NewRiskCommand())
-	rootCmd.AddCommand(commands.NewFlawCommand())
+	rootCmd.AddCommand(commands.NewScanCommand())
 }
 
 func main() {

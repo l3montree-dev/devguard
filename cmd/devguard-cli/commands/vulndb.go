@@ -68,20 +68,8 @@ func newRepairCommand() *cobra.Command {
 				slog.Info("starting cwe database repair")
 				if err := mitreService.Mirror(); err != nil {
 					slog.Error("could not mirror cwe database", "err", err)
-					return
 				}
 				slog.Info("finished cwe database repair", "duration", time.Since(now))
-			}
-
-			if emptyOrContains(databasesToRepair, "cvelist") {
-				slog.Info("starting cvelist database repair")
-				now := time.Now()
-
-				if err := cvelistService.Mirror(); err != nil {
-					slog.Error("could not mirror cvelist database", "err", err)
-					return
-				}
-				slog.Info("finished cvelist database repair", "duration", time.Since(now))
 			}
 
 			if emptyOrContains(databasesToRepair, "nvd") {
@@ -93,30 +81,36 @@ func newRepairCommand() *cobra.Command {
 					afterDate, err := time.Parse("2006-01-02", after)
 					if err != nil {
 						slog.Error("could not parse after date", "err", err, "provided", after, "expectedFormat", "2006-01-02")
-						return
 					}
 					err = nvdService.FetchAfter(afterDate)
 					if err != nil {
 						slog.Error("could not fetch after date", "err", err)
-						return
 					}
 				} else {
 					if startIndex != 0 {
 						err = nvdService.FetchAfterIndex(startIndex)
 						if err != nil {
 							slog.Error("could not fetch after index", "err", err)
-							return
 						}
 					} else {
 						// just redo the intitial sync
 						err = nvdService.InitialPopulation()
 						if err != nil {
 							slog.Error("could not do initial sync", "err", err)
-							return
 						}
 					}
 				}
 				slog.Info("finished nvd database repair", "duration", time.Since(now))
+			}
+
+			if emptyOrContains(databasesToRepair, "cvelist") {
+				slog.Info("starting cvelist database repair")
+				now := time.Now()
+
+				if err := cvelistService.Mirror(); err != nil {
+					slog.Error("could not mirror cvelist database", "err", err)
+				}
+				slog.Info("finished cvelist database repair", "duration", time.Since(now))
 			}
 
 			if emptyOrContains(databasesToRepair, "epss") {
@@ -125,7 +119,6 @@ func newRepairCommand() *cobra.Command {
 
 				if err := epssService.Mirror(); err != nil {
 					slog.Error("could not repair epss database", "err", err)
-					return
 				}
 				slog.Info("finished epss database repair", "duration", time.Since(now))
 			}
@@ -135,7 +128,6 @@ func newRepairCommand() *cobra.Command {
 				now := time.Now()
 				if err := osvService.Mirror(); err != nil {
 					slog.Error("could not repair osv database", "err", err)
-					return
 				}
 				slog.Info("finished osv database repair", "duration", time.Since(now))
 			}
@@ -145,7 +137,6 @@ func newRepairCommand() *cobra.Command {
 				now := time.Now()
 				if err := expoitDBService.Mirror(); err != nil {
 					slog.Error("could not repair exploitdb database", "err", err)
-					return
 				}
 				slog.Info("finished exploitdb database repair", "duration", time.Since(now))
 			}
@@ -155,7 +146,6 @@ func newRepairCommand() *cobra.Command {
 				now := time.Now()
 				if err := githubExploitDBService.Mirror(); err != nil {
 					slog.Error("could not repair github-poc database", "err", err)
-					return
 				}
 				slog.Info("finished github-poc database repair", "duration", time.Since(now))
 			}

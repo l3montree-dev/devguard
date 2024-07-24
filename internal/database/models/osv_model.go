@@ -25,6 +25,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
+	"gorm.io/gorm"
 )
 
 type pkg struct {
@@ -102,7 +103,7 @@ func (affectedComponent AffectedComponent) TableName() string {
 	return "affected_components"
 }
 
-func (affectedComponent *AffectedComponent) SetIdHash() {
+func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
 	// build the stable map
 	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s",
 		affectedComponent.PURL,
@@ -119,6 +120,7 @@ func (affectedComponent *AffectedComponent) SetIdHash() {
 	hashString := hex.EncodeToString(hash[:])
 
 	affectedComponent.ID = hashString
+	return nil
 }
 
 func (osv OSV) GetAffectedPackages() []AffectedComponent {
@@ -177,7 +179,7 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 
 				// create the affected package
 				affectedComponent := AffectedComponent{
-					PURL:       affected.Package.Purl,
+					PURL:       strings.Split(affected.Package.Purl, "?")[0],
 					Ecosystem:  affected.Package.Ecosystem,
 					Scheme:     "pkg",
 					Type:       purl.Type,
@@ -191,7 +193,6 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 
 					CVE: cves,
 				}
-				affectedComponent.SetIdHash()
 				affectedComponents = append(affectedComponents, affectedComponent)
 			}
 		}
@@ -201,7 +202,7 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 			for _, v := range affected.Versions {
 				tmpV := v
 				affectedComponent := AffectedComponent{
-					PURL:       affected.Package.Purl,
+					PURL:       strings.Split(affected.Package.Purl, "?")[0],
 					Ecosystem:  affected.Package.Ecosystem,
 					Scheme:     "pkg",
 					Type:       purl.Type,
@@ -213,7 +214,6 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 
 					CVE: cves,
 				}
-				affectedComponent.SetIdHash()
 				affectedComponents = append(affectedComponents, affectedComponent)
 			}
 		}

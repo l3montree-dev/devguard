@@ -123,7 +123,6 @@ func (s osvService) getEcosystems() ([]string, error) {
 			if s == e {
 				return true
 			}
-			slog.Warn("skipping ecosystem", "ecosystem", s)
 		}
 		return false
 	})

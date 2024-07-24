@@ -33,7 +33,7 @@ type sbomScanner struct {
 // like the affected package version and fixed version
 
 type comparer interface {
-	GetVulns(purl string, componentType string) ([]models.VulnInPackage, error)
+	GetVulns(purl string, notASemverVersion string, componentType string) ([]models.VulnInPackage, error)
 }
 
 func NewSBOMScanner(cpeComparer comparer, purlComparer comparer, cveRepository cveRepository) *sbomScanner {
@@ -55,7 +55,7 @@ func (s *sbomScanner) Scan(bom *cdx.BOM) ([]models.VulnInPackage, error) {
 				// check if CPE is present
 				vulns := []models.VulnInPackage{}
 				if component.CPE != "" {
-					res, err := s.cpeComparer.GetVulns(component.CPE, string(component.Type))
+					res, err := s.cpeComparer.GetVulns(utils.NormalizePurl(component.CPE), component.Version, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "cpe", component.CPE)
 						return nil, nil
@@ -63,17 +63,15 @@ func (s *sbomScanner) Scan(bom *cdx.BOM) ([]models.VulnInPackage, error) {
 					vulns = append(vulns, res...)
 				}
 				if component.PackageURL != "" {
-					if isDistroPurl, err := utils.IsDistroPurl(component.PackageURL); err == nil && isDistroPurl {
-						// try to convert the purl to a CPE
-						res, err := s.cpeComparer.GetVulns(component.PackageURL, string(component.Type))
-						if err != nil {
-							slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
-						} else {
-							vulns = append(vulns, res...)
-						}
+					// try to convert the purl to a CPE
+					res, err := s.cpeComparer.GetVulns(utils.NormalizePurl(component.PackageURL), component.Version, string(component.Type))
+					if err != nil {
+						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
+					} else {
+						vulns = append(vulns, res...)
 					}
 
-					res, err := s.purlComparer.GetVulns(component.PackageURL, string(component.Type))
+					res, err = s.purlComparer.GetVulns(utils.NormalizePurl(component.PackageURL), component.Version, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
 					}

@@ -14,6 +14,7 @@ type cveRepository interface {
 	repositories.Repository[string, models.CVE, database.DB]
 	FindByID(id string) (models.CVE, error)
 	GetLastModDate() (time.Time, error)
+	SaveBatchCPEMatch(tx database.DB, matches []models.CPEMatch) error
 }
 
 type configService interface {

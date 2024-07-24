@@ -59,9 +59,9 @@ func (c *componentRepository) LoadAssetComponents(tx database.DB, asset models.A
 	var components []models.ComponentDependency
 	var err error
 	if version == models.LatestVersion {
-		err = c.GetDB(tx).Where("asset_id = ? AND scan_type = ? AND semver_end is NULL", asset.ID, scanType).Find(&components).Error
+		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_id = ? AND scan_type = ? AND semver_end is NULL", asset.ID, scanType).Find(&components).Error
 	} else {
-		err = c.GetDB(tx).Where(`asset_id = ? AND scan_type = ? AND semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)`, asset.ID, scanType, version, version).Find(&components).Error
+		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where(`asset_id = ? AND scan_type = ? AND semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)`, asset.ID, scanType, version, version).Find(&components).Error
 	}
 
 	if err != nil {

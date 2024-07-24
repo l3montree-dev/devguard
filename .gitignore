@@ -12,3 +12,6 @@ bom.xml
 .kratos/kratos.yml
 *.private-key.pem
 node_modules
+cvelistV5*
+image.tar
+result-image.json
