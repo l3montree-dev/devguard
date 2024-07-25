@@ -7,6 +7,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/spf13/cobra"
@@ -70,7 +71,9 @@ func newSbomCommand() *cobra.Command {
 
 						sbom := assetService.BuildSBOM(asset, version, "", components)
 
-						vulns, err := sbomScanner.Scan(sbom)
+						normalizedSBOM := normalize.FromCdxBom(sbom)
+
+						vulns, err := sbomScanner.Scan(normalizedSBOM)
 						if err != nil {
 							slog.Error("could not scan sbom", "err", err)
 							continue

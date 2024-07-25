@@ -1,35 +1,13 @@
-package utils
+package normalize
 
 import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strings"
 
 	"github.com/package-url/packageurl-go"
 )
-
-func IsDistroPurl(purl string) (bool, error) {
-	// check if the distro query parameter is defined
-	parsedPurl, err := url.Parse(purl)
-	if err != nil {
-
-		return false, err
-	}
-
-	// Parse the query parameters
-	queryParams, err := url.ParseQuery(parsedPurl.RawQuery)
-	if err != nil {
-		return false, fmt.Errorf("failed to parse query parameters: %w", err)
-	}
-
-	// Extract the distro parameter
-	distro := queryParams.Get("distro")
-	if distro == "" {
-		return false, nil
-	}
-
-	return true, nil
-}
 
 func removeDigitSuffix(s string) string {
 	reg := regexp.MustCompile(`\.\d+$`)
@@ -55,6 +33,10 @@ func componentTypeToPart(componentType string) string {
 	}
 }
 
+func removeBuildIndex(version string) string {
+	return strings.Split(version, "-")[0]
+}
+
 // PurlToCPE maps a package URL (purl) to a Common Platform Enumeration (CPE)
 func PurlToCPE(purl string, componentType string) (string, error) {
 	// Parse the purl
@@ -66,12 +48,12 @@ func PurlToCPE(purl string, componentType string) (string, error) {
 	// Extract components
 	// namespace := parsedPurl.Namespace
 	name := normalizePackageName(parsedPurl.Name)
-	version := parsedPurl.Version
+	version := removeBuildIndex(parsedPurl.Version)
 
 	// Construct the CPE string
 	// This is a simplified mapping; adjust based on your specific requirements
 	cpe := fmt.Sprintf("cpe:2.3:%s:%s:%s:%s:*:*:*:*:*:*:*",
-		componentTypeToPart(componentType), url.PathEscape(name), url.PathEscape(name), url.PathEscape(version))
+		componentTypeToPart(componentType), url.PathEscape(name), url.PathEscape(name), version)
 
 	return cpe, nil
 }

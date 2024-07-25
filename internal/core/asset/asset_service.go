@@ -27,6 +27,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -221,13 +222,13 @@ func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
 	return res
 }
 
-func buildBomRefMap(bom *cdx.BOM) map[string]cdx.Component {
+func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 	res := make(map[string]cdx.Component)
-	if bom.Components == nil {
+	if bom.GetComponents() == nil {
 		return res
 	}
 
-	for _, c := range *bom.Components {
+	for _, c := range *bom.GetComponents() {
 		res[c.BOMRef] = c
 		for k, v := range recursiveBuildBomRefMap(c) {
 			res[k] = v
@@ -236,7 +237,7 @@ func buildBomRefMap(bom *cdx.BOM) map[string]cdx.Component {
 	return res
 }
 
-func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom *cdx.BOM) error {
+func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom normalize.SBOM) error {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, asset, scanType, currentVersion)
 	if err != nil {
@@ -253,8 +254,8 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 	bomRefMap := buildBomRefMap(sbom)
 
 	// create all direct dependencies
-	root := sbom.Metadata.Component.BOMRef
-	for _, c := range *sbom.Dependencies {
+	root := sbom.GetMetadata().Component.BOMRef
+	for _, c := range *sbom.GetDependencies() {
 		if c.Ref != root {
 			continue // no direct dependency
 		}
@@ -263,7 +264,7 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 			component := bomRefMap[directDependency]
 			// the sbom of a container image does not contain the scope. In a container image, we do not have
 			// anything like a deep nested dependency tree. Everything is a direct dependency.
-			componentPackageUrl, err := utils.PurlOrCpe(component)
+			componentPackageUrl, err := normalize.PurlOrCpe(component)
 			if err != nil {
 				slog.Error("could not decode purl", "err", err)
 				continue
@@ -289,9 +290,9 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 	}
 
 	// find all dependencies from this component
-	for _, c := range *sbom.Dependencies {
+	for _, c := range *sbom.GetDependencies() {
 		comp := bomRefMap[c.Ref]
-		compPackageUrl, err := utils.PurlOrCpe(comp)
+		compPackageUrl, err := normalize.PurlOrCpe(comp)
 		if err != nil {
 			slog.Warn("could not decode purl", "err", err)
 			continue
@@ -299,7 +300,7 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 
 		for _, d := range *c.Dependencies {
 			dep := bomRefMap[d]
-			depPurlOrName, err := utils.PurlOrCpe(dep)
+			depPurlOrName, err := normalize.PurlOrCpe(dep)
 			if err != nil {
 				slog.Error("could not decode purl", "err", err)
 				continue

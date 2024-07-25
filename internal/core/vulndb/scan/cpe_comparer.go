@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"golang.org/x/mod/semver"
@@ -38,7 +39,7 @@ func NewCPEComparer(db core.DB) *cpeComparer {
 
 func (c *cpeComparer) GetVulns(purl string, notASemverVersion string, componentType string) ([]models.VulnInPackage, error) {
 	// convert the purl to a cpe
-	cpe, err := utils.PurlToCPE(purl, componentType)
+	cpe, err := normalize.PurlToCPE(purl, componentType)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func (c *cpeComparer) GetVulns(purl string, notASemverVersion string, componentT
 
 	debug := false
 
-	if strings.Contains(purl, "debian/git@") {
+	if strings.Contains(purl, "debian/curl") {
 		fmt.Println("purl", purl)
 		fmt.Println("cpe", cpe)
 

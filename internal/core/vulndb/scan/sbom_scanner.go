@@ -18,7 +18,7 @@ package scan
 import (
 	"log/slog"
 
-	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -43,11 +43,11 @@ func NewSBOMScanner(cpeComparer comparer, purlComparer comparer, cveRepository c
 	}
 }
 
-func (s *sbomScanner) Scan(bom *cdx.BOM) ([]models.VulnInPackage, error) {
+func (s *sbomScanner) Scan(bom normalize.SBOM) ([]models.VulnInPackage, error) {
 	errgroup := utils.ErrGroup[[]models.VulnInPackage](10)
 
 	// iterate through all components
-	for _, c := range *bom.Components {
+	for _, c := range *bom.GetComponents() {
 		component := c
 
 		errgroup.Go(
@@ -55,7 +55,7 @@ func (s *sbomScanner) Scan(bom *cdx.BOM) ([]models.VulnInPackage, error) {
 				// check if CPE is present
 				vulns := []models.VulnInPackage{}
 				if component.CPE != "" {
-					res, err := s.cpeComparer.GetVulns(utils.NormalizePurl(component.CPE), component.Version, string(component.Type))
+					res, err := s.cpeComparer.GetVulns(component.CPE, component.Version, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "cpe", component.CPE)
 						return nil, nil
@@ -64,14 +64,14 @@ func (s *sbomScanner) Scan(bom *cdx.BOM) ([]models.VulnInPackage, error) {
 				}
 				if component.PackageURL != "" {
 					// try to convert the purl to a CPE
-					res, err := s.cpeComparer.GetVulns(utils.NormalizePurl(component.PackageURL), component.Version, string(component.Type))
+					res, err := s.cpeComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
 					} else {
 						vulns = append(vulns, res...)
 					}
 
-					res, err = s.purlComparer.GetVulns(utils.NormalizePurl(component.PackageURL), component.Version, string(component.Type))
+					res, err = s.purlComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
 					}

@@ -21,6 +21,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -36,7 +37,7 @@ type componentRepository interface {
 
 type assetService interface {
 	HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanType string, version string, scannerID string, userID string) (amountOpened int, amountClose int, newState []models.Flaw, err error)
-	UpdateSBOM(asset models.Asset, scanType string, version string, sbom *cdx.BOM) error
+	UpdateSBOM(asset models.Asset, scanType string, version string, sbom normalize.SBOM) error
 }
 
 type httpController struct {
@@ -73,6 +74,7 @@ func (s *httpController) Scan(c core.Context) error {
 	if err := decoder.Decode(bom); err != nil {
 		return err
 	}
+	normalizedBom := normalize.FromCdxBom(bom)
 	assetObj := core.GetAsset(c)
 
 	userID := core.GetSession(c).GetUserID()
@@ -101,13 +103,13 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// update the sbom in the database in parallel
-	if err := s.assetService.UpdateSBOM(assetObj, scanType, version, bom); err != nil {
+	if err := s.assetService.UpdateSBOM(assetObj, scanType, version, normalizedBom); err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not update sbom"})
 	}
 
 	// scan the bom we just retrieved.
-	vulns, err := s.sbomScanner.Scan(bom)
+	vulns, err := s.sbomScanner.Scan(normalizedBom)
 	if err != nil {
 		slog.Error("could not scan file", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not scan file"})

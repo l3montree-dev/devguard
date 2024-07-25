@@ -1,4 +1,4 @@
-package utils
+package normalize
 
 import (
 	"net/url"
@@ -8,15 +8,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NormalizePurl(purl string) string {
+func normalizePurl(purl string) string {
 	// unescape the purl
 	purl, err := url.PathUnescape(purl)
 	if err != nil {
 		return purl
 	}
 	// remove any query parameters
-	parts := strings.Split(purl, "?")
-	return parts[0]
+	purl = strings.Split(purl, "?")[0]
+
+	// remove everything follows a "+"
+	purl = strings.Split(purl, "+")[0]
+	return purl
 }
 
 func PurlOrCpe(component cdx.Component) (string, error) {
@@ -36,5 +39,5 @@ func PurlOrCpe(component cdx.Component) (string, error) {
 	}
 
 	// remove any query parameters
-	return NormalizePurl(purl), nil
+	return purl, nil
 }
