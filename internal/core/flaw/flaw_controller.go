@@ -2,6 +2,7 @@ package flaw
 
 import (
 	"encoding/json"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -12,11 +13,20 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type FlawsByPackage struct {
+	PackageName string    `json:"packageName"`
+	AvgRisk     float64   `json:"avgRisk"`
+	MaxRisk     float64   `json:"maxRisk"`
+	FlawCount   int       `json:"flawCount"`
+	TotalRisk   float64   `json:"totalRisk"`
+	Flaws       []FlawDTO `json:"flaws"`
+}
+
 type repository interface {
 	repositories.Repository[string, models.Flaw, core.DB]
 
 	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.Flaw, error)
-	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error)
+	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)
 }
 type flawService interface {
 	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification *string) error
@@ -42,7 +52,7 @@ func NewHttpController(flawRepository repository, flawService flawService) *flaw
 func (c flawHttpController) ListPaged(ctx core.Context) error {
 	// get the asset
 	asset := core.GetAsset(ctx)
-	pagedResp, err := c.flawRepository.GetByAssetIdPaged(
+	pagedResp, packageNameIndexMap, err := c.flawRepository.GetByAssetIdPaged(
 		nil,
 		core.GetPageInfo(ctx),
 		ctx.QueryParam("search"),
@@ -55,27 +65,17 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(flaw models.Flaw) interface{} {
-		/*
-			type pagedFlawDTO struct {
-				ID                string           `json:"id"`
-				ScannerID         string           `json:"scanner"`
-				Message           *string          `json:"message"`
-				AssetID           string           `json:"assetId"`
-				State             models.FlawState `json:"state"`
-				CVE               *models.CVE      `json:"cve"`
-				CVEID             string           `json:"cveId"`
-				Effort            *int             `json:"effort"`
-				RiskAssessment    *int             `json:"riskAssessment"`
-				RawRiskAssessment *int             `json:"rawRiskAssessment"`
-				Priority          *int             `json:"priority"`
-				ArbitraryJsonData    map[string]any   `json:"arbitraryJsonData"`
-				LastDetected      time.Time        `json:"lastDetected"`
-				CreatedAt         time.Time        `json:"createdAt"`
+	res := map[string]FlawsByPackage{}
+	for _, flaw := range pagedResp.Data {
+		// get the package name
+		if _, ok := res[flaw.ComponentPurlOrCpe]; !ok {
+			res[flaw.ComponentPurlOrCpe] = FlawsByPackage{
+				PackageName: flaw.ComponentPurlOrCpe,
 			}
-
-		*/
-		return FlawDTO{
+		}
+		flawsByPackage := res[flaw.ComponentPurlOrCpe]
+		// append the flaw to the package
+		flawsByPackage.Flaws = append(res[flaw.ComponentPurlOrCpe].Flaws, FlawDTO{
 			ID:                 flaw.ID,
 			ScannerID:          flaw.ScannerID,
 			Message:            flaw.Message,
@@ -92,8 +92,35 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 			ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
 			LastDetected:       flaw.LastDetected,
 			CreatedAt:          flaw.CreatedAt,
+		})
+		res[flaw.ComponentPurlOrCpe] = flawsByPackage
+	}
+
+	values := make([]FlawsByPackage, 0, len(res))
+	for _, v := range res {
+		// calculate the max and average risk
+		maxRisk := 0.
+		totalRisk := 0.
+
+		for _, f := range v.Flaws {
+			totalRisk += utils.OrDefault(f.RawRiskAssessment, 0)
+			if utils.OrDefault(f.RawRiskAssessment, 0) > maxRisk {
+				maxRisk = *f.RawRiskAssessment
+			}
 		}
-	}))
+		v.AvgRisk = totalRisk / float64(len(v.Flaws))
+		v.MaxRisk = maxRisk
+		v.TotalRisk = totalRisk
+		v.FlawCount = len(v.Flaws)
+		values = append(values, v)
+	}
+
+	// sort the value based on the index map
+	slices.SortFunc(values, func(a, b FlawsByPackage) int {
+		return packageNameIndexMap[a.PackageName] - packageNameIndexMap[b.PackageName]
+	})
+
+	return ctx.JSON(200, core.NewPaged(core.GetPageInfo(ctx), pagedResp.Total, values))
 }
 
 func (c flawHttpController) Read(ctx core.Context) error {

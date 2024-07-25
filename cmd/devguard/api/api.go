@@ -255,6 +255,7 @@ func health(c echo.Context) error {
 }
 
 func Start(db core.DB) {
+
 	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_PUBLIC"))
 	oryAdmin := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_ADMIN"))
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
