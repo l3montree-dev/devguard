@@ -107,10 +107,6 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, s
 		return r.PackageName
 	})
 
-	if err != nil {
-		return core.Paged[models.Flaw]{}, map[string]int{}, err
-	}
-
 	err = q.Where("flaws.component_purl_or_cpe IN (?)", packageNames).Order("raw_risk_assessment DESC").Find(&flaws).Error
 
 	if err != nil {

@@ -126,6 +126,7 @@ func TestFromOSV(t *testing.T) {
 		}
 
 		// check the hash
+		affectedComponents[0].BeforeSave(nil) // nolint:errcheck
 
 		if affectedComponents[0].ID != "fa69db493788baa6560d6986aba5612b80fadc3ea89752dcc0ff4096b14833da" { // nolint:all
 			t.Errorf("Expected ID to be set, got %s", affectedComponents[0].ID)
@@ -259,7 +260,7 @@ func TestSetIdHash(t *testing.T) {
 				{},
 			},
 		}
-		affectedComponent.BeforeSave(nil)
+		affectedComponent.BeforeSave(nil) // nolint:errcheck
 
 		otherAffectedComponent := AffectedComponent{
 			PURL:      "pkg:golang/toolchain",
@@ -267,7 +268,7 @@ func TestSetIdHash(t *testing.T) {
 			CVE:       make([]CVE, 0),
 		}
 
-		otherAffectedComponent.BeforeSave(nil)
+		otherAffectedComponent.BeforeSave(nil) // nolint:errcheck
 		if affectedComponent.ID != otherAffectedComponent.ID {
 			t.Errorf("Expected the same hash, got %s and %s", affectedComponent.ID, otherAffectedComponent.ID)
 		}
