@@ -2,6 +2,8 @@ package commands
 
 import (
 	"log/slog"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -17,6 +19,7 @@ func NewVulndbCommand() *cobra.Command {
 	}
 
 	vulndbCmd.AddCommand(newRepairCommand())
+	vulndbCmd.AddCommand(newImportCommand())
 	return &vulndbCmd
 }
 
@@ -30,6 +33,57 @@ func emptyOrContains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+func isValidCVE(cveId string) bool {
+	// should either be just 2023-1234 or cve-2023-1234
+	if len(cveId) == 0 {
+		return false
+	}
+
+	r := regexp.MustCompile(`^CVE-\d{4}-\d{4,7}$`)
+	if r.MatchString(cveId) {
+		return true
+	}
+
+	r = regexp.MustCompile(`^\d{4}-\d{4,7}$`)
+	return r.MatchString(cveId)
+}
+
+func newImportCommand() *cobra.Command {
+	importCmd := &cobra.Command{
+		Use:   "import",
+		Short: "Will import the vulnerability database",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			core.LoadConfig() // nolint
+			database, err := core.DatabaseFactory()
+			if err != nil {
+				slog.Error("could not connect to database", "err", err)
+				return
+			}
+
+			cveId := args[0]
+			cveId = strings.TrimSpace(strings.ToUpper(cveId))
+			// check if first argument is valid cve
+			if !isValidCVE(cveId) {
+				slog.Error("invalid cve id", "cve", cveId)
+				return
+			}
+
+			cveRepository := repositories.NewCVERepository(database)
+			nvdService := vulndb.NewNVDService(cveRepository)
+
+			cve, err := nvdService.ImportCVE(cveId)
+			if err != nil {
+				slog.Error("could not import cve", "err", err)
+				return
+			}
+
+			slog.Info("successfully imported cve", "cveId", cve.CVE)
+		},
+	}
+	return importCmd
 }
 
 func newRepairCommand() *cobra.Command {

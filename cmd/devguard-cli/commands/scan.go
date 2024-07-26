@@ -79,7 +79,7 @@ func newSbomCommand() *cobra.Command {
 							continue
 						}
 
-						amountOpened, amountClosed, _, err := assetService.HandleScanResult(
+						amountOpened, amountClosed, flaws, err := assetService.HandleScanResult(
 							asset,
 							vulns,
 							scanType,
@@ -93,7 +93,7 @@ func newSbomCommand() *cobra.Command {
 							continue
 						}
 
-						slog.Info("scan result", "asset", asset.Name, "scanType", scanType, "version", version, "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
+						slog.Info("scan result", "asset", asset.Name, "scanType", scanType, "version", version, "totalAmount", len(flaws), "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
 					}
 
 				}

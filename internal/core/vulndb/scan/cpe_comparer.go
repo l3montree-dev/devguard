@@ -17,7 +17,6 @@ package scan
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -57,7 +56,7 @@ func (c *cpeComparer) GetVulns(purl string, notASemverVersion string, componentT
 
 	debug := false
 
-	if strings.Contains(purl, "debian/curl") {
+	if strings.Contains(purl, "debian/python") {
 		fmt.Println("purl", purl)
 		fmt.Println("cpe", cpe)
 
@@ -132,20 +131,15 @@ func (c *cpeComparer) GetVulns(purl string, notASemverVersion string, componentT
 			fmt.Println("fixedVersion", fixedVersion)
 		}
 
-		unescapedPurl, err := url.PathUnescape(purl)
-		if err != nil {
-			return nil, err
-		}
-
 		for _, cve := range cpeMatch.CVEs {
 			vulns = append(vulns, models.VulnInPackage{
 				CVEID:             cve.CVE,
-				Purl:              unescapedPurl,
+				Purl:              purl,
 				FixedVersion:      fixedVersion,
 				IntroducedVersion: tmp.VersionStartIncluding,
 				InstalledVersion:  version,
 				CVE:               *cve,
-				PackageName:       unescapedPurl,
+				PackageName:       purl,
 			})
 		}
 	}

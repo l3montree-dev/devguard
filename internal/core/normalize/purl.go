@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/pkg/errors"
 )
 
 func normalizePurl(purl string) string {
@@ -19,17 +18,14 @@ func normalizePurl(purl string) string {
 
 	// remove everything follows a "+"
 	purl = strings.Split(purl, "+")[0]
+	purl = strings.Split(purl, "~")[0]
 	return purl
 }
 
-func PurlOrCpe(component cdx.Component) (string, error) {
+func PurlOrCpe(component cdx.Component) string {
 	var purl string
-	var err error
 	if component.PackageURL != "" {
-		purl, err = url.PathUnescape(component.PackageURL)
-		if err != nil {
-			return "", errors.Wrap(err, "could not unescape purl")
-		}
+		return component.PackageURL
 	} else if component.CPE != "" {
 		purl = component.CPE
 	} else if component.Version != "" {
@@ -39,5 +35,5 @@ func PurlOrCpe(component cdx.Component) (string, error) {
 	}
 
 	// remove any query parameters
-	return purl, nil
+	return purl
 }
