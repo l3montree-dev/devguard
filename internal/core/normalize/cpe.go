@@ -20,7 +20,10 @@ func normalizePackageName(packageName string) string {
 	// remove the version from the package name
 	// like python3.11
 	// we only want python
-	return removeDigitSuffix(packageName)
+	packageName = removeDigitSuffix(packageName)
+	// lowercase the package name
+	packageName = strings.ToLower(packageName)
+	return packageName
 }
 
 func componentTypeToPart(componentType string) string {

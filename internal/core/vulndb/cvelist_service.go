@@ -3,6 +3,7 @@ package vulndb
 import (
 	"archive/zip"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -63,8 +64,9 @@ type cvelistJson struct {
 				Vendor   string `json:"vendor"`
 				Product  string `json:"product"`
 				Versions []struct {
-					Version string `json:"version"`
-					Status  string `json:"status"`
+					Version  string  `json:"version"`
+					Status   string  `json:"status"`
+					LessThan *string `json:"lessThan"`
 				} `json:"versions"`
 			} `json:"affected"`
 			ProviderMetadata struct {
@@ -154,6 +156,43 @@ func (s *cvelistService) downloadZip() (*zip.Reader, error) {
 	}
 
 	return utils.ZipReaderFromResponse(res)
+}
+
+func (s *cvelistService) ImportCVE(cveId string) ([]models.CPEMatch, error) {
+	resp, err := s.httpClient.Get(fmt.Sprintf("https://cveawg.mitre.org/api/cve/%s", cveId))
+
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get cve")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("cve not found")
+	}
+	defer resp.Body.Close()
+
+	var cvelist cvelistJson
+	if err := json.NewDecoder(resp.Body).Decode(&cvelist); err != nil {
+		return nil, errors.Wrap(err, "could not decode json")
+	}
+
+	matches := generateCPE(cvelist)
+
+	if err := s.cveRepository.SaveBatchCPEMatch(nil, matches); err != nil {
+		return nil, errors.Wrap(err, "could not save cpe matches")
+	}
+
+	if err := s.cveRepository.GetDB(nil).Model(&models.CVE{
+		CVE: cveId,
+		// unique the cpeIds
+	}).Association("Configurations").Append(utils.Map(matches, func(el models.CPEMatch) models.CPEMatch {
+		return models.CPEMatch{
+			MatchCriteriaID: el.CalculateHash(),
+		}
+	})); err != nil {
+		return nil, errors.Wrap(err, "could not save cve to cpe mapping")
+	}
+
+	return matches, nil
 }
 
 func (s *cvelistService) Mirror() error {
@@ -274,8 +313,19 @@ func generateCPE(cve cvelistJson) []models.CPEMatch {
 
 	for _, product := range cve.Containers.Cna.Affected {
 		for _, version := range product.Versions {
-			cpe := "cpe:2.3:a:" + product.Vendor + ":" + product.Product
-			cpeVersion, err := transformVersionToRange(version.Version)
+			cpe := "cpe:2.3:a:" + strings.ToLower(product.Vendor) + ":" + strings.ToLower(product.Product)
+
+			var cpeVersion versionRange
+			var err error
+			// check if version is a range
+			if version.LessThan != nil {
+				// version defines the range using a separate field
+				cpeVersion, err = transformVersionMapToRange(version.Version, *version.LessThan)
+			} else {
+				// version seems to look like this: ">=1.0.0, <=2.0.0"
+				cpeVersion, err = transformVersionStringToRange(version.Version)
+			}
+
 			if err != nil {
 				slog.Error("could not transform version to range", "err", err)
 				continue
@@ -291,8 +341,8 @@ func generateCPE(cve cvelistJson) []models.CPEMatch {
 			match := models.CPEMatch{
 				Criteria:              cpe,
 				Part:                  "a",
-				Vendor:                product.Vendor,
-				Product:               product.Product,
+				Vendor:                strings.ToLower(product.Vendor),
+				Product:               strings.ToLower(product.Product),
 				Version:               utils.OrDefault(cpeVersion.concreteVersion, "*"),
 				VersionEndExcluding:   cpeVersion.versionEndExcluding,
 				VersionEndIncluding:   cpeVersion.versionEndIncluding,
@@ -321,7 +371,16 @@ type versionRange struct {
 	versionEndExcluding   *string
 }
 
-func transformVersionToRange(version string) (versionRange, error) {
+// the cvelist is not consistent. Sometime it contains the range in the version field itself like: >=1.0.0, <=2.0.0
+// sometimes it contains an additional field like: "lessThan": "2.0.0"
+func transformVersionMapToRange(version string, lessThan string) (versionRange, error) {
+	return versionRange{
+		versionStartIncluding: utils.Ptr(version),
+		versionEndExcluding:   utils.Ptr(lessThan),
+	}, nil
+}
+
+func transformVersionStringToRange(version string) (versionRange, error) {
 	if version == "" {
 		return versionRange{}, errors.New("version is empty")
 	}

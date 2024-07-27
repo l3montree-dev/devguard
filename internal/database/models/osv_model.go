@@ -45,12 +45,11 @@ type rng struct {
 }
 
 type Affected struct {
-	Package          pkg      `json:"package"`
-	Ranges           []rng    `json:"ranges"`
-	Versions         []string `json:"versions"`
-	DatabaseSpecific struct {
-		Source string `json:"source"`
-	} `json:"database_specific"`
+	Package           pkg            `json:"package"`
+	Ranges            []rng          `json:"ranges"`
+	Versions          []string       `json:"versions"`
+	DatabaseSpecific  map[string]any `json:"database_specific"`
+	EcosystemSpecific map[string]any `json:"ecosystem_specific"`
 }
 
 type OSV struct {
@@ -136,6 +135,18 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 		// check if the affected package has a purl
 		if affected.Package.Purl == "" {
 			continue
+		}
+		if affected.EcosystemSpecific != nil {
+			// get the urgency - debian defines it: https://security-team.debian.org/security_tracker.html#severity-levels
+			if urgency, ok := affected.EcosystemSpecific["urgency"]; ok {
+				if urgencyStr, ok := urgency.(string); ok {
+					urgencyStr = strings.ToLower(urgencyStr)
+					if urgencyStr == "unimportant" {
+						// just continue
+						continue
+					}
+				}
+			}
 		}
 		purl, err := packageurl.FromString(affected.Package.Purl)
 		if err != nil {

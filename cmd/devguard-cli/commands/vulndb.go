@@ -73,16 +73,37 @@ func newImportCommand() *cobra.Command {
 
 			cveRepository := repositories.NewCVERepository(database)
 			nvdService := vulndb.NewNVDService(cveRepository)
+			osvService := vulndb.NewOSVService(repositories.NewAffectedCmpRepository(database))
 
 			cve, err := nvdService.ImportCVE(cveId)
+
 			if err != nil {
 				slog.Error("could not import cve", "err", err)
 				return
 			}
-
 			slog.Info("successfully imported cve", "cveId", cve.CVE)
+
+			// the cvelist does provide additional cpe matches.
+			cvelistService := vulndb.NewCVEListService(cveRepository)
+			cpeMatches, err := cvelistService.ImportCVE(cveId)
+			if err != nil {
+				slog.Error("could not import cve from cvelist", "err", err)
+				return
+			}
+
+			slog.Info("successfully imported cpe matches", "cveId", cve.CVE, "cpeMatches", len(cpeMatches))
+
+			// the osv database provides additional information about affected packages
+			affectedPackages, err := osvService.ImportCVE(cveId)
+			if err != nil {
+				slog.Error("could not import cve from osv", "err", err)
+				return
+			}
+
+			slog.Info("successfully imported affected packages", "cveId", cve.CVE, "affectedPackages", len(affectedPackages))
 		},
 	}
+
 	return importCmd
 }
 

@@ -19,6 +19,7 @@ import (
 	"archive/zip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -128,6 +129,39 @@ func (s osvService) getEcosystems() ([]string, error) {
 	})
 
 	return ecosystems, nil
+}
+
+func (s osvService) ImportCVE(cveId string) ([]models.AffectedComponent, error) {
+	resp, err := s.httpClient.Get(fmt.Sprintf("https://api.osv.dev/v1/vulns/%s", cveId))
+
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get cve")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("could not get cve")
+	}
+
+	defer resp.Body.Close()
+	var osv models.OSV
+	err = json.NewDecoder(resp.Body).Decode(&osv)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode cve")
+	}
+
+	if !osv.IsCVE() {
+		return nil, errors.New("not a cve")
+	}
+
+	affectedComponents := osv.GetAffectedPackages()
+
+	err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not save affected packages")
+	}
+
+	return affectedComponents, nil
 }
 
 func (s osvService) Mirror() error {
