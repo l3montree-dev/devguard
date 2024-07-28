@@ -135,8 +135,18 @@ func newRepairCommand() *cobra.Command {
 			osvService := vulndb.NewOSVService(affectedCmpRepository)
 			cvelistService := vulndb.NewCVEListService(cveRepository)
 			expoitDBService := vulndb.NewExploitDBService(nvdService, repositories.NewExploitRepository(database))
+			dsaService := vulndb.NewDSAService(cveRepository)
 
 			githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(database))
+
+			if emptyOrContains(databasesToRepair, "dsa") {
+				slog.Info("starting dsa database repair")
+				now := time.Now()
+				if err := dsaService.Mirror(); err != nil {
+					slog.Error("could not mirror dsa database", "err", err)
+				}
+				slog.Info("finished dsa database repair", "duration", time.Since(now))
+			}
 
 			if emptyOrContains(databasesToRepair, "cwe") {
 				now := time.Now()
@@ -228,7 +238,7 @@ func newRepairCommand() *cobra.Command {
 	}
 	repairCmd.Flags().String("after", "", "allows to only repair a subset of data. This is used to identify the 'last correct' date in the nvd database. The sync will only include cve modifications in the interval [after, now]. Format: 2006-01-02")
 	repairCmd.Flags().Int("startIndex", 0, "provide a start index to fetch the data from. This is useful after an initial sync failed")
-	repairCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to repair. Possible values are: nvd, cvelist, exploitdb, github-poc, cwe, epss, osv")
+	repairCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to repair. Possible values are: nvd, cvelist, exploitdb, github-poc, cwe, epss, osv, dsa")
 
 	return &repairCmd
 }
