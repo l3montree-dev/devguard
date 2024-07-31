@@ -78,13 +78,13 @@ func (c *componentRepository) GetVersions(tx database.DB, asset models.Asset) ([
 
 func (c *componentRepository) FindByPurl(tx database.DB, purl string) (models.Component, error) {
 	var component models.Component
-	err := c.GetDB(tx).Where("purl_or_cpe = ?", purl).First(&component).Error
+	err := c.GetDB(tx).Where("purl = ?", purl).First(&component).Error
 	return component, err
 }
 
 func (c *componentRepository) HandleStateDiff(tx database.DB, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
-		return utils.SafeDereference(dep.ComponentPurlOrCpe) + "->" + dep.DependencyPurlOrCpe
+		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})
 
 	removed := comparison.OnlyInA

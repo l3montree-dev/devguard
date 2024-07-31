@@ -20,9 +20,9 @@ func (_m *ScanComparer) EXPECT() *ScanComparer_Expecter {
 	return &ScanComparer_Expecter{mock: &_m.Mock}
 }
 
-// GetVulns provides a mock function with given fields: purl
-func (_m *ScanComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {
-	ret := _m.Called(purl)
+// GetVulns provides a mock function with given fields: purl, notASemverVersion, componentType
+func (_m *ScanComparer) GetVulns(purl string, notASemverVersion string, componentType string) ([]models.VulnInPackage, error) {
+	ret := _m.Called(purl, notASemverVersion, componentType)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetVulns")
@@ -30,19 +30,19 @@ func (_m *ScanComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {
 
 	var r0 []models.VulnInPackage
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string) ([]models.VulnInPackage, error)); ok {
-		return rf(purl)
+	if rf, ok := ret.Get(0).(func(string, string, string) ([]models.VulnInPackage, error)); ok {
+		return rf(purl, notASemverVersion, componentType)
 	}
-	if rf, ok := ret.Get(0).(func(string) []models.VulnInPackage); ok {
-		r0 = rf(purl)
+	if rf, ok := ret.Get(0).(func(string, string, string) []models.VulnInPackage); ok {
+		r0 = rf(purl, notASemverVersion, componentType)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VulnInPackage)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(purl)
+	if rf, ok := ret.Get(1).(func(string, string, string) error); ok {
+		r1 = rf(purl, notASemverVersion, componentType)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -57,13 +57,15 @@ type ScanComparer_GetVulns_Call struct {
 
 // GetVulns is a helper method to define mock.On call
 //   - purl string
-func (_e *ScanComparer_Expecter) GetVulns(purl interface{}) *ScanComparer_GetVulns_Call {
-	return &ScanComparer_GetVulns_Call{Call: _e.mock.On("GetVulns", purl)}
+//   - notASemverVersion string
+//   - componentType string
+func (_e *ScanComparer_Expecter) GetVulns(purl interface{}, notASemverVersion interface{}, componentType interface{}) *ScanComparer_GetVulns_Call {
+	return &ScanComparer_GetVulns_Call{Call: _e.mock.On("GetVulns", purl, notASemverVersion, componentType)}
 }
 
-func (_c *ScanComparer_GetVulns_Call) Run(run func(purl string)) *ScanComparer_GetVulns_Call {
+func (_c *ScanComparer_GetVulns_Call) Run(run func(purl string, notASemverVersion string, componentType string)) *ScanComparer_GetVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		run(args[0].(string), args[1].(string), args[2].(string))
 	})
 	return _c
 }
@@ -73,7 +75,7 @@ func (_c *ScanComparer_GetVulns_Call) Return(_a0 []models.VulnInPackage, _a1 err
 	return _c
 }
 
-func (_c *ScanComparer_GetVulns_Call) RunAndReturn(run func(string) ([]models.VulnInPackage, error)) *ScanComparer_GetVulns_Call {
+func (_c *ScanComparer_GetVulns_Call) RunAndReturn(run func(string, string, string) ([]models.VulnInPackage, error)) *ScanComparer_GetVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }

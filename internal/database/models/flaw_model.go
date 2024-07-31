@@ -35,10 +35,10 @@ type Flaw struct {
 	AssetID  uuid.UUID   `json:"assetId" gorm:"not null;"`
 	State    FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
 
-	CVE                *CVE       `json:"cve"`
-	CVEID              string     `json:"cveId" gorm:"null;type:text;default:null;"`
-	Component          *Component `json:"component" gorm:"foreignKey:ComponentPurlOrCpe;constraint:OnDelete:CASCADE;"`
-	ComponentPurlOrCpe string     `json:"componentPurlOrCpe" gorm:"type:text;default:null;"`
+	CVE           *CVE       `json:"cve"`
+	CVEID         string     `json:"cveId" gorm:"null;type:text;default:null;"`
+	Component     *Component `json:"component" gorm:"foreignKey:ComponentPurl;constraint:OnDelete:CASCADE;"`
+	ComponentPurl string     `json:"componentPurl" gorm:"type:text;default:null;"`
 
 	Effort            *int     `json:"effort" gorm:"default:null;"`
 	RiskAssessment    *int     `json:"riskAssessment" gorm:"default:null;"`

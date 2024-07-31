@@ -63,10 +63,10 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, s
 		q = q.Where(f.SQL(), f.Value())
 	}
 	if search != "" && len(search) > 2 {
-		q = q.Where("(\"CVE\".description ILIKE ?  OR flaws.cve_id ILIKE ? OR component_purl_or_cpe ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("(\"CVE\".description ILIKE ?  OR flaws.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
-	err := q.Distinct("flaws.component_purl_or_cpe").Count(&count).Error
+	err := q.Distinct("flaws.component_purl").Count(&count).Error
 	if err != nil {
 		return core.Paged[models.Flaw]{}, map[string]int{}, err
 	}
@@ -80,14 +80,14 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, s
 	}
 
 	if search != "" && len(search) > 2 {
-		q = q.Where("(\"CVE\".description ILIKE ?  OR flaws.cve_id ILIKE ? OR component_purl_or_cpe ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("(\"CVE\".description ILIKE ?  OR flaws.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	packageNameQuery := r.GetDB(tx).Table("components").
-		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, COUNT(f.id) as flaw_count, components.purl_or_cpe as package_name").
-		Joins("INNER JOIN flaws f ON components.purl_or_cpe = f.component_purl_or_cpe").
+		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, COUNT(f.id) as flaw_count, components.purl as package_name").
+		Joins("INNER JOIN flaws f ON components.purl = f.component_purl").
 		Where("components.asset_id = ?", "22e14d6a-edfe-4b30-aa30-18ddf3cd15af").
-		Group("components.purl_or_cpe")
+		Group("components.purl")
 
 	// apply sorting
 	if len(sort) > 0 {
@@ -107,7 +107,7 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, s
 		return r.PackageName
 	})
 
-	err = q.Where("flaws.component_purl_or_cpe IN (?)", packageNames).Order("raw_risk_assessment DESC").Find(&flaws).Error
+	err = q.Where("flaws.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Find(&flaws).Error
 
 	if err != nil {
 		return core.Paged[models.Flaw]{}, map[string]int{}, err
@@ -138,14 +138,14 @@ func (g flawRepository) Read(id string) (models.Flaw, error) {
 	return t, err
 }
 
-func (r *flawRepository) GetFlawsByPurlOrCpe(tx core.DB, purlOrCpe []string) ([]models.Flaw, error) {
+func (r *flawRepository) GetFlawsByPurl(tx core.DB, purl []string) ([]models.Flaw, error) {
 
 	var flaws []models.Flaw = []models.Flaw{}
-	if len(purlOrCpe) == 0 {
+	if len(purl) == 0 {
 		return flaws, nil
 	}
 
-	if err := r.Repository.GetDB(tx).Where("component_purl_or_cpe IN ?", purlOrCpe).Find(&flaws).Error; err != nil {
+	if err := r.Repository.GetDB(tx).Where("component_purl IN ?", purl).Find(&flaws).Error; err != nil {
 		return nil, err
 	}
 

@@ -42,7 +42,7 @@ type flawRepository interface {
 	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 	SaveBatch(db core.DB, flaws []models.Flaw) error
 
-	GetFlawsByPurlOrCpe(tx core.DB, purlOrCpe []string) ([]models.Flaw, error)
+	GetFlawsByPurl(tx core.DB, purl []string) ([]models.Flaw, error)
 }
 
 type componentRepository interface {
@@ -105,33 +105,33 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 	for _, vuln := range vulns {
 		v := vuln
 
-		componentPurlOrCpe, err := url.PathUnescape(v.Purl)
+		componentPurl, err := url.PathUnescape(v.Purl)
 		if err != nil {
 			slog.Error("could not unescape purl", "err", err)
 			continue
 		}
 
 		// remove any qualifiers from the purl
-		parts := strings.Split(componentPurlOrCpe, "?")
-		componentPurlOrCpe = parts[0]
+		parts := strings.Split(componentPurl, "?")
+		componentPurl = parts[0]
 
 		// check if the component has an cve
 
 		flaw := models.Flaw{
-			AssetID:            asset.ID,
-			CVEID:              v.CVEID,
-			ScannerID:          scannerID,
-			ComponentPurlOrCpe: componentPurlOrCpe,
-			CVE:                &v.CVE,
+			AssetID:       asset.ID,
+			CVEID:         v.CVEID,
+			ScannerID:     scannerID,
+			ComponentPurl: componentPurl,
+			CVE:           &v.CVE,
 		}
 
 		flaw.SetArbitraryJsonData(map[string]any{
 			"introducedVersion": v.GetIntroducedVersion(),
 			"fixedVersion":      v.GetFixedVersion(),
-			"packageName":       componentPurlOrCpe,
+			"packageName":       componentPurl,
 			"cveId":             v.CVEID,
 			"installedVersion":  v.InstalledVersion,
-			"componentDepth":    depthMap[componentPurlOrCpe],
+			"componentDepth":    depthMap[componentPurl],
 			"scanType":          scanType,
 		})
 		flaws = append(flaws, flaw)
@@ -269,14 +269,14 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 			// create the direct dependency edge.
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurlOrCpe:  nil, // direct dependency - therefore set it to nil
-					ScanType:            scanType,
-					DependencyPurlOrCpe: componentPackageUrl,
-					AssetSemverStart:    currentVersion,
+					ComponentPurl:    nil, // direct dependency - therefore set it to nil
+					ScanType:         scanType,
+					DependencyPurl:   componentPackageUrl,
+					AssetSemverStart: currentVersion,
 				},
 			)
 			components[componentPackageUrl] = models.Component{
-				PurlOrCpe:     componentPackageUrl,
+				Purl:          componentPackageUrl,
 				ComponentType: models.ComponentType(component.Type),
 				AssetID:       asset.GetID(),
 				ScanType:      scanType,
@@ -296,21 +296,21 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurlOrCpe:  utils.EmptyThenNil(compPackageUrl),
-					ScanType:            scanType,
-					DependencyPurlOrCpe: depPurlOrName,
-					AssetSemverStart:    currentVersion,
+					ComponentPurl:    utils.EmptyThenNil(compPackageUrl),
+					ScanType:         scanType,
+					DependencyPurl:   depPurlOrName,
+					AssetSemverStart: currentVersion,
 				},
 			)
 			components[depPurlOrName] = models.Component{
-				PurlOrCpe:     depPurlOrName,
+				Purl:          depPurlOrName,
 				AssetID:       asset.GetID(),
 				ScanType:      scanType,
 				ComponentType: models.ComponentType(dep.Type),
 				Version:       dep.Version,
 			}
 			components[compPackageUrl] = models.Component{
-				PurlOrCpe:     compPackageUrl,
+				Purl:          compPackageUrl,
 				AssetID:       asset.GetID(),
 				ScanType:      scanType,
 				ComponentType: models.ComponentType(comp.Type),
@@ -387,15 +387,15 @@ func (s *service) BuildSBOM(asset models.Asset, version string, organizationName
 
 		var p packageurl.PackageURL
 		var err error
-		if c.ComponentPurlOrCpe != nil {
-			p, err = packageurl.FromString(*c.ComponentPurlOrCpe)
+		if c.ComponentPurl != nil {
+			p, err = packageurl.FromString(*c.ComponentPurl)
 			if err == nil {
-				if _, ok := alreadyIncluded[*c.ComponentPurlOrCpe]; !ok {
-					alreadyIncluded[*c.ComponentPurlOrCpe] = true
+				if _, ok := alreadyIncluded[*c.ComponentPurl]; !ok {
+					alreadyIncluded[*c.ComponentPurl] = true
 					bomComponents = append(bomComponents, cdx.Component{
-						BOMRef:     *c.ComponentPurlOrCpe,
+						BOMRef:     *c.ComponentPurl,
 						Type:       cdx.ComponentType(c.Component.ComponentType),
-						PackageURL: *c.ComponentPurlOrCpe,
+						PackageURL: *c.ComponentPurl,
 						Version:    c.Component.Version,
 						Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
 					})
@@ -403,14 +403,14 @@ func (s *service) BuildSBOM(asset models.Asset, version string, organizationName
 			}
 		}
 
-		if c.DependencyPurlOrCpe != "" {
-			p, err = packageurl.FromString(c.DependencyPurlOrCpe)
+		if c.DependencyPurl != "" {
+			p, err = packageurl.FromString(c.DependencyPurl)
 			if err == nil {
-				alreadyIncluded[c.DependencyPurlOrCpe] = true
+				alreadyIncluded[c.DependencyPurl] = true
 				bomComponents = append(bomComponents, cdx.Component{
-					BOMRef:     c.DependencyPurlOrCpe,
+					BOMRef:     c.DependencyPurl,
 					Type:       cdx.ComponentType(c.Dependency.ComponentType),
-					PackageURL: c.DependencyPurlOrCpe,
+					PackageURL: c.DependencyPurl,
 					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
 					Version:    c.Dependency.Version,
 				})
@@ -421,18 +421,18 @@ func (s *service) BuildSBOM(asset models.Asset, version string, organizationName
 	// build up the dependency map
 	dependencyMap := make(map[string][]string)
 	for _, c := range components {
-		if c.ComponentPurlOrCpe == nil {
+		if c.ComponentPurl == nil {
 			if _, ok := dependencyMap[asset.Slug]; !ok {
-				dependencyMap[asset.Slug] = []string{c.DependencyPurlOrCpe}
+				dependencyMap[asset.Slug] = []string{c.DependencyPurl}
 				continue
 			}
-			dependencyMap[asset.Slug] = append(dependencyMap[asset.Slug], c.DependencyPurlOrCpe)
+			dependencyMap[asset.Slug] = append(dependencyMap[asset.Slug], c.DependencyPurl)
 			continue
 		}
-		if _, ok := dependencyMap[*c.ComponentPurlOrCpe]; !ok {
-			dependencyMap[*c.ComponentPurlOrCpe] = make([]string, 0)
+		if _, ok := dependencyMap[*c.ComponentPurl]; !ok {
+			dependencyMap[*c.ComponentPurl] = make([]string, 0)
 		}
-		dependencyMap[*c.ComponentPurlOrCpe] = append(dependencyMap[*c.ComponentPurlOrCpe], c.DependencyPurlOrCpe)
+		dependencyMap[*c.ComponentPurl] = append(dependencyMap[*c.ComponentPurl], c.DependencyPurl)
 	}
 
 	// build up the dependencies

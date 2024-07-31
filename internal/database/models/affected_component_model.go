@@ -29,7 +29,8 @@ import (
 )
 
 type AffectedComponent struct {
-	ID               string  `json:"id" gorm:"primaryKey;"`
+	ID               string `json:"id" gorm:"primaryKey;"`
+	Source           string
 	PURL             string  `json:"purl" gorm:"type:text;column:purl;index"`
 	Ecosystem        string  `json:"ecosystem" gorm:"type:text;"`
 	Scheme           string  `json:"scheme" gorm:"type:text;"`
@@ -146,6 +147,8 @@ func AffectedComponentFromOSV(osv obj.OSV) []AffectedComponent {
 					Qualifiers: &qualifiersStr,
 					Subpath:    &purl.Subpath,
 
+					Source: "osv",
+
 					SemverIntroduced: semverIntroducedPtr,
 					SemverFixed:      semverFixedPtr,
 
@@ -169,6 +172,8 @@ func AffectedComponentFromOSV(osv obj.OSV) []AffectedComponent {
 					Qualifiers: &qualifiersStr,
 					Subpath:    &purl.Subpath,
 					Version:    &tmpV,
+
+					Source: "osv",
 
 					CVE: cves,
 				}
