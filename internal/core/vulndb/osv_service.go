@@ -28,6 +28,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 )
@@ -143,7 +144,7 @@ func (s osvService) ImportCVE(cveId string) ([]models.AffectedComponent, error) 
 	}
 
 	defer resp.Body.Close()
-	var osv models.OSV
+	var osv obj.OSV
 	err = json.NewDecoder(resp.Body).Decode(&osv)
 
 	if err != nil {
@@ -154,7 +155,7 @@ func (s osvService) ImportCVE(cveId string) ([]models.AffectedComponent, error) 
 		return nil, errors.New("not a cve")
 	}
 
-	affectedComponents := osv.GetAffectedPackages()
+	affectedComponents := models.AffectedComponentFromOSV(osv)
 
 	err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
 	if err != nil {
@@ -202,7 +203,7 @@ func (s osvService) Mirror() error {
 				continue
 			}
 
-			osv := models.OSV{}
+			osv := obj.OSV{}
 			err = json.Unmarshal(unzippedFileBytes, &osv)
 			if err != nil {
 				slog.Error("could not unmarshal osv", "err", err)
@@ -214,7 +215,7 @@ func (s osvService) Mirror() error {
 			}
 
 			// convert the osv to affected packages
-			affectedComponents := osv.GetAffectedPackages()
+			affectedComponents := models.AffectedComponentFromOSV(osv)
 			// save the affected packages
 			err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
 			if err != nil {

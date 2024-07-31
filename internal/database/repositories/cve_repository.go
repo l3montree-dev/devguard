@@ -93,10 +93,7 @@ func (g *cveRepository) SaveBatch(tx database.DB, cves []models.CVE) error {
 }
 
 func (g *cveRepository) Save(tx database.DB, cve *models.CVE) error {
-	return g.GetDB(tx).Session(
-		&gorm.Session{
-			FullSaveAssociations: true,
-		}).Clauses(
+	return g.GetDB(tx).Clauses(
 		clause.OnConflict{
 			UpdateAll: true,
 		},

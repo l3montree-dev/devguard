@@ -16,8 +16,7 @@
 package scan
 
 import (
-	"log/slog"
-	"net/url"
+	"fmt"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -44,28 +43,26 @@ func (comparer *purlComparer) GetVulns(purl string, notASemverVersion string, _ 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse purl")
 	}
-
+	affectedComponents := []models.AffectedComponent{}
 	version, err := utils.SemverFix(p.Version)
 	if err != nil {
-		slog.Info("could not parse version", "version", p.Version, "purl", purl)
-		return nil, err
+		fmt.Println(p.ToString(), "is not a semver version", notASemverVersion)
+		// the provided version from the purl is not a semver version
+		// thus we have to look at exact version matches using the "notASemverVersion" parameter
+		comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", p.ToString()).Where("version = ?", notASemverVersion).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)
+	} else {
+		p.Version = ""
+		fmt.Println(p.ToString(), "is a semver version", version)
+		// we can use the version from the purl todo a semver range check
+		// check if the package is present in the database
+		comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", p.ToString()).Where(
+			comparer.db.Where(
+				"version = ?", notASemverVersion).
+				Or("semver_introduced IS NULL AND semver_fixed > ?", version).
+				Or("semver_introduced < ? AND semver_fixed IS NULL", version).
+				Or("semver_introduced < ? AND semver_fixed > ?", version, version),
+		).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)
 	}
-
-	affectedComponents := []models.AffectedComponent{}
-	p.Version = ""
-
-	pURL, err := url.PathUnescape(p.ToString())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not unescape purl path")
-	}
-	// check if the package is present in the database
-	comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", pURL).Where(
-		comparer.db.Where(
-			"version = ?", notASemverVersion).
-			Or("semver_introduced IS NULL AND semver_fixed > ?", version).
-			Or("semver_introduced < ? AND semver_fixed IS NULL", version).
-			Or("semver_introduced < ? AND semver_fixed > ?", version, version),
-	).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)
 
 	vulnerabilities := []models.VulnInPackage{}
 

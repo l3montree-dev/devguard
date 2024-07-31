@@ -75,12 +75,17 @@ func (nvdService NVDService) ImportCVE(cveID string) (models.CVE, error) {
 	}
 
 	var cve models.CVE
+	var weaknesses []models.Weakness
 	var cpes []models.CPEMatch
 	err = nvdService.cveRepository.Transaction(func(tx database.DB) error {
-		cve, cpes = fromNVDCVE(resp.Vulnerabilities[0].Cve)
+		cve, weaknesses, cpes = fromNVDCVE(resp.Vulnerabilities[0].Cve)
 		if err := nvdService.cveRepository.Save(tx, &cve); err != nil {
 			return err
 		}
+		if err := nvdService.cveRepository.GetDB(tx).Model(&cve).Association("Weaknesses").Append(weaknesses); err != nil {
+			return err
+		}
+
 		// save the cpes
 		return nvdService.cveRepository.GetDB(tx).Model(&cve).Association("Configurations").Append(cpes)
 	})
@@ -141,19 +146,30 @@ func (nvdService NVDService) fetchJSONFromNVD(url url.URL, currentTry int) (nist
 
 func (nvdService NVDService) saveResponseInDB(resp nistResponse) error {
 	cves := make([]models.CVE, len(resp.Vulnerabilities))
+	weaknesses := make([][]models.Weakness, len(resp.Vulnerabilities))
 	cpes := make([][]models.CPEMatch, len(resp.Vulnerabilities))
 	for i, v := range resp.Vulnerabilities {
-		cves[i], cpes[i] = fromNVDCVE(v.Cve)
+		cves[i], weaknesses[i], cpes[i] = fromNVDCVE(v.Cve)
 	}
 
 	for i, cve := range cves {
 		tmp := cve
 		err := nvdService.cveRepository.Transaction(func(tx database.DB) error {
 			if err := nvdService.cveRepository.Save(tx, &tmp); err != nil {
+				slog.Warn("Could not save CVE", "err", err)
+				return err
+			}
+			// save the weaknesses
+			if err := nvdService.cveRepository.GetDB(tx).Model(&tmp).Association("Weaknesses").Append(weaknesses[i]); err != nil {
+				slog.Warn("Could not save weaknesses", "err", err)
 				return err
 			}
 			// save the cpes
-			return nvdService.cveRepository.GetDB(tx).Model(&tmp).Association("Configurations").Append(cpes[i])
+			if err := nvdService.cveRepository.GetDB(tx).Model(&tmp).Association("Configurations").Append(cpes[i]); err != nil {
+				slog.Warn("Could not save CPEs", "err", err)
+				return err
+			}
+			return nil
 		})
 		if err != nil {
 			return err
@@ -203,7 +219,7 @@ func (nvdService NVDService) fetchAndSaveAllPages(url url.URL, startIndex int) e
 		slog.Info("fetched NVD data", "totalResults", resp.TotalResults, "currentIndex", startIndex)
 
 		if err := nvdService.saveResponseInDB(resp); err != nil {
-			return err
+			slog.Warn("Could not save response in DB", "err", err)
 		}
 
 		slog.Info("Done iteration", "apiRequestTime", apiRequestFinished.Sub(start).String(), "databaseTime", time.Since(apiRequestFinished).String())
@@ -322,7 +338,7 @@ func getCVSSMetric(nvdCVE nvdCVE) cvssMetric {
 	}
 }
 
-func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.CPEMatch) {
+func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.Weakness, []models.CPEMatch) {
 	published, err := time.Parse(utils.ISO8601Format, nistCVE.Published)
 	if err != nil {
 		published = time.Now()
@@ -344,7 +360,7 @@ func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.CPEMatch) {
 	}
 
 	// build the cwe list
-	weaknesses := []*models.Weakness{}
+	weaknesses := []models.Weakness{}
 	configurations := []models.CPEMatch{}
 
 	for _, w := range nistCVE.Weaknesses {
@@ -355,7 +371,7 @@ func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.CPEMatch) {
 			}
 
 			if d.Lang == "en" {
-				weaknesses = append(weaknesses, &models.Weakness{
+				weaknesses = append(weaknesses, models.Weakness{
 					Source: w.Source,
 					Type:   w.Type,
 					CWEID:  d.Value,
@@ -397,8 +413,6 @@ func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.CPEMatch) {
 
 		Description: description,
 
-		Weaknesses: weaknesses,
-
 		Severity:              models.Severity(cvssMetric.Severity),
 		CVSS:                  cvssMetric.CVSS,
 		ExploitabilityScore:   cvssMetric.ExploitabilityScore,
@@ -420,7 +434,7 @@ func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.CPEMatch) {
 		Vector: cvssMetric.Vector,
 
 		References: string(refs),
-	}, configurations
+	}, weaknesses, configurations
 
 }
 

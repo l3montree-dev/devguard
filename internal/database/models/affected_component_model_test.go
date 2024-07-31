@@ -20,64 +20,66 @@ import (
 	"io"
 	"os"
 	"testing"
+
+	"github.com/l3montree-dev/devguard/internal/obj"
 )
 
 func TestFromOSV(t *testing.T) {
 	t.Run("empty OSV", func(t *testing.T) {
-		osv := OSV{
-			Affected: []Affected{},
+		osv := obj.OSV{
+			Affected: []obj.Affected{},
 		}
-		affectedComponents := osv.GetAffectedPackages()
+		affectedComponents := AffectedComponentFromOSV(osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
 	})
 
 	t.Run("affected package without purl", func(t *testing.T) {
-		osv := OSV{
-			Affected: []Affected{
+		osv := obj.OSV{
+			Affected: []obj.Affected{
 				{
-					Package: pkg{
+					Package: obj.Pkg{
 						Purl: "",
 					},
-					Ranges: []rng{},
+					Ranges: []obj.Rng{},
 				},
 			},
 		}
-		affectedComponents := osv.GetAffectedPackages()
+		affectedComponents := AffectedComponentFromOSV(osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
 	})
 
 	t.Run("affected package with invalid purl", func(t *testing.T) {
-		osv := OSV{
-			Affected: []Affected{
+		osv := obj.OSV{
+			Affected: []obj.Affected{
 				{
-					Package: pkg{
+					Package: obj.Pkg{
 						Purl: "invalid_purl",
 					},
-					Ranges: []rng{},
+					Ranges: []obj.Rng{},
 				},
 			},
 		}
-		affectedComponents := osv.GetAffectedPackages()
+		affectedComponents := AffectedComponentFromOSV(osv)
 		if len(affectedComponents) != 0 {
 			t.Errorf("Expected no affected packages, got %d", len(affectedComponents))
 		}
 	})
 
 	t.Run("affected package with valid purl", func(t *testing.T) {
-		osv := OSV{
-			Affected: []Affected{
+		osv := obj.OSV{
+			Affected: []obj.Affected{
 				{
-					Package: pkg{
+					Package: obj.Pkg{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []rng{
+					Ranges: []obj.Rng{
 						{
 							Type: "SEMVER",
-							Events: []semverEvent{
+							Events: []obj.SemverEvent{
 								{
 									Introduced: "0",
 								},
@@ -90,7 +92,7 @@ func TestFromOSV(t *testing.T) {
 				},
 			},
 		}
-		affectedComponents := osv.GetAffectedPackages()
+		affectedComponents := AffectedComponentFromOSV(osv)
 		if len(affectedComponents) != 1 {
 			t.Errorf("Expected 1 affected package, got %d", len(affectedComponents))
 		}
@@ -134,16 +136,16 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package with multiple SEMVER ranges", func(t *testing.T) {
-		osv := OSV{
-			Affected: []Affected{
+		osv := obj.OSV{
+			Affected: []obj.Affected{
 				{
-					Package: pkg{
+					Package: obj.Pkg{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []rng{
+					Ranges: []obj.Rng{
 						{
 							Type: "SEMVER",
-							Events: []semverEvent{
+							Events: []obj.SemverEvent{
 								{
 									Introduced: "0",
 								},
@@ -163,7 +165,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := osv.GetAffectedPackages()
+		affectedComponents := AffectedComponentFromOSV(osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
 		}
@@ -187,16 +189,16 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package without SEMVER ranges but with versions", func(t *testing.T) {
-		osv := OSV{
-			Affected: []Affected{
+		osv := obj.OSV{
+			Affected: []obj.Affected{
 				{
-					Package: pkg{
+					Package: obj.Pkg{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []rng{
+					Ranges: []obj.Rng{
 						{
 							Type: "ECOSYSTEM",
-							Events: []semverEvent{
+							Events: []obj.SemverEvent{
 								{
 									Introduced: "1.14.14",
 								},
@@ -214,7 +216,7 @@ func TestFromOSV(t *testing.T) {
 			},
 		}
 
-		affectedComponents := osv.GetAffectedPackages()
+		affectedComponents := AffectedComponentFromOSV(osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
 		}
@@ -234,13 +236,13 @@ func TestFromOSV(t *testing.T) {
 		f, _ := os.Open("testdata/GHSA-2v6x-frw8-7r7f.json")
 		defer f.Close()
 		bytes, _ := io.ReadAll(f)
-		osv := OSV{}
+		osv := obj.OSV{}
 		err := json.Unmarshal(bytes, &osv)
 		if err != nil {
 			t.Errorf("Could not unmarshal osv, got %s", err)
 		}
 
-		affectedComponents := osv.GetAffectedPackages()
+		affectedComponents := AffectedComponentFromOSV(osv)
 		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 2 affected package, got %d", len(affectedComponents))
 		}

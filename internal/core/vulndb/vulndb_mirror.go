@@ -27,6 +27,7 @@ type leaderElector interface {
 }
 
 func StartMirror(database core.DB, leaderElector leaderElector, configService configService) {
+	return
 	cveRepository := repositories.NewCVERepository(database)
 	cweRepository := repositories.NewCWERepository(database)
 	affectedCmpRepository := repositories.NewAffectedCmpRepository(database)

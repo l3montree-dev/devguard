@@ -63,15 +63,15 @@ func (s *sbomScanner) Scan(bom normalize.SBOM) ([]models.VulnInPackage, error) {
 					vulns = append(vulns, res...)
 				}
 				if component.PackageURL != "" {
-					// try to convert the purl to a CPE
+					/*// try to convert the purl to a CPE
 					res, err := s.cpeComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
 					} else {
 						vulns = append(vulns, res...)
-					}
+					}*/
 
-					res, err = s.purlComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
+					res, err := s.purlComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
 					}

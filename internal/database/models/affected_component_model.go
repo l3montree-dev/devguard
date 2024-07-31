@@ -21,65 +21,12 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
+	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm"
 )
-
-type pkg struct {
-	Name      string `json:"name"`
-	Ecosystem string `json:"ecosystem"`
-	Purl      string `json:"purl"`
-}
-
-type semverEvent struct {
-	Introduced string `json:"introduced,omitempty"`
-	Fixed      string `json:"fixed,omitempty"`
-}
-
-type rng struct {
-	Type   string        `json:"type"`
-	Events []semverEvent `json:"events"`
-}
-
-type Affected struct {
-	Package           pkg            `json:"package"`
-	Ranges            []rng          `json:"ranges"`
-	Versions          []string       `json:"versions"`
-	DatabaseSpecific  map[string]any `json:"database_specific"`
-	EcosystemSpecific map[string]any `json:"ecosystem_specific"`
-}
-
-type OSV struct {
-	ID            string     `json:"id"`
-	Summary       string     `json:"summary"`
-	Modified      time.Time  `json:"modified"`
-	Published     time.Time  `json:"published"`
-	Related       []string   `json:"related"`
-	Aliases       []string   `json:"aliases"`
-	Affected      []Affected `json:"affected"`
-	SchemaVersion string     `json:"schema_version"`
-}
-
-func (osv OSV) GetCVE() []string {
-	cves := make([]string, 0)
-	for _, alias := range osv.Aliases {
-		if strings.HasPrefix(alias, "CVE-") {
-			cves = append(cves, alias)
-		}
-	}
-	// check if the osv itself is a cve
-	if strings.HasPrefix(osv.ID, "CVE-") {
-		cves = append(cves, osv.ID)
-	}
-
-	return cves
-}
-func (osv OSV) IsCVE() bool {
-	return len(osv.GetCVE()) > 0
-}
 
 type AffectedComponent struct {
 	ID               string  `json:"id" gorm:"primaryKey;"`
@@ -122,7 +69,7 @@ func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
 	return nil
 }
 
-func (osv OSV) GetAffectedPackages() []AffectedComponent {
+func AffectedComponentFromOSV(osv obj.OSV) []AffectedComponent {
 	affectedComponents := make([]AffectedComponent, 0)
 
 	cveIds := osv.GetCVE()
