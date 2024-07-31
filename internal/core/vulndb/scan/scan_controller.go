@@ -74,7 +74,7 @@ func (s *httpController) Scan(c core.Context) error {
 	if err := decoder.Decode(bom); err != nil {
 		return err
 	}
-	normalizedBom := normalize.FromCdxBom(bom)
+	normalizedBom := normalize.FromCdxBom(bom, true)
 	assetObj := core.GetAsset(c)
 
 	userID := core.GetSession(c).GetUserID()

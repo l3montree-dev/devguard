@@ -56,12 +56,12 @@ func (c *cpeComparer) GetVulns(purl string, notASemverVersion string, componentT
 
 	debug := false
 
-	if strings.Contains(purl, "debian/python") {
+	/*if strings.Contains(purl, "debian/python") {
 		fmt.Println("purl", purl)
 		fmt.Println("cpe", cpe)
 
 		debug = true
-	}
+	}*/
 
 	cpeMatches := []models.CPEMatch{}
 

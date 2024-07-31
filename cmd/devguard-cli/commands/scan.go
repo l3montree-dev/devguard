@@ -71,7 +71,7 @@ func newSbomCommand() *cobra.Command {
 
 						sbom := assetService.BuildSBOM(asset, version, "", components)
 
-						normalizedSBOM := normalize.FromCdxBom(sbom)
+						normalizedSBOM := normalize.FromCdxBom(sbom, false)
 
 						vulns, err := sbomScanner.Scan(normalizedSBOM)
 						if err != nil {

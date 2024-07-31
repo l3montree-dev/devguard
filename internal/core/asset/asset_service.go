@@ -264,7 +264,7 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 			component := bomRefMap[directDependency]
 			// the sbom of a container image does not contain the scope. In a container image, we do not have
 			// anything like a deep nested dependency tree. Everything is a direct dependency.
-			componentPackageUrl := normalize.PurlOrCpe(component)
+			componentPackageUrl := normalize.Purl(component)
 
 			// create the direct dependency edge.
 			dependencies = append(dependencies,
@@ -288,11 +288,11 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 	// find all dependencies from this component
 	for _, c := range *sbom.GetDependencies() {
 		comp := bomRefMap[c.Ref]
-		compPackageUrl := normalize.PurlOrCpe(comp)
+		compPackageUrl := normalize.Purl(comp)
 
 		for _, d := range *c.Dependencies {
 			dep := bomRefMap[d]
-			depPurlOrName := normalize.PurlOrCpe(dep)
+			depPurlOrName := normalize.Purl(dep)
 
 			dependencies = append(dependencies,
 				models.ComponentDependency{

@@ -138,13 +138,12 @@ func NewCVEListService(cveRepository cveRepository) cvelistService {
 var cveBaseURL string = "https://github.com/CVEProject/cvelistV5/archive/refs/heads/main.zip"
 
 func (s *cvelistService) downloadZip() (*zip.Reader, error) {
-	// open zip file
+	/*// open zip file
 	rc, err := zip.OpenReader("cvelistV5-main.zip")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open zip file")
 	}
-	return &rc.Reader, nil
-
+	*/
 	req, err := http.NewRequest(http.MethodGet, cveBaseURL, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create request")

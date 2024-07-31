@@ -7,22 +7,34 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
-func normalizePurl(purl string) string {
+// returns the normalized purl AND the component type
+func normalizePurl(purl string) (string, cdx.ComponentType) {
 	// unescape the purl
 	purl, err := url.PathUnescape(purl)
 	if err != nil {
-		return purl
+		return purl, cdx.ComponentTypeLibrary
 	}
+	// get the distro query parameter
+	pURL, err := url.Parse(purl)
+	if err != nil {
+		return purl, cdx.ComponentTypeLibrary
+	}
+
+	q := pURL.Query()
+	distro := q.Get("distro")
+
 	// remove any query parameters
 	purl = strings.Split(purl, "?")[0]
 
-	// remove everything follows a "+"
-	purl = strings.Split(purl, "+")[0]
-	purl = strings.Split(purl, "~")[0]
-	return purl
+	if distro != "" {
+		// its an application
+		return purl, cdx.ComponentTypeApplication
+	}
+
+	return purl, cdx.ComponentTypeLibrary
 }
 
-func PurlOrCpe(component cdx.Component) string {
+func Purl(component cdx.Component) string {
 	var purl string
 	if component.PackageURL != "" {
 		return component.PackageURL
