@@ -266,6 +266,7 @@ func Start(db core.DB) {
 	// init all repositories using the provided database
 	patRepository := repositories.NewPATRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
+	assetRisksRepository := repositories.NewAssetRiskRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
 	flawEventRepository := repositories.NewFlawEventRepository(db)
@@ -276,7 +277,7 @@ func Start(db core.DB) {
 	flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 	flawController := flaw.NewHttpController(flawRepository, flawService)
 
-	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
+	assetService := asset.NewService(assetRepository, assetRisksRepository, componentRepository, flawRepository, flawService)
 
 	// init all http controllers using the repositories
 	patController := pat.NewHttpController(patRepository)
@@ -364,6 +365,7 @@ func Start(db core.DB) {
 	assetRouter.GET("/affected-packages/", assetController.AffectedPackages)
 	assetRouter.GET("/sbom.json/", assetController.SBOMJSON)
 	assetRouter.GET("/sbom.xml/", assetController.SBOMXML)
+	assetRouter.GET("/overview/", assetController.Overview)
 
 	assetRouter.GET("/versions/", assetController.Versions)
 

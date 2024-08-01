@@ -104,3 +104,18 @@ func (c *componentRepository) HandleStateDiff(tx database.DB, assetID uuid.UUID,
 		return c.CreateAssetComponents(tx, added)
 	})
 }
+
+func (c *componentRepository) GetAssetDependenciesGroupedByScanType(asset_ID string) ([]models.AssetAllDependencies, error) {
+	var results []models.AssetAllDependencies
+	err := c.db.Model(&models.Component{}).
+		Select("scan_type , COUNT(*) as count").
+		Group("scan_type").
+		Where("asset_id = ?", asset_ID).
+		Find(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}

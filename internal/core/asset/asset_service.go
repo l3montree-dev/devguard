@@ -16,10 +16,13 @@
 package asset
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -38,6 +41,11 @@ type flawRepository interface {
 	SaveBatch(db core.DB, flaws []models.Flaw) error
 
 	GetFlawsByPurlOrCpe(tx core.DB, purlOrCpe []string) ([]models.Flaw, error)
+
+	GetRecentFlawsForAsset(assetID uuid.UUID, time time.Time) ([]models.FlawRisk, error)
+	GetAssetFlawsStatistics(asset_ID string) ([]models.AssetRiskSummary, error)
+	GetAssetRisksDistribution(asset_ID string) ([]models.AssetRiskDistribution, error)
+	GetAssetCriticalDependenciesGroupedByScanType(asset_ID string) ([]models.AssetCriticalDependencies, error)
 }
 
 type componentRepository interface {
@@ -45,10 +53,12 @@ type componentRepository interface {
 	LoadAssetComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
 	FindByPurl(tx core.DB, purl string) (models.Component, error)
 	HandleStateDiff(tx database.DB, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error
+	GetAssetDependenciesGroupedByScanType(asset_ID string) ([]models.AssetAllDependencies, error)
 }
 
 type assetRepository interface {
 	Save(tx core.DB, asset *models.Asset) error
+	Transaction(txFunc func(core.DB) error) error
 }
 
 type flawService interface {
@@ -59,20 +69,27 @@ type flawService interface {
 	RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error
 }
 type service struct {
-	flawRepository      flawRepository
-	componentRepository componentRepository
-	flawService         flawService
-	assetRepository     assetRepository
-	httpClient          *http.Client
+	flawRepository            flawRepository
+	componentRepository       componentRepository
+	flawService               flawService
+	assetRepository           assetRepository
+	httpClient                *http.Client
+	assetRecentRiskRepository assetRecentRiskRepository
 }
 
-func NewService(assetRepository assetRepository, componentRepository componentRepository, flawRepository flawRepository, flawService flawService) *service {
+type assetRecentRiskRepository interface {
+	GetAssetRecentRisksByAssetId(assetId uuid.UUID) ([]models.AssetRecentRisks, error)
+	UpdateAssetRecentRisks(assetRisks *models.AssetRecentRisks) error
+}
+
+func NewService(assetRepository assetRepository, assetRecentRiskRepository assetRecentRiskRepository, componentRepository componentRepository, flawRepository flawRepository, flawService flawService) *service {
 	return &service{
-		assetRepository:     assetRepository,
-		componentRepository: componentRepository,
-		flawRepository:      flawRepository,
-		flawService:         flawService,
-		httpClient:          &http.Client{},
+		assetRepository:           assetRepository,
+		assetRecentRiskRepository: assetRecentRiskRepository,
+		componentRepository:       componentRepository,
+		flawRepository:            flawRepository,
+		flawService:               flawService,
+		httpClient:                &http.Client{},
 	}
 }
 
@@ -306,4 +323,166 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 	}
 
 	return nil
+}
+
+func (s *service) GetAssetCombinedDependencies(asset_ID string) ([]models.AssetCombinedDependencies, error) {
+
+	allDependencies, err := s.getAssetDependenciesGroupedByScanType(asset_ID)
+	if err != nil {
+		return nil, err
+	}
+
+	criticalDependencies, err := s.getAssetCriticalDependenciesGroupedByScanType(asset_ID)
+	if err != nil {
+		return nil, err
+	}
+
+	criticalCountMap := make(map[string]int64)
+	for _, criticalDep := range criticalDependencies {
+		criticalCountMap[criticalDep.ScannerID] = criticalDep.Count
+	}
+
+	combinedDependencies := make([]models.AssetCombinedDependencies, len(allDependencies))
+	for i, allDep := range allDependencies {
+		combinedDependencies[i] = models.AssetCombinedDependencies{
+			ScanType:          allDep.ScanType,
+			CountDependencies: allDep.Count,
+			CountCritical:     criticalCountMap[allDep.ScanType],
+		}
+	}
+
+	return combinedDependencies, nil
+}
+
+func (s *service) getAssetCriticalDependenciesGroupedByScanType(asset_ID string) ([]models.AssetCriticalDependencies, error) {
+	assets, err := s.flawRepository.GetAssetCriticalDependenciesGroupedByScanType(asset_ID)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range assets {
+		assets[i].ScannerID = scanTypeFromScannerID(assets[i].ScannerID)
+	}
+	return assets, nil
+
+}
+
+func (s *service) getAssetDependenciesGroupedByScanType(asset_ID string) ([]models.AssetAllDependencies, error) {
+	return s.componentRepository.GetAssetDependenciesGroupedByScanType(asset_ID)
+}
+
+func (s *service) GetAssetFlawsStatistics(asset_ID string) ([]models.AssetRiskSummary, error) {
+
+	risks, err := s.flawRepository.GetAssetFlawsStatistics(asset_ID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range risks {
+		risks[i].ScannerID = scanTypeFromScannerID(risks[i].ScannerID)
+
+	}
+	return risks, nil
+}
+
+func scanTypeFromScannerID(scannerID string) string {
+	parts := strings.Split(scannerID, "/")
+	return parts[len(parts)-1]
+}
+
+func (s *service) UpdateAssetRecentRisks(assetID uuid.UUID, begin time.Time, end time.Time) error {
+	tmpID := 1
+
+	for time := begin; time.Before(end); time = time.AddDate(0, 0, 1) {
+		assetRisk, err := s.flawRepository.GetRecentFlawsForAsset(assetID, time)
+		if err != nil {
+			return err
+		}
+
+		riskSum := 0.0
+		riskAvg := 0.0
+		riskMax := 0.0
+		riskMin := 99.0
+		dayOfRisk := "9999-99-99 00:00:00.000000 +0200 CEST"
+
+		for i := range assetRisk {
+			arbitraryJsonData := make(map[string]interface{})
+			err := json.Unmarshal([]byte(assetRisk[i].ArbitraryJsonData), &arbitraryJsonData)
+			if err != nil {
+				slog.Error("could not parse additional data", "err", err, "flawId", assetRisk[i].FlawID)
+			}
+			risk := arbitraryJsonData["risk"].(float64)
+			riskSum += risk
+			if risk > riskMax {
+				riskMax = risk
+			}
+			if risk <= riskMin {
+				riskMin = risk
+			}
+
+		}
+
+		if riskMin == 99.0 {
+			riskMin = 0.0
+		}
+		if len(assetRisk) != 0 {
+			riskAvg = riskSum / float64(len(assetRisk))
+			dayOfRisk = assetRisk[0].CreatedAt.String()
+
+		}
+
+		result := models.AssetRecentRisks{
+			AssetID:      assetID,
+			ID:           tmpID,
+			DayOfRisk:    dayOfRisk,
+			DayOfScan:    time.Format("2006-01-02"),
+			AssetSumRisk: riskSum,
+			AssetAvgRisk: riskAvg,
+			AssetMaxRisk: riskMax,
+			AssetMinRisk: riskMin,
+		}
+
+		tmpID++
+
+		err = s.assetRecentRiskRepository.UpdateAssetRecentRisks(&result)
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
+
+}
+
+func (s *service) GetAssetRecentRisksByAssetId(assetID uuid.UUID) ([]models.AssetRecentRisks, error) {
+	return s.assetRecentRiskRepository.GetAssetRecentRisksByAssetId(assetID)
+}
+
+func (s *service) GetAssetFlawsDistribution(asset_ID string) ([]models.AssetRiskDistribution, error) {
+	assets, err := s.flawRepository.GetAssetRisksDistribution(asset_ID)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range assets {
+		assets[i].ScannerID = scanTypeFromScannerID(assets[i].ScannerID)
+	}
+
+	return assets, nil
+
+}
+
+func (s *service) GetAssetFlaws(assetID uuid.UUID) ([]models.AssetFlaws, error) {
+	assetFlaws := make([]models.AssetFlaws, 0)
+
+	flaws, err := s.flawRepository.GetAllFlawsByAssetID(nil, assetID)
+	if err != nil {
+		return nil, err
+	}
+	for _, flaw := range flaws {
+		assetFlaws = append(assetFlaws, models.AssetFlaws{
+			FlawID:            flaw.ID,
+			RawRiskAssessment: flaw.RawRiskAssessment,
+		})
+	}
+	return assetFlaws, nil
 }

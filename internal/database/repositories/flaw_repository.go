@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -110,4 +112,105 @@ func (r *flawRepository) GetFlawsByPurlOrCpe(tx core.DB, purlOrCpe []string) ([]
 	}
 
 	return flaws, nil
+}
+
+func (r *flawRepository) GetRecentFlawsForAsset(assetID uuid.UUID, time time.Time) ([]models.FlawRisk, error) {
+	var flawRisk []models.FlawRisk
+
+	if err := r.db.Raw(`
+		WITH RankedEvents AS (
+			SELECT 
+				flaw_events.flaw_id, 
+				flaw_events.created_at,
+				flaw_events.arbitrary_json_data,
+				flaw_events.type,
+				ROW_NUMBER() OVER (PARTITION BY flaw_events.flaw_id ORDER BY flaw_events.created_at DESC) AS rn
+			FROM 
+				flaw_events
+			WHERE 
+				flaw_events.created_at <= ?
+				AND EXISTS (
+					SELECT 1 
+					FROM flaws 
+					WHERE flaws.id = flaw_events.flaw_id 
+					  AND flaws.asset_id = ?
+				)
+				AND flaw_events.type IN ('detected', 'rawRiskAssessmentUpdated')
+		)
+		SELECT 
+			flaw_id, 
+			created_at, 
+			arbitrary_json_data,
+			type
+		FROM 
+			RankedEvents
+		WHERE 
+			rn = 1
+		ORDER BY 
+			flaw_id;
+	`, time, assetID).Scan(&flawRisk).Error; err != nil {
+
+		return nil, err
+	}
+
+	return flawRisk, nil
+}
+
+func (r *flawRepository) GetAssetCriticalDependenciesGroupedByScanType(asset_ID string) ([]models.AssetCriticalDependencies, error) {
+	var results []models.AssetCriticalDependencies
+	err := r.db.Model(&models.Flaw{}).
+		Select("scanner_id , COUNT(*) as count").
+		Group("scanner_id").
+		Where("asset_id = ?", asset_ID).
+		Find(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func (r *flawRepository) GetAssetFlawsStatistics(asset_ID string) ([]models.AssetRiskSummary, error) {
+	var results []models.AssetRiskSummary
+
+	err := r.db.Model(&models.Flaw{}).
+		Select("scanner_id , raw_risk_assessment,  COUNT(*) as count , AVG(raw_risk_assessment) as average, SUM(raw_risk_assessment) as sum").
+		Group("scanner_id, raw_risk_assessment").
+		Where("asset_id = ?", asset_ID).
+		Find(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func (r *flawRepository) GetAssetRisksDistribution(asset_ID string) ([]models.AssetRiskDistribution, error) {
+	var results []models.AssetRiskDistribution
+
+	err := r.db.Raw(`
+        SELECT 
+            scanner_id,
+            CASE 
+                WHEN raw_risk_assessment >= 0.0 AND raw_risk_assessment < 2.0 THEN '0-2'
+                WHEN raw_risk_assessment >= 2.0 AND raw_risk_assessment < 4.0 THEN '2-4'
+                WHEN raw_risk_assessment >= 4.0 AND raw_risk_assessment < 6.0 THEN '4-6'
+				WHEN raw_risk_assessment >= 6.0 AND raw_risk_assessment < 8.0 THEN '6-8'
+				WHEN raw_risk_assessment >= 8.0 AND raw_risk_assessment <= 10.0 THEN '8-10'
+				ELSE 'unknown'
+    
+            END AS risk_range,
+            COUNT(*) as count
+        FROM flaws
+        WHERE asset_id = ?
+        GROUP BY scanner_id, risk_range
+    `, asset_ID).Scan(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
