@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
@@ -43,6 +44,9 @@ type AffectedComponent struct {
 	SemverIntroduced *string `json:"semverStart" gorm:"type:semver;index"`
 	SemverFixed      *string `json:"semverEnd" gorm:"type:semver;index"`
 
+	VersionIntroduced *string `json:"versionIntroduced" gorm:"index"` // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
+	VersionFixed      *string `json:"versionFixed" gorm:"index"`      // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
+
 	CVE []CVE `json:"cves" gorm:"many2many:cve_affected_component;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
@@ -50,23 +54,27 @@ func (affectedComponent AffectedComponent) TableName() string {
 	return "affected_components"
 }
 
-func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
-	// build the stable map
-	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s",
-		affectedComponent.PURL,
-		affectedComponent.Ecosystem,
-		affectedComponent.Name,
-		utils.SafeDereference(affectedComponent.Namespace),
-		utils.SafeDereference(affectedComponent.Qualifiers),
-		utils.SafeDereference(affectedComponent.Subpath),
-		utils.SafeDereference(affectedComponent.Version),
-		utils.SafeDereference(affectedComponent.SemverIntroduced),
-		utils.SafeDereference(affectedComponent.SemverFixed))
+func (a AffectedComponent) CalculateHash() string {
+	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s",
+		a.PURL,
+		a.Ecosystem,
+		a.Name,
+		utils.SafeDereference(a.Namespace),
+		utils.SafeDereference(a.Qualifiers),
+		utils.SafeDereference(a.Subpath),
+		utils.SafeDereference(a.Version),
+		utils.SafeDereference(a.SemverIntroduced),
+		utils.SafeDereference(a.SemverFixed),
+		utils.SafeDereference(a.VersionIntroduced),
+		utils.SafeDereference(a.VersionFixed),
+	)
 
 	hash := sha256.Sum256([]byte(toHash))
-	hashString := hex.EncodeToString(hash[:])
+	return hex.EncodeToString(hash[:])
+}
 
-	affectedComponent.ID = hashString
+func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
+	affectedComponent.ID = affectedComponent.CalculateHash()
 	return nil
 }
 
@@ -127,11 +135,11 @@ func AffectedComponentFromOSV(osv obj.OSV) []AffectedComponent {
 
 				var semverIntroducedPtr *string
 				var semverFixedPtr *string
-				semverIntroduced, err := utils.SemverFix(tmpE.Introduced)
+				semverIntroduced, err := normalize.SemverFix(tmpE.Introduced)
 				if err == nil {
 					semverIntroducedPtr = &semverIntroduced
 				}
-				semverFixed, err := utils.SemverFix(fixed)
+				semverFixed, err := normalize.SemverFix(fixed)
 				if err == nil {
 					semverFixedPtr = &semverFixed
 				}

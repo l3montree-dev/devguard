@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -83,7 +84,7 @@ func (a *httpController) AffectedPackages(c core.Context) error {
 		version = models.LatestVersion
 	} else {
 		var err error
-		version, err = utils.SemverFix(version)
+		version, err = normalize.SemverFix(version)
 		if err != nil {
 			return err
 		}
@@ -149,7 +150,7 @@ func (a *httpController) DependencyGraph(c core.Context) error {
 		version = models.LatestVersion
 	} else {
 		var err error
-		version, err = utils.SemverFix(version)
+		version, err = normalize.SemverFix(version)
 		if err != nil {
 			return err
 		}
@@ -199,7 +200,7 @@ func (a *httpController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 		version = models.LatestVersion
 	} else {
 		var err error
-		version, err = utils.SemverFix(version)
+		version, err = normalize.SemverFix(version)
 		if err != nil {
 			return nil, err
 		}

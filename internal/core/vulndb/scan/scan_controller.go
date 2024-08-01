@@ -95,7 +95,7 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	var err error
-	version, err = utils.SemverFix(version)
+	version, err = normalize.SemverFix(version)
 	// check if valid semver
 	if err != nil {
 		slog.Error("invalid semver version", "version", version)

@@ -16,6 +16,23 @@ func removeDigitSuffix(s string) string {
 	return reg.ReplaceAllString(s, "")
 }
 
+func CPEProductName(name string) string {
+	// remove lib prefix
+	name = strings.TrimPrefix(name, "lib")
+	// remove build version suffix - if exists
+	name = removeBuildIndex(name)
+	return name
+}
+
+func CPEProductVersion(version string) string {
+	// remove anything from the version like a "+" or "~"
+	version = strings.Split(version, "+")[0]
+	version = strings.Split(version, "~")[0]
+	// check if the version has a suffix which matches p{digits}
+	// if so, remove it
+	return version
+}
+
 func normalizePackageName(packageName string) string {
 	// remove the version from the package name
 	// like python3.11

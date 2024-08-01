@@ -18,7 +18,6 @@ package scan
 import (
 	"log/slog"
 
-	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -66,7 +65,7 @@ func (s *sbomScanner) Scan(bom normalize.SBOM) ([]models.VulnInPackage, error) {
 				if component.PackageURL != "" {
 					var res []models.VulnInPackage
 					var err error
-					if component.Type == cyclonedx.ComponentTypeApplication {
+					/*if component.Type == cyclonedx.ComponentTypeApplication {
 						// try to convert the purl to a CPE
 						res, err = s.cpeComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
 						if err != nil {
@@ -74,7 +73,7 @@ func (s *sbomScanner) Scan(bom normalize.SBOM) ([]models.VulnInPackage, error) {
 						} else {
 							vulns = append(vulns, res...)
 						}
-					}
+					}*/
 					res, err = s.purlComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)

@@ -47,28 +47,28 @@ func (c *cpeComparer) GetVulns(purl string, notASemverVersion string, componentT
 	// split the criteria into its parts
 	parts := strings.Split(cpe, ":")
 	part := parts[2]
-	vendor := parts[3]
+	// vendor := parts[3]
 	product := parts[4]
-	version, err := utils.SemverFix(parts[5])
-	if err != nil {
-		return nil, err
-	}
+	version := parts[5]
+	// remove any digit suffixes from the product
+	product = normalize.CPEProductName(product)
+	version = normalize.CPEProductVersion(version)
 
 	debug := false
 
-	/*if strings.Contains(purl, "debian/python") {
+	if strings.Contains(purl, "perl-modules") {
 		fmt.Println("purl", purl)
 		fmt.Println("cpe", cpe)
 
 		debug = true
-	}*/
+	}
 
 	cpeMatches := []models.CPEMatch{}
 
 	if debug {
-		c.db.Debug().Model(models.CPEMatch{}).Where("(part = ? OR part = '*')  AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding IS NULL) AND (version_end_including >= ? OR version_end_including IS NULL) AND (version_start_including <= ? OR version_start_including IS NULL) AND (version_start_excluding < ? OR version_start_excluding IS NULL) AND vulnerable = true", part, product, version, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
+		c.db.Debug().Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding IS NULL) AND (version_end_including >= ? OR version_end_including IS NULL) AND (version_start_including <= ? OR version_start_including IS NULL) AND (version_start_excluding < ? OR version_start_excluding IS NULL) AND vulnerable = true", part, product, version, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
 	} else {
-		c.db.Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (vendor = ? OR vendor = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding IS NULL) AND (version_end_including >= ? OR version_end_including IS NULL) AND (version_start_including <= ? OR version_start_including IS NULL) AND (version_start_excluding < ? OR version_start_excluding IS NULL) AND vulnerable = true", part, vendor, product, version, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
+		c.db.Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding IS NULL) AND (version_end_including >= ? OR version_end_including IS NULL) AND (version_start_including <= ? OR version_start_including IS NULL) AND (version_start_excluding < ? OR version_start_excluding IS NULL) AND vulnerable = true", part, product, version, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
 	}
 	// pg_semver sometimes gets the versions wrong. Lets use Go, which is more reliable todo a version check
 	filteredMatches := []models.CPEMatch{}

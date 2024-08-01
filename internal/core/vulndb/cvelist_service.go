@@ -61,9 +61,10 @@ type cvelistJson struct {
 				URL  string   `json:"url"`
 			} `json:"references"`
 			Affected []struct {
-				Vendor   string `json:"vendor"`
-				Product  string `json:"product"`
-				Versions []struct {
+				Vendor      string `json:"vendor"`
+				Product     string `json:"product"`
+				PackageName string `json:"packageName"`
+				Versions    []struct {
 					Version  string  `json:"version"`
 					Status   string  `json:"status"`
 					LessThan *string `json:"lessThan"`
@@ -312,7 +313,12 @@ func generateCPE(cve cvelistJson) []models.CPEMatch {
 
 	for _, product := range cve.Containers.Cna.Affected {
 		for _, version := range product.Versions {
-			cpe := "cpe:2.3:a:" + strings.ToLower(product.Vendor) + ":" + strings.ToLower(product.Product)
+			productName := product.Product
+			if product.PackageName != "" {
+				productName = product.PackageName
+			}
+
+			cpe := "cpe:2.3:a:" + strings.ToLower(product.Vendor) + ":" + strings.ToLower(productName)
 
 			var cpeVersion versionRange
 			var err error
@@ -341,7 +347,7 @@ func generateCPE(cve cvelistJson) []models.CPEMatch {
 				Criteria:              cpe,
 				Part:                  "a",
 				Vendor:                strings.ToLower(product.Vendor),
-				Product:               strings.ToLower(product.Product),
+				Product:               strings.ToLower(productName),
 				Version:               utils.OrDefault(cpeVersion.concreteVersion, "*"),
 				VersionEndExcluding:   cpeVersion.versionEndExcluding,
 				VersionEndIncluding:   cpeVersion.versionEndIncluding,
@@ -359,7 +365,9 @@ func generateCPE(cve cvelistJson) []models.CPEMatch {
 			cpeCriteria = append(cpeCriteria, match)
 		}
 	}
-	return cpeCriteria
+	return utils.UniqBy(cpeCriteria, func(el models.CPEMatch) string {
+		return el.CalculateHash()
+	})
 }
 
 type versionRange struct {
