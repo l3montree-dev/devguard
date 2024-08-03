@@ -28,7 +28,7 @@ type affectedCmpRepository struct {
 	Repository[string, models.AffectedComponent, core.DB]
 }
 
-func NewAffectedCmpRepository(db core.DB) *affectedCmpRepository {
+func NewAffectedComponentRepository(db core.DB) *affectedCmpRepository {
 	err := db.AutoMigrate(&models.AffectedComponent{})
 	if err != nil {
 		panic(err)

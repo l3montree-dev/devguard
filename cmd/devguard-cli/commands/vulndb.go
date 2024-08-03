@@ -73,7 +73,7 @@ func newImportCommand() *cobra.Command {
 
 			cveRepository := repositories.NewCVERepository(database)
 			nvdService := vulndb.NewNVDService(cveRepository)
-			osvService := vulndb.NewOSVService(repositories.NewAffectedCmpRepository(database))
+			osvService := vulndb.NewOSVService(repositories.NewAffectedComponentRepository(database))
 
 			cve, err := nvdService.ImportCVE(cveId)
 
@@ -128,7 +128,7 @@ func newRepairCommand() *cobra.Command {
 
 			cveRepository := repositories.NewCVERepository(database)
 			cweRepository := repositories.NewCWERepository(database)
-			affectedCmpRepository := repositories.NewAffectedCmpRepository(database)
+			affectedCmpRepository := repositories.NewAffectedComponentRepository(database)
 			nvdService := vulndb.NewNVDService(cveRepository)
 			mitreService := vulndb.NewMitreService(cweRepository)
 			epssService := vulndb.NewEPSSService(nvdService, cveRepository)

@@ -27,10 +27,9 @@ type leaderElector interface {
 }
 
 func StartMirror(database core.DB, leaderElector leaderElector, configService configService) {
-	return
 	cveRepository := repositories.NewCVERepository(database)
 	cweRepository := repositories.NewCWERepository(database)
-	affectedCmpRepository := repositories.NewAffectedCmpRepository(database)
+	affectedComponentRepository := repositories.NewAffectedComponentRepository(database)
 	exploitRepository := repositories.NewExploitRepository(database)
 
 	nvdService := NewNVDService(cveRepository)
@@ -40,7 +39,7 @@ func StartMirror(database core.DB, leaderElector leaderElector, configService co
 	exploitDBService := NewExploitDBService(nvdService, exploitRepository)
 	githubExploitDBService := NewGithubExploitDBService(exploitRepository)
 
-	osvService := NewOSVService(affectedCmpRepository)
+	osvService := NewOSVService(affectedComponentRepository)
 
 	//for flaw service
 	flawRepository := repositories.NewFlawRepository(database)

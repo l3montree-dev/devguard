@@ -76,7 +76,13 @@ func Unzip(src, dest string) error {
 				return err
 			}
 
-			_, err = io.Copy(outFile, rc)
+			// Define a maximum size for the decompressed data
+			const maxSize = 500 << 20 // 500 MB
+
+			// Create a LimitedReader to cap the size of the decompressed data
+			lr := &io.LimitedReader{R: rc, N: maxSize}
+
+			_, err = io.Copy(outFile, lr)
 
 			// Close the file without defer to close before next iteration of loop
 			outFile.Close()
