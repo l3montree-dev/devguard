@@ -49,3 +49,7 @@ func (g *orgRepository) List(
 	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Where("id IN ?", ids).Find(&ts).Error
 	return ts, err
 }
+
+func (g *orgRepository) Update(tx core.DB, org *models.Org) error {
+	return g.GetDB(tx).Save(org).Error
+}
