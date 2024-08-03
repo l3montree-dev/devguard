@@ -362,7 +362,7 @@ func Start(db core.DB) {
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC("asset", accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.GET("/dependency-graph/", assetController.DependencyGraph)
-	assetRouter.GET("/affected-packages/", assetController.AffectedPackages)
+	assetRouter.GET("/affected-components/", assetController.AffectedComponents)
 	assetRouter.GET("/sbom.json/", assetController.SBOMJSON)
 	assetRouter.GET("/sbom.xml/", assetController.SBOMXML)
 

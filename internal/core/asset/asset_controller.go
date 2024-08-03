@@ -77,7 +77,7 @@ func (a *httpController) Versions(c core.Context) error {
 	return c.JSON(200, versions)
 }
 
-func (a *httpController) AffectedPackages(c core.Context) error {
+func (a *httpController) AffectedComponents(c core.Context) error {
 	// get the version query param
 	version := c.QueryParam("version")
 	if version == "" {
