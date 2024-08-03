@@ -16,6 +16,8 @@
 package org
 
 import (
+	"encoding/json"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -31,6 +33,7 @@ type repository interface {
 	repositories.Repository[uuid.UUID, models.Org, core.DB]
 	// ReadBySlug reads an organization by its slug
 	ReadBySlug(slug string) (models.Org, error)
+	Update(tx core.DB, organization *models.Org) error
 }
 type httpController struct {
 	organizationRepository repository
@@ -115,8 +118,56 @@ func (o *httpController) bootstrapOrg(c core.Context, organization models.Org) e
 	return nil
 }
 
-func (o *httpController) Update(c core.Context) error {
-	return nil
+func (o *httpController) Update(ctx core.Context) error {
+	organization := core.GetTenant(ctx)
+	members, err := fetchMembersOfOrganization(ctx)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
+	}
+
+	req := ctx.Request().Body
+
+	defer req.Close()
+
+	var patchRequest patchRequest
+	err = json.NewDecoder(req).Decode(&patchRequest)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not decode request").WithInternal(err)
+	}
+
+	updated := patchRequest.applyToModel(&organization)
+	if updated {
+		err := o.organizationRepository.Update(nil, &organization)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not update organization").WithInternal(err)
+		}
+	}
+
+	resp := orgDetails{
+		Org: organization,
+		Members: utils.Map(
+			members, func(i client.Identity) orgMember {
+				nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
+				var first, last string
+				if nameMap != nil {
+					if nameMap["first"] != nil {
+						first = nameMap["first"].(string)
+					}
+					if nameMap["last"] != nil {
+						last = nameMap["last"].(string)
+					}
+				}
+				return orgMember{
+					ID: i.Id,
+					Name: name{
+						First: first,
+						Last:  last,
+					},
+				}
+			}),
+	}
+
+	return ctx.JSON(200, resp)
 }
 
 func (o *httpController) Delete(c core.Context) error {
