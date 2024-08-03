@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 // 20.160.635.721
@@ -15,9 +14,14 @@ func ConvertToSemver(originalVersion string) string {
 	if originalVersion == "" {
 		return ""
 	}
-	mainComponents, _ := splitVersion(originalVersion)
+	// check if its already a valid semver
+	if semver, err := SemverFix(originalVersion); err == nil {
+		return semver
+	}
+
+	// mainComponents, _ := splitVersion(originalVersion)
 	// Step 1: Parse the original version
-	components := parseVersion(mainComponents)
+	components := parseVersion(originalVersion)
 
 	// Step 2: Normalize the components
 	normalizedComponents := []int{}
@@ -53,18 +57,6 @@ func ConvertToSemver(originalVersion string) string {
 	*/
 
 	return semverVersion
-}
-
-// splitVersion splits the main version and pre-release components
-func splitVersion(version string) (string, string) {
-	if strings.Contains(version, "-") {
-		parts := strings.SplitN(version, "-", 2)
-
-		// remove leading zeros from pre-release components
-
-		return parts[0], parts[1]
-	}
-	return version, ""
 }
 
 // parseVersion splits the version string into components based on common delimiters

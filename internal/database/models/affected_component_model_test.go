@@ -130,7 +130,7 @@ func TestFromOSV(t *testing.T) {
 		// check the hash
 		affectedComponents[0].BeforeSave(nil) // nolint:errcheck
 
-		if affectedComponents[0].ID != "fa69db493788baa6560d6986aba5612b80fadc3ea89752dcc0ff4096b14833da" { // nolint:all
+		if affectedComponents[0].ID != "cd146d09f2bf86c428c8798954c4783ef9e6b02d47da039eb980b4c7f01405db" { // nolint:all
 			t.Errorf("Expected ID to be set, got %s", affectedComponents[0].ID)
 		}
 	})
