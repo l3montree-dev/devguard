@@ -77,7 +77,7 @@ func (githubIntegration *githubIntegration) IntegrationEnabled(ctx core.Context)
 func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	// check if we have integrations
 	if !githubIntegration.IntegrationEnabled(ctx) {
-		return nil, nil
+		return nil, NoGithubAppInstallationError
 	}
 
 	tenant := core.GetTenant(ctx)

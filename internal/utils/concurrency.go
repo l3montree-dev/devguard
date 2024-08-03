@@ -16,6 +16,8 @@
 package utils
 
 import (
+	"sync"
+
 	"golang.org/x/sync/errgroup"
 )
 
@@ -25,9 +27,10 @@ type concurrentResult struct {
 }
 
 type errGroup[T any] struct {
-	ch    chan T
-	group errgroup.Group
-	res   []T
+	ch             chan T
+	group          errgroup.Group
+	res            []T
+	collectionDone sync.WaitGroup
 }
 
 func (eg *errGroup[T]) Go(fn func() (T, error)) {
@@ -46,7 +49,9 @@ func (eg *errGroup[T]) Go(fn func() (T, error)) {
 func (eg *errGroup[T]) startCollecting() {
 	// reset the result slice
 	eg.res = make([]T, 0)
+	eg.collectionDone.Add(1)
 	go func() {
+		defer eg.collectionDone.Done()
 		for r := range eg.ch {
 			eg.res = append(eg.res, r)
 		}
@@ -58,15 +63,17 @@ func (eg *errGroup[T]) SetLimit(limit int) {
 }
 
 func (eg *errGroup[T]) WaitAndCollect() ([]T, error) {
+	defer eg.startCollecting()
 	err := eg.group.Wait()
 	close(eg.ch)
+	// Wait for the collection to finish - otherwise the result might be incomplete
+	eg.collectionDone.Wait()
 	if err != nil {
 		return nil, err
 	}
 	// Reset the channel
 	eg.ch = make(chan T)
 	res := eg.res
-	eg.startCollecting()
 
 	return res, nil
 }
