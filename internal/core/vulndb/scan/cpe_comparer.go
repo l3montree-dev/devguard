@@ -50,7 +50,7 @@ func (c *cpeComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {
 
 	cpeMatches := []models.CPEMatch{}
 
-	c.db.Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (vendor = ? OR vendor = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding = '') AND (version_start_including <= ? OR version_start_including = '')", part, vendor, product, version, version, version).Preload("CVEs").Find(&cpeMatches)
+	c.db.Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (vendor = ? OR vendor = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_including >= ? OR version_end_including = '') AND (version_start_including <= ? OR version_start_including = '')", part, vendor, product, version, version, version).Preload("CVEs").Find(&cpeMatches)
 
 	vulns := []models.VulnInPackage{}
 	for _, cpeMatch := range cpeMatches {
@@ -59,7 +59,7 @@ func (c *cpeComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {
 			vulns = append(vulns, models.VulnInPackage{
 				CVEID:             cve.CVE,
 				Purl:              purl,
-				FixedVersion:      &tmp.VersionEndExcluding,
+				FixedVersion:      &tmp.VersionEndIncluding,
 				IntroducedVersion: &tmp.VersionStartIncluding,
 				InstalledVersion:  version,
 				CVE:               *cve,

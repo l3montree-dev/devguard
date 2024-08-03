@@ -421,7 +421,8 @@ func fromNVDCPEMatch(cpeMatch nvdCpeMatch) models.CPEMatch {
 		TargetSw:              parts[10],
 		TargetHw:              parts[11],
 		Other:                 parts[12],
-		VersionEndExcluding:   cpeMatch.VersionEndIncluding,
+		VersionEndExcluding:   cpeMatch.VersionEndExcluding,
+		VersionEndIncluding:   cpeMatch.VersionEndIncluding,
 		VersionStartIncluding: cpeMatch.VersionStartIncluding,
 		Vulnerable:            cpeMatch.Vulnerable,
 	}

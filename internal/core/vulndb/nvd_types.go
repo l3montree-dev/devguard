@@ -3,9 +3,11 @@ package vulndb
 import "github.com/l3montree-dev/devguard/internal/utils"
 
 type nvdCpeMatch struct {
-	Vulnerable            bool   `json:"vulnerable"`
-	Criteria              string `json:"criteria"`
-	VersionEndIncluding   string `json:"versionEndExcluding"`
+	Vulnerable bool   `json:"vulnerable"`
+	Criteria   string `json:"criteria"`
+
+	VersionEndExcluding   string `json:"versionEndExcluding"`
+	VersionEndIncluding   string `json:"versionEndIncluding"`
 	VersionStartIncluding string `json:"versionStartIncluding"`
 	MatchCriteriaID       string `json:"matchCriteriaId"`
 }
