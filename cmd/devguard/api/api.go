@@ -255,6 +255,7 @@ func health(c echo.Context) error {
 }
 
 func Start(db core.DB) {
+
 	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_PUBLIC"))
 	oryAdmin := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_ADMIN"))
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
@@ -282,7 +283,7 @@ func Start(db core.DB) {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
-	assetController := asset.NewHttpController(assetRepository, componentRepository, scan.NewPurlComparer(db), flawRepository, assetService)
+	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
 	patService := pat.NewPatService(patRepository)
@@ -363,7 +364,7 @@ func Start(db core.DB) {
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC("asset", accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.GET("/dependency-graph/", assetController.DependencyGraph)
-	assetRouter.GET("/affected-packages/", assetController.AffectedPackages)
+	assetRouter.GET("/affected-components/", assetController.AffectedComponents)
 	assetRouter.GET("/sbom.json/", assetController.SBOMJSON)
 	assetRouter.GET("/sbom.xml/", assetController.SBOMXML)
 

@@ -106,10 +106,10 @@ func BuildDependencyTree(elements []models.ComponentDependency) tree {
 	tree.cursors["root"] = tree.Root
 
 	for _, element := range elements {
-		if element.ComponentPurlOrCpe == nil {
-			tree.addNode("root", element.DependencyPurlOrCpe)
+		if element.ComponentPurl == nil {
+			tree.addNode("root", element.DependencyPurl)
 		} else {
-			tree.addNode(*element.ComponentPurlOrCpe, element.DependencyPurlOrCpe)
+			tree.addNode(*element.ComponentPurl, element.DependencyPurl)
 		}
 	}
 

@@ -20,13 +20,18 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
 )
 
@@ -37,7 +42,7 @@ type flawRepository interface {
 	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 	SaveBatch(db core.DB, flaws []models.Flaw) error
 
-	GetFlawsByPurlOrCpe(tx core.DB, purlOrCpe []string) ([]models.Flaw, error)
+	GetFlawsByPurl(tx core.DB, purl []string) ([]models.Flaw, error)
 }
 
 type componentRepository interface {
@@ -76,7 +81,72 @@ func NewService(assetRepository assetRepository, componentRepository componentRe
 	}
 }
 
-func (s *service) HandleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw) (int, int, []models.Flaw, error) {
+func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanType string, version string, scannerID string, userID string) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
+
+	// create flaws out of those vulnerabilities
+	flaws := []models.Flaw{}
+
+	// load all asset components again and build a dependency tree
+	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, asset, scanType, version)
+	if err != nil {
+		return 0, 0, []models.Flaw{}, errors.Wrap(err, "could not load asset components")
+	}
+	// build a dependency tree
+	tree := BuildDependencyTree(assetComponents)
+	// calculate the depth of each component
+	depthMap := make(map[string]int)
+
+	// our dependency tree has a "fake" root node.
+	//  the first - 0 - element is just the name of the application
+	// therefore we start at -1 to get the correct depth. The fake node will be 0, the first real node will be 1
+	CalculateDepth(tree.Root, -1, depthMap)
+
+	// now we have the depth.
+	for _, vuln := range vulns {
+		v := vuln
+
+		componentPurl, err := url.PathUnescape(v.Purl)
+		if err != nil {
+			slog.Error("could not unescape purl", "err", err)
+			continue
+		}
+
+		// remove any qualifiers from the purl
+		parts := strings.Split(componentPurl, "?")
+		componentPurl = parts[0]
+
+		// check if the component has an cve
+
+		flaw := models.Flaw{
+			AssetID:       asset.ID,
+			CVEID:         v.CVEID,
+			ScannerID:     scannerID,
+			ComponentPurl: componentPurl,
+			CVE:           &v.CVE,
+		}
+
+		flaw.SetArbitraryJsonData(map[string]any{
+			"introducedVersion": v.GetIntroducedVersion(),
+			"fixedVersion":      v.GetFixedVersion(),
+			"packageName":       componentPurl,
+			"cveId":             v.CVEID,
+			"installedVersion":  v.InstalledVersion,
+			"componentDepth":    depthMap[componentPurl],
+			"scanType":          scanType,
+		})
+		flaws = append(flaws, flaw)
+	}
+
+	flaws = utils.UniqBy(flaws, func(f models.Flaw) string {
+		return f.CalculateHash()
+	})
+
+	// let the asset service handle the new scan result - we do not need
+	// any return value from that process - even if it fails, we should return the current flaws
+	return s.handleScanResult(userID, scannerID, asset, flaws)
+}
+
+func (s *service) handleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw) (int, int, []models.Flaw, error) {
 	// get all existing flaws from the database - this is the old state
 	existingFlaws, err := s.flawRepository.ListByScanner(asset.GetID(), scannerID)
 	if err != nil {
@@ -152,13 +222,13 @@ func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
 	return res
 }
 
-func buildBomRefMap(bom *cdx.BOM) map[string]cdx.Component {
+func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 	res := make(map[string]cdx.Component)
-	if bom.Components == nil {
+	if bom.GetComponents() == nil {
 		return res
 	}
 
-	for _, c := range *bom.Components {
+	for _, c := range *bom.GetComponents() {
 		res[c.BOMRef] = c
 		for k, v := range recursiveBuildBomRefMap(c) {
 			res[k] = v
@@ -167,17 +237,7 @@ func buildBomRefMap(bom *cdx.BOM) map[string]cdx.Component {
 	return res
 }
 
-func purlOrCpe(component cdx.Component) (string, error) {
-	if component.PackageURL != "" {
-		return url.PathUnescape(component.PackageURL)
-	}
-	if component.CPE != "" {
-		return component.CPE, nil
-	}
-	return component.Name, nil
-}
-
-func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom *cdx.BOM) error {
+func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom normalize.SBOM) error {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, asset, scanType, currentVersion)
 	if err != nil {
@@ -194,8 +254,8 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 	bomRefMap := buildBomRefMap(sbom)
 
 	// create all direct dependencies
-	root := sbom.Metadata.Component.BOMRef
-	for _, c := range *sbom.Dependencies {
+	root := sbom.GetMetadata().Component.BOMRef
+	for _, c := range *sbom.GetDependencies() {
 		if c.Ref != root {
 			continue // no direct dependency
 		}
@@ -204,63 +264,57 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 			component := bomRefMap[directDependency]
 			// the sbom of a container image does not contain the scope. In a container image, we do not have
 			// anything like a deep nested dependency tree. Everything is a direct dependency.
-			componentPackageUrl, err := purlOrCpe(component)
-			if err != nil {
-				slog.Error("could not decode purl", "err", err)
-				continue
-			}
+			componentPackageUrl := normalize.Purl(component)
 
 			// create the direct dependency edge.
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurlOrCpe:  nil, // direct dependency - therefore set it to nil
-					ScanType:            scanType,
-					DependencyPurlOrCpe: componentPackageUrl,
-					AssetSemverStart:    currentVersion,
+					ComponentPurl:    nil, // direct dependency - therefore set it to nil
+					ScanType:         scanType,
+					DependencyPurl:   componentPackageUrl,
+					AssetSemverStart: currentVersion,
 				},
 			)
 			components[componentPackageUrl] = models.Component{
-				PurlOrCpe: componentPackageUrl,
-				AssetID:   asset.GetID(),
-				ScanType:  scanType,
+				Purl:          componentPackageUrl,
+				ComponentType: models.ComponentType(component.Type),
+				AssetID:       asset.GetID(),
+				ScanType:      scanType,
+				Version:       component.Version,
 			}
 		}
 	}
 
 	// find all dependencies from this component
-
-	for _, c := range *sbom.Dependencies {
+	for _, c := range *sbom.GetDependencies() {
 		comp := bomRefMap[c.Ref]
-		compPackageUrl, err := purlOrCpe(comp)
-		if err != nil {
-			slog.Warn("could not decode purl", "err", err)
-			continue
-		}
+		compPackageUrl := normalize.Purl(comp)
 
 		for _, d := range *c.Dependencies {
 			dep := bomRefMap[d]
-			depPurlOrName, err := purlOrCpe(dep)
-			if err != nil {
-				slog.Error("could not decode purl", "err", err)
-				continue
-			}
+			depPurlOrName := normalize.Purl(dep)
+
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurlOrCpe:  utils.Ptr(compPackageUrl),
-					ScanType:            scanType,
-					DependencyPurlOrCpe: depPurlOrName,
-					AssetSemverStart:    currentVersion,
+					ComponentPurl:    utils.EmptyThenNil(compPackageUrl),
+					ScanType:         scanType,
+					DependencyPurl:   depPurlOrName,
+					AssetSemverStart: currentVersion,
 				},
 			)
 			components[depPurlOrName] = models.Component{
-				PurlOrCpe: depPurlOrName,
-				AssetID:   asset.GetID(),
-				ScanType:  scanType,
+				Purl:          depPurlOrName,
+				AssetID:       asset.GetID(),
+				ScanType:      scanType,
+				ComponentType: models.ComponentType(dep.Type),
+				Version:       dep.Version,
 			}
 			components[compPackageUrl] = models.Component{
-				PurlOrCpe: compPackageUrl,
-				AssetID:   asset.GetID(),
-				ScanType:  scanType,
+				Purl:          compPackageUrl,
+				AssetID:       asset.GetID(),
+				ScanType:      scanType,
+				ComponentType: models.ComponentType(comp.Type),
+				Version:       comp.Version,
 			}
 		}
 	}
@@ -283,7 +337,7 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 
 		err := s.assetRepository.Save(tx, &asset)
 		if err != nil {
-			slog.Info("Error saving asset: %v", err)
+			slog.Info("error saving asset", "err", err)
 			return fmt.Errorf("could not save asset: %v", err)
 		}
 		// get the flaws
@@ -306,4 +360,93 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 	}
 
 	return nil
+}
+
+func (s *service) BuildSBOM(asset models.Asset, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {
+	bom := cdx.BOM{
+		BOMFormat:   "CycloneDX",
+		SpecVersion: cyclonedx.SpecVersion1_5,
+		Version:     1,
+		Metadata: &cdx.Metadata{
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Component: &cdx.Component{
+				BOMRef:    asset.Slug,
+				Type:      cdx.ComponentTypeApplication,
+				Name:      asset.Name,
+				Version:   version,
+				Author:    organizationName,
+				Publisher: "github.com/l3montree-dev/devguard",
+			},
+		},
+	}
+
+	bomComponents := make([]cdx.Component, 0)
+	alreadyIncluded := make(map[string]bool)
+	for _, cLoop := range components {
+		c := cLoop
+
+		var p packageurl.PackageURL
+		var err error
+		if c.ComponentPurl != nil {
+			p, err = packageurl.FromString(*c.ComponentPurl)
+			if err == nil {
+				if _, ok := alreadyIncluded[*c.ComponentPurl]; !ok {
+					alreadyIncluded[*c.ComponentPurl] = true
+					bomComponents = append(bomComponents, cdx.Component{
+						BOMRef:     *c.ComponentPurl,
+						Type:       cdx.ComponentType(c.Component.ComponentType),
+						PackageURL: *c.ComponentPurl,
+						Version:    c.Component.Version,
+						Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
+					})
+				}
+			}
+		}
+
+		if c.DependencyPurl != "" {
+			p, err = packageurl.FromString(c.DependencyPurl)
+			if err == nil {
+				alreadyIncluded[c.DependencyPurl] = true
+				bomComponents = append(bomComponents, cdx.Component{
+					BOMRef:     c.DependencyPurl,
+					Type:       cdx.ComponentType(c.Dependency.ComponentType),
+					PackageURL: c.DependencyPurl,
+					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
+					Version:    c.Dependency.Version,
+				})
+			}
+		}
+	}
+
+	// build up the dependency map
+	dependencyMap := make(map[string][]string)
+	for _, c := range components {
+		if c.ComponentPurl == nil {
+			if _, ok := dependencyMap[asset.Slug]; !ok {
+				dependencyMap[asset.Slug] = []string{c.DependencyPurl}
+				continue
+			}
+			dependencyMap[asset.Slug] = append(dependencyMap[asset.Slug], c.DependencyPurl)
+			continue
+		}
+		if _, ok := dependencyMap[*c.ComponentPurl]; !ok {
+			dependencyMap[*c.ComponentPurl] = make([]string, 0)
+		}
+		dependencyMap[*c.ComponentPurl] = append(dependencyMap[*c.ComponentPurl], c.DependencyPurl)
+	}
+
+	// build up the dependencies
+	bomDependencies := make([]cdx.Dependency, len(dependencyMap))
+	i := 0
+	for k, v := range dependencyMap {
+		vtmp := v
+		bomDependencies[i] = cdx.Dependency{
+			Ref:          k,
+			Dependencies: &vtmp,
+		}
+		i++
+	}
+	bom.Dependencies = &bomDependencies
+	bom.Components = &bomComponents
+	return &bom
 }

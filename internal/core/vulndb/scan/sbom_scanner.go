@@ -18,7 +18,7 @@ package scan
 import (
 	"log/slog"
 
-	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -33,7 +33,7 @@ type sbomScanner struct {
 // like the affected package version and fixed version
 
 type comparer interface {
-	GetVulns(purl string) ([]models.VulnInPackage, error)
+	GetVulns(purl string, notASemverVersion string, componentType string) ([]models.VulnInPackage, error)
 }
 
 func NewSBOMScanner(cpeComparer comparer, purlComparer comparer, cveRepository cveRepository) *sbomScanner {
@@ -43,42 +43,45 @@ func NewSBOMScanner(cpeComparer comparer, purlComparer comparer, cveRepository c
 	}
 }
 
-func (s *sbomScanner) Scan(bom *cdx.BOM) ([]models.VulnInPackage, error) {
+func (s *sbomScanner) Scan(bom normalize.SBOM) ([]models.VulnInPackage, error) {
 	errgroup := utils.ErrGroup[[]models.VulnInPackage](10)
+
 	// iterate through all components
-	for _, c := range *bom.Components {
+	for _, c := range *bom.GetComponents() {
 		component := c
+
 		errgroup.Go(
 			func() ([]models.VulnInPackage, error) {
 				// check if CPE is present
+				vulns := []models.VulnInPackage{}
 				if component.CPE != "" {
-					res, err := s.cpeComparer.GetVulns(component.CPE)
+					res, err := s.cpeComparer.GetVulns(component.CPE, component.Version, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "cpe", component.CPE)
 						return nil, nil
 					}
-					return res, nil
-				} else if component.PackageURL != "" {
-					vulns := []models.VulnInPackage{}
-
-					if isDistroPurl, err := utils.IsDistroPurl(component.PackageURL); err == nil && isDistroPurl {
+					vulns = append(vulns, res...)
+				}
+				if component.PackageURL != "" {
+					var res []models.VulnInPackage
+					var err error
+					/*if component.Type == cyclonedx.ComponentTypeApplication {
 						// try to convert the purl to a CPE
-						res, err := s.cpeComparer.GetVulns(component.PackageURL)
+						res, err = s.cpeComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
 						if err != nil {
 							slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
-							return nil, nil
+						} else {
+							vulns = append(vulns, res...)
 						}
-						vulns = append(vulns, res...)
-					}
-
-					res, err := s.purlComparer.GetVulns(component.PackageURL)
+					}*/
+					res, err = s.purlComparer.GetVulns(component.PackageURL, component.Version, string(component.Type))
 					if err != nil {
 						slog.Warn("could not get cves", "err", err, "purl", component.PackageURL)
-						return nil, nil
 					}
-					return append(vulns, res...), nil
+
+					vulns = append(vulns, res...)
 				}
-				return nil, nil
+				return vulns, nil
 			})
 	}
 

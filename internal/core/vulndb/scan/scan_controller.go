@@ -17,12 +17,11 @@ package scan
 
 import (
 	"log/slog"
-	"net/url"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -37,8 +36,8 @@ type componentRepository interface {
 }
 
 type assetService interface {
-	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw) (amountOpened int, amountClosed int, newState []models.Flaw, err error)
-	UpdateSBOM(asset models.Asset, scanType string, version string, sbom *cdx.BOM) error
+	HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanType string, version string, scannerID string, userID string) (amountOpened int, amountClose int, newState []models.Flaw, err error)
+	UpdateSBOM(asset models.Asset, scanType string, version string, sbom normalize.SBOM) error
 }
 
 type httpController struct {
@@ -75,6 +74,7 @@ func (s *httpController) Scan(c core.Context) error {
 	if err := decoder.Decode(bom); err != nil {
 		return err
 	}
+	normalizedBom := normalize.FromCdxBom(bom, true)
 	assetObj := core.GetAsset(c)
 
 	userID := core.GetSession(c).GetUserID()
@@ -95,7 +95,7 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	var err error
-	version, err = utils.SemverFix(version)
+	version, err = normalize.SemverFix(version)
 	// check if valid semver
 	if err != nil {
 		slog.Error("invalid semver version", "version", version)
@@ -103,13 +103,13 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// update the sbom in the database in parallel
-	if err := s.assetService.UpdateSBOM(assetObj, scanType, version, bom); err != nil {
+	if err := s.assetService.UpdateSBOM(assetObj, scanType, version, normalizedBom); err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not update sbom"})
 	}
 
 	// scan the bom we just retrieved.
-	vulns, err := s.sbomScanner.Scan(bom)
+	vulns, err := s.sbomScanner.Scan(normalizedBom)
 	if err != nil {
 		slog.Error("could not scan file", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not scan file"})
@@ -117,67 +117,12 @@ func (s *httpController) Scan(c core.Context) error {
 
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
-		scannerID = "github.com/l3montree-dev/devguard/cmd/devguard-scanner"
+		scannerID = "github.com/l3montree-dev/devguard/cmd/devguard-scanner/" + scanType
 	}
 
-	// create flaws out of those vulnerabilities
-	flaws := []models.Flaw{}
+	// handle the scan result
+	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(assetObj, vulns, scanType, version, scannerID, userID)
 
-	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, assetObj, scanType, version)
-	if err != nil {
-		slog.Error("could not load asset components", "err", err)
-		return c.JSON(500, map[string]string{"error": "could not load asset components"})
-	}
-	// build a dependency tree
-	tree := asset.BuildDependencyTree(assetComponents)
-	// calculate the depth of each component
-	depthMap := make(map[string]int)
-
-	// our dependency tree has a "fake" root node.
-	//  the first - 0 - element is just the name of the application
-	// therefore we start at -1 to get the correct depth. The fake node will be 0, the first real node will be 1
-	asset.CalculateDepth(tree.Root, -1, depthMap)
-
-	// now we have the depth.
-	for _, vuln := range vulns {
-		v := vuln
-
-		componentPurlOrCpe, err := url.PathUnescape(v.Purl)
-		if err != nil {
-			slog.Error("could not unescape purl", "err", err)
-			continue
-		}
-
-		// check if the component has an cve
-
-		flaw := models.Flaw{
-			AssetID:            assetObj.ID,
-			CVEID:              v.CVEID,
-			ScannerID:          scannerID,
-			ComponentPurlOrCpe: componentPurlOrCpe,
-			CVE:                &v.CVE,
-		}
-
-		flaw.SetArbitraryJsonData(map[string]any{
-			"introducedVersion": v.GetIntroducedVersion(),
-			"fixedVersion":      v.GetFixedVersion(),
-			"packageName":       v.PackageName,
-			"cveId":             v.CVEID,
-			"installedVersion":  v.InstalledVersion,
-			"componentDepth":    depthMap[componentPurlOrCpe],
-			"scanType":          scanType,
-		})
-		flaws = append(flaws, flaw)
-	}
-
-	flaws = utils.UniqBy(flaws, func(f models.Flaw) string {
-		return f.CalculateHash()
-	})
-
-	// let the asset service handle the new scan result - we do not need
-	// any return value from that process - even if it fails, we should return the current flaws
-	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(userID, scannerID, assetObj, flaws)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
@@ -188,20 +133,20 @@ func (s *httpController) Scan(c core.Context) error {
 		AmountClosed: amountClose,
 		Flaws: utils.Map(newState, func(f models.Flaw) flaw.FlawDTO {
 			return flaw.FlawDTO{
-				ID:                 f.ID,
-				ScannerID:          f.AssetID.String(),
-				State:              f.State,
-				CVE:                f.CVE,
-				Component:          f.Component,
-				CVEID:              f.CVEID,
-				ComponentPurlOrCpe: f.ComponentPurlOrCpe,
-				Effort:             f.Effort,
-				RiskAssessment:     f.RiskAssessment,
-				RawRiskAssessment:  f.RawRiskAssessment,
-				Priority:           f.Priority,
-				ArbitraryJsonData:  f.GetArbitraryJsonData(),
-				LastDetected:       f.LastDetected,
-				CreatedAt:          f.CreatedAt,
+				ID:                f.ID,
+				ScannerID:         f.AssetID.String(),
+				State:             f.State,
+				CVE:               f.CVE,
+				Component:         f.Component,
+				CVEID:             f.CVEID,
+				ComponentPurl:     f.ComponentPurl,
+				Effort:            f.Effort,
+				RiskAssessment:    f.RiskAssessment,
+				RawRiskAssessment: f.RawRiskAssessment,
+				Priority:          f.Priority,
+				ArbitraryJsonData: f.GetArbitraryJsonData(),
+				LastDetected:      f.LastDetected,
+				CreatedAt:         f.CreatedAt,
 			}
 		})})
 }

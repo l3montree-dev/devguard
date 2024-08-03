@@ -20,13 +20,32 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
+type ComponentType string
+
+const (
+	ComponentTypeApplication          ComponentType = "application"
+	ComponentTypeContainer            ComponentType = "container"
+	ComponentTypeData                 ComponentType = "data"
+	ComponentTypeDevice               ComponentType = "device"
+	ComponentTypeDeviceDriver         ComponentType = "device-driver"
+	ComponentTypeFile                 ComponentType = "file"
+	ComponentTypeFirmware             ComponentType = "firmware"
+	ComponentTypeFramework            ComponentType = "framework"
+	ComponentTypeLibrary              ComponentType = "library"
+	ComponentTypeMachineLearningModel ComponentType = "machine-learning-model"
+	ComponentTypeOS                   ComponentType = "operating-system"
+	ComponentTypePlatform             ComponentType = "platform"
+)
+
 type Component struct {
 	// either cpe or purl is set
-	PurlOrCpe    string                `json:"purlOrCpe" gorm:"primaryKey;column:purl_or_cpe"`
-	Dependencies []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
-	Asset        Asset                 `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
-	AssetID      uuid.UUID             `json:"assetId" gorm:"column:asset_id;type:uuid;"`
-	ScanType     string                `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
+	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"` // without qualifiers!
+	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
+	Asset         Asset                 `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
+	AssetID       uuid.UUID             `json:"assetId" gorm:"column:asset_id;type:uuid;"`
+	ScanType      string                `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
+	ComponentType ComponentType         `json:"componentType"`
+	Version       string                `json:"version"`
 }
 
 type ComponentDependency struct {
@@ -35,15 +54,15 @@ type ComponentDependency struct {
 	// the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
 	// we use edges, which provide the information, that a component is used by another component in one asset
-	AssetSemverStart    string    `json:"semverStart" gorm:"column:semver_start;type:semver"`
-	AssetSemverEnd      *string   `json:"semverEnd" gorm:"column:semver_end;type:semver"`
-	Component           Component `json:"component" gorm:"foreignKey:ComponentPurlOrCpe;references:PurlOrCpe"`
-	ComponentPurlOrCpe  *string   `json:"componentPurlOrCpe" gorm:"column:component_purl_or_cpe;"` // will be nil, for direct dependencies
-	Dependency          Component `json:"dependency" gorm:"foreignKey:DependencyPurlOrCpe;references:PurlOrCpe"`
-	DependencyPurlOrCpe string    `json:"dependencyPurlOrCpe" gorm:"column:dependency_purl_or_cpe;"`
-	AssetID             uuid.UUID `json:"assetId" gorm:"column:asset_id;type:uuid;"`
-	Asset               Asset     `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
-	ScanType            string    `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
+	AssetSemverStart string    `json:"semverStart" gorm:"column:semver_start;type:semver"`
+	AssetSemverEnd   *string   `json:"semverEnd" gorm:"column:semver_end;type:semver"`
+	Component        Component `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl"`
+	ComponentPurl    *string   `json:"componentPurl" gorm:"column:component_purl;"` // will be nil, for direct dependencies
+	Dependency       Component `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl"`
+	DependencyPurl   string    `json:"dependencyPurl" gorm:"column:dependency_purl;"`
+	AssetID          uuid.UUID `json:"assetId" gorm:"column:asset_id;type:uuid;"`
+	Asset            Asset     `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
+	ScanType         string    `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
 
 	Depth int `json:"depth" gorm:"column:depth"`
 }
@@ -52,7 +71,7 @@ const LatestVersion = "latest"
 
 func GetOnlyDirectDependencies(deps []ComponentDependency) []ComponentDependency {
 	return utils.Filter(deps, func(dep ComponentDependency) bool {
-		return dep.ComponentPurlOrCpe == nil
+		return dep.ComponentPurl == nil
 	})
 }
 

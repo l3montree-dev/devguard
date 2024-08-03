@@ -12,3 +12,10 @@ bom.xml
 .kratos/kratos.yml
 *.private-key.pem
 node_modules
+cvelistV5*
+image.tar
+result-image.json
+security-tracker.json
+security-tracker-master
+webwml-master
+repo.zip

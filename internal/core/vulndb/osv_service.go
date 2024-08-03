@@ -19,6 +19,7 @@ import (
 	"archive/zip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 )
@@ -51,6 +53,30 @@ var osvBaseURL string = "https://storage.googleapis.com/osv-vulnerabilities"
 var importEcosystems = []string{
 	"Go",
 	"npm",
+	"AlmaLinux",
+	"Alpine",
+	"Android",
+	"Bitnami",
+	"Chainguard",
+	"CRAN",
+	"crates.io",
+	"Debian",
+	"GIT",
+	"Github Actions",
+	"Hackage",
+	"Hex",
+	"Linux",
+	"Maven",
+	"NuGet",
+	"OSS-Fuzz",
+	"Packagist",
+	"Pub",
+	"PyPI",
+	"Rocky Linux",
+	"RubyGems",
+	"SwiftURL",
+	"Ubuntu",
+	"Wolfi",
 }
 
 func (s osvService) getOSVZipContainingEcosystem(ecosystem string) (*zip.Reader, error) {
@@ -106,6 +132,39 @@ func (s osvService) getEcosystems() ([]string, error) {
 	return ecosystems, nil
 }
 
+func (s osvService) ImportCVE(cveId string) ([]models.AffectedComponent, error) {
+	resp, err := s.httpClient.Get(fmt.Sprintf("https://api.osv.dev/v1/vulns/%s", cveId))
+
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get cve")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("could not get cve")
+	}
+
+	defer resp.Body.Close()
+	var osv obj.OSV
+	err = json.NewDecoder(resp.Body).Decode(&osv)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "could not decode cve")
+	}
+
+	if !osv.IsCVE() {
+		return nil, errors.New("not a cve")
+	}
+
+	affectedComponents := models.AffectedComponentFromOSV(osv)
+
+	err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not save affected packages")
+	}
+
+	return affectedComponents, nil
+}
+
 func (s osvService) Mirror() error {
 	ecosystems, err := s.getEcosystems()
 	if err != nil {
@@ -144,7 +203,7 @@ func (s osvService) Mirror() error {
 				continue
 			}
 
-			osv := models.OSV{}
+			osv := obj.OSV{}
 			err = json.Unmarshal(unzippedFileBytes, &osv)
 			if err != nil {
 				slog.Error("could not unmarshal osv", "err", err)
@@ -156,7 +215,7 @@ func (s osvService) Mirror() error {
 			}
 
 			// convert the osv to affected packages
-			affectedComponents := osv.GetAffectedPackages()
+			affectedComponents := models.AffectedComponentFromOSV(osv)
 			// save the affected packages
 			err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
 			if err != nil {

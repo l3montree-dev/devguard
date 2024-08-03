@@ -3,17 +3,15 @@ package asset
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
-	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
-	"github.com/package-url/packageurl-go"
 
 	"github.com/labstack/echo/v4"
 )
@@ -29,10 +27,6 @@ type repository interface {
 	Update(tx core.DB, asset *models.Asset) error
 }
 
-type vulnService interface {
-	GetVulnsForAll(purls []string) ([]models.VulnInPackage, error)
-}
-
 type assetComponentsLoader interface {
 	GetVersions(tx core.DB, asset models.Asset) ([]string, error)
 	LoadAssetComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
@@ -40,23 +34,24 @@ type assetComponentsLoader interface {
 
 type assetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
+	BuildSBOM(asset models.Asset, version, orgName string, components []models.ComponentDependency) *cdx.BOM
 }
 
 type httpController struct {
 	assetRepository       repository
 	assetComponentsLoader assetComponentsLoader
-	vulnService           vulnService
-	flawRepository        flawRepository
-	assetService          assetService
+
+	flawRepository flawRepository
+	assetService   assetService
 }
 
-func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, vulnService vulnService, flawRepository flawRepository, assetService assetService) *httpController {
+func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, flawRepository flawRepository, assetService assetService) *httpController {
 	return &httpController{
 		assetRepository:       repository,
 		assetComponentsLoader: assetComponentsLoader,
-		vulnService:           vulnService,
-		flawRepository:        flawRepository,
-		assetService:          assetService,
+
+		flawRepository: flawRepository,
+		assetService:   assetService,
 	}
 }
 
@@ -82,14 +77,14 @@ func (a *httpController) Versions(c core.Context) error {
 	return c.JSON(200, versions)
 }
 
-func (a *httpController) AffectedPackages(c core.Context) error {
+func (a *httpController) AffectedComponents(c core.Context) error {
 	// get the version query param
 	version := c.QueryParam("version")
 	if version == "" {
 		version = models.LatestVersion
 	} else {
 		var err error
-		version, err = utils.SemverFix(version)
+		version, err = normalize.SemverFix(version)
 		if err != nil {
 			return err
 		}
@@ -106,10 +101,10 @@ func (a *httpController) AffectedPackages(c core.Context) error {
 	}
 
 	purls := utils.Map(components, func(c models.ComponentDependency) string {
-		return c.DependencyPurlOrCpe
+		return c.DependencyPurl
 	})
 
-	flaws, err := a.flawRepository.GetFlawsByPurlOrCpe(nil, purls)
+	flaws, err := a.flawRepository.GetFlawsByPurl(nil, purls)
 	if err != nil {
 		return err
 	}
@@ -155,7 +150,7 @@ func (a *httpController) DependencyGraph(c core.Context) error {
 		version = models.LatestVersion
 	} else {
 		var err error
-		version, err = utils.SemverFix(version)
+		version, err = normalize.SemverFix(version)
 		if err != nil {
 			return err
 		}
@@ -205,7 +200,7 @@ func (a *httpController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 		version = models.LatestVersion
 	} else {
 		var err error
-		version, err = utils.SemverFix(version)
+		version, err = normalize.SemverFix(version)
 		if err != nil {
 			return nil, err
 		}
@@ -220,104 +215,7 @@ func (a *httpController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buildSBOM(asset, version, org.Name, components), nil
-}
-
-func buildSBOM(asset models.Asset, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {
-	bom := cdx.BOM{
-		BOMFormat:   "CycloneDX",
-		SpecVersion: cyclonedx.SpecVersion1_5,
-		Version:     1,
-		Metadata: &cdx.Metadata{
-			Timestamp: time.Now().UTC().Format(time.RFC3339),
-			Component: &cdx.Component{
-				BOMRef:    asset.Slug,
-				Type:      cdx.ComponentTypeApplication,
-				Name:      asset.Name,
-				Version:   version,
-				Author:    organizationName,
-				Publisher: "github.com/l3montree-dev/devguard",
-			},
-		},
-	}
-
-	bomComponents := make([]cdx.Component, 0)
-	alreadyIncluded := make(map[string]bool)
-	for _, cLoop := range components {
-		c := cLoop
-
-		scope := cdx.ScopeOptional
-		var p packageurl.PackageURL
-		var err error
-		if c.ComponentPurlOrCpe == nil {
-			scope = cdx.ScopeRequired
-			p, err = packageurl.FromString(c.DependencyPurlOrCpe)
-			if err != nil {
-				continue
-			}
-		} else {
-			p, err = packageurl.FromString(*c.ComponentPurlOrCpe)
-			if err != nil {
-				continue
-			}
-		}
-
-		if _, ok := alreadyIncluded[c.DependencyPurlOrCpe]; !ok {
-			alreadyIncluded[c.DependencyPurlOrCpe] = true
-			bomComponents = append(bomComponents, cdx.Component{
-				BOMRef:     c.DependencyPurlOrCpe,
-				Type:       cdx.ComponentTypeLibrary,
-				PackageURL: c.DependencyPurlOrCpe,
-				Scope:      scope,
-				Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
-			})
-		}
-
-		if c.ComponentPurlOrCpe != nil {
-			if _, ok := alreadyIncluded[*c.ComponentPurlOrCpe]; !ok {
-				alreadyIncluded[*c.ComponentPurlOrCpe] = true
-				bomComponents = append(bomComponents, cdx.Component{
-					BOMRef:     *c.ComponentPurlOrCpe,
-					Type:       cdx.ComponentTypeLibrary,
-					PackageURL: *c.ComponentPurlOrCpe,
-					Scope:      scope,
-					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
-				})
-			}
-		}
-	}
-
-	// build up the dependency map
-	dependencyMap := make(map[string][]string)
-	for _, c := range components {
-		if c.ComponentPurlOrCpe == nil {
-			if _, ok := dependencyMap[asset.Slug]; !ok {
-				dependencyMap[asset.Slug] = []string{c.DependencyPurlOrCpe}
-				continue
-			}
-			dependencyMap[asset.Slug] = append(dependencyMap[asset.Slug], c.DependencyPurlOrCpe)
-			continue
-		}
-		if _, ok := dependencyMap[*c.ComponentPurlOrCpe]; !ok {
-			dependencyMap[*c.ComponentPurlOrCpe] = make([]string, 0)
-		}
-		dependencyMap[*c.ComponentPurlOrCpe] = append(dependencyMap[*c.ComponentPurlOrCpe], c.DependencyPurlOrCpe)
-	}
-
-	// build up the dependencies
-	bomDependencies := make([]cdx.Dependency, len(dependencyMap))
-	i := 0
-	for k, v := range dependencyMap {
-		vtmp := v
-		bomDependencies[i] = cdx.Dependency{
-			Ref:          k,
-			Dependencies: &vtmp,
-		}
-		i++
-	}
-	bom.Dependencies = &bomDependencies
-	bom.Components = &bomComponents
-	return &bom
+	return a.assetService.BuildSBOM(asset, version, org.Name, components), nil
 }
 
 func (c *httpController) Update(ctx core.Context) error {

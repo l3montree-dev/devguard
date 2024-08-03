@@ -59,9 +59,9 @@ func (c *componentRepository) LoadAssetComponents(tx database.DB, asset models.A
 	var components []models.ComponentDependency
 	var err error
 	if version == models.LatestVersion {
-		err = c.GetDB(tx).Where("asset_id = ? AND scan_type = ? AND semver_end is NULL", asset.ID, scanType).Find(&components).Error
+		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_id = ? AND scan_type = ? AND semver_end is NULL", asset.ID, scanType).Find(&components).Error
 	} else {
-		err = c.GetDB(tx).Where(`asset_id = ? AND scan_type = ? AND semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)`, asset.ID, scanType, version, version).Find(&components).Error
+		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where(`asset_id = ? AND scan_type = ? AND semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)`, asset.ID, scanType, version, version).Find(&components).Error
 	}
 
 	if err != nil {
@@ -78,13 +78,13 @@ func (c *componentRepository) GetVersions(tx database.DB, asset models.Asset) ([
 
 func (c *componentRepository) FindByPurl(tx database.DB, purl string) (models.Component, error) {
 	var component models.Component
-	err := c.GetDB(tx).Where("purl_or_cpe = ?", purl).First(&component).Error
+	err := c.GetDB(tx).Where("purl = ?", purl).First(&component).Error
 	return component, err
 }
 
 func (c *componentRepository) HandleStateDiff(tx database.DB, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
-		return utils.SafeDereference(dep.ComponentPurlOrCpe) + "->" + dep.DependencyPurlOrCpe
+		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})
 
 	removed := comparison.OnlyInA
