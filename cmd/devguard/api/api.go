@@ -225,6 +225,7 @@ func multiTenantMiddleware(rbacProvider accesscontrol.RBACProvider, organization
 			// set the RBAC in the context
 			c.Set("rbac", domainRBAC)
 
+			c.Set("orgSlug", tenant)
 			// continue to the request
 			return next(c)
 		}
@@ -377,6 +378,7 @@ func Start(db core.DB) {
 	flawRouter.GET("/:flawId/", flawController.Read)
 
 	flawRouter.POST("/:flawId/", flawController.CreateEvent, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
+	flawRouter.POST("/:flawId/mitigate/", flawController.Mitigate, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

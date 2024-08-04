@@ -28,6 +28,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -52,8 +53,21 @@ type githubAppInstallationRepository interface {
 	Delete(tx core.DB, installationID int) error
 }
 
+type flawRepository interface {
+	Read(id string) (models.Flaw, error)
+	Save(db core.DB, flaw *models.Flaw) error
+	Transaction(fn func(tx core.DB) error) error
+}
+
+type flawEventRepository interface {
+	Save(db core.DB, event *models.FlawEvent) error
+}
+
 type githubIntegration struct {
 	githubAppInstallationRepository githubAppInstallationRepository
+	flawRepository                  flawRepository
+	flawEventRepository             flawEventRepository
+	frontendUrl                     string
 }
 
 var _ core.ThirdPartyIntegration = &githubIntegration{}
@@ -63,8 +77,20 @@ var NoGithubAppInstallationError = fmt.Errorf("no github app installations found
 func NewGithubIntegration(db core.DB) *githubIntegration {
 	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
 
+	flawRepository := repositories.NewFlawRepository(db)
+	flawEventRepository := repositories.NewFlawEventRepository(db)
+
+	frontendUrl := os.Getenv("FRONTEND_URL")
+	if frontendUrl == "" {
+		panic("FRONTEND_URL is not set")
+	}
+
 	return &githubIntegration{
 		githubAppInstallationRepository: githubAppInstallationRepository,
+		flawRepository:                  flawRepository,
+		flawEventRepository:             flawEventRepository,
+
+		frontendUrl: frontendUrl,
 	}
 }
 
@@ -239,32 +265,83 @@ func ownerAndRepoFromRepositoryID(repositoryID string) (string, string, error) {
 
 func (g *githubIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
-	case core.FlawDetectedEvent:
-		if !strings.HasPrefix(event.RepositoryID, "github:") {
+	case core.ManualMitigateEvent:
+		asset := core.GetAsset(event.Ctx)
+		flawId, err := core.GetFlawID(event.Ctx)
+		if err != nil {
+			return err
+		}
+
+		flaw, err := g.flawRepository.Read(flawId)
+		if err != nil {
+			return err
+		}
+
+		repoId := utils.SafeDereference(asset.RepositoryID)
+		if !strings.HasPrefix(repoId, "github:") {
 			// this integration only handles github repositories.
 			return nil
 		}
 		// we create a new ticket in github
-		client, err := NewGithubClient(installationIdFromRepositoryID(event.RepositoryID))
+		client, err := NewGithubClient(installationIdFromRepositoryID(repoId))
 		if err != nil {
 			return err
 		}
+
+		exp := risk.Explain(flaw, asset)
+		// print json stringify to the console
+		orgSlug, _ := core.GetOrgSlug(event.Ctx)
+		projectSlug, _ := core.GetProjectSlug(event.Ctx)
+		assetSlug, _ := core.GetAssetSlug(event.Ctx)
 
 		// create a new issue
 		issue := &github.IssueRequest{
-			Title: github.String("Flaw detected"),
-			Body:  github.String("A flaw has been detected in your repository"),
+			Title: github.String(flaw.CVEID),
+			Body:  github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug)),
 		}
 
-		owner, repo, err := ownerAndRepoFromRepositoryID(event.RepositoryID)
+		owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
 		if err != nil {
 			return err
 		}
 
-		_, _, err = client.Issues.Create(context.Background(), owner, repo, issue)
+		createdIssue, _, err := client.Issues.Create(context.Background(), owner, repo, issue)
 		if err != nil {
 			return err
 		}
+
+		// save the issue id to the flaw
+		flaw.TicketID = utils.Ptr(fmt.Sprintf("github:%d", createdIssue.GetID()))
+		session := core.GetSession(event.Ctx)
+		userID := session.GetUserID()
+		// create an event
+		flawEvent := models.NewMitigateEvent(flaw.ID, userID, event.Ctx.Param("justification"), map[string]any{})
+		// save the flaw and the event in a transaction
+		err = g.flawRepository.Transaction(func(tx core.DB) error {
+			err := g.flawRepository.Save(tx, &flaw)
+			if err != nil {
+				return err
+			}
+			err = g.flawEventRepository.Save(tx, &flawEvent)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		// if an error did happen, delete the issue from github
+		if err != nil {
+			_, _, err := client.Issues.Edit(context.TODO(), owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
+				State: github.String("closed"),
+			})
+			if err != nil {
+				slog.Error("could not delete issue", "err", err)
+			}
+			return err
+		}
+		return nil
+
+	case core.FlawDetectedEvent:
+		return nil
 	}
 	return nil
 }

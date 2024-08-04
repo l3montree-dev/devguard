@@ -123,6 +123,33 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	return ctx.JSON(200, core.NewPaged(core.GetPageInfo(ctx), pagedResp.Total, values))
 }
 
+func (c flawHttpController) Mitigate(ctx core.Context) error {
+	flawId, err := core.GetFlawID(ctx)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid flaw id")
+	}
+
+	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
+
+	if err != nil {
+		return echo.NewHTTPError(404, "could not find flaw")
+	}
+
+	if err = thirdPartyIntegrations.HandleEvent(core.ManualMitigateEvent{
+		Ctx: ctx,
+	}); err != nil {
+		return echo.NewHTTPError(500, "could not mitigate flaw").WithInternal(err)
+	}
+
+	// fetch the flaw again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the flaw.
+	flaw, err := c.flawRepository.Read(flawId)
+	if err != nil {
+		return echo.NewHTTPError(404, "could not find flaw")
+	}
+
+	return ctx.JSON(200, convertToDetailedDTO(flaw))
+}
+
 func (c flawHttpController) Read(ctx core.Context) error {
 	flawId, err := core.GetFlawID(ctx)
 	if err != nil {

@@ -16,10 +16,10 @@ const (
 	EventTypeReopened FlawEventType = "reopened"
 
 	//EventTypeRiskAssessmentUpdated FlawEventType = "riskAssessmentUpdated"
-	EventTypeAccepted            FlawEventType = "accepted"
-	EventTypeMarkedForMitigation FlawEventType = "markedForMitigation"
-	EventTypeFalsePositive       FlawEventType = "falsePositive"
-	EventTypeMarkedForTransfer   FlawEventType = "markedForTransfer"
+	EventTypeAccepted          FlawEventType = "accepted"
+	EventTypeMitigate          FlawEventType = "mitigate"
+	EventTypeFalsePositive     FlawEventType = "falsePositive"
+	EventTypeMarkedForTransfer FlawEventType = "markedForTransfer"
 
 	EventTypeRawRiskAssessmentUpdated FlawEventType = "rawRiskAssessmentUpdated"
 
@@ -82,8 +82,6 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 		flaw.RawRiskAssessment = &f
 	case EventTypeAccepted:
 		flaw.State = FlawStateAccepted
-	case EventTypeMarkedForMitigation:
-		flaw.State = FlawStateMarkedForMitigation
 	case EventTypeFalsePositive:
 		flaw.State = FlawStateFalsePositive
 	case EventTypeMarkedForTransfer:
@@ -120,6 +118,17 @@ func NewDetectedEvent(flawID string, userID string, riskCalculationReport obj.Ri
 	return ev
 }
 
+func NewMitigateEvent(flawID string, userID string, justification string, arbitraryData map[string]any) FlawEvent {
+	ev := FlawEvent{
+		Type:          EventTypeMitigate,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+	ev.SetArbitraryJsonData(arbitraryData)
+	return ev
+}
+
 func NewRawRiskAssessmentUpdatedEvent(flawID string, userID string, justification string, report obj.RiskCalculationReport) FlawEvent {
 	event := FlawEvent{
 		Type:          EventTypeRawRiskAssessmentUpdated,
@@ -143,7 +152,7 @@ func CheckStatusType(statusType string) error {
 		return nil
 	case "reopened":
 		return nil
-	case "markedForMitigation":
+	case "mitigate":
 		return nil
 	case "falsePositive":
 		return nil
