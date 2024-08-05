@@ -144,5 +144,6 @@ func (v *vulnDBService) mirror() {
 }
 
 func (v *vulnDBService) startMirrorDaemon() {
+	return
 	go v.mirror()
 }

@@ -53,7 +53,8 @@ type Flaw struct {
 	// this is not stored in the database - it just caches the parsed data
 	arbitraryJsonData map[string]any
 
-	TicketID *string `json:"ticketId" gorm:"default:null;"` // might be set by integrations
+	TicketID  *string `json:"ticketId" gorm:"default:null;"` // might be set by integrations
+	TicketURL *string `json:"ticketUrl" gorm:"default:null;"`
 
 	CreatedAt time.Time    `json:"createdAt"`
 	UpdatedAt time.Time    `json:"updatedAt"`

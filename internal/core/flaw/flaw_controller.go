@@ -224,6 +224,8 @@ func convertToDetailedDTO(flaw models.Flaw) detailedFlawDTO {
 			LastDetected:      flaw.LastDetected,
 			CreatedAt:         flaw.CreatedAt,
 			ScannerID:         flaw.ScannerID,
+			TicketID:          flaw.TicketID,
+			TicketURL:         flaw.TicketURL,
 		},
 		Events: utils.Map(flaw.Events, func(ev models.FlawEvent) FlawEventDTO {
 			return FlawEventDTO{

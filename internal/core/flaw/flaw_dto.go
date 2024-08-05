@@ -39,6 +39,7 @@ type FlawDTO struct {
 	LastDetected      time.Time         `json:"lastDetected"`
 	CreatedAt         time.Time         `json:"createdAt"`
 	TicketID          *string           `json:"ticketId"`
+	TicketURL         *string           `json:"ticketUrl"`
 }
 
 type detailedFlawDTO struct {
@@ -65,5 +66,6 @@ func FlawToDto(f models.Flaw) FlawDTO {
 		LastDetected:      f.LastDetected,
 		CreatedAt:         f.CreatedAt,
 		TicketID:          f.TicketID,
+		TicketURL:         f.TicketURL,
 	}
 }

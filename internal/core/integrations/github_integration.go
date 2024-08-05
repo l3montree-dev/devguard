@@ -17,6 +17,7 @@ package integrations
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -295,10 +296,17 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		projectSlug, _ := core.GetProjectSlug(event.Ctx)
 		assetSlug, _ := core.GetAssetSlug(event.Ctx)
 
+		// read the justification from the body
+		var justification map[string]string
+		err = json.NewDecoder(event.Ctx.Request().Body).Decode(&justification)
+		if err != nil {
+			return err
+		}
+
 		// create a new issue
 		issue := &github.IssueRequest{
 			Title:  github.String(flaw.CVEID),
-			Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug)),
+			Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug) + "\n\n------\n\n" + justification["comment"]),
 			Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment))},
 		}
 
@@ -312,6 +320,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return err
 		}
 
+		// todo - we are editing the labels on each call. Actually we only need todo it once
 		_, _, err = client.Issues.EditLabel(context.Background(), owner, repo, "severity:"+strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), &github.Label{
 			Description: github.String("Severity of the flaw"),
 			Color:       github.String(risk.RiskToColor(*flaw.RawRiskAssessment)),
@@ -329,6 +338,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 
 		// save the issue id to the flaw
 		flaw.TicketID = utils.Ptr(fmt.Sprintf("github:%d", createdIssue.GetID()))
+		flaw.TicketURL = utils.Ptr(createdIssue.GetHTMLURL())
 		session := core.GetSession(event.Ctx)
 		userID := session.GetUserID()
 		// create an event
