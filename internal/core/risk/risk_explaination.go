@@ -5,8 +5,40 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
+
+func RiskToSeverity(risk float64) string {
+	switch {
+	case risk < 4:
+		return "Low"
+	case risk < 7:
+		return "Medium"
+	case risk < 9:
+		return "High"
+	case risk <= 10:
+	default:
+		return "None"
+	}
+	return "None"
+}
+
+// returns hex without leading "#"
+func RiskToColor(risk float64) string {
+	switch {
+	case risk < 4:
+		return "00FF00"
+	case risk < 7:
+		return "FFFF00"
+	case risk < 9:
+		return "FFA500"
+	case risk <= 10:
+	default:
+		return "FF0000"
+	}
+	return "FF0000"
+}
 
 // parseCvssVector parses the CVSS vector and returns a map of its components.
 func parseCvssVector(vector string) map[string]string {
@@ -81,26 +113,26 @@ const (
 
 // cvssBE generates a message based on the asset and CVSS object.
 func cvssBE(asset models.Asset, cvssObj map[string]string) string {
-	var str strings.Builder
+	elements := []string{}
 
 	if asset.AvailabilityRequirement == RequirementsLevelHigh && cvssObj["A"] == "H" {
-		str.WriteString("Exploiting this vulnerability is critical because the asset requires high availability, and the vulnerability significantly impacts availability.")
+		elements = append(elements, "- Exploiting this vulnerability is critical because the asset requires high availability, and the vulnerability significantly impacts availability.")
 	} else if cvssObj["A"] == "H" {
-		str.WriteString("Exploiting this vulnerability significantly impacts availability.")
+		elements = append(elements, "- Exploiting this vulnerability significantly impacts availability.")
 	}
 
 	if asset.IntegrityRequirement == RequirementsLevelHigh && cvssObj["I"] == "H" {
-		str.WriteString("Exploiting this vulnerability is critical because the asset requires high integrity, and the vulnerability significantly impacts integrity.")
+		elements = append(elements, "- Exploiting this vulnerability is critical because the asset requires high integrity, and the vulnerability significantly impacts integrity.")
 	} else if cvssObj["I"] == "H" {
-		str.WriteString("Exploiting this vulnerability significantly impacts integrity.")
+		elements = append(elements, "- Exploiting this vulnerability significantly impacts integrity.")
 	}
 
 	if asset.ConfidentialityRequirement == RequirementsLevelHigh && cvssObj["C"] == "H" {
-		str.WriteString("Exploiting this vulnerability is critical because the asset requires high confidentiality, and the vulnerability significantly impacts confidentiality.")
+		elements = append(elements, "- Exploiting this vulnerability is critical because the asset requires high confidentiality, and the vulnerability significantly impacts confidentiality.")
 	} else if cvssObj["C"] == "H" {
-		str.WriteString("Exploiting this vulnerability significantly impacts confidentiality.")
+		elements = append(elements, "- Exploiting this vulnerability significantly impacts confidentiality.")
 	}
-	return str.String()
+	return strings.Join(elements, "\n")
 }
 
 // describeCVSS generates a description of the CVSS vector.
@@ -153,73 +185,108 @@ func describeCVSS(cvss map[string]string) string {
 			descriptions = append(descriptions, desc)
 		}
 	}
-	return strings.Join(descriptions, "\n")
+
+	// create a bullet point list to improve readability
+	descriptions[0] = "- " + descriptions[0]
+	// remove empty strings
+	descriptions = utils.Filter(descriptions, func(s string) bool {
+		return s != ""
+	})
+
+	return strings.Join(descriptions, "\n- ")
 }
 
 type Explanation struct {
-	ExploitMessage struct {
+	obj.RiskMetrics
+
+	exploitMessage struct {
 		Short string
 		Long  string
 	}
-	EpssMessage           string
-	CvssBEMessage         string
-	ComponentDepthMessage string
-	CvssMessage           string
+	epssMessage           string
+	cvssBEMessage         string
+	componentDepthMessage string
+	cvssMessage           string
 	flawId                string
 	risk                  float64
 
-	cvss  float64
-	cveId string
+	depth int
+	epss  float64
+
+	cveId          string
+	cveDescription string
+
+	affectedComponentName string
+	scanType              string
+	fixedVersion          *string
 }
 
 func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) string {
 	var str strings.Builder
 	str.WriteString(fmt.Sprintf("# %s\n", e.cveId))
-	str.WriteString(fmt.Sprintf("## Risk: %f\n", e.risk))
-	str.WriteString("## Risk Explanation\n")
-	str.WriteString("### EPSS\n")
-	str.WriteString(fmt.Sprintf("%s\n", e.EpssMessage))
+	str.WriteString(e.cveDescription)
 	str.WriteString("\n")
-	str.WriteString("### Exploit\n")
-	str.WriteString(fmt.Sprintf("**Short:** %s\n", e.ExploitMessage.Short))
-	str.WriteString(fmt.Sprintf("**Long:** %s\n", e.ExploitMessage.Long))
+	str.WriteString("### Affected component \n")
+	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.affectedComponentName, e.scanType))
+	str.WriteString("### Recommended fix\n")
+	if e.fixedVersion != nil {
+		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))
+	} else {
+		str.WriteString("No fix is available.\n")
+	}
 	str.WriteString("\n")
-	str.WriteString("### Vulnerability Depth\n")
-	str.WriteString(fmt.Sprintf("%s\n", e.ComponentDepthMessage))
+	str.WriteString(fmt.Sprintf("## Risk: `%.2f (%s)`\n", e.risk, RiskToSeverity(e.risk)))
+	str.WriteString(fmt.Sprintf("### EPSS: `%.2f %%`\n", e.epss*100))
+	str.WriteString(fmt.Sprintf("%s\n", e.epssMessage))
 	str.WriteString("\n")
-	str.WriteString("### CVSS-BE\n")
-	str.WriteString(fmt.Sprintf("%s\n", e.CvssBEMessage))
+	str.WriteString(fmt.Sprintf("### Exploit: `%s`\n", e.exploitMessage.Short))
+	str.WriteString(e.exploitMessage.Long)
 	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("### CVSS (%f)\n", e.cvss))
-	str.WriteString(fmt.Sprintf("%s\n", e.CvssMessage))
+	str.WriteString(fmt.Sprintf("### Vulnerability Depth: `%d`\n", e.depth))
+	str.WriteString(fmt.Sprintf("%s\n", e.componentDepthMessage))
+	str.WriteString("\n")
+	str.WriteString(fmt.Sprintf("### CVSS-BE: `%.1f`\n", e.WithEnvironment))
+	str.WriteString(fmt.Sprintf("%s\n", e.cvssBEMessage))
+	str.WriteString("\n")
+	str.WriteString(fmt.Sprintf("### CVSS-B: `%.1f`\n", e.BaseScore))
+	str.WriteString(fmt.Sprintf("%s\n", e.cvssMessage))
 	str.WriteString("\n")
 	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, e.flawId))
 	return str.String()
 }
 
-func Explain(flaw models.Flaw, asset models.Asset) Explanation {
-	// Example usage
-	cvssVector := flaw.CVE.Vector
-	cvss := parseCvssVector(cvssVector)
+// provide the vector and risk metrics obtained from the risk calculation
+func Explain(flaw models.Flaw, asset models.Asset, vector string, riskMetrics obj.RiskMetrics) Explanation {
+	cvss := parseCvssVector(vector)
 
 	shortMsg, longMsg := exploitMessage(flaw, cvss)
 
 	depth := int(flaw.GetArbitraryJsonData()["componentDepth"].(float64))
 
 	return Explanation{
-		ExploitMessage: struct {
+		exploitMessage: struct {
 			Short string
 			Long  string
 		}{
 			Short: shortMsg,
 			Long:  longMsg,
 		},
-		EpssMessage:           epssMessage(utils.OrDefault(flaw.CVE.EPSS, 0)),
-		CvssBEMessage:         cvssBE(asset, cvss),
-		ComponentDepthMessage: componentDepthMessages(depth),
-		CvssMessage:           describeCVSS(cvss),
+		epssMessage:           epssMessage(utils.OrDefault(flaw.CVE.EPSS, 0)),
+		cvssBEMessage:         cvssBE(asset, cvss),
+		componentDepthMessage: componentDepthMessages(depth),
+		cvssMessage:           describeCVSS(cvss),
 		flawId:                flaw.ID,
 
-		risk: utils.OrDefault(flaw.RawRiskAssessment, 0),
+		risk:  utils.OrDefault(flaw.RawRiskAssessment, 0),
+		epss:  utils.OrDefault(flaw.CVE.EPSS, 0),
+		depth: depth,
+
+		RiskMetrics:    riskMetrics,
+		cveId:          flaw.CVEID,
+		cveDescription: flaw.CVE.Description,
+
+		affectedComponentName: flaw.GetArbitraryJsonData()["packageName"].(string),
+		scanType:              flaw.GetArbitraryJsonData()["scanType"].(string),
+		fixedVersion:          utils.EmptyThenNil(flaw.GetArbitraryJsonData()["fixedVersion"].(string)),
 	}
 }

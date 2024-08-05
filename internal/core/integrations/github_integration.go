@@ -287,8 +287,9 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		if err != nil {
 			return err
 		}
+		riskMetrics, vector := risk.RiskCalculation(*flaw.CVE, core.GetEnvironmentalFromAsset(asset))
 
-		exp := risk.Explain(flaw, asset)
+		exp := risk.Explain(flaw, asset, vector, riskMetrics)
 		// print json stringify to the console
 		orgSlug, _ := core.GetOrgSlug(event.Ctx)
 		projectSlug, _ := core.GetProjectSlug(event.Ctx)
@@ -296,8 +297,9 @@ func (g *githubIntegration) HandleEvent(event any) error {
 
 		// create a new issue
 		issue := &github.IssueRequest{
-			Title: github.String(flaw.CVEID),
-			Body:  github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug)),
+			Title:  github.String(flaw.CVEID),
+			Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug)),
+			Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment))},
 		}
 
 		owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
@@ -310,12 +312,30 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return err
 		}
 
+		_, _, err = client.Issues.EditLabel(context.Background(), owner, repo, "severity:"+strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), &github.Label{
+			Description: github.String("Severity of the flaw"),
+			Color:       github.String(risk.RiskToColor(*flaw.RawRiskAssessment)),
+		})
+		if err != nil {
+			slog.Error("could not update label", "err", err)
+		}
+		_, _, err = client.Issues.EditLabel(context.Background(), owner, repo, "devguard", &github.Label{
+			Description: github.String("DevGuard"),
+			Color:       github.String("182654"),
+		})
+		if err != nil {
+			slog.Error("could not update label", "err", err)
+		}
+
 		// save the issue id to the flaw
 		flaw.TicketID = utils.Ptr(fmt.Sprintf("github:%d", createdIssue.GetID()))
 		session := core.GetSession(event.Ctx)
 		userID := session.GetUserID()
 		// create an event
-		flawEvent := models.NewMitigateEvent(flaw.ID, userID, event.Ctx.Param("justification"), map[string]any{})
+		flawEvent := models.NewMitigateEvent(flaw.ID, userID, event.Ctx.Param("justification"), map[string]any{
+			"ticketId": flaw.TicketID,
+			"url":      createdIssue.GetHTMLURL(),
+		})
 		// save the flaw and the event in a transaction
 		err = g.flawRepository.Transaction(func(tx core.DB) error {
 			err := g.flawRepository.Save(tx, &flaw)

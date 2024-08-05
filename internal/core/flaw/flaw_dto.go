@@ -38,6 +38,7 @@ type FlawDTO struct {
 	ArbitraryJsonData map[string]any    `json:"arbitraryJsonData"`
 	LastDetected      time.Time         `json:"lastDetected"`
 	CreatedAt         time.Time         `json:"createdAt"`
+	TicketID          *string           `json:"ticketId"`
 }
 
 type detailedFlawDTO struct {
@@ -63,5 +64,6 @@ func FlawToDto(f models.Flaw) FlawDTO {
 		ArbitraryJsonData: f.GetArbitraryJsonData(),
 		LastDetected:      f.LastDetected,
 		CreatedAt:         f.CreatedAt,
+		TicketID:          f.TicketID,
 	}
 }
