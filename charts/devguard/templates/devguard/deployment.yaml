@@ -1,3 +1,10 @@
+
+{{- $protocol := "http" -}}
+{{- if .Values.web.ingress.tls -}}
+{{- $protocol = "https" -}}
+{{- end -}}
+{{- $host := index .Values.web.ingress.hosts 0 -}}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -50,6 +57,8 @@ spec:
             value: devguard
           - name: POSTGRES_HOST
             value: postgresql
+          - name: FRONTEND_URL
+            value: {{ printf "%s://%s" $protocol $host.host }}
           - name: ORY_KRATOS_PUBLIC
             value: http://kratos:4433
           - name: ORY_KRATOS_ADMIN
