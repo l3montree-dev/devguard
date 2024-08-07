@@ -114,6 +114,21 @@ func (a *httpController) AffectedComponents(c core.Context) error {
 	}))
 }
 
+func (a *httpController) Metrics(c core.Context) error {
+	asset := core.GetAsset(c)
+	scannerIds := []string{}
+	// get the latest events of this asset per scan type
+	err := a.assetRepository.GetDB(nil).Table("flaws").Select("DISTINCT scanner_id").Where("asset_id  = ?", asset.ID).Pluck("scanner_id", &scannerIds).Error
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, assetMetrics{
+		EnabledScanners: scannerIds,
+	})
+}
+
 func (a *httpController) Create(c core.Context) error {
 	var req createRequest
 	if err := c.Bind(&req); err != nil {
