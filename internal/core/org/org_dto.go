@@ -17,6 +17,7 @@ package org
 
 import (
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -125,12 +126,7 @@ type name struct {
 	Last  string `json:"last"`
 }
 
-type orgMember struct {
-	ID   string `json:"id"`
-	Name name   `json:"name"`
-}
-
 type orgDetails struct {
 	models.Org
-	Members []orgMember `json:"members"`
+	Members []core.User `json:"members"`
 }

@@ -59,7 +59,7 @@ type assetRepository interface {
 type flawService interface {
 	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw) error
 	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error
-	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification *string) error
+	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) error
 
 	RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error
 }

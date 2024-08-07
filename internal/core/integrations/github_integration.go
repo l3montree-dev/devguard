@@ -58,17 +58,27 @@ type flawRepository interface {
 	Read(id string) (models.Flaw, error)
 	Save(db core.DB, flaw *models.Flaw) error
 	Transaction(fn func(tx core.DB) error) error
+	FindByTicketID(tx core.DB, ticketID string) (models.Flaw, error)
+	GetOrgFromFlawID(tx core.DB, flawID string) (models.Org, error)
 }
 
 type flawEventRepository interface {
 	Save(db core.DB, event *models.FlawEvent) error
 }
 
+type githubUserRepository interface {
+	Save(db core.DB, user *models.GithubUser) error
+	GetDB(tx core.DB) core.DB
+	FindByOrgID(tx core.DB, orgID uuid.UUID) ([]models.GithubUser, error)
+}
+
 type githubIntegration struct {
 	githubAppInstallationRepository githubAppInstallationRepository
-	flawRepository                  flawRepository
-	flawEventRepository             flawEventRepository
-	frontendUrl                     string
+	githubUserRepository            githubUserRepository
+
+	flawRepository      flawRepository
+	flawEventRepository flawEventRepository
+	frontendUrl         string
 }
 
 var _ core.ThirdPartyIntegration = &githubIntegration{}
@@ -88,8 +98,10 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 
 	return &githubIntegration{
 		githubAppInstallationRepository: githubAppInstallationRepository,
-		flawRepository:                  flawRepository,
-		flawEventRepository:             flawEventRepository,
+		githubUserRepository:            repositories.NewGithubUserRepository(db),
+
+		flawRepository:      flawRepository,
+		flawEventRepository: flawEventRepository,
 
 		frontendUrl: frontendUrl,
 	}
@@ -137,6 +149,47 @@ func (githubIntegration *githubIntegration) WantsToHandleWebhook(ctx core.Contex
 	return true
 }
 
+func createNewFlawEventBasedOnComment(flawId, userId, comment string) models.FlawEvent {
+	if strings.HasPrefix(comment, "/accept") {
+		// create a new flaw accept event
+		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
+	} else if strings.HasPrefix(comment, "/false-positive") {
+		// create a new flaw false positive event
+		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
+	} else if strings.HasPrefix(comment, "/reopen") {
+		// create a new flaw reopen event
+		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
+	} else if strings.HasPrefix(comment, "/a") {
+		// create a new flaw accept event
+		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
+	} else if strings.HasPrefix(comment, "/fp") {
+		// create a new flaw false positive event
+		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
+	} else if strings.HasPrefix(comment, "/r") {
+		// create a new flaw reopen event
+		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
+	} else {
+		// create a new comment event
+		return models.NewCommentEvent(flawId, userId, comment)
+	}
+}
+
+func (githubIntegration *githubIntegration) GetUsers(org models.Org) []core.User {
+	users, err := githubIntegration.githubUserRepository.FindByOrgID(nil, org.ID)
+	if err != nil {
+		slog.Error("could not get users from github", "err", err)
+		return nil
+	}
+
+	return utils.Map(users, func(user models.GithubUser) core.User {
+		return core.User{
+			ID:        "github:" + strconv.Itoa(int(user.ID)),
+			Name:      user.Username,
+			AvatarURL: &user.AvatarURL,
+		}
+	})
+}
+
 func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) error {
 	payload, err := github.ValidatePayload(ctx.Request(), []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))
 	if err != nil {
@@ -151,6 +204,67 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 	}
 
 	switch event := event.(type) {
+	case *github.IssueCommentEvent:
+		// check if the issue is a devguard issue
+		issueId := event.Issue.GetID()
+		// look for a flaw with such a github ticket id
+		flaw, err := githubIntegration.flawRepository.FindByTicketID(nil, fmt.Sprintf("github:%d", issueId))
+		if err != nil {
+			slog.Debug("could not find flaw by ticket id", "err", err, "ticketId", issueId)
+			return nil
+		}
+
+		// the issue is a devguard issue.
+		// lets check what the comment is about
+		comment := event.Comment.GetBody()
+
+		// make sure to save the user - it might be a new user or it might have new values defined.
+		// we do not care about any error - and we want speed, thus do it on a goroutine
+		go func() {
+			org, err := githubIntegration.flawRepository.GetOrgFromFlawID(nil, flaw.ID)
+			if err != nil {
+				slog.Error("could not get org from flaw id", "err", err)
+				return
+			}
+			// save the user in the database
+			user := models.GithubUser{
+				ID:        event.Comment.User.GetID(),
+				Username:  event.Comment.User.GetLogin(),
+				AvatarURL: event.Comment.User.GetAvatarURL(),
+			}
+
+			err = githubIntegration.githubUserRepository.Save(nil, &user)
+			if err != nil {
+				slog.Error("could not save github user", "err", err)
+				return
+			}
+
+			if err = githubIntegration.githubUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
+				slog.Error("could not append user to organization", "err", err)
+			}
+		}()
+
+		// create a new event based on the comment
+		flawEvent := createNewFlawEventBasedOnComment(flaw.ID, fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment)
+
+		flawEvent.Apply(&flaw)
+		// save the flaw and the event in a transaction
+		err = githubIntegration.flawRepository.Transaction(func(tx core.DB) error {
+			err := githubIntegration.flawRepository.Save(tx, &flaw)
+			if err != nil {
+				return err
+			}
+			err = githubIntegration.flawEventRepository.Save(tx, &flawEvent)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			slog.Error("could not save flaw and event", "err", err)
+			return err
+		}
+		return nil
 	case *github.InstallationEvent:
 		// check what type of action is being performed
 		switch *event.Action {

@@ -95,7 +95,42 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 		flaw.RawRiskAssessment = &f
 
 	}
+}
 
+func NewAcceptedEvent(flawID, userID, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeAccepted,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+}
+
+func NewReopenedEvent(flawID, userID, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeReopened,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+}
+
+func NewCommentEvent(flawID, userID, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeComment,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+}
+
+func NewFalsePositiveEvent(flawID, userID, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeFalsePositive,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
 }
 
 func NewFixedEvent(flawID string, userID string) FlawEvent {

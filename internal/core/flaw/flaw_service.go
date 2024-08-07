@@ -218,7 +218,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 	return nil
 }
 
-func (s *service) UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification *string) error {
+func (s *service) UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) error {
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
 		return s.flawRepository.Transaction(func(d core.DB) error {
@@ -228,13 +228,19 @@ func (s *service) UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, 
 	return s.updateFlawState(tx, userID, flaw, statusType, justification)
 }
 
-func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification *string) error {
-	ev := models.FlawEvent{
-		Type:          models.FlawEventType(statusType),
-		FlawID:        flaw.CalculateHash(),
-		UserID:        userID,
-		Justification: justification,
+func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) error {
+	var ev models.FlawEvent
+	switch models.FlawEventType(statusType) {
+	case models.EventTypeAccepted:
+		ev = models.NewAcceptedEvent(flaw.CalculateHash(), userID, justification)
+	case models.EventTypeFalsePositive:
+		ev = models.NewFalsePositiveEvent(flaw.CalculateHash(), userID, justification)
+	case models.EventTypeReopened:
+		ev = models.NewReopenedEvent(flaw.CalculateHash(), userID, justification)
+	case models.EventTypeComment:
+		ev = models.NewCommentEvent(flaw.CalculateHash(), userID, justification)
 	}
+
 	// apply the event on the flaw
 	ev.Apply(flaw)
 

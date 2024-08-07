@@ -2,6 +2,7 @@ package integrations
 
 import (
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -53,6 +54,15 @@ func (t *thirdPartyIntegrations) HandleWebhook(ctx core.Context) error {
 
 	_, err := wg.WaitAndCollect()
 	return err
+}
+
+func (t *thirdPartyIntegrations) GetUsers(org models.Org) []core.User {
+	users := []core.User{}
+	for _, i := range t.integrations {
+		users = append(users, i.GetUsers(org)...)
+	}
+
+	return users
 }
 
 func (t *thirdPartyIntegrations) WantsToFinishInstallation(ctx core.Context) bool {

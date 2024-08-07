@@ -151,3 +151,19 @@ func (r *flawRepository) GetFlawsByPurl(tx core.DB, purl []string) ([]models.Fla
 
 	return flaws, nil
 }
+
+func (r *flawRepository) FindByTicketID(tx core.DB, ticketID string) (models.Flaw, error) {
+	var flaw models.Flaw
+	if err := r.Repository.GetDB(tx).Where("ticket_id = ?", ticketID).First(&flaw).Error; err != nil {
+		return models.Flaw{}, err
+	}
+	return flaw, nil
+}
+
+func (r *flawRepository) GetOrgFromFlawID(tx core.DB, flawID string) (models.Org, error) {
+	var org models.Org
+	if err := r.GetDB(tx).Raw("SELECT organizations.* from organizations left join projects p on organizations.id = p.organization_id left join assets a on p.id = a.project_id left join flaws f on a.id = f.asset_id where f.id = ?", flawID).First(&org).Error; err != nil {
+		return models.Org{}, err
+	}
+	return org, nil
+}

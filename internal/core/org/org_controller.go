@@ -125,6 +125,10 @@ func (o *httpController) Update(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
+	// get all members from any third party integrations
+	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
+	users := thirdPartyIntegrations.GetUsers(organization)
+
 	req := ctx.Request().Body
 
 	defer req.Close()
@@ -145,26 +149,23 @@ func (o *httpController) Update(ctx core.Context) error {
 
 	resp := orgDetails{
 		Org: organization,
-		Members: utils.Map(
-			members, func(i client.Identity) orgMember {
+		Members: append(users, utils.Map(
+			members, func(i client.Identity) core.User {
 				nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
-				var first, last string
+				var name string
 				if nameMap != nil {
 					if nameMap["first"] != nil {
-						first = nameMap["first"].(string)
+						name += nameMap["first"].(string)
 					}
 					if nameMap["last"] != nil {
-						last = nameMap["last"].(string)
+						name += " " + nameMap["last"].(string)
 					}
 				}
-				return orgMember{
-					ID: i.Id,
-					Name: name{
-						First: first,
-						Last:  last,
-					},
+				return core.User{
+					ID:   i.Id,
+					Name: name,
 				}
-			}),
+			})...),
 	}
 
 	return ctx.JSON(200, resp)
@@ -214,7 +215,11 @@ func (o *httpController) Members(c core.Context) error {
 func (o *httpController) Read(c core.Context) error {
 	// get the organization from the context
 	organization := core.GetTenant(c)
+	// fetch the regular members of the current organization
 	members, err := fetchMembersOfOrganization(c)
+	// get all members from any third party integrations
+	thirdPartyIntegrations := core.GetThirdPartyIntegration(c)
+	users := thirdPartyIntegrations.GetUsers(organization)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
@@ -222,26 +227,23 @@ func (o *httpController) Read(c core.Context) error {
 
 	resp := orgDetails{
 		Org: organization,
-		Members: utils.Map(
-			members, func(i client.Identity) orgMember {
+		Members: append(users, utils.Map(
+			members, func(i client.Identity) core.User {
 				nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
-				var first, last string
+				var name string
 				if nameMap != nil {
 					if nameMap["first"] != nil {
-						first = nameMap["first"].(string)
+						name += nameMap["first"].(string)
 					}
 					if nameMap["last"] != nil {
-						last = nameMap["last"].(string)
+						name += " " + nameMap["last"].(string)
 					}
 				}
-				return orgMember{
-					ID: i.Id,
-					Name: name{
-						First: first,
-						Last:  last,
-					},
+				return core.User{
+					ID:   i.Id,
+					Name: name,
 				}
-			}),
+			})...),
 	}
 
 	return c.JSON(200, resp)
