@@ -121,11 +121,6 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 
 }
 
-type name struct {
-	First string `json:"first"`
-	Last  string `json:"last"`
-}
-
 type orgDetails struct {
 	models.Org
 	Members []core.User `json:"members"`
