@@ -218,17 +218,21 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 	return nil
 }
 
-func (s *service) UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) error {
+func (s *service) UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error) {
 	if tx == nil {
+		var ev models.FlawEvent
+		var err error
 		// we are not part of a parent transaction - create a new one
-		return s.flawRepository.Transaction(func(d core.DB) error {
-			return s.updateFlawState(d, userID, flaw, statusType, justification)
+		err = s.flawRepository.Transaction(func(d core.DB) error {
+			ev, err = s.updateFlawState(d, userID, flaw, statusType, justification)
+			return err
 		})
+		return ev, err
 	}
 	return s.updateFlawState(tx, userID, flaw, statusType, justification)
 }
 
-func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) error {
+func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error) {
 	var ev models.FlawEvent
 	switch models.FlawEventType(statusType) {
 	case models.EventTypeAccepted:
@@ -247,11 +251,11 @@ func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, 
 	// run the updates in the transaction to keep a valid state
 	err := s.flawRepository.Save(tx, flaw)
 	if err != nil {
-		return err
+		return models.FlawEvent{}, err
 	}
 	if err := s.flawEventRepository.Save(tx, &ev); err != nil {
-		return err
+		return models.FlawEvent{}, err
 	}
 	flaw.Events = append(flaw.Events, ev)
-	return nil
+	return ev, nil
 }

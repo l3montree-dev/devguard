@@ -2,6 +2,7 @@ package flaw
 
 import (
 	"encoding/json"
+	"log/slog"
 	"slices"
 
 	"github.com/google/uuid"
@@ -29,7 +30,7 @@ type repository interface {
 	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)
 }
 type flawService interface {
-	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) error
+	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error)
 }
 
 type flawHttpController struct {
@@ -131,10 +132,6 @@ func (c flawHttpController) Mitigate(ctx core.Context) error {
 
 	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
 
-	if err != nil {
-		return echo.NewHTTPError(404, "could not find flaw")
-	}
-
 	if err = thirdPartyIntegrations.HandleEvent(core.ManualMitigateEvent{
 		Ctx: ctx,
 	}); err != nil {
@@ -170,7 +167,7 @@ func (c flawHttpController) Read(ctx core.Context) error {
 }
 
 func (c flawHttpController) CreateEvent(ctx core.Context) error {
-
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	flawId, err := core.GetFlawID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid flaw id")
@@ -196,7 +193,20 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 	justification := status.Justification
 
 	err = c.flawRepository.Transaction(func(tx core.DB) error {
-		return c.flawService.UpdateFlawState(tx, userID, &flaw, statusType, justification)
+		ev, err := c.flawService.UpdateFlawState(tx, userID, &flaw, statusType, justification)
+		if err != nil {
+			return err
+		}
+		err = thirdPartyIntegration.HandleEvent(core.FlawEvent{
+			Ctx:   ctx,
+			Event: ev,
+		})
+		// we do not want the transaction to be rolled back if the third party integration fails
+		if err != nil {
+			// just log the error
+			slog.Error("could not handle event", "err", err)
+		}
+		return nil
 	})
 	if err != nil {
 		return echo.NewHTTPError(500, "could not create flaw event").WithInternal(err)

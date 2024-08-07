@@ -120,14 +120,10 @@ func (o *httpController) bootstrapOrg(c core.Context, organization models.Org) e
 
 func (o *httpController) Update(ctx core.Context) error {
 	organization := core.GetTenant(ctx)
-	members, err := fetchMembersOfOrganization(ctx)
+	members, err := FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
-
-	// get all members from any third party integrations
-	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
-	users := thirdPartyIntegrations.GetUsers(organization)
 
 	req := ctx.Request().Body
 
@@ -148,24 +144,8 @@ func (o *httpController) Update(ctx core.Context) error {
 	}
 
 	resp := orgDetails{
-		Org: organization,
-		Members: append(users, utils.Map(
-			members, func(i client.Identity) core.User {
-				nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
-				var name string
-				if nameMap != nil {
-					if nameMap["first"] != nil {
-						name += nameMap["first"].(string)
-					}
-					if nameMap["last"] != nil {
-						name += " " + nameMap["last"].(string)
-					}
-				}
-				return core.User{
-					ID:   i.Id,
-					Name: name,
-				}
-			})...),
+		Org:     organization,
+		Members: members,
 	}
 
 	return ctx.JSON(200, resp)
@@ -184,7 +164,7 @@ func (o *httpController) Delete(c core.Context) error {
 	return c.NoContent(200)
 }
 
-func fetchMembersOfOrganization(ctx core.Context) ([]client.Identity, error) {
+func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	// get all members from the organization
 	organization := core.GetTenant(ctx)
 	accessControl := core.GetRBAC(ctx)
@@ -198,13 +178,37 @@ func fetchMembersOfOrganization(ctx core.Context) ([]client.Identity, error) {
 	// get the auth admin client from the context
 	authAdminClient := core.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
-	users, _, err := authAdminClient.IdentityAPI.ListIdentitiesExecute(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
+	m, _, err := authAdminClient.IdentityAPI.ListIdentitiesExecute(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
 
-	return users, err
+	if err != nil {
+		return nil, err
+	}
+
+	users := utils.Map(m, func(i client.Identity) core.User {
+		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
+		var name string
+		if nameMap != nil {
+			if nameMap["first"] != nil {
+				name += nameMap["first"].(string)
+			}
+			if nameMap["last"] != nil {
+				name += " " + nameMap["last"].(string)
+			}
+		}
+		return core.User{
+			ID:   i.Id,
+			Name: name,
+		}
+	})
+
+	// fetch all members from third party integrations
+	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
+	users = append(users, thirdPartyIntegrations.GetUsers(organization)...)
+	return users, nil
 }
 
 func (o *httpController) Members(c core.Context) error {
-	users, err := fetchMembersOfOrganization(c)
+	users, err := FetchMembersOfOrganization(c)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
@@ -216,34 +220,15 @@ func (o *httpController) Read(c core.Context) error {
 	// get the organization from the context
 	organization := core.GetTenant(c)
 	// fetch the regular members of the current organization
-	members, err := fetchMembersOfOrganization(c)
-	// get all members from any third party integrations
-	thirdPartyIntegrations := core.GetThirdPartyIntegration(c)
-	users := thirdPartyIntegrations.GetUsers(organization)
+	members, err := FetchMembersOfOrganization(c)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
 	resp := orgDetails{
-		Org: organization,
-		Members: append(users, utils.Map(
-			members, func(i client.Identity) core.User {
-				nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
-				var name string
-				if nameMap != nil {
-					if nameMap["first"] != nil {
-						name += nameMap["first"].(string)
-					}
-					if nameMap["last"] != nil {
-						name += " " + nameMap["last"].(string)
-					}
-				}
-				return core.User{
-					ID:   i.Id,
-					Name: name,
-				}
-			})...),
+		Org:     organization,
+		Members: members,
 	}
 
 	return c.JSON(200, resp)

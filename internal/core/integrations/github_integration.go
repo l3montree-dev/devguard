@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -72,6 +73,10 @@ type githubUserRepository interface {
 	FindByOrgID(tx core.DB, orgID uuid.UUID) ([]models.GithubUser, error)
 }
 
+type assetRepository interface {
+	Read(id uuid.UUID) (models.Asset, error)
+}
+
 type githubIntegration struct {
 	githubAppInstallationRepository githubAppInstallationRepository
 	githubUserRepository            githubUserRepository
@@ -79,6 +84,7 @@ type githubIntegration struct {
 	flawRepository      flawRepository
 	flawEventRepository flawEventRepository
 	frontendUrl         string
+	assetRepository     assetRepository
 }
 
 var _ core.ThirdPartyIntegration = &githubIntegration{}
@@ -103,7 +109,8 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 		flawRepository:      flawRepository,
 		flawEventRepository: flawEventRepository,
 
-		frontendUrl: frontendUrl,
+		frontendUrl:     frontendUrl,
+		assetRepository: repositories.NewAssetRepository(db),
 	}
 }
 
@@ -206,7 +213,11 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 	switch event := event.(type) {
 	case *github.IssueCommentEvent:
 		// check if the issue is a devguard issue
-		issueId := event.Issue.GetID()
+		issueId := event.Issue.GetNumber()
+		// check if the user is a bot - we do not want to handle bot comments
+		if event.Comment.User.GetType() == "Bot" {
+			return nil
+		}
 		// look for a flaw with such a github ticket id
 		flaw, err := githubIntegration.flawRepository.FindByTicketID(nil, fmt.Sprintf("github:%d", issueId))
 		if err != nil {
@@ -264,7 +275,47 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			slog.Error("could not save flaw and event", "err", err)
 			return err
 		}
-		return nil
+
+		// get the asset
+		asset, err := githubIntegration.assetRepository.Read(flaw.AssetID)
+		if err != nil {
+			slog.Error("could not read asset", "err", err)
+			return err
+		}
+		// make sure to update the github issue accordingly
+		client, err := NewGithubClient(installationIdFromRepositoryID(utils.SafeDereference(asset.RepositoryID)))
+		if err != nil {
+			slog.Error("could not create github client", "err", err)
+			return err
+		}
+
+		owner, repo, err := ownerAndRepoFromRepositoryID(utils.SafeDereference(asset.RepositoryID))
+		if err != nil {
+			slog.Error("could not get owner and repo from repository id", "err", err)
+			return err
+		}
+
+		switch flawEvent.Type {
+		case models.EventTypeAccepted:
+			_, _, err = client.Issues.Edit(context.Background(), owner, repo, issueId, &github.IssueRequest{
+				State:  github.String("closed"),
+				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:accepted"},
+			})
+			return err
+		case models.EventTypeFalsePositive:
+			_, _, err = client.Issues.Edit(context.Background(), owner, repo, issueId, &github.IssueRequest{
+				State:  github.String("closed"),
+				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:false-positive"},
+			})
+			return err
+		case models.EventTypeReopened:
+			_, _, err = client.Issues.Edit(context.Background(), owner, repo, issueId, &github.IssueRequest{
+				State:  github.String("open"),
+				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:open"},
+			})
+			return err
+		}
+
 	case *github.InstallationEvent:
 		// check what type of action is being performed
 		switch *event.Action {
@@ -451,7 +502,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		}
 
 		// save the issue id to the flaw
-		flaw.TicketID = utils.Ptr(fmt.Sprintf("github:%d", createdIssue.GetID()))
+		flaw.TicketID = utils.Ptr(fmt.Sprintf("github:%d", createdIssue.GetNumber()))
 		flaw.TicketURL = utils.Ptr(createdIssue.GetHTMLURL())
 		session := core.GetSession(event.Ctx)
 		userID := session.GetUserID()
@@ -484,8 +535,112 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		}
 		return nil
 
-	case core.FlawDetectedEvent:
-		return nil
+	case core.FlawEvent:
+		// DO NOT RELY ON THE PROVIDED CONTEXT.
+		// This function might run in the context of a github webhook.
+		ev := event.Event
+
+		asset := core.GetAsset(event.Ctx)
+		flaw, err := g.flawRepository.Read(ev.FlawID)
+
+		if err != nil {
+			return err
+		}
+
+		if flaw.TicketID == nil {
+			// we do not have a ticket id - we do not need to do anything
+			return nil
+		}
+
+		repoId := utils.SafeDereference(asset.RepositoryID)
+		if !strings.HasPrefix(repoId, "github:") || !strings.HasPrefix(*flaw.TicketID, "github:") {
+			// this integration only handles github repositories.
+			return nil
+		}
+		// we create a new ticket in github
+		client, err := NewGithubClient(installationIdFromRepositoryID(repoId))
+		if err != nil {
+			return err
+		}
+
+		owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
+		if err != nil {
+			return err
+		}
+
+		githubTicketID := strings.TrimPrefix(*flaw.TicketID, "github:")
+		githubTicketIDInt, err := strconv.Atoi(githubTicketID)
+		if err != nil {
+			return err
+		}
+
+		members, err := org.FetchMembersOfOrganization(event.Ctx)
+		if err != nil {
+			return err
+		}
+
+		// find the member which created the event
+		member, ok := utils.Find(
+			members,
+			func(member core.User) bool {
+				return member.ID == ev.UserID
+			},
+		)
+		if !ok {
+			member = core.User{
+				ID:   ev.UserID,
+				Name: "unknown",
+			}
+		}
+
+		switch ev.Type {
+		case models.EventTypeAccepted:
+			// if a flaw gets accepted, we close the issue and create a comment with that justification
+			_, _, err = client.Issues.CreateComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" accepted the flaw", utils.SafeDereference(ev.Justification))),
+			})
+			if err != nil {
+				return err
+			}
+			_, _, err = client.Issues.Edit(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
+				State:  github.String("closed"),
+				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:accepted"},
+			})
+			return err
+		case models.EventTypeFalsePositive:
+
+			_, _, err = client.Issues.CreateComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" marked the flaw as false positive", utils.SafeDereference(ev.Justification))),
+			})
+			if err != nil {
+				return err
+			}
+
+			_, _, err = client.Issues.Edit(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
+				State:  github.String("closed"),
+				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:false-positive"},
+			})
+			return err
+		case models.EventTypeReopened:
+			_, _, err = client.Issues.CreateComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" reopened the flaw", utils.SafeDereference(ev.Justification))),
+			})
+			if err != nil {
+				return err
+			}
+
+			_, _, err = client.Issues.Edit(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
+				State:  github.String("open"),
+				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:open"},
+			})
+			return err
+
+		case models.EventTypeComment:
+			_, _, err = client.Issues.CreateComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the flaw", utils.SafeDereference(ev.Justification))),
+			})
+			return err
+		}
 	}
 	return nil
 }
