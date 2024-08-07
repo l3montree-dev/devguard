@@ -502,7 +502,7 @@ func init() {
 			// execute cdxgen and git help commands. If they throw an error, print it to the console
 			// if they don't, print a success message
 
-			for _, command := range []string{"cdxgen", "git"} {
+			for _, command := range []string{"trivy", "git"} {
 				cmd := exec.Command(command, "--help")
 				// get the output
 				var out bytes.Buffer

@@ -87,3 +87,8 @@ func (a *patchRequest) applyToModel(
 
 	return updated
 }
+
+type assetMetrics struct {
+	// keyed by the scanType
+	EnabledScanners []string `json:"enabledScanners"`
+}
