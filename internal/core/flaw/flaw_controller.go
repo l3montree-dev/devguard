@@ -2,6 +2,7 @@ package flaw
 
 import (
 	"encoding/json"
+	"log/slog"
 	"slices"
 
 	"github.com/google/uuid"
@@ -29,7 +30,7 @@ type repository interface {
 	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)
 }
 type flawService interface {
-	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification *string) error
+	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error)
 }
 
 type flawHttpController struct {
@@ -123,6 +124,29 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	return ctx.JSON(200, core.NewPaged(core.GetPageInfo(ctx), pagedResp.Total, values))
 }
 
+func (c flawHttpController) Mitigate(ctx core.Context) error {
+	flawId, err := core.GetFlawID(ctx)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid flaw id")
+	}
+
+	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
+
+	if err = thirdPartyIntegrations.HandleEvent(core.ManualMitigateEvent{
+		Ctx: ctx,
+	}); err != nil {
+		return echo.NewHTTPError(500, "could not mitigate flaw").WithInternal(err)
+	}
+
+	// fetch the flaw again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the flaw.
+	flaw, err := c.flawRepository.Read(flawId)
+	if err != nil {
+		return echo.NewHTTPError(404, "could not find flaw")
+	}
+
+	return ctx.JSON(200, convertToDetailedDTO(flaw))
+}
+
 func (c flawHttpController) Read(ctx core.Context) error {
 	flawId, err := core.GetFlawID(ctx)
 	if err != nil {
@@ -143,7 +167,7 @@ func (c flawHttpController) Read(ctx core.Context) error {
 }
 
 func (c flawHttpController) CreateEvent(ctx core.Context) error {
-
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	flawId, err := core.GetFlawID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid flaw id")
@@ -169,7 +193,20 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 	justification := status.Justification
 
 	err = c.flawRepository.Transaction(func(tx core.DB) error {
-		return c.flawService.UpdateFlawState(tx, userID, &flaw, statusType, &justification)
+		ev, err := c.flawService.UpdateFlawState(tx, userID, &flaw, statusType, justification)
+		if err != nil {
+			return err
+		}
+		err = thirdPartyIntegration.HandleEvent(core.FlawEvent{
+			Ctx:   ctx,
+			Event: ev,
+		})
+		// we do not want the transaction to be rolled back if the third party integration fails
+		if err != nil {
+			// just log the error
+			slog.Error("could not handle event", "err", err)
+		}
+		return nil
 	})
 	if err != nil {
 		return echo.NewHTTPError(500, "could not create flaw event").WithInternal(err)
@@ -197,6 +234,8 @@ func convertToDetailedDTO(flaw models.Flaw) detailedFlawDTO {
 			LastDetected:      flaw.LastDetected,
 			CreatedAt:         flaw.CreatedAt,
 			ScannerID:         flaw.ScannerID,
+			TicketID:          flaw.TicketID,
+			TicketURL:         flaw.TicketURL,
 		},
 		Events: utils.Map(flaw.Events, func(ev models.FlawEvent) FlawEventDTO {
 			return FlawEventDTO{

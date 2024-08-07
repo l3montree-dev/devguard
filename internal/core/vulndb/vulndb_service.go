@@ -21,13 +21,15 @@ type vulnDBService struct {
 	osvService             osvService
 	exploitDBService       exploitDBService
 	githubExploitDBService githubExploitDBService
+	dsa                    debianSecurityTracker
+	cveList                cvelistService
 
 	configService configService
 
 	flawService flawService
 }
 
-func newVulnDBService(leaderElector leaderElector, mitreService mitreService, epssService epssService, nvdService NVDService, configService configService, osvService osvService, exploitDBService exploitDBService, githubExploitDBService githubExploitDBService, flawService flawService) *vulnDBService {
+func newVulnDBService(leaderElector leaderElector, mitreService mitreService, epssService epssService, nvdService NVDService, configService configService, osvService osvService, exploitDBService exploitDBService, githubExploitDBService githubExploitDBService, flawService flawService, dsa debianSecurityTracker, cveList cvelistService) *vulnDBService {
 	return &vulnDBService{
 		leaderElector: leaderElector,
 		// Add a comma after leaderElector
@@ -37,6 +39,8 @@ func newVulnDBService(leaderElector leaderElector, mitreService mitreService, ep
 		nvdService:             nvdService,
 		exploitDBService:       exploitDBService,
 		githubExploitDBService: githubExploitDBService,
+		dsa:                    dsa,
+		cveList:                cveList,
 
 		configService: configService,
 
@@ -81,6 +85,12 @@ func (v *vulnDBService) mirror() {
 					slog.Info("successfully mirrored nvd")
 				}
 
+				if err := v.cveList.Mirror(); err != nil {
+					slog.Error("could not mirror cve list", "err", err)
+				} else {
+					slog.Info("successfully mirrored cve list")
+				}
+
 				if err := v.exploitDBService.Mirror(); err != nil {
 					slog.Error("could not mirror exploitdb", "err", err)
 				} else {
@@ -101,6 +111,13 @@ func (v *vulnDBService) mirror() {
 				} else {
 					slog.Info("successfully mirrored osv")
 				}
+
+				if err := v.dsa.Mirror(); err != nil {
+					slog.Error("could not mirror dsa", "err", err)
+				} else {
+					slog.Info("successfully mirrored dsa")
+				}
+
 				if err := v.configService.SetJSONConfig("vulndb.lastMirror", struct {
 					Time time.Time `json:"time"`
 				}{

@@ -16,10 +16,10 @@ const (
 	EventTypeReopened FlawEventType = "reopened"
 
 	//EventTypeRiskAssessmentUpdated FlawEventType = "riskAssessmentUpdated"
-	EventTypeAccepted            FlawEventType = "accepted"
-	EventTypeMarkedForMitigation FlawEventType = "markedForMitigation"
-	EventTypeFalsePositive       FlawEventType = "falsePositive"
-	EventTypeMarkedForTransfer   FlawEventType = "markedForTransfer"
+	EventTypeAccepted          FlawEventType = "accepted"
+	EventTypeMitigate          FlawEventType = "mitigate"
+	EventTypeFalsePositive     FlawEventType = "falsePositive"
+	EventTypeMarkedForTransfer FlawEventType = "markedForTransfer"
 
 	EventTypeRawRiskAssessmentUpdated FlawEventType = "rawRiskAssessmentUpdated"
 
@@ -82,8 +82,6 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 		flaw.RawRiskAssessment = &f
 	case EventTypeAccepted:
 		flaw.State = FlawStateAccepted
-	case EventTypeMarkedForMitigation:
-		flaw.State = FlawStateMarkedForMitigation
 	case EventTypeFalsePositive:
 		flaw.State = FlawStateFalsePositive
 	case EventTypeMarkedForTransfer:
@@ -97,7 +95,42 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 		flaw.RawRiskAssessment = &f
 
 	}
+}
 
+func NewAcceptedEvent(flawID, userID, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeAccepted,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+}
+
+func NewReopenedEvent(flawID, userID, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeReopened,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+}
+
+func NewCommentEvent(flawID, userID, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeComment,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+}
+
+func NewFalsePositiveEvent(flawID, userID, justification string) FlawEvent {
+	return FlawEvent{
+		Type:          EventTypeFalsePositive,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
 }
 
 func NewFixedEvent(flawID string, userID string) FlawEvent {
@@ -117,6 +150,17 @@ func NewDetectedEvent(flawID string, userID string, riskCalculationReport obj.Ri
 
 	ev.SetArbitraryJsonData(riskCalculationReport.Map())
 
+	return ev
+}
+
+func NewMitigateEvent(flawID string, userID string, justification string, arbitraryData map[string]any) FlawEvent {
+	ev := FlawEvent{
+		Type:          EventTypeMitigate,
+		FlawID:        flawID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+	ev.SetArbitraryJsonData(arbitraryData)
 	return ev
 }
 
@@ -143,7 +187,7 @@ func CheckStatusType(statusType string) error {
 		return nil
 	case "reopened":
 		return nil
-	case "markedForMitigation":
+	case "mitigate":
 		return nil
 	case "falsePositive":
 		return nil

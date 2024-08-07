@@ -16,12 +16,11 @@ import (
 type FlawState string
 
 const (
-	FlawStateOpen                FlawState = "open"
-	FlawStateFixed               FlawState = "fixed"    // we did not find the flaw anymore in the last scan!
-	FlawStateAccepted            FlawState = "accepted" // like ignore
-	FlawStateMarkedForMitigation FlawState = "markedForMitigation"
-	FlawStateFalsePositive       FlawState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
-	FlawStateMarkedForTransfer   FlawState = "markedForTransfer"
+	FlawStateOpen              FlawState = "open"
+	FlawStateFixed             FlawState = "fixed"         // we did not find the flaw anymore in the last scan!
+	FlawStateAccepted          FlawState = "accepted"      // like ignore
+	FlawStateFalsePositive     FlawState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
+	FlawStateMarkedForTransfer FlawState = "markedForTransfer"
 )
 
 type Flaw struct {
@@ -53,6 +52,9 @@ type Flaw struct {
 	// this is a map of additional data that is parsed from the ArbitraryJsonData field
 	// this is not stored in the database - it just caches the parsed data
 	arbitraryJsonData map[string]any
+
+	TicketID  *string `json:"ticketId" gorm:"default:null;"` // might be set by integrations
+	TicketURL *string `json:"ticketUrl" gorm:"default:null;"`
 
 	CreatedAt time.Time    `json:"createdAt"`
 	UpdatedAt time.Time    `json:"updatedAt"`

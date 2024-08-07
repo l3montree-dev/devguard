@@ -49,6 +49,16 @@ func Flat[T any](s [][]T) []T {
 	return res
 }
 
+func Find[T any](s []T, f func(T) bool) (T, bool) {
+	for _, v := range s {
+		if f(v) {
+			return v, true
+		}
+	}
+	var t T
+	return t, false
+}
+
 type CompareResult[T any] struct {
 	OnlyInA []T
 	OnlyInB []T

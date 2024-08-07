@@ -17,6 +17,7 @@ package org
 
 import (
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -120,17 +121,7 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 
 }
 
-type name struct {
-	First string `json:"first"`
-	Last  string `json:"last"`
-}
-
-type orgMember struct {
-	ID   string `json:"id"`
-	Name name   `json:"name"`
-}
-
 type orgDetails struct {
 	models.Org
-	Members []orgMember `json:"members"`
+	Members []core.User `json:"members"`
 }
