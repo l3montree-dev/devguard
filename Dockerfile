@@ -24,6 +24,8 @@ RUN CGO_ENABLED=0 go build -o /go/bin/devguard-cli cmd/devguard-cli/main.go
 
 FROM golang:1.22.3
 
+WORKDIR /
+
 COPY config/rbac_model.conf /config/rbac_model.conf
 COPY --from=build /go/bin/app /
 COPY --from=build /go/bin/devguard-cli /
