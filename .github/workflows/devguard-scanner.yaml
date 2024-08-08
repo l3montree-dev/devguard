@@ -105,7 +105,6 @@ jobs:
       with:
         name: docker-image
         path: .
-    - name: Run Trivy vulnerability scanner in tarball mode
       # Running Trivy to scan the Docker image for vulnerabilities
     - name: DevGuard Container-Scanning
       uses: docker://devguard-scanner:main-d4b4d6b0-1723128582@sha256:18b05d96412bfd9f0a8ccf9237f6d61dc542f2bcbd86624d0b607d802fd42915
