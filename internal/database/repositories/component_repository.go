@@ -119,3 +119,18 @@ func (c *componentRepository) GetAssetDependenciesGroupedByScanType(asset_ID str
 
 	return results, nil
 }
+
+func (c *componentRepository) GetPackages(asset_ID string) ([]models.AssetComponents, error) {
+	var results []models.AssetComponents
+	err := c.db.Model(&models.Component{}).
+		Select("SUBSTRING(purl_or_cpe FROM ':(.*?)/') AS pkg , COUNT(*) as count").
+		Where("asset_id = ?", asset_ID).
+		Group("pkg").
+		Find(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}

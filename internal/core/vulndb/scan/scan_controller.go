@@ -124,13 +124,13 @@ func (s *httpController) Scan(c core.Context) error {
 	flaws := []models.Flaw{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, assetObj, scanType, version)
+	AssetComponents, err := s.componentRepository.LoadAssetComponents(nil, assetObj, scanType, version)
 	if err != nil {
 		slog.Error("could not load asset components", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not load asset components"})
 	}
 	// build a dependency tree
-	tree := asset.BuildDependencyTree(assetComponents)
+	tree := asset.BuildDependencyTree(AssetComponents)
 	// calculate the depth of each component
 	depthMap := make(map[string]int)
 
