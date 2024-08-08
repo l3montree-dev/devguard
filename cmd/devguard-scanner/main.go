@@ -195,13 +195,28 @@ func isValidPath(path string) (bool, error) {
 }
 
 func getCurrentVersion(path string) (string, int, error) {
-	cmd := exec.Command("git", "tag", "--sort=-v:refname")
+	// mark the path as safe git directory
+	cmd := exec.Command("git", "config", "--global", "--add", "safe.directory", getDirFromPath(path)) // nolint:all
 	var out bytes.Buffer
 	var errOut bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &errOut
-	cmd.Dir = getDirFromPath(path)
 	err := cmd.Run()
+	if err != nil {
+		slog.Info("could not mark path as safe", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
+		return "", 0, err
+	}
+
+	// reset the buffer
+	out.Reset()
+	errOut.Reset()
+
+	cmd = exec.Command("git", "tag", "--sort=-v:refname")
+
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	cmd.Dir = getDirFromPath(path)
+	err = cmd.Run()
 	if err != nil {
 		slog.Info("could not run git tag", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
 		return "", 0, err
