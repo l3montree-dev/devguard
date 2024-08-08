@@ -16,15 +16,14 @@
 package scan
 
 import (
-	"log/slog"
-	"net/url"
+	"fmt"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
 )
 
 type purlComparer struct {
@@ -37,68 +36,60 @@ func NewPurlComparer(db core.DB) *purlComparer {
 	}
 }
 
-func (comparer *purlComparer) GetVulnsForAll(purls []string) ([]models.VulnInPackage, error) {
-	g := errgroup.Group{}
-	g.SetLimit(10) // magic concurrency number - this was just a quick test against a local installed postgresql
-	results := make([][]models.VulnInPackage, len(purls))
-	for i, purl := range purls {
-		p := purl
-		itmp := i
-		g.Go(func() error {
-			vulns, err := comparer.GetVulns(p)
-			if err != nil {
-				return err
-			}
-			results[itmp] = vulns
-			return nil
-		})
-	}
-
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-
-	return utils.Flat(results), nil
-}
-
-func (comparer *purlComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {
+// some purls do contain versions, which cannot be found in the database. An example is git.
+// the purl looks like: pkg:deb/debian/git@v2.30.2-1, while the version we would like it to match is: 1:2.30.2-1 ("1:" prefix)
+func (comparer *purlComparer) GetVulns(purl string, version string, _ string) ([]models.VulnInPackage, error) {
 	// parse the purl
 	p, err := packageurl.FromString(purl)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse purl")
 	}
 
-	version, err := utils.SemverFix(p.Version)
-	if err != nil {
-		slog.Info("could not parse version", "version", p.Version, "purl", purl)
-		return nil, err
+	debug := false
+
+	if strings.Contains(purl, "debian/git") {
+		fmt.Println("purl", purl)
+		fmt.Println(version)
+		debug = true
 	}
 
 	affectedComponents := []models.AffectedComponent{}
-	p.Version = ""
-
-	pURL, err := url.PathUnescape(p.ToString())
+	semVer, err := normalize.SemverFix(version)
+	p.Version = "" // we save the purl without any version inside the database.
 	if err != nil {
-		return nil, errors.Wrap(err, "could not unescape purl path")
+		// we use the fake semver version - if we can convert it.
+		// this just allows best effort ordering
+		comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", p.ToString()).Where("version = ?", version).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)
+	} else {
+		if debug {
+			fmt.Println("semver", semVer, version)
+		}
+
+		// we can use the version from the purl todo a semver range check
+		// check if the package is present in the database
+		comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", p.ToString()).Where(
+			comparer.db.Where(
+				"version = ?", version).
+				Or("semver_introduced IS NULL AND semver_fixed > ?", semVer).
+				Or("semver_introduced < ? AND semver_fixed IS NULL", semVer).
+				Or("semver_introduced < ? AND semver_fixed > ?", semVer, semVer),
+		).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)
 	}
-	// check if the package is present in the database
-	comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", pURL).Where(
-		comparer.db.Where(
-			"version = ?", version).
-			Or("semver_introduced IS NULL AND semver_fixed > ?", version).
-			Or("semver_introduced < ? AND semver_fixed IS NULL", version).
-			Or("semver_introduced < ? AND semver_fixed > ?", version, version),
-	).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)
 
 	vulnerabilities := []models.VulnInPackage{}
 
 	// transform the affected packages to the vulnInPackage struct
 	for _, affectedComponent := range affectedComponents {
 		for _, cve := range affectedComponent.CVE {
+			fixedVersion := affectedComponent.VersionFixed
+			if fixedVersion == nil {
+				fixedVersion = affectedComponent.SemverFixed
+			}
+
 			// append the cve to the vulnerabilities
 			vulnerabilities = append(vulnerabilities, models.VulnInPackage{
 				CVEID:             cve.CVE,
-				FixedVersion:      affectedComponent.SemverFixed,
+				FixedVersion:      fixedVersion,
 				IntroducedVersion: affectedComponent.SemverIntroduced,
 				PackageName:       affectedComponent.PURL,
 				Purl:              purl,

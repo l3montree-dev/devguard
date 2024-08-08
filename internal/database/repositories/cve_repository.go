@@ -93,14 +93,55 @@ func (g *cveRepository) SaveBatch(tx database.DB, cves []models.CVE) error {
 }
 
 func (g *cveRepository) Save(tx database.DB, cve *models.CVE) error {
-	return g.GetDB(tx).Session(
+	return g.GetDB(tx).Clauses(
+		clause.OnConflict{
+			UpdateAll: true,
+		},
+	).Save(cve).Error
+}
+
+func (g *cveRepository) saveBatchCPEMatch(tx database.DB, matches []models.CPEMatch, batchSize int) error {
+	err := g.GetDB(tx).Session(
 		&gorm.Session{
+			Logger:               logger.Default.LogMode(logger.Silent),
 			FullSaveAssociations: true,
 		}).Clauses(
 		clause.OnConflict{
 			UpdateAll: true,
 		},
-	).Save(cve).Error
+	).CreateInBatches(&matches, batchSize).Error
+	// check if we got a protocol error since we are inserting more than 65535 parameters
+	if err != nil && err.Error() == "extended protocol limited to 65535 parameters; extended protocol limited to 65535 parameters" {
+		newBatchSize := batchSize / 2
+		if newBatchSize < 1 {
+			// we can't reduce the batch size anymore
+			// lets try to save the CVEs one by one
+			// this will be slow but it will work
+			for _, match := range matches {
+				tmpCVE := match
+				if err := g.GetDB(tx).Session(
+					&gorm.Session{
+						Logger:               logger.Default.LogMode(logger.Silent),
+						FullSaveAssociations: true,
+					}).Clauses(
+					clause.OnConflict{
+						UpdateAll: true,
+					},
+				).Create(&tmpCVE).Error; err != nil {
+					// log, that we werent able to save the CVE
+					slog.Error("unable to save cpe", "cpe", match.Criteria, "err", err)
+				}
+			}
+			return nil
+		}
+		slog.Warn("protocol error, trying to reduce batch size", "newBatchSize", newBatchSize, "oldBatchSize", batchSize, "err", err)
+		return g.saveBatchCPEMatch(tx, matches, newBatchSize)
+	}
+	return err
+}
+
+func (g *cveRepository) SaveBatchCPEMatch(tx database.DB, matches []models.CPEMatch) error {
+	return g.saveBatchCPEMatch(tx, matches, 1000)
 }
 
 func (g *cveRepository) FindAllListPaged(tx database.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error) {

@@ -36,9 +36,8 @@ type githubBatchClient struct {
 	clients []githubClient
 }
 
-// groups multiple github client - since an org can have multiple installations
+// groups multiple github clients - since an org can have multiple installations
 func newGithubBatchClient(appInstallations []models.GithubAppInstallation) (*githubBatchClient, error) {
-
 	if len(appInstallations) == 0 {
 		slog.Error("no github app installations found")
 		return nil, NoGithubAppInstallationError
@@ -65,6 +64,7 @@ func (githubOrgClient *githubBatchClient) ListRepositories() ([]githubRepository
 			if err != nil {
 				return nil, err
 			}
+
 			return utils.Map(result.Repositories, func(el *github.Repository) githubRepository {
 				return githubRepository{el, client.githubAppInstallationID}
 			}), nil

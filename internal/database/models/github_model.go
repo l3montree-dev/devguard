@@ -39,3 +39,14 @@ type GithubAppInstallation struct {
 func (GithubAppInstallation) TableName() string {
 	return "github_app_installations"
 }
+
+type GithubUser struct {
+	ID            int64  `json:"id" gorm:"primaryKey"`
+	Username      string `json:"username"`
+	AvatarURL     string `json:"avatarUrl"`
+	Organizations []Org  `json:"orgs" gorm:"many2many:github_user_orgs;"`
+}
+
+func (GithubUser) TableName() string {
+	return "github_users"
+}

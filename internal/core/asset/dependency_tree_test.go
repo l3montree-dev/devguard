@@ -24,13 +24,13 @@ import (
 func TestDependencyTree(t *testing.T) {
 	t.Run("buildDependencyTree", func(t *testing.T) {
 		graph := []models.ComponentDependency{
-			{ComponentPurlOrCpe: nil, DependencyPurlOrCpe: "a", Depth: 0},
-			{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "b", Depth: 1},
-			{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "c", Depth: 1},
-			{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "d", Depth: 2},
-			{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "e", Depth: 2},
-			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "f", Depth: 3},
-			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "g", Depth: 3},
+			{ComponentPurl: nil, DependencyPurl: "a", Depth: 0},
+			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "b", Depth: 1},
+			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "c", Depth: 1},
+			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "d", Depth: 2},
+			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "e", Depth: 2},
+			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "f", Depth: 3},
+			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "g", Depth: 3},
 		}
 		tree := BuildDependencyTree(graph)
 
@@ -66,11 +66,11 @@ func TestDependencyTree(t *testing.T) {
 			b <---> c # here is the cycle in the tree
 		*/
 		graph := []models.ComponentDependency{
-			{ComponentPurlOrCpe: nil, DependencyPurlOrCpe: "a", Depth: 0},
-			{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "b", Depth: 1},
-			{ComponentPurlOrCpe: utils.Ptr("a"), DependencyPurlOrCpe: "c", Depth: 1},
-			{ComponentPurlOrCpe: utils.Ptr("b"), DependencyPurlOrCpe: "c", Depth: 2},
-			{ComponentPurlOrCpe: utils.Ptr("c"), DependencyPurlOrCpe: "b", Depth: 2}, // closes the cycle
+			{ComponentPurl: nil, DependencyPurl: "a", Depth: 0},
+			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "b", Depth: 1},
+			{ComponentPurl: utils.Ptr("a"), DependencyPurl: "c", Depth: 1},
+			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "c", Depth: 2},
+			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "b", Depth: 2}, // closes the cycle
 		}
 		tree := BuildDependencyTree(graph)
 

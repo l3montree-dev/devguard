@@ -16,12 +16,11 @@ import (
 type FlawState string
 
 const (
-	FlawStateOpen                FlawState = "open"
-	FlawStateFixed               FlawState = "fixed"    // we did not find the flaw anymore in the last scan!
-	FlawStateAccepted            FlawState = "accepted" // like ignore
-	FlawStateMarkedForMitigation FlawState = "markedForMitigation"
-	FlawStateFalsePositive       FlawState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
-	FlawStateMarkedForTransfer   FlawState = "markedForTransfer"
+	FlawStateOpen              FlawState = "open"
+	FlawStateFixed             FlawState = "fixed"         // we did not find the flaw anymore in the last scan!
+	FlawStateAccepted          FlawState = "accepted"      // like ignore
+	FlawStateFalsePositive     FlawState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
+	FlawStateMarkedForTransfer FlawState = "markedForTransfer"
 )
 
 type Flaw struct {
@@ -35,10 +34,10 @@ type Flaw struct {
 	AssetID  uuid.UUID   `json:"assetId" gorm:"not null;"`
 	State    FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
 
-	CVE                *CVE       `json:"cve"`
-	CVEID              string     `json:"cveId" gorm:"null;type:text;default:null;"`
-	Component          *Component `json:"component" gorm:"foreignKey:ComponentPurlOrCpe;constraint:OnDelete:CASCADE;"`
-	ComponentPurlOrCpe string     `json:"componentPurlOrCpe" gorm:"type:text;default:null;"`
+	CVE           *CVE       `json:"cve"`
+	CVEID         string     `json:"cveId" gorm:"null;type:text;default:null;"`
+	Component     *Component `json:"component" gorm:"foreignKey:ComponentPurl;constraint:OnDelete:CASCADE;"`
+	ComponentPurl string     `json:"componentPurl" gorm:"type:text;default:null;"`
 
 	Effort            *int     `json:"effort" gorm:"default:null;"`
 	RiskAssessment    *int     `json:"riskAssessment" gorm:"default:null;"`
@@ -53,6 +52,9 @@ type Flaw struct {
 	// this is a map of additional data that is parsed from the ArbitraryJsonData field
 	// this is not stored in the database - it just caches the parsed data
 	arbitraryJsonData map[string]any
+
+	TicketID  *string `json:"ticketId" gorm:"default:null;"` // might be set by integrations
+	TicketURL *string `json:"ticketUrl" gorm:"default:null;"`
 
 	CreatedAt time.Time    `json:"createdAt"`
 	UpdatedAt time.Time    `json:"updatedAt"`
@@ -98,13 +100,10 @@ func (m *Flaw) CalculateHash() string {
 	return hash
 }
 
-func (m *Flaw) SetIdHash() {
-	hash := m.CalculateHash()
-	m.ID = hash
-}
-
-func (f *Flaw) BeforeCreate(tx *gorm.DB) (err error) {
-	f.SetIdHash()
+// hook to calculate the hash before creating the flaw
+func (f *Flaw) BeforeSave(tx *gorm.DB) (err error) {
+	hash := f.CalculateHash()
+	f.ID = hash
 	return nil
 }
 

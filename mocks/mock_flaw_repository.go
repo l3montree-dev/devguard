@@ -274,32 +274,41 @@ func (_c *FlawRepository_GetByAssetId_Call) RunAndReturn(run func(*gorm.DB, uuid
 	return _c
 }
 
-// GetByAssetIdPaged provides a mock function with given fields: tx, pageInfo, filter, sort, assetId
-func (_m *FlawRepository) GetByAssetIdPaged(tx *gorm.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], error) {
-	ret := _m.Called(tx, pageInfo, filter, sort, assetId)
+// GetByAssetIdPaged provides a mock function with given fields: tx, pageInfo, search, filter, sort, assetId
+func (_m *FlawRepository) GetByAssetIdPaged(tx *gorm.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error) {
+	ret := _m.Called(tx, pageInfo, search, filter, sort, assetId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByAssetIdPaged")
 	}
 
 	var r0 core.Paged[models.Flaw]
-	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, core.PageInfo, []core.FilterQuery, []core.SortQuery, uuid.UUID) (core.Paged[models.Flaw], error)); ok {
-		return rf(tx, pageInfo, filter, sort, assetId)
+	var r1 map[string]int
+	var r2 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)); ok {
+		return rf(tx, pageInfo, search, filter, sort, assetId)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, core.PageInfo, []core.FilterQuery, []core.SortQuery, uuid.UUID) core.Paged[models.Flaw]); ok {
-		r0 = rf(tx, pageInfo, filter, sort, assetId)
+	if rf, ok := ret.Get(0).(func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) core.Paged[models.Flaw]); ok {
+		r0 = rf(tx, pageInfo, search, filter, sort, assetId)
 	} else {
 		r0 = ret.Get(0).(core.Paged[models.Flaw])
 	}
 
-	if rf, ok := ret.Get(1).(func(*gorm.DB, core.PageInfo, []core.FilterQuery, []core.SortQuery, uuid.UUID) error); ok {
-		r1 = rf(tx, pageInfo, filter, sort, assetId)
+	if rf, ok := ret.Get(1).(func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) map[string]int); ok {
+		r1 = rf(tx, pageInfo, search, filter, sort, assetId)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(map[string]int)
+		}
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) error); ok {
+		r2 = rf(tx, pageInfo, search, filter, sort, assetId)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // FlawRepository_GetByAssetIdPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetIdPaged'
@@ -310,26 +319,27 @@ type FlawRepository_GetByAssetIdPaged_Call struct {
 // GetByAssetIdPaged is a helper method to define mock.On call
 //   - tx *gorm.DB
 //   - pageInfo core.PageInfo
+//   - search string
 //   - filter []core.FilterQuery
 //   - sort []core.SortQuery
 //   - assetId uuid.UUID
-func (_e *FlawRepository_Expecter) GetByAssetIdPaged(tx interface{}, pageInfo interface{}, filter interface{}, sort interface{}, assetId interface{}) *FlawRepository_GetByAssetIdPaged_Call {
-	return &FlawRepository_GetByAssetIdPaged_Call{Call: _e.mock.On("GetByAssetIdPaged", tx, pageInfo, filter, sort, assetId)}
+func (_e *FlawRepository_Expecter) GetByAssetIdPaged(tx interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}, assetId interface{}) *FlawRepository_GetByAssetIdPaged_Call {
+	return &FlawRepository_GetByAssetIdPaged_Call{Call: _e.mock.On("GetByAssetIdPaged", tx, pageInfo, search, filter, sort, assetId)}
 }
 
-func (_c *FlawRepository_GetByAssetIdPaged_Call) Run(run func(tx *gorm.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID)) *FlawRepository_GetByAssetIdPaged_Call {
+func (_c *FlawRepository_GetByAssetIdPaged_Call) Run(run func(tx *gorm.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID)) *FlawRepository_GetByAssetIdPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(core.PageInfo), args[2].([]core.FilterQuery), args[3].([]core.SortQuery), args[4].(uuid.UUID))
+		run(args[0].(*gorm.DB), args[1].(core.PageInfo), args[2].(string), args[3].([]core.FilterQuery), args[4].([]core.SortQuery), args[5].(uuid.UUID))
 	})
 	return _c
 }
 
-func (_c *FlawRepository_GetByAssetIdPaged_Call) Return(_a0 core.Paged[models.Flaw], _a1 error) *FlawRepository_GetByAssetIdPaged_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *FlawRepository_GetByAssetIdPaged_Call) Return(_a0 core.Paged[models.Flaw], _a1 map[string]int, _a2 error) *FlawRepository_GetByAssetIdPaged_Call {
+	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *FlawRepository_GetByAssetIdPaged_Call) RunAndReturn(run func(*gorm.DB, core.PageInfo, []core.FilterQuery, []core.SortQuery, uuid.UUID) (core.Paged[models.Flaw], error)) *FlawRepository_GetByAssetIdPaged_Call {
+func (_c *FlawRepository_GetByAssetIdPaged_Call) RunAndReturn(run func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)) *FlawRepository_GetByAssetIdPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }

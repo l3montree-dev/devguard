@@ -226,6 +226,7 @@ func multiTenantMiddleware(rbacProvider accesscontrol.RBACProvider, organization
 			// set the RBAC in the context
 			c.Set("rbac", domainRBAC)
 
+			c.Set("orgSlug", tenant)
 			// continue to the request
 			return next(c)
 		}
@@ -256,6 +257,7 @@ func health(c echo.Context) error {
 }
 
 func Start(db core.DB) {
+
 	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_PUBLIC"))
 	oryAdmin := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_ADMIN"))
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
@@ -287,7 +289,7 @@ func Start(db core.DB) {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
-	assetController := asset.NewHttpController(assetRepository, componentRepository, scan.NewPurlComparer(db), flawRepository, assetService)
+	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
 	statisticsController := statistics.NewHttpController(statisticsService)
@@ -348,6 +350,8 @@ func Start(db core.DB) {
 	tenantRouter.DELETE("/", orgController.Delete, core.AccessControlMiddleware("organization", accesscontrol.ActionDelete))
 	tenantRouter.GET("/", orgController.Read, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 
+	tenantRouter.PATCH("/", orgController.Update, core.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
+
 	tenantRouter.GET("/metrics/", orgController.Metrics)
 
 	tenantRouter.GET("/members/", orgController.Members)
@@ -367,8 +371,9 @@ func Start(db core.DB) {
 
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC("asset", accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
+	assetRouter.GET("/metrics/", assetController.Metrics)
 	assetRouter.GET("/dependency-graph/", assetController.DependencyGraph)
-	assetRouter.GET("/affected-packages/", assetController.AffectedPackages)
+	assetRouter.GET("/affected-components/", assetController.AffectedComponents)
 	assetRouter.GET("/sbom.json/", assetController.SBOMJSON)
 	assetRouter.GET("/sbom.xml/", assetController.SBOMXML)
 
@@ -383,6 +388,7 @@ func Start(db core.DB) {
 	flawRouter.GET("/:flawId/", flawController.Read)
 
 	flawRouter.POST("/:flawId/", flawController.CreateEvent, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
+	flawRouter.POST("/:flawId/mitigate/", flawController.Mitigate, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

@@ -86,6 +86,14 @@ func GetProjectSlug(c Context) (string, error) {
 	return projectID, nil
 }
 
+func GetOrgSlug(c Context) (string, error) {
+	orgSlug := GetParam(c, "orgSlug")
+	if orgSlug == "" {
+		return "", fmt.Errorf("could not get org slug")
+	}
+	return orgSlug, nil
+}
+
 func GetAssetSlug(c Context) (string, error) {
 	assetSlug := GetParam(c, "assetSlug")
 	if assetSlug == "" {

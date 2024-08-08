@@ -31,14 +31,10 @@
 package main
 
 import (
-	"log/slog"
 	"os"
-	"time"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-cli/commands"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/spf13/cobra"
 )
 
@@ -56,130 +52,9 @@ func Execute() {
 }
 
 func init() {
-	riskCmd := cobra.Command{
-		Use:   "risk",
-		Short: "Risk Assessment",
-	}
-
-	calculateCmd := cobra.Command{
-		Use:   "calculate",
-		Short: "Will recalculate the risk assessments",
-		Args:  cobra.ExactArgs(0),
-		Run: func(cmd *cobra.Command, args []string) {
-			core.LoadConfig() // nolint
-			database, err := core.DatabaseFactory()
-			if err != nil {
-				slog.Error("could not connect to database", "err", err)
-				return
-			}
-
-			flawRepository := repositories.NewFlawRepository(database)
-			flawEventRepository := repositories.NewFlawEventRepository(database)
-			cveRepository := repositories.NewCVERepository(database)
-			assetRepository := repositories.NewAssetRepository(database)
-			flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
-
-			if err := flawService.RecalculateAllRawRiskAssessments(); err != nil {
-				slog.Error("could not recalculate risk assessments", "err", err)
-				return
-			}
-		},
-	}
-
-	vulndbCmd := cobra.Command{
-		Use:   "vulndb",
-		Short: "Vulnerability Database",
-	}
-	repairCmd := cobra.Command{
-		Use:   "repair",
-		Short: "Will repair the vulnerability database",
-		Args:  cobra.ExactArgs(0),
-		Run: func(cmd *cobra.Command, args []string) {
-			// check if after flag is set
-			after, _ := cmd.Flags().GetString("after")
-			startIndex, _ := cmd.Flags().GetInt("startIndex")
-
-			core.LoadConfig() // nolint
-			database, err := core.DatabaseFactory()
-			if err != nil {
-				slog.Error("could not connect to database", "err", err)
-				return
-			}
-
-			cveRepository := repositories.NewCVERepository(database)
-			cweRepository := repositories.NewCWERepository(database)
-			affectedCmpRepository := repositories.NewAffectedCmpRepository(database)
-			nvdService := vulndb.NewNVDService(cveRepository)
-			mitreService := vulndb.NewMitreService(cweRepository)
-			epssService := vulndb.NewEPSSService(nvdService, cveRepository)
-			osvService := vulndb.NewOSVService(affectedCmpRepository)
-
-			now := time.Now()
-			slog.Info("starting cwe database repair")
-			if err := mitreService.Mirror(); err != nil {
-				slog.Error("could not mirror cwe database", "err", err)
-				return
-			}
-			slog.Info("finished cwe database repair", "duration", time.Since(now))
-
-			slog.Info("starting cve database repair")
-			now = time.Now()
-			if after != "" {
-				// we do a partial repair
-				// try to parse the date
-				afterDate, err := time.Parse("2006-01-02", after)
-				if err != nil {
-					slog.Error("could not parse after date", "err", err, "provided", after, "expectedFormat", "2006-01-02")
-					return
-				}
-				err = nvdService.FetchAfter(afterDate)
-				if err != nil {
-					slog.Error("could not fetch after date", "err", err)
-					return
-				}
-
-			} else {
-				if startIndex != 0 {
-					err = nvdService.FetchAfterIndex(startIndex)
-					if err != nil {
-						slog.Error("could not fetch after index", "err", err)
-						return
-					}
-				} else {
-					// just redo the intitial sync
-					err = nvdService.InitialPopulation()
-					if err != nil {
-						slog.Error("could not do initial sync", "err", err)
-						return
-					}
-				}
-			}
-			slog.Info("finished cve database repair", "duration", time.Since(now))
-			slog.Info("starting epss database repair")
-			now = time.Now()
-
-			if err := epssService.Mirror(); err != nil {
-				slog.Error("could not repair epss database", "err", err)
-				return
-			}
-			slog.Info("finished epss database repair", "duration", time.Since(now))
-			slog.Info("starting osv database repair")
-			now = time.Now()
-			if err := osvService.Mirror(); err != nil {
-				slog.Error("could not repair osv database", "err", err)
-				return
-			}
-			slog.Info("finished osv database repair", "duration", time.Since(now))
-		},
-	}
-	repairCmd.Flags().String("after", "", "allows to only repair a subset of data. This is used to identify the 'last correct' date in the nvd database. The sync will only include cve modifications in the interval [after, now]. Format: 2006-01-02")
-	repairCmd.Flags().Int("startIndex", 0, "provide a start index to fetch the data from. This is useful after an initial sync failed")
-
-	riskCmd.AddCommand(&calculateCmd)
-
-	vulndbCmd.AddCommand(&repairCmd)
-	rootCmd.AddCommand(&vulndbCmd)
-	rootCmd.AddCommand(&riskCmd)
+	rootCmd.AddCommand(commands.NewVulndbCommand())
+	rootCmd.AddCommand(commands.NewRiskCommand())
+	rootCmd.AddCommand(commands.NewScanCommand())
 }
 
 func main() {

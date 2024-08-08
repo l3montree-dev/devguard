@@ -16,11 +16,14 @@
 package scan
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"golang.org/x/mod/semver"
 )
 
 type cpeComparer struct {
@@ -33,9 +36,9 @@ func NewCPEComparer(db core.DB) *cpeComparer {
 	}
 }
 
-func (c *cpeComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {
+func (c *cpeComparer) GetVulns(purl string, notASemverVersion string, componentType string) ([]models.VulnInPackage, error) {
 	// convert the purl to a cpe
-	cpe, err := utils.PurlToCPE(purl)
+	cpe, err := normalize.PurlToCPE(purl, componentType)
 	if err != nil {
 		return nil, err
 	}
@@ -44,28 +47,102 @@ func (c *cpeComparer) GetVulns(purl string) ([]models.VulnInPackage, error) {
 	// split the criteria into its parts
 	parts := strings.Split(cpe, ":")
 	part := parts[2]
-	vendor := parts[3]
+	// vendor := parts[3]
 	product := parts[4]
 	version := parts[5]
+	// remove any digit suffixes from the product
+	product = normalize.CPEProductName(product)
+	version = normalize.CPEProductVersion(version)
+
+	debug := false
+
+	if strings.Contains(purl, "perl-modules") {
+		fmt.Println("purl", purl)
+		fmt.Println("cpe", cpe)
+
+		debug = true
+	}
 
 	cpeMatches := []models.CPEMatch{}
 
-	c.db.Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (vendor = ? OR vendor = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_including >= ? OR version_end_including = '') AND (version_start_including <= ? OR version_start_including = '')", part, vendor, product, version, version, version).Preload("CVEs").Find(&cpeMatches)
-
-	vulns := []models.VulnInPackage{}
+	if debug {
+		c.db.Debug().Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding IS NULL) AND (version_end_including >= ? OR version_end_including IS NULL) AND (version_start_including <= ? OR version_start_including IS NULL) AND (version_start_excluding < ? OR version_start_excluding IS NULL) AND vulnerable = true", part, product, version, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
+	} else {
+		c.db.Model(models.CPEMatch{}).Where("(part = ? OR part = '*') AND (product = ? OR product = '*') AND (version = ? OR version = '*') AND (version_end_excluding > ? OR version_end_excluding IS NULL) AND (version_end_including >= ? OR version_end_including IS NULL) AND (version_start_including <= ? OR version_start_including IS NULL) AND (version_start_excluding < ? OR version_start_excluding IS NULL) AND vulnerable = true", part, product, version, version, version, version, version).Preload("CVEs").Find(&cpeMatches)
+	}
+	// pg_semver sometimes gets the versions wrong. Lets use Go, which is more reliable todo a version check
+	filteredMatches := []models.CPEMatch{}
 	for _, cpeMatch := range cpeMatches {
+		if debug {
+			fmt.Println("found cpe match", cpeMatch.VersionStartIncluding, cpeMatch.VersionEndExcluding, cpeMatch.VersionEndIncluding, version, semver.IsValid("v"+utils.SafeDereference(cpeMatch.VersionStartIncluding)), semver.IsValid("v"+utils.SafeDereference(cpeMatch.VersionEndExcluding)), semver.IsValid("v"+utils.SafeDereference(cpeMatch.VersionEndIncluding)), semver.IsValid("v"+version))
+		}
+		if cpeMatch.VersionStartIncluding != nil {
+			if semver.Compare("v"+*cpeMatch.VersionStartIncluding, "v"+version) > 0 {
+				// version start including has to be smaller or equal to the version
+				if debug {
+					fmt.Println("version start including has to be smaller or equal to the version", "cpeMatch", cpeMatch.VersionStartIncluding, "version", version)
+				}
+				continue
+			}
+		}
+
+		if cpeMatch.VersionEndExcluding != nil {
+			if semver.Compare("v"+*cpeMatch.VersionEndExcluding, "v"+version) <= 0 {
+				// version end excluding has to be bigger than the version
+				if debug {
+					fmt.Println("version end excluding has to be bigger than the version", "cpeMatch", cpeMatch.VersionEndExcluding, "version", version)
+				}
+				continue
+			} else if debug {
+				fmt.Println("version end excluding has to be bigger than the version", "cpeMatch", cpeMatch.VersionEndExcluding, "version",
+					version)
+			}
+		}
+
+		if cpeMatch.VersionEndIncluding != nil {
+			if semver.Compare("v"+*cpeMatch.VersionEndIncluding, "v"+version) < 0 {
+				// version end including has to be bigger or equal to the version
+				if debug {
+					fmt.Println("version end including has to be bigger or equal to the version", "cpeMatch", cpeMatch.VersionEndIncluding, "version", version)
+				}
+				continue
+			}
+		}
+		if debug {
+			fmt.Println("version is in the range")
+		}
+		// if we reach this point, the version is in the range
+		filteredMatches = append(filteredMatches, cpeMatch)
+
+	}
+
+	if debug {
+		fmt.Println("filteredMatches", filteredMatches)
+	}
+	vulns := []models.VulnInPackage{}
+	for _, cpeMatch := range filteredMatches {
 		tmp := cpeMatch
+		fixedVersion := tmp.VersionEndExcluding
+		if fixedVersion == nil {
+			fixedVersion = tmp.VersionEndIncluding
+		}
+
+		if debug {
+			fmt.Println("fixedVersion", fixedVersion)
+		}
+
 		for _, cve := range cpeMatch.CVEs {
 			vulns = append(vulns, models.VulnInPackage{
 				CVEID:             cve.CVE,
 				Purl:              purl,
-				FixedVersion:      &tmp.VersionEndIncluding,
-				IntroducedVersion: &tmp.VersionStartIncluding,
+				FixedVersion:      fixedVersion,
+				IntroducedVersion: tmp.VersionStartIncluding,
 				InstalledVersion:  version,
 				CVE:               *cve,
 				PackageName:       purl,
 			})
 		}
 	}
+
 	return vulns, nil
 }

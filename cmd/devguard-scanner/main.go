@@ -195,13 +195,30 @@ func isValidPath(path string) (bool, error) {
 }
 
 func getCurrentVersion(path string) (string, int, error) {
-	cmd := exec.Command("git", "tag", "--sort=-v:refname")
+	// mark the path as safe git directory
+	cmd := exec.Command("git", "config", "--global", "--add", "safe.directory", getDirFromPath(path)) // nolint:all
 	var out bytes.Buffer
+	var errOut bytes.Buffer
 	cmd.Stdout = &out
-	cmd.Dir = getDirFromPath(path)
+	cmd.Stderr = &errOut
 	err := cmd.Run()
 	if err != nil {
-		slog.Info("could not run git tag", "err", err, "path", getDirFromPath(path))
+		slog.Info("could not mark path as safe", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
+		return "", 0, err
+	}
+
+	// reset the buffer
+	out.Reset()
+	errOut.Reset()
+
+	cmd = exec.Command("git", "tag", "--sort=-v:refname")
+
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	cmd.Dir = getDirFromPath(path)
+	err = cmd.Run()
+	if err != nil {
+		slog.Info("could not run git tag", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
 		return "", 0, err
 	}
 
@@ -223,10 +240,15 @@ func getCurrentVersion(path string) (string, int, error) {
 	} else {
 		cmd = exec.Command("git", "rev-list", "--count", latestTag+"..HEAD") // nolint:all:Latest Tag is already checked against a semver regex.
 		var commitOut bytes.Buffer
+		errOut = bytes.Buffer{}
 		cmd.Stdout = &commitOut
+		cmd.Stderr = &errOut
 		cmd.Dir = getDirFromPath(path)
 		err = cmd.Run()
 		if err != nil {
+			slog.Error(
+				"could not run git rev-list --count", "err", err, "path", getDirFromPath(path), "msg", errOut.String(),
+			)
 			log.Fatal(err)
 		}
 
@@ -502,7 +524,7 @@ func init() {
 			// execute cdxgen and git help commands. If they throw an error, print it to the console
 			// if they don't, print a success message
 
-			for _, command := range []string{"cdxgen", "git"} {
+			for _, command := range []string{"trivy", "git"} {
 				cmd := exec.Command(command, "--help")
 				// get the output
 				var out bytes.Buffer

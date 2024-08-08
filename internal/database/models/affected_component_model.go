@@ -21,68 +21,17 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
+	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
+	"gorm.io/gorm"
 )
 
-type pkg struct {
-	Name      string `json:"name"`
-	Ecosystem string `json:"ecosystem"`
-	Purl      string `json:"purl"`
-}
-
-type semverEvent struct {
-	Introduced string `json:"introduced,omitempty"`
-	Fixed      string `json:"fixed,omitempty"`
-}
-
-type rng struct {
-	Type   string        `json:"type"`
-	Events []semverEvent `json:"events"`
-}
-
-type Affected struct {
-	Package          pkg      `json:"package"`
-	Ranges           []rng    `json:"ranges"`
-	Versions         []string `json:"versions"`
-	DatabaseSpecific struct {
-		Source string `json:"source"`
-	} `json:"database_specific"`
-}
-
-type OSV struct {
-	ID            string     `json:"id"`
-	Summary       string     `json:"summary"`
-	Modified      time.Time  `json:"modified"`
-	Published     time.Time  `json:"published"`
-	Related       []string   `json:"related"`
-	Aliases       []string   `json:"aliases"`
-	Affected      []Affected `json:"affected"`
-	SchemaVersion string     `json:"schema_version"`
-}
-
-func (osv OSV) GetCVE() []string {
-	cves := make([]string, 0)
-	for _, alias := range osv.Aliases {
-		if strings.HasPrefix(alias, "CVE-") {
-			cves = append(cves, alias)
-		}
-	}
-	// check if the osv itself is a cve
-	if strings.HasPrefix(osv.ID, "CVE-") {
-		cves = append(cves, osv.ID)
-	}
-
-	return cves
-}
-func (osv OSV) IsCVE() bool {
-	return len(osv.GetCVE()) > 0
-}
-
 type AffectedComponent struct {
-	ID               string  `json:"id" gorm:"primaryKey;"`
+	ID               string `json:"id" gorm:"primaryKey;"`
+	Source           string
 	PURL             string  `json:"purl" gorm:"type:text;column:purl;index"`
 	Ecosystem        string  `json:"ecosystem" gorm:"type:text;"`
 	Scheme           string  `json:"scheme" gorm:"type:text;"`
@@ -95,6 +44,9 @@ type AffectedComponent struct {
 	SemverIntroduced *string `json:"semverStart" gorm:"type:semver;index"`
 	SemverFixed      *string `json:"semverEnd" gorm:"type:semver;index"`
 
+	VersionIntroduced *string `json:"versionIntroduced" gorm:"index"` // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
+	VersionFixed      *string `json:"versionFixed" gorm:"index"`      // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
+
 	CVE []CVE `json:"cves" gorm:"many2many:cve_affected_component;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
@@ -102,26 +54,31 @@ func (affectedComponent AffectedComponent) TableName() string {
 	return "affected_components"
 }
 
-func (affectedComponent *AffectedComponent) SetIdHash() {
-	// build the stable map
-	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s",
-		affectedComponent.PURL,
-		affectedComponent.Ecosystem,
-		affectedComponent.Name,
-		utils.SafeDereference(affectedComponent.Namespace),
-		utils.SafeDereference(affectedComponent.Qualifiers),
-		utils.SafeDereference(affectedComponent.Subpath),
-		utils.SafeDereference(affectedComponent.Version),
-		utils.SafeDereference(affectedComponent.SemverIntroduced),
-		utils.SafeDereference(affectedComponent.SemverFixed))
+func (a AffectedComponent) CalculateHash() string {
+	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s",
+		a.PURL,
+		a.Ecosystem,
+		a.Name,
+		utils.SafeDereference(a.Namespace),
+		utils.SafeDereference(a.Qualifiers),
+		utils.SafeDereference(a.Subpath),
+		utils.SafeDereference(a.Version),
+		utils.SafeDereference(a.SemverIntroduced),
+		utils.SafeDereference(a.SemverFixed),
+		utils.SafeDereference(a.VersionIntroduced),
+		utils.SafeDereference(a.VersionFixed),
+	)
 
 	hash := sha256.Sum256([]byte(toHash))
-	hashString := hex.EncodeToString(hash[:])
-
-	affectedComponent.ID = hashString
+	return hex.EncodeToString(hash[:])
 }
 
-func (osv OSV) GetAffectedPackages() []AffectedComponent {
+func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
+	affectedComponent.ID = affectedComponent.CalculateHash()
+	return nil
+}
+
+func AffectedComponentFromOSV(osv obj.OSV) []AffectedComponent {
 	affectedComponents := make([]AffectedComponent, 0)
 
 	cveIds := osv.GetCVE()
@@ -134,6 +91,18 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 		// check if the affected package has a purl
 		if affected.Package.Purl == "" {
 			continue
+		}
+		if affected.EcosystemSpecific != nil {
+			// get the urgency - debian defines it: https://security-team.debian.org/security_tracker.html#severity-levels
+			if urgency, ok := affected.EcosystemSpecific["urgency"]; ok {
+				if urgencyStr, ok := urgency.(string); ok {
+					urgencyStr = strings.ToLower(urgencyStr)
+					if urgencyStr == "unimportant" {
+						// just continue
+						continue
+					}
+				}
+			}
 		}
 		purl, err := packageurl.FromString(affected.Package.Purl)
 		if err != nil {
@@ -166,18 +135,18 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 
 				var semverIntroducedPtr *string
 				var semverFixedPtr *string
-				semverIntroduced, err := utils.SemverFix(tmpE.Introduced)
+				semverIntroduced, err := normalize.SemverFix(tmpE.Introduced)
 				if err == nil {
 					semverIntroducedPtr = &semverIntroduced
 				}
-				semverFixed, err := utils.SemverFix(fixed)
+				semverFixed, err := normalize.SemverFix(fixed)
 				if err == nil {
 					semverFixedPtr = &semverFixed
 				}
 
 				// create the affected package
 				affectedComponent := AffectedComponent{
-					PURL:       affected.Package.Purl,
+					PURL:       strings.Split(affected.Package.Purl, "?")[0],
 					Ecosystem:  affected.Package.Ecosystem,
 					Scheme:     "pkg",
 					Type:       purl.Type,
@@ -186,12 +155,13 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 					Qualifiers: &qualifiersStr,
 					Subpath:    &purl.Subpath,
 
+					Source: "osv",
+
 					SemverIntroduced: semverIntroducedPtr,
 					SemverFixed:      semverFixedPtr,
 
 					CVE: cves,
 				}
-				affectedComponent.SetIdHash()
 				affectedComponents = append(affectedComponents, affectedComponent)
 			}
 		}
@@ -201,7 +171,7 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 			for _, v := range affected.Versions {
 				tmpV := v
 				affectedComponent := AffectedComponent{
-					PURL:       affected.Package.Purl,
+					PURL:       strings.Split(affected.Package.Purl, "?")[0],
 					Ecosystem:  affected.Package.Ecosystem,
 					Scheme:     "pkg",
 					Type:       purl.Type,
@@ -211,9 +181,10 @@ func (osv OSV) GetAffectedPackages() []AffectedComponent {
 					Subpath:    &purl.Subpath,
 					Version:    &tmpV,
 
+					Source: "osv",
+
 					CVE: cves,
 				}
-				affectedComponent.SetIdHash()
 				affectedComponents = append(affectedComponents, affectedComponent)
 			}
 		}

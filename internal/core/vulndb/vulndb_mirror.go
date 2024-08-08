@@ -14,6 +14,7 @@ type cveRepository interface {
 	repositories.Repository[string, models.CVE, database.DB]
 	FindByID(id string) (models.CVE, error)
 	GetLastModDate() (time.Time, error)
+	SaveBatchCPEMatch(tx database.DB, matches []models.CPEMatch) error
 }
 
 type configService interface {
@@ -28,7 +29,7 @@ type leaderElector interface {
 func StartMirror(database core.DB, leaderElector leaderElector, configService configService) {
 	cveRepository := repositories.NewCVERepository(database)
 	cweRepository := repositories.NewCWERepository(database)
-	affectedCmpRepository := repositories.NewAffectedCmpRepository(database)
+	affectedComponentRepository := repositories.NewAffectedComponentRepository(database)
 	exploitRepository := repositories.NewExploitRepository(database)
 
 	nvdService := NewNVDService(cveRepository)
@@ -38,16 +39,18 @@ func StartMirror(database core.DB, leaderElector leaderElector, configService co
 	exploitDBService := NewExploitDBService(nvdService, exploitRepository)
 	githubExploitDBService := NewGithubExploitDBService(exploitRepository)
 
-	osvService := NewOSVService(affectedCmpRepository)
+	osvService := NewOSVService(affectedComponentRepository)
+	cveList := NewCVEListService(cveRepository)
 
 	//for flaw service
 	flawRepository := repositories.NewFlawRepository(database)
 	flawEventRepository := repositories.NewFlawEventRepository(database)
 	assetRepository := repositories.NewAssetRepository(database)
 	flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
+	dsa := NewDebianSecurityTracker(affectedComponentRepository)
 
 	// start the mirror process.
-	vulnDBService := newVulnDBService(leaderElector, mitreService, epssService, nvdService, configService, osvService, exploitDBService, githubExploitDBService, flawService)
+	vulnDBService := newVulnDBService(leaderElector, mitreService, epssService, nvdService, configService, osvService, exploitDBService, githubExploitDBService, flawService, dsa, cveList)
 
 	vulnDBService.startMirrorDaemon()
 }

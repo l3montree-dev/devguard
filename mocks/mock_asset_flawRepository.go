@@ -82,21 +82,21 @@ func (_c *AssetFlawRepository_GetAllFlawsByAssetID_Call) RunAndReturn(run func(*
 	return _c
 }
 
-// GetFlawsByPurlOrCpe provides a mock function with given fields: tx, purlOrCpe
-func (_m *AssetFlawRepository) GetFlawsByPurlOrCpe(tx *gorm.DB, purlOrCpe []string) ([]models.Flaw, error) {
-	ret := _m.Called(tx, purlOrCpe)
+// GetFlawsByPurl provides a mock function with given fields: tx, purl
+func (_m *AssetFlawRepository) GetFlawsByPurl(tx *gorm.DB, purl []string) ([]models.Flaw, error) {
+	ret := _m.Called(tx, purl)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetFlawsByPurlOrCpe")
+		panic("no return value specified for GetFlawsByPurl")
 	}
 
 	var r0 []models.Flaw
 	var r1 error
 	if rf, ok := ret.Get(0).(func(*gorm.DB, []string) ([]models.Flaw, error)); ok {
-		return rf(tx, purlOrCpe)
+		return rf(tx, purl)
 	}
 	if rf, ok := ret.Get(0).(func(*gorm.DB, []string) []models.Flaw); ok {
-		r0 = rf(tx, purlOrCpe)
+		r0 = rf(tx, purl)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Flaw)
@@ -104,7 +104,7 @@ func (_m *AssetFlawRepository) GetFlawsByPurlOrCpe(tx *gorm.DB, purlOrCpe []stri
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, []string) error); ok {
-		r1 = rf(tx, purlOrCpe)
+		r1 = rf(tx, purl)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -112,31 +112,31 @@ func (_m *AssetFlawRepository) GetFlawsByPurlOrCpe(tx *gorm.DB, purlOrCpe []stri
 	return r0, r1
 }
 
-// AssetFlawRepository_GetFlawsByPurlOrCpe_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFlawsByPurlOrCpe'
-type AssetFlawRepository_GetFlawsByPurlOrCpe_Call struct {
+// AssetFlawRepository_GetFlawsByPurl_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFlawsByPurl'
+type AssetFlawRepository_GetFlawsByPurl_Call struct {
 	*mock.Call
 }
 
-// GetFlawsByPurlOrCpe is a helper method to define mock.On call
+// GetFlawsByPurl is a helper method to define mock.On call
 //   - tx *gorm.DB
-//   - purlOrCpe []string
-func (_e *AssetFlawRepository_Expecter) GetFlawsByPurlOrCpe(tx interface{}, purlOrCpe interface{}) *AssetFlawRepository_GetFlawsByPurlOrCpe_Call {
-	return &AssetFlawRepository_GetFlawsByPurlOrCpe_Call{Call: _e.mock.On("GetFlawsByPurlOrCpe", tx, purlOrCpe)}
+//   - purl []string
+func (_e *AssetFlawRepository_Expecter) GetFlawsByPurl(tx interface{}, purl interface{}) *AssetFlawRepository_GetFlawsByPurl_Call {
+	return &AssetFlawRepository_GetFlawsByPurl_Call{Call: _e.mock.On("GetFlawsByPurl", tx, purl)}
 }
 
-func (_c *AssetFlawRepository_GetFlawsByPurlOrCpe_Call) Run(run func(tx *gorm.DB, purlOrCpe []string)) *AssetFlawRepository_GetFlawsByPurlOrCpe_Call {
+func (_c *AssetFlawRepository_GetFlawsByPurl_Call) Run(run func(tx *gorm.DB, purl []string)) *AssetFlawRepository_GetFlawsByPurl_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(*gorm.DB), args[1].([]string))
 	})
 	return _c
 }
 
-func (_c *AssetFlawRepository_GetFlawsByPurlOrCpe_Call) Return(_a0 []models.Flaw, _a1 error) *AssetFlawRepository_GetFlawsByPurlOrCpe_Call {
+func (_c *AssetFlawRepository_GetFlawsByPurl_Call) Return(_a0 []models.Flaw, _a1 error) *AssetFlawRepository_GetFlawsByPurl_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *AssetFlawRepository_GetFlawsByPurlOrCpe_Call) RunAndReturn(run func(*gorm.DB, []string) ([]models.Flaw, error)) *AssetFlawRepository_GetFlawsByPurlOrCpe_Call {
+func (_c *AssetFlawRepository_GetFlawsByPurl_Call) RunAndReturn(run func(*gorm.DB, []string) ([]models.Flaw, error)) *AssetFlawRepository_GetFlawsByPurl_Call {
 	_c.Call.Return(run)
 	return _c
 }

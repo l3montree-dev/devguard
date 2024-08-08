@@ -29,19 +29,23 @@ func NewIntegrationController() *integrationController {
 }
 
 func (c *integrationController) ListRepositories(ctx core.Context) error {
-	ThirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	repos, err := ThirdPartyIntegration.ListRepositories(ctx)
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+
+	if !thirdPartyIntegration.IntegrationEnabled(ctx) {
+		return ctx.JSON(404, "no integration enabled")
+	}
+
+	repos, err := thirdPartyIntegration.ListRepositories(ctx)
 	if err != nil {
-		return err
+		return ctx.JSON(500, "could not list repositories")
 	}
 
 	return ctx.JSON(200, repos)
 }
 
 func (c *integrationController) FinishInstallation(ctx core.Context) error {
-
-	ThirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	if err := ThirdPartyIntegration.FinishInstallation(ctx); err != nil {
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	if err := thirdPartyIntegration.FinishInstallation(ctx); err != nil {
 		slog.Error("could not finish installation", "err", err)
 		return err
 	}

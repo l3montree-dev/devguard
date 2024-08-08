@@ -17,12 +17,11 @@ package scan
 
 import (
 	"log/slog"
-	"net/url"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -37,8 +36,8 @@ type componentRepository interface {
 }
 
 type assetService interface {
-	HandleScanResult(user string, scannerID string, asset models.Asset, flaws []models.Flaw) (amountOpened int, amountClosed int, newState []models.Flaw, err error)
-	UpdateSBOM(asset models.Asset, scanType string, version string, sbom *cdx.BOM) error
+	HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanType string, version string, scannerID string, userID string) (amountOpened int, amountClose int, newState []models.Flaw, err error)
+	UpdateSBOM(asset models.Asset, scanType string, version string, sbom normalize.SBOM) error
 }
 
 type httpController struct {
@@ -75,6 +74,7 @@ func (s *httpController) Scan(c core.Context) error {
 	if err := decoder.Decode(bom); err != nil {
 		return err
 	}
+	normalizedBom := normalize.FromCdxBom(bom, true)
 	assetObj := core.GetAsset(c)
 
 	userID := core.GetSession(c).GetUserID()
@@ -95,7 +95,7 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	var err error
-	version, err = utils.SemverFix(version)
+	version, err = normalize.SemverFix(version)
 	// check if valid semver
 	if err != nil {
 		slog.Error("invalid semver version", "version", version)
@@ -103,13 +103,13 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// update the sbom in the database in parallel
-	if err := s.assetService.UpdateSBOM(assetObj, scanType, version, bom); err != nil {
+	if err := s.assetService.UpdateSBOM(assetObj, scanType, version, normalizedBom); err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not update sbom"})
 	}
 
 	// scan the bom we just retrieved.
-	vulns, err := s.sbomScanner.Scan(bom)
+	vulns, err := s.sbomScanner.Scan(normalizedBom)
 	if err != nil {
 		slog.Error("could not scan file", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not scan file"})
@@ -117,12 +117,13 @@ func (s *httpController) Scan(c core.Context) error {
 
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
-		scannerID = "github.com/l3montree-dev/devguard/cmd/devguard-scanner"
+		scannerID = "github.com/l3montree-dev/devguard/cmd/devguard-scanner/" + scanType
 	}
 
-	// create flaws out of those vulnerabilities
-	flaws := []models.Flaw{}
+	// handle the scan result
+	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(assetObj, vulns, scanType, version, scannerID, userID)
 
+<<<<<<< HEAD
 	// load all asset components again and build a dependency tree
 	AssetComponents, err := s.componentRepository.LoadAssetComponents(nil, assetObj, scanType, version)
 	if err != nil {
@@ -178,6 +179,8 @@ func (s *httpController) Scan(c core.Context) error {
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current flaws
 	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(userID, scannerID, assetObj, flaws)
+=======
+>>>>>>> origin/main
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
@@ -188,20 +191,20 @@ func (s *httpController) Scan(c core.Context) error {
 		AmountClosed: amountClose,
 		Flaws: utils.Map(newState, func(f models.Flaw) flaw.FlawDTO {
 			return flaw.FlawDTO{
-				ID:                 f.ID,
-				ScannerID:          f.AssetID.String(),
-				State:              f.State,
-				CVE:                f.CVE,
-				Component:          f.Component,
-				CVEID:              f.CVEID,
-				ComponentPurlOrCpe: f.ComponentPurlOrCpe,
-				Effort:             f.Effort,
-				RiskAssessment:     f.RiskAssessment,
-				RawRiskAssessment:  f.RawRiskAssessment,
-				Priority:           f.Priority,
-				ArbitraryJsonData:  f.GetArbitraryJsonData(),
-				LastDetected:       f.LastDetected,
-				CreatedAt:          f.CreatedAt,
+				ID:                f.ID,
+				ScannerID:         f.AssetID.String(),
+				State:             f.State,
+				CVE:               f.CVE,
+				Component:         f.Component,
+				CVEID:             f.CVEID,
+				ComponentPurl:     f.ComponentPurl,
+				Effort:            f.Effort,
+				RiskAssessment:    f.RiskAssessment,
+				RawRiskAssessment: f.RawRiskAssessment,
+				Priority:          f.Priority,
+				ArbitraryJsonData: f.GetArbitraryJsonData(),
+				LastDetected:      f.LastDetected,
+				CreatedAt:         f.CreatedAt,
 			}
 		})})
 }

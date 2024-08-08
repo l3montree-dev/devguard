@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package utils
+package normalize
 
 import (
 	"fmt"
@@ -44,6 +44,11 @@ func SemverFix(version string) (string, error) {
 
 	if version == "" || version == "0" {
 		return "", ErrInvalidVersion
+	}
+
+	// remove anything after "~"
+	if strings.Contains(version, "~") {
+		version = strings.Split(version, "~")[0]
 	}
 
 	// lets check if we need to fix the semver - there are some cases where the semver is not valid
