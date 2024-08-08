@@ -255,14 +255,8 @@ func (s *service) GetAssetFlaws(assetID uuid.UUID) ([]models.AssetFlaws, models.
 		if f.State == models.FlawStateFalsePositive {
 			assetFlawsStateStatistics.Handled++
 		}
-		if f.State == models.FlawStateMarkedForMitigation {
-			assetFlawsStateStatistics.Handled++
-		}
-		if f.State == models.FlawStateMarkedForTransfer {
-			assetFlawsStateStatistics.Handled++
-		}
 
-		DamagedPkg := f.ComponentPurlOrCpe
+		DamagedPkg := f.ComponentPurl
 		parts := strings.Split(DamagedPkg, ":")
 		DamagedPkg = parts[1]
 		DamagedPkgs[DamagedPkg]++

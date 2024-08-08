@@ -123,64 +123,6 @@ func (s *httpController) Scan(c core.Context) error {
 	// handle the scan result
 	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(assetObj, vulns, scanType, version, scannerID, userID)
 
-<<<<<<< HEAD
-	// load all asset components again and build a dependency tree
-	AssetComponents, err := s.componentRepository.LoadAssetComponents(nil, assetObj, scanType, version)
-	if err != nil {
-		slog.Error("could not load asset components", "err", err)
-		return c.JSON(500, map[string]string{"error": "could not load asset components"})
-	}
-	// build a dependency tree
-	tree := asset.BuildDependencyTree(AssetComponents)
-	// calculate the depth of each component
-	depthMap := make(map[string]int)
-
-	// our dependency tree has a "fake" root node.
-	//  the first - 0 - element is just the name of the application
-	// therefore we start at -1 to get the correct depth. The fake node will be 0, the first real node will be 1
-	asset.CalculateDepth(tree.Root, -1, depthMap)
-
-	// now we have the depth.
-	for _, vuln := range vulns {
-		v := vuln
-
-		componentPurlOrCpe, err := url.PathUnescape(v.Purl)
-		if err != nil {
-			slog.Error("could not unescape purl", "err", err)
-			continue
-		}
-
-		// check if the component has an cve
-
-		flaw := models.Flaw{
-			AssetID:            assetObj.ID,
-			CVEID:              v.CVEID,
-			ScannerID:          scannerID,
-			ComponentPurlOrCpe: componentPurlOrCpe,
-			CVE:                &v.CVE,
-		}
-
-		flaw.SetArbitraryJsonData(map[string]any{
-			"introducedVersion": v.GetIntroducedVersion(),
-			"fixedVersion":      v.GetFixedVersion(),
-			"packageName":       v.PackageName,
-			"cveId":             v.CVEID,
-			"installedVersion":  v.InstalledVersion,
-			"componentDepth":    depthMap[componentPurlOrCpe],
-			"scanType":          scanType,
-		})
-		flaws = append(flaws, flaw)
-	}
-
-	flaws = utils.UniqBy(flaws, func(f models.Flaw) string {
-		return f.CalculateHash()
-	})
-
-	// let the asset service handle the new scan result - we do not need
-	// any return value from that process - even if it fails, we should return the current flaws
-	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(userID, scannerID, assetObj, flaws)
-=======
->>>>>>> origin/main
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})

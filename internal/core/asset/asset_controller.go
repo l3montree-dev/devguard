@@ -8,11 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
-<<<<<<< HEAD
 
-=======
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
->>>>>>> origin/main
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 
