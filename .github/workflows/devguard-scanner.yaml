@@ -26,7 +26,7 @@ jobs:
         fetch-depth: 0
       uses: actions/checkout@v4 # Check out the repository content to the runner
     - name: DevGuard SCA
-      uses: docker://ghcr.io/l3montree-dev/devguard-scanner:main-f5f157f7-1723130757
+      uses: docker://ghcr.io/l3montree-dev/devguard-scanner@sha256:b88e8a3278a7a8647988ee3daca2d576c2139193dc11d6c8dea1aa97e1bfcf3c
       with:
         args: devguard-scanner sca --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="${{ secrets.DEVGUARD_TOKEN }}" --path="/github/workspace"
       # Running Gitleaks to scan the code for secrets
@@ -92,6 +92,6 @@ jobs:
         path: .
       # Running Trivy to scan the Docker image for vulnerabilities
     - name: DevGuard Container-Scanning
-      uses: docker://ghcr.io/l3montree-dev/devguard-scanner:main-f5f157f7-1723130757
+      uses: docker://ghcr.io/l3montree-dev/devguard-scanner@sha256:b88e8a3278a7a8647988ee3daca2d576c2139193dc11d6c8dea1aa97e1bfcf3c
       with:
         args: devguard-scanner container-scanning --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="${{ secrets.DEVGUARD_TOKEN }}" --path="/github/workspace/image.tar"
