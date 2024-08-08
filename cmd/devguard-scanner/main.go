@@ -197,11 +197,13 @@ func isValidPath(path string) (bool, error) {
 func getCurrentVersion(path string) (string, int, error) {
 	cmd := exec.Command("git", "tag", "--sort=-v:refname")
 	var out bytes.Buffer
+	var errOut bytes.Buffer
 	cmd.Stdout = &out
+	cmd.Stderr = &errOut
 	cmd.Dir = getDirFromPath(path)
 	err := cmd.Run()
 	if err != nil {
-		slog.Info("could not run git tag", "err", err, "path", getDirFromPath(path))
+		slog.Info("could not run git tag", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
 		return "", 0, err
 	}
 
@@ -223,10 +225,15 @@ func getCurrentVersion(path string) (string, int, error) {
 	} else {
 		cmd = exec.Command("git", "rev-list", "--count", latestTag+"..HEAD") // nolint:all:Latest Tag is already checked against a semver regex.
 		var commitOut bytes.Buffer
+		errOut = bytes.Buffer{}
 		cmd.Stdout = &commitOut
+		cmd.Stderr = &errOut
 		cmd.Dir = getDirFromPath(path)
 		err = cmd.Run()
 		if err != nil {
+			slog.Error(
+				"could not run git rev-list --count", "err", err, "path", getDirFromPath(path), "msg", errOut.String(),
+			)
 			log.Fatal(err)
 		}
 
