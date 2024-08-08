@@ -28,7 +28,7 @@ jobs:
     - name: DevGuard SCA
       uses: docker://ghcr.io/l3montree-dev/devguard-scanner:main-f5f157f7-1723130757
       with:
-        args: devguard-scanner sca --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="{{ secrets.DEVGUARD_TOKEN }}" --path="/github/workspace"
+        args: devguard-scanner sca --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="${{ secrets.DEVGUARD_TOKEN }}" --path="/github/workspace"
       # Running Gitleaks to scan the code for secrets
 
   # Docker image build job
@@ -84,7 +84,6 @@ jobs:
   image-scanning:
     needs: build-image
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/checkout@v4
     - uses: actions/download-artifact@v4
@@ -95,4 +94,4 @@ jobs:
     - name: DevGuard Container-Scanning
       uses: docker://ghcr.io/l3montree-dev/devguard-scanner:main-f5f157f7-1723130757
       with:
-        args: devguard-scanner container-scanning --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="{{ secrets.DEVGUARD_TOKEN }}" --path="/github/workspace/image.tar"
+        args: devguard-scanner container-scanning --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="${{ secrets.DEVGUARD_TOKEN }}" --path="/github/workspace/image.tar"
