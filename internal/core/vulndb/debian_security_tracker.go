@@ -2,7 +2,6 @@ package vulndb
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -191,8 +190,6 @@ func (s debianSecurityTracker) Mirror() error {
 			affectedComponents = append(affectedComponents, debianCveToAffectedComponent(packageName, cveId, cve)...)
 		}
 	}
-
-	fmt.Println("affectedComponents", len(affectedComponents))
 
 	err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
 	if err != nil {

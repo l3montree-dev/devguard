@@ -1,3 +1,10 @@
+
+{{- $protocol := "http" -}}
+{{- if .Values.web.ingress.tls -}}
+{{- $protocol = "https" -}}
+{{- end -}}
+{{- $host := index .Values.web.ingress.hosts 0 -}}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -50,10 +57,14 @@ spec:
             value: devguard
           - name: POSTGRES_HOST
             value: postgresql
+          - name: FRONTEND_URL
+            value: {{ printf "%s://%s" $protocol $host.host }}
           - name: ORY_KRATOS_PUBLIC
             value: http://kratos:4433
           - name: ORY_KRATOS_ADMIN
             value: http://kratos:4434
+          - name: GOMEMLIMIT
+            value: 1024MiB
           - name: GITHUB_APP_ID
             value: {{ .Values.api.github.appId | quote }}
           - name: GITHUB_PRIVATE_KEY
@@ -80,10 +91,10 @@ spec:
           resources:
             limits:
               cpu: 4
-              memory: 1024Mi
+              memory: 2048Mi
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 1024Mi
           volumeMounts:
           - mountPath: /github-app-private-key
             name: github-app-private-key
