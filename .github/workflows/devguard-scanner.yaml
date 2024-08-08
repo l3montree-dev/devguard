@@ -25,6 +25,9 @@ jobs:
       with:
         fetch-depth: 0
       uses: actions/checkout@v4 # Check out the repository content to the runner
+    - name: Set up Git
+      run: |
+        git config --global --add safe.directory /github/workspace
     - name: DevGuard SCA
       uses: docker://ghcr.io/l3montree-dev/devguard-scanner@sha256:b88e8a3278a7a8647988ee3daca2d576c2139193dc11d6c8dea1aa97e1bfcf3c
       with:
@@ -91,6 +94,9 @@ jobs:
         name: docker-image
         path: .
       # Running Trivy to scan the Docker image for vulnerabilities
+    - name: Set up Git
+      run: |
+        git config --global --add safe.directory /github/workspace
     - name: DevGuard Container-Scanning
       uses: docker://ghcr.io/l3montree-dev/devguard-scanner@sha256:b88e8a3278a7a8647988ee3daca2d576c2139193dc11d6c8dea1aa97e1bfcf3c
       with:
