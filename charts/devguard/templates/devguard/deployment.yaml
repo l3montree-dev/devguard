@@ -63,6 +63,8 @@ spec:
             value: http://kratos:4433
           - name: ORY_KRATOS_ADMIN
             value: http://kratos:4434
+          - name: GOMEMLIMIT
+            value: 1024MiB
           - name: GITHUB_APP_ID
             value: {{ .Values.api.github.appId | quote }}
           - name: GITHUB_PRIVATE_KEY
