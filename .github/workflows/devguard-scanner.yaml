@@ -26,28 +26,14 @@ jobs:
         fetch-depth: 0
       uses: actions/checkout@v4 # Check out the repository content to the runner
     - name: DevGuard SCA
-      uses: docker://devguard-scanner:main-d4b4d6b0-1723128582@sha256:18b05d96412bfd9f0a8ccf9237f6d61dc542f2bcbd86624d0b607d802fd42915
+      uses: docker://ghcr.io/l3montree-dev/devguard-scanner:main-f5f157f7-1723130757
       with:
-        args: devguard-scanner sca --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="{{ secret.DEVGUARD_TOKEN }}" --path="/github/workspace"
+        args: devguard-scanner sca --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="${{ secrets.DEVGUARD_TOKEN }}" --path="/github/workspace"
       # Running Gitleaks to scan the code for secrets
-
-  # Software Composition Analysis (SCA) to find vulnerabilities in project dependencies
-  container-scanning:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      with:
-        fetch-depth: 0
-      uses: actions/checkout@v4 # Check out the repository content to the runner
-    - name: DevGuard Container-Scanning
-      uses: docker://devguard-scanner:main-d4b4d6b0-1723128582@sha256:18b05d96412bfd9f0a8ccf9237f6d61dc542f2bcbd86624d0b607d802fd42915
-      with:
-        args: devguard-scanner container-scanning --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="{{ secret.DEVGUARD_TOKEN }}" --path="/github/workspace"
 
   # Docker image build job
   build-image:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/checkout@v4
     - name: Set IMAGE_TAG if tagged
@@ -98,16 +84,14 @@ jobs:
   image-scanning:
     needs: build-image
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/checkout@v4
     - uses: actions/download-artifact@v4
       with:
         name: docker-image
         path: .
-    - name: Run Trivy vulnerability scanner in tarball mode
       # Running Trivy to scan the Docker image for vulnerabilities
     - name: DevGuard Container-Scanning
-      uses: docker://devguard-scanner:main-d4b4d6b0-1723128582@sha256:18b05d96412bfd9f0a8ccf9237f6d61dc542f2bcbd86624d0b607d802fd42915
+      uses: docker://ghcr.io/l3montree-dev/devguard-scanner:main-f5f157f7-1723130757
       with:
-        args: devguard-scanner container-scanning --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="{{ secret.DEVGUARD_TOKEN }}" --path="/github/workspace/image.tar"
+        args: devguard-scanner container-scanning --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="${{ secrets.DEVGUARD_TOKEN }}" --path="/github/workspace/image.tar"
