@@ -3,6 +3,7 @@ package asset
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -73,6 +74,13 @@ func (a *httpController) Versions(c core.Context) error {
 	if err != nil {
 		return err
 	}
+
+	fmt.Println(versions)
+	// order the version in descending order
+	normalize.SemverSort(versions)
+
+	// now only reverse it
+	slices.Reverse(versions)
 
 	return c.JSON(200, versions)
 }
