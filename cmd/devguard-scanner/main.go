@@ -196,6 +196,7 @@ func isValidPath(path string) (bool, error) {
 
 func getCurrentVersion(path string) (string, int, error) {
 	// mark the path as safe git directory
+	slog.Debug("marking path as safe", "path", getDirFromPath(path))
 	cmd := exec.Command("git", "config", "--global", "--add", "safe.directory", getDirFromPath(path)) // nolint:all
 	var out bytes.Buffer
 	var errOut bytes.Buffer
@@ -405,7 +406,6 @@ func addScanFlags(cmd *cobra.Command) {
 }
 
 func getDirFromPath(path string) string {
-
 	fi, err := os.Stat(path)
 	if err != nil {
 		return path

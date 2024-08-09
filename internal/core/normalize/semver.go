@@ -18,8 +18,11 @@ package normalize
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
+
+	"golang.org/x/mod/semver"
 )
 
 // Regex for validating a correct semver.
@@ -38,6 +41,12 @@ func normalizeVersionPart(versionPart string) string {
 var (
 	ErrInvalidVersion = fmt.Errorf("invalid version")
 )
+
+func SemverSort(versions []string) {
+	slices.SortStableFunc(versions, func(a, b string) int {
+		return semver.Compare("v"+a, "v"+b)
+	})
+}
 
 func SemverFix(version string) (string, error) {
 	version = strings.TrimPrefix(version, "v")

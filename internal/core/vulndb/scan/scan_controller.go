@@ -82,8 +82,7 @@ func (s *httpController) Scan(c core.Context) error {
 	// get the X-Asset-Version header
 	version := c.Request().Header.Get("X-Asset-Version")
 	if version == "" {
-		slog.Error("no version header found")
-		return c.JSON(400, map[string]string{"error": "no version header found"})
+		version = models.LatestVersion
 	}
 
 	scanType := c.Request().Header.Get("X-Scan-Type")
@@ -94,12 +93,14 @@ func (s *httpController) Scan(c core.Context) error {
 		})
 	}
 
-	var err error
-	version, err = normalize.SemverFix(version)
-	// check if valid semver
-	if err != nil {
-		slog.Error("invalid semver version", "version", version)
-		return c.JSON(400, map[string]string{"error": "invalid semver version"})
+	if version != models.LatestVersion {
+		var err error
+		version, err = normalize.SemverFix(version)
+		// check if valid semver
+		if err != nil {
+			slog.Error("invalid semver version", "version", version)
+			return c.JSON(400, map[string]string{"error": "invalid semver version"})
+		}
 	}
 
 	// update the sbom in the database in parallel

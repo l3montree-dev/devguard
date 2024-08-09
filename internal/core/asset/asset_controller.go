@@ -3,6 +3,7 @@ package asset
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
@@ -76,13 +77,19 @@ func (a *httpController) Versions(c core.Context) error {
 		return err
 	}
 
+	// order the version in descending order
+	normalize.SemverSort(versions)
+
+	// now only reverse it
+	slices.Reverse(versions)
+
 	return c.JSON(200, versions)
 }
 
 func (a *httpController) AffectedComponents(c core.Context) error {
 	// get the version query param
 	version := c.QueryParam("version")
-	if version == "" {
+	if version == "" || version == models.LatestVersion {
 		version = models.LatestVersion
 	} else {
 		var err error
@@ -163,7 +170,7 @@ func (a *httpController) DependencyGraph(c core.Context) error {
 	app := core.GetAsset(c)
 	// check for version query param
 	version := c.QueryParam("version")
-	if version == "" {
+	if version == "" || version == models.LatestVersion {
 		version = models.LatestVersion
 	} else {
 		var err error
