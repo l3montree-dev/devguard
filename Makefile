@@ -9,6 +9,3 @@ mocks::
 
 lint::
 	golangci-lint run ./...
-
-flawfind::
-	docker build -t flawfind -f Dockerfile.flawfind .
