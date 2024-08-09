@@ -39,7 +39,7 @@ func NewComponentRepository(db database.DB) *componentRepository {
 	}
 }
 
-func (c *componentRepository) UpdateSemverEnd(tx database.DB, ids []uuid.UUID, version string) error {
+func (c *componentRepository) UpdateSemverEnd(tx database.DB, ids []uuid.UUID, version *string) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -89,11 +89,34 @@ func (c *componentRepository) HandleStateDiff(tx database.DB, assetID uuid.UUID,
 
 	removed := comparison.OnlyInA
 	added := comparison.OnlyInB
+	both := comparison.InBoth
+
+	// check if we can delete some component. All which would have same SemverStart and SemverEnd
+	var toDelete []models.ComponentDependency
+
+	// Disjoin will first return all elements where the predicate is true
+	// and then all elements where the predicate is false
+	toDelete, removed = utils.Disjoin(removed, func(dep models.ComponentDependency) bool {
+		return dep.AssetSemverStart == version
+	})
 
 	return c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
+		if len(toDelete) != 0 {
+			if err := c.GetDB(tx).Delete(&toDelete).Error; err != nil {
+				return err
+			}
+		}
+
+		// update semver end as null for all components which are in both
+		if err := c.UpdateSemverEnd(tx, utils.Map(both, func(el models.ComponentDependency) uuid.UUID {
+			return el.ID
+		}), nil); err != nil {
+			return err
+		}
+
 		if err := c.UpdateSemverEnd(tx, utils.Map(removed, func(el models.ComponentDependency) uuid.UUID {
 			return el.ID
-		}), version); err != nil {
+		}), &version); err != nil {
 			return err
 		}
 		// make sure the asset id is set

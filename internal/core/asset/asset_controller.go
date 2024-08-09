@@ -75,7 +75,6 @@ func (a *httpController) Versions(c core.Context) error {
 		return err
 	}
 
-	fmt.Println(versions)
 	// order the version in descending order
 	normalize.SemverSort(versions)
 
@@ -88,7 +87,7 @@ func (a *httpController) Versions(c core.Context) error {
 func (a *httpController) AffectedComponents(c core.Context) error {
 	// get the version query param
 	version := c.QueryParam("version")
-	if version == "" {
+	if version == "" || version == models.LatestVersion {
 		version = models.LatestVersion
 	} else {
 		var err error
@@ -169,7 +168,7 @@ func (a *httpController) DependencyGraph(c core.Context) error {
 	app := core.GetAsset(c)
 	// check for version query param
 	version := c.QueryParam("version")
-	if version == "" {
+	if version == "" || version == models.LatestVersion {
 		version = models.LatestVersion
 	} else {
 		var err error

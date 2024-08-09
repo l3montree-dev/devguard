@@ -41,6 +41,19 @@ func Reduce[T, U any](s []T, f func(U, T) U, init U) U {
 	return r
 }
 
+func Disjoin[T any](a []T, predicate func(el T) bool) ([]T, []T) {
+	trueList := make([]T, 0)
+	falseList := make([]T, 0)
+	for _, el := range a {
+		if predicate(el) {
+			trueList = append(trueList, el)
+		} else {
+			falseList = append(falseList, el)
+		}
+	}
+	return trueList, falseList
+}
+
 func Flat[T any](s [][]T) []T {
 	res := make([]T, 0)
 	for _, subslice := range s {
