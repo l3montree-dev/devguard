@@ -56,18 +56,12 @@ jobs:
 
     - name: Zip the CSV files
       run: zip vulndb.zip cve_affected_component.csv #cves.csv cpe_matches.csv cve_cpe_match.csv cwes.csv exploits.csv weaknesses.csv
-    
     - name: Install Cosign 
       uses: sigstore/cosign-installer@main
-
     - name: Write signing key to disk
       run: 'echo "$COSIGN_PASSWORD" > cosign.key'
-    
     - name: Sign the database CSV files
       run: cosign sign-blob -key cosign.key vulndb.zip
-
-
-
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v3
       with:
@@ -79,7 +73,6 @@ jobs:
     - name: Push the database ZIP file to GitHub Container Registry
       run: |
         oras push ghcr.io/l3montree-dev/devguard/vulndb:${{env.date}} vulndb.zip
-
     - name: Push the sign file to GitHub Container Registry
       run: |
           oras push ghcr.io/l3montree-dev/devguard/vulndb:${{env.date}} vulndb.zip.sig
