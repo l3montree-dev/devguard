@@ -10,9 +10,9 @@ import (
 )
 
 type statisticsService interface {
-	GetAssetFlawsStatistics(asset_ID string) ([]models.AssetRiskSummary, error)
-	GetAssetCombinedDependencies(asset_ID string) ([]models.AssetCombinedDependencies, error)
-	GetAssetFlawsDistribution(asset_ID string) ([]models.AssetRiskDistribution, error)
+	GetAssetFlawsStatistics(assetID uuid.UUID) ([]models.AssetRiskSummary, error)
+	GetAssetCombinedDependencies(assetID uuid.UUID) ([]models.AssetCombinedDependencies, error)
+	GetAssetFlawsDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error)
 	GetAssetFlaws(assetID uuid.UUID) ([]models.AssetFlaws, models.AssetFlawsStateStatistics, []models.AssetComponents, []models.AssetComponents, []models.FlawEventWithFlawName, error)
 
 	UpdateAssetRecentRisks(assetID uuid.UUID, begin time.Time, end time.Time) error
@@ -20,12 +20,12 @@ type statisticsService interface {
 }
 
 type httpController struct {
-	assetService statisticsService
+	statisticsService statisticsService
 }
 
-func NewHttpController(assetService statisticsService) *httpController {
+func NewHttpController(statisticsService statisticsService) *httpController {
 	return &httpController{
-		assetService: assetService,
+		statisticsService: statisticsService,
 	}
 }
 
@@ -33,54 +33,54 @@ func (c *httpController) Overview(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 
 	t := time.Now().AddDate(0, 0, -30)
-	err := c.assetService.UpdateAssetRecentRisks(asset.ID, t, time.Now())
+	err := c.statisticsService.UpdateAssetRecentRisks(asset.ID, t, time.Now())
 	if err != nil {
 		return fmt.Errorf("Error updating asset risks: %v", err)
 	}
 
-	assetDependencies, err := c.assetService.GetAssetCombinedDependencies(asset.ID.String())
+	dependencies, err := c.statisticsService.GetAssetCombinedDependencies(asset.ID)
 	if err != nil {
 		return fmt.Errorf("Error getting asset dependencies: %v", err)
 	}
-	assetRisksSummary, err := c.assetService.GetAssetFlawsStatistics(asset.ID.String())
+	risksSummary, err := c.statisticsService.GetAssetFlawsStatistics(asset.ID)
 	if err != nil {
 		return fmt.Errorf("Error getting asset risk summary: %v", err)
 	}
-	assetRiskDistribution, err := c.assetService.GetAssetFlawsDistribution(asset.ID.String())
+	riskDistribution, err := c.statisticsService.GetAssetFlawsDistribution(asset.ID)
 	if err != nil {
 		return fmt.Errorf("Error getting asset risk distribution: %v", err)
 	}
 
-	assetRisks, err := c.assetService.GetAssetRecentRisksByAssetId(asset.ID)
+	risks, err := c.statisticsService.GetAssetRecentRisksByAssetId(asset.ID)
 	if err != nil {
 		return fmt.Errorf("Error getting asset risks: %v", err)
 	}
 
-	assetFlaws, assetFlawsStateStatistics, assetHighestDamagedPackages, assetComponents, assetDetails, err := c.assetService.GetAssetFlaws(asset.ID)
+	flaws, flawsStateStatistics, highestDamagedPackages, components, details, err := c.statisticsService.GetAssetFlaws(asset.ID)
 	if err != nil {
 		return fmt.Errorf("Error getting asset flaws: %v", err)
 	}
 
 	var totalDependenciesNumber int64 = 0
-	totalCriticalDependenciesNumber := len(assetRisksSummary)
+	totalCriticalDependenciesNumber := len(risksSummary)
 
-	for _, dependency := range assetDependencies {
+	for _, dependency := range dependencies {
 		totalDependenciesNumber += dependency.CountDependencies
 	}
 
-	overview := models.Overview{
-		TotalDependencies:           int(totalDependenciesNumber),
-		TotalCriticalDependencies:   totalCriticalDependenciesNumber,
-		AssetCombinedDependencies:   assetDependencies,
-		AssetRiskSummary:            assetRisksSummary,
-		AssetRiskDistribution:       assetRiskDistribution,
-		AssetRecentRisks:            assetRisks,
-		AssetFlaws:                  assetFlaws,
-		AssetFlawsStateStatistics:   assetFlawsStateStatistics,
-		AssetHighestDamagedPackages: assetHighestDamagedPackages,
-		AssetComponents:             assetComponents,
-		FlawEvents:                  assetDetails,
+	overview := models.AssetOverview{
+		TotalDependencies:         int(totalDependenciesNumber),
+		TotalCriticalDependencies: totalCriticalDependenciesNumber,
+		CombinedDependencies:      dependencies,
+		RiskSummary:               risksSummary,
+		RiskDistribution:          riskDistribution,
+		RecentRisks:               risks,
+		Flaws:                     flaws,
+		FlawsStateStatistics:      flawsStateStatistics,
+		HighestDamagedPackages:    highestDamagedPackages,
+		Components:                components,
+		FlawEvents:                details,
 	}
 
-	return ctx.JSON(200, OverviewToDto(overview))
+	return ctx.JSON(200, overviewToDto(overview))
 }

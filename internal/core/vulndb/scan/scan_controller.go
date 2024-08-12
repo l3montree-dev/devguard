@@ -32,7 +32,7 @@ type cveRepository interface {
 
 type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
-	LoadAssetComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
+	LoadComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
 }
 
 type assetService interface {

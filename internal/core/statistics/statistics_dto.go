@@ -5,7 +5,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-type OverviewDTO struct {
+type assetOverviewDTO struct {
 	TotalDependencies           int                                `json:"totalDependenciesNumber"`
 	TotalCriticalDependencies   int                                `json:"criticalDependenciesNumber"`
 	AssetCombinedDependencies   []models.AssetCombinedDependencies `json:"assetCombinedDependencies"`
@@ -16,37 +16,37 @@ type OverviewDTO struct {
 	AssetFlawsStateStatistics   models.AssetFlawsStateStatistics   `json:"assetFlawsStateStatistics"`
 	AssetHighestDamagedPackages []models.AssetComponents           `json:"assetHighestDamagedPackages"`
 	AssetComponents             []models.AssetComponents           `json:"assetComponents"`
-	FlawEvents                  []FlawEventWithFlawNameDTO         `json:"flawEvents"`
+	FlawEvents                  []flawEventWithFlawNameDTO         `json:"flawEvents"`
 }
 
-type FlawEventWithFlawNameDTO struct {
+type flawEventWithFlawNameDTO struct {
 	flaw.FlawEventDTO
 	FlawName string `json:"flawName"`
 }
 
-func OverviewToDto(o models.Overview) OverviewDTO {
+func overviewToDto(o models.AssetOverview) assetOverviewDTO {
 	flawEvents := o.FlawEvents
-	flawEventDTO := make([]FlawEventWithFlawNameDTO, len(o.FlawEvents))
+	flawEventDTO := make([]flawEventWithFlawNameDTO, len(o.FlawEvents))
 	for i, flawEvent := range flawEvents {
 		flawEventDTO[i] = flawEventToDto(flawEvent)
 	}
 
-	return OverviewDTO{
+	return assetOverviewDTO{
 		TotalDependencies:           o.TotalDependencies,
 		TotalCriticalDependencies:   o.TotalCriticalDependencies,
-		AssetCombinedDependencies:   o.AssetCombinedDependencies,
-		AssetRiskSummary:            o.AssetRiskSummary,
-		AssetRiskDistribution:       o.AssetRiskDistribution,
-		AssetRecentRisks:            o.AssetRecentRisks,
-		AssetFlaws:                  o.AssetFlaws,
-		AssetFlawsStateStatistics:   o.AssetFlawsStateStatistics,
-		AssetHighestDamagedPackages: o.AssetHighestDamagedPackages,
-		AssetComponents:             o.AssetComponents,
+		AssetCombinedDependencies:   o.CombinedDependencies,
+		AssetRiskSummary:            o.RiskSummary,
+		AssetRiskDistribution:       o.RiskDistribution,
+		AssetRecentRisks:            o.RecentRisks,
+		AssetFlaws:                  o.Flaws,
+		AssetFlawsStateStatistics:   o.FlawsStateStatistics,
+		AssetHighestDamagedPackages: o.HighestDamagedPackages,
+		AssetComponents:             o.Components,
 		FlawEvents:                  flawEventDTO,
 	}
 }
 
-func flawEventToDto(flawEvent models.FlawEventWithFlawName) FlawEventWithFlawNameDTO {
+func flawEventToDto(flawEvent models.FlawEventWithFlawName) flawEventWithFlawNameDTO {
 	return struct {
 		flaw.FlawEventDTO
 		FlawName string `json:"flawName"`

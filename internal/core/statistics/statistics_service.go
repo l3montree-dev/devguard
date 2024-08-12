@@ -13,20 +13,20 @@ import (
 
 type statisticsRepository interface {
 	GetRecentFlawsForAsset(assetID uuid.UUID, time time.Time) ([]models.FlawRisk, error)
-	GetAssetFlawsStatistics(asset_ID string) ([]models.AssetRiskSummary, error)
-	GetAssetRisksDistribution(asset_ID string) ([]models.AssetRiskDistribution, error)
-	GetAssetCriticalDependenciesGroupedByScanType(asset_ID string) ([]models.AssetCriticalDependencies, error)
+	GetAssetFlawsStatistics(assetID uuid.UUID) ([]models.AssetRiskSummary, error)
+	GetAssetRisksDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error)
+	GetAssetCriticalDependenciesGroupedByScanType(assetID uuid.UUID) ([]models.AssetDependencies, error)
 	GetRecentFlawsState(assetID uuid.UUID, time time.Time) ([]models.FlawRisk, error)
-	GetFlawsDetailsByAssetId(assetID uuid.UUID) ([]models.Flaw, error)
+	GetFlawDetailsByAssetId(assetID uuid.UUID) ([]models.Flaw, error)
 }
 
 type componentRepository interface {
-	GetAssetDependenciesGroupedByScanType(asset_ID string) ([]models.AssetAllDependencies, error)
-	GetPackages(asset_ID string) ([]models.AssetComponents, error)
+	GetDependenciesGroupedByScanType(assetID uuid.UUID) ([]models.AssetDependencies, error)
+	GetPackages(assetID uuid.UUID) ([]models.AssetComponents, error)
 }
 type assetRecentRiskRepository interface {
-	GetAssetRecentRisksByAssetId(assetId uuid.UUID) ([]models.AssetRecentRisks, error)
-	UpdateAssetRecentRisks(assetRisks *models.AssetRecentRisks) error
+	GetRecentRisksByAssetId(assetId uuid.UUID) ([]models.AssetRecentRisks, error)
+	UpdateRecentRisks(assetRisks *models.AssetRecentRisks) error
 }
 type service struct {
 	statisticsRepository      statisticsRepository
@@ -42,14 +42,14 @@ func NewService(statisticsRepository statisticsRepository, componentRepository c
 	}
 }
 
-func (s *service) GetAssetCombinedDependencies(asset_ID string) ([]models.AssetCombinedDependencies, error) {
+func (s *service) GetAssetCombinedDependencies(assetID uuid.UUID) ([]models.AssetCombinedDependencies, error) {
 
-	allDependencies, err := s.getAssetDependenciesGroupedByScanType(asset_ID)
+	dependencies, err := s.getAssetDependenciesGroupedByScanType(assetID)
 	if err != nil {
 		return nil, err
 	}
 
-	criticalDependencies, err := s.getAssetCriticalDependenciesGroupedByScanType(asset_ID)
+	criticalDependencies, err := s.getAssetCriticalDependenciesGroupedByScanType(assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -59,20 +59,20 @@ func (s *service) GetAssetCombinedDependencies(asset_ID string) ([]models.AssetC
 		criticalCountMap[criticalDep.ScannerID] = criticalDep.Count
 	}
 
-	combinedDependencies := make([]models.AssetCombinedDependencies, len(allDependencies))
-	for i, allDep := range allDependencies {
+	combinedDependencies := make([]models.AssetCombinedDependencies, len(dependencies))
+	for i, allDep := range dependencies {
 		combinedDependencies[i] = models.AssetCombinedDependencies{
-			ScanType:          allDep.ScanType,
+			ScannerID:         allDep.ScannerID,
 			CountDependencies: allDep.Count,
-			CountCritical:     criticalCountMap[allDep.ScanType],
+			CountCritical:     criticalCountMap[allDep.ScannerID],
 		}
 	}
 
 	return combinedDependencies, nil
 }
 
-func (s *service) getAssetCriticalDependenciesGroupedByScanType(asset_ID string) ([]models.AssetCriticalDependencies, error) {
-	assets, err := s.statisticsRepository.GetAssetCriticalDependenciesGroupedByScanType(asset_ID)
+func (s *service) getAssetCriticalDependenciesGroupedByScanType(assetID uuid.UUID) ([]models.AssetDependencies, error) {
+	assets, err := s.statisticsRepository.GetAssetCriticalDependenciesGroupedByScanType(assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -84,13 +84,13 @@ func (s *service) getAssetCriticalDependenciesGroupedByScanType(asset_ID string)
 
 }
 
-func (s *service) getAssetDependenciesGroupedByScanType(asset_ID string) ([]models.AssetAllDependencies, error) {
-	return s.componentRepository.GetAssetDependenciesGroupedByScanType(asset_ID)
+func (s *service) getAssetDependenciesGroupedByScanType(assetID uuid.UUID) ([]models.AssetDependencies, error) {
+	return s.componentRepository.GetDependenciesGroupedByScanType(assetID)
 }
 
-func (s *service) GetAssetFlawsStatistics(asset_ID string) ([]models.AssetRiskSummary, error) {
+func (s *service) GetAssetFlawsStatistics(assetID uuid.UUID) ([]models.AssetRiskSummary, error) {
 
-	risks, err := s.statisticsRepository.GetAssetFlawsStatistics(asset_ID)
+	risks, err := s.statisticsRepository.GetAssetFlawsStatistics(assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -144,23 +144,21 @@ func (s *service) UpdateAssetRecentRisks(assetID uuid.UUID, begin time.Time, end
 		if len(assetRisk) != 0 {
 			riskAvg = riskSum / float64(len(assetRisk))
 			dayOfRisk = assetRisk[0].CreatedAt.String()
-
 		}
 
 		result := models.AssetRecentRisks{
-			AssetID:      assetID,
-			ID:           tmpID,
-			DayOfRisk:    dayOfRisk,
-			DayOfScan:    time.Format("2006-01-02"),
-			AssetSumRisk: riskSum,
-			AssetAvgRisk: riskAvg,
-			AssetMaxRisk: riskMax,
-			AssetMinRisk: riskMin,
+			AssetID:   assetID,
+			DayOfRisk: dayOfRisk,
+			DayOfScan: time.Format("2006-01-02"),
+			SumRisk:   riskSum,
+			AvgRisk:   riskAvg,
+			MaxRisk:   riskMax,
+			MinRisk:   riskMin,
 		}
 
 		tmpID++
 
-		err = s.assetRecentRiskRepository.UpdateAssetRecentRisks(&result)
+		err = s.assetRecentRiskRepository.UpdateRecentRisks(&result)
 		if err != nil {
 			return err
 		}
@@ -171,11 +169,11 @@ func (s *service) UpdateAssetRecentRisks(assetID uuid.UUID, begin time.Time, end
 }
 
 func (s *service) GetAssetRecentRisksByAssetId(assetID uuid.UUID) ([]models.AssetRecentRisks, error) {
-	return s.assetRecentRiskRepository.GetAssetRecentRisksByAssetId(assetID)
+	return s.assetRecentRiskRepository.GetRecentRisksByAssetId(assetID)
 }
 
-func (s *service) GetAssetFlawsDistribution(asset_ID string) ([]models.AssetRiskDistribution, error) {
-	assets, err := s.statisticsRepository.GetAssetRisksDistribution(asset_ID)
+func (s *service) GetAssetFlawsDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error) {
+	assets, err := s.statisticsRepository.GetAssetRisksDistribution(assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +188,7 @@ func (s *service) GetAssetFlawsDistribution(asset_ID string) ([]models.AssetRisk
 
 func (s *service) GetAssetFlaws(assetID uuid.UUID) ([]models.AssetFlaws, models.AssetFlawsStateStatistics, []models.AssetComponents, []models.AssetComponents, []models.FlawEventWithFlawName, error) {
 
-	flaws, err := s.statisticsRepository.GetFlawsDetailsByAssetId(assetID)
+	flaws, err := s.statisticsRepository.GetFlawDetailsByAssetId(assetID)
 	if err != nil {
 		return nil, models.AssetFlawsStateStatistics{}, nil, nil, nil, err
 	}
@@ -288,7 +286,7 @@ func (s *service) GetAssetFlaws(assetID uuid.UUID) ([]models.AssetFlaws, models.
 		})
 	}
 
-	assetComponents, err := s.componentRepository.GetPackages(assetID.String())
+	assetComponents, err := s.componentRepository.GetPackages(assetID)
 	if err != nil {
 		return nil, models.AssetFlawsStateStatistics{}, nil, nil, nil, err
 	}

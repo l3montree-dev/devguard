@@ -32,7 +32,7 @@ type repository interface {
 
 type assetComponentsLoader interface {
 	GetVersions(tx core.DB, asset models.Asset) ([]string, error)
-	LoadAssetComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
+	LoadComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
 }
 
 type assetService interface {
@@ -104,7 +104,7 @@ func (a *httpController) AffectedComponents(c core.Context) error {
 		return echo.NewHTTPError(400, "scanType query param is required")
 	}
 
-	components, err := a.assetComponentsLoader.LoadAssetComponents(nil, core.GetAsset(c), scanType, version)
+	components, err := a.assetComponentsLoader.LoadComponents(nil, core.GetAsset(c), scanType, version)
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (a *httpController) DependencyGraph(c core.Context) error {
 		return echo.NewHTTPError(400, "scanType query param is required")
 	}
 
-	components, err := a.assetComponentsLoader.LoadAssetComponents(nil, app, scanType, version)
+	components, err := a.assetComponentsLoader.LoadComponents(nil, app, scanType, version)
 	if err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func (a *httpController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 		return nil, echo.NewHTTPError(400, "scanType query param is required")
 	}
 
-	components, err := a.assetComponentsLoader.LoadAssetComponents(nil, asset, scanType, version)
+	components, err := a.assetComponentsLoader.LoadComponents(nil, asset, scanType, version)
 	if err != nil {
 		return nil, err
 	}

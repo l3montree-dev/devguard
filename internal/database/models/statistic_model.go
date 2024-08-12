@@ -4,12 +4,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type AssetAllDependencies struct {
-	ScanType string `json:"scanType"`
-	Count    int64  `json:"count"`
-}
-
-type AssetCriticalDependencies struct {
+type AssetDependencies struct {
 	ScannerID string `json:"scannerId"`
 	Count     int64  `json:"count"`
 }
@@ -19,21 +14,21 @@ type FlawEventWithFlawName struct {
 	FlawName string `json:"flawName"`
 }
 
-type Overview struct {
-	TotalDependencies           int                         `json:"totalDependenciesNumber"`
-	TotalCriticalDependencies   int                         `json:"criticalDependenciesNumber"`
-	AssetCombinedDependencies   []AssetCombinedDependencies `json:"assetCombinedDependencies"`
-	AssetRiskSummary            []AssetRiskSummary          `json:"assetRiskSummary"`
-	AssetRiskDistribution       []AssetRiskDistribution     `json:"assetRiskDistribution"`
-	AssetRecentRisks            []AssetRecentRisks          `json:"assetRisks"`
-	AssetFlaws                  []AssetFlaws                `json:"assetFlaws"`
-	AssetFlawsStateStatistics   AssetFlawsStateStatistics   `json:"assetFlawsStateStatistics"`
-	AssetHighestDamagedPackages []AssetComponents           `json:"assetHighestDamagedPackages"`
-	AssetComponents             []AssetComponents           `json:"assetComponents"`
-	FlawEvents                  []FlawEventWithFlawName     `json:"flawEvents"`
+type AssetOverview struct {
+	TotalDependencies         int                         `json:"totalDependenciesNumber"`
+	TotalCriticalDependencies int                         `json:"criticalDependenciesNumber"`
+	CombinedDependencies      []AssetCombinedDependencies `json:"assetCombinedDependencies"`
+	RiskSummary               []AssetRiskSummary          `json:"assetRiskSummary"`
+	RiskDistribution          []AssetRiskDistribution     `json:"assetRiskDistribution"`
+	RecentRisks               []AssetRecentRisks          `json:"assetRisks"`
+	Flaws                     []AssetFlaws                `json:"assetFlaws"`
+	FlawsStateStatistics      AssetFlawsStateStatistics   `json:"assetFlawsStateStatistics"`
+	HighestDamagedPackages    []AssetComponents           `json:"assetHighestDamagedPackages"`
+	Components                []AssetComponents           `json:"assetComponents"`
+	FlawEvents                []FlawEventWithFlawName     `json:"flawEvents"`
 }
 type AssetCombinedDependencies struct {
-	ScanType          string `json:"scanType"`
+	ScannerID         string `json:"scannerId"`
 	CountDependencies int64  `json:"countDependencies"`
 	CountCritical     int64  `json:"countCritical"`
 }
@@ -53,14 +48,13 @@ type AssetRiskDistribution struct {
 }
 
 type AssetRecentRisks struct {
-	AssetID      uuid.UUID `json:"assetId" gorm:"primaryKey"`
-	ID           int       `json:"id" gorm:"primaryKey"`
-	DayOfRisk    string    `json:"dayOfRisk" `
-	DayOfScan    string    `json:"dayOfScan"`
-	AssetSumRisk float64   `json:"assetSumRisk"`
-	AssetAvgRisk float64   `json:"assetAverageRisk"`
-	AssetMaxRisk float64   `json:"assetMaxRisk"`
-	AssetMinRisk float64   `json:"assetMinRisk"`
+	AssetID   uuid.UUID `json:"assetId" gorm:"primaryKey"`
+	DayOfRisk string    `json:"dayOfRisk" gorm:"primaryKey"`
+	DayOfScan string    `json:"dayOfScan"`
+	SumRisk   float64   `json:"assetSumRisk"`
+	AvgRisk   float64   `json:"assetAverageRisk"`
+	MaxRisk   float64   `json:"assetMaxRisk"`
+	MinRisk   float64   `json:"assetMinRisk"`
 }
 
 func (m AssetRecentRisks) TableName() string {

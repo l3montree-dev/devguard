@@ -22,7 +22,7 @@ func NewAssetRiskRepository(db core.DB) *assetRecentRiskRepository {
 	}
 }
 
-func (r *assetRecentRiskRepository) GetAssetRecentRisksByAssetId(assetId uuid.UUID) ([]models.AssetRecentRisks, error) {
+func (r *assetRecentRiskRepository) GetRecentRisksByAssetId(assetId uuid.UUID) ([]models.AssetRecentRisks, error) {
 	var assetRisks []models.AssetRecentRisks = []models.AssetRecentRisks{}
 	// get all assetRisks of the asset
 	if err := r.Repository.GetDB(r.db).Where("asset_id = ?", assetId).Find(&assetRisks).Error; err != nil {
@@ -31,6 +31,6 @@ func (r *assetRecentRiskRepository) GetAssetRecentRisksByAssetId(assetId uuid.UU
 	return assetRisks, nil
 }
 
-func (r *assetRecentRiskRepository) UpdateAssetRecentRisks(assetRisks *models.AssetRecentRisks) error {
+func (r *assetRecentRiskRepository) UpdateRecentRisks(assetRisks *models.AssetRecentRisks) error {
 	return r.Repository.GetDB(r.db).Save(assetRisks).Error
 }

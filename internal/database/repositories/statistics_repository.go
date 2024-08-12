@@ -15,13 +15,12 @@ type statisticsRepository struct {
 }
 
 func NewStatisticsRepository(db core.DB) *statisticsRepository {
-
 	return &statisticsRepository{
 		db: db,
 	}
 }
 
-func (g statisticsRepository) GetFlawsDetailsByAssetId(assetID uuid.UUID) ([]models.Flaw, error) {
+func (g statisticsRepository) GetFlawDetailsByAssetId(assetID uuid.UUID) ([]models.Flaw, error) {
 	var flaws []models.Flaw = []models.Flaw{}
 	if err := g.db.Preload("Events").Find(&flaws, "asset_id = ?", assetID).Error; err != nil {
 		return nil, err
@@ -113,12 +112,12 @@ func (r *statisticsRepository) GetRecentFlawsState(assetID uuid.UUID, time time.
 	return flawRisk, nil
 }
 
-func (r *statisticsRepository) GetAssetCriticalDependenciesGroupedByScanType(asset_ID string) ([]models.AssetCriticalDependencies, error) {
-	var results []models.AssetCriticalDependencies
+func (r *statisticsRepository) GetAssetCriticalDependenciesGroupedByScanType(assetID uuid.UUID) ([]models.AssetDependencies, error) {
+	var results []models.AssetDependencies
 	err := r.db.Model(&models.Flaw{}).
 		Select("scanner_id , COUNT(*) as count").
 		Group("scanner_id").
-		Where("asset_id = ?", asset_ID).
+		Where("asset_id = ?", assetID).
 		Find(&results).Error
 
 	if err != nil {
@@ -128,13 +127,13 @@ func (r *statisticsRepository) GetAssetCriticalDependenciesGroupedByScanType(ass
 	return results, nil
 }
 
-func (r *statisticsRepository) GetAssetFlawsStatistics(asset_ID string) ([]models.AssetRiskSummary, error) {
+func (r *statisticsRepository) GetAssetFlawsStatistics(assetID uuid.UUID) ([]models.AssetRiskSummary, error) {
 	var results []models.AssetRiskSummary
 
 	err := r.db.Model(&models.Flaw{}).
 		Select("scanner_id , raw_risk_assessment,  COUNT(*) as count , AVG(raw_risk_assessment) as average, SUM(raw_risk_assessment) as sum").
 		Group("scanner_id, raw_risk_assessment").
-		Where("asset_id = ?", asset_ID).
+		Where("asset_id = ?", assetID).
 		Find(&results).Error
 
 	if err != nil {
@@ -144,7 +143,7 @@ func (r *statisticsRepository) GetAssetFlawsStatistics(asset_ID string) ([]model
 	return results, nil
 }
 
-func (r *statisticsRepository) GetAssetRisksDistribution(asset_ID string) ([]models.AssetRiskDistribution, error) {
+func (r *statisticsRepository) GetAssetRisksDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error) {
 	var results []models.AssetRiskDistribution
 
 	err := r.db.Raw(`
@@ -157,13 +156,12 @@ func (r *statisticsRepository) GetAssetRisksDistribution(asset_ID string) ([]mod
 				WHEN raw_risk_assessment >= 6.0 AND raw_risk_assessment < 8.0 THEN '6-8'
 				WHEN raw_risk_assessment >= 8.0 AND raw_risk_assessment <= 10.0 THEN '8-10'
 				ELSE 'unknown'
-    
             END AS risk_range,
             COUNT(*) as count
         FROM flaws
         WHERE asset_id = ?
         GROUP BY scanner_id, risk_range
-    `, asset_ID).Scan(&results).Error
+    `, assetID).Scan(&results).Error
 
 	if err != nil {
 		return nil, err

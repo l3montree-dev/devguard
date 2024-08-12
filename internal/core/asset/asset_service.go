@@ -48,7 +48,7 @@ type flawRepository interface {
 
 type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
-	LoadAssetComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
+	LoadComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
 	FindByPurl(tx core.DB, purl string) (models.Component, error)
 	HandleStateDiff(tx database.DB, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error
 }
@@ -89,7 +89,7 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 	flaws := []models.Flaw{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadAssetComponents(nil, asset, scanType, version)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, asset, scanType, version)
 	if err != nil {
 		return 0, 0, []models.Flaw{}, errors.Wrap(err, "could not load asset components")
 	}
@@ -241,7 +241,7 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 
 func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom normalize.SBOM) error {
 	// load the asset components
-	AssetComponents, err := s.componentRepository.LoadAssetComponents(nil, asset, scanType, currentVersion)
+	AssetComponents, err := s.componentRepository.LoadComponents(nil, asset, scanType, currentVersion)
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
 	}

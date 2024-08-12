@@ -22,13 +22,9 @@ RUN go mod download
 RUN CGO_ENABLED=0 go build -o /go/bin/app cmd/devguard/main.go
 RUN CGO_ENABLED=0 go build -o /go/bin/devguard-cli cmd/devguard-cli/main.go
 
-<<<<<<< HEAD
-FROM golang:1.22.3
-=======
 FROM alpine:3.20.2@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5
 
 WORKDIR /
->>>>>>> origin/main
 
 COPY config/rbac_model.conf /config/rbac_model.conf
 COPY --from=build /go/bin/app /
