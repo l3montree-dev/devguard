@@ -58,4 +58,4 @@ jobs:
       uses: oras-project/setup-oras@v1
     - name: Push the database dump to OCI
       run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:$(date +%s) dump.sql
+        oras push ghcr.io/l3montree-dev/devguard/vulndb:$(date +%s) data.csv
