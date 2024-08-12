@@ -8,7 +8,7 @@ env:
   POSTGRES_HOST: localhost
   POSTGRES_PASSWORD: not_reachable_from_the_internet
   COSIGN_PASSWORD: ${{ secrets.COSIGN_PRIVATE_KEY }}
-  date: $(date +%s)
+
 
 jobs:
   build:
