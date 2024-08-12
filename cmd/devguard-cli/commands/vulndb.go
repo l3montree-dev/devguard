@@ -127,28 +127,29 @@ func newRepairCommand() *cobra.Command {
 			databasesToRepair, _ := cmd.Flags().GetStringArray("databases")
 
 			cveRepository := repositories.NewCVERepository(database)
-			cweRepository := repositories.NewCWERepository(database)
-			affectedCmpRepository := repositories.NewAffectedComponentRepository(database)
+			//cweRepository := repositories.NewCWERepository(database)
+			//affectedCmpRepository := repositories.NewAffectedComponentRepository(database)
 			nvdService := vulndb.NewNVDService(cveRepository)
-			mitreService := vulndb.NewMitreService(cweRepository)
-			epssService := vulndb.NewEPSSService(nvdService, cveRepository)
-			osvService := vulndb.NewOSVService(affectedCmpRepository)
-			cvelistService := vulndb.NewCVEListService(cveRepository)
-			debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
+			//mitreService := vulndb.NewMitreService(cweRepository)
+			//epssService := vulndb.NewEPSSService(nvdService, cveRepository)
+			//osvService := vulndb.NewOSVService(affectedCmpRepository)
+			//cvelistService := vulndb.NewCVEListService(cveRepository)
+			//debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 
-			expoitDBService := vulndb.NewExploitDBService(nvdService, repositories.NewExploitRepository(database))
+			//expoitDBService := vulndb.NewExploitDBService(nvdService, repositories.NewExploitRepository(database))
 
-			githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(database))
-
-			if emptyOrContains(databasesToRepair, "cwe") {
-				now := time.Now()
-				slog.Info("starting cwe database repair")
-				if err := mitreService.Mirror(); err != nil {
-					slog.Error("could not mirror cwe database", "err", err)
+			//githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(database))
+			/*
+				if emptyOrContains(databasesToRepair, "cwe") {
+					now := time.Now()
+					slog.Info("starting cwe database repair")
+					if err := mitreService.Mirror(); err != nil {
+						slog.Error("could not mirror cwe database", "err", err)
+					}
+					slog.Info("finished cwe database repair", "duration", time.Since(now))
 				}
-				slog.Info("finished cwe database repair", "duration", time.Since(now))
-			}
 
+			*/
 			if emptyOrContains(databasesToRepair, "nvd") {
 				slog.Info("starting nvd database repair")
 				now := time.Now()
@@ -179,62 +180,64 @@ func newRepairCommand() *cobra.Command {
 				}
 				slog.Info("finished nvd database repair", "duration", time.Since(now))
 			}
+			/*
 
-			if emptyOrContains(databasesToRepair, "cvelist") {
-				slog.Info("starting cvelist database repair")
-				now := time.Now()
+				if emptyOrContains(databasesToRepair, "cvelist") {
+					slog.Info("starting cvelist database repair")
+					now := time.Now()
 
-				if err := cvelistService.Mirror(); err != nil {
-					slog.Error("could not mirror cvelist database", "err", err)
+					if err := cvelistService.Mirror(); err != nil {
+						slog.Error("could not mirror cvelist database", "err", err)
+					}
+					slog.Info("finished cvelist database repair", "duration", time.Since(now))
 				}
-				slog.Info("finished cvelist database repair", "duration", time.Since(now))
-			}
 
-			if emptyOrContains(databasesToRepair, "epss") {
-				slog.Info("starting epss database repair")
-				now := time.Now()
+				if emptyOrContains(databasesToRepair, "epss") {
+					slog.Info("starting epss database repair")
+					now := time.Now()
 
-				if err := epssService.Mirror(); err != nil {
-					slog.Error("could not repair epss database", "err", err)
+					if err := epssService.Mirror(); err != nil {
+						slog.Error("could not repair epss database", "err", err)
+					}
+					slog.Info("finished epss database repair", "duration", time.Since(now))
 				}
-				slog.Info("finished epss database repair", "duration", time.Since(now))
-			}
 
-			if emptyOrContains(databasesToRepair, "osv") {
-				slog.Info("starting osv database repair")
-				now := time.Now()
-				if err := osvService.Mirror(); err != nil {
-					slog.Error("could not repair osv database", "err", err)
+				if emptyOrContains(databasesToRepair, "osv") {
+					slog.Info("starting osv database repair")
+					now := time.Now()
+					if err := osvService.Mirror(); err != nil {
+						slog.Error("could not repair osv database", "err", err)
+					}
+					slog.Info("finished osv database repair", "duration", time.Since(now))
 				}
-				slog.Info("finished osv database repair", "duration", time.Since(now))
-			}
 
-			if emptyOrContains(databasesToRepair, "exploitdb") {
-				slog.Info("starting exploitdb database repair")
-				now := time.Now()
-				if err := expoitDBService.Mirror(); err != nil {
-					slog.Error("could not repair exploitdb database", "err", err)
+				if emptyOrContains(databasesToRepair, "exploitdb") {
+					slog.Info("starting exploitdb database repair")
+					now := time.Now()
+					if err := expoitDBService.Mirror(); err != nil {
+						slog.Error("could not repair exploitdb database", "err", err)
+					}
+					slog.Info("finished exploitdb database repair", "duration", time.Since(now))
 				}
-				slog.Info("finished exploitdb database repair", "duration", time.Since(now))
-			}
 
-			if emptyOrContains(databasesToRepair, "github-poc") {
-				slog.Info("starting github-poc database repair")
-				now := time.Now()
-				if err := githubExploitDBService.Mirror(); err != nil {
-					slog.Error("could not repair github-poc database", "err", err)
+				if emptyOrContains(databasesToRepair, "github-poc") {
+					slog.Info("starting github-poc database repair")
+					now := time.Now()
+					if err := githubExploitDBService.Mirror(); err != nil {
+						slog.Error("could not repair github-poc database", "err", err)
+					}
+					slog.Info("finished github-poc database repair", "duration", time.Since(now))
 				}
-				slog.Info("finished github-poc database repair", "duration", time.Since(now))
-			}
 
-			if emptyOrContains(databasesToRepair, "dsa") {
-				slog.Info("starting dsa database repair")
-				now := time.Now()
-				if err := debianSecurityTracker.Mirror(); err != nil {
-					slog.Error("could not repair dsa database", "err", err)
+				if emptyOrContains(databasesToRepair, "dsa") {
+					slog.Info("starting dsa database repair")
+					now := time.Now()
+					if err := debianSecurityTracker.Mirror(); err != nil {
+						slog.Error("could not repair dsa database", "err", err)
+					}
+					slog.Info("finished dsa database repair", "duration", time.Since(now))
 				}
-				slog.Info("finished dsa database repair", "duration", time.Since(now))
-			}
+			*/
 
 		},
 	}
