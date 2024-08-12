@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -116,8 +117,10 @@ func newRepairCommand() *cobra.Command {
 			// check if after flag is set
 			after, _ := cmd.Flags().GetString("after")
 			startIndex, _ := cmd.Flags().GetInt("startIndex")
+			fmt.Println(after, startIndex)
 
 			core.LoadConfig() // nolint
+
 			database, err := core.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "err", err)
@@ -126,13 +129,13 @@ func newRepairCommand() *cobra.Command {
 
 			databasesToRepair, _ := cmd.Flags().GetStringArray("databases")
 
-			cveRepository := repositories.NewCVERepository(database)
+			//cveRepository := repositories.NewCVERepository(database)
 			//cweRepository := repositories.NewCWERepository(database)
-			//affectedCmpRepository := repositories.NewAffectedComponentRepository(database)
-			nvdService := vulndb.NewNVDService(cveRepository)
+			affectedCmpRepository := repositories.NewAffectedComponentRepository(database)
+			//nvdService := vulndb.NewNVDService(cveRepository)
 			//mitreService := vulndb.NewMitreService(cweRepository)
 			//epssService := vulndb.NewEPSSService(nvdService, cveRepository)
-			//osvService := vulndb.NewOSVService(affectedCmpRepository)
+			osvService := vulndb.NewOSVService(affectedCmpRepository)
 			//cvelistService := vulndb.NewCVEListService(cveRepository)
 			//debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 
@@ -140,77 +143,78 @@ func newRepairCommand() *cobra.Command {
 
 			//githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(database))
 			/*
-				if emptyOrContains(databasesToRepair, "cwe") {
-					now := time.Now()
-					slog.Info("starting cwe database repair")
-					if err := mitreService.Mirror(); err != nil {
-						slog.Error("could not mirror cwe database", "err", err)
+					if emptyOrContains(databasesToRepair, "cwe") {
+						now := time.Now()
+						slog.Info("starting cwe database repair")
+						if err := mitreService.Mirror(); err != nil {
+							slog.Error("could not mirror cwe database", "err", err)
+						}
+						slog.Info("finished cwe database repair", "duration", time.Since(now))
 					}
-					slog.Info("finished cwe database repair", "duration", time.Since(now))
-				}
 
-			*/
-			if emptyOrContains(databasesToRepair, "nvd") {
-				slog.Info("starting nvd database repair")
-				now := time.Now()
-				if after != "" {
-					// we do a partial repair
-					// try to parse the date
-					afterDate, err := time.Parse("2006-01-02", after)
-					if err != nil {
-						slog.Error("could not parse after date", "err", err, "provided", after, "expectedFormat", "2006-01-02")
-					}
-					err = nvdService.FetchAfter(afterDate)
-					if err != nil {
-						slog.Error("could not fetch after date", "err", err)
-					}
-				} else {
-					if startIndex != 0 {
-						err = nvdService.FetchAfterIndex(startIndex)
+
+				if emptyOrContains(databasesToRepair, "nvd") {
+					slog.Info("starting nvd database repair")
+					now := time.Now()
+					if after != "" {
+						// we do a partial repair
+						// try to parse the date
+						afterDate, err := time.Parse("2006-01-02", after)
 						if err != nil {
-							slog.Error("could not fetch after index", "err", err)
+							slog.Error("could not parse after date", "err", err, "provided", after, "expectedFormat", "2006-01-02")
+						}
+						err = nvdService.FetchAfter(afterDate)
+						if err != nil {
+							slog.Error("could not fetch after date", "err", err)
 						}
 					} else {
-						// just redo the intitial sync
-						err = nvdService.InitialPopulation()
-						if err != nil {
-							slog.Error("could not do initial sync", "err", err)
+						if startIndex != 0 {
+							err = nvdService.FetchAfterIndex(startIndex)
+							if err != nil {
+								slog.Error("could not fetch after index", "err", err)
+							}
+						} else {
+							// just redo the intitial sync
+							err = nvdService.InitialPopulation()
+							if err != nil {
+								slog.Error("could not do initial sync", "err", err)
+							}
 						}
 					}
+					slog.Info("finished nvd database repair", "duration", time.Since(now))
 				}
-				slog.Info("finished nvd database repair", "duration", time.Since(now))
+
+
+					if emptyOrContains(databasesToRepair, "cvelist") {
+						slog.Info("starting cvelist database repair")
+						now := time.Now()
+
+						if err := cvelistService.Mirror(); err != nil {
+							slog.Error("could not mirror cvelist database", "err", err)
+						}
+						slog.Info("finished cvelist database repair", "duration", time.Since(now))
+					}
+
+					if emptyOrContains(databasesToRepair, "epss") {
+						slog.Info("starting epss database repair")
+						now := time.Now()
+
+						if err := epssService.Mirror(); err != nil {
+							slog.Error("could not repair epss database", "err", err)
+						}
+						slog.Info("finished epss database repair", "duration", time.Since(now))
+					}
+
+			*/
+			if emptyOrContains(databasesToRepair, "osv") {
+				slog.Info("starting osv database repair")
+				now := time.Now()
+				if err := osvService.Mirror(); err != nil {
+					slog.Error("could not repair osv database", "err", err)
+				}
+				slog.Info("finished osv database repair", "duration", time.Since(now))
 			}
 			/*
-
-				if emptyOrContains(databasesToRepair, "cvelist") {
-					slog.Info("starting cvelist database repair")
-					now := time.Now()
-
-					if err := cvelistService.Mirror(); err != nil {
-						slog.Error("could not mirror cvelist database", "err", err)
-					}
-					slog.Info("finished cvelist database repair", "duration", time.Since(now))
-				}
-
-				if emptyOrContains(databasesToRepair, "epss") {
-					slog.Info("starting epss database repair")
-					now := time.Now()
-
-					if err := epssService.Mirror(); err != nil {
-						slog.Error("could not repair epss database", "err", err)
-					}
-					slog.Info("finished epss database repair", "duration", time.Since(now))
-				}
-
-				if emptyOrContains(databasesToRepair, "osv") {
-					slog.Info("starting osv database repair")
-					now := time.Now()
-					if err := osvService.Mirror(); err != nil {
-						slog.Error("could not repair osv database", "err", err)
-					}
-					slog.Info("finished osv database repair", "duration", time.Since(now))
-				}
-
 				if emptyOrContains(databasesToRepair, "exploitdb") {
 					slog.Info("starting exploitdb database repair")
 					now := time.Now()

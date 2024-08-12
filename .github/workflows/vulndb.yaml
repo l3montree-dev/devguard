@@ -40,12 +40,14 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: 1.22
+
     - name: Build the database (this takes some time)
       run: |
         go run ./cmd/devguard-cli/main.go vulndb repair --startIndex=0
     - name: Dump the PostgreSQL database
       # skip:checkov:CKV_SECRET_6
-      run: PGPASSWORD=${{env.POSTGRES_PASSWORD}} pg_dump -h localhost -U devguard devguard -t affected_components -t cpe_matches  -t cve_affected_component -t cve_cpe_match -t cves -t cwes -t exploits -t weaknesses --on-conflict-do-nothing --column-inserts > dump.sql
+      # devguard -t affected_components -t cpe_matches  -t cve_affected_component -t cve_cpe_match -t cves -t cwes -t exploits -t weaknesses --on-conflict-do-nothing --column-inserts > dump.sql
+      run: PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard \c devguard -c "COPY (SELECT * FROM cves) TO STDOUT WITH DELIMITER ',' CSV HEADER" > data.csv
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v3
       with:
