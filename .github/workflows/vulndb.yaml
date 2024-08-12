@@ -58,8 +58,10 @@ jobs:
       run: zip vulndb.zip cve_affected_component.csv #cves.csv cpe_matches.csv cve_cpe_match.csv cwes.csv exploits.csv weaknesses.csv
     - name: Install Cosign 
       uses: sigstore/cosign-installer@main
+
     - name: Write signing key to disk
-      run: 'echo "$COSIGN_PASSWORD" > cosign.key'
+        run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+
     - name: Sign the database CSV files
       run: cosign sign-blob -key cosign.key vulndb.zip
     - name: Login to GitHub Container Registry
