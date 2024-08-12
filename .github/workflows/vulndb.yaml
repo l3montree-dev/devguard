@@ -60,10 +60,10 @@ jobs:
       uses: sigstore/cosign-installer@main
 
     - name: Write signing key to disk
-        run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+      run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
 
     - name: Sign the database CSV files
-      run: cosign sign-blob -key cosign.key vulndb.zip
+      run: cosign sign-blob --key cosign.key vulndb.zip
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v3
       with:
