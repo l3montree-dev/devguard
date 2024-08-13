@@ -85,5 +85,5 @@ jobs:
         oras push ghcr.io/l3montree-dev/devguard/vulndb:$date vulndb.zip
     - name: Push the sign file to GitHub Container Registry
       run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:$date vulndb.zip.sig
+        oras push ghcr.io/l3montree-dev/devguard/vulndb:$date+sig vulndb.zip.sig
     
