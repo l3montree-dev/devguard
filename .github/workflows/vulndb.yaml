@@ -7,6 +7,7 @@ env:
   POSTGRES_USER: devguard
   POSTGRES_HOST: localhost
   POSTGRES_PASSWORD: not_reachable_from_the_internet
+  DATE: ${{ date +%s}}
 
 jobs:
   build:
@@ -74,8 +75,8 @@ jobs:
       uses: oras-project/setup-oras@v1
     - name: Push the database ZIP file to GitHub Container Registry
       run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:${{env.date}} vulndb.zip
+        oras push ghcr.io/l3montree-dev/devguard/vulndb:${{env.DATE}} vulndb.zip
     - name: Push the sign file to GitHub Container Registry
       run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:${{env.date}} vulndb.zip.sig
+        oras push ghcr.io/l3montree-dev/devguard/vulndb:${{env.DATE}} vulndb.zip.sig
     

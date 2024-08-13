@@ -21,6 +21,7 @@ func NewVulndbCommand() *cobra.Command {
 
 	vulndbCmd.AddCommand(newRepairCommand())
 	vulndbCmd.AddCommand(newImportCommand())
+
 	return &vulndbCmd
 }
 
