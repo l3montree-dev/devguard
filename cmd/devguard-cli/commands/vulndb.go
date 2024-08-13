@@ -20,8 +20,8 @@ func NewVulndbCommand() *cobra.Command {
 	}
 
 	vulndbCmd.AddCommand(newRepairCommand())
+	vulndbCmd.AddCommand(newImportCVECommand())
 	vulndbCmd.AddCommand(newImportCommand())
-
 	return &vulndbCmd
 }
 
@@ -52,9 +52,9 @@ func isValidCVE(cveId string) bool {
 	return r.MatchString(cveId)
 }
 
-func newImportCommand() *cobra.Command {
+func newImportCVECommand() *cobra.Command {
 	importCmd := &cobra.Command{
-		Use:   "import",
+		Use:   "importcve",
 		Short: "Will import the vulnerability database",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -106,6 +106,16 @@ func newImportCommand() *cobra.Command {
 		},
 	}
 
+	return importCmd
+}
+func newImportCommand() *cobra.Command {
+	importCmd := &cobra.Command{
+		Use:   "import2",
+		Short: "Will import the vulnerability database",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+		},
+	}
 	return importCmd
 }
 

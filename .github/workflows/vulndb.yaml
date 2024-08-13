@@ -22,6 +22,7 @@ jobs:
           POSTGRES_USER: ${{env.POSTGRES_USER}}
           POSTGRES_PASSWORD: ${{env.POSTGRES_PASSWORD}}
 
+
         ports:
         - 5432:5432
         options: "--health-cmd=\"pg_isready -U devguard\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
@@ -75,10 +76,14 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Setup oras cli
       uses: oras-project/setup-oras@v1
+
+    - name: set the date
+      run: echo "date="+${{env.DATE}} >> "$GITHUB_ENV"
+
     - name: Push the database ZIP file to GitHub Container Registry
       run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:${{env.DATE}} vulndb.zip
+        oras push ghcr.io/l3montree-dev/devguard/vulndb:$date vulndb.zip
     - name: Push the sign file to GitHub Container Registry
       run: |
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:${{env.DATE}} vulndb.zip.sig
+        oras push ghcr.io/l3montree-dev/devguard/vulndb:$date vulndb.zip.sig
     
