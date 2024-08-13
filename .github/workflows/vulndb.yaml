@@ -7,7 +7,8 @@ env:
   POSTGRES_USER: devguard
   POSTGRES_HOST: localhost
   POSTGRES_PASSWORD: not_reachable_from_the_internet
-  DATE: ${{ date +%s}}
+  DATE : $(date +%s)
+
 
 jobs:
   build:
@@ -20,6 +21,7 @@ jobs:
           POSTGRES_DB: ${{env.POSTGRES_DB}}
           POSTGRES_USER: ${{env.POSTGRES_USER}}
           POSTGRES_PASSWORD: ${{env.POSTGRES_PASSWORD}}
+
         ports:
         - 5432:5432
         options: "--health-cmd=\"pg_isready -U devguard\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
