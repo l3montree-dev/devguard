@@ -78,7 +78,7 @@ jobs:
       uses: oras-project/setup-oras@v1
 
     - name: set the date
-      run: echo "date="+${{env.DATE}} >> "$GITHUB_ENV"
+      run: echo "date="${{env.DATE}} >> "$GITHUB_ENV"
 
     - name: Push the database ZIP file to GitHub Container Registry
       run: |
