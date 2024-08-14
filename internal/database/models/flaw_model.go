@@ -61,6 +61,14 @@ type Flaw struct {
 	DeletedAt sql.NullTime `gorm:"index" json:"-"`
 }
 
+type FlawRisk struct {
+	FlawID            string
+	CreatedAt         time.Time
+	ArbitraryJsonData string
+	Risk              float64
+	Type              FlawEventType
+}
+
 func (m Flaw) TableName() string {
 	return "flaws"
 }

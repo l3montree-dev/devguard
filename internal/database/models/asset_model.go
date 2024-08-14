@@ -52,11 +52,11 @@ func (m Asset) TableName() string {
 }
 
 func (m Asset) GetCurrentAssetComponents() []ComponentDependency {
-	assetComponents := make([]ComponentDependency, 0)
+	AssetComponents := make([]ComponentDependency, 0)
 	for _, assetComponent := range m.Components {
 		if assetComponent.AssetSemverEnd == nil {
-			assetComponents = append(assetComponents, assetComponent)
+			AssetComponents = append(AssetComponents, assetComponent)
 		}
 	}
-	return assetComponents
+	return AssetComponents
 }

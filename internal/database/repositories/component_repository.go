@@ -47,7 +47,7 @@ func (c *componentRepository) UpdateSemverEnd(tx database.DB, ids []uuid.UUID, v
 	return c.GetDB(tx).Model(&models.ComponentDependency{}).Where("id IN ?", ids).Update("semver_end", version).Error
 }
 
-func (c *componentRepository) CreateAssetComponents(tx database.DB, components []models.ComponentDependency) error {
+func (c *componentRepository) CreateComponents(tx database.DB, components []models.ComponentDependency) error {
 	if len(components) == 0 {
 		return nil
 	}
@@ -55,7 +55,7 @@ func (c *componentRepository) CreateAssetComponents(tx database.DB, components [
 	return c.GetDB(tx).Create(&components).Error
 }
 
-func (c *componentRepository) LoadAssetComponents(tx database.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadComponents(tx database.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 	if version == models.LatestVersion {
@@ -124,6 +124,30 @@ func (c *componentRepository) HandleStateDiff(tx database.DB, assetID uuid.UUID,
 			added[i].AssetID = assetID
 		}
 
-		return c.CreateAssetComponents(tx, added)
+		return c.CreateComponents(tx, added)
 	})
+}
+
+func (c *componentRepository) GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error) {
+	var results []struct {
+		ScanType string `gorm:"column:scan_type"`
+		Count    int    `gorm:"column:count"`
+	}
+	err := c.db.Model(&models.Component{}).
+		Select("scan_type , COUNT(*) as count").
+		Group("scan_type").
+		Where("asset_id = ?", assetID).
+		Find(&results).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// convert to map
+	counts := make(map[string]int)
+	for _, r := range results {
+		counts[r.ScanType] = r.Count
+	}
+
+	return counts, nil
 }

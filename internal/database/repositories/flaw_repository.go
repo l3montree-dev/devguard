@@ -3,6 +3,7 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
+
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
@@ -124,6 +125,14 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, s
 func (r *flawRepository) GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error) {
 	var flaws []models.Flaw = []models.Flaw{}
 	if err := r.Repository.GetDB(tx).Where("asset_id = ?", assetID).Find(&flaws).Error; err != nil {
+		return nil, err
+	}
+	return flaws, nil
+}
+
+func (r *flawRepository) GetAllOpenFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error) {
+	var flaws []models.Flaw = []models.Flaw{}
+	if err := r.Repository.GetDB(tx).Where("asset_id = ? AND state = ?", assetID, models.FlawStateOpen).Find(&flaws).Error; err != nil {
 		return nil, err
 	}
 	return flaws, nil

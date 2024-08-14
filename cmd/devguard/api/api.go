@@ -31,6 +31,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/project"
+	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -268,6 +269,8 @@ func Start(db core.DB) {
 	// init all repositories using the provided database
 	patRepository := repositories.NewPATRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
+	assetRiskAggregationRepository := repositories.NewAssetRiskHistoryRepository(db)
+	statisticsRepository := repositories.NewStatisticsRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
 	flawEventRepository := repositories.NewFlawEventRepository(db)
@@ -280,12 +283,16 @@ func Start(db core.DB) {
 
 	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
 
+	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, flawRepository)
+
 	// init all http controllers using the repositories
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
 	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
+
+	statisticsController := statistics.NewHttpController(statisticsService)
 
 	patService := pat.NewPatService(patRepository)
 
@@ -369,6 +376,14 @@ func Start(db core.DB) {
 	assetRouter.GET("/affected-components/", assetController.AffectedComponents)
 	assetRouter.GET("/sbom.json/", assetController.SBOMJSON)
 	assetRouter.GET("/sbom.xml/", assetController.SBOMXML)
+
+	assetRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
+	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetRiskDistribution)
+	assetRouter.GET("/stats/risk-history/", statisticsController.GetAssetRiskHistory)
+	assetRouter.GET("/stats/flaw-count-by-scanner/", statisticsController.GetFlawCountByScannerId)
+	assetRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanType)
+	assetRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetFlawAggregationStateAndChange)
+	assetRouter.GET("/stats/average-fixing-time/", statisticsController.AverageFixingTime)
 
 	assetRouter.GET("/versions/", assetController.Versions)
 
