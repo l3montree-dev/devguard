@@ -1,164 +1,137 @@
 package statistics
 
 import (
-	"encoding/json"
-	"log/slog"
-	"sort"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type statisticsRepository interface {
-	GetRecentFlawsForAsset(assetID uuid.UUID, time time.Time) ([]models.FlawRisk, error)
-	GetAssetFlawsStatistics(assetID uuid.UUID) ([]models.AssetRiskSummary, error)
-	GetAssetRisksDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error)
-	GetAssetCriticalDependenciesGroupedByScanType(assetID uuid.UUID) ([]models.AssetDependencies, error)
-	GetRecentFlawsState(assetID uuid.UUID, time time.Time) ([]models.FlawRisk, error)
-	GetFlawDetailsByAssetId(assetID uuid.UUID) ([]models.Flaw, error)
+	TimeTravelFlawState(assetID uuid.UUID, time time.Time) ([]models.Flaw, error)
+	GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error)
+	GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error)
+	AverageFixingTime(assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 }
 
 type componentRepository interface {
-	GetDependenciesGroupedByScanType(assetID uuid.UUID) ([]models.AssetDependencies, error)
-	GetPackages(assetID uuid.UUID) ([]models.AssetComponents, error)
+	GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error)
 }
-type assetRecentRiskRepository interface {
-	GetRecentRisksByAssetId(assetId uuid.UUID) ([]models.AssetRecentRisks, error)
-	UpdateRecentRisks(assetRisks *models.AssetRecentRisks) error
+type assetRiskHistoryRepository interface {
+	GetRiskHistory(assetId uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error)
+	UpdateRiskAggregation(assetRisk *models.AssetRiskHistory) error
 }
+
+type flawRepository interface {
+	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
+}
+
 type service struct {
-	statisticsRepository      statisticsRepository
-	componentRepository       componentRepository
-	assetRecentRiskRepository assetRecentRiskRepository
+	statisticsRepository       statisticsRepository
+	componentRepository        componentRepository
+	assetRiskHistoryRepository assetRiskHistoryRepository
+	flawRepository             flawRepository
 }
 
-func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRecentRiskRepository assetRecentRiskRepository) *service {
+func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, flawRepository flawRepository) *service {
 	return &service{
-		statisticsRepository:      statisticsRepository,
-		componentRepository:       componentRepository,
-		assetRecentRiskRepository: assetRecentRiskRepository,
+		statisticsRepository:       statisticsRepository,
+		componentRepository:        componentRepository,
+		assetRiskHistoryRepository: assetRiskHistoryRepository,
+		flawRepository:             flawRepository,
 	}
 }
 
-func (s *service) GetAssetCombinedDependencies(assetID uuid.UUID) ([]models.AssetCombinedDependencies, error) {
-
-	dependencies, err := s.getAssetDependenciesGroupedByScanType(assetID)
-	if err != nil {
-		return nil, err
-	}
-
-	criticalDependencies, err := s.getAssetCriticalDependenciesGroupedByScanType(assetID)
-	if err != nil {
-		return nil, err
-	}
-
-	criticalCountMap := make(map[string]int64)
-	for _, criticalDep := range criticalDependencies {
-		criticalCountMap[criticalDep.ScannerID] = criticalDep.Count
-	}
-
-	combinedDependencies := make([]models.AssetCombinedDependencies, len(dependencies))
-	for i, allDep := range dependencies {
-		combinedDependencies[i] = models.AssetCombinedDependencies{
-			ScannerID:         allDep.ScannerID,
-			CountDependencies: allDep.Count,
-			CountCritical:     criticalCountMap[allDep.ScannerID],
-		}
-	}
-
-	return combinedDependencies, nil
-}
-
-func (s *service) getAssetCriticalDependenciesGroupedByScanType(assetID uuid.UUID) ([]models.AssetDependencies, error) {
-	assets, err := s.statisticsRepository.GetAssetCriticalDependenciesGroupedByScanType(assetID)
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range assets {
-		assets[i].ScannerID = scanTypeFromScannerID(assets[i].ScannerID)
-	}
-	return assets, nil
-
-}
-
-func (s *service) getAssetDependenciesGroupedByScanType(assetID uuid.UUID) ([]models.AssetDependencies, error) {
-	return s.componentRepository.GetDependenciesGroupedByScanType(assetID)
-}
-
-func (s *service) GetAssetFlawsStatistics(assetID uuid.UUID) ([]models.AssetRiskSummary, error) {
-
-	risks, err := s.statisticsRepository.GetAssetFlawsStatistics(assetID)
-	if err != nil {
-		return nil, err
-	}
-	for i := range risks {
-		risks[i].ScannerID = scanTypeFromScannerID(risks[i].ScannerID)
-
-	}
-	return risks, nil
-}
-
-func scanTypeFromScannerID(scannerID string) string {
-	parts := strings.Split(scannerID, "/")
-	return parts[len(parts)-1]
-}
-
-func (s *service) UpdateAssetRecentRisks(assetID uuid.UUID, begin time.Time, end time.Time) error {
-	tmpID := 1
-
+func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time, end time.Time) error {
 	for time := begin; time.Before(end); time = time.AddDate(0, 0, 1) {
-		assetRisk, err := s.statisticsRepository.GetRecentFlawsForAsset(assetID, time)
+		flaws, err := s.statisticsRepository.TimeTravelFlawState(assetID, time)
 		if err != nil {
 			return err
 		}
 
-		riskSum := 0.0
-		riskAvg := 0.0
-		riskMax := 0.0
-		riskMin := 99.0
-		dayOfRisk := "9999-99-99 00:00:00.000000 +0200 CEST"
+		risks := map[string]struct {
+			Min float64
+			Max float64
+			Sum float64
+			Avg float64
+		}{
+			"open":  {Min: -1.0, Max: 0.0, Sum: 0.0, Avg: 0.0},
+			"fixed": {Min: -1.0, Max: 0.0, Sum: 0.0, Avg: 0.0},
+		}
 
-		for i := range assetRisk {
-			arbitraryJsonData := make(map[string]interface{})
-			err := json.Unmarshal([]byte(assetRisk[i].ArbitraryJsonData), &arbitraryJsonData)
-			if err != nil {
-				slog.Error("could not parse additional data", "err", err, "flawId", assetRisk[i].FlawID)
+		openFlaws, fixedFlaws := 0, 0
+
+		for _, flaw := range flaws {
+			var key string
+			if flaw.State == models.FlawStateOpen {
+				openFlaws++
+				key = "open"
+			} else {
+				fixedFlaws++
+				key = "fixed"
 			}
-			risk := arbitraryJsonData["risk"].(float64)
-			riskSum += risk
-			if risk > riskMax {
-				riskMax = risk
-			}
-			if risk <= riskMin {
-				riskMin = risk
+
+			riskAggregation := risks[key]
+
+			if riskAggregation.Min == -1.0 {
+				riskAggregation.Min = utils.OrDefault(flaw.RawRiskAssessment, -1)
 			}
 
+			risk := utils.OrDefault(flaw.RawRiskAssessment, 0)
+
+			if riskAggregation.Min <= risk {
+				riskAggregation.Min = risk
+			}
+
+			riskAggregation.Sum += risk
+			if risk > riskAggregation.Max {
+				riskAggregation.Max = risk
+			}
+
+			risks[key] = riskAggregation
 		}
 
-		if riskMin == 99.0 {
-			riskMin = 0.0
-		}
-		if len(assetRisk) != 0 {
-			riskAvg = riskSum / float64(len(assetRisk))
-			dayOfRisk = assetRisk[0].CreatedAt.String()
-		}
+		openRisk := risks["open"]
+		fixedRisk := risks["fixed"]
 
-		result := models.AssetRecentRisks{
-			AssetID:   assetID,
-			DayOfRisk: dayOfRisk,
-			DayOfScan: time.Format("2006-01-02"),
-			SumRisk:   riskSum,
-			AvgRisk:   riskAvg,
-			MaxRisk:   riskMax,
-			MinRisk:   riskMin,
+		if openRisk.Min == -1.0 {
+			openRisk.Min = 0.0
+		}
+		if fixedRisk.Min == -1.0 {
+			fixedRisk.Min = 0.0
 		}
 
-		tmpID++
+		if openFlaws != 0 {
+			openRisk.Avg = openRisk.Sum / float64(openFlaws)
+		}
 
-		err = s.assetRecentRiskRepository.UpdateRecentRisks(&result)
+		if fixedFlaws != 0 {
+			fixedRisk.Avg = fixedRisk.Sum / float64(fixedFlaws)
+		}
+
+		result := models.AssetRiskHistory{
+			AssetID: assetID,
+			Day:     time,
+
+			SumOpenRisk: openRisk.Sum,
+			AvgOpenRisk: openRisk.Avg,
+			MaxOpenRisk: openRisk.Max,
+			MinOpenRisk: openRisk.Min,
+
+			SumClosedRisk: fixedRisk.Sum,
+			AvgClosedRisk: fixedRisk.Avg,
+			MaxClosedRisk: fixedRisk.Max,
+			MinClosedRisk: fixedRisk.Min,
+
+			OpenFlaws:  openFlaws,
+			FixedFlaws: fixedFlaws,
+		}
+
+		err = s.assetRiskHistoryRepository.UpdateRiskAggregation(&result)
 		if err != nil {
 			return err
 		}
@@ -168,132 +141,105 @@ func (s *service) UpdateAssetRecentRisks(assetID uuid.UUID, begin time.Time, end
 
 }
 
-func (s *service) GetAssetRecentRisksByAssetId(assetID uuid.UUID) ([]models.AssetRecentRisks, error) {
-	return s.assetRecentRiskRepository.GetRecentRisksByAssetId(assetID)
+func (s *service) GetAssetRiskHistory(assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
+	return s.assetRiskHistoryRepository.GetRiskHistory(assetID, start, end)
 }
 
-func (s *service) GetAssetFlawsDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error) {
-	assets, err := s.statisticsRepository.GetAssetRisksDistribution(assetID)
+func (s *service) GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error) {
+	riskDistribution, err := s.statisticsRepository.GetAssetRiskDistribution(assetID)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := range assets {
-		assets[i].ScannerID = scanTypeFromScannerID(assets[i].ScannerID)
-	}
-
-	return assets, nil
-
+	return riskDistribution, nil
 }
 
-func (s *service) GetAssetFlaws(assetID uuid.UUID) ([]models.AssetFlaws, models.AssetFlawsStateStatistics, []models.AssetComponents, []models.AssetComponents, []models.FlawEventWithFlawName, error) {
-
-	flaws, err := s.statisticsRepository.GetFlawDetailsByAssetId(assetID)
+func (s *service) GetComponentRisk(assetID uuid.UUID) (map[string]float64, error) {
+	flaws, err := s.flawRepository.GetAllFlawsByAssetID(nil, assetID)
 	if err != nil {
-		return nil, models.AssetFlawsStateStatistics{}, nil, nil, nil, err
+		return nil, err
 	}
 
-	assetRisk, err := s.statisticsRepository.GetRecentFlawsForAsset(assetID, time.Now().AddDate(0, 0, -1))
-	if err != nil {
-		return nil, models.AssetFlawsStateStatistics{}, nil, nil, nil, err
-	}
-
-	assetFlaws := make([]models.AssetFlaws, 0)
-	var assetFlawsStateStatistics models.AssetFlawsStateStatistics
-
-	DamagedPkgs := make(map[string]int)
-
-	events := make([]models.FlawEventWithFlawName, 0)
-
-	for i := range assetRisk {
-		flawType := assetRisk[i].Type
-		if flawType == "detected" {
-			assetFlawsStateStatistics.Open++
-		}
-		if flawType == "reopened" {
-			assetFlawsStateStatistics.Open++
-		}
-		if flawType == "fixed" {
-			assetFlawsStateStatistics.Handled++
-		}
-		if flawType == "accepted" {
-			assetFlawsStateStatistics.Handled++
-		}
-		if flawType == "falsePositive" {
-			assetFlawsStateStatistics.Handled++
-		}
-	}
+	totalRiskPerComponent := make(map[string]float64)
 
 	for _, f := range flaws {
-		arbitraryJsonData := f.GetArbitraryJsonData()
-		var fixedVersion string
-		if arbitraryJsonData != nil {
-			fixedVersionA := arbitraryJsonData["fixedVersion"]
-			if fixedVersionA != nil {
-				fixedVersion = fixedVersionA.(string)
-			}
-
-		}
-
-		assetFlaws = append(assetFlaws, models.AssetFlaws{
-			FlawID:            f.ID,
-			RawRiskAssessment: f.RawRiskAssessment,
-			FixedVersion:      fixedVersion,
-		})
-
-		if f.State == models.FlawStateOpen {
-			assetFlawsStateStatistics.Open++
-		}
-		if f.State == models.FlawStateFixed {
-			assetFlawsStateStatistics.Handled++
-		}
-		if f.State == models.FlawStateAccepted {
-			assetFlawsStateStatistics.Handled++
-		}
-		if f.State == models.FlawStateFalsePositive {
-			assetFlawsStateStatistics.Handled++
-		}
-
-		DamagedPkg := f.ComponentPurl
-		parts := strings.Split(DamagedPkg, ":")
-		DamagedPkg = parts[1]
-		DamagedPkgs[DamagedPkg]++
-
-		for event := range f.Events {
-			events = append(events, models.FlawEventWithFlawName{
-				FlawEvent: f.Events[event],
-				FlawName:  f.CVEID,
-			})
-
-		}
-
-	}
-	keys := make([]string, 0, len(DamagedPkgs))
-	for k := range DamagedPkgs {
-		keys = append(keys, k)
+		damagedPkg := f.ComponentPurl
+		parts := strings.Split(damagedPkg, ":")
+		damagedPkg = parts[1]
+		totalRiskPerComponent[damagedPkg] += utils.OrDefault(f.RawRiskAssessment, 0)
 	}
 
-	sort.Slice(keys, func(i, j int) bool {
-		return DamagedPkgs[keys[i]] > DamagedPkgs[keys[j]]
-	})
+	return totalRiskPerComponent, nil
+}
 
-	topHighestDamagedPkgs := []models.AssetComponents{}
-	for i := 0; i < 3 && i < len(keys); i++ {
-		k := keys[i]
-		topHighestDamagedPkgs = append(topHighestDamagedPkgs, models.AssetComponents{
-			Component: k,
-			Count:     DamagedPkgs[k],
-		})
+func (s *service) GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
+	return s.statisticsRepository.GetFlawCountByScannerId(assetID)
+}
+
+func (s *service) GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error) {
+	return s.componentRepository.GetDependencyCountPerScanType(assetID)
+}
+
+func (s *service) GetAverageFixingTime(assetID uuid.UUID, severity string) (time.Duration, error) {
+	var riskIntervalStart, riskIntervalEnd float64
+	if severity == "critical" {
+		riskIntervalStart = 9
+		riskIntervalEnd = 10
+	} else if severity == "high" {
+		riskIntervalStart = 7
+		riskIntervalEnd = 9
+	} else if severity == "medium" {
+		riskIntervalStart = 4
+		riskIntervalEnd = 7
+	} else if severity == "low" {
+		riskIntervalStart = 0
+		riskIntervalEnd = 4
 	}
 
-	assetComponents, err := s.componentRepository.GetPackages(assetID)
-	if err != nil {
-		return nil, models.AssetFlawsStateStatistics{}, nil, nil, nil, err
+	return s.statisticsRepository.AverageFixingTime(assetID, riskIntervalStart, riskIntervalEnd)
+}
+
+func (s *service) GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (flawAggregationStateAndChange, error) {
+	// check if calculateChangeTo is in the future
+	if calculateChangeTo.After(time.Now()) {
+		return flawAggregationStateAndChange{}, fmt.Errorf("Cannot calculate change to the future")
 	}
 
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].CreatedAt.After(events[j].CreatedAt)
-	})
+	results := utils.Concurrently(
+		func() (any, error) {
+			return s.flawRepository.GetAllFlawsByAssetID(nil, assetID)
+		},
+		func() (any, error) {
+			return s.statisticsRepository.TimeTravelFlawState(assetID, calculateChangeTo)
+		},
+	)
 
-	return assetFlaws, assetFlawsStateStatistics, topHighestDamagedPkgs, assetComponents, events, nil
+	if results.HasErrors() {
+		return flawAggregationStateAndChange{}, results.Error()
+	}
+
+	now := results.GetValue(0).([]models.Flaw)
+	was := results.GetValue(1).([]models.Flaw)
+
+	nowState := calculateFlawAggregationState(now)
+	wasState := calculateFlawAggregationState(was)
+
+	return flawAggregationStateAndChange{
+		Now: nowState,
+		Was: wasState,
+	}, nil
+}
+
+func calculateFlawAggregationState(flaws []models.Flaw) flawAggregationState {
+	state := flawAggregationState{}
+
+	for _, flaw := range flaws {
+		if flaw.State == models.FlawStateOpen {
+			state.Open++
+		} else {
+			state.Fixed++
+		}
+	}
+
+	return state
 }

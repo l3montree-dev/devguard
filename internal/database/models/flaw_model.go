@@ -65,6 +65,7 @@ type FlawRisk struct {
 	FlawID            string
 	CreatedAt         time.Time
 	ArbitraryJsonData string
+	Risk              float64
 	Type              FlawEventType
 }
 

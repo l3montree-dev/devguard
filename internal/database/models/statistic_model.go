@@ -1,13 +1,10 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
-
-type AssetDependencies struct {
-	ScannerID string `json:"scannerId"`
-	Count     int64  `json:"count"`
-}
 
 type FlawEventWithFlawName struct {
 	FlawEvent
@@ -15,50 +12,44 @@ type FlawEventWithFlawName struct {
 }
 
 type AssetOverview struct {
-	TotalDependencies         int                         `json:"totalDependenciesNumber"`
-	TotalCriticalDependencies int                         `json:"criticalDependenciesNumber"`
-	CombinedDependencies      []AssetCombinedDependencies `json:"assetCombinedDependencies"`
-	RiskSummary               []AssetRiskSummary          `json:"assetRiskSummary"`
-	RiskDistribution          []AssetRiskDistribution     `json:"assetRiskDistribution"`
-	RecentRisks               []AssetRecentRisks          `json:"assetRisks"`
-	Flaws                     []AssetFlaws                `json:"assetFlaws"`
-	FlawsStateStatistics      AssetFlawsStateStatistics   `json:"assetFlawsStateStatistics"`
-	HighestDamagedPackages    []AssetComponents           `json:"assetHighestDamagedPackages"`
-	Components                []AssetComponents           `json:"assetComponents"`
-	FlawEvents                []FlawEventWithFlawName     `json:"flawEvents"`
-}
-type AssetCombinedDependencies struct {
-	ScannerID         string `json:"scannerId"`
-	CountDependencies int64  `json:"countDependencies"`
-	CountCritical     int64  `json:"countCritical"`
-}
-
-type AssetRiskSummary struct {
-	ScannerID         string  `json:"scannerId"`
-	RawRiskAssessment float64 `json:"rawRiskAssessment"`
-	Count             int64   `json:"count"`
-	Average           float64 `json:"average"`
-	Sum               float64 `json:"sum"`
+	TotalDependencies       int                       `json:"totalDependenciesNumber"`
+	TotalFlawedDependencies int                       `json:"criticalDependenciesNumber"`
+	RiskDistribution        []AssetRiskDistribution   `json:"assetRiskDistribution"`
+	RiskAggregation         []AssetRiskHistory        `json:"assetRisk"`
+	Flaws                   []AssetFlaws              `json:"assetFlaws"`
+	FlawsStateStatistics    AssetFlawsStateStatistics `json:"assetFlawsStateStatistics"`
+	RiskPerComponent        map[string]float64        `json:"riskPerComponent"`
+	FlawEvents              []FlawEventWithFlawName   `json:"flawEvents"`
 }
 
 type AssetRiskDistribution struct {
 	ScannerID string `json:"scannerId"`
-	RiskRange string `json:"riskRange"`
-	Count     int64  `json:"count"`
+	// the range of the risk - something like 2-4, 4-6, 6-8, 8-10
+	Severity string `json:"severity"`
+	Count    int64  `json:"count"`
 }
 
-type AssetRecentRisks struct {
-	AssetID   uuid.UUID `json:"assetId" gorm:"primaryKey"`
-	DayOfRisk string    `json:"dayOfRisk" gorm:"primaryKey"`
-	DayOfScan string    `json:"dayOfScan"`
-	SumRisk   float64   `json:"assetSumRisk"`
-	AvgRisk   float64   `json:"assetAverageRisk"`
-	MaxRisk   float64   `json:"assetMaxRisk"`
-	MinRisk   float64   `json:"assetMinRisk"`
+type AssetRiskHistory struct {
+	AssetID uuid.UUID `json:"assetId" gorm:"primaryKey"`
+	// on the day 2024-08-12 the asset had a sumRisk of 25.
+	Day time.Time `json:"day" gorm:"primaryKey;type:date"`
+
+	SumOpenRisk float64 `json:"sumOpenRisk"`
+	AvgOpenRisk float64 `json:"averageOpenRisk"`
+	MaxOpenRisk float64 `json:"maxOpenRisk"`
+	MinOpenRisk float64 `json:"minOpenRisk"`
+
+	SumClosedRisk float64 `json:"sumClosedRisk"`
+	AvgClosedRisk float64 `json:"averageClosedRisk"`
+	MaxClosedRisk float64 `json:"maxClosedRisk"`
+	MinClosedRisk float64 `json:"minClosedRisk"`
+
+	OpenFlaws  int `json:"openFlaws"`
+	FixedFlaws int `json:"fixedFlaws"`
 }
 
-func (m AssetRecentRisks) TableName() string {
-	return "asset_risks"
+func (m AssetRiskHistory) TableName() string {
+	return "asset_risk_history"
 }
 
 type AssetFlaws struct {
@@ -72,9 +63,4 @@ type AssetFlawsStateStatistics struct {
 	Handled     int `json:"handled"`
 	LastOpen    int `json:"lastOpen"`
 	LastHandled int `json:"lastHandled"`
-}
-
-type AssetComponents struct {
-	Component string `json:"component"`
-	Count     int    `json:"count"`
 }

@@ -16,6 +16,7 @@
 package utils
 
 import (
+	"fmt"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
@@ -24,6 +25,64 @@ import (
 type concurrentResult struct {
 	index int
 	value any
+	err   error
+}
+
+func (c concurrentResult) Value() any {
+	return c.value
+}
+
+func (c concurrentResult) Error() error {
+	return c.err
+}
+
+type concurrentResultSlice []concurrentResult
+
+func (c concurrentResultSlice) Values() []any {
+	res := make([]any, len(c))
+	for i, r := range c {
+		res[i] = r.Value()
+	}
+	return res
+}
+
+func (c concurrentResultSlice) HasErrors() bool {
+	for _, r := range c {
+		if r.Error() != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func (c concurrentResultSlice) Errors() []error {
+	res := make([]error, 0)
+	for _, r := range c {
+		if r.Error() != nil {
+			res = append(res, r.Error())
+		}
+	}
+	return res
+}
+
+func (c concurrentResultSlice) Error() error {
+	// concat all errors
+	msg := ""
+
+	for _, r := range c {
+		if r.Error() != nil {
+			msg += r.Error().Error() + "\n"
+		}
+	}
+	return fmt.Errorf(msg)
+}
+
+func (c concurrentResultSlice) Get(index int) (any, error) {
+	return c[index].Value(), c[index].Error()
+}
+
+func (c concurrentResultSlice) GetValue(index int) any {
+	return c[index].Value()
 }
 
 type errGroup[T any] struct {
@@ -85,21 +144,22 @@ func ErrGroup[T any](limit int) *errGroup[T] {
 	return &g
 }
 
-func Concurrently(fns ...func() any) []any {
-	results := make([]concurrentResult, len(fns))
+func Concurrently(fns ...func() (any, error)) concurrentResultSlice {
+	results := make(concurrentResultSlice, len(fns))
 	ch := make(chan concurrentResult, len(fns))
 	for i, fn := range fns {
-		go func(i int, fn func() any) {
-			ch <- concurrentResult{i, fn()}
+		go func(i int, fn func() (any, error)) {
+			v, err := fn()
+			ch <- concurrentResult{index: i, value: v, err: err}
 		}(i, fn)
 	}
 	for i := 0; i < len(fns); i++ {
 		results[i] = <-ch
 	}
 
-	res := make([]any, len(fns))
+	res := make(concurrentResultSlice, len(fns))
 	for _, r := range results {
-		res[r.index] = r.value
+		res[r.index] = r
 	}
 
 	return res

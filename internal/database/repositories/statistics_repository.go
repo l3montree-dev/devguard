@@ -20,100 +20,40 @@ func NewStatisticsRepository(db core.DB) *statisticsRepository {
 	}
 }
 
-func (g statisticsRepository) GetFlawDetailsByAssetId(assetID uuid.UUID) ([]models.Flaw, error) {
-	var flaws []models.Flaw = []models.Flaw{}
-	if err := g.db.Preload("Events").Find(&flaws, "asset_id = ?", assetID).Error; err != nil {
+// returns all flaws for the asset including the events, which were created before the given time
+func (r *statisticsRepository) TimeTravelFlawState(assetID uuid.UUID, time time.Time) ([]models.Flaw, error) {
+	flaws := []models.Flaw{}
+
+	err := r.db.Model(&models.Flaw{}).Preload("Events", func(db core.DB) core.DB {
+		return db.Where("created_at <= ?", time).Order("created_at ASC")
+	}).
+		Where("asset_id = ? AND created_at <= ?", assetID, time).
+		Find(&flaws).Error
+
+	if err != nil {
 		return nil, err
+	}
+
+	// now remove all events of the flaws, which were created after the given time
+	for _, flaw := range flaws {
+		// get the last event of the flaw based on the created_at timestamp.
+		tmpFlaw := flaw
+
+		events := flaw.Events
+		// iterate through all events and apply them
+		for _, event := range events {
+			event.Apply(&tmpFlaw)
+		}
 	}
 	return flaws, nil
 }
 
-func (r *statisticsRepository) GetRecentFlawsForAsset(assetID uuid.UUID, time time.Time) ([]models.FlawRisk, error) {
-	var flawRisk []models.FlawRisk
-
-	if err := r.db.Raw(`
-		WITH RankedEvents AS (
-			SELECT 
-				flaw_events.flaw_id, 
-				flaw_events.created_at,
-				flaw_events.arbitrary_json_data,
-				flaw_events.type,
-				ROW_NUMBER() OVER (PARTITION BY flaw_events.flaw_id ORDER BY flaw_events.created_at DESC) AS rn
-			FROM 
-				flaw_events
-			WHERE 
-				flaw_events.created_at <= ?
-				AND EXISTS (
-					SELECT 1 
-					FROM flaws 
-					WHERE flaws.id = flaw_events.flaw_id 
-					  AND flaws.asset_id = ?
-				)
-				AND flaw_events.type IN ('detected', 'rawRiskAssessmentUpdated')
-		)
-		SELECT 
-			flaw_id, 
-			created_at, 
-			arbitrary_json_data,
-			type
-		FROM 
-			RankedEvents
-		WHERE 
-			rn = 1
-		ORDER BY 
-			flaw_id;
-	`, time, assetID).Scan(&flawRisk).Error; err != nil {
-
-		return nil, err
+func (r *statisticsRepository) GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
+	var results []struct {
+		ScannerID string `gorm:"column:scanner_id"`
+		Count     int    `gorm:"column:count"`
 	}
 
-	return flawRisk, nil
-}
-
-func (r *statisticsRepository) GetRecentFlawsState(assetID uuid.UUID, time time.Time) ([]models.FlawRisk, error) {
-	var flawRisk []models.FlawRisk
-
-	if err := r.db.Raw(`
-		WITH RankedEvents AS (
-			SELECT 
-				flaw_events.flaw_id, 
-				flaw_events.created_at,
-				flaw_events.arbitrary_json_data,
-				flaw_events.type,
-				ROW_NUMBER() OVER (PARTITION BY flaw_events.flaw_id ORDER BY flaw_events.created_at DESC) AS rn
-			FROM 
-				flaw_events
-			WHERE 
-				flaw_events.created_at <= ?
-				AND EXISTS (
-					SELECT 1 
-					FROM flaws 
-					WHERE flaws.id = flaw_events.flaw_id 
-					  AND flaws.asset_id = ?
-				)
-				AND flaw_events.type IN ('detected', 'reopened', 'fixed', 'accepted', 'falsePositive')
-		)
-		SELECT 
-			flaw_id, 
-			created_at, 
-			arbitrary_json_data,
-			type
-		FROM 
-			RankedEvents
-		WHERE 
-			rn = 1
-		ORDER BY 
-			flaw_id;
-	`, time, assetID).Scan(&flawRisk).Error; err != nil {
-
-		return nil, err
-	}
-
-	return flawRisk, nil
-}
-
-func (r *statisticsRepository) GetAssetCriticalDependenciesGroupedByScanType(assetID uuid.UUID) ([]models.AssetDependencies, error) {
-	var results []models.AssetDependencies
 	err := r.db.Model(&models.Flaw{}).
 		Select("scanner_id , COUNT(*) as count").
 		Group("scanner_id").
@@ -124,43 +64,32 @@ func (r *statisticsRepository) GetAssetCriticalDependenciesGroupedByScanType(ass
 		return nil, err
 	}
 
-	return results, nil
-}
-
-func (r *statisticsRepository) GetAssetFlawsStatistics(assetID uuid.UUID) ([]models.AssetRiskSummary, error) {
-	var results []models.AssetRiskSummary
-
-	err := r.db.Model(&models.Flaw{}).
-		Select("scanner_id , raw_risk_assessment,  COUNT(*) as count , AVG(raw_risk_assessment) as average, SUM(raw_risk_assessment) as sum").
-		Group("scanner_id, raw_risk_assessment").
-		Where("asset_id = ?", assetID).
-		Find(&results).Error
-
-	if err != nil {
-		return nil, err
+	// convert to map
+	counts := make(map[string]int)
+	for _, r := range results {
+		counts[r.ScannerID] = r.Count
 	}
 
-	return results, nil
+	return counts, nil
 }
 
-func (r *statisticsRepository) GetAssetRisksDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error) {
+func (r *statisticsRepository) GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error) {
 	var results []models.AssetRiskDistribution
 
 	err := r.db.Raw(`
         SELECT 
             scanner_id,
             CASE 
-                WHEN raw_risk_assessment >= 0.0 AND raw_risk_assessment < 2.0 THEN '0-2'
-                WHEN raw_risk_assessment >= 2.0 AND raw_risk_assessment < 4.0 THEN '2-4'
-                WHEN raw_risk_assessment >= 4.0 AND raw_risk_assessment < 6.0 THEN '4-6'
-				WHEN raw_risk_assessment >= 6.0 AND raw_risk_assessment < 8.0 THEN '6-8'
-				WHEN raw_risk_assessment >= 8.0 AND raw_risk_assessment <= 10.0 THEN '8-10'
+                WHEN raw_risk_assessment >= 0.0 AND raw_risk_assessment < 4.0 THEN 'LOW'
+                WHEN raw_risk_assessment >= 4.0 AND raw_risk_assessment < 7 THEN 'MEDIUM'
+                WHEN raw_risk_assessment >= 7 AND raw_risk_assessment < 9 THEN 'HIGH'
+				WHEN raw_risk_assessment >= 9 AND raw_risk_assessment <= 10.0 THEN 'CRITICAL'
 				ELSE 'unknown'
-            END AS risk_range,
+            END AS severity,
             COUNT(*) as count
         FROM flaws
-        WHERE asset_id = ?
-        GROUP BY scanner_id, risk_range
+        WHERE asset_id = ? AND state = 'open'
+        GROUP BY scanner_id, severity
     `, assetID).Scan(&results).Error
 
 	if err != nil {
@@ -168,4 +97,74 @@ func (r *statisticsRepository) GetAssetRisksDistribution(assetID uuid.UUID) ([]m
 	}
 
 	return results, nil
+}
+
+var fixedEvents = []models.FlawEventType{
+	models.EventTypeAccepted,
+	models.EventTypeFixed,
+	models.EventTypeFalsePositive,
+}
+
+var openEvents = []models.FlawEventType{
+	models.EventTypeDetected,
+	models.EventTypeReopened,
+}
+
+func (r *statisticsRepository) AverageFixingTime(assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
+	var results []struct {
+		AvgFixingTime string `gorm:"column:avg"`
+	}
+	err := r.db.Raw(`
+WITH events AS (
+    SELECT
+        flaws.id,
+        flaws.component_purl,
+        fe.type,
+        fe.created_at,
+        LAG(fe.type) OVER (PARTITION BY flaws.id ORDER BY fe.created_at) AS prev_type,
+        LAG(fe.created_at) OVER (PARTITION BY flaws.id ORDER BY fe.created_at) AS prev_created_at,
+        LEAD(fe.type) OVER (PARTITION BY flaws.id ORDER BY fe.created_at) AS next_type
+    FROM
+        flaws
+    JOIN
+        flaw_events fe ON flaws.id = fe.flaw_id
+    WHERE
+        fe.type IN ? AND flaws.asset_id = ? AND flaws.raw_risk_assessment >= ? AND flaws.raw_risk_assessment <= ?
+),
+intervals AS (
+   SELECT
+        id,
+        component_purl,
+        COALESCE(next_type, type) AS type,
+        prev_type,
+        prev_created_at,
+        CASE
+            WHEN next_type IS NULL THEN NOW() - prev_created_at
+            ELSE created_at - prev_created_at
+        END AS fixing_time
+    FROM
+        events
+    WHERE
+        prev_type IN ? 
+)
+SELECT
+   EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
+FROM
+    intervals`, append(fixedEvents, openEvents...), assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
+	if err != nil {
+		return 0, err
+	}
+
+	if len(results) == 0 {
+		return 0, nil
+	}
+
+	fixingTimeStr := results[0].AvgFixingTime
+	// parse it to float
+	fixingTime, err := time.ParseDuration(fixingTimeStr + "s")
+	if err != nil {
+		return 0, err
+	}
+
+	return fixingTime, nil
 }

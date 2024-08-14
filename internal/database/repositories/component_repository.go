@@ -128,8 +128,11 @@ func (c *componentRepository) HandleStateDiff(tx database.DB, assetID uuid.UUID,
 	})
 }
 
-func (c *componentRepository) GetDependenciesGroupedByScanType(assetID uuid.UUID) ([]models.AssetDependencies, error) {
-	var results []models.AssetDependencies
+func (c *componentRepository) GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error) {
+	var results []struct {
+		ScanType string `gorm:"column:scan_type"`
+		Count    int    `gorm:"column:count"`
+	}
 	err := c.db.Model(&models.Component{}).
 		Select("scan_type , COUNT(*) as count").
 		Group("scan_type").
@@ -140,20 +143,11 @@ func (c *componentRepository) GetDependenciesGroupedByScanType(assetID uuid.UUID
 		return nil, err
 	}
 
-	return results, nil
-}
-
-func (c *componentRepository) GetPackages(assetID uuid.UUID) ([]models.AssetComponents, error) {
-	var results []models.AssetComponents
-	err := c.db.Model(&models.Component{}).
-		Select("SUBSTRING(purl FROM ':(.*?)/') AS pkg , COUNT(*) as count").
-		Where("asset_id = ?", assetID).
-		Group("pkg").
-		Find(&results).Error
-
-	if err != nil {
-		return nil, err
+	// convert to map
+	counts := make(map[string]int)
+	for _, r := range results {
+		counts[r.ScanType] = r.Count
 	}
 
-	return results, nil
+	return counts, nil
 }

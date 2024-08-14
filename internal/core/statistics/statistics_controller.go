@@ -1,7 +1,7 @@
 package statistics
 
 import (
-	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,13 +10,14 @@ import (
 )
 
 type statisticsService interface {
-	GetAssetFlawsStatistics(assetID uuid.UUID) ([]models.AssetRiskSummary, error)
-	GetAssetCombinedDependencies(assetID uuid.UUID) ([]models.AssetCombinedDependencies, error)
-	GetAssetFlawsDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error)
-	GetAssetFlaws(assetID uuid.UUID) ([]models.AssetFlaws, models.AssetFlawsStateStatistics, []models.AssetComponents, []models.AssetComponents, []models.FlawEventWithFlawName, error)
+	GetComponentRisk(assetID uuid.UUID) (map[string]float64, error)
+	GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error)
+	GetAssetRiskHistory(assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
+	GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (flawAggregationStateAndChange, error)
 
-	UpdateAssetRecentRisks(assetID uuid.UUID, begin time.Time, end time.Time) error
-	GetAssetRecentRisksByAssetId(assetID uuid.UUID) ([]models.AssetRecentRisks, error)
+	GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error)
+	GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error)
+	GetAverageFixingTime(assetID uuid.UUID, severity string) (time.Duration, error)
 }
 
 type httpController struct {
@@ -29,58 +30,144 @@ func NewHttpController(statisticsService statisticsService) *httpController {
 	}
 }
 
-func (c *httpController) Overview(ctx core.Context) error {
+func (c *httpController) GetComponentRisk(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
+	results, err := c.statisticsService.GetComponentRisk(asset.ID)
 
-	t := time.Now().AddDate(0, 0, -30)
-	err := c.statisticsService.UpdateAssetRecentRisks(asset.ID, t, time.Now())
 	if err != nil {
-		return fmt.Errorf("Error updating asset risks: %v", err)
+		return err
 	}
 
-	dependencies, err := c.statisticsService.GetAssetCombinedDependencies(asset.ID)
+	return ctx.JSON(200, results)
+}
+
+func (c *httpController) GetDependencyCountPerScanType(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	results, err := c.statisticsService.GetDependencyCountPerScanType(asset.ID)
+
 	if err != nil {
-		return fmt.Errorf("Error getting asset dependencies: %v", err)
+		return err
 	}
-	risksSummary, err := c.statisticsService.GetAssetFlawsStatistics(asset.ID)
+
+	return ctx.JSON(200, results)
+}
+
+func (c *httpController) GetFlawCountByScannerId(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	results, err := c.statisticsService.GetFlawCountByScannerId(asset.ID)
+
 	if err != nil {
-		return fmt.Errorf("Error getting asset risk summary: %v", err)
+		return err
 	}
-	riskDistribution, err := c.statisticsService.GetAssetFlawsDistribution(asset.ID)
+
+	return ctx.JSON(200, results)
+}
+
+func (c *httpController) GetAssetRiskDistribution(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	results, err := c.statisticsService.GetAssetRiskDistribution(asset.ID)
+
 	if err != nil {
-		return fmt.Errorf("Error getting asset risk distribution: %v", err)
+		return err
 	}
 
-	risks, err := c.statisticsService.GetAssetRecentRisksByAssetId(asset.ID)
+	return ctx.JSON(200, results)
+}
+
+func (c *httpController) AverageFixingTime(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	severity := ctx.QueryParam("severity")
+	if severity == "" {
+		slog.Warn("severity query parameter is required")
+		return ctx.JSON(400, map[string]string{
+			"error": "severity query parameter is required",
+		})
+	}
+
+	// check the severity value
+	if severity != "critical" && severity != "high" && severity != "medium" && severity != "low" {
+		slog.Warn("severity query parameter must be one of critical, high, medium, low")
+		return ctx.JSON(400, map[string]string{
+			"error": "severity query parameter must be one of critical, high, medium, low",
+		})
+	}
+
+	duration, err := c.statisticsService.GetAverageFixingTime(asset.ID, severity)
 	if err != nil {
-		return fmt.Errorf("Error getting asset risks: %v", err)
+		return ctx.JSON(500, nil)
 	}
 
-	flaws, flawsStateStatistics, highestDamagedPackages, components, details, err := c.statisticsService.GetAssetFlaws(asset.ID)
+	return ctx.JSON(200, map[string]float64{
+		"averageFixingTimeSeconds": duration.Abs().Seconds(),
+	})
+}
+
+func (c *httpController) GetAssetRiskHistory(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	// get the start and end query params
+	start := ctx.QueryParam("start")
+	end := ctx.QueryParam("end")
+
+	if start == "" || end == "" {
+		slog.Warn("start and end query parameters are required")
+		return ctx.JSON(400, map[string]string{
+			"error": "start and end query parameters are required",
+		})
+	}
+
+	// parse the dates
+	beginTime, err := time.Parse(time.DateOnly, start)
 	if err != nil {
-		return fmt.Errorf("Error getting asset flaws: %v", err)
+		slog.Warn("Error parsing begin date", "error", err)
+		return ctx.JSON(400, map[string]string{
+			"error": "begin query parameter must be a valid date",
+		})
 	}
 
-	var totalDependenciesNumber int64 = 0
-	totalCriticalDependenciesNumber := len(risksSummary)
-
-	for _, dependency := range dependencies {
-		totalDependenciesNumber += dependency.CountDependencies
+	endTime, err := time.Parse(time.DateOnly, end)
+	if err != nil {
+		slog.Warn("Error parsing end date", "error", err)
+		return ctx.JSON(400, map[string]string{
+			"error": "end query parameter must be a valid date",
+		})
 	}
 
-	overview := models.AssetOverview{
-		TotalDependencies:         int(totalDependenciesNumber),
-		TotalCriticalDependencies: totalCriticalDependenciesNumber,
-		CombinedDependencies:      dependencies,
-		RiskSummary:               risksSummary,
-		RiskDistribution:          riskDistribution,
-		RecentRisks:               risks,
-		Flaws:                     flaws,
-		FlawsStateStatistics:      flawsStateStatistics,
-		HighestDamagedPackages:    highestDamagedPackages,
-		Components:                components,
-		FlawEvents:                details,
+	results, err := c.statisticsService.GetAssetRiskHistory(asset.ID, beginTime, endTime)
+
+	if err != nil {
+		slog.Error("Error getting asset risk history", "error", err)
+		return ctx.JSON(500, nil)
 	}
 
-	return ctx.JSON(200, overviewToDto(overview))
+	return ctx.JSON(200, results)
+}
+
+func (c *httpController) GetFlawAggregationStateAndChange(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	// extract the time from the query parameter
+	compareTo := ctx.QueryParam("compareTo")
+	if compareTo == "" {
+		slog.Warn("compareTo query parameter is required")
+		return ctx.JSON(400, map[string]string{
+			"error": "compareTo query parameter is required",
+		})
+	}
+
+	// parse the date
+	calculateChangeTo, err := time.Parse(time.DateOnly, compareTo)
+	if err != nil {
+		slog.Warn("Error parsing date", "error", err)
+		return ctx.JSON(400, map[string]string{
+			"error": "compareTo query parameter must be a valid date",
+		})
+	}
+
+	results, err := c.statisticsService.GetFlawAggregationStateAndChangeSince(asset.ID, calculateChangeTo)
+
+	if err != nil {
+		slog.Error("Error getting flaw aggregation state", "error", err)
+		return ctx.JSON(500, nil)
+	}
+
+	return ctx.JSON(200, results)
 }
