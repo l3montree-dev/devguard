@@ -27,6 +27,7 @@ type assetRiskHistoryRepository interface {
 }
 
 type flawRepository interface {
+	GetAllOpenFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 }
 
@@ -155,7 +156,7 @@ func (s *service) GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRis
 }
 
 func (s *service) GetComponentRisk(assetID uuid.UUID) (map[string]float64, error) {
-	flaws, err := s.flawRepository.GetAllFlawsByAssetID(nil, assetID)
+	flaws, err := s.flawRepository.GetAllOpenFlawsByAssetID(nil, assetID)
 	if err != nil {
 		return nil, err
 	}
