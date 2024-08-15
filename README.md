@@ -28,7 +28,7 @@
     ·
     <a href="https://github.com/l3montree-dev/devguard/issues">Request Feature</a>
     ·
-    <a href="https://github.com/l3montree-dev/devguard?tab=readme-ov-file#sponsors-and-supporters">Sponsors</a>
+    <a href="https://github.com/l3montree-dev/devguard?tab=readme-ov-file#sponsors-and-supporters-">Sponsors</a>
   </p>
 </div>
 
