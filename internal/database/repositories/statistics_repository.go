@@ -160,6 +160,9 @@ FROM
 	}
 
 	fixingTimeStr := results[0].AvgFixingTime
+	if fixingTimeStr == "" {
+		return 0, nil
+	}
 	// parse it to float
 	fixingTime, err := time.ParseDuration(fixingTimeStr + "s")
 	if err != nil {

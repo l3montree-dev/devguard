@@ -29,9 +29,10 @@ func (r *assetRiskHistoryRepository) GetRiskHistory(assetId uuid.UUID, start, en
 	// get all assetRisk of the asset
 	if err := r.Repository.GetDB(r.db).Where("asset_id = ?", assetId).Where(
 		"day >= ? AND day <= ?", start, end,
-	).Find(&assetRisk).Error; err != nil {
+	).Order("day ASC").Find(&assetRisk).Error; err != nil {
 		return nil, err
 	}
+
 	return assetRisk, nil
 }
 

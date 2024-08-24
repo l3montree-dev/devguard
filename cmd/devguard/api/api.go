@@ -292,7 +292,7 @@ func Start(db core.DB) {
 	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
-	statisticsController := statistics.NewHttpController(statisticsService)
+	statisticsController := statistics.NewHttpController(statisticsService, assetRepository)
 
 	patService := pat.NewPatService(patRepository)
 
@@ -369,6 +369,11 @@ func Start(db core.DB) {
 	projectRouter.POST("/assets/", assetController.Create, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
 	projectRouter.GET("/assets/", assetController.Read)
 
+	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution)
+	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory)
+	projectRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetProjectFlawAggregationStateAndChange)
+	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime)
+
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC("asset", accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.GET("/metrics/", assetController.Metrics)
@@ -383,7 +388,7 @@ func Start(db core.DB) {
 	assetRouter.GET("/stats/flaw-count-by-scanner/", statisticsController.GetFlawCountByScannerId)
 	assetRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanType)
 	assetRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetFlawAggregationStateAndChange)
-	assetRouter.GET("/stats/average-fixing-time/", statisticsController.AverageFixingTime)
+	assetRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetFixingTime)
 
 	assetRouter.GET("/versions/", assetController.Versions)
 

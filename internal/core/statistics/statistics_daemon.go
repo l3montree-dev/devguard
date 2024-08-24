@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -13,6 +14,7 @@ import (
 type assetRepository interface {
 	GetAllAssetsFromDB() ([]models.Asset, error)
 	Save(tx core.DB, asset *models.Asset) error
+	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 }
 
 type daemon struct {
