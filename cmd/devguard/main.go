@@ -20,7 +20,9 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
+	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
 
 	_ "github.com/lib/pq"
 )
@@ -46,9 +48,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	statisticsDaemon := statistics.NewDaemon(repositories.NewAssetRepository(db), statistics.NewService(
+		repositories.NewStatisticsRepository(db),
+		repositories.NewComponentRepository(db),
+		repositories.NewAssetRiskHistoryRepository(db),
+		repositories.NewFlawRepository(db),
+	))
 
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 	vulndb.StartMirror(db, leaderElector, configService)
+	statisticsDaemon.Start()
+
 	api.Start(db)
 }

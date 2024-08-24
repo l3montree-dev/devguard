@@ -18,6 +18,7 @@ type statisticsService interface {
 	GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error)
 	GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error)
 	GetAverageFixingTime(assetID uuid.UUID, severity string) (time.Duration, error)
+	UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time, end time.Time) error
 }
 
 type httpController struct {

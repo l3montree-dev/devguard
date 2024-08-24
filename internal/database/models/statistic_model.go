@@ -6,22 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type FlawEventWithFlawName struct {
-	FlawEvent
-	FlawName string `json:"flawName"`
-}
-
-type AssetOverview struct {
-	TotalDependencies       int                       `json:"totalDependenciesNumber"`
-	TotalFlawedDependencies int                       `json:"criticalDependenciesNumber"`
-	RiskDistribution        []AssetRiskDistribution   `json:"assetRiskDistribution"`
-	RiskAggregation         []AssetRiskHistory        `json:"assetRisk"`
-	Flaws                   []AssetFlaws              `json:"assetFlaws"`
-	FlawsStateStatistics    AssetFlawsStateStatistics `json:"assetFlawsStateStatistics"`
-	RiskPerComponent        map[string]float64        `json:"riskPerComponent"`
-	FlawEvents              []FlawEventWithFlawName   `json:"flawEvents"`
-}
-
 type AssetRiskDistribution struct {
 	ScannerID string `json:"scannerId"`
 	// the range of the risk - something like 2-4, 4-6, 6-8, 8-10
@@ -50,17 +34,4 @@ type AssetRiskHistory struct {
 
 func (m AssetRiskHistory) TableName() string {
 	return "asset_risk_history"
-}
-
-type AssetFlaws struct {
-	FlawID            string   `json:"flawId" `
-	RawRiskAssessment *float64 `json:"rawRiskAssessment"`
-	FixedVersion      string   `json:"fixedVersion"`
-}
-
-type AssetFlawsStateStatistics struct {
-	Open        int `json:"open"`
-	Handled     int `json:"handled"`
-	LastOpen    int `json:"lastOpen"`
-	LastHandled int `json:"lastHandled"`
 }
