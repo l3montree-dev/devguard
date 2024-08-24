@@ -12,12 +12,12 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  
+
   <picture>
     <source srcset="images/logo_inverse_horizontal.svg"  media="(prefers-color-scheme: dark)">
     <img src="images/logo_horizontal.svg" alt="DevGuard by L3montree Logo" width="240" height="80">
   </picture>
-  
+
   <h3 align="center">DevGuard - Develop Secure Software - Backend</h3>
 
   <p align="center">
@@ -27,12 +27,14 @@
     <a href="https://github.com/l3montree-dev/devguard/issues">Report Bug</a>
     ·
     <a href="https://github.com/l3montree-dev/devguard/issues">Request Feature</a>
+    ·
+    <a href="https://github.com/l3montree-dev/devguard?tab=readme-ov-file#sponsors-and-supporters-">Sponsors</a>
   </p>
 </div>
 
 <p align="center">
    <a href="https://www.bestpractices.dev/projects/8928"><img src="https://www.bestpractices.dev/projects/8928/badge" alt="OpenSSF Badge"></a>
-   <a href="https://github.com/calcom/cal.com/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-AGPLv3-purple" alt="License"></a>
+   <a href="https://github.com/l3montree-dev/devguard/blob/main/LICENSE.txt"><img src="https://img.shields.io/badge/license-AGPLv3-purple" alt="License"></a>
    <a href="https://github.com/l3montree-dev/devguard/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22"><img src="https://img.shields.io/badge/Help%20Wanted-Contribute-blue"></a>
 </p>
 
@@ -237,9 +239,20 @@ Distributed under the AGPL-3.0-or-later License. See [`LICENSE.txt`](LICENSE.txt
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## Sponsors and Supporters 🚀
+
+We are proud to be supported by the following organizations:
+
+[![OWASP](./images/sponsors/sp-owasp.png)](https://owasp.org/)
+[![Bonn-Rhein-Sieg University of Applied Science](./images/sponsors/sp-hbrs.png)](https://www.h-brs.de/)
+[![WhereGroup](./images/sponsors/sp-wheregroup.png)](https://wheregroup.com/)
+[![WhereGroup](./images/sponsors/sp-digitalhub.png)](https://www.digitalhub.de/)
+[![WhereGroup](./images/sponsors/sp-wetteronline.png)](https://wetteronline.de/)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [go.dev]: https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white
 [go-url]: https://go.dev
-
 
