@@ -1,10 +1,17 @@
 package commands
 
 import (
+	"bytes"
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -12,10 +19,12 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/spf13/cobra"
+	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
-
-	oras "oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
 )
 
@@ -121,8 +130,11 @@ func newImportCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 
+			tmp := "./vulndb-tmp"
+			//defer os.RemoveAll(tmp)
+
 			// 0. Create a file store
-			fs, err := file.New("/tmp/")
+			fs, err := file.New(tmp)
 			if err != nil {
 				panic(err)
 			}
@@ -133,7 +145,7 @@ func newImportCommand() *cobra.Command {
 			reg := "ghcr.io/l3montree-dev/devguard"
 			repo, err := remote.NewRepository(reg + "/vulndb")
 			if err != nil {
-				fmt.Println("could not connect to remote repository")
+				slog.Error("could not connect to remote repository", "err", err)
 				panic(err)
 			}
 
@@ -141,10 +153,63 @@ func newImportCommand() *cobra.Command {
 			tag := args[0]
 			manifestDescriptor, err := oras.Copy(ctx, repo, tag, fs, tag, oras.DefaultCopyOptions)
 			if err != nil {
+				slog.Error("could not copy from remote repository to file store", "err", err)
 				panic(err)
 			}
-			fmt.Println("manifest descriptor:", manifestDescriptor)
-			fmt.Println("File store:", fs)
+
+			tag = args[0] + ".sig"
+			_, err = oras.Copy(ctx, repo, tag, fs, tag, oras.DefaultCopyOptions)
+			if err != nil {
+				slog.Error("could not copy from remote repository to file store", "err", err)
+				panic(err)
+			}
+
+			/*
+				files, err := os.ReadDir(tmp)
+				if err != nil {
+					panic(err)
+				}
+
+				for _, file := range files {
+
+					f, err := os.Open(tmp + "/" + file.Name())
+					if err != nil {
+						panic(err)
+					}
+
+					data, err := io.ReadAll(f)
+					if err != nil {
+						panic(err)
+					}
+					fmt.Println(string(data))
+
+					defer f.Close()
+
+					err = utils.Unzip(tmp+"/"+file.Name(), "./")
+					if err != nil {
+						panic(err)
+					}
+
+				}
+			*/
+			/*
+				f, err := os.Open("./cve_affected_component.csv")
+				if err != nil {
+					panic(err)
+				}
+				data, err := io.ReadAll(f)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Println(string(data))
+
+				defer f.Close()
+			*/
+
+			err = utils.Unzip(tmp+"/vulndb.zip", "./")
+			if err != nil {
+				panic(err)
+			}
 
 			reader, err := fs.Fetch(ctx, manifestDescriptor)
 			if err != nil {
@@ -158,6 +223,62 @@ func newImportCommand() *cobra.Command {
 
 			fmt.Println(string(data))
 
+			// Load the public key
+			pubKeyData, err := os.ReadFile("cosign.pub")
+			if err != nil {
+				slog.Error("could not read public key", "err", err)
+			}
+
+			// PEM-Block dekodieren
+			block, _ := pem.Decode(pubKeyData)
+			if block == nil {
+				panic("could not decode pem block")
+			}
+
+			// Parse the public key
+			pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+			if err != nil {
+				slog.Error("could not parse public key", "err", err)
+			}
+
+			// ECDSA-key generation
+			ecdsaPubKey, ok := pubKey.(*ecdsa.PublicKey)
+			if !ok {
+				slog.Error("failed to parse public key")
+			}
+
+			// Load the signature file
+			sigFileData, err := os.ReadFile(tmp + "/vulndb.zip.sig")
+			if err != nil {
+				slog.Error("could not read signature file", "err", err)
+			}
+
+			// decode base64 signature
+			base64Sig := string(sigFileData)
+			sig, err := base64.StdEncoding.DecodeString(base64Sig)
+			if err != nil {
+				slog.Error("could not decode base64 signature", "err", err)
+			}
+
+			// Load the blob
+			blob, err := os.ReadFile(tmp + "/vulndb.zip")
+			if err != nil {
+				slog.Error("could not read blob file", "err", err)
+			}
+
+			// setup verifier
+			verifier, err := signature.LoadECDSAVerifier(ecdsaPubKey, crypto.SHA256)
+			if err != nil {
+				slog.Error("could not load verifier", "err", err)
+			}
+
+			// Verify the signature
+			err = verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(blob), options.WithContext(ctx))
+			if err != nil {
+				slog.Error("could not verify signature", "err", err)
+			}
+
+			fmt.Println("Signature verified successfully")
 		},
 	}
 	return importCmd
