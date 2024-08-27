@@ -51,6 +51,7 @@ jobs:
     - name: Dump the PostgreSQL database
       # skip:checkov:CKV_SECRET_6
       run: |
+       PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM affected_component) TO STDOUT WITH DELIMITER ',' CSV HEADER" > affected_component.csv 
         PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cve_affected_component) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cve_affected_component.csv 
         PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cves) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cves.csv 
         PGPASSWORD=${{env.POSTGRES_PASSWORD}} psql -h localhost -U devguard devguard -c "COPY (SELECT * FROM cpe_matches) TO STDOUT WITH DELIMITER ',' CSV HEADER" > cpe_matches.csv  
@@ -63,7 +64,7 @@ jobs:
       run: sudo apt-get install zip
 
     - name: Zip the CSV files
-      run: zip vulndb.zip cve_affected_component.csv cves.csv cpe_matches.csv cve_cpe_match.csv cwes.csv exploits.csv weaknesses.csv
+      run: zip vulndb.zip affected_component.csv  cve_affected_component.csv cves.csv cpe_matches.csv cve_cpe_match.csv cwes.csv exploits.csv weaknesses.csv
     - name: Install Cosign 
       uses: sigstore/cosign-installer@main
 
