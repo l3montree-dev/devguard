@@ -25,7 +25,16 @@ import (
 )
 
 type affectedCmpRepository struct {
+	db *gorm.DB
 	Repository[string, models.AffectedComponent, core.DB]
+}
+
+func (g *affectedCmpRepository) Save(tx *gorm.DB, affectedComponents *models.AffectedComponent) error {
+	return g.GetDB(tx).Clauses(
+		clause.OnConflict{
+			UpdateAll: true,
+		},
+	).Save(affectedComponents).Error
 }
 
 func NewAffectedComponentRepository(db core.DB) *affectedCmpRepository {
@@ -35,8 +44,17 @@ func NewAffectedComponentRepository(db core.DB) *affectedCmpRepository {
 	}
 
 	return &affectedCmpRepository{
+		db:         db,
 		Repository: newGormRepository[string, models.AffectedComponent](db),
 	}
+}
+
+func (g *affectedCmpRepository) GetAllAffectedComponentsID() ([]string, error) {
+	var affectedComponents []string
+	err := g.db.Model(&models.AffectedComponent{}).
+		Pluck("id", &affectedComponents).
+		Error
+	return affectedComponents, err
 }
 
 func (g *affectedCmpRepository) createInBatches(tx core.DB, pkgs []models.AffectedComponent, batchSize int) error {

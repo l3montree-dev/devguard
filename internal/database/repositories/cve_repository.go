@@ -42,6 +42,24 @@ func (g *cveRepository) FindByID(id string) (models.CVE, error) {
 	return t, err
 }
 
+func (g *cveRepository) GetAllCVEsID() ([]string, error) {
+	var cvesID []string
+	err := g.db.Model(&models.CVE{}).
+		Pluck("cve", &cvesID).
+		Error
+	return cvesID, err
+}
+
+func (g *cveRepository) GetAllCPEMatchesID() ([]string, error) {
+	var cpeMatchesID []string
+
+	err := g.db.Model(&models.CPEMatch{}).
+		Pluck("match_criteria_id", &cpeMatchesID).
+		Error
+
+	return cpeMatchesID, err
+}
+
 func (g *cveRepository) FindAll(cveIDs []string) ([]models.CVE, error) {
 	var cves []models.CVE
 	err := g.db.Find(&cves, "cve IN ?", cveIDs).Error

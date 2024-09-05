@@ -16,11 +16,12 @@
 package main
 
 import (
+	"log/slog"
+
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/config"
-	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
 
 	_ "github.com/lib/pq"
 )
@@ -41,14 +42,23 @@ func main() {
 	core.LoadConfig() // nolint: errcheck
 	core.InitLogger()
 
-	db, err := core.DatabaseFactory()
+	database, err := core.DatabaseFactory()
 
 	if err != nil {
 		panic(err)
 	}
 
-	configService := config.NewService(db)
-	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
-	vulndb.StartMirror(db, leaderElector, configService)
-	api.Start(db)
+	api.Start(database)
+
+	cveRepository := repositories.NewCVERepository(database)
+	cweRepository := repositories.NewCWERepository(database)
+	exploitsRepository := repositories.NewExploitRepository(database)
+	affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
+
+	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
+	err = v.Import(database, "latest")
+	if err != nil {
+		slog.Error("could not import vulndb", "err", err)
+		return
+	}
 }
