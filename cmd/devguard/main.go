@@ -20,6 +20,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 
@@ -42,23 +43,31 @@ func main() {
 	core.LoadConfig() // nolint: errcheck
 	core.InitLogger()
 
-	database, err := core.DatabaseFactory()
+	db, err := core.DatabaseFactory()
 
 	if err != nil {
 		panic(err)
 	}
+	statisticsDaemon := statistics.NewDaemon(repositories.NewAssetRepository(db), statistics.NewService(
+		repositories.NewStatisticsRepository(db),
+		repositories.NewComponentRepository(db),
+		repositories.NewAssetRiskHistoryRepository(db),
+		repositories.NewFlawRepository(db),
+	))
 
-	api.Start(database)
+	statisticsDaemon.Start()
+	api.Start(db)
 
-	cveRepository := repositories.NewCVERepository(database)
-	cweRepository := repositories.NewCWERepository(database)
-	exploitsRepository := repositories.NewExploitRepository(database)
-	affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
+	cveRepository := repositories.NewCVERepository(db)
+	cweRepository := repositories.NewCWERepository(db)
+	exploitsRepository := repositories.NewExploitRepository(db)
+	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
 
 	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
-	err = v.Import(database, "latest")
+	err = v.Import(db, "latest")
 	if err != nil {
 		slog.Error("could not import vulndb", "err", err)
 		return
 	}
+
 }

@@ -8,13 +8,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
-type FlawsByPackage struct {
+type flawsByPackage struct {
 	PackageName string    `json:"packageName"`
 	AvgRisk     float64   `json:"avgRisk"`
 	MaxRisk     float64   `json:"maxRisk"`
@@ -66,11 +67,11 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 	}
 
-	res := map[string]FlawsByPackage{}
+	res := map[string]flawsByPackage{}
 	for _, flaw := range pagedResp.Data {
 		// get the package name
 		if _, ok := res[flaw.ComponentPurl]; !ok {
-			res[flaw.ComponentPurl] = FlawsByPackage{
+			res[flaw.ComponentPurl] = flawsByPackage{
 				PackageName: flaw.ComponentPurl,
 			}
 		}
@@ -97,7 +98,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 		res[flaw.ComponentPurl] = flawsByPackage
 	}
 
-	values := make([]FlawsByPackage, 0, len(res))
+	values := make([]flawsByPackage, 0, len(res))
 	for _, v := range res {
 		// calculate the max and average risk
 		maxRisk := 0.
@@ -117,7 +118,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	}
 
 	// sort the value based on the index map
-	slices.SortFunc(values, func(a, b FlawsByPackage) int {
+	slices.SortFunc(values, func(a, b flawsByPackage) int {
 		return packageNameIndexMap[a.PackageName] - packageNameIndexMap[b.PackageName]
 	})
 

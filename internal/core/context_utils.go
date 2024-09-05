@@ -106,6 +106,10 @@ func GetAsset(c Context) models.Asset {
 	return c.Get("asset").(models.Asset)
 }
 
+func SetAsset(c Context, asset models.Asset) {
+	c.Set("asset", asset)
+}
+
 func GetProject(c Context) models.Project {
 	return c.Get("project").(models.Project)
 }

@@ -63,7 +63,7 @@ func newSbomCommand() *cobra.Command {
 					for _, version := range versions {
 						now := time.Now()
 						// build the sbom of the asset
-						components, err := componentRepository.LoadAssetComponents(nil, asset, scanType, version)
+						components, err := componentRepository.LoadComponents(nil, asset, scanType, version)
 						if err != nil {
 							slog.Error("could not load asset components", "err", err)
 							continue

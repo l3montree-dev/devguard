@@ -3,6 +3,7 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
+
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
@@ -86,7 +87,7 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, s
 	packageNameQuery := r.GetDB(tx).Table("components").
 		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, COUNT(f.id) as flaw_count, components.purl as package_name").
 		Joins("INNER JOIN flaws f ON components.purl = f.component_purl").
-		Where("components.asset_id = ?", "22e14d6a-edfe-4b30-aa30-18ddf3cd15af").
+		Where("components.asset_id = ?", assetId.String()).
 		Group("components.purl")
 
 	// apply sorting
@@ -124,6 +125,14 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, s
 func (r *flawRepository) GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error) {
 	var flaws []models.Flaw = []models.Flaw{}
 	if err := r.Repository.GetDB(tx).Where("asset_id = ?", assetID).Find(&flaws).Error; err != nil {
+		return nil, err
+	}
+	return flaws, nil
+}
+
+func (r *flawRepository) GetAllOpenFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error) {
+	var flaws []models.Flaw = []models.Flaw{}
+	if err := r.Repository.GetDB(tx).Where("asset_id = ? AND state = ?", assetID, models.FlawStateOpen).Find(&flaws).Error; err != nil {
 		return nil, err
 	}
 	return flaws, nil
