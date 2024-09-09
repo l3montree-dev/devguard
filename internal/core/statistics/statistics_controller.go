@@ -24,15 +24,21 @@ type statisticsService interface {
 	UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time, end time.Time) error
 }
 
+type projectRepository interface {
+	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
+}
+
 type httpController struct {
 	statisticsService statisticsService
 	assetRepository   assetRepository
+	projectRepository projectRepository
 }
 
-func NewHttpController(statisticsService statisticsService, assetRepository assetRepository) *httpController {
+func NewHttpController(statisticsService statisticsService, assetRepository assetRepository, projectRepository projectRepository) *httpController {
 	return &httpController{
 		statisticsService: statisticsService,
 		assetRepository:   assetRepository,
+		projectRepository: projectRepository,
 	}
 }
 
@@ -80,12 +86,73 @@ func (c *httpController) GetAssetRiskDistribution(ctx core.Context) error {
 	return ctx.JSON(200, results)
 }
 
+// get the risk distribution
+func (c *httpController) GetOrgRiskDistribution(ctx core.Context) error {
+	org := core.GetTenant(ctx)
+	projects, err := c.projectRepository.GetByOrgID(org.ID)
+	if err != nil {
+		return err
+	}
+
+	results := make([][]models.AssetRiskDistribution, 0)
+	// iterate over all projects and fetch the assets
+	for _, project := range projects {
+		projectResults, err := getAssetsRiskDistribution(project.ID, c)
+		if err != nil {
+			return err
+		}
+		results = append(results, projectResults...)
+	}
+
+	aggregatedResults := aggregateRiskDistribution(results)
+
+	return ctx.JSON(200, aggregatedResults)
+}
 func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 	project := core.GetProject(ctx)
-	// fetch all assets
-	assets, err := c.assetRepository.GetByProjectID(project.ID)
+
+	results, err := getAssetsRiskDistribution(project.ID, c)
 	if err != nil {
-		return errors.Wrap(err, "could not fetch assets by project id")
+		return err
+	}
+
+	// aggregate the results
+	aggregatedResults := aggregateRiskDistribution(results)
+
+	return ctx.JSON(200, aggregatedResults)
+}
+func (c *httpController) GetAverageAssetFixingTime(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	severity := ctx.QueryParam("severity")
+	if severity == "" {
+		slog.Warn("severity query parameter is required")
+		return ctx.JSON(400, map[string]string{
+			"error": "severity query parameter is required",
+		})
+	}
+
+	// check the severity value
+	if severity != "critical" && severity != "high" && severity != "medium" && severity != "low" {
+		slog.Warn("severity query parameter must be one of critical, high, medium, low")
+		return ctx.JSON(400, map[string]string{
+			"error": "severity query parameter must be one of critical, high, medium, low",
+		})
+	}
+
+	duration, err := c.statisticsService.GetAverageFixingTime(asset.ID, severity)
+	if err != nil {
+		return ctx.JSON(500, nil)
+	}
+
+	return ctx.JSON(200, map[string]float64{
+		"averageFixingTimeSeconds": duration.Abs().Seconds(),
+	})
+}
+func getAssetsRiskDistribution(projectID uuid.UUID, c *httpController) ([][]models.AssetRiskDistribution, error) {
+	// fetch all assets
+	assets, err := c.assetRepository.GetByProjectID(projectID)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not fetch assets by project id")
 	}
 
 	group := utils.ErrGroup[[]models.AssetRiskDistribution](10)
@@ -95,11 +162,10 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 		})
 	}
 
-	results, err := group.WaitAndCollect()
-	if err != nil {
-		return err
-	}
+	return group.WaitAndCollect()
+}
 
+func aggregateRiskDistribution(results [][]models.AssetRiskDistribution) []models.AssetRiskDistribution {
 	// aggregate the results
 	resultMap := make(map[string]map[string]int64)
 	for _, r := range utils.Flat(results) {
@@ -128,59 +194,77 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 			})
 		}
 	}
-
-	return ctx.JSON(200, aggregatedResults)
+	return aggregatedResults
 }
 
-func (c *httpController) GetAverageAssetFixingTime(ctx core.Context) error {
-	asset := core.GetAsset(ctx)
-	severity := ctx.QueryParam("severity")
-	if severity == "" {
-		slog.Warn("severity query parameter is required")
-		return ctx.JSON(400, map[string]string{
-			"error": "severity query parameter is required",
-		})
-	}
-
-	// check the severity value
-	if severity != "critical" && severity != "high" && severity != "medium" && severity != "low" {
-		slog.Warn("severity query parameter must be one of critical, high, medium, low")
-		return ctx.JSON(400, map[string]string{
-			"error": "severity query parameter must be one of critical, high, medium, low",
-		})
-	}
-
-	duration, err := c.statisticsService.GetAverageFixingTime(asset.ID, severity)
+// get the average fixing time
+func (c *httpController) GetAverageOrgFixingTime(ctx core.Context) error {
+	org := core.GetTenant(ctx)
+	projects, err := c.projectRepository.GetByOrgID(org.ID)
 	if err != nil {
-		return ctx.JSON(500, nil)
+		return err
 	}
+
+	severity := ctx.QueryParam("severity")
+	err = checkSeverity(severity)
+	if err != nil {
+		return ctx.JSON(400, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	results := make([]time.Duration, 0)
+	for _, project := range projects {
+		projectResults, err := getAssetsAverageFixingTime(project.ID, severity, c)
+		if err != nil {
+			return err
+		}
+		results = append(results, projectResults...)
+	}
+	resultsInSeconds := getResultsInSeconds(results)
 
 	return ctx.JSON(200, map[string]float64{
-		"averageFixingTimeSeconds": duration.Abs().Seconds(),
+		"averageFixingTimeSeconds": resultsInSeconds / float64(len(results)),
 	})
 }
-
 func (c *httpController) GetAverageProjectFixingTime(ctx core.Context) error {
 	project := core.GetProject(ctx)
 	severity := ctx.QueryParam("severity")
-	if severity == "" {
-		slog.Warn("severity query parameter is required")
+	err := checkSeverity(severity)
+	if err != nil {
 		return ctx.JSON(400, map[string]string{
-			"error": "severity query parameter is required",
+			"error": err.Error(),
 		})
 	}
 
+	results, err := getAssetsAverageFixingTime(project.ID, severity, c)
+	if err != nil {
+		return err
+	}
+
+	resultsInSeconds := getResultsInSeconds(results)
+
+	return ctx.JSON(200, map[string]float64{
+		"averageFixingTimeSeconds": resultsInSeconds / float64(len(results)),
+	})
+}
+func checkSeverity(severity string) error {
+	if severity == "" {
+		slog.Warn("severity query parameter is required")
+		return fmt.Errorf("severity query parameter is required")
+	}
 	// check the severity value
 	if severity != "critical" && severity != "high" && severity != "medium" && severity != "low" {
 		slog.Warn("severity query parameter must be one of critical, high, medium, low")
-		return ctx.JSON(400, map[string]string{
-			"error": "severity query parameter must be one of critical, high, medium, low",
-		})
+		return fmt.Errorf("severity query parameter must be one of critical, high, medium, low")
 	}
-
-	assets, err := c.assetRepository.GetByProjectID(project.ID)
+	return nil
+}
+func getAssetsAverageFixingTime(projectID uuid.UUID, severity string, c *httpController) ([]time.Duration, error) {
+	// fetch all assets
+	assets, err := c.assetRepository.GetByProjectID(projectID)
 	if err != nil {
-		return err
+		return nil, errors.Wrap(err, "could not fetch assets by project id")
 	}
 
 	// get all assets and iterate over them
@@ -191,26 +275,21 @@ func (c *httpController) GetAverageProjectFixingTime(ctx core.Context) error {
 		})
 	}
 
-	results, err := errgroup.WaitAndCollect()
-	if err != nil {
-		return err
-	}
-
+	return errgroup.WaitAndCollect()
+}
+func getResultsInSeconds(results []time.Duration) float64 {
 	resultsInSeconds := utils.Reduce(utils.Map(results, func(t time.Duration) float64 {
 		return t.Abs().Seconds()
 	}), func(acc, curr float64) float64 {
 		return acc + curr
 	}, 0.)
-
-	return ctx.JSON(200, map[string]float64{
-		"averageFixingTimeSeconds": resultsInSeconds / float64(len(results)),
-	})
+	return resultsInSeconds
 }
 
-func (c *httpController) GetProjectRiskHistory(ctx core.Context) error {
-	// fetch all assets from the project
-	project := core.GetProject(ctx)
-	assets, err := c.assetRepository.GetByProjectID(project.ID)
+// get the risk history
+func (c *httpController) GetOrgRiskHistory(ctx core.Context) error {
+	org := core.GetTenant(ctx)
+	projects, err := c.projectRepository.GetByOrgID(org.ID)
 	if err != nil {
 		return err
 	}
@@ -219,8 +298,25 @@ func (c *httpController) GetProjectRiskHistory(ctx core.Context) error {
 	start := ctx.QueryParam("start")
 	end := ctx.QueryParam("end")
 
-	// iterate over all assets and fetch the histories.
-	// set the limit to 10
+	results := make([]assetRiskHistory, 0)
+	for _, project := range projects {
+		projectResults, err := getAssetsRiskHistory(project.ID, start, end, c)
+		if err != nil {
+			return err
+		}
+		results = append(results, projectResults...)
+	}
+
+	return ctx.JSON(200, results)
+
+}
+func getAssetsRiskHistory(projectID uuid.UUID, start string, end string, c *httpController) ([]assetRiskHistory, error) {
+	// fetch all assets
+	assets, err := c.assetRepository.GetByProjectID(projectID)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not fetch assets by project id")
+	}
+
 	errgroup := utils.ErrGroup[assetRiskHistory](10)
 	for _, asset := range assets {
 		errgroup.Go(func() (assetRiskHistory, error) {
@@ -236,10 +332,18 @@ func (c *httpController) GetProjectRiskHistory(ctx core.Context) error {
 		})
 	}
 
-	results, err := errgroup.WaitAndCollect()
+	return errgroup.WaitAndCollect()
+}
+func (c *httpController) GetProjectRiskHistory(ctx core.Context) error {
+	// fetch all assets from the project
+	project := core.GetProject(ctx)
 
+	// get the start and end query params
+	start := ctx.QueryParam("start")
+	end := ctx.QueryParam("end")
+
+	results, err := getAssetsRiskHistory(project.ID, start, end, c)
 	if err != nil {
-		slog.Error("Error getting project risk history", "error", err)
 		return ctx.JSON(500, nil)
 	}
 
@@ -280,36 +384,41 @@ func (c *httpController) getAssetRiskHistory(start, end string, asset models.Ass
 	return c.statisticsService.GetAssetRiskHistory(asset.ID, beginTime, endTime)
 }
 
+// get the flaw aggregation state and change
+func (c *httpController) GetOrgFlawAggregationStateAndChange(ctx core.Context) error {
+	org := core.GetTenant(ctx)
+	compareTo := ctx.QueryParam("compareTo")
+
+	projects, err := c.projectRepository.GetByOrgID(org.ID)
+	if err != nil {
+		return err
+	}
+
+	results := make([]flawAggregationStateAndChange, 0)
+	for _, project := range projects {
+		projectResults, err := getAssetsFlawAggregationStateAndChange(project.ID, compareTo, c)
+		if err != nil {
+			return err
+		}
+		results = append(results, projectResults...)
+	}
+
+	// aggregate the results
+	result := aggregateFlawAggregationStateAndChange(results)
+	return ctx.JSON(200, result)
+
+}
 func (c *httpController) GetProjectFlawAggregationStateAndChange(ctx core.Context) error {
 	project := core.GetProject(ctx)
 	compareTo := ctx.QueryParam("compareTo")
 
-	errgroup := utils.ErrGroup[flawAggregationStateAndChange](10)
-	// get all assets
-	assets, err := c.assetRepository.GetByProjectID(project.ID)
+	results, err := getAssetsFlawAggregationStateAndChange(project.ID, compareTo, c)
 	if err != nil {
-		return err
-	}
-
-	for _, asset := range assets {
-		errgroup.Go(func() (flawAggregationStateAndChange, error) {
-			return c.getFlawAggregationStateAndChange(compareTo, asset)
-		})
-	}
-
-	results, err := errgroup.WaitAndCollect()
-	if err != nil {
-		return err
+		slog.Error("Error getting flaw aggregation state", "error", err)
+		return ctx.JSON(500, nil)
 	}
 	// aggregate the results
-	result := flawAggregationStateAndChange{}
-	for _, r := range results {
-		result.Now.Fixed += r.Now.Fixed
-		result.Now.Open += r.Now.Open
-
-		result.Was.Fixed += r.Was.Fixed
-		result.Was.Open += r.Was.Open
-	}
+	result := aggregateFlawAggregationStateAndChange(results)
 
 	return ctx.JSON(200, result)
 }
@@ -326,6 +435,34 @@ func (c *httpController) GetFlawAggregationStateAndChange(ctx core.Context) erro
 	}
 
 	return ctx.JSON(200, results)
+}
+func getAssetsFlawAggregationStateAndChange(projectID uuid.UUID, compareTo string, c *httpController) ([]flawAggregationStateAndChange, error) {
+	errgroup := utils.ErrGroup[flawAggregationStateAndChange](10)
+	// get all assets
+	assets, err := c.assetRepository.GetByProjectID(projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, asset := range assets {
+		errgroup.Go(func() (flawAggregationStateAndChange, error) {
+			return c.getFlawAggregationStateAndChange(compareTo, asset)
+		})
+	}
+	return errgroup.WaitAndCollect()
+}
+func aggregateFlawAggregationStateAndChange(results []flawAggregationStateAndChange) flawAggregationStateAndChange {
+	// aggregate the results
+	result := flawAggregationStateAndChange{}
+	for _, r := range results {
+		result.Now.Fixed += r.Now.Fixed
+		result.Now.Open += r.Now.Open
+
+		result.Was.Fixed += r.Was.Fixed
+		result.Was.Open += r.Was.Open
+	}
+
+	return result
 }
 
 func (c *httpController) getFlawAggregationStateAndChange(compareTo string, asset models.Asset) (flawAggregationStateAndChange, error) {

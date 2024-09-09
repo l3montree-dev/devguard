@@ -292,7 +292,7 @@ func Start(db core.DB) {
 	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
 
-	statisticsController := statistics.NewHttpController(statisticsService, assetRepository)
+	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, projectRepository)
 
 	patService := pat.NewPatService(patRepository)
 
@@ -357,6 +357,11 @@ func Start(db core.DB) {
 	tenantRouter.GET("/members/", orgController.Members)
 	tenantRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 	tenantRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
+
+	tenantRouter.GET("/stats/risk-history/", statisticsController.GetOrgRiskHistory)
+	tenantRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageOrgFixingTime)
+	tenantRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetOrgFlawAggregationStateAndChange)
+	tenantRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution)
 
 	tenantRouter.GET("/projects/", projectController.List, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 	tenantRouter.POST("/projects/", projectController.Create, core.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
