@@ -274,6 +274,16 @@ func (nvdService NVDService) mirror() error {
 	return nvdService.FetchAfter(lastModDate)
 }
 
+func (nvdService NVDService) Sync() error {
+	lastModDate, err := nvdService.cveRepository.GetLastModDate()
+	if err != nil {
+		// we are doing the initial population
+		return err
+	}
+
+	return nvdService.FetchAfter(lastModDate)
+}
+
 type cvssMetric struct {
 	Severity              string
 	CVSS                  float32
