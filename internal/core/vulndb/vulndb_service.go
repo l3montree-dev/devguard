@@ -137,7 +137,7 @@ func (v *vulnDBService) mirror() {
 			time.Sleep(2 * time.Hour)
 		} else {
 			// if we are not the leader, sleep for 5 minutes
-			slog.Info("not the leader. Waiting for 5 minutes to check again")
+			slog.Debug("not the leader. Waiting for 5 minutes to check again")
 			time.Sleep(5 * time.Minute)
 		}
 	}
