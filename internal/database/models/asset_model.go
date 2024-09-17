@@ -45,6 +45,9 @@ type Asset struct {
 	LastComponentUpdate time.Time `json:"lastComponentUpdate"`
 
 	RepositoryID *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
+
+	// if this flag is true, everyone is allowed to read this asset.
+	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 }
 
 func (m Asset) TableName() string {

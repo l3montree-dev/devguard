@@ -61,6 +61,8 @@ type patchRequest struct {
 	NIST                   *bool   `json:"nist"`
 	Grundschutz            *bool   `json:"grundschutz"`
 	Description            *string `json:"description"`
+
+	IsPublic *bool `json:"isPublic"`
 }
 
 func (p patchRequest) applyToModel(org *models.Org) bool {
@@ -115,6 +117,11 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 	if p.Description != nil {
 		updated = true
 		org.Description = *p.Description
+	}
+
+	if p.IsPublic != nil {
+		updated = true
+		org.IsPublic = *p.IsPublic
 	}
 
 	return updated
