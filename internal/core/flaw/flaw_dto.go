@@ -40,6 +40,8 @@ type FlawDTO struct {
 	CreatedAt         time.Time         `json:"createdAt"`
 	TicketID          *string           `json:"ticketId"`
 	TicketURL         *string           `json:"ticketUrl"`
+
+	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
 
 type detailedFlawDTO struct {
@@ -49,23 +51,24 @@ type detailedFlawDTO struct {
 
 func FlawToDto(f models.Flaw) FlawDTO {
 	return FlawDTO{
-		ID:                f.ID,
-		ScannerID:         f.ScannerID,
-		Message:           f.Message,
-		AssetID:           f.AssetID.String(),
-		State:             f.State,
-		CVE:               f.CVE,
-		CVEID:             f.CVEID,
-		Component:         f.Component,
-		ComponentPurl:     f.ComponentPurl,
-		Effort:            f.Effort,
-		RiskAssessment:    f.RiskAssessment,
-		RawRiskAssessment: f.RawRiskAssessment,
-		Priority:          f.Priority,
-		ArbitraryJsonData: f.GetArbitraryJsonData(),
-		LastDetected:      f.LastDetected,
-		CreatedAt:         f.CreatedAt,
-		TicketID:          f.TicketID,
-		TicketURL:         f.TicketURL,
+		ID:                 f.ID,
+		ScannerID:          f.ScannerID,
+		Message:            f.Message,
+		AssetID:            f.AssetID.String(),
+		State:              f.State,
+		CVE:                f.CVE,
+		CVEID:              f.CVEID,
+		Component:          f.Component,
+		ComponentPurl:      f.ComponentPurl,
+		Effort:             f.Effort,
+		RiskAssessment:     f.RiskAssessment,
+		RawRiskAssessment:  f.RawRiskAssessment,
+		Priority:           f.Priority,
+		ArbitraryJsonData:  f.GetArbitraryJsonData(),
+		LastDetected:       f.LastDetected,
+		CreatedAt:          f.CreatedAt,
+		TicketID:           f.TicketID,
+		TicketURL:          f.TicketURL,
+		RiskRecalculatedAt: f.RiskRecalculatedAt,
 	}
 }
