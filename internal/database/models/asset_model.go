@@ -45,6 +45,8 @@ type Asset struct {
 	LastComponentUpdate time.Time `json:"lastComponentUpdate"`
 
 	RepositoryID *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
+
+	LastHistoryUpdate *time.Time
 }
 
 func (m Asset) TableName() string {

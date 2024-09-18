@@ -27,6 +27,11 @@ func (g *projectRepository) GetByOrgID(organizationID uuid.UUID) ([]models.Proje
 	return projects, err
 }
 
+func (g *projectRepository) GetProjectIdByAssetID(assetID uuid.UUID) (uuid.UUID, error) {
+	var projectID uuid.UUID
+	err := g.db.Model(&models.Asset{}).Select("project_id").Where("id = ?", assetID).Row().Scan(&projectID)
+	return projectID, err
+}
 func (g *projectRepository) ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error) {
 	var t models.Project
 	err := g.db.Where("slug = ? AND organization_id = ?", slug, organizationID).First(&t).Error

@@ -13,7 +13,7 @@ type DB = *gorm.DB
 func NewConnection(host, user, password, dbname, port string) (*gorm.DB, error) {
 	// https://github.com/go-gorm/postgres
 	db, err := gorm.Open(postgres.New(postgres.Config{
-		DSN: fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbname),
+		DSN: fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&timezone=UTC", user, password, host, port, dbname),
 	}), &gorm.Config{
 		Logger: logger.Default,
 	})

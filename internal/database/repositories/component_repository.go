@@ -58,8 +58,8 @@ func (c *componentRepository) CreateComponents(tx database.DB, components []mode
 func (c *componentRepository) LoadComponents(tx database.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
-	if version == models.LatestVersion {
-		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_id = ? AND scan_type = ? AND semver_end is NULL", asset.ID, scanType).Find(&components).Error
+	if version == models.NoVersion {
+		err = c.GetDB(tx).Debug().Preload("Component").Preload("Dependency").Where("asset_id = ? AND scan_type = ? AND semver_end is NULL", asset.ID, scanType).Find(&components).Error
 	} else {
 		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where(`asset_id = ? AND scan_type = ? AND semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)`, asset.ID, scanType, version, version).Find(&components).Error
 	}
@@ -67,6 +67,7 @@ func (c *componentRepository) LoadComponents(tx database.DB, asset models.Asset,
 	if err != nil {
 		return nil, err
 	}
+
 	return components, err
 }
 

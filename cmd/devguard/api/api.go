@@ -283,14 +283,14 @@ func Start(db core.DB) {
 
 	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
 
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, flawRepository)
+	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, flawRepository, assetRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 
 	// init all http controllers using the repositories
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
 	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
-	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
+	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetService, statisticsService)
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, projectRepository)
 

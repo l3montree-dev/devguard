@@ -89,8 +89,8 @@ func (a *httpController) Versions(c core.Context) error {
 func (a *httpController) AffectedComponents(c core.Context) error {
 	// get the version query param
 	version := c.QueryParam("version")
-	if version == "" || version == models.LatestVersion {
-		version = models.LatestVersion
+	if version == "" || version == models.NoVersion {
+		version = models.NoVersion
 	} else {
 		var err error
 		version, err = normalize.SemverFix(version)
@@ -170,8 +170,8 @@ func (a *httpController) DependencyGraph(c core.Context) error {
 	app := core.GetAsset(c)
 	// check for version query param
 	version := c.QueryParam("version")
-	if version == "" || version == models.LatestVersion {
-		version = models.LatestVersion
+	if version == "" || version == models.NoVersion {
+		version = models.NoVersion
 	} else {
 		var err error
 		version, err = normalize.SemverFix(version)
@@ -221,7 +221,7 @@ func (a *httpController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 	// check for version query param
 	version := c.QueryParam("version")
 	if version == "" {
-		version = models.LatestVersion
+		version = models.NoVersion
 	} else {
 		var err error
 		version, err = normalize.SemverFix(version)

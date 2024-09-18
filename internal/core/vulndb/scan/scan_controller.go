@@ -17,8 +17,10 @@ package scan
 
 import (
 	"log/slog"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
@@ -40,15 +42,26 @@ type assetService interface {
 	UpdateSBOM(asset models.Asset, scanType string, version string, sbom normalize.SBOM) error
 }
 
+type assetRepository interface {
+	GetAllAssetsFromDB() ([]models.Asset, error)
+	Save(tx core.DB, asset *models.Asset) error
+}
+
+type statisticsService interface {
+	UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error
+}
+
 type httpController struct {
 	db                  core.DB
 	sbomScanner         *sbomScanner
 	cveRepository       cveRepository
 	componentRepository componentRepository
+	assetRepository     assetRepository
 	assetService        assetService
+	statisticsService   statisticsService
 }
 
-func NewHttpController(db core.DB, cveRepository cveRepository, componentRepository componentRepository, assetService assetService) *httpController {
+func NewHttpController(db core.DB, cveRepository cveRepository, componentRepository componentRepository, assetRepository assetRepository, assetService assetService, statisticsService statisticsService) *httpController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -59,6 +72,8 @@ func NewHttpController(db core.DB, cveRepository cveRepository, componentReposit
 		cveRepository:       cveRepository,
 		componentRepository: componentRepository,
 		assetService:        assetService,
+		assetRepository:     assetRepository,
+		statisticsService:   statisticsService,
 	}
 }
 
@@ -82,7 +97,7 @@ func (s *httpController) Scan(c core.Context) error {
 	// get the X-Asset-Version header
 	version := c.Request().Header.Get("X-Asset-Version")
 	if version == "" {
-		version = models.LatestVersion
+		version = models.NoVersion
 	}
 
 	scanType := c.Request().Header.Get("X-Scan-Type")
@@ -93,7 +108,7 @@ func (s *httpController) Scan(c core.Context) error {
 		})
 	}
 
-	if version != models.LatestVersion {
+	if version != models.NoVersion {
 		var err error
 		version, err = normalize.SemverFix(version)
 		// check if valid semver
@@ -127,6 +142,12 @@ func (s *httpController) Scan(c core.Context) error {
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
+	}
+
+	slog.Info("recalculating risk history for asset", "asset", assetObj.ID)
+	if err := s.statisticsService.UpdateAssetRiskAggregation(assetObj.ID, utils.OrDefault(assetObj.LastHistoryUpdate, assetObj.CreatedAt), time.Now(), true); err != nil {
+		slog.Error("could not recalculate risk history", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not recalculate risk history"})
 	}
 
 	return c.JSON(200, ScanResponse{

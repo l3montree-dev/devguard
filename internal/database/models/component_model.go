@@ -42,7 +42,7 @@ type Component struct {
 	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"` // without qualifiers!
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	Asset         Asset                 `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
-	AssetID       uuid.UUID             `json:"assetId" gorm:"column:assetID;type:uuid;"`
+	AssetID       uuid.UUID             `json:"assetId" gorm:"column:asset_id;type:uuid;"`
 	ScanType      string                `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
 	ComponentType ComponentType         `json:"componentType"`
 	Version       string                `json:"version"`
@@ -60,14 +60,14 @@ type ComponentDependency struct {
 	ComponentPurl    *string   `json:"componentPurl" gorm:"column:component_purl;"` // will be nil, for direct dependencies
 	Dependency       Component `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl"`
 	DependencyPurl   string    `json:"dependencyPurl" gorm:"column:dependency_purl;"`
-	AssetID          uuid.UUID `json:"assetId" gorm:"column:assetID;type:uuid;"`
+	AssetID          uuid.UUID `json:"assetId" gorm:"column:asset_id;type:uuid;"`
 	Asset            Asset     `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
 	ScanType         string    `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
 
 	Depth int `json:"depth" gorm:"column:depth"`
 }
 
-const LatestVersion = "latest"
+const NoVersion = "0.0.0"
 
 func GetOnlyDirectDependencies(deps []ComponentDependency) []ComponentDependency {
 	return utils.Filter(deps, func(dep ComponentDependency) bool {

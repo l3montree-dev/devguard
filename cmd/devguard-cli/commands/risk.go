@@ -41,8 +41,10 @@ func newCalculateCmd() *cobra.Command {
 			flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 			statisticsRepository := repositories.NewStatisticsRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
+			projectRepository := repositories.NewProjectRepository(database)
+			projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(database)
 
-			statisticService := statistics.NewService(statisticsRepository, componentRepository, repositories.NewAssetRiskHistoryRepository(database), flawRepository)
+			statisticService := statistics.NewService(statisticsRepository, componentRepository, repositories.NewAssetRiskHistoryRepository(database), flawRepository, assetRepository, projectRepository, projectRiskHistoryRepository)
 
 			shouldCalculateHistory, err := cmd.Flags().GetBool("history")
 			if err != nil {
@@ -61,7 +63,7 @@ func newCalculateCmd() *cobra.Command {
 
 				for _, asset := range assets {
 					slog.Info("recalculating risk history for asset", "asset", asset.ID)
-					if err := statisticService.UpdateAssetRiskAggregation(asset.ID, asset.CreatedAt, time.Now()); err != nil {
+					if err := statisticService.UpdateAssetRiskAggregation(asset.ID, asset.CreatedAt, time.Now(), true); err != nil {
 						slog.Error("could not recalculate risk history", "err", err)
 						return
 					}

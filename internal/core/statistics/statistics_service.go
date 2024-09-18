@@ -2,6 +2,7 @@ package statistics
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ type componentRepository interface {
 }
 type assetRiskHistoryRepository interface {
 	GetRiskHistory(assetId uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error)
+	GetRiskHistoryByProject(projectId uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error)
 	UpdateRiskAggregation(assetRisk *models.AssetRiskHistory) error
 }
 
@@ -31,24 +33,146 @@ type flawRepository interface {
 	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 }
 
-type service struct {
-	statisticsRepository       statisticsRepository
-	componentRepository        componentRepository
-	assetRiskHistoryRepository assetRiskHistoryRepository
-	flawRepository             flawRepository
+type proRepository interface {
+	GetProjectIdByAssetID(assetID uuid.UUID) (uuid.UUID, error)
 }
 
-func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, flawRepository flawRepository) *service {
+type projectRiskHistoryRepository interface {
+	GetRiskHistory(projectId uuid.UUID, start, end time.Time) ([]models.ProjectRiskHistory, error)
+	UpdateRiskAggregation(projectRisk *models.ProjectRiskHistory) error
+}
+
+type service struct {
+	statisticsRepository         statisticsRepository
+	componentRepository          componentRepository
+	assetRiskHistoryRepository   assetRiskHistoryRepository
+	flawRepository               flawRepository
+	assetRepository              assetRepository
+	projectRepository            proRepository
+	projectRiskHistoryRepository projectRiskHistoryRepository
+}
+
+func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, flawRepository flawRepository, assetRepository assetRepository, projectRepository proRepository, projectRiskHistoryRepository projectRiskHistoryRepository) *service {
 	return &service{
-		statisticsRepository:       statisticsRepository,
-		componentRepository:        componentRepository,
-		assetRiskHistoryRepository: assetRiskHistoryRepository,
-		flawRepository:             flawRepository,
+		statisticsRepository:         statisticsRepository,
+		componentRepository:          componentRepository,
+		assetRiskHistoryRepository:   assetRiskHistoryRepository,
+		flawRepository:               flawRepository,
+		assetRepository:              assetRepository,
+		projectRepository:            projectRepository,
+		projectRiskHistoryRepository: projectRiskHistoryRepository,
 	}
 }
 
-func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time, end time.Time) error {
-	for time := begin; time.Before(end); time = time.AddDate(0, 0, 1) {
+func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end time.Time) error {
+	// set begin to last second of date
+	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
+	// set end to last second of date
+	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
+
+	slog.Error("update project risk aggregation", "projectID", projectID, "begin", begin, "end", end)
+	// fetch all assets history for the project
+	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
+		assetsHistory, err := s.assetRiskHistoryRepository.GetRiskHistoryByProject(projectID, time)
+
+		if err != nil {
+			return fmt.Errorf("could not get risk history by project: %w", err)
+		}
+		risks := map[string]struct {
+			Min float64
+			Max float64
+			Sum float64
+			Avg float64
+		}{
+			"open":  {Min: -1.0, Max: 0.0, Sum: 0.0, Avg: 0.0},
+			"fixed": {Min: -1.0, Max: 0.0, Sum: 0.0, Avg: 0.0},
+		}
+		riskAggregationOpen := risks["open"]
+		riskAggregationFixed := risks["fixed"]
+
+		var projectRiskHistory models.ProjectRiskHistory = models.ProjectRiskHistory{}
+
+		openFlaws, fixedFlaws := 0, 0
+
+		for _, assetHistory := range assetsHistory {
+			if assetHistory.OpenFlaws > 0 {
+				openFlaws += assetHistory.OpenFlaws
+			} else if assetHistory.FixedFlaws > 0 {
+				fixedFlaws += assetHistory.FixedFlaws
+			}
+
+			if riskAggregationOpen.Min > assetHistory.MinOpenRisk {
+				riskAggregationOpen.Min = assetHistory.MinOpenRisk
+			}
+
+			if riskAggregationFixed.Min > assetHistory.MinClosedRisk {
+				riskAggregationFixed.Min = assetHistory.MinClosedRisk
+			}
+
+			riskAggregationOpen.Sum += assetHistory.SumOpenRisk
+			riskAggregationFixed.Sum += assetHistory.SumClosedRisk
+
+			if assetHistory.MaxOpenRisk > riskAggregationOpen.Max {
+				riskAggregationOpen.Max = assetHistory.MaxOpenRisk
+			}
+
+			if assetHistory.MaxClosedRisk > riskAggregationFixed.Max {
+				riskAggregationFixed.Max = assetHistory.MaxClosedRisk
+			}
+
+		}
+
+		openRisk := riskAggregationOpen
+		fixedRisk := riskAggregationFixed
+
+		if openRisk.Min == -1.0 {
+			openRisk.Min = 0.0
+		}
+		if fixedRisk.Min == -1.0 {
+			fixedRisk.Min = 0.0
+		}
+
+		if openFlaws != 0 {
+			openRisk.Avg = openRisk.Sum / float64(openFlaws)
+		}
+
+		if fixedFlaws != 0 {
+			fixedRisk.Avg = fixedRisk.Sum / float64(fixedFlaws)
+		}
+
+		projectRiskHistory = models.ProjectRiskHistory{
+			ProjectID: projectID,
+			Day:       time,
+
+			SumOpenRisk: openRisk.Sum,
+			AvgOpenRisk: openRisk.Avg,
+			MaxOpenRisk: openRisk.Max,
+			MinOpenRisk: openRisk.Min,
+
+			SumClosedRisk: fixedRisk.Sum,
+			AvgClosedRisk: fixedRisk.Avg,
+			MaxClosedRisk: fixedRisk.Max,
+			MinClosedRisk: fixedRisk.Min,
+
+			OpenFlaws:  openFlaws,
+			FixedFlaws: fixedFlaws,
+		}
+		err = s.projectRiskHistoryRepository.UpdateRiskAggregation(&projectRiskHistory)
+		if err != nil {
+			return fmt.Errorf("could not update project risk aggregation: %w", err)
+		}
+
+	}
+	return nil
+}
+
+func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
+	// set begin to last second of date
+	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
+	// set end to last second of date
+	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
+
+	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
 		flaws, err := s.statisticsRepository.TimeTravelFlawState(assetID, time)
 		if err != nil {
 			return err
@@ -71,6 +195,7 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 			if flaw.State == models.FlawStateOpen {
 				openFlaws++
 				key = "open"
+
 			} else {
 				fixedFlaws++
 				key = "fixed"
@@ -137,6 +262,19 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 			return err
 		}
 
+		// we ALWAYS need to propagate the risk aggregation to the project. The only exception is in the statistics daemon. There
+		// we update all assets and afterwards do a one time project update. This is just optimization.
+		if propagateToProject {
+			projectID, err := s.projectRepository.GetProjectIdByAssetID(assetID)
+			if err != nil {
+				return fmt.Errorf("could not get project id by asset id: %w", err)
+			}
+			err = s.updateProjectRiskAggregation(projectID, begin, end)
+			if err != nil {
+				return fmt.Errorf("could not update project risk aggregation: %w", err)
+			}
+		}
+
 	}
 	return nil
 
@@ -144,6 +282,10 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 
 func (s *service) GetAssetRiskHistory(assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
 	return s.assetRiskHistoryRepository.GetRiskHistory(assetID, start, end)
+}
+
+func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error) {
+	return s.projectRiskHistoryRepository.GetRiskHistory(projectID, start, end)
 }
 
 func (s *service) GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error) {
