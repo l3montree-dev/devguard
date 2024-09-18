@@ -18,12 +18,8 @@ func NewVulndbCommand() *cobra.Command {
 		Short: "Vulnerability Database",
 	}
 
-<<<<<<< HEAD
-	vulndbCmd.AddCommand(newRepairCommand())
 	vulndbCmd.AddCommand(newImportCVECommand())
-=======
 	vulndbCmd.AddCommand(newSyncCommand())
->>>>>>> origin/main
 	vulndbCmd.AddCommand(newImportCommand())
 	return &vulndbCmd
 }
@@ -112,7 +108,6 @@ func newImportCVECommand() *cobra.Command {
 	return importCmd
 }
 
-<<<<<<< HEAD
 func newImportCommand() *cobra.Command {
 	importCmd := &cobra.Command{
 		Use:   "import",
@@ -148,16 +143,10 @@ func newImportCommand() *cobra.Command {
 	return importCmd
 }
 
-func newRepairCommand() *cobra.Command {
-	repairCmd := cobra.Command{
-		Use:   "repair",
-		Short: "Will repair the vulnerability database",
-=======
 func newSyncCommand() *cobra.Command {
 	syncCmd := cobra.Command{
 		Use:   "sync",
 		Short: "Will sync the vulnerability database",
->>>>>>> origin/main
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			// check if after flag is set

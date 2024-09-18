@@ -45,9 +45,12 @@ jobs:
       with:
         go-version: 1.22
 
+     
+
     - name: Build the database (this takes some time)
       run: |
-        go run ./cmd/devguard-cli/main.go vulndb sync --startIndex=0
+        # will fetch the latest build database from ghcr.io
+        go run ./cmd/devguard-cli/main.go vulndb sync
     - name: Dump the PostgreSQL database
       # skip:checkov:CKV_SECRET_6
       run: |
