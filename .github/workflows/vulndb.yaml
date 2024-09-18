@@ -71,7 +71,7 @@ jobs:
     - name: Write signing key to disk
       run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
 
-    - name: Sign the database CSV files
+    - name: Sign the database zip file  
       env:
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
       run: cosign sign-blob --yes --key cosign.key vulndb.zip > vulndb.zip.sig
@@ -91,7 +91,7 @@ jobs:
       run: |
         oras push ghcr.io/l3montree-dev/devguard/vulndb:$date vulndb.zip
         oras push ghcr.io/l3montree-dev/devguard/vulndb:latest vulndb.zip
-    - name: Push the sign file to GitHub Container Registry
+    - name: Push the signatures to the GitHub Container Registry  
       run: |
         oras push ghcr.io/l3montree-dev/devguard/vulndb:$date.sig vulndb.zip.sig
-        oras push ghcr.io/l3montree-dev/devguard/vulndb:latest.siq vulndb.zip.sig
+        oras push ghcr.io/l3montree-dev/devguard/vulndb:latest.sig vulndb.zip.sig

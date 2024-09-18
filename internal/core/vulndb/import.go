@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/csv"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -51,12 +52,63 @@ type exploitsRepository interface {
 type affectedComponentsRepository interface {
 	GetAllAffectedComponentsID() ([]string, error)
 	Save(tx database.DB, affectedComponent *models.AffectedComponent) error
+	SaveBatch(tx core.DB, affectedPkgs []models.AffectedComponent) error
 }
 type importService struct {
 	cveRepository                cvesRepository
 	cweRepository                cwesRepository
 	exploitRepository            exploitsRepository
 	affectedComponentsRepository affectedComponentsRepository
+}
+
+type configService interface {
+	GetJSONConfig(key string, v any) error
+	SetJSONConfig(key string, v any) error
+}
+
+type leaderElector interface {
+	IsLeader() bool
+}
+
+func StartMirror(db core.DB, leaderElector leaderElector, configService configService) {
+	cveRepository := repositories.NewCVERepository(db)
+	cweRepository := repositories.NewCWERepository(db)
+	exploitsRepository := repositories.NewExploitRepository(db)
+	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
+
+	v := NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
+	for {
+		if leaderElector.IsLeader() {
+			var lastMirror struct {
+				Time time.Time `json:"time"`
+			}
+
+			err := configService.GetJSONConfig("vulndb.lastMirror", &lastMirror)
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				slog.Error("could not get last mirror time", "err", err)
+				continue
+			} else if errors.Is(err, gorm.ErrRecordNotFound) {
+				slog.Info("no last mirror time found. Setting to 0")
+				lastMirror.Time = time.Time{}
+			}
+
+			if time.Since(lastMirror.Time) > 2*time.Hour {
+				slog.Info("last mirror was more than 2 hours ago. Starting mirror process")
+
+				if err := v.Import(db, "latest"); err != nil {
+					slog.Error("could not import vulndb", "err", err)
+				}
+			} else {
+				slog.Info("last mirror was less than 2 hours ago. Not mirroring", "lastMirror", lastMirror.Time, "now", time.Now())
+			}
+			slog.Info("done. Waiting for 2 hours to check again")
+			time.Sleep(2 * time.Hour)
+		} else {
+			// if we are not the leader, sleep for 5 minutes
+			slog.Debug("not the leader. Waiting for 5 minutes to check again")
+			time.Sleep(5 * time.Minute)
+		}
+	}
 }
 
 func NewImportService(cvesRepository cvesRepository, cweRepository cwesRepository, exploitRepository exploitsRepository, affectedComponentsRepository affectedComponentsRepository) *importService {
@@ -70,7 +122,7 @@ func NewImportService(cvesRepository cvesRepository, cweRepository cwesRepositor
 
 func (s importService) Import(tx database.DB, tag string) error {
 	slog.Info("Importing vulndb started")
-
+	begin := time.Now()
 	tmp := "./vulndb-tmp"
 	sigFile := tmp + "/vulndb.zip.sig"
 	blobFile := tmp + "/vulndb.zip"
@@ -89,7 +141,7 @@ func (s importService) Import(tx database.DB, tag string) error {
 	defer fs.Close()
 
 	//import the vulndb csv to the file store
-	err = copyCSVFromRemoteToLocal(reg, tag, fs, ctx)
+	err = copyCSVFromRemoteToLocal(ctx, reg, tag, fs)
 	if err != nil {
 		return fmt.Errorf("could not copy csv from remote to local: %w", err)
 	}
@@ -121,7 +173,7 @@ func (s importService) Import(tx database.DB, tag string) error {
 		return err
 	}
 
-	slog.Info("Importing vulndb completed")
+	slog.Info("Importing vulndb completed", "duration", time.Since(begin))
 
 	return nil
 }
@@ -135,77 +187,58 @@ func readCSVFile(f *os.File) ([][]string, error) {
 	}
 	return data, nil
 }
-func getMapOfRecords(data []string) (map[string]bool, error) {
-	m := make(map[string]bool)
-	for _, id := range data {
-		m[id] = false
-	}
-	return m, nil
-}
-
-func numberOfOldRecordsNotInNewImportedList(m map[string]bool) int {
-	var i = 0
-	for r := range m {
-		if !m[r] {
-			i++
-		}
-	}
-	return i
-}
 
 // import cves
 func (s importService) importCves(tx database.DB, f *os.File) error {
 	slog.Info("Importing cves started")
+	begin := time.Now()
 	// Read cves.csv
 	data, err := readCSVFile(f)
 	if err != nil {
 		return err
 	}
-
-	// Get all existing cvesID in the database
+	// Get all existing cve ids in the database
 	cvesID, err := s.cveRepository.GetAllCVEsID()
-	if err != nil {
-		return err
-	}
-
-	// Get map of existing cvesID
-	cvesMap, err := getMapOfRecords(cvesID)
 	if err != nil {
 		return err
 	}
 
 	// Skip the header
 	data = data[1:]
+
 	// csv to model and save
-	slog.Info("modeling cves and saving them to database")
-	err = modelAndSaveCve(tx, data, cvesMap, s.cveRepository)
+	err = s.modelAndSaveCve(tx, data)
 	if err != nil {
 		return err
 	}
 
-	//Numbers of old cves, which are not in the new imported list
-	i := numberOfOldRecordsNotInNewImportedList(cvesMap)
-	slog.Info(fmt.Sprint("numbers of old cves", len(cvesID), ",numbers of new cves", len(data)))
-	slog.Info(fmt.Sprint("Numbers of old cves, which are not in the new imported list: ", i))
+	amounjtOfCves := len(data)
+	amountOfOldCves := len(cvesID)
 
+	slog.Info("finished importing cves", "amountOfCves", amounjtOfCves, "amountOfOldCves", amountOfOldCves, "amountOfOldCvesNotInNewImportedList", amountOfOldCves-amounjtOfCves, "duration", time.Since(begin))
 	return nil
 }
 
-func modelAndSaveCve(tx database.DB, data [][]string, cvesMap map[string]bool, cveRepository cvesRepository) error {
+func (s importService) modelAndSaveCve(tx database.DB, data [][]string) error {
+	cves := make([]models.CVE, 0)
+	alreadyPushedInSlice := make(map[string]bool)
+
 	// csv to model and save
 	for _, row := range data {
 		cve, err := csvRowToCveModel(row)
 		if err != nil {
 			return err
 		}
-		// Mark the cve as exist
-		cvesMap[cve.CVE] = true
-		// save the cve
-		err = cveRepository.Save(tx, &cve)
-		if err != nil {
-			return err
-		}
 
+		if _, ok := alreadyPushedInSlice[cve.CVE]; ok {
+			continue
+		}
+		cves = append(cves, cve)
+	}
+	// save the cves
+	err := s.cveRepository.SaveBatch(tx, cves)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -221,13 +254,13 @@ func csvRowToCveModel(row []string) (models.CVE, error) {
 		}
 		createdAt = c
 	}
-	updatedAT := time.Time{}
+	updatedAt := time.Time{}
 	if row[2] != "" {
 		u, err := time.Parse("2006-01-02 15:04:05.999999-07", row[2])
 		if err != nil {
 			return cve, err
 		}
-		updatedAT = u
+		updatedAt = u
 	}
 
 	datePublished := time.Time{}
@@ -259,13 +292,13 @@ func csvRowToCveModel(row []string) (models.CVE, error) {
 
 	severity := models.Severity(row[7])
 
-	exportabilityScore := float64(0)
+	exploitabilityScore := float64(0)
 	if row[8] != "" {
 		e, err := strconv.ParseFloat(row[8], 32)
 		if err != nil {
 			return cve, err
 		}
-		exportabilityScore = e
+		exploitabilityScore = e
 	}
 
 	impactScore := float64(0)
@@ -286,13 +319,13 @@ func csvRowToCveModel(row []string) (models.CVE, error) {
 		cISAExploitAdd = datatypes.Date(cISAExploitAddTime)
 	}
 
-	cISAActionDue := datatypes.Date{}
+	cisaExploitAdd := datatypes.Date{}
 	if row[20] != "" {
 		cISAActionDueTime, err := time.Parse("2006-01-02", row[20])
 		if err != nil {
 			return cve, fmt.Errorf("error parsing cisa action due time: %w", err)
 		}
-		cISAActionDue = datatypes.Date(cISAActionDueTime)
+		cisaExploitAdd = datatypes.Date(cISAActionDueTime)
 	}
 
 	epss := float64(0)
@@ -317,13 +350,13 @@ func csvRowToCveModel(row []string) (models.CVE, error) {
 	cve = models.CVE{
 		CVE:                   row[0],
 		CreatedAt:             createdAt,
-		UpdatedAt:             updatedAT,
+		UpdatedAt:             updatedAt,
 		DatePublished:         datePublished,
 		DateLastModified:      dateLastModified,
 		Description:           row[5],
 		CVSS:                  float32(cvss),
 		Severity:              severity,
-		ExploitabilityScore:   float32(exportabilityScore),
+		ExploitabilityScore:   float32(exploitabilityScore),
 		ImpactScore:           float32(impactScore),
 		AttackVector:          row[10],
 		AttackComplexity:      row[11],
@@ -335,7 +368,7 @@ func csvRowToCveModel(row []string) (models.CVE, error) {
 		AvailabilityImpact:    row[17],
 		References:            row[18],
 		CISAExploitAdd:        &cISAExploitAdd,
-		CISAActionDue:         &cISAActionDue,
+		CISAActionDue:         &cisaExploitAdd,
 		CISARequiredAction:    row[21],
 		CISAVulnerabilityName: row[22],
 		EPSS:                  &epss,
@@ -349,20 +382,14 @@ func csvRowToCveModel(row []string) (models.CVE, error) {
 // import cpe_matches
 func (s importService) importCpeMatches(tx database.DB, f *os.File) error {
 	slog.Info("Importing cpe_matches started")
+	begin := time.Now()
 	// Read cpe_matches.csv
 	data, err := readCSVFile(f)
 	if err != nil {
 		return err
 	}
-
 	// Get all existing cpesID in the database
 	cpeMatchesID, err := s.cveRepository.GetAllCPEMatchesID()
-	if err != nil {
-		return err
-	}
-
-	// Create a map of cpeMatches to check if a cpeMatch is already in the database
-	cpeMatchesMap, err := getMapOfRecords(cpeMatchesID)
 	if err != nil {
 		return err
 	}
@@ -370,33 +397,39 @@ func (s importService) importCpeMatches(tx database.DB, f *os.File) error {
 	// Skip the header
 	data = data[1:]
 	// model and save
-	err = modelAndSaveCpeMatch(tx, data, cpeMatchesMap, s.cveRepository)
+	err = s.modelAndSaveCpeMatch(tx, data)
 	if err != nil {
 		return err
 	}
 
-	i := numberOfOldRecordsNotInNewImportedList(cpeMatchesMap)
-	slog.Info(fmt.Sprint("numbers of old cpeMatches", len(cpeMatchesID), ",new cpeMatches", len(data)), ", not in the new imported list: ", i)
+	amountOfCpeMatches := len(data)
+	amountOfOldCpeMatches := len(cpeMatchesID)
+
+	slog.Info("finished importing cpe_matches", "amountOfCpeMatches", amountOfCpeMatches, "amountOfOldCpeMatches", amountOfOldCpeMatches, "amountOfOldCpeMatchesNotInNewImportedList", amountOfOldCpeMatches-amountOfCpeMatches, "duration", time.Since(begin))
 
 	return nil
 }
 
-func modelAndSaveCpeMatch(tx database.DB, data [][]string, cpeMatchesMap map[string]bool, cveRepository cvesRepository) error {
+func (s importService) modelAndSaveCpeMatch(tx database.DB, data [][]string) error {
+	cpes := make([]models.CPEMatch, 0)
+	alreadyPushedInSlice := make(map[string]bool)
 	// csv to model and save
 	for _, row := range data {
 		cpeMatch, err := csvRowToCpeMatchModel(row)
 		if err != nil {
 			return err
 		}
-		// Mark the cpeMatch as exist
-		cpeMatchesMap[cpeMatch.MatchCriteriaID] = true
-		// save the cpeMatch
-		err = cveRepository.SaveBatchCPEMatch(tx, []models.CPEMatch{cpeMatch})
-		if err != nil {
-			return err
+		if _, ok := alreadyPushedInSlice[cpeMatch.MatchCriteriaID]; ok {
+			continue
 		}
-
+		cpes = append(cpes, cpeMatch)
 	}
+	// save the cpes
+	err := s.cveRepository.SaveBatchCPEMatch(tx, cpes)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -431,6 +464,7 @@ func csvRowToCpeMatchModel(row []string) (models.CPEMatch, error) {
 // import cwe
 func (s importService) importCwes(tx database.DB, f *os.File) error {
 	slog.Info("Importing cwes started")
+	begin := time.Now()
 	// Read cwes.csv
 	data, err := readCSVFile(f)
 	if err != nil {
@@ -443,43 +477,41 @@ func (s importService) importCwes(tx database.DB, f *os.File) error {
 		return err
 	}
 
-	// Create a map of cwes to check if a cwe is already in the database
-	cwesMap, err := getMapOfRecords(cwesID)
-	if err != nil {
-		return err
-	}
-
 	// Skip the header
 	data = data[1:]
 	// model and save
-	err = modelAndSaveCwe(tx, data, cwesMap, s.cweRepository)
+	err = s.modelAndSaveCwe(tx, data)
 	if err != nil {
 		return err
 	}
 
-	i := numberOfOldRecordsNotInNewImportedList(cwesMap)
-	slog.Info(fmt.Sprint("numbers of old cwes ", len(cwesID), ", new cwes ", len(data)), ", not in the new imported list: ", i)
+	amountOfCwes := len(data)
+	amountOfOldCwes := len(cwesID)
 
+	slog.Info("finished importing cwes", "amountOfCwes", amountOfCwes, "amountOfOldCwes", amountOfOldCwes, "amountOfOldCwesNotInNewImportedList", amountOfOldCwes-amountOfCwes, "duration", time.Since(begin))
 	return nil
 }
 
-func modelAndSaveCwe(tx database.DB, data [][]string, cwesMap map[string]bool, cweRepository cwesRepository) error {
-	// csv to model and save
+func (s importService) modelAndSaveCwe(tx database.DB, data [][]string) error {
+	cwes := make([]models.CWE, 0)
+	alreadyPushedInSlice := make(map[string]bool)
 	for _, row := range data {
 		cwe, err := csvRowToCweModel(row)
 		if err != nil {
 			return err
 		}
-		// Mark the cwe as exist
-		cwesMap[cwe.CWE] = true
-
-		// save the cwe
-		err = cweRepository.SaveBatch(tx, []models.CWE{cwe})
-		if err != nil {
-			return err
+		if _, ok := alreadyPushedInSlice[cwe.CWE]; ok {
+			continue
 		}
+		cwes = append(cwes, cwe)
 
 	}
+	// save the cwe
+	err := s.cweRepository.SaveBatch(tx, cwes)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -516,6 +548,7 @@ func csvRowToCweModel(row []string) (models.CWE, error) {
 // import exploits
 func (s importService) importExploits(tx database.DB, f *os.File) error {
 	slog.Info("Importing exploits started")
+	begin := time.Now()
 	// Read exploits.csv
 	data, err := readCSVFile(f)
 	if err != nil {
@@ -528,41 +561,42 @@ func (s importService) importExploits(tx database.DB, f *os.File) error {
 		return err
 	}
 
-	// Create a map of exploits to check if a exploit is already in the database
-	exploitsMap, err := getMapOfRecords(exploitsID)
-	if err != nil {
-		return err
-	}
-
 	// Skip the header
 	data = data[1:]
 	// Save all exploits
-	err = modelAndSaveExploit(tx, data, exploitsMap, s.exploitRepository)
+	err = s.modelAndSaveExploit(tx, data)
 	if err != nil {
 		return err
 	}
 
-	i := numberOfOldRecordsNotInNewImportedList(exploitsMap)
-	slog.Info(fmt.Sprint("numbers of old exploits ", len(exploitsID), ", new exploits ", len(data)), ", not in the new imported list: ", i)
+	amountOfExploits := len(data)
+	amountOfOldExploits := len(exploitsID)
+
+	slog.Info("finished importing exploits", "amountOfExploits", amountOfExploits, "amountOfOldExploits", amountOfOldExploits, "amountOfOldExploitsNotInNewImportedList", amountOfOldExploits-amountOfExploits, "duration", time.Since(begin))
 
 	return nil
 }
-func modelAndSaveExploit(tx database.DB, data [][]string, exploitsMap map[string]bool, exploitRepository exploitsRepository) error {
+func (s importService) modelAndSaveExploit(tx database.DB, data [][]string) error {
+	exploits := make([]models.Exploit, 0)
+	alreadyPushedInSlice := make(map[string]bool)
 	// csv to model and save
 	for _, row := range data {
 		exploit, err := csvRowToExploitModel(row)
 		if err != nil {
 			return err
 		}
-		// Mark the exploit as exist
-		exploitsMap[exploit.ID] = true
-		// save the exploit
-		err = exploitRepository.SaveBatch(tx, []models.Exploit{exploit})
-		if err != nil {
-			return err
+		if _, ok := alreadyPushedInSlice[exploit.ID]; ok {
+			continue
 		}
-
+		exploits = append(exploits, exploit)
 	}
+
+	// save the exploits
+	err := s.exploitRepository.SaveBatch(tx, exploits)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 func csvRowToExploitModel(row []string) (models.Exploit, error) {
@@ -647,20 +681,14 @@ func csvRowToExploitModel(row []string) (models.Exploit, error) {
 // import affected_components
 func (s importService) importAffectedComponents(tx database.DB, f *os.File) error {
 	slog.Info("Importing affected_components started")
+	begin := time.Now()
 	// Read affected_components.csv
 	data, err := readCSVFile(f)
 	if err != nil {
 		return err
 	}
-
 	// Get all existing affectedComponentsID in the database
 	affectedComponentsID, err := s.affectedComponentsRepository.GetAllAffectedComponentsID()
-	if err != nil {
-		return err
-	}
-
-	// Create a map of affectedComponents to check if a affectedComponent is already in the database
-	affectedComponentsMap, err := getMapOfRecords(affectedComponentsID)
 	if err != nil {
 		return err
 	}
@@ -668,34 +696,39 @@ func (s importService) importAffectedComponents(tx database.DB, f *os.File) erro
 	// Skip the header
 	data = data[1:]
 	// model and save
-	err = modelAndSaveAffectedComponent(tx, data, affectedComponentsMap, s.affectedComponentsRepository)
+	err = s.modelAndSaveAffectedComponent(tx, data)
 	if err != nil {
 		return err
 	}
 
-	i := numberOfOldRecordsNotInNewImportedList(affectedComponentsMap)
-	slog.Info(fmt.Sprint("numbers of old affectedComponents ", len(affectedComponentsID), ",numbers of new affectedComponents ", len(data)), ", not in the new imported list: ", i)
+	amountOfAffectedComponents := len(data)
+	amountOfOldAffectedComponents := len(affectedComponentsID)
+
+	slog.Info("finished importing affected_components", "amountOfAffectedComponents", amountOfAffectedComponents, "amountOfOldAffectedComponents", amountOfOldAffectedComponents, "amountOfOldAffectedComponentsNotInNewImportedList", amountOfOldAffectedComponents-amountOfAffectedComponents, "duration", time.Since(begin))
 
 	return nil
 }
 
-func modelAndSaveAffectedComponent(tx database.DB, data [][]string, affectedComponentsMap map[string]bool, affectedComponentsRepository affectedComponentsRepository) error {
-	//total := len(data)
+func (s importService) modelAndSaveAffectedComponent(tx database.DB, data [][]string) error {
+	affectedComponents := make([]models.AffectedComponent, 0)
+	alreadyPushedInSlice := make(map[string]bool)
 	// csv to model and save
 	for _, row := range data {
 		affectedComponent, err := csvRowToAffectedComponentModel(row)
 		if err != nil {
 			return err
 		}
-		// Mark the affectedComponent as exist
-		affectedComponentsMap[affectedComponent.ID] = true
-		// save the affectedComponent
-		err = affectedComponentsRepository.Save(tx, &affectedComponent)
-		if err != nil {
-			return err
+		if _, ok := alreadyPushedInSlice[affectedComponent.ID]; ok {
+			continue
 		}
-
+		affectedComponents = append(affectedComponents, affectedComponent)
 	}
+	// save the affectedComponents
+	err := s.affectedComponentsRepository.SaveBatch(tx, affectedComponents)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -732,6 +765,7 @@ func csvRowToAffectedComponentModel(row []string) (models.AffectedComponent, err
 // import weaknesses
 func (s importService) importWeaknesses(tx database.DB, f *os.File) error {
 	slog.Info("Importing weaknesses started")
+	begin := time.Now()
 	// Read weaknesses.csv
 	data, err := readCSVFile(f)
 	if err != nil {
@@ -747,12 +781,14 @@ func (s importService) importWeaknesses(tx database.DB, f *os.File) error {
 	}
 
 	// Save all weaknesses
-	numberOfWeaknessesNotSaved, err := saveWeaknesses(tx, weaknesses, s.cveRepository)
+	err = s.saveWeaknesses(tx, weaknesses)
 	if err != nil {
 		return err
 	}
-	slog.Info(fmt.Sprint("Numbers of weaknesses not saved: ", numberOfWeaknessesNotSaved))
 
+	amountOfWeaknesses := len(data)
+
+	slog.Info("finished importing weaknesses", "amountOfWeaknesses", amountOfWeaknesses, "amountOfOldWeaknesses", "duration", time.Since(begin))
 	return nil
 }
 
@@ -770,28 +806,6 @@ func modelWeaknesses(data [][]string) ([]models.Weakness, error) {
 	return weaknesses, nil
 }
 
-func saveWeaknesses(tx database.DB, weaknesses []models.Weakness, cveRepository cvesRepository) (int, error) {
-	// Get all existing cvesID in the database
-	cvesId, err := cveRepository.GetAllCVEsID()
-	if err != nil {
-		return 0, err
-	}
-	// Create a map of cves to check if a cve is exist
-	cvesIdMap, err := getMapOfRecords(cvesId)
-	if err != nil {
-		return 0, err
-	}
-	// Group weaknesses by cveID
-	weaknessesByCVE := groupWeaknessesByCVE(weaknesses)
-
-	// Save weaknesses
-	numberOfWeaknessesNotSaved, err := saveWeaknessesGroup(tx, weaknessesByCVE, cveRepository, cvesIdMap)
-	if err != nil {
-		return 0, err
-	}
-
-	return numberOfWeaknessesNotSaved, nil
-}
 func groupWeaknessesByCVE(weaknesses []models.Weakness) map[string][]models.Weakness {
 	weaknessesByCVE := make(map[string][]models.Weakness)
 	for _, weakness := range weaknesses {
@@ -799,16 +813,14 @@ func groupWeaknessesByCVE(weaknesses []models.Weakness) map[string][]models.Weak
 	}
 	return weaknessesByCVE
 }
-func saveWeaknessesGroup(tx database.DB, weaknessesByCVE map[string][]models.Weakness, cveRepository cvesRepository, cvesIdMap map[string]bool) (int, error) {
-	var i = 0
+func (s importService) saveWeaknesses(tx database.DB, weaknesses []models.Weakness) error {
+	// Group weaknesses by cveID
+	weaknessesByCVE := groupWeaknessesByCVE(weaknesses)
+
 	for cveId, weaknessesGroup := range weaknessesByCVE {
-		if _, exists := cvesIdMap[cveId]; !exists {
-			i++
-			continue // Skip if the cve does not exist
-		}
 
 		// add weaknesses to the cve
-		if err := cveRepository.GetDB(tx).Model(&models.CVE{
+		if err := s.cveRepository.GetDB(tx).Model(&models.CVE{
 			CVE: cveId,
 		}).Association("Weaknesses").Append(utils.Map(weaknessesGroup, func(w models.Weakness) models.Weakness {
 			return models.Weakness{
@@ -818,10 +830,10 @@ func saveWeaknessesGroup(tx database.DB, weaknessesByCVE map[string][]models.Wea
 				CWEID:  w.CWEID,
 			}
 		})); err != nil {
-			return i, err
+			return err
 		}
 	}
-	return i, nil
+	return nil
 }
 func csvRowToWeaknessModel(row []string) (models.Weakness, error) {
 
@@ -837,6 +849,7 @@ func csvRowToWeaknessModel(row []string) (models.Weakness, error) {
 // import cpe_cve_matches
 func (s importService) importCveCpeMatches(tx database.DB, f *os.File) error {
 	slog.Info("Importing cpe_cve_matches started")
+	begin := time.Now()
 	// Read cpe_cve_matches.csv
 	data, err := readCSVFile(f)
 	if err != nil {
@@ -846,17 +859,20 @@ func (s importService) importCveCpeMatches(tx database.DB, f *os.File) error {
 	// Skip the header
 	data = data[1:]
 	// Save all cpe_cve_matches
-	err = saveCpeCveMatches(tx, data, s.cveRepository)
+	err = s.saveCpeCveMatches(tx, data)
 	if err != nil {
 		return err
 	}
 
+	amountOfCpeCveMatches := len(data)
+
+	slog.Info("finished importing cpe_cve_matches", "amountOfCpeCveMatches", amountOfCpeCveMatches, "duration", time.Since(begin))
 	return nil
 }
-func saveCpeCveMatches(tx database.DB, csvData [][]string, cveRepository cvesRepository) error {
+func (s importService) saveCpeCveMatches(tx database.DB, csvData [][]string) error {
 	//Group cpeCveMatches by cveID
 	cpeCveMatchesByCVE := groupCpeCveMatchesByCVE(csvData)
-	return saveCpeCveMatchesGroup(tx, cpeCveMatchesByCVE, cveRepository)
+	return s.saveCpeCveMatchesGroup(tx, cpeCveMatchesByCVE)
 }
 func groupCpeCveMatchesByCVE(csvData [][]string) map[string][]string {
 	// the key will be the cve id. The value will be an array of cpe match criteria ids
@@ -872,7 +888,7 @@ func groupCpeCveMatchesByCVE(csvData [][]string) map[string][]string {
 	}
 	return cveToCpeMatches
 }
-func saveCpeCveMatchesGroup(tx database.DB, cpeMatchesByCVE map[string][]string, cveRepository cvesRepository) error {
+func (s importService) saveCpeCveMatchesGroup(tx database.DB, cpeMatchesByCVE map[string][]string) error {
 	for cveId, cpeMatches := range cpeMatchesByCVE {
 		for i := 0; i < len(cpeMatches); i += 1000 {
 			end := i + 1000
@@ -880,7 +896,7 @@ func saveCpeCveMatchesGroup(tx database.DB, cpeMatchesByCVE map[string][]string,
 				end = len(cpeMatches)
 			}
 			// add cpeCveMatches to the cve
-			if err := cveRepository.GetDB(tx).Session(&gorm.Session{
+			if err := s.cveRepository.GetDB(tx).Session(&gorm.Session{
 				// disable logging
 				// it might log slow queries or a missing cve.
 				Logger: logger.Default.LogMode(logger.Silent),
@@ -901,8 +917,9 @@ func saveCpeCveMatchesGroup(tx database.DB, cpeMatchesByCVE map[string][]string,
 }
 
 // import cve_affects_component
-func (s importService) importCveAffectsComponent(tx database.DB, f *os.File) error {
+func (s importService) importCveAffectedComponent(tx database.DB, f *os.File) error {
 	slog.Info("Importing cve_affects_component started")
+	begin := time.Now()
 	// Read cve_affects_component.csv
 	data, err := readCSVFile(f)
 	if err != nil {
@@ -912,17 +929,21 @@ func (s importService) importCveAffectsComponent(tx database.DB, f *os.File) err
 	// Skip the header
 	data = data[1:]
 	// model and save
-	err = saveCveAffectedComponents(tx, data, s.cveRepository)
+	err = s.saveCveAffectedComponents(tx, data)
 	if err != nil {
 		return err
 	}
 
+	amountOfCveAffectedComponents := len(data)
+
+	slog.Info("finished importing cve_affects_component", "amountOfCveAffectedComponents", amountOfCveAffectedComponents, "duration", time.Since(begin))
+
 	return nil
 }
-func saveCveAffectedComponents(tx database.DB, csvData [][]string, cveRepository cvesRepository) error {
+func (s importService) saveCveAffectedComponents(tx database.DB, csvData [][]string) error {
 	//Group affectedComponents by cveID
 	cveToAffectedComponents := groupAffectedComponentsByCVE(csvData)
-	return saveCveAffectedComponentsGroup(tx, cveToAffectedComponents, cveRepository)
+	return s.saveCveAffectedComponentsGroup(tx, cveToAffectedComponents)
 }
 
 func groupAffectedComponentsByCVE(csvData [][]string) map[string][]string {
@@ -940,7 +961,7 @@ func groupAffectedComponentsByCVE(csvData [][]string) map[string][]string {
 	return cveToAffectedComponents
 }
 
-func saveCveAffectedComponentsGroup(tx database.DB, cveToAffectedComponents map[string][]string, cveRepository cvesRepository) error {
+func (s importService) saveCveAffectedComponentsGroup(tx database.DB, cveToAffectedComponents map[string][]string) error {
 	for cveId, affectedComponentHashes := range cveToAffectedComponents {
 		for i := 0; i < len(affectedComponentHashes); i += 1000 {
 			end := i + 1000
@@ -948,7 +969,7 @@ func saveCveAffectedComponentsGroup(tx database.DB, cveToAffectedComponents map[
 				end = len(affectedComponentHashes)
 			}
 			// add cpeCveMatches to the cve
-			if err := cveRepository.GetDB(tx).Session(&gorm.Session{
+			if err := s.cveRepository.GetDB(tx).Session(&gorm.Session{
 				// disable logging
 				// it might log slow queries or a missing cve.
 				Logger: logger.Default.LogMode(logger.Silent),
@@ -1060,7 +1081,7 @@ func (s importService) copyCSVToDB(tx database.DB, tmp string) error {
 		panic(err)
 	}
 	defer cveAffectsComponentCsv.Close()
-	err = s.importCveAffectsComponent(tx, cveAffectsComponentCsv)
+	err = s.importCveAffectedComponent(tx, cveAffectsComponentCsv)
 	if err != nil {
 		return err
 	}
@@ -1126,7 +1147,7 @@ func verifySignature(pubKeyFile string, sigFile string, blobFile string, ctx con
 
 	return nil
 }
-func copyCSVFromRemoteToLocal(reg string, tag string, fs *file.Store, ctx context.Context) error {
+func copyCSVFromRemoteToLocal(ctx context.Context, reg string, tag string, fs *file.Store) error {
 	// Connect to a remote repository
 	repo, err := remote.NewRepository(reg)
 	if err != nil {

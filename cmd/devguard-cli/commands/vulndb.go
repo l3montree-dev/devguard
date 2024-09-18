@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"fmt"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -54,7 +53,7 @@ func isValidCVE(cveId string) bool {
 
 func newImportCVECommand() *cobra.Command {
 	importCmd := &cobra.Command{
-		Use:   "importcve",
+		Use:   "import-cve",
 		Short: "Will import the vulnerability database",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -153,7 +152,6 @@ func newRepairCommand() *cobra.Command {
 			// check if after flag is set
 			after, _ := cmd.Flags().GetString("after")
 			startIndex, _ := cmd.Flags().GetInt("startIndex")
-			fmt.Println(after, startIndex)
 
 			core.LoadConfig() // nolint
 

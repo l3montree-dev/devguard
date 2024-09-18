@@ -16,10 +16,10 @@
 package main
 
 import (
-	"log/slog"
-
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/config"
+	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -58,16 +58,8 @@ func main() {
 	statisticsDaemon.Start()
 	api.Start(db)
 
-	cveRepository := repositories.NewCVERepository(db)
-	cweRepository := repositories.NewCWERepository(db)
-	exploitsRepository := repositories.NewExploitRepository(db)
-	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
-
-	v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
-	err = v.Import(db, "latest")
-	if err != nil {
-		slog.Error("could not import vulndb", "err", err)
-		return
-	}
+	configService := config.NewService(db)
+	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
+	vulndb.StartMirror(db, leaderElector, configService)
 
 }
