@@ -35,6 +35,7 @@ func (p *CreateRequest) ToModel() models.Project {
 type patchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
+	IsPublic    *bool   `json:"isPublic"`
 }
 
 func (p *patchRequest) applyToModel(project *models.Project) bool {
@@ -48,5 +49,11 @@ func (p *patchRequest) applyToModel(project *models.Project) bool {
 		project.Description = *p.Description
 		updated = true
 	}
+
+	if p.IsPublic != nil {
+		project.IsPublic = *p.IsPublic
+		updated = true
+	}
+
 	return updated
 }
