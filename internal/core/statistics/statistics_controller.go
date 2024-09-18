@@ -202,6 +202,12 @@ func (c *httpController) GetAverageProjectFixingTime(ctx core.Context) error {
 		return acc + curr
 	}, 0.)
 
+	if len(results) == 0 {
+		return ctx.JSON(200, map[string]float64{
+			"averageFixingTimeSeconds": 0,
+		})
+	}
+
 	return ctx.JSON(200, map[string]float64{
 		"averageFixingTimeSeconds": resultsInSeconds / float64(len(results)),
 	})

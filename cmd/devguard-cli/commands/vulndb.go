@@ -18,8 +18,12 @@ func NewVulndbCommand() *cobra.Command {
 		Short: "Vulnerability Database",
 	}
 
+<<<<<<< HEAD
 	vulndbCmd.AddCommand(newRepairCommand())
 	vulndbCmd.AddCommand(newImportCVECommand())
+=======
+	vulndbCmd.AddCommand(newSyncCommand())
+>>>>>>> origin/main
 	vulndbCmd.AddCommand(newImportCommand())
 	return &vulndbCmd
 }
@@ -108,6 +112,7 @@ func newImportCVECommand() *cobra.Command {
 	return importCmd
 }
 
+<<<<<<< HEAD
 func newImportCommand() *cobra.Command {
 	importCmd := &cobra.Command{
 		Use:   "import",
@@ -147,6 +152,12 @@ func newRepairCommand() *cobra.Command {
 	repairCmd := cobra.Command{
 		Use:   "repair",
 		Short: "Will repair the vulnerability database",
+=======
+func newSyncCommand() *cobra.Command {
+	syncCmd := cobra.Command{
+		Use:   "sync",
+		Short: "Will sync the vulnerability database",
+>>>>>>> origin/main
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			// check if after flag is set
@@ -161,7 +172,7 @@ func newRepairCommand() *cobra.Command {
 				return
 			}
 
-			databasesToRepair, _ := cmd.Flags().GetStringArray("databases")
+			databasesToSync, _ := cmd.Flags().GetStringArray("databases")
 
 			cveRepository := repositories.NewCVERepository(database)
 			cweRepository := repositories.NewCWERepository(database)
@@ -177,20 +188,20 @@ func newRepairCommand() *cobra.Command {
 
 			githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(database))
 
-			if emptyOrContains(databasesToRepair, "cwe") {
+			if emptyOrContains(databasesToSync, "cwe") {
 				now := time.Now()
-				slog.Info("starting cwe database repair")
+				slog.Info("starting cwe database sync")
 				if err := mitreService.Mirror(); err != nil {
 					slog.Error("could not mirror cwe database", "err", err)
 				}
-				slog.Info("finished cwe database repair", "duration", time.Since(now))
+				slog.Info("finished cwe database sync", "duration", time.Since(now))
 			}
 
-			if emptyOrContains(databasesToRepair, "nvd") {
-				slog.Info("starting nvd database repair")
+			if emptyOrContains(databasesToSync, "nvd") {
+				slog.Info("starting nvd database sync")
 				now := time.Now()
 				if after != "" {
-					// we do a partial repair
+					// we do a partial sync
 					// try to parse the date
 					afterDate, err := time.Parse("2006-01-02", after)
 					if err != nil {
@@ -207,77 +218,76 @@ func newRepairCommand() *cobra.Command {
 							slog.Error("could not fetch after index", "err", err)
 						}
 					} else {
-						// just redo the intitial sync
-						err = nvdService.InitialPopulation()
+						err = nvdService.Sync()
 						if err != nil {
 							slog.Error("could not do initial sync", "err", err)
 						}
 					}
 				}
-				slog.Info("finished nvd database repair", "duration", time.Since(now))
+				slog.Info("finished nvd database sync", "duration", time.Since(now))
 			}
 
-			if emptyOrContains(databasesToRepair, "cvelist") {
-				slog.Info("starting cvelist database repair")
+			if emptyOrContains(databasesToSync, "cvelist") {
+				slog.Info("starting cvelist database sync")
 				now := time.Now()
 
 				if err := cvelistService.Mirror(); err != nil {
 					slog.Error("could not mirror cvelist database", "err", err)
 				}
-				slog.Info("finished cvelist database repair", "duration", time.Since(now))
+				slog.Info("finished cvelist database sync", "duration", time.Since(now))
 			}
 
-			if emptyOrContains(databasesToRepair, "epss") {
-				slog.Info("starting epss database repair")
+			if emptyOrContains(databasesToSync, "epss") {
+				slog.Info("starting epss database sync")
 				now := time.Now()
 
 				if err := epssService.Mirror(); err != nil {
-					slog.Error("could not repair epss database", "err", err)
+					slog.Error("could not sync epss database", "err", err)
 				}
-				slog.Info("finished epss database repair", "duration", time.Since(now))
+				slog.Info("finished epss database sync", "duration", time.Since(now))
 			}
 
-			if emptyOrContains(databasesToRepair, "osv") {
-				slog.Info("starting osv database repair")
+			if emptyOrContains(databasesToSync, "osv") {
+				slog.Info("starting osv database sync")
 				now := time.Now()
 				if err := osvService.Mirror(); err != nil {
-					slog.Error("could not repair osv database", "err", err)
+					slog.Error("could not sync osv database", "err", err)
 				}
-				slog.Info("finished osv database repair", "duration", time.Since(now))
+				slog.Info("finished osv database sync", "duration", time.Since(now))
 			}
 
-			if emptyOrContains(databasesToRepair, "exploitdb") {
-				slog.Info("starting exploitdb database repair")
+			if emptyOrContains(databasesToSync, "exploitdb") {
+				slog.Info("starting exploitdb database sync")
 				now := time.Now()
 				if err := expoitDBService.Mirror(); err != nil {
-					slog.Error("could not repair exploitdb database", "err", err)
+					slog.Error("could not sync exploitdb database", "err", err)
 				}
-				slog.Info("finished exploitdb database repair", "duration", time.Since(now))
+				slog.Info("finished exploitdb database sync", "duration", time.Since(now))
 			}
 
-			if emptyOrContains(databasesToRepair, "github-poc") {
-				slog.Info("starting github-poc database repair")
+			if emptyOrContains(databasesToSync, "github-poc") {
+				slog.Info("starting github-poc database sync")
 				now := time.Now()
 				if err := githubExploitDBService.Mirror(); err != nil {
-					slog.Error("could not repair github-poc database", "err", err)
+					slog.Error("could not sync github-poc database", "err", err)
 				}
-				slog.Info("finished github-poc database repair", "duration", time.Since(now))
+				slog.Info("finished github-poc database sync", "duration", time.Since(now))
 			}
 
-			if emptyOrContains(databasesToRepair, "dsa") {
-				slog.Info("starting dsa database repair")
+			if emptyOrContains(databasesToSync, "dsa") {
+				slog.Info("starting dsa database sync")
 				now := time.Now()
 				if err := debianSecurityTracker.Mirror(); err != nil {
-					slog.Error("could not repair dsa database", "err", err)
+					slog.Error("could not sync dsa database", "err", err)
 				}
-				slog.Info("finished dsa database repair", "duration", time.Since(now))
+				slog.Info("finished dsa database sync", "duration", time.Since(now))
 			}
 
 		},
 	}
-	repairCmd.Flags().String("after", "", "allows to only repair a subset of data. This is used to identify the 'last correct' date in the nvd database. The sync will only include cve modifications in the interval [after, now]. Format: 2006-01-02")
-	repairCmd.Flags().Int("startIndex", 0, "provide a start index to fetch the data from. This is useful after an initial sync failed")
-	repairCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to repair. Possible values are: nvd, cvelist, exploitdb, github-poc, cwe, epss, osv, dsa")
+	syncCmd.Flags().String("after", "", "allows to only sync a subset of data. This is used to identify the 'last correct' date in the nvd database. The sync will only include cve modifications in the interval [after, now]. Format: 2006-01-02")
+	syncCmd.Flags().Int("startIndex", 0, "provide a start index to fetch the data from. This is useful after an initial sync failed")
+	syncCmd.Flags().StringArray("databases", []string{}, "provide a list of databases to sync. Possible values are: nvd, cvelist, exploitdb, github-poc, cwe, epss, osv, dsa")
 
-	return &repairCmd
+	return &syncCmd
 }

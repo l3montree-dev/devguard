@@ -18,6 +18,7 @@ package flaw
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -114,6 +115,9 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 }
 
 func (s *service) RecalculateAllRawRiskAssessments() error {
+	now := time.Now()
+	slog.Info("recalculating all raw risk assessments", "time", now)
+
 	userID := "system"
 	justification := "System recalculated raw risk assessment"
 
@@ -124,7 +128,6 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 
 	err = s.flawRepository.Transaction(func(tx core.DB) error {
 		for _, asset := range assets {
-
 			// get all flaws of the asset
 			flaws, err := s.flawRepository.GetAllFlawsByAssetID(tx, asset.ID)
 			if len(flaws) == 0 {
@@ -184,8 +187,10 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 			events = append(events, ev)
 
 			slog.Info("recalculated raw risk assessment", "cve", cve.CVE)
+		} else {
+			// only update the last calculated time
+			flaws[i].RiskRecalculatedAt = time.Now()
 		}
-
 	}
 
 	// saving the flaws and the events HAS to be done in the same transaction

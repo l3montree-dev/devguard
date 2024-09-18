@@ -59,6 +59,8 @@ type Flaw struct {
 	CreatedAt time.Time    `json:"createdAt"`
 	UpdatedAt time.Time    `json:"updatedAt"`
 	DeletedAt sql.NullTime `gorm:"index" json:"-"`
+
+	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt" gorm:"default:null;"`
 }
 
 type FlawRisk struct {

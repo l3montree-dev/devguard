@@ -47,7 +47,7 @@ jobs:
 
     - name: Build the database (this takes some time)
       run: |
-        go run ./cmd/devguard-cli/main.go vulndb repair --startIndex=0
+        go run ./cmd/devguard-cli/main.go vulndb sync --startIndex=0
     - name: Dump the PostgreSQL database
       # skip:checkov:CKV_SECRET_6
       run: |

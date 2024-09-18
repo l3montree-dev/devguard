@@ -241,7 +241,7 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 
 func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom normalize.SBOM) error {
 	// load the asset components
-	AssetComponents, err := s.componentRepository.LoadComponents(nil, asset, scanType, currentVersion)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, asset, scanType, currentVersion)
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
 	}
@@ -331,7 +331,7 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 		return err
 	}
 
-	return s.componentRepository.HandleStateDiff(nil, asset.ID, currentVersion, AssetComponents, dependencies)
+	return s.componentRepository.HandleStateDiff(nil, asset.ID, currentVersion, assetComponents, dependencies)
 }
 
 func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error {

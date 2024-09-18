@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/l3montree-dev/devguard/internal/obj"
 )
@@ -93,7 +94,7 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 			return
 		}
 		flaw.RawRiskAssessment = &f
-
+		flaw.RiskRecalculatedAt = time.Now()
 	}
 }
 
