@@ -58,6 +58,12 @@ func (c *httpController) GetAverageOrgFixingTime(ctx core.Context) error {
 	}
 	resultsInSeconds := getResultsInSeconds(results)
 
+	if len(results) == 0 {
+		return ctx.JSON(200, map[string]float64{
+			"averageFixingTimeSeconds": 0,
+		})
+	}
+
 	return ctx.JSON(200, map[string]float64{
 		"averageFixingTimeSeconds": resultsInSeconds / float64(len(results)),
 	})
@@ -70,7 +76,7 @@ func (c *httpController) GetOrgRiskHistory(ctx core.Context) error {
 	start := ctx.QueryParam("start")
 	end := ctx.QueryParam("end")
 
-	results, err := getOrgRiskHistory(org.ID, start, end, c)
+	results, err := c.getOrgRiskHistory(org.ID, start, end)
 	if err != nil {
 		return ctx.JSON(500, nil)
 	}
@@ -78,7 +84,7 @@ func (c *httpController) GetOrgRiskHistory(ctx core.Context) error {
 
 }
 
-func getOrgRiskHistory(orgID uuid.UUID, start string, end string, c *httpController) ([]projectRiskHistory, error) {
+func (c *httpController) getOrgRiskHistory(orgID uuid.UUID, start string, end string) ([]projectRiskHistory, error) {
 	// fetch all projects
 	projects, err := c.projectRepository.GetByOrgID(orgID)
 	if err != nil {

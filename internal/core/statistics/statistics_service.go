@@ -2,7 +2,6 @@ package statistics
 
 import (
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -33,7 +32,7 @@ type flawRepository interface {
 	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 }
 
-type proRepository interface {
+type assetToProjectIdConverter interface {
 	GetProjectIdByAssetID(assetID uuid.UUID) (uuid.UUID, error)
 }
 
@@ -48,11 +47,11 @@ type service struct {
 	assetRiskHistoryRepository   assetRiskHistoryRepository
 	flawRepository               flawRepository
 	assetRepository              assetRepository
-	projectRepository            proRepository
+	projectRepository            assetToProjectIdConverter
 	projectRiskHistoryRepository projectRiskHistoryRepository
 }
 
-func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, flawRepository flawRepository, assetRepository assetRepository, projectRepository proRepository, projectRiskHistoryRepository projectRiskHistoryRepository) *service {
+func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, flawRepository flawRepository, assetRepository assetRepository, projectRepository assetToProjectIdConverter, projectRiskHistoryRepository projectRiskHistoryRepository) *service {
 	return &service{
 		statisticsRepository:         statisticsRepository,
 		componentRepository:          componentRepository,
@@ -70,7 +69,6 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 	// set end to last second of date
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 
-	slog.Error("update project risk aggregation", "projectID", projectID, "begin", begin, "end", end)
 	// fetch all assets history for the project
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
 		assetsHistory, err := s.assetRiskHistoryRepository.GetRiskHistoryByProject(projectID, time)

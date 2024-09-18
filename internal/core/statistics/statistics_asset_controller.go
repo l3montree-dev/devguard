@@ -99,10 +99,9 @@ func (c *httpController) GetAverageAssetFixingTime(ctx core.Context) error {
 	}
 
 	// check the severity value
-	if severity != "critical" && severity != "high" && severity != "medium" && severity != "low" {
-		slog.Warn("severity query parameter must be one of critical, high, medium, low")
+	if err := checkSeverity(severity); err != nil {
 		return ctx.JSON(400, map[string]string{
-			"error": "severity query parameter must be one of critical, high, medium, low",
+			"error": err.Error(),
 		})
 	}
 
