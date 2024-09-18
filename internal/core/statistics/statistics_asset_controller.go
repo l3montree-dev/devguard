@@ -88,7 +88,6 @@ func (c *httpController) GetAssetRiskDistribution(ctx core.Context) error {
 	return ctx.JSON(200, results)
 }
 
-// get the risk distribution
 func (c *httpController) GetAverageAssetFixingTime(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	severity := ctx.QueryParam("severity")
@@ -149,8 +148,6 @@ func aggregateRiskDistribution(results [][]models.AssetRiskDistribution) []model
 	return aggregatedResults
 }
 
-// get the average fixing time
-
 func checkSeverity(severity string) error {
 	if severity == "" {
 		slog.Warn("severity query parameter is required")
@@ -172,8 +169,6 @@ func getResultsInSeconds(results []time.Duration) float64 {
 	}, 0.)
 	return resultsInSeconds
 }
-
-// get the risk history
 
 func (c *httpController) GetAssetRiskHistory(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
@@ -208,8 +203,6 @@ func (c *httpController) getAssetRiskHistory(start, end string, asset models.Ass
 
 	return c.statisticsService.GetAssetRiskHistory(asset.ID, beginTime, endTime)
 }
-
-// get the flaw aggregation state and change
 
 func (c *httpController) GetFlawAggregationStateAndChange(ctx core.Context) error {
 	asset := core.GetAsset(ctx)

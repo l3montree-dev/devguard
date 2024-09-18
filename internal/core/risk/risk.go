@@ -33,6 +33,7 @@ func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int)
 	tmp = tmp / float64(affectedComponentDepth)
 	// round to 2 decimal places
 	tmp = float64(int(tmp*100)) / 100
+
 	return obj.RiskCalculationReport{
 		Risk: tmp,
 

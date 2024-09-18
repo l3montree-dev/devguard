@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// get the risk distribution
 func (c *httpController) GetOrgRiskDistribution(ctx core.Context) error {
 	org := core.GetTenant(ctx)
 	projects, err := c.projectRepository.GetByOrgID(org.ID)
@@ -104,7 +103,6 @@ func getOrgRiskHistory(orgID uuid.UUID, start string, end string, c *httpControl
 	return errgroup.WaitAndCollect()
 }
 
-// get the flaw aggregation state and change
 func (c *httpController) GetOrgFlawAggregationStateAndChange(ctx core.Context) error {
 	org := core.GetTenant(ctx)
 	compareTo := ctx.QueryParam("compareTo")

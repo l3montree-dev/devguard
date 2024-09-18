@@ -16,6 +16,8 @@ type Org struct {
 	Description            string    `json:"description" gorm:"type:text"`
 
 	GithubAppInstallations []GithubAppInstallation `json:"githubAppInstallations" gorm:"foreignKey:OrgID;"`
+
+	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 }
 
 func (m Model) TableName() string {
