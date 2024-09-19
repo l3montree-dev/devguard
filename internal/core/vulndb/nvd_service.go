@@ -262,23 +262,11 @@ func (nvdService NVDService) FetchAfter(lastModDate time.Time) error {
 	return nil
 }
 
-// After initial data population has occurred, the last modified date parameters provide an efficient way to update a user's local repository and stay within the API rate limits. No more than once every two hours, automated requests should include a range where lastModStartDate equals the time of the last CVE or CPE received and lastModEndDate equals the current time.
-// ref: https://nvd.nist.gov/developers/start-here
-func (nvdService NVDService) mirror() error {
-	lastModDate, err := nvdService.cveRepository.GetLastModDate()
-	if err != nil {
-		// we are doing the initial population
-		return nvdService.InitialPopulation()
-	}
-
-	return nvdService.FetchAfter(lastModDate)
-}
-
 func (nvdService NVDService) Sync() error {
 	lastModDate, err := nvdService.cveRepository.GetLastModDate()
 	if err != nil {
 		// we are doing the initial population
-		return err
+		return nvdService.InitialPopulation()
 	}
 
 	return nvdService.FetchAfter(lastModDate)

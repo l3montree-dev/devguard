@@ -18,6 +18,7 @@ func NewVulndbCommand() *cobra.Command {
 		Short: "Vulnerability Database",
 	}
 
+	vulndbCmd.AddCommand(newImportCVECommand())
 	vulndbCmd.AddCommand(newSyncCommand())
 	vulndbCmd.AddCommand(newImportCommand())
 	return &vulndbCmd
@@ -50,9 +51,9 @@ func isValidCVE(cveId string) bool {
 	return r.MatchString(cveId)
 }
 
-func newImportCommand() *cobra.Command {
+func newImportCVECommand() *cobra.Command {
 	importCmd := &cobra.Command{
-		Use:   "import",
+		Use:   "import-cve",
 		Short: "Will import the vulnerability database",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -107,6 +108,41 @@ func newImportCommand() *cobra.Command {
 	return importCmd
 }
 
+func newImportCommand() *cobra.Command {
+	importCmd := &cobra.Command{
+		Use:   "import",
+		Short: "Will import the vulnerability database",
+		Args:  cobra.MaximumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			core.LoadConfig() // nolint
+
+			database, err := core.DatabaseFactory()
+			if err != nil {
+				slog.Error("could not connect to database", "err", err)
+				return
+			}
+
+			cveRepository := repositories.NewCVERepository(database)
+			cweRepository := repositories.NewCWERepository(database)
+			exploitsRepository := repositories.NewExploitRepository(database)
+			affectedComponentsRepository := repositories.NewAffectedComponentRepository(database)
+
+			tag := "latest"
+			if len(args) > 0 {
+				tag = args[0]
+			}
+			v := vulndb.NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
+			err = v.Import(database, tag)
+			if err != nil {
+				slog.Error("could not import vulndb", "err", err)
+				return
+			}
+
+		},
+	}
+	return importCmd
+}
+
 func newSyncCommand() *cobra.Command {
 	syncCmd := cobra.Command{
 		Use:   "sync",
@@ -118,6 +154,7 @@ func newSyncCommand() *cobra.Command {
 			startIndex, _ := cmd.Flags().GetInt("startIndex")
 
 			core.LoadConfig() // nolint
+
 			database, err := core.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "err", err)
