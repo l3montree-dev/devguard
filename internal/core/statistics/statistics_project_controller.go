@@ -1,7 +1,6 @@
 package statistics
 
 import (
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
-	results, err := getProjectRiskDistribution(project.ID, c)
+	results, err := c.getProjectRiskDistribution(project.ID)
 	if err != nil {
 		return err
 	}
@@ -26,7 +25,7 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 	return ctx.JSON(200, aggregatedResults)
 }
 
-func getProjectRiskDistribution(projectID uuid.UUID, c *httpController) ([][]models.AssetRiskDistribution, error) {
+func (c *httpController) getProjectRiskDistribution(projectID uuid.UUID) ([][]models.AssetRiskDistribution, error) {
 	// fetch all assets
 	assets, err := c.assetRepository.GetByProjectID(projectID)
 	if err != nil {
@@ -53,7 +52,7 @@ func (c *httpController) GetAverageProjectFixingTime(ctx core.Context) error {
 		})
 	}
 
-	results, err := getProjectAverageFixingTime(project.ID, severity, c)
+	results, err := c.getProjectAverageFixingTime(project.ID, severity)
 	if err != nil {
 		return err
 	}
@@ -71,7 +70,7 @@ func (c *httpController) GetAverageProjectFixingTime(ctx core.Context) error {
 	})
 }
 
-func getProjectAverageFixingTime(projectID uuid.UUID, severity string, c *httpController) ([]time.Duration, error) {
+func (c *httpController) getProjectAverageFixingTime(projectID uuid.UUID, severity string) ([]time.Duration, error) {
 	// fetch all assets
 	assets, err := c.assetRepository.GetByProjectID(projectID)
 	if err != nil {
@@ -89,7 +88,7 @@ func getProjectAverageFixingTime(projectID uuid.UUID, severity string, c *httpCo
 	return errgroup.WaitAndCollect()
 }
 
-func getProjectRiskHistory(projectID uuid.UUID, start string, end string, c *httpController) ([]assetRiskHistory, error) {
+func (c *httpController) getAssetsRiskHistory(projectID uuid.UUID, start string, end string) ([]assetRiskHistory, error) {
 	// fetch all assets
 	assets, err := c.assetRepository.GetByProjectID(projectID)
 	if err != nil {
@@ -120,7 +119,7 @@ func (c *httpController) GetProjectRiskHistory(ctx core.Context) error {
 	start := ctx.QueryParam("start")
 	end := ctx.QueryParam("end")
 
-	results, err := getProjectRiskHistory(project.ID, start, end, c)
+	results, err := c.getAssetsRiskHistory(project.ID, start, end)
 	if err != nil {
 		return ctx.JSON(500, nil)
 	}
@@ -128,30 +127,11 @@ func (c *httpController) GetProjectRiskHistory(ctx core.Context) error {
 	return ctx.JSON(200, results)
 }
 
-func (c *httpController) getProjectRiskHistory(start, end string, project models.Project) ([]models.ProjectRiskHistory, error) {
-	if start == "" || end == "" {
-		return nil, fmt.Errorf("start and end query parameters are required")
-	}
-
-	// parse the dates
-	beginTime, err := time.Parse(time.DateOnly, start)
-	if err != nil {
-		return nil, errors.Wrap(err, "error parsing begin date")
-	}
-
-	endTime, err := time.Parse(time.DateOnly, end)
-	if err != nil {
-		return nil, errors.Wrap(err, "error parsing end date")
-	}
-
-	return c.statisticsService.GetProjectRiskHistory(project.ID, beginTime, endTime)
-}
-
 func (c *httpController) GetProjectFlawAggregationStateAndChange(ctx core.Context) error {
 	project := core.GetProject(ctx)
 	compareTo := ctx.QueryParam("compareTo")
 
-	results, err := getProjectFlawAggregationStateAndChange(project.ID, compareTo, c)
+	results, err := c.getProjectFlawAggregationStateAndChange(project.ID, compareTo)
 	if err != nil {
 		slog.Error("Error getting flaw aggregation state", "error", err)
 		return ctx.JSON(500, nil)
@@ -162,7 +142,7 @@ func (c *httpController) GetProjectFlawAggregationStateAndChange(ctx core.Contex
 	return ctx.JSON(200, result)
 }
 
-func getProjectFlawAggregationStateAndChange(projectID uuid.UUID, compareTo string, c *httpController) ([]flawAggregationStateAndChange, error) {
+func (c *httpController) getProjectFlawAggregationStateAndChange(projectID uuid.UUID, compareTo string) ([]flawAggregationStateAndChange, error) {
 	errgroup := utils.ErrGroup[flawAggregationStateAndChange](10)
 	// get all assets
 	assets, err := c.assetRepository.GetByProjectID(projectID)

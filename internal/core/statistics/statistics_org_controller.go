@@ -1,6 +1,7 @@
 package statistics
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,7 +21,7 @@ func (c *httpController) GetOrgRiskDistribution(ctx core.Context) error {
 	results := make([][]models.AssetRiskDistribution, 0)
 	// iterate over all projects and fetch the assets
 	for _, project := range projects {
-		projectResults, err := getProjectRiskDistribution(project.ID, c)
+		projectResults, err := c.getProjectRiskDistribution(project.ID)
 		if err != nil {
 			return err
 		}
@@ -50,7 +51,7 @@ func (c *httpController) GetAverageOrgFixingTime(ctx core.Context) error {
 
 	results := make([]time.Duration, 0)
 	for _, project := range projects {
-		projectResults, err := getProjectAverageFixingTime(project.ID, severity, c)
+		projectResults, err := c.getProjectAverageFixingTime(project.ID, severity)
 		if err != nil {
 			return err
 		}
@@ -108,6 +109,24 @@ func (c *httpController) getOrgRiskHistory(orgID uuid.UUID, start string, end st
 
 	return errgroup.WaitAndCollect()
 }
+func (c *httpController) getProjectRiskHistory(start, end string, project models.Project) ([]models.ProjectRiskHistory, error) {
+	if start == "" || end == "" {
+		return nil, fmt.Errorf("start and end query parameters are required")
+	}
+
+	// parse the dates
+	beginTime, err := time.Parse(time.DateOnly, start)
+	if err != nil {
+		return nil, errors.Wrap(err, "error parsing begin date")
+	}
+
+	endTime, err := time.Parse(time.DateOnly, end)
+	if err != nil {
+		return nil, errors.Wrap(err, "error parsing end date")
+	}
+
+	return c.statisticsService.GetProjectRiskHistory(project.ID, beginTime, endTime)
+}
 
 func (c *httpController) GetOrgFlawAggregationStateAndChange(ctx core.Context) error {
 	org := core.GetTenant(ctx)
@@ -120,7 +139,7 @@ func (c *httpController) GetOrgFlawAggregationStateAndChange(ctx core.Context) e
 
 	results := make([]flawAggregationStateAndChange, 0)
 	for _, project := range projects {
-		projectResults, err := getProjectFlawAggregationStateAndChange(project.ID, compareTo, c)
+		projectResults, err := c.getProjectFlawAggregationStateAndChange(project.ID, compareTo)
 		if err != nil {
 			return err
 		}
