@@ -266,7 +266,7 @@ func (nvdService NVDService) Sync() error {
 	lastModDate, err := nvdService.cveRepository.GetLastModDate()
 	if err != nil {
 		// we are doing the initial population
-		return err
+		return nvdService.InitialPopulation()
 	}
 
 	return nvdService.FetchAfter(lastModDate)
