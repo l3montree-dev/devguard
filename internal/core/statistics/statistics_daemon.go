@@ -42,12 +42,13 @@ func (daemon daemon) Start() {
 			a := asset
 			t := time.Now()
 			slog.Info("recalculating risk history for asset", "asset", asset.ID)
-			if err := daemon.statisticsService.UpdateAssetRiskAggregation(asset.ID, utils.OrDefault(asset.LastHistoryUpdate, asset.CreatedAt), t); err != nil {
+			if err := daemon.statisticsService.UpdateAssetRiskAggregation(asset.ID, utils.OrDefault(asset.LastHistoryUpdate, asset.CreatedAt), t, true); err != nil {
 				slog.Error("could not recalculate risk history", "err", err)
 				continue
 			}
 			// save the new LastHistoryUpdate timestamp
-			asset.LastHistoryUpdate = &t
+			a.LastHistoryUpdate = &t
+
 			// save the asset
 			if err := daemon.assetRepository.Save(nil, &a); err != nil {
 				slog.Error("could not save asset", "err", err)

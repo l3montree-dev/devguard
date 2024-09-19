@@ -283,16 +283,16 @@ func Start(db core.DB) {
 
 	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
 
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, flawRepository)
+	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, flawRepository, assetRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 
 	// init all http controllers using the repositories
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
 	projectController := project.NewHttpController(projectRepository, assetRepository)
 	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
-	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetService)
+	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetService, statisticsService)
 
-	statisticsController := statistics.NewHttpController(statisticsService, assetRepository)
+	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, projectRepository)
 
 	patService := pat.NewPatService(patRepository)
 
@@ -357,6 +357,11 @@ func Start(db core.DB) {
 	tenantRouter.GET("/members/", orgController.Members)
 	tenantRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 	tenantRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
+
+	tenantRouter.GET("/stats/risk-history/", statisticsController.GetOrgRiskHistory)
+	tenantRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageOrgFixingTime)
+	tenantRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetOrgFlawAggregationStateAndChange)
+	tenantRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution)
 
 	tenantRouter.GET("/projects/", projectController.List, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
 	tenantRouter.POST("/projects/", projectController.Create, core.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))

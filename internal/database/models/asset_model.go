@@ -48,6 +48,8 @@ type Asset struct {
 
 	// if this flag is true, everyone is allowed to read this asset.
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
+
+	LastHistoryUpdate *time.Time
 }
 
 func (m Asset) TableName() string {

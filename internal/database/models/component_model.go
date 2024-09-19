@@ -67,7 +67,7 @@ type ComponentDependency struct {
 	Depth int `json:"depth" gorm:"column:depth"`
 }
 
-const LatestVersion = "latest"
+const NoVersion = "0.0.0"
 
 func GetOnlyDirectDependencies(deps []ComponentDependency) []ComponentDependency {
 	return utils.Filter(deps, func(dep ComponentDependency) bool {

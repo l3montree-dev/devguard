@@ -18,3 +18,8 @@ type assetRiskHistory struct {
 	Asset       models.Asset              `json:"asset"`
 	RiskHistory []models.AssetRiskHistory `json:"riskHistory"`
 }
+
+type projectRiskHistory struct {
+	Project     models.Project              `json:"project"`
+	RiskHistory []models.ProjectRiskHistory `json:"riskHistory"`
+}

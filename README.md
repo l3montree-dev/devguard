@@ -256,3 +256,39 @@ We are proud to be supported by the following organizations:
 [go.dev]: https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white
 [go-url]: https://go.dev
 
+
+### DEVGUARD-SCANNER
+
+#### Build the scanner
+```bash
+docker build . -f Dockerfile.scanner -t devguard-scanner  
+```
+
+#### Use the scanner for sca
+
+```bash
+docker run -v "$(PWD):/app" scanner devguard-scanner sca \
+  --assetName="<ASSET NAME>" \
+  --apiUrl="http://host.docker.internal:8080" \
+  --token="<TOKEN>" \
+  --path="/app"
+```
+
+#### Scan a container
+
+##### Build a image.tar from a dockerfile using kaniko
+
+```bash
+docker run --rm -v $(pwd):/workspace gcr.io/kaniko-project/executor:latest --dockerfile=/workspace/Dockerfile --context=/workspace --tarPath=/workspace/image.tar --no-push
+```
+
+##### Scan the .tar
+```bash
+docker run -v "$(PWD):/app" scanner devguard-scanner container-scanning \
+  --assetName="<ASSET NAME>" \
+  --apiUrl="http://host.docker.internal:8080" \
+  --token="<TOKEN>" \
+  --path="/app/image.tar"
+```
+
+

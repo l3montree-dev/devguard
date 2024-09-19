@@ -12,8 +12,6 @@ type Model struct {
 	CreatedAt time.Time    `json:"createdAt"`
 	UpdatedAt time.Time    `json:"updatedAt"`
 	DeletedAt sql.NullTime `gorm:"index" json:"-"`
-
-	LastHistoryUpdate *time.Time
 }
 
 func (a Model) GetID() uuid.UUID {
