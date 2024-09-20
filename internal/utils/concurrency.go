@@ -74,7 +74,7 @@ func (c concurrentResultSlice) Error() error {
 			msg += r.Error().Error() + "\n"
 		}
 	}
-	return fmt.Errorf(msg)
+	return fmt.Errorf(msg) // nolint:all
 }
 
 func (c concurrentResultSlice) Get(index int) (any, error) {

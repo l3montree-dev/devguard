@@ -117,7 +117,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 func (githubIntegration *githubIntegration) IntegrationEnabled(ctx core.Context) bool {
 	// check if the github app installation exists in the database
 	tenant := core.GetTenant(ctx)
-	return tenant.GithubAppInstallations != nil && len(tenant.GithubAppInstallations) > 0
+	return len(tenant.GithubAppInstallations) > 0
 }
 
 func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
