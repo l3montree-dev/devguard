@@ -14,7 +14,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-FROM golang:1.22.3-alpine AS golang-builder
+FROM golang:1.23.1-alpine AS golang-builder
 
 # set the working directory
 WORKDIR /app
