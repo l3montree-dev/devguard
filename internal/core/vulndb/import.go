@@ -788,7 +788,7 @@ func (s importService) importWeaknesses(tx database.DB, f *os.File) error {
 
 	amountOfWeaknesses := len(data)
 
-	slog.Info("finished importing weaknesses", "amountOfWeaknesses", amountOfWeaknesses, "amountOfOldWeaknesses", "duration", time.Since(begin))
+	slog.Info("finished importing weaknesses", "amountOfWeaknesses", amountOfWeaknesses, "duration", time.Since(begin))
 	return nil
 }
 
