@@ -403,7 +403,7 @@ func addScanFlags(cmd *cobra.Command) {
 
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("fail-on-risk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
-	cmd.Flags().String("webUI", "http://localhost:3000", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")
+	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")
 }
 
 func getDirFromPath(path string) string {
