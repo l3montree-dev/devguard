@@ -56,17 +56,17 @@ type CVE struct {
 	CISARequiredAction    string          `json:"cisaRequiredAction" gorm:"type:text;" cve:"cisaRequiredAction"`
 	CISAVulnerabilityName string          `json:"cisaVulnerabilityName" gorm:"type:text;" cve:"cisaVulnerabilityName"`
 
-	Configurations []*CPEMatch `json:"configurations" gorm:"many2many:cve_cpe_match;" cve:"configurations"`
+	Configurations []*CPEMatch `json:"configurations" gorm:"many2many:cve_cpe_match;"`
 
 	EPSS       *float64 `json:"epss" gorm:"type:decimal(6,5);" cve:"epss"`
 	Percentile *float32 `json:"percentile" gorm:"type:decimal(6,5);" cve:"percentile"`
 
-	AffectedComponents []AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component" cve:"affectedComponents"`
+	AffectedComponents []*AffectedComponent `json:"affectedComponents" gorm:"many2many:cve_affected_component"`
 
 	Vector string `json:"vector" gorm:"type:text;" cve:"vector"`
 
 	Risk     obj.RiskMetrics `json:"risk" gorm:"-" cve:"risk"`
-	Exploits []*Exploit      `json:"exploits" gorm:"foreignKey:CVEID;" cve:"exploits"`
+	Exploits []*Exploit      `json:"exploits" gorm:"foreignKey:CVEID;"`
 }
 
 type Weakness struct {

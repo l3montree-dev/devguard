@@ -543,7 +543,7 @@ func init() {
 		Long:  `Scan an application for vulnerabilities. This command will generate a sbom, upload it to devguard and scan it for vulnerabilities.`,
 		// Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			err := scaCommandFactory("sca")
+			err := scaCommandFactory("sca")(cmd, args)
 			if err != nil {
 				slog.Error("software composition analysis failed", "err", err)
 				os.Exit(1)

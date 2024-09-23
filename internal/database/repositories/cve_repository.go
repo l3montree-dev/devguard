@@ -7,6 +7,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
@@ -64,6 +65,29 @@ func (g *cveRepository) FindAll(cveIDs []string) ([]models.CVE, error) {
 	var cves []models.CVE
 	err := g.db.Find(&cves, "cve IN ?", cveIDs).Error
 	return cves, err
+}
+
+func (g *cveRepository) SaveCveAffectedComponents(tx core.DB, cveId string, affectedComponentHashes []string) error {
+
+	affectedComponents := utils.Map(utils.UniqBy(affectedComponentHashes, func(c string) string {
+		return c
+	}), func(c string) models.AffectedComponent {
+		return models.AffectedComponent{
+			ID: c,
+		}
+	})
+
+	// add cpeCveMatches to the cve
+	m := g.GetDB(tx).Debug().Session(&gorm.Session{
+		// disable logging
+		// it might log slow queries or a missing cve.
+		Logger:               logger.Default.LogMode(logger.Silent),
+		FullSaveAssociations: false,
+	}).Model(&models.CVE{
+		CVE: cveId,
+	})
+	assoc := m.Association("AffectedComponents")
+	return assoc.Append(&affectedComponents)
 }
 
 func (g *cveRepository) createInBatches(tx database.DB, cves []models.CVE, batchSize int) error {
