@@ -18,6 +18,9 @@ import (
 )
 
 func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int) obj.RiskCalculationReport {
+	if affectedComponentDepth == 0 {
+		affectedComponentDepth = 1
+	}
 	e := core.SanitizeEnv(env)
 	r, vector := RiskCalculation(cve, e)
 	risk := r.WithEnvironmentAndThreatIntelligence

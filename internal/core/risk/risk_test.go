@@ -39,7 +39,27 @@ func ptr[T any](s T) *T {
 	return &s
 }
 
+func TestCalculateRawRisk(t *testing.T) {
+	t.Run("should never divide by zero - instead divide by 1", func(t *testing.T) {
+		sut := models.CVE{
+			CVSS:   5,
+			Vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
+		}
+		env := core.Environmental{
+			ConfidentialityRequirements: "L",
+			IntegrityRequirements:       "L",
+			AvailabilityRequirements:    "L",
+		}
+		affectedComponentDepth := 0
+		riskReport := risk.RawRisk(sut, env, affectedComponentDepth)
+
+		if riskReport.Risk != 1.7 {
+			t.Errorf("Expected risk to be 1.7, got %f", riskReport.Risk)
+		}
+	})
+}
 func TestCalculateRisk(t *testing.T) {
+
 	t.Run("should not panic if no vector is defined", func(t *testing.T) {
 		sut := models.CVE{
 			CVSS:   5,
