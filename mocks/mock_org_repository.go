@@ -569,6 +569,53 @@ func (_c *OrgRepository_Transaction_Call) RunAndReturn(run func(func(*gorm.DB) e
 	return _c
 }
 
+// Update provides a mock function with given fields: tx, organization
+func (_m *OrgRepository) Update(tx *gorm.DB, organization *models.Org) error {
+	ret := _m.Called(tx, organization)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.Org) error); ok {
+		r0 = rf(tx, organization)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// OrgRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type OrgRepository_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - organization *models.Org
+func (_e *OrgRepository_Expecter) Update(tx interface{}, organization interface{}) *OrgRepository_Update_Call {
+	return &OrgRepository_Update_Call{Call: _e.mock.On("Update", tx, organization)}
+}
+
+func (_c *OrgRepository_Update_Call) Run(run func(tx *gorm.DB, organization *models.Org)) *OrgRepository_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(*models.Org))
+	})
+	return _c
+}
+
+func (_c *OrgRepository_Update_Call) Return(_a0 error) *OrgRepository_Update_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *OrgRepository_Update_Call) RunAndReturn(run func(*gorm.DB, *models.Org) error) *OrgRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewOrgRepository creates a new instance of OrgRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewOrgRepository(t interface {

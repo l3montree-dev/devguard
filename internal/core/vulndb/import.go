@@ -38,6 +38,7 @@ type cvesRepository interface {
 	GetAllCPEMatchesID() ([]string, error)
 	Save(tx database.DB, cve *models.CVE) error
 	SaveBatchCPEMatch(tx database.DB, matches []models.CPEMatch) error
+	SaveCveAffectedComponents(tx core.DB, cveId string, affectedComponentHashes []string) error
 }
 type cwesRepository interface {
 	GetAllCWEsID() ([]string, error)
@@ -181,11 +182,7 @@ func (s importService) Import(tx database.DB, tag string) error {
 func readCSVFile(f *os.File) ([][]string, error) {
 	reader := csv.NewReader(f)
 	reader.FieldsPerRecord = -1 // Allow variable number of fields
-	data, err := reader.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
+	return reader.ReadAll()
 }
 
 // import cves
@@ -969,20 +966,10 @@ func (s importService) saveCveAffectedComponentsGroup(tx database.DB, cveToAffec
 				end = len(affectedComponentHashes)
 			}
 			// add cpeCveMatches to the cve
-			if err := s.cveRepository.GetDB(tx).Session(&gorm.Session{
-				// disable logging
-				// it might log slow queries or a missing cve.
-				Logger: logger.Default.LogMode(logger.Silent),
-			}).Model(&models.CVE{
-				CVE: cveId,
-			}).Association("AffectedComponents").Append(utils.Map(utils.UniqBy(affectedComponentHashes[i:end], func(c string) string {
+			if err := s.cveRepository.SaveCveAffectedComponents(tx, cveId, utils.UniqBy(affectedComponentHashes[i:end], func(c string) string {
 				return c
-			}), func(c string) models.AffectedComponent {
-				return models.AffectedComponent{
-					ID: c,
-				}
 			})); err != nil {
-				return fmt.Errorf("error saving cpe_cve_matches: %w", err)
+				return fmt.Errorf("error saving cve_affected_components: %w", err)
 			}
 		}
 	}
