@@ -41,6 +41,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -419,8 +420,8 @@ func getDirFromPath(path string) string {
 	return path
 }
 
-func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
+func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
 		core.InitLogger()
 		token, assetName, apiUrl, failOnRisk, webUI := parseConfig(cmd)
 
@@ -431,13 +432,11 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 
 		path, err := cmd.Flags().GetString("path")
 		if err != nil {
-			slog.Error("could not get path", "err", err)
-			os.Exit(1)
+			return errors.Wrap(err, "could not get path")
 		}
 
 		if isValid, err := isValidPath(path); !isValid && err != nil {
-			slog.Error("invalid path", "err", err)
-			os.Exit(1)
+			return errors.Wrap(err, "invalid path")
 		}
 
 		// we use the commit count, to check if we should create a new version - or if its dirty.
@@ -459,8 +458,7 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 		file, err := generateSBOM(path)
 
 		if err != nil {
-			slog.Error("could not open file", "err", err)
-			return
+			return errors.Wrap(err, "could not open file")
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -468,14 +466,12 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 
 		req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/scan", file)
 		if err != nil {
-			slog.Error("could not create request", "err", err)
-			return
+			return errors.Wrap(err, "could not create request")
 		}
 
 		err = pat.SignRequest(token, req)
 		if err != nil {
-			slog.Error("could not sign request", "err", err)
-			return
+			return errors.Wrap(err, "could not sign request")
 		}
 
 		req.Header.Set("X-Asset-Name", assetName)
@@ -485,18 +481,16 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			slog.Error("could not send request", "err", err)
-			return
+			return errors.Wrap(err, "could not send request")
 		}
 
 		err = os.Remove(file.Name())
 		if err != nil {
-			slog.Error("could not remove file", "err", err)
+			return errors.Wrap(err, "could not remove file")
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			slog.Error("could not scan file", "status", resp.Status)
-			return
+			return fmt.Errorf("could not scan file: %s", resp.Status)
 		}
 
 		// read and parse the body - it should be an array of flaws
@@ -505,10 +499,10 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 
 		err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 		if err != nil {
-			slog.Error("could not parse response", "err", err)
-			return
+			return errors.Wrap(err, "could not parse response")
 		}
 		printScaResults(scanResponse, failOnRisk, assetName, webUI)
+		return nil
 	}
 }
 
@@ -548,7 +542,13 @@ func init() {
 		Short: "Software composition analysis",
 		Long:  `Scan an application for vulnerabilities. This command will generate a sbom, upload it to devguard and scan it for vulnerabilities.`,
 		// Args:  cobra.ExactArgs(0),
-		Run: scaCommandFactory("sca"),
+		Run: func(cmd *cobra.Command, args []string) {
+			err := scaCommandFactory("sca")
+			if err != nil {
+				slog.Error("software composition analysis failed", "err", err)
+				os.Exit(1)
+			}
+		},
 	}
 
 	containerScanningCommand := &cobra.Command{
@@ -568,7 +568,11 @@ func init() {
 				os.Exit(1)
 			}
 
-			scaCommandFactory("container-scanning")(cmd, args)
+			err = scaCommandFactory("container-scanning")(cmd, args)
+			if err != nil {
+				slog.Error("container scanning failed", "err", err)
+				os.Exit(1)
+			}
 		},
 	}
 

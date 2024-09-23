@@ -60,7 +60,7 @@ func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectId uuid.UUID
 	}
 
 	// get all assetRisk of the project
-	if err := r.Repository.GetDB(r.db).Debug().
+	if err := r.Repository.GetDB(r.db).
 		Where("asset_id IN (?)", assetIDs).
 		Where("day = ?", day).
 		Order("day ASC").
