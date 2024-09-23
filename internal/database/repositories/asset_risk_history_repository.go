@@ -43,8 +43,9 @@ func (r *assetRiskHistoryRepository) UpdateRiskAggregation(assetRisk *models.Ass
 func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectId uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error) {
 
 	var assetRisk []models.AssetRiskHistory = []models.AssetRiskHistory{}
+
 	// get all assetRisk of the project
-	if err := r.Repository.GetDB(r.db).Where("asset_id IN (?)", r.Repository.GetDB(r.db).Table("assets").Select("id").Where("project_id = ?", projectId)).Where(
+	if err := r.Repository.GetDB(r.db).Where("asset_id IN (?)", r.Repository.GetDB(r.db).Table("assets").Select("id::uuid").Where("project_id = ?", projectId)).Where(
 		"day = ?", day,
 	).Order("day ASC").Find(&assetRisk).Error; err != nil {
 		return nil, err
