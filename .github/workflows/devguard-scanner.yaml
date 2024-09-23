@@ -29,7 +29,7 @@ jobs:
       run: |
         git config --global --add safe.directory /github/workspace
     - name: DevGuard SCA
-      uses: docker://ghcr.io/l3montree-dev/devguard-scanner:main-ef8210f5-1723186855
+      uses: docker://ghcr.io/l3montree-dev/devguard-scanner@sha256:55736b9dc029762131ea31b7d5ec7a108f07df114520fefa82df28132f554ab8
       with:
         args: devguard-scanner sca --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="${{ secrets.DEVGUARD_TOKEN }}" --path="/github/workspace"
       # Running Gitleaks to scan the code for secrets
@@ -100,6 +100,6 @@ jobs:
       run: |
         git config --global --add safe.directory /github/workspace
     - name: DevGuard Container-Scanning
-      uses: docker://ghcr.io/l3montree-dev/devguard-scanner:main-ef8210f5-1723186855
+      uses: docker://ghcr.io/l3montree-dev/devguard-scanner@sha256:55736b9dc029762131ea31b7d5ec7a108f07df114520fefa82df28132f554ab8
       with:
         args: devguard-scanner container-scanning --assetName="l3montree/projects/devguard/assets/devguard-api" --apiUrl="https://api.main.flawfix.dev" --token="${{ secrets.DEVGUARD_TOKEN }}" --path="/github/workspace/image.tar"
