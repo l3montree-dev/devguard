@@ -21,12 +21,12 @@ func (_m *ScanComponentRepository) EXPECT() *ScanComponentRepository_Expecter {
 	return &ScanComponentRepository_Expecter{mock: &_m.Mock}
 }
 
-// LoadAssetComponents provides a mock function with given fields: tx, asset, scanType, version
-func (_m *ScanComponentRepository) LoadAssetComponents(tx *gorm.DB, asset models.Asset, scanType string, version string) ([]models.ComponentDependency, error) {
+// LoadComponents provides a mock function with given fields: tx, asset, scanType, version
+func (_m *ScanComponentRepository) LoadComponents(tx *gorm.DB, asset models.Asset, scanType string, version string) ([]models.ComponentDependency, error) {
 	ret := _m.Called(tx, asset, scanType, version)
 
 	if len(ret) == 0 {
-		panic("no return value specified for LoadAssetComponents")
+		panic("no return value specified for LoadComponents")
 	}
 
 	var r0 []models.ComponentDependency
@@ -51,33 +51,33 @@ func (_m *ScanComponentRepository) LoadAssetComponents(tx *gorm.DB, asset models
 	return r0, r1
 }
 
-// ScanComponentRepository_LoadAssetComponents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadAssetComponents'
-type ScanComponentRepository_LoadAssetComponents_Call struct {
+// ScanComponentRepository_LoadComponents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadComponents'
+type ScanComponentRepository_LoadComponents_Call struct {
 	*mock.Call
 }
 
-// LoadAssetComponents is a helper method to define mock.On call
+// LoadComponents is a helper method to define mock.On call
 //   - tx *gorm.DB
 //   - asset models.Asset
 //   - scanType string
 //   - version string
-func (_e *ScanComponentRepository_Expecter) LoadAssetComponents(tx interface{}, asset interface{}, scanType interface{}, version interface{}) *ScanComponentRepository_LoadAssetComponents_Call {
-	return &ScanComponentRepository_LoadAssetComponents_Call{Call: _e.mock.On("LoadAssetComponents", tx, asset, scanType, version)}
+func (_e *ScanComponentRepository_Expecter) LoadComponents(tx interface{}, asset interface{}, scanType interface{}, version interface{}) *ScanComponentRepository_LoadComponents_Call {
+	return &ScanComponentRepository_LoadComponents_Call{Call: _e.mock.On("LoadComponents", tx, asset, scanType, version)}
 }
 
-func (_c *ScanComponentRepository_LoadAssetComponents_Call) Run(run func(tx *gorm.DB, asset models.Asset, scanType string, version string)) *ScanComponentRepository_LoadAssetComponents_Call {
+func (_c *ScanComponentRepository_LoadComponents_Call) Run(run func(tx *gorm.DB, asset models.Asset, scanType string, version string)) *ScanComponentRepository_LoadComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(*gorm.DB), args[1].(models.Asset), args[2].(string), args[3].(string))
 	})
 	return _c
 }
 
-func (_c *ScanComponentRepository_LoadAssetComponents_Call) Return(_a0 []models.ComponentDependency, _a1 error) *ScanComponentRepository_LoadAssetComponents_Call {
+func (_c *ScanComponentRepository_LoadComponents_Call) Return(_a0 []models.ComponentDependency, _a1 error) *ScanComponentRepository_LoadComponents_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *ScanComponentRepository_LoadAssetComponents_Call) RunAndReturn(run func(*gorm.DB, models.Asset, string, string) ([]models.ComponentDependency, error)) *ScanComponentRepository_LoadAssetComponents_Call {
+func (_c *ScanComponentRepository_LoadComponents_Call) RunAndReturn(run func(*gorm.DB, models.Asset, string, string) ([]models.ComponentDependency, error)) *ScanComponentRepository_LoadComponents_Call {
 	_c.Call.Return(run)
 	return _c
 }

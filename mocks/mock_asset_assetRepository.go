@@ -68,6 +68,52 @@ func (_c *AssetAssetRepository_Save_Call) RunAndReturn(run func(*gorm.DB, *model
 	return _c
 }
 
+// Transaction provides a mock function with given fields: txFunc
+func (_m *AssetAssetRepository) Transaction(txFunc func(*gorm.DB) error) error {
+	ret := _m.Called(txFunc)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Transaction")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(func(*gorm.DB) error) error); ok {
+		r0 = rf(txFunc)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AssetAssetRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
+type AssetAssetRepository_Transaction_Call struct {
+	*mock.Call
+}
+
+// Transaction is a helper method to define mock.On call
+//   - txFunc func(*gorm.DB) error
+func (_e *AssetAssetRepository_Expecter) Transaction(txFunc interface{}) *AssetAssetRepository_Transaction_Call {
+	return &AssetAssetRepository_Transaction_Call{Call: _e.mock.On("Transaction", txFunc)}
+}
+
+func (_c *AssetAssetRepository_Transaction_Call) Run(run func(txFunc func(*gorm.DB) error)) *AssetAssetRepository_Transaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(func(*gorm.DB) error))
+	})
+	return _c
+}
+
+func (_c *AssetAssetRepository_Transaction_Call) Return(_a0 error) *AssetAssetRepository_Transaction_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *AssetAssetRepository_Transaction_Call) RunAndReturn(run func(func(*gorm.DB) error) error) *AssetAssetRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewAssetAssetRepository creates a new instance of AssetAssetRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewAssetAssetRepository(t interface {

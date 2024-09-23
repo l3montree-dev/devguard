@@ -22,21 +22,31 @@ func (_m *FlawFlawService) EXPECT() *FlawFlawService_Expecter {
 }
 
 // UpdateFlawState provides a mock function with given fields: tx, userID, _a2, statusType, justification
-func (_m *FlawFlawService) UpdateFlawState(tx *gorm.DB, userID string, _a2 *models.Flaw, statusType string, justification *string) error {
+func (_m *FlawFlawService) UpdateFlawState(tx *gorm.DB, userID string, _a2 *models.Flaw, statusType string, justification string) (models.FlawEvent, error) {
 	ret := _m.Called(tx, userID, _a2, statusType, justification)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateFlawState")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.Flaw, string, *string) error); ok {
+	var r0 models.FlawEvent
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.Flaw, string, string) (models.FlawEvent, error)); ok {
+		return rf(tx, userID, _a2, statusType, justification)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.Flaw, string, string) models.FlawEvent); ok {
 		r0 = rf(tx, userID, _a2, statusType, justification)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(models.FlawEvent)
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(*gorm.DB, string, *models.Flaw, string, string) error); ok {
+		r1 = rf(tx, userID, _a2, statusType, justification)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // FlawFlawService_UpdateFlawState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateFlawState'
@@ -49,24 +59,24 @@ type FlawFlawService_UpdateFlawState_Call struct {
 //   - userID string
 //   - _a2 *models.Flaw
 //   - statusType string
-//   - justification *string
+//   - justification string
 func (_e *FlawFlawService_Expecter) UpdateFlawState(tx interface{}, userID interface{}, _a2 interface{}, statusType interface{}, justification interface{}) *FlawFlawService_UpdateFlawState_Call {
 	return &FlawFlawService_UpdateFlawState_Call{Call: _e.mock.On("UpdateFlawState", tx, userID, _a2, statusType, justification)}
 }
 
-func (_c *FlawFlawService_UpdateFlawState_Call) Run(run func(tx *gorm.DB, userID string, _a2 *models.Flaw, statusType string, justification *string)) *FlawFlawService_UpdateFlawState_Call {
+func (_c *FlawFlawService_UpdateFlawState_Call) Run(run func(tx *gorm.DB, userID string, _a2 *models.Flaw, statusType string, justification string)) *FlawFlawService_UpdateFlawState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].(*models.Flaw), args[3].(string), args[4].(*string))
+		run(args[0].(*gorm.DB), args[1].(string), args[2].(*models.Flaw), args[3].(string), args[4].(string))
 	})
 	return _c
 }
 
-func (_c *FlawFlawService_UpdateFlawState_Call) Return(_a0 error) *FlawFlawService_UpdateFlawState_Call {
-	_c.Call.Return(_a0)
+func (_c *FlawFlawService_UpdateFlawState_Call) Return(_a0 models.FlawEvent, _a1 error) *FlawFlawService_UpdateFlawState_Call {
+	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FlawFlawService_UpdateFlawState_Call) RunAndReturn(run func(*gorm.DB, string, *models.Flaw, string, *string) error) *FlawFlawService_UpdateFlawState_Call {
+func (_c *FlawFlawService_UpdateFlawState_Call) RunAndReturn(run func(*gorm.DB, string, *models.Flaw, string, string) (models.FlawEvent, error)) *FlawFlawService_UpdateFlawState_Call {
 	_c.Call.Return(run)
 	return _c
 }
