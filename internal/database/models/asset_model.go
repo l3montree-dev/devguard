@@ -41,15 +41,19 @@ type Asset struct {
 
 	Components []ComponentDependency `json:"components" gorm:"hasMany;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 
-	Version             string    `json:"version" gorm:"type:text;"`
-	LastComponentUpdate time.Time `json:"lastComponentUpdate"`
-
 	RepositoryID *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
 
 	// if this flag is true, everyone is allowed to read this asset.
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
 	LastHistoryUpdate *time.Time
+
+	LastSecretScan    *time.Time `json:"lastSecretScan"`
+	LastSastScan      *time.Time `json:"lastSastScan"`
+	LastScaScan       *time.Time `json:"lastScaScan"`
+	LastIacScan       *time.Time `json:"lastIacScan"`
+	LastContainerScan *time.Time `json:"lastContainerScan"`
+	LastDastScan      *time.Time `json:"lastDastScan"`
 }
 
 func (m Asset) TableName() string {

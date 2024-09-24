@@ -145,7 +145,33 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current flaws
-	return s.handleScanResult(userID, scannerID, asset, flaws)
+	amountOpened, amountClosed, amountExisting, err := s.handleScanResult(userID, scannerID, asset, flaws)
+	if err != nil {
+		return 0, 0, []models.Flaw{}, err
+	}
+
+	switch scanType {
+	case "sast":
+		asset.LastSastScan = utils.Ptr(time.Now())
+	case "dast":
+		asset.LastDastScan = utils.Ptr(time.Now())
+	case "sca":
+		asset.LastScaScan = utils.Ptr(time.Now())
+	case "container-scanning":
+		asset.LastContainerScan = utils.Ptr(time.Now())
+	case "secret-scanning":
+		asset.LastSecretScan = utils.Ptr(time.Now())
+	case "iac":
+		asset.LastIacScan = utils.Ptr(time.Now())
+	}
+
+	err = s.assetRepository.Save(nil, &asset)
+	if err != nil {
+		// swallow but log
+		slog.Error("could not save asset", "err", err)
+	}
+
+	return amountOpened, amountClosed, amountExisting, nil
 }
 
 func (s *service) handleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw) (int, int, []models.Flaw, error) {
