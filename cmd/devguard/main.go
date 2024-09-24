@@ -19,6 +19,7 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
+	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
@@ -49,6 +50,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	flawService := flaw.NewService(
+		repositories.NewFlawRepository(db),
+		repositories.NewFlawEventRepository(db),
+		repositories.NewAssetRepository(db),
+		repositories.NewCVERepository(db),
+	)
+
 	statisticsDaemon := statistics.NewDaemon(repositories.NewAssetRepository(db), statistics.NewService(
 		repositories.NewStatisticsRepository(db),
 		repositories.NewComponentRepository(db),
@@ -59,6 +67,7 @@ func main() {
 		repositories.NewProjectRiskHistoryRepository(db),
 	))
 
+	flawService.StartRiskRecalculationDaemon()
 	statisticsDaemon.Start()
 	api.Start(db)
 

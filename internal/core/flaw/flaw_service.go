@@ -264,3 +264,15 @@ func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, 
 	flaw.Events = append(flaw.Events, ev)
 	return ev, nil
 }
+
+func (service *service) StartRiskRecalculationDaemon() {
+	go func() {
+		for {
+			err := service.RecalculateAllRawRiskAssessments()
+			if err != nil {
+				slog.Error("could not recalculate risk assessments", "err", err)
+			}
+			time.Sleep(1 * time.Hour)
+		}
+	}()
+}
