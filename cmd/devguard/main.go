@@ -67,12 +67,12 @@ func main() {
 		repositories.NewProjectRiskHistoryRepository(db),
 	))
 
-	flawService.StartRiskRecalculationDaemon()
 	statisticsDaemon.Start()
 	api.Start(db)
 
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
+	flawService.StartRiskRecalculationDaemon(leaderElector)
 	vulndb.StartMirror(db, leaderElector, configService)
 
 }

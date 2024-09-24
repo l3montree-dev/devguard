@@ -1,6 +1,7 @@
 package leaderelection
 
 import (
+	"context"
 	"log/slog"
 	"math/rand"
 	"sync/atomic"
@@ -92,4 +93,26 @@ func (e *databaseLeaderElector) checkIfLeader() (bool, error) {
 	}
 
 	return config.LeaderID == e.leaderElectorID, nil
+}
+
+func (e *databaseLeaderElector) IfLeader(ctx context.Context, fn func() error) {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				if e.IsLeader() {
+					err := fn()
+					if err != nil {
+						slog.Error("error while running leader function", "err", err)
+						return
+					}
+				} else {
+					slog.Debug("not leader, waiting")
+					time.Sleep(5 * time.Minute)
+				}
+			}
+		}
+	}()
 }

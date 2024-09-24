@@ -68,7 +68,7 @@ type configService interface {
 }
 
 type leaderElector interface {
-	IsLeader() bool
+	IfLeader(ctx context.Context, fn func() error)
 }
 
 func StartMirror(db core.DB, leaderElector leaderElector, configService configService) {
@@ -78,38 +78,33 @@ func StartMirror(db core.DB, leaderElector leaderElector, configService configSe
 	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
 
 	v := NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
-	for {
-		if leaderElector.IsLeader() {
-			var lastMirror struct {
-				Time time.Time `json:"time"`
-			}
-
-			err := configService.GetJSONConfig("vulndb.lastMirror", &lastMirror)
-			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-				slog.Error("could not get last mirror time", "err", err)
-				continue
-			} else if errors.Is(err, gorm.ErrRecordNotFound) {
-				slog.Info("no last mirror time found. Setting to 0")
-				lastMirror.Time = time.Time{}
-			}
-
-			if time.Since(lastMirror.Time) > 2*time.Hour {
-				slog.Info("last mirror was more than 2 hours ago. Starting mirror process")
-
-				if err := v.Import(db, "latest"); err != nil {
-					slog.Error("could not import vulndb", "err", err)
-				}
-			} else {
-				slog.Info("last mirror was less than 2 hours ago. Not mirroring", "lastMirror", lastMirror.Time, "now", time.Now())
-			}
-			slog.Info("done. Waiting for 2 hours to check again")
-			time.Sleep(2 * time.Hour)
-		} else {
-			// if we are not the leader, sleep for 5 minutes
-			slog.Debug("not the leader. Waiting for 5 minutes to check again")
-			time.Sleep(5 * time.Minute)
+	leaderElector.IfLeader(context.Background(), func() error {
+		var lastMirror struct {
+			Time time.Time `json:"time"`
 		}
-	}
+
+		err := configService.GetJSONConfig("vulndb.lastMirror", &lastMirror)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			slog.Error("could not get last mirror time", "err", err)
+			return nil
+		} else if errors.Is(err, gorm.ErrRecordNotFound) {
+			slog.Info("no last mirror time found. Setting to 0")
+			lastMirror.Time = time.Time{}
+		}
+
+		if time.Since(lastMirror.Time) > 2*time.Hour {
+			slog.Info("last mirror was more than 2 hours ago. Starting mirror process")
+
+			if err := v.Import(db, "latest"); err != nil {
+				slog.Error("could not import vulndb", "err", err)
+			}
+		} else {
+			slog.Info("last mirror was less than 2 hours ago. Not mirroring", "lastMirror", lastMirror.Time, "now", time.Now())
+		}
+		slog.Info("done. Waiting for 2 hours to check again")
+		time.Sleep(2 * time.Hour)
+		return nil
+	})
 }
 
 func NewImportService(cvesRepository cvesRepository, cweRepository cwesRepository, exploitRepository exploitsRepository, affectedComponentsRepository affectedComponentsRepository) *importService {
