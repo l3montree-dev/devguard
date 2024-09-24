@@ -16,6 +16,7 @@
 package flaw
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"time"
@@ -263,4 +264,19 @@ func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, 
 	}
 	flaw.Events = append(flaw.Events, ev)
 	return ev, nil
+}
+
+type leaderElector interface {
+	IfLeader(ctx context.Context, fn func() error)
+}
+
+func (service *service) StartRiskRecalculationDaemon(leaderElector leaderElector) {
+	leaderElector.IfLeader(context.Background(), func() error {
+		err := service.RecalculateAllRawRiskAssessments()
+		if err != nil {
+			slog.Error("could not recalculate risk assessments", "err", err)
+		}
+		time.Sleep(1 * time.Hour)
+		return nil
+	})
 }
