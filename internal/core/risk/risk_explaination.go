@@ -135,50 +135,51 @@ func cvssBE(asset models.Asset, cvssObj map[string]string) string {
 	return strings.Join(elements, "\n")
 }
 
+var baseScores = map[string]map[string]string{
+	"AV": {
+		"N": "The vulnerability can be exploited over the network without needing physical access.",
+		"A": "The vulnerability can be exploited over a local network, such as Wi-Fi.",
+		"L": "The vulnerability requires local access to the device to be exploited.",
+		"P": "The vulnerability requires physical access to the device to be exploited.",
+	},
+	"AC": {
+		"L": "It is easy for an attacker to exploit this vulnerability.",
+		"H": "It is difficult for an attacker to exploit this vulnerability and may require special conditions.",
+	},
+	"PR": {
+		"N": "An attacker does not need any special privileges or access rights.",
+		"L": "An attacker needs basic access or low-level privileges.",
+		"H": "An attacker needs high-level or administrative privileges.",
+	},
+	"UI": {
+		"N": "No user interaction is needed for the attacker to exploit this vulnerability.",
+		"R": "The attacker needs the user to perform some action, like clicking a link.",
+	},
+	"S": {
+		"U": "The impact is confined to the system where the vulnerability exists.",
+		"C": "The vulnerability can affect other systems as well, not just the initial system.",
+	},
+	"C": {
+		"H": "There is a high impact on the confidentiality of the information.",
+		"L": "There is a low impact on the confidentiality of the information.",
+		"N": "",
+	},
+	"I": {
+		"H": "There is a high impact on the integrity of the data.",
+		"L": "There is a low impact on the integrity of the data.",
+		"N": "",
+	},
+	"A": {
+		"H": "There is a high impact on the availability of the system.",
+		"L": "There is a low impact on the availability of the system.",
+		"N": "",
+	},
+}
+
+var order = []string{"AV", "AC", "PR", "UI", "S", "C", "I", "A"}
+
 // describeCVSS generates a description of the CVSS vector.
 func describeCVSS(cvss map[string]string) string {
-	baseScores := map[string]map[string]string{
-		"AV": {
-			"N": "The vulnerability can be exploited over the network without needing physical access.",
-			"A": "The vulnerability can be exploited over a local network, such as Wi-Fi.",
-			"L": "The vulnerability requires local access to the device to be exploited.",
-			"P": "The vulnerability requires physical access to the device to be exploited.",
-		},
-		"AC": {
-			"L": "It is easy for an attacker to exploit this vulnerability.",
-			"H": "It is difficult for an attacker to exploit this vulnerability and may require special conditions.",
-		},
-		"PR": {
-			"N": "An attacker does not need any special privileges or access rights.",
-			"L": "An attacker needs basic access or low-level privileges.",
-			"H": "An attacker needs high-level or administrative privileges.",
-		},
-		"UI": {
-			"N": "No user interaction is needed for the attacker to exploit this vulnerability.",
-			"R": "The attacker needs the user to perform some action, like clicking a link.",
-		},
-		"S": {
-			"U": "The impact is confined to the system where the vulnerability exists.",
-			"C": "The vulnerability can affect other systems as well, not just the initial system.",
-		},
-		"C": {
-			"H": "There is a high impact on the confidentiality of the information.",
-			"L": "There is a low impact on the confidentiality of the information.",
-			"N": "",
-		},
-		"I": {
-			"H": "There is a high impact on the integrity of the data.",
-			"L": "There is a low impact on the integrity of the data.",
-			"N": "",
-		},
-		"A": {
-			"H": "There is a high impact on the availability of the system.",
-			"L": "There is a low impact on the availability of the system.",
-			"N": "",
-		},
-	}
-
-	order := []string{"AV", "AC", "PR", "UI", "S", "C", "I", "A"}
 	var descriptions []string
 	for _, key := range order {
 		if desc, ok := baseScores[key][cvss[key]]; ok {

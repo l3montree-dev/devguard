@@ -250,6 +250,23 @@ func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, 
 		ev = models.NewCommentEvent(flaw.CalculateHash(), userID, justification)
 	}
 
+	return s.applyAndSave(tx, flaw, &ev)
+}
+
+func (s *service) ApplyAndSave(tx core.DB, flaw *models.Flaw, flawEvent *models.FlawEvent) error {
+	if tx == nil {
+		// we are not part of a parent transaction - create a new one
+		return s.flawRepository.Transaction(func(d core.DB) error {
+			_, err := s.applyAndSave(d, flaw, flawEvent)
+			return err
+		})
+	}
+
+	_, err := s.applyAndSave(tx, flaw, flawEvent)
+	return err
+}
+
+func (s *service) applyAndSave(tx core.DB, flaw *models.Flaw, ev *models.FlawEvent) (models.FlawEvent, error) {
 	// apply the event on the flaw
 	ev.Apply(flaw)
 
@@ -258,9 +275,9 @@ func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, 
 	if err != nil {
 		return models.FlawEvent{}, err
 	}
-	if err := s.flawEventRepository.Save(tx, &ev); err != nil {
+	if err := s.flawEventRepository.Save(tx, ev); err != nil {
 		return models.FlawEvent{}, err
 	}
-	flaw.Events = append(flaw.Events, ev)
-	return ev, nil
+	flaw.Events = append(flaw.Events, *ev)
+	return *ev, nil
 }
