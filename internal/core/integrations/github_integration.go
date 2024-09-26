@@ -529,7 +529,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		session := core.GetSession(event.Ctx)
 		userID := session.GetUserID()
 		// create an event
-		flawEvent := models.NewMitigateEvent(flaw.ID, userID, event.Ctx.Param("justification"), map[string]any{
+		flawEvent := models.NewMitigateEvent(flaw.ID, userID, justification["comment"], map[string]any{
 			"ticketId": *flaw.TicketID,
 			"url":      createdIssue.GetHTMLURL(),
 		})
@@ -600,7 +600,6 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		)
 		if !ok {
 			member = core.User{
-				ID:   ev.UserID,
 				Name: "unknown",
 			}
 		}

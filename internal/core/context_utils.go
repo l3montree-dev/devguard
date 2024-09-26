@@ -70,6 +70,10 @@ func GetSession(ctx Context) AuthSession {
 	return ctx.Get("session").(AuthSession)
 }
 
+func SetSession(ctx Context, session AuthSession) {
+	ctx.Set("session", session)
+}
+
 func GetParam(c Context, param string) string {
 	value := c.Param(param)
 	if value == "" {
@@ -92,6 +96,18 @@ func GetOrgSlug(c Context) (string, error) {
 		return "", fmt.Errorf("could not get org slug")
 	}
 	return orgSlug, nil
+}
+
+func SetOrgSlug(c Context, orgSlug string) {
+	c.Set("orgSlug", orgSlug)
+}
+
+func SetProjectSlug(c Context, projectSlug string) {
+	c.Set("projectSlug", projectSlug)
+}
+
+func SetAssetSlug(c Context, assetSlug string) {
+	c.Set("assetSlug", assetSlug)
 }
 
 func GetAssetSlug(c Context) (string, error) {
