@@ -19,6 +19,7 @@ import (
 
 func TestGithubIntegrationHandleEvent(t *testing.T) {
 	t.Run("it should not be possible to call handle event with a context without flawId parameter", func(t *testing.T) {
+
 		githubIntegration := githubIntegration{}
 
 		req := httptest.NewRequest("POST", "/webhook", nil)
@@ -123,6 +124,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
+		flawService := mocks.NewIntegrationsFlawService(t)
 		flawRepository := mocks.NewIntegrationsFlawRepository(t)
 		flawRepository.On("Read", "1").Return(models.Flaw{
 			CVE: &models.CVE{
@@ -132,7 +134,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			CVEID:             "CVE-2021-1234",
 			RawRiskAssessment: utils.Ptr(8.5),
 		}, nil)
-		flawRepository.On("Transaction", mock.Anything).Return(fmt.Errorf("could not save flaw"))
+		flawService.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save flaw"))
 
 		githubClientFactory := func(repoId string) (githubClientFacade, error) {
 			facade := mocks.NewIntegrationsGithubClientFacade(t)
@@ -159,6 +161,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			flawRepository:      flawRepository,
 			githubClientFactory: githubClientFactory,
 			frontendUrl:         "http://localhost:3000",
+			flawService:         flawService,
 		}
 
 		core.SetAsset(ctx, models.Asset{
@@ -245,9 +248,10 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx.SetParamNames("flawId")
 		ctx.SetParamValues("1")
 
-		githubIntegration.HandleEvent(core.ManualMitigateEvent{
+		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
 			Ctx: ctx,
 		})
+		assert.NoError(t, err)
 
 		flawService.AssertExpectations(t)
 	})
