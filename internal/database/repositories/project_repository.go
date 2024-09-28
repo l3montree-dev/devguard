@@ -40,3 +40,9 @@ func (g *projectRepository) ReadBySlug(organizationID uuid.UUID, slug string) (m
 func (g *projectRepository) Update(tx core.DB, project *models.Project) error {
 	return g.db.Save(project).Error
 }
+
+func (g *projectRepository) List(projectIDs []uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {
+	var projects []models.Project
+	err := g.db.Where("id IN ?", projectIDs).Or("organization_id = ? AND is_public = true", orgID).Find(&projects).Error
+	return projects, err
+}

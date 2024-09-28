@@ -38,6 +38,7 @@ type assetComponentsLoader interface {
 type assetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 	BuildSBOM(asset models.Asset, version, orgName string, components []models.ComponentDependency) *cdx.BOM
+	BuildVeX(asset models.Asset, version, orgName string, components []models.ComponentDependency, flaws []models.Flaw) *cdx.BOM
 }
 
 type httpController struct {
@@ -104,9 +105,21 @@ func (a *httpController) AffectedComponents(c core.Context) error {
 		return echo.NewHTTPError(400, "scanType query param is required")
 	}
 
-	components, err := a.assetComponentsLoader.LoadComponents(nil, core.GetAsset(c), scanType, version)
+	asset := core.GetAsset(c)
+	_, flaws, err := a.getComponentsAndFlaws(asset, scanType, version)
 	if err != nil {
 		return err
+	}
+
+	return c.JSON(200, utils.Map(flaws, func(m models.Flaw) flaw.FlawDTO {
+		return flaw.FlawToDto(m)
+	}))
+}
+
+func (a *httpController) getComponentsAndFlaws(asset models.Asset, scanType, version string) ([]models.ComponentDependency, []models.Flaw, error) {
+	components, err := a.assetComponentsLoader.LoadComponents(nil, asset, scanType, version)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	purls := utils.Map(components, func(c models.ComponentDependency) string {
@@ -115,12 +128,9 @@ func (a *httpController) AffectedComponents(c core.Context) error {
 
 	flaws, err := a.flawRepository.GetFlawsByPurl(nil, purls)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-
-	return c.JSON(200, utils.Map(flaws, func(m models.Flaw) flaw.FlawDTO {
-		return flaw.FlawToDto(m)
-	}))
+	return components, flaws, nil
 }
 
 func (a *httpController) Metrics(c core.Context) error {
@@ -215,6 +225,24 @@ func (a *httpController) SBOMXML(c core.Context) error {
 	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom)
 }
 
+func (a *httpController) VEXXML(c core.Context) error {
+	sbom, err := a.buildVeX(c)
+	if err != nil {
+		return err
+	}
+
+	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom)
+}
+
+func (a *httpController) VEXJSON(c core.Context) error {
+	sbom, err := a.buildVeX(c)
+	if err != nil {
+		return err
+	}
+
+	return cdx.NewBOMEncoder(c.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom)
+}
+
 func (a *httpController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(c)
 	org := core.GetTenant(c)
@@ -240,6 +268,35 @@ func (a *httpController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 		return nil, err
 	}
 	return a.assetService.BuildSBOM(asset, version, org.Name, components), nil
+}
+
+func (a *httpController) buildVeX(c core.Context) (*cdx.BOM, error) {
+	asset := core.GetAsset(c)
+	org := core.GetTenant(c)
+	// check for version query param
+	version := c.QueryParam("version")
+	if version == "" {
+		version = models.NoVersion
+	} else {
+		var err error
+		version, err = normalize.SemverFix(version)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	scanType := c.QueryParam("scanType")
+	if scanType == "" {
+		return nil, echo.NewHTTPError(400, "scanType query param is required")
+	}
+
+	// get all associated flaws
+	components, flaws, err := a.getComponentsAndFlaws(asset, scanType, version)
+	if err != nil {
+		return nil, err
+	}
+
+	return a.assetService.BuildVeX(asset, version, org.Name, components, flaws), nil
 }
 
 func (c *httpController) Update(ctx core.Context) error {

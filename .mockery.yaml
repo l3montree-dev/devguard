@@ -22,3 +22,19 @@ packages:
       mockName: "{{.PackageName | firstUpper}}{{.InterfaceName | firstUpper}}"
       outpkg: "mocks"
       dir: "mocks"
+  github.com/l3montree-dev/devguard/internal/accesscontrol:
+    config:
+      recursive: true
+      all: true
+      filename: "mock_{{.PackageName}}_{{.InterfaceName}}.go"
+      mockName: "{{.PackageName | firstUpper}}{{.InterfaceName | firstUpper}}"
+      outpkg: "mocks"
+      dir: "mocks"
+  github.com/l3montree-dev/devguard/cmd/devguard/api:
+    config:
+      recursive: true
+      all: true
+      filename: "mock_{{.PackageName}}_{{.InterfaceName}}.go"
+      mockName: "{{.PackageName | firstUpper}}{{.InterfaceName | firstUpper}}"
+      outpkg: "mocks"
+      dir: "mocks"

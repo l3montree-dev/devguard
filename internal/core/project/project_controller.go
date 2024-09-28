@@ -23,30 +23,36 @@ import (
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 
 	"github.com/labstack/echo/v4"
 )
 
 type projectRepository interface {
-	repositories.Repository[uuid.UUID, models.Project, core.DB]
 	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
 	Update(tx core.DB, project *models.Project) error
+	Delete(tx core.DB, projectID uuid.UUID) error
+	Create(tx core.DB, project *models.Project) error
+	List(projectIds []uuid.UUID, orgId uuid.UUID) ([]models.Project, error)
 }
 
 type assetRepository interface {
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 }
 
+type projectService interface {
+	ListAllowedProjects(c core.Context) ([]models.Project, error)
+}
 type Controller struct {
 	projectRepository projectRepository
 	assetRepository   assetRepository
+	projectService    projectService
 }
 
-func NewHttpController(repository projectRepository, assetRepository assetRepository) *Controller {
+func NewHttpController(repository projectRepository, assetRepository assetRepository, projectService projectService) *Controller {
 	return &Controller{
 		projectRepository: repository,
 		assetRepository:   assetRepository,
+		projectService:    projectService,
 	}
 }
 
@@ -155,18 +161,8 @@ func (p *Controller) Read(c core.Context) error {
 }
 
 func (p *Controller) List(c core.Context) error {
-	// get all projects the user has at least read access to
-	rbac := core.GetRBAC(c)
-	projectsIdsStr := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
-
-	// extract the project ids from the roles
-	projectIDs := make([]uuid.UUID, 0)
-	for _, project := range projectsIdsStr {
-		projectID := uuid.MustParse(project)
-		projectIDs = append(projectIDs, projectID)
-	}
-
-	projects, err := p.projectRepository.List(projectIDs)
+	// get all projects the user has at least read access to - might be public projects as well
+	projects, err := p.projectService.ListAllowedProjects(c)
 
 	if err != nil {
 		return err

@@ -43,9 +43,6 @@ type Asset struct {
 
 	RepositoryID *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
 
-	// if this flag is true, everyone is allowed to read this asset.
-	IsPublic bool `json:"isPublic" gorm:"default:false;"`
-
 	LastHistoryUpdate *time.Time
 
 	LastSecretScan    *time.Time `json:"lastSecretScan"`

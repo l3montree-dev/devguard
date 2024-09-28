@@ -340,10 +340,10 @@ func (s *service) GetAverageFixingTime(assetID uuid.UUID, severity string) (time
 	return s.statisticsRepository.AverageFixingTime(assetID, riskIntervalStart, riskIntervalEnd)
 }
 
-func (s *service) GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (flawAggregationStateAndChange, error) {
+func (s *service) GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error) {
 	// check if calculateChangeTo is in the future
 	if calculateChangeTo.After(time.Now()) {
-		return flawAggregationStateAndChange{}, fmt.Errorf("Cannot calculate change to the future")
+		return FlawAggregationStateAndChange{}, fmt.Errorf("Cannot calculate change to the future")
 	}
 
 	results := utils.Concurrently(
@@ -356,7 +356,7 @@ func (s *service) GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calcu
 	)
 
 	if results.HasErrors() {
-		return flawAggregationStateAndChange{}, results.Error()
+		return FlawAggregationStateAndChange{}, results.Error()
 	}
 
 	now := results.GetValue(0).([]models.Flaw)
@@ -365,14 +365,14 @@ func (s *service) GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calcu
 	nowState := calculateFlawAggregationState(now)
 	wasState := calculateFlawAggregationState(was)
 
-	return flawAggregationStateAndChange{
+	return FlawAggregationStateAndChange{
 		Now: nowState,
 		Was: wasState,
 	}, nil
 }
 
-func calculateFlawAggregationState(flaws []models.Flaw) flawAggregationState {
-	state := flawAggregationState{}
+func calculateFlawAggregationState(flaws []models.Flaw) FlawAggregationState {
+	state := FlawAggregationState{}
 
 	for _, flaw := range flaws {
 		if flaw.State == models.FlawStateOpen {

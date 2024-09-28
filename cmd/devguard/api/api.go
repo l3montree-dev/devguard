@@ -52,6 +52,36 @@ type projectRepository interface {
 	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
 }
 
+func accessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			// get the rbac
+			rbac := core.GetRBAC(c)
+			org := core.GetTenant(c)
+			// get the user
+			user := core.GetSession(c).GetUserID()
+
+			allowed, err := rbac.IsAllowed(user, string(obj), act)
+			if err != nil {
+				c.Response().WriteHeader(500)
+				return echo.NewHTTPError(500, "could not determine if the user has access")
+			}
+
+			// check if the user has the required role
+			if !allowed {
+				if org.IsPublic && act == accesscontrol.ActionRead {
+					core.SetIsPublicRequest(c)
+				} else {
+					c.Response().WriteHeader(403)
+					return echo.NewHTTPError(403, "forbidden")
+				}
+			}
+
+			return next(c)
+		}
+	}
+}
+
 func assetMiddleware(repository assetRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		// get the project
@@ -107,7 +137,12 @@ func projectAccessControlFactory(projectRepository projectRepository) accesscont
 
 				// check if the user has the required role
 				if !allowed {
-					return echo.NewHTTPError(403, "forbidden")
+					if project.IsPublic && act == accesscontrol.ActionRead {
+						// allow READ on all objects in the project - if access is public
+						core.SetIsPublicRequest(c)
+					} else {
+						return echo.NewHTTPError(403, "forbidden")
+					}
 				}
 
 				c.Set("project", project)
@@ -148,7 +183,12 @@ func projectAccessControl(projectRepository projectRepository, obj accesscontrol
 
 			// check if the user has the required role
 			if !allowed {
-				return echo.NewHTTPError(403, "forbidden")
+				// check if public
+				if project.IsPublic && act == accesscontrol.ActionRead {
+					core.SetIsPublicRequest(c)
+				} else {
+					return echo.NewHTTPError(403, "forbidden")
+				}
 			}
 
 			c.Set("project", project)
@@ -217,8 +257,13 @@ func multiTenantMiddleware(rbacProvider accesscontrol.RBACProvider, organization
 			allowed := domainRBAC.HasAccess(session.GetUserID())
 
 			if !allowed {
-				slog.Error("access denied")
-				return c.JSON(401, map[string]string{"error": "access denied"})
+				if org.IsPublic {
+					core.SetIsPublicRequest(c)
+				} else {
+					// not allowed and not a public tenant
+					slog.Error("access denied")
+					return c.JSON(403, map[string]string{"error": "access denied"})
+				}
 			}
 
 			// set the tenant in the context
@@ -288,11 +333,11 @@ func Start(db core.DB) {
 	// init all http controllers using the repositories
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
-	projectController := project.NewHttpController(projectRepository, assetRepository)
+	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
 	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetService, statisticsService)
 
-	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, projectRepository)
+	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, project.NewService(projectRepository))
 
 	patService := pat.NewPatService(patRepository)
 
@@ -347,10 +392,10 @@ func Start(db core.DB) {
 	orgRouter.GET("/", orgController.List)
 
 	tenantRouter := orgRouter.Group("/:tenant", multiTenantMiddleware(casbinRBACProvider, orgRepository))
-	tenantRouter.DELETE("/", orgController.Delete, core.AccessControlMiddleware("organization", accesscontrol.ActionDelete))
-	tenantRouter.GET("/", orgController.Read, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
+	tenantRouter.DELETE("/", orgController.Delete, accessControlMiddleware("organization", accesscontrol.ActionDelete))
+	tenantRouter.GET("/", orgController.Read, accessControlMiddleware("organization", accesscontrol.ActionRead))
 
-	tenantRouter.PATCH("/", orgController.Update, core.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
+	tenantRouter.PATCH("/", orgController.Update, accessControlMiddleware("organization", accesscontrol.ActionUpdate))
 
 	tenantRouter.GET("/metrics/", orgController.Metrics)
 
@@ -363,8 +408,8 @@ func Start(db core.DB) {
 	tenantRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetOrgFlawAggregationStateAndChange)
 	tenantRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution)
 
-	tenantRouter.GET("/projects/", projectController.List, core.AccessControlMiddleware("organization", accesscontrol.ActionRead))
-	tenantRouter.POST("/projects/", projectController.Create, core.AccessControlMiddleware("organization", accesscontrol.ActionUpdate))
+	tenantRouter.GET("/projects/", projectController.List, accessControlMiddleware("organization", accesscontrol.ActionRead))
+	tenantRouter.POST("/projects/", projectController.Create, accessControlMiddleware("organization", accesscontrol.ActionUpdate))
 
 	projectRouter := tenantRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)
@@ -386,6 +431,8 @@ func Start(db core.DB) {
 	assetRouter.GET("/affected-components/", assetController.AffectedComponents)
 	assetRouter.GET("/sbom.json/", assetController.SBOMJSON)
 	assetRouter.GET("/sbom.xml/", assetController.SBOMXML)
+	assetRouter.GET("/vex.json/", assetController.VEXJSON)
+	assetRouter.GET("/vex.xml/", assetController.VEXXML)
 
 	assetRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetRiskDistribution)

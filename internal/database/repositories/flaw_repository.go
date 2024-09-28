@@ -154,7 +154,7 @@ func (r *flawRepository) GetFlawsByPurl(tx core.DB, purl []string) ([]models.Fla
 		return flaws, nil
 	}
 
-	if err := r.Repository.GetDB(tx).Where("component_purl IN ?", purl).Find(&flaws).Error; err != nil {
+	if err := r.Repository.GetDB(tx).Preload("Events").Joins("CVE").Where("component_purl IN ?", purl).Find(&flaws).Error; err != nil {
 		return nil, err
 	}
 
