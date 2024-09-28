@@ -431,6 +431,8 @@ func Start(db core.DB) {
 	assetRouter.GET("/affected-components/", assetController.AffectedComponents)
 	assetRouter.GET("/sbom.json/", assetController.SBOMJSON)
 	assetRouter.GET("/sbom.xml/", assetController.SBOMXML)
+	assetRouter.GET("/vex.json/", assetController.VEXJSON)
+	assetRouter.GET("/vex.xml/", assetController.VEXXML)
 
 	assetRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetRiskDistribution)

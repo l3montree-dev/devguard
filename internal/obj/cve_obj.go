@@ -15,6 +15,8 @@
 
 package obj
 
+import "encoding/json"
+
 type RiskMetrics struct {
 	BaseScore                            float64 `json:"baseScore"`
 	WithEnvironment                      float64 `json:"withEnvironment"`
@@ -54,4 +56,13 @@ func (r RiskCalculationReport) Map() map[string]any {
 		"risk":                       r.Risk,
 		"vector":                     r.Vector,
 	}
+}
+
+func (r RiskCalculationReport) String() string {
+	m := r.Map()
+	str, err := json.Marshal(m)
+	if err != nil {
+		return ""
+	}
+	return string(str)
 }

@@ -17,7 +17,6 @@ package auth
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -57,8 +56,8 @@ func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.M
 			if oryKratosSessionCookie == nil {
 				userID, err = verifier.VerifyRequestSignature(c.Request())
 				if err != nil {
-					slog.Error("session authentication failed", "err", err)
-					return c.JSON(401, map[string]string{"error": "no session, could not authenticate"})
+					c.Set("session", NoSession)
+					return next(c)
 				}
 			} else {
 				userID, err = cookieAuth(c.Request().Context(), oryApiClient, oryKratosSessionCookie.String())

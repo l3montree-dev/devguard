@@ -302,22 +302,23 @@ func csvRowToCveModel(row []string) (models.CVE, error) {
 		impactScore = i
 	}
 
-	cISAExploitAdd := datatypes.Date{}
+	var cisaExploitAdd *datatypes.Date = nil
 	if row[19] != "" {
 		cISAExploitAddTime, err := time.Parse("2006-01-02", row[19])
 		if err != nil {
 			return cve, fmt.Errorf("error parsing cisa exploit add time: %w", err)
 		}
-		cISAExploitAdd = datatypes.Date(cISAExploitAddTime)
+		cisaExploitAdd = utils.Ptr(datatypes.Date(cISAExploitAddTime))
 	}
 
-	cisaExploitAdd := datatypes.Date{}
+	var cisaActionDue *datatypes.Date = nil
 	if row[20] != "" {
-		cISAActionDueTime, err := time.Parse("2006-01-02", row[20])
+		cisaActionDueTime, err := time.Parse("2006-01-02", row[20])
 		if err != nil {
 			return cve, fmt.Errorf("error parsing cisa action due time: %w", err)
 		}
-		cisaExploitAdd = datatypes.Date(cISAActionDueTime)
+
+		cisaActionDue = utils.Ptr(datatypes.Date(cisaActionDueTime))
 	}
 
 	epss := float64(0)
@@ -359,8 +360,8 @@ func csvRowToCveModel(row []string) (models.CVE, error) {
 		IntegrityImpact:       row[16],
 		AvailabilityImpact:    row[17],
 		References:            row[18],
-		CISAExploitAdd:        &cISAExploitAdd,
-		CISAActionDue:         &cisaExploitAdd,
+		CISAExploitAdd:        cisaExploitAdd,
+		CISAActionDue:         cisaActionDue,
 		CISARequiredAction:    row[21],
 		CISAVulnerabilityName: row[22],
 		EPSS:                  &epss,
