@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -12,8 +11,7 @@ import (
 )
 
 func (c *httpController) GetOrgRiskDistribution(ctx core.Context) error {
-	org := core.GetTenant(ctx)
-	projects, err := c.projectRepository.GetByOrgID(org.ID)
+	projects, err := c.projectService.ListAllowedProjects(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,8 +33,7 @@ func (c *httpController) GetOrgRiskDistribution(ctx core.Context) error {
 
 // get the average fixing time
 func (c *httpController) GetAverageOrgFixingTime(ctx core.Context) error {
-	org := core.GetTenant(ctx)
-	projects, err := c.projectRepository.GetByOrgID(org.ID)
+	projects, err := c.projectService.ListAllowedProjects(ctx)
 	if err != nil {
 		return err
 	}
@@ -72,12 +69,11 @@ func (c *httpController) GetAverageOrgFixingTime(ctx core.Context) error {
 
 // get the risk history
 func (c *httpController) GetOrgRiskHistory(ctx core.Context) error {
-	org := core.GetTenant(ctx)
 	// get the start and end query params
 	start := ctx.QueryParam("start")
 	end := ctx.QueryParam("end")
 
-	results, err := c.getOrgRiskHistory(org.ID, start, end)
+	results, err := c.getOrgRiskHistory(ctx, start, end)
 	if err != nil {
 		return ctx.JSON(500, nil)
 	}
@@ -85,9 +81,9 @@ func (c *httpController) GetOrgRiskHistory(ctx core.Context) error {
 
 }
 
-func (c *httpController) getOrgRiskHistory(orgID uuid.UUID, start string, end string) ([]ProjectRiskHistory, error) {
+func (c *httpController) getOrgRiskHistory(ctx core.Context, start string, end string) ([]ProjectRiskHistory, error) {
 	// fetch all projects
-	projects, err := c.projectRepository.GetByOrgID(orgID)
+	projects, err := c.projectService.ListAllowedProjects(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch projects by org id")
 	}
@@ -129,10 +125,9 @@ func (c *httpController) getProjectRiskHistory(start, end string, project models
 }
 
 func (c *httpController) GetOrgFlawAggregationStateAndChange(ctx core.Context) error {
-	org := core.GetTenant(ctx)
 	compareTo := ctx.QueryParam("compareTo")
 
-	projects, err := c.projectRepository.GetByOrgID(org.ID)
+	projects, err := c.projectService.ListAllowedProjects(ctx)
 	if err != nil {
 		return err
 	}

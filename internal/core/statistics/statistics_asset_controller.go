@@ -26,21 +26,21 @@ type statisticsService interface {
 	GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)
 }
 
-type projectRepository interface {
-	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
+type projectService interface {
+	ListAllowedProjects(c core.Context) ([]models.Project, error)
 }
 
 type httpController struct {
 	statisticsService statisticsService
 	assetRepository   assetRepository
-	projectRepository projectRepository
+	projectService    projectService
 }
 
-func NewHttpController(statisticsService statisticsService, assetRepository assetRepository, projectRepository projectRepository) *httpController {
+func NewHttpController(statisticsService statisticsService, assetRepository assetRepository, projectService projectService) *httpController {
 	return &httpController{
 		statisticsService: statisticsService,
 		assetRepository:   assetRepository,
-		projectRepository: projectRepository,
+		projectService:    projectService,
 	}
 }
 
