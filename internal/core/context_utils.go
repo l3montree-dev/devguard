@@ -83,7 +83,14 @@ func SetSession(ctx Context, session AuthSession) {
 }
 
 func GetParam(c Context, param string) string {
-	return c.Param(param)
+	v := c.Param(param)
+	if v == "" {
+		v := c.Get(param)
+		if v == nil {
+			return ""
+		}
+	}
+	return v
 }
 
 func GetProjectSlug(c Context) (string, error) {
