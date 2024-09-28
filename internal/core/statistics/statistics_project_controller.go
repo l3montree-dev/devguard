@@ -88,21 +88,21 @@ func (c *httpController) getProjectAverageFixingTime(projectID uuid.UUID, severi
 	return errgroup.WaitAndCollect()
 }
 
-func (c *httpController) getAssetsRiskHistory(projectID uuid.UUID, start string, end string) ([]assetRiskHistory, error) {
+func (c *httpController) getAssetsRiskHistory(projectID uuid.UUID, start string, end string) ([]AssetRiskHistory, error) {
 	// fetch all assets
 	assets, err := c.assetRepository.GetByProjectID(projectID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch assets by project id")
 	}
 
-	errgroup := utils.ErrGroup[assetRiskHistory](10)
+	errgroup := utils.ErrGroup[AssetRiskHistory](10)
 	for _, asset := range assets {
-		errgroup.Go(func() (assetRiskHistory, error) {
+		errgroup.Go(func() (AssetRiskHistory, error) {
 			results, err := c.getAssetRiskHistory(start, end, asset)
 			if err != nil {
-				return assetRiskHistory{}, err
+				return AssetRiskHistory{}, err
 			}
-			return assetRiskHistory{
+			return AssetRiskHistory{
 				RiskHistory: results,
 				Asset:       asset,
 			}, nil
@@ -142,8 +142,8 @@ func (c *httpController) GetProjectFlawAggregationStateAndChange(ctx core.Contex
 	return ctx.JSON(200, result)
 }
 
-func (c *httpController) getProjectFlawAggregationStateAndChange(projectID uuid.UUID, compareTo string) ([]flawAggregationStateAndChange, error) {
-	errgroup := utils.ErrGroup[flawAggregationStateAndChange](10)
+func (c *httpController) getProjectFlawAggregationStateAndChange(projectID uuid.UUID, compareTo string) ([]FlawAggregationStateAndChange, error) {
+	errgroup := utils.ErrGroup[FlawAggregationStateAndChange](10)
 	// get all assets
 	assets, err := c.assetRepository.GetByProjectID(projectID)
 	if err != nil {
@@ -151,7 +151,7 @@ func (c *httpController) getProjectFlawAggregationStateAndChange(projectID uuid.
 	}
 
 	for _, asset := range assets {
-		errgroup.Go(func() (flawAggregationStateAndChange, error) {
+		errgroup.Go(func() (FlawAggregationStateAndChange, error) {
 			return c.getFlawAggregationStateAndChange(compareTo, asset)
 		})
 	}

@@ -54,8 +54,6 @@ type patchRequest struct {
 	AvailabilityRequirement    *models.RequirementLevel `json:"availabilityRequirement"`
 
 	RepositoryID *string `json:"repositoryId"`
-
-	IsPublic *bool `json:"isPublic"`
 }
 
 func (a *patchRequest) applyToModel(
@@ -85,11 +83,6 @@ func (a *patchRequest) applyToModel(
 		} else {
 			asset.RepositoryID = a.RepositoryID
 		}
-	}
-
-	if a.IsPublic != nil {
-		updated = true
-		asset.IsPublic = *a.IsPublic
 	}
 
 	return updated

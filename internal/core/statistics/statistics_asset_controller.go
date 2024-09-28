@@ -16,7 +16,7 @@ type statisticsService interface {
 	GetComponentRisk(assetID uuid.UUID) (map[string]float64, error)
 	GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error)
 	GetAssetRiskHistory(assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
-	GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (flawAggregationStateAndChange, error)
+	GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error)
 
 	GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error)
 	GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error)
@@ -26,21 +26,21 @@ type statisticsService interface {
 	GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)
 }
 
-type projectRepository interface {
-	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
+type projectService interface {
+	ListAllowedProjects(c core.Context) ([]models.Project, error)
 }
 
 type httpController struct {
 	statisticsService statisticsService
 	assetRepository   assetRepository
-	projectRepository projectRepository
+	projectService    projectService
 }
 
-func NewHttpController(statisticsService statisticsService, assetRepository assetRepository, projectRepository projectRepository) *httpController {
+func NewHttpController(statisticsService statisticsService, assetRepository assetRepository, projectService projectService) *httpController {
 	return &httpController{
 		statisticsService: statisticsService,
 		assetRepository:   assetRepository,
-		projectRepository: projectRepository,
+		projectService:    projectService,
 	}
 }
 
@@ -217,9 +217,9 @@ func (c *httpController) GetFlawAggregationStateAndChange(ctx core.Context) erro
 	return ctx.JSON(200, results)
 }
 
-func aggregateFlawAggregationStateAndChange(results []flawAggregationStateAndChange) flawAggregationStateAndChange {
+func aggregateFlawAggregationStateAndChange(results []FlawAggregationStateAndChange) FlawAggregationStateAndChange {
 	// aggregate the results
-	result := flawAggregationStateAndChange{}
+	result := FlawAggregationStateAndChange{}
 	for _, r := range results {
 		result.Now.Fixed += r.Now.Fixed
 		result.Now.Open += r.Now.Open
@@ -231,11 +231,11 @@ func aggregateFlawAggregationStateAndChange(results []flawAggregationStateAndCha
 	return result
 }
 
-func (c *httpController) getFlawAggregationStateAndChange(compareTo string, asset models.Asset) (flawAggregationStateAndChange, error) {
+func (c *httpController) getFlawAggregationStateAndChange(compareTo string, asset models.Asset) (FlawAggregationStateAndChange, error) {
 	// parse the date
 	calculateChangeTo, err := time.Parse(time.DateOnly, compareTo)
 	if err != nil {
-		return flawAggregationStateAndChange{}, errors.Wrap(err, "error parsing date")
+		return FlawAggregationStateAndChange{}, errors.Wrap(err, "error parsing date")
 	}
 
 	return c.statisticsService.GetFlawAggregationStateAndChangeSince(asset.ID, calculateChangeTo)

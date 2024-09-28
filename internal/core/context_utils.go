@@ -62,6 +62,14 @@ func GetTenant(c Context) models.Org {
 	return c.Get("tenant").(models.Org)
 }
 
+func SetIsPublicRequest(c Context) {
+	c.Set("publicRequest", true)
+}
+
+func IsPublicRequest(c Context) bool {
+	return c.Get("publicRequest") != nil
+}
+
 func GetOryClient(c Context) *client.APIClient {
 	return c.Get("ory").(*client.APIClient)
 }
@@ -75,11 +83,7 @@ func SetSession(ctx Context, session AuthSession) {
 }
 
 func GetParam(c Context, param string) string {
-	value := c.Param(param)
-	if value == "" {
-		return c.Get(param).(string)
-	}
-	return value
+	return c.Param(param)
 }
 
 func GetProjectSlug(c Context) (string, error) {

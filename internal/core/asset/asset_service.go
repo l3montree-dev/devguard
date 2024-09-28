@@ -18,6 +18,7 @@ package asset
 import (
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -28,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
+	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 
@@ -391,6 +393,10 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 }
 
 func (s *service) BuildSBOM(asset models.Asset, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {
+	if version == models.NoVersion {
+		version = "latest"
+	}
+
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
 		SpecVersion: cyclonedx.SpecVersion1_5,
@@ -477,4 +483,151 @@ func (s *service) BuildSBOM(asset models.Asset, version string, organizationName
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 	return &bom
+}
+
+func (s *service) BuildVeX(asset models.Asset, version string, organizationName string, components []models.ComponentDependency, flaws []models.Flaw) *cdx.BOM {
+	if version == models.NoVersion {
+		version = "latest"
+	}
+
+	bom := cdx.BOM{
+		BOMFormat:   "CycloneDX",
+		SpecVersion: cyclonedx.SpecVersion1_5,
+		Version:     1,
+		Metadata: &cdx.Metadata{
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Component: &cdx.Component{
+				BOMRef:    asset.Slug,
+				Type:      cdx.ComponentTypeApplication,
+				Name:      asset.Name,
+				Version:   version,
+				Author:    organizationName,
+				Publisher: "github.com/l3montree-dev/devguard",
+			},
+		},
+	}
+	vulnerabilities := make([]cdx.Vulnerability, 0)
+	for _, flaw := range flaws {
+		// check if cve
+		cve := flaw.CVE
+		if cve != nil {
+			vuln := cdx.Vulnerability{
+				ID: cve.CVE,
+				Source: &cdx.Source{
+					Name: "NVD",
+					URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", flaw.CVEID),
+				},
+				Affects: &[]cdx.Affects{{
+					Ref: flaw.ComponentPurl,
+				}},
+				Analysis: &cdx.VulnerabilityAnalysis{
+					State: flawStateToImpactAnalysisState(flaw.State),
+				},
+			}
+
+			response := flawStateToResponseStatus(flaw.State)
+			if response != "" {
+				vuln.Analysis.Response = &[]cdx.ImpactAnalysisResponse{response}
+			}
+
+			justification := getJustification(flaw)
+			if justification != nil {
+				vuln.Analysis.Detail = *justification
+			}
+
+			cvss := math.Round(float64(cve.CVSS)*100) / 100
+
+			risk := risk.RawRisk(*cve, core.GetEnvironmentalFromAsset(asset), int(flaw.GetArbitraryJsonData()["componentDepth"].(float64)))
+
+			vuln.Ratings = &[]cdx.VulnerabilityRating{
+				{
+					Vector:   cve.Vector,
+					Method:   vectorToCVSSScoringMethod(cve.Vector),
+					Score:    &cvss,
+					Severity: scoreToSeverity(cvss),
+				},
+				{
+					Vector:        risk.Vector,
+					Method:        "DevGuard",
+					Score:         &risk.Risk,
+					Severity:      scoreToSeverity(risk.Risk),
+					Justification: risk.String(),
+				},
+			}
+
+			vulnerabilities = append(vulnerabilities, vuln)
+		}
+	}
+	bom.Vulnerabilities = &vulnerabilities
+
+	return &bom
+}
+
+func scoreToSeverity(score float64) cdx.Severity {
+	if score >= 9.0 {
+		return cdx.SeverityCritical
+	} else if score >= 7.0 {
+		return cdx.SeverityHigh
+	} else if score >= 4.0 {
+		return cdx.SeverityMedium
+	}
+	return cdx.SeverityLow
+}
+
+func vectorToCVSSScoringMethod(vector string) cdx.ScoringMethod {
+	if strings.Contains(vector, "CVSS:3.0") {
+		return cdx.ScoringMethodCVSSv3
+	} else if strings.Contains(vector, "CVSS:2.0") {
+		return cdx.ScoringMethodCVSSv2
+	} else if strings.Contains(vector, "CVSS:3.1") {
+		return cdx.ScoringMethodCVSSv31
+	}
+	return cdx.ScoringMethodCVSSv4
+}
+
+func flawStateToImpactAnalysisState(state models.FlawState) cdx.ImpactAnalysisState {
+	switch state {
+	case models.FlawStateOpen:
+		return cdx.IASInTriage
+	case models.FlawStateFixed:
+		return cdx.IASResolved
+	case models.FlawStateAccepted:
+		return cdx.IASExploitable
+	case models.FlawStateFalsePositive:
+		return cdx.IASFalsePositive
+	case models.FlawStateMarkedForTransfer:
+		return cdx.IASInTriage
+	default:
+		return cdx.IASInTriage
+	}
+}
+
+func getJustification(flaw models.Flaw) *string {
+	// check if we have any event
+	if len(flaw.Events) > 0 {
+		// look for the last event which has a justification
+		for i := len(flaw.Events) - 1; i >= 0; i-- {
+			if flaw.Events[i].Justification != nil {
+				return flaw.Events[i].Justification
+			}
+		}
+	}
+	return nil
+}
+
+func flawStateToResponseStatus(state models.FlawState) cdx.ImpactAnalysisResponse {
+	switch state {
+	case models.FlawStateOpen:
+		return ""
+	case models.FlawStateFixed:
+		return cdx.IARUpdate
+	case models.FlawStateAccepted:
+		return cdx.IARWillNotFix
+	case models.FlawStateFalsePositive:
+		return cdx.IARWillNotFix
+	case models.FlawStateMarkedForTransfer:
+		return ""
+	default:
+		return ""
+	}
 }
