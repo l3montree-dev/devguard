@@ -85,22 +85,22 @@ func (c *httpController) GetOrgRiskHistory(ctx core.Context) error {
 
 }
 
-func (c *httpController) getOrgRiskHistory(orgID uuid.UUID, start string, end string) ([]projectRiskHistory, error) {
+func (c *httpController) getOrgRiskHistory(orgID uuid.UUID, start string, end string) ([]ProjectRiskHistory, error) {
 	// fetch all projects
 	projects, err := c.projectRepository.GetByOrgID(orgID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch projects by org id")
 	}
 
-	errgroup := utils.ErrGroup[projectRiskHistory](10)
+	errgroup := utils.ErrGroup[ProjectRiskHistory](10)
 	for _, project := range projects {
-		errgroup.Go(func() (projectRiskHistory, error) {
+		errgroup.Go(func() (ProjectRiskHistory, error) {
 			results, err := c.getProjectRiskHistory(start, end, project)
 			if err != nil {
-				return projectRiskHistory{}, err
+				return ProjectRiskHistory{}, err
 			}
 
-			return projectRiskHistory{
+			return ProjectRiskHistory{
 				RiskHistory: results,
 				Project:     project,
 			}, nil
@@ -137,7 +137,7 @@ func (c *httpController) GetOrgFlawAggregationStateAndChange(ctx core.Context) e
 		return err
 	}
 
-	results := make([]flawAggregationStateAndChange, 0)
+	results := make([]FlawAggregationStateAndChange, 0)
 	for _, project := range projects {
 		projectResults, err := c.getProjectFlawAggregationStateAndChange(project.ID, compareTo)
 		if err != nil {

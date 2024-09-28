@@ -17,16 +17,21 @@ package core
 
 import (
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 
 	"github.com/labstack/echo/v4"
 )
+
+func publicAccessAllowed(org models.Org, act accesscontrol.Action) bool {
+	return org.IsPublic && act == accesscontrol.ActionRead
+}
 
 func AccessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// get the rbac
 			rbac := GetRBAC(c)
-
+			org := GetTenant(c)
 			// get the user
 			user := GetSession(c).GetUserID()
 
@@ -37,6 +42,10 @@ func AccessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action)
 
 			// check if the user has the required role
 			if !allowed {
+				if publicAccessAllowed(org, act) {
+					SetIsPublicRequest(c)
+				}
+				c.Response().Status = 403
 				return echo.NewHTTPError(403, "forbidden")
 			}
 

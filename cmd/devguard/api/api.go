@@ -107,7 +107,12 @@ func projectAccessControlFactory(projectRepository projectRepository) accesscont
 
 				// check if the user has the required role
 				if !allowed {
-					return echo.NewHTTPError(403, "forbidden")
+					if project.IsPublic && act == accesscontrol.ActionRead {
+						// allow READ on all objects in the project - if access is public
+						core.SetIsPublicRequest(c)
+					} else {
+						return echo.NewHTTPError(403, "forbidden")
+					}
 				}
 
 				c.Set("project", project)
@@ -148,7 +153,12 @@ func projectAccessControl(projectRepository projectRepository, obj accesscontrol
 
 			// check if the user has the required role
 			if !allowed {
-				return echo.NewHTTPError(403, "forbidden")
+				// check if public
+				if project.IsPublic && act == accesscontrol.ActionRead {
+					core.SetIsPublicRequest(c)
+				} else {
+					return echo.NewHTTPError(403, "forbidden")
+				}
 			}
 
 			c.Set("project", project)
@@ -217,8 +227,13 @@ func multiTenantMiddleware(rbacProvider accesscontrol.RBACProvider, organization
 			allowed := domainRBAC.HasAccess(session.GetUserID())
 
 			if !allowed {
-				slog.Error("access denied")
-				return c.JSON(401, map[string]string{"error": "access denied"})
+				if org.IsPublic {
+					core.SetIsPublicRequest(c)
+				} else {
+					// not allowed and not a public tenant
+					slog.Error("access denied")
+					return c.JSON(403, map[string]string{"error": "access denied"})
+				}
 			}
 
 			// set the tenant in the context

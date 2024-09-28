@@ -28,3 +28,7 @@ func NewSession(userID string) session {
 		userID: userID,
 	}
 }
+
+var NoSession session = session{
+	userID: "NO_SESSION",
+}

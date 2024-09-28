@@ -41,7 +41,6 @@ func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSe
 	// check if we have a session
 	session, _, err := oryApiClient.FrontendAPI.ToSession(ctx).Cookie(oryKratosSessionCookie).Execute()
 	if err != nil {
-		slog.Error("could not get session from cookie", "err", err)
 		return "", err
 	}
 	return session.Identity.Id, nil
@@ -49,24 +48,30 @@ func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSe
 
 func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) (err error) {
+		return func(c echo.Context) error {
 			oryKratosSessionCookie := getCookie("ory_kratos_session", c.Cookies())
 
 			var userID string
+			var err error
 
 			if oryKratosSessionCookie == nil {
 				userID, err = verifier.VerifyRequestSignature(c.Request())
+				if err != nil {
+					slog.Error("session authentication failed", "err", err)
+					return c.JSON(401, map[string]string{"error": "no session, could not authenticate"})
+				}
 			} else {
 				userID, err = cookieAuth(c.Request().Context(), oryApiClient, oryKratosSessionCookie.String())
-			}
-
-			if err != nil {
-				slog.Error("session authentication failed", "err", err)
-				return c.JSON(401, map[string]string{"error": "no session, could not authenticate"})
+				if err != nil {
+					// user is not authenticated
+					// set a special session - it might be that the user is still allowed todo the request
+					// since the org, project etc. is public
+					c.Set("session", NoSession)
+					return next(c)
+				}
 			}
 
 			c.Set("session", NewSession(userID))
-			c.Set("sessionCookie", oryKratosSessionCookie)
 
 			return next(c)
 		}
