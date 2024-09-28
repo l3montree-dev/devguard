@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -77,6 +78,19 @@ type assetRepository interface {
 	Read(id uuid.UUID) (models.Asset, error)
 }
 
+type flawService interface {
+	ApplyAndSave(tx core.DB, flaw *models.Flaw, flawEvent *models.FlawEvent) error
+}
+
+// wrapper around the github package - which provides only the methods
+// we need
+type githubClientFacade interface {
+	CreateIssue(ctx context.Context, owner string, repo string, issue *github.IssueRequest) (*github.Issue, *github.Response, error)
+	CreateIssueComment(ctx context.Context, owner string, repo string, number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error)
+	EditIssue(ctx context.Context, owner string, repo string, number int, issue *github.IssueRequest) (*github.Issue, *github.Response, error)
+	EditIssueLabel(ctx context.Context, owner string, repo string, name string, label *github.Label) (*github.Label, *github.Response, error)
+}
+
 type githubIntegration struct {
 	githubAppInstallationRepository githubAppInstallationRepository
 	githubUserRepository            githubUserRepository
@@ -85,6 +99,9 @@ type githubIntegration struct {
 	flawEventRepository flawEventRepository
 	frontendUrl         string
 	assetRepository     assetRepository
+	flawService         flawService
+
+	githubClientFactory func(repoId string) (githubClientFacade, error)
 }
 
 var _ core.ThirdPartyIntegration = &githubIntegration{}
@@ -108,9 +125,14 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 
 		flawRepository:      flawRepository,
 		flawEventRepository: flawEventRepository,
+		flawService:         flaw.NewService(flawRepository, flawEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
 
 		frontendUrl:     frontendUrl,
 		assetRepository: repositories.NewAssetRepository(db),
+
+		githubClientFactory: func(repoId string) (githubClientFacade, error) {
+			return NewGithubClient(installationIdFromRepositoryID(repoId))
+		},
 	}
 }
 
@@ -283,7 +305,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 		// make sure to update the github issue accordingly
-		client, err := NewGithubClient(installationIdFromRepositoryID(utils.SafeDereference(asset.RepositoryID)))
+		client, err := githubIntegration.githubClientFactory(utils.SafeDereference(asset.RepositoryID))
 		if err != nil {
 			slog.Error("could not create github client", "err", err)
 			return err
@@ -297,19 +319,19 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 
 		switch flawEvent.Type {
 		case models.EventTypeAccepted:
-			_, _, err = client.Issues.Edit(context.Background(), owner, repo, issueId, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, issueId, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:accepted"},
 			})
 			return err
 		case models.EventTypeFalsePositive:
-			_, _, err = client.Issues.Edit(context.Background(), owner, repo, issueId, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, issueId, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:false-positive"},
 			})
 			return err
 		case models.EventTypeReopened:
-			_, _, err = client.Issues.Edit(context.Background(), owner, repo, issueId, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, issueId, &github.IssueRequest{
 				State:  github.String("open"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:open"},
 			})
@@ -449,7 +471,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return nil
 		}
 		// we create a new ticket in github
-		client, err := NewGithubClient(installationIdFromRepositoryID(repoId))
+		client, err := g.githubClientFactory(repoId)
 		if err != nil {
 			return err
 		}
@@ -480,20 +502,20 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		createdIssue, _, err := client.Issues.Create(context.Background(), owner, repo, issue)
+		createdIssue, _, err := client.CreateIssue(context.Background(), owner, repo, issue)
 		if err != nil {
 			return err
 		}
 
 		// todo - we are editing the labels on each call. Actually we only need todo it once
-		_, _, err = client.Issues.EditLabel(context.Background(), owner, repo, "severity:"+strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), &github.Label{
+		_, _, err = client.EditIssueLabel(context.Background(), owner, repo, "severity:"+strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), &github.Label{
 			Description: github.String("Severity of the flaw"),
 			Color:       github.String(risk.RiskToColor(*flaw.RawRiskAssessment)),
 		})
 		if err != nil {
 			slog.Error("could not update label", "err", err)
 		}
-		_, _, err = client.Issues.EditLabel(context.Background(), owner, repo, "devguard", &github.Label{
+		_, _, err = client.EditIssueLabel(context.Background(), owner, repo, "devguard", &github.Label{
 			Description: github.String("DevGuard"),
 			Color:       github.String("182654"),
 		})
@@ -507,25 +529,15 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		session := core.GetSession(event.Ctx)
 		userID := session.GetUserID()
 		// create an event
-		flawEvent := models.NewMitigateEvent(flaw.ID, userID, event.Ctx.Param("justification"), map[string]any{
-			"ticketId": flaw.TicketID,
+		flawEvent := models.NewMitigateEvent(flaw.ID, userID, justification["comment"], map[string]any{
+			"ticketId": *flaw.TicketID,
 			"url":      createdIssue.GetHTMLURL(),
 		})
 		// save the flaw and the event in a transaction
-		err = g.flawRepository.Transaction(func(tx core.DB) error {
-			err := g.flawRepository.Save(tx, &flaw)
-			if err != nil {
-				return err
-			}
-			err = g.flawEventRepository.Save(tx, &flawEvent)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+		err = g.flawService.ApplyAndSave(nil, &flaw, &flawEvent)
 		// if an error did happen, delete the issue from github
 		if err != nil {
-			_, _, err := client.Issues.Edit(context.TODO(), owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
+			_, _, err := client.EditIssue(context.TODO(), owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
 				State: github.String("closed"),
 			})
 			if err != nil {
@@ -558,7 +570,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return nil
 		}
 		// we create a new ticket in github
-		client, err := NewGithubClient(installationIdFromRepositoryID(repoId))
+		client, err := g.githubClientFactory(repoId)
 		if err != nil {
 			return err
 		}
@@ -588,7 +600,6 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		)
 		if !ok {
 			member = core.User{
-				ID:   ev.UserID,
 				Name: "unknown",
 			}
 		}
@@ -596,47 +607,47 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		switch ev.Type {
 		case models.EventTypeAccepted:
 			// if a flaw gets accepted, we close the issue and create a comment with that justification
-			_, _, err = client.Issues.CreateComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" accepted the flaw", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
 			}
-			_, _, err = client.Issues.Edit(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:accepted"},
 			})
 			return err
 		case models.EventTypeFalsePositive:
 
-			_, _, err = client.Issues.CreateComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" marked the flaw as false positive", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
 			}
 
-			_, _, err = client.Issues.Edit(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:false-positive"},
 			})
 			return err
 		case models.EventTypeReopened:
-			_, _, err = client.Issues.CreateComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" reopened the flaw", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
 			}
 
-			_, _, err = client.Issues.Edit(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
 				State:  github.String("open"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)), "state:open"},
 			})
 			return err
 
 		case models.EventTypeComment:
-			_, _, err = client.Issues.CreateComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the flaw", utils.SafeDereference(ev.Justification))),
 			})
 			return err

@@ -102,6 +102,18 @@ func GetOrgSlug(c Context) (string, error) {
 	return orgSlug, nil
 }
 
+func SetOrgSlug(c Context, orgSlug string) {
+	c.Set("orgSlug", orgSlug)
+}
+
+func SetProjectSlug(c Context, projectSlug string) {
+	c.Set("projectSlug", projectSlug)
+}
+
+func SetAssetSlug(c Context, assetSlug string) {
+	c.Set("assetSlug", assetSlug)
+}
+
 func GetAssetSlug(c Context) (string, error) {
 	assetSlug := GetParam(c, "assetSlug")
 	if assetSlug == "" {

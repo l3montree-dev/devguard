@@ -78,6 +78,24 @@ func (githubOrgClient *githubBatchClient) ListRepositories() ([]githubRepository
 	return utils.Flat(results), nil
 }
 
+var _ githubClientFacade = &githubClient{}
+
+func (client githubClient) CreateIssue(ctx context.Context, owner string, repo string, issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+	return client.Issues.Create(ctx, owner, repo, issue)
+}
+
+func (client githubClient) CreateIssueComment(ctx context.Context, owner string, repo string, number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+	return client.Issues.CreateComment(ctx, owner, repo, number, comment)
+}
+
+func (client githubClient) EditIssue(ctx context.Context, owner string, repo string, number int, issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+	return client.Issues.Edit(ctx, owner, repo, number, issue)
+}
+
+func (client githubClient) EditIssueLabel(ctx context.Context, owner string, repo string, name string, label *github.Label) (*github.Label, *github.Response, error) {
+	return client.Issues.EditLabel(ctx, owner, repo, name, label)
+}
+
 func NewGithubClient(installationID int) (githubClient, error) {
 	appId := os.Getenv("GITHUB_APP_ID")
 	if appId == "" {
