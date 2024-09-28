@@ -85,10 +85,11 @@ func SetSession(ctx Context, session AuthSession) {
 func GetParam(c Context, param string) string {
 	v := c.Param(param)
 	if v == "" {
-		v := c.Get(param)
-		if v == nil {
+		fallback := c.Get(param)
+		if fallback == nil {
 			return ""
 		}
+		return fallback.(string)
 	}
 	return v
 }
