@@ -259,8 +259,9 @@ We are proud to be supported by the following organizations:
 [![OWASP](./images/sponsors/sp-owasp.png)](https://owasp.org/)
 [![Bonn-Rhein-Sieg University of Applied Science](./images/sponsors/sp-hbrs.png)](https://www.h-brs.de/)
 [![WhereGroup](./images/sponsors/sp-wheregroup.png)](https://wheregroup.com/)
-[![WhereGroup](./images/sponsors/sp-digitalhub.png)](https://www.digitalhub.de/)
-[![WhereGroup](./images/sponsors/sp-wetteronline.png)](https://wetteronline.de/)
+[![DigitalHub](./images/sponsors/sp-digitalhub.png)](https://www.digitalhub.de/)
+[![WetterOnline](./images/sponsors/sp-wetteronline.png)](https://wetteronline.de/)
+[![Ikor](./images/sponsors/sp-ikor.png)](https://ikor.one/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
