@@ -346,6 +346,7 @@ func Start(db core.DB) {
 	server := echohttp.Server()
 
 	githubIntegration := integrations.NewGithubIntegration(db)
+	gitlabIntegration := integrations.NewGitLabIntegration(db)
 
 	integrationController := integrations.NewIntegrationController()
 
@@ -354,7 +355,7 @@ func Start(db core.DB) {
 	// this makes the third party integrations available to all controllers
 	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c core.Context) error {
-			core.SetThirdPartyIntegration(c, integrations.NewThirdPartyIntegrations(githubIntegration))
+			core.SetThirdPartyIntegration(c, integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration))
 			return next(c)
 		}
 	})
@@ -370,6 +371,7 @@ func Start(db core.DB) {
 	apiV1Router.POST("/webhook/", integrationController.HandleWebhook)
 	// apply the health route without any session or multi tenant middleware
 	apiV1Router.GET("/health/", health)
+
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
 	// register a simple whoami route for testing purposes
@@ -401,8 +403,12 @@ func Start(db core.DB) {
 
 	tenantRouter.GET("/members/", orgController.Members)
 	tenantRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
-	tenantRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
+	tenantRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitLabIntegration)
+	tenantRouter.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken)
+
+	tenantRouter.GET("/integrations/repositories/", integrationController.
+		ListRepositories)
 	tenantRouter.GET("/stats/risk-history/", statisticsController.GetOrgRiskHistory)
 	tenantRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageOrgFixingTime)
 	tenantRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetOrgFlawAggregationStateAndChange)

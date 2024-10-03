@@ -11,7 +11,20 @@ type thirdPartyIntegrations struct {
 	integrations []core.ThirdPartyIntegration
 }
 
-var _ core.ThirdPartyIntegration = &thirdPartyIntegrations{}
+var _ core.IntegrationAggregate = &thirdPartyIntegrations{}
+
+func (t *thirdPartyIntegrations) GetIntegration(id core.IntegrationID) core.ThirdPartyIntegration {
+	for _, i := range t.integrations {
+		if i.GetID() == id {
+			return i
+		}
+	}
+	return nil
+}
+
+func (t *thirdPartyIntegrations) GetID() core.IntegrationID {
+	return core.AggregateID
+}
 
 func (t *thirdPartyIntegrations) IntegrationEnabled(ctx core.Context) bool {
 	return utils.Any(t.integrations, func(i core.ThirdPartyIntegration) bool {
@@ -63,24 +76,6 @@ func (t *thirdPartyIntegrations) GetUsers(org models.Org) []core.User {
 	}
 
 	return users
-}
-
-func (t *thirdPartyIntegrations) WantsToFinishInstallation(ctx core.Context) bool {
-	return utils.Any(t.integrations, func(i core.ThirdPartyIntegration) bool {
-		return i.WantsToFinishInstallation(ctx)
-	})
-}
-
-func (t *thirdPartyIntegrations) FinishInstallation(ctx core.Context) error {
-	for _, i := range t.integrations {
-		if i.WantsToFinishInstallation(ctx) {
-			if err := i.FinishInstallation(ctx); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }
 
 func (t *thirdPartyIntegrations) HandleEvent(event any) error {

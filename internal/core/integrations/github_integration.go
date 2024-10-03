@@ -68,10 +68,10 @@ type flawEventRepository interface {
 	Save(db core.DB, event *models.FlawEvent) error
 }
 
-type githubUserRepository interface {
-	Save(db core.DB, user *models.GithubUser) error
+type externalUserRepository interface {
+	Save(db core.DB, user *models.ExternalUser) error
 	GetDB(tx core.DB) core.DB
-	FindByOrgID(tx core.DB, orgID uuid.UUID) ([]models.GithubUser, error)
+	FindByOrgID(tx core.DB, orgID uuid.UUID) ([]models.ExternalUser, error)
 }
 
 type assetRepository interface {
@@ -93,7 +93,7 @@ type githubClientFacade interface {
 
 type githubIntegration struct {
 	githubAppInstallationRepository githubAppInstallationRepository
-	githubUserRepository            githubUserRepository
+	externalUserRepository          externalUserRepository
 
 	flawRepository      flawRepository
 	flawEventRepository flawEventRepository
@@ -121,7 +121,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 
 	return &githubIntegration{
 		githubAppInstallationRepository: githubAppInstallationRepository,
-		githubUserRepository:            repositories.NewGithubUserRepository(db),
+		externalUserRepository:          repositories.NewGithubUserRepository(db),
 
 		flawRepository:      flawRepository,
 		flawEventRepository: flawEventRepository,
@@ -134,6 +134,10 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 			return NewGithubClient(installationIdFromRepositoryID(repoId))
 		},
 	}
+}
+
+func (githubIntegration *githubIntegration) GetID() core.IntegrationID {
+	return core.GitHubIntegrationID
 }
 
 func (githubIntegration *githubIntegration) IntegrationEnabled(ctx core.Context) bool {
@@ -204,13 +208,13 @@ func createNewFlawEventBasedOnComment(flawId, userId, comment string) models.Fla
 }
 
 func (githubIntegration *githubIntegration) GetUsers(org models.Org) []core.User {
-	users, err := githubIntegration.githubUserRepository.FindByOrgID(nil, org.ID)
+	users, err := githubIntegration.externalUserRepository.FindByOrgID(nil, org.ID)
 	if err != nil {
 		slog.Error("could not get users from github", "err", err)
 		return nil
 	}
 
-	return utils.Map(users, func(user models.GithubUser) core.User {
+	return utils.Map(users, func(user models.ExternalUser) core.User {
 		return core.User{
 			ID:        "github:" + strconv.Itoa(int(user.ID)),
 			Name:      user.Username,
@@ -260,19 +264,19 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 				return
 			}
 			// save the user in the database
-			user := models.GithubUser{
+			user := models.ExternalUser{
 				ID:        event.Comment.User.GetID(),
 				Username:  event.Comment.User.GetLogin(),
 				AvatarURL: event.Comment.User.GetAvatarURL(),
 			}
 
-			err = githubIntegration.githubUserRepository.Save(nil, &user)
+			err = githubIntegration.externalUserRepository.Save(nil, &user)
 			if err != nil {
 				slog.Error("could not save github user", "err", err)
 				return
 			}
 
-			if err = githubIntegration.githubUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
+			if err = githubIntegration.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
 				slog.Error("could not append user to organization", "err", err)
 			}
 		}()

@@ -45,9 +45,12 @@ func (c *integrationController) ListRepositories(ctx core.Context) error {
 
 func (c *integrationController) FinishInstallation(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	if err := thirdPartyIntegration.FinishInstallation(ctx); err != nil {
-		slog.Error("could not finish installation", "err", err)
-		return err
+	gh := thirdPartyIntegration.GetIntegration(core.GitHubIntegrationID)
+	if gh != nil {
+		if err := gh.(*githubIntegration).FinishInstallation(ctx); err != nil {
+			slog.Error("could not finish installation", "err", err)
+			return err
+		}
 	}
 
 	return ctx.JSON(200, "Installation finished")
@@ -61,4 +64,34 @@ func (c *integrationController) HandleWebhook(ctx core.Context) error {
 	}
 
 	return ctx.JSON(200, "Webhook handled")
+}
+
+func (c *integrationController) TestAndSaveGitLabIntegration(ctx core.Context) error {
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
+	if gl == nil {
+		return ctx.JSON(404, "GitLab integration not enabled")
+	}
+
+	if err := gl.(*gitlabIntegration).TestAndSave(ctx); err != nil {
+		slog.Error("could not test GitLab integration", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *integrationController) DeleteGitLabAccessToken(ctx core.Context) error {
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
+	if gl == nil {
+		return ctx.JSON(404, "GitLab integration not enabled")
+	}
+
+	if err := gl.(*gitlabIntegration).Delete(ctx); err != nil {
+		slog.Error("could not delete GitLab integration", "err", err)
+		return err
+	}
+
+	return nil
 }

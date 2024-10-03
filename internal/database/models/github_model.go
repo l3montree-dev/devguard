@@ -40,13 +40,13 @@ func (GithubAppInstallation) TableName() string {
 	return "github_app_installations"
 }
 
-type GithubUser struct {
+type ExternalUser struct {
 	ID            int64  `json:"id" gorm:"primaryKey"`
 	Username      string `json:"username"`
 	AvatarURL     string `json:"avatarUrl"`
-	Organizations []Org  `json:"orgs" gorm:"many2many:github_user_orgs;"`
+	Organizations []Org  `json:"orgs" gorm:"many2many:external_user_orgs;"`
 }
 
-func (GithubUser) TableName() string {
-	return "github_users"
+func (ExternalUser) TableName() string {
+	return "external_users"
 }

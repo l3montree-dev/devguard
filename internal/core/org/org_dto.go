@@ -19,6 +19,8 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/obj"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type createRequest struct {
@@ -128,7 +130,60 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 
 }
 
+type OrgDTO struct {
+	models.Model
+	Name                   string           `json:"name" gorm:"type:text"`
+	ContactPhoneNumber     *string          `json:"contactPhoneNumber" gorm:"type:text"`
+	NumberOfEmployees      *int             `json:"numberOfEmployees"`
+	Country                *string          `json:"country" gorm:"type:text"`
+	Industry               *string          `json:"industry" gorm:"type:text"`
+	CriticalInfrastructure bool             `json:"criticalInfrastructure"`
+	ISO27001               bool             `json:"iso27001"`
+	NIST                   bool             `json:"nist"`
+	Grundschutz            bool             `json:"grundschutz"`
+	Projects               []models.Project `json:"projects" gorm:"foreignKey:OrganizationID;"`
+	Slug                   string           `json:"slug" gorm:"type:text;unique;not null;index"`
+	Description            string           `json:"description" gorm:"type:text"`
+
+	GithubAppInstallations []models.GithubAppInstallation `json:"githubAppInstallations" gorm:"foreignKey:OrgID;"`
+
+	GitLabIntegrations []obj.GitlabIntegrationDTO `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
+
+	IsPublic bool `json:"isPublic" gorm:"default:false;"`
+}
+
+func obfuscateGitLabIntegrations(integration models.GitLabIntegration) obj.GitlabIntegrationDTO {
+	return obj.GitlabIntegrationDTO{
+		ID:              integration.ID.String(),
+		Name:            integration.Name,
+		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
+		Url:             integration.GitLabUrl,
+	}
+}
+
+func fromModel(org models.Org) OrgDTO {
+	return OrgDTO{
+		Model:                  org.Model,
+		Name:                   org.Name,
+		ContactPhoneNumber:     org.ContactPhoneNumber,
+		NumberOfEmployees:      org.NumberOfEmployees,
+		Country:                org.Country,
+		Industry:               org.Industry,
+		CriticalInfrastructure: org.CriticalInfrastructure,
+		ISO27001:               org.ISO27001,
+		NIST:                   org.NIST,
+		Grundschutz:            org.Grundschutz,
+		Slug:                   org.Slug,
+		Description:            org.Description,
+		IsPublic:               org.IsPublic,
+
+		Projects:               org.Projects,
+		GithubAppInstallations: org.GithubAppInstallations,
+		GitLabIntegrations:     utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
+	}
+}
+
 type orgDetails struct {
-	models.Org
+	OrgDTO
 	Members []core.User `json:"members"`
 }

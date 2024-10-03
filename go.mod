@@ -24,6 +24,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/swag v1.16.3
+	github.com/xanzy/go-gitlab v0.109.0
 	github.com/yaronf/httpsign v0.3.1
 	golang.org/x/mod v0.18.0
 	golang.org/x/sync v0.8.0
@@ -63,6 +64,8 @@ require (
 	github.com/google/go-containerregistry v0.20.1 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect

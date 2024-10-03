@@ -144,7 +144,7 @@ func (o *httpController) Update(ctx core.Context) error {
 	}
 
 	resp := orgDetails{
-		Org:     organization,
+		OrgDTO:  fromModel(organization),
 		Members: members,
 	}
 
@@ -227,7 +227,7 @@ func (o *httpController) Read(c core.Context) error {
 	}
 
 	resp := orgDetails{
-		Org:     organization,
+		OrgDTO:  fromModel(organization),
 		Members: members,
 	}
 

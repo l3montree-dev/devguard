@@ -17,6 +17,8 @@ type Org struct {
 
 	GithubAppInstallations []GithubAppInstallation `json:"githubAppInstallations" gorm:"foreignKey:OrgID;"`
 
+	GitLabIntegrations []GitLabIntegration `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
+
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 }
 
