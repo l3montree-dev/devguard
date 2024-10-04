@@ -1,6 +1,8 @@
 package integrations
 
 import (
+	"log/slog"
+
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -38,14 +40,25 @@ func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repo
 	for _, i := range t.integrations {
 		if i.IntegrationEnabled(ctx) {
 			wg.Go(func() ([]core.Repository, error) {
-				return i.ListRepositories(ctx)
+				repos, err := i.ListRepositories(ctx)
+				if err != nil {
+					slog.Error("error while listing repositories", "err", err)
+					// swallow error
+					return nil, nil
+				}
+				return repos, err
 			})
+		} else {
+			slog.Debug("integration not enabled", "integration", i.GetID())
 		}
 	}
 
 	results, err := wg.WaitAndCollect()
+	if err != nil {
+		slog.Error("error while listing repositories", "err", err)
+	}
 
-	return utils.Flat(results), err
+	return utils.Flat(results), nil
 }
 
 func (t *thirdPartyIntegrations) WantsToHandleWebhook(ctx core.Context) bool {

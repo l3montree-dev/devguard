@@ -26,7 +26,7 @@ type externalUserRepository struct {
 	Repository[int, models.ExternalUser, core.DB]
 }
 
-func NewGithubUserRepository(db core.DB) *externalUserRepository {
+func NewExternalUserRepository(db core.DB) *externalUserRepository {
 	if err := db.AutoMigrate(&models.ExternalUser{}); err != nil {
 		panic(err)
 	}
@@ -38,7 +38,7 @@ func NewGithubUserRepository(db core.DB) *externalUserRepository {
 
 func (r *externalUserRepository) FindByOrgID(tx core.DB, orgID uuid.UUID) ([]models.ExternalUser, error) {
 	var users []models.ExternalUser
-	if err := r.GetDB(tx).Raw("SELECT gh.* FROM github_users gh WHERE EXISTS(SELECT 1 from github_user_orgs where github_user_id = gh.id AND org_id = ?)", orgID).Scan(&users).Error; err != nil {
+	if err := r.GetDB(tx).Raw("SELECT gh.* FROM external_users gh WHERE EXISTS(SELECT 1 from external_user_orgs where external_user_id = gh.id AND org_id = ?)", orgID).Scan(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil

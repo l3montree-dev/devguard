@@ -121,7 +121,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 
 	return &githubIntegration{
 		githubAppInstallationRepository: githubAppInstallationRepository,
-		externalUserRepository:          repositories.NewGithubUserRepository(db),
+		externalUserRepository:          repositories.NewExternalUserRepository(db),
 
 		flawRepository:      flawRepository,
 		flawEventRepository: flawEventRepository,
@@ -164,7 +164,7 @@ func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) (
 		}
 
 		// get the repositories
-		r, err := githubClient.ListRepositories()
+		r, err := githubClient.ListRepositories(ctx.QueryParam("search"))
 		if err != nil {
 			return nil, err
 		}

@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v62/github"
@@ -55,17 +56,53 @@ func newGithubBatchClient(appInstallations []models.GithubAppInstallation) (*git
 	}, nil
 }
 
-func (githubOrgClient *githubBatchClient) ListRepositories() ([]githubRepository, error) {
+func fetchAllRepos(client githubClient) ([]*github.Repository, error) {
+	result, _, err := client.Apps.ListRepos(context.Background(), &github.ListOptions{
+		Page:    1,
+		PerPage: 100,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	repos := result.Repositories
+	// check if there is more to fetch
+	for len(repos) < *result.TotalCount {
+		result, _, err = client.Apps.ListRepos(context.Background(), &github.ListOptions{
+			Page:    len(repos) / 100,
+			PerPage: 100,
+		})
+		if err != nil {
+			return nil, err
+		}
+		repos = append(repos, result.Repositories...)
+	}
+
+	return repos, nil
+}
+
+func (githubOrgClient *githubBatchClient) ListRepositories(
+	search string,
+) ([]githubRepository, error) {
 	wg := utils.ErrGroup[[]githubRepository](10)
 
 	for _, client := range githubOrgClient.clients {
 		wg.Go(func() ([]githubRepository, error) {
-			result, _, err := client.Apps.ListRepos(context.Background(), nil)
+
+			result, err := fetchAllRepos(client)
 			if err != nil {
 				return nil, err
 			}
 
-			return utils.Map(result.Repositories, func(el *github.Repository) githubRepository {
+			// filter the result set based on the search query
+			if search != "" {
+				result = utils.Filter(result, func(el *github.Repository) bool {
+					return strings.Contains(*el.FullName, search)
+				})
+			}
+
+			return utils.Map(result, func(el *github.Repository) githubRepository {
 				return githubRepository{el, client.githubAppInstallationID}
 			}), nil
 		})
