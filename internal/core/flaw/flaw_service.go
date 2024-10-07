@@ -288,6 +288,7 @@ type leaderElector interface {
 }
 
 func (service *service) StartRiskRecalculationDaemon(leaderElector leaderElector) {
+	slog.Info("starting risk recalculation daemon")
 	leaderElector.IfLeader(context.Background(), func() error {
 		err := service.RecalculateAllRawRiskAssessments()
 		if err != nil {
