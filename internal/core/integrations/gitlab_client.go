@@ -117,15 +117,13 @@ func (client gitlabClient) EditIssueLabel(ctx context.Context, projectId int, is
 		return *l.Name
 	})...)
 
-	createdLabels := make([]*gitlab.Label, 0)
 	// make sure each label exists
 	for _, label := range labels {
 		// make sure to create the label beforehand
-		l, _, err := client.Labels.CreateLabel(projectId, label)
+		_, _, err := client.Labels.CreateLabel(projectId, label)
 		if err != nil {
 			return nil, err
 		}
-		createdLabels = append(createdLabels, l)
 	}
 
 	_, _, err = client.Issues.UpdateIssue(projectId, issueId, &gitlab.UpdateIssueOptions{
