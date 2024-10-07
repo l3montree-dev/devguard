@@ -182,31 +182,6 @@ func (githubIntegration *githubIntegration) WantsToHandleWebhook(ctx core.Contex
 	return true
 }
 
-func createNewFlawEventBasedOnComment(flawId, userId, comment string) models.FlawEvent {
-	if strings.HasPrefix(comment, "/accept") {
-		// create a new flaw accept event
-		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
-	} else if strings.HasPrefix(comment, "/false-positive") {
-		// create a new flaw false positive event
-		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
-	} else if strings.HasPrefix(comment, "/reopen") {
-		// create a new flaw reopen event
-		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
-	} else if strings.HasPrefix(comment, "/a") {
-		// create a new flaw accept event
-		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
-	} else if strings.HasPrefix(comment, "/fp") {
-		// create a new flaw false positive event
-		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
-	} else if strings.HasPrefix(comment, "/r") {
-		// create a new flaw reopen event
-		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
-	} else {
-		// create a new comment event
-		return models.NewCommentEvent(flawId, userId, comment)
-	}
-}
-
 func (githubIntegration *githubIntegration) GetUsers(org models.Org) []core.User {
 	users, err := githubIntegration.externalUserRepository.FindByOrgID(nil, org.ID)
 	if err != nil {
@@ -216,7 +191,7 @@ func (githubIntegration *githubIntegration) GetUsers(org models.Org) []core.User
 
 	return utils.Map(users, func(user models.ExternalUser) core.User {
 		return core.User{
-			ID:        "github:" + strconv.Itoa(int(user.ID)),
+			ID:        user.ID,
 			Name:      user.Username,
 			AvatarURL: &user.AvatarURL,
 		}
@@ -224,13 +199,14 @@ func (githubIntegration *githubIntegration) GetUsers(org models.Org) []core.User
 }
 
 func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) error {
-	payload, err := github.ValidatePayload(ctx.Request(), []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))
+	req := ctx.Request()
+	payload, err := github.ValidatePayload(req, []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))
 	if err != nil {
-		slog.Error("could not validate github webhook", "err", err)
-		return err
+		slog.Debug("could not validate github webhook", "err", err)
+		return nil
 	}
 
-	event, err := github.ParseWebHook(github.WebHookType(ctx.Request()), payload)
+	event, err := github.ParseWebHook(github.WebHookType(req), payload)
 	if err != nil {
 		slog.Error("could not parse github webhook", "err", err)
 		return err
@@ -265,7 +241,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			}
 			// save the user in the database
 			user := models.ExternalUser{
-				ID:        event.Comment.User.GetID(),
+				ID:        fmt.Sprintf("github:%d", event.Comment.User.GetID()),
 				Username:  event.Comment.User.GetLogin(),
 				AvatarURL: event.Comment.User.GetAvatarURL(),
 			}
@@ -459,6 +435,12 @@ func (g *githubIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
+		repoId := utils.SafeDereference(asset.RepositoryID)
+		if !strings.HasPrefix(repoId, "github:") {
+			// this integration only handles github repositories.
+			return nil
+		}
+
 		flawId, err := core.GetFlawID(event.Ctx)
 		if err != nil {
 			return err
@@ -469,11 +451,6 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		repoId := utils.SafeDereference(asset.RepositoryID)
-		if !strings.HasPrefix(repoId, "github:") {
-			// this integration only handles github repositories.
-			return nil
-		}
 		// we create a new ticket in github
 		client, err := g.githubClientFactory(repoId)
 		if err != nil {
@@ -552,8 +529,6 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		return nil
 
 	case core.FlawEvent:
-		// DO NOT RELY ON THE PROVIDED CONTEXT.
-		// This function might run in the context of a github webhook.
 		ev := event.Event
 
 		asset := core.GetAsset(event.Ctx)

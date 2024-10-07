@@ -41,7 +41,7 @@ func (GithubAppInstallation) TableName() string {
 }
 
 type ExternalUser struct {
-	ID            int64  `json:"id" gorm:"primaryKey"`
+	ID            string `json:"id" gorm:"primaryKey"`
 	Username      string `json:"username"`
 	AvatarURL     string `json:"avatarUrl"`
 	Organizations []Org  `json:"orgs" gorm:"many2many:external_user_orgs;"`

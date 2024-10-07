@@ -1,6 +1,8 @@
 package integrations
 
 import (
+	"bytes"
+	"io"
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -68,18 +70,27 @@ func (t *thirdPartyIntegrations) WantsToHandleWebhook(ctx core.Context) bool {
 }
 
 func (t *thirdPartyIntegrations) HandleWebhook(ctx core.Context) error {
-	wg := utils.ErrGroup[struct{}](-1)
+	body, err := io.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return err
+	}
+
+	// Close the original body
+	defer ctx.Request().Body.Close()
 
 	for _, i := range t.integrations {
+		// Create a new ReadCloser for the body
+		// otherwise we would reread the body - which is not possible
+		ctx.Request().Body = io.NopCloser(bytes.NewBuffer(body))
 		if i.WantsToHandleWebhook(ctx) {
-			wg.Go(func() (struct{}, error) {
-				return struct{}{}, i.HandleWebhook(ctx)
-			})
+			if err := i.HandleWebhook(ctx); err != nil {
+				slog.Error("error while handling webhook", "err", err)
+				return err
+			}
 		}
 	}
 
-	_, err := wg.WaitAndCollect()
-	return err
+	return nil
 }
 
 func (t *thirdPartyIntegrations) GetUsers(org models.Org) []core.User {

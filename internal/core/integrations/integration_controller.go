@@ -17,11 +17,38 @@ package integrations
 
 import (
 	"log/slog"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type integrationController struct {
+}
+
+func createNewFlawEventBasedOnComment(flawId, userId, comment string) models.FlawEvent {
+	if strings.HasPrefix(comment, "/accept") {
+		// create a new flaw accept event
+		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
+	} else if strings.HasPrefix(comment, "/false-positive") {
+		// create a new flaw false positive event
+		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
+	} else if strings.HasPrefix(comment, "/reopen") {
+		// create a new flaw reopen event
+		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
+	} else if strings.HasPrefix(comment, "/a") {
+		// create a new flaw accept event
+		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
+	} else if strings.HasPrefix(comment, "/fp") {
+		// create a new flaw false positive event
+		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
+	} else if strings.HasPrefix(comment, "/r") {
+		// create a new flaw reopen event
+		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
+	} else {
+		// create a new comment event
+		return models.NewCommentEvent(flawId, userId, comment)
+	}
 }
 
 func NewIntegrationController() *integrationController {
