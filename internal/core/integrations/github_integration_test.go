@@ -25,7 +25,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		req := httptest.NewRequest("POST", "/webhook", nil)
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
-		core.SetAsset(ctx, models.Asset{})
+		core.SetAsset(ctx, models.Asset{
+			RepositoryID: utils.Ptr("github:123"),
+		})
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
 			Ctx: ctx,
@@ -45,7 +47,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		req := httptest.NewRequest("POST", "/webhook", nil)
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
-		core.SetAsset(ctx, models.Asset{})
+		core.SetAsset(ctx, models.Asset{
+			RepositoryID: utils.Ptr("github:123"),
+		})
 		ctx.SetParamNames("flawId")
 		ctx.SetParamValues("1")
 
@@ -58,12 +62,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 	t.Run("it should do nothing, if the asset is NOT connected to a github repository", func(t *testing.T) {
 		// since we are not asserting anything on flawRepository nor flawEventRepository nor github client, we can be sure
 		// that no methods were called and actually nothing happened
-		flawRepository := mocks.NewIntegrationsFlawRepository(t)
-		flawRepository.On("Read", "1").Return(models.Flaw{}, nil)
-
-		githubIntegration := githubIntegration{
-			flawRepository: flawRepository,
-		}
+		githubIntegration := githubIntegration{}
 
 		req := httptest.NewRequest("POST", "/webhook", nil)
 		e := echo.New()
