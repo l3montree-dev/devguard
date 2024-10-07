@@ -17,11 +17,38 @@ package integrations
 
 import (
 	"log/slog"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type integrationController struct {
+}
+
+func createNewFlawEventBasedOnComment(flawId, userId, comment string) models.FlawEvent {
+	if strings.HasPrefix(comment, "/accept") {
+		// create a new flaw accept event
+		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
+	} else if strings.HasPrefix(comment, "/false-positive") {
+		// create a new flaw false positive event
+		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
+	} else if strings.HasPrefix(comment, "/reopen") {
+		// create a new flaw reopen event
+		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
+	} else if strings.HasPrefix(comment, "/a") {
+		// create a new flaw accept event
+		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
+	} else if strings.HasPrefix(comment, "/fp") {
+		// create a new flaw false positive event
+		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
+	} else if strings.HasPrefix(comment, "/r") {
+		// create a new flaw reopen event
+		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
+	} else {
+		// create a new comment event
+		return models.NewCommentEvent(flawId, userId, comment)
+	}
 }
 
 func NewIntegrationController() *integrationController {
@@ -45,9 +72,12 @@ func (c *integrationController) ListRepositories(ctx core.Context) error {
 
 func (c *integrationController) FinishInstallation(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	if err := thirdPartyIntegration.FinishInstallation(ctx); err != nil {
-		slog.Error("could not finish installation", "err", err)
-		return err
+	gh := thirdPartyIntegration.GetIntegration(core.GitHubIntegrationID)
+	if gh != nil {
+		if err := gh.(*githubIntegration).FinishInstallation(ctx); err != nil {
+			slog.Error("could not finish installation", "err", err)
+			return err
+		}
 	}
 
 	return ctx.JSON(200, "Installation finished")
@@ -61,4 +91,34 @@ func (c *integrationController) HandleWebhook(ctx core.Context) error {
 	}
 
 	return ctx.JSON(200, "Webhook handled")
+}
+
+func (c *integrationController) TestAndSaveGitLabIntegration(ctx core.Context) error {
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
+	if gl == nil {
+		return ctx.JSON(404, "GitLab integration not enabled")
+	}
+
+	if err := gl.(*gitlabIntegration).TestAndSave(ctx); err != nil {
+		slog.Error("could not test GitLab integration", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *integrationController) DeleteGitLabAccessToken(ctx core.Context) error {
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
+	if gl == nil {
+		return ctx.JSON(404, "GitLab integration not enabled")
+	}
+
+	if err := gl.(*gitlabIntegration).Delete(ctx); err != nil {
+		slog.Error("could not delete GitLab integration", "err", err)
+		return err
+	}
+
+	return nil
 }

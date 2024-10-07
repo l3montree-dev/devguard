@@ -103,10 +103,10 @@ func (e *databaseLeaderElector) IfLeader(ctx context.Context, fn func() error) {
 				return
 			default:
 				if e.IsLeader() {
+					slog.Debug("is leader, running leader function")
 					err := fn()
 					if err != nil {
 						slog.Error("error while running leader function", "err", err)
-						return
 					}
 				} else {
 					slog.Debug("not leader, waiting")

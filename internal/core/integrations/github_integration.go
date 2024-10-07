@@ -68,10 +68,10 @@ type flawEventRepository interface {
 	Save(db core.DB, event *models.FlawEvent) error
 }
 
-type githubUserRepository interface {
-	Save(db core.DB, user *models.GithubUser) error
+type externalUserRepository interface {
+	Save(db core.DB, user *models.ExternalUser) error
 	GetDB(tx core.DB) core.DB
-	FindByOrgID(tx core.DB, orgID uuid.UUID) ([]models.GithubUser, error)
+	FindByOrgID(tx core.DB, orgID uuid.UUID) ([]models.ExternalUser, error)
 }
 
 type assetRepository interface {
@@ -93,7 +93,7 @@ type githubClientFacade interface {
 
 type githubIntegration struct {
 	githubAppInstallationRepository githubAppInstallationRepository
-	githubUserRepository            githubUserRepository
+	externalUserRepository          externalUserRepository
 
 	flawRepository      flawRepository
 	flawEventRepository flawEventRepository
@@ -121,7 +121,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 
 	return &githubIntegration{
 		githubAppInstallationRepository: githubAppInstallationRepository,
-		githubUserRepository:            repositories.NewGithubUserRepository(db),
+		externalUserRepository:          repositories.NewExternalUserRepository(db),
 
 		flawRepository:      flawRepository,
 		flawEventRepository: flawEventRepository,
@@ -134,6 +134,10 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 			return NewGithubClient(installationIdFromRepositoryID(repoId))
 		},
 	}
+}
+
+func (githubIntegration *githubIntegration) GetID() core.IntegrationID {
+	return core.GitHubIntegrationID
 }
 
 func (githubIntegration *githubIntegration) IntegrationEnabled(ctx core.Context) bool {
@@ -160,7 +164,7 @@ func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) (
 		}
 
 		// get the repositories
-		r, err := githubClient.ListRepositories()
+		r, err := githubClient.ListRepositories(ctx.QueryParam("search"))
 		if err != nil {
 			return nil, err
 		}
@@ -178,41 +182,16 @@ func (githubIntegration *githubIntegration) WantsToHandleWebhook(ctx core.Contex
 	return true
 }
 
-func createNewFlawEventBasedOnComment(flawId, userId, comment string) models.FlawEvent {
-	if strings.HasPrefix(comment, "/accept") {
-		// create a new flaw accept event
-		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
-	} else if strings.HasPrefix(comment, "/false-positive") {
-		// create a new flaw false positive event
-		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
-	} else if strings.HasPrefix(comment, "/reopen") {
-		// create a new flaw reopen event
-		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
-	} else if strings.HasPrefix(comment, "/a") {
-		// create a new flaw accept event
-		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
-	} else if strings.HasPrefix(comment, "/fp") {
-		// create a new flaw false positive event
-		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
-	} else if strings.HasPrefix(comment, "/r") {
-		// create a new flaw reopen event
-		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
-	} else {
-		// create a new comment event
-		return models.NewCommentEvent(flawId, userId, comment)
-	}
-}
-
 func (githubIntegration *githubIntegration) GetUsers(org models.Org) []core.User {
-	users, err := githubIntegration.githubUserRepository.FindByOrgID(nil, org.ID)
+	users, err := githubIntegration.externalUserRepository.FindByOrgID(nil, org.ID)
 	if err != nil {
 		slog.Error("could not get users from github", "err", err)
 		return nil
 	}
 
-	return utils.Map(users, func(user models.GithubUser) core.User {
+	return utils.Map(users, func(user models.ExternalUser) core.User {
 		return core.User{
-			ID:        "github:" + strconv.Itoa(int(user.ID)),
+			ID:        user.ID,
 			Name:      user.Username,
 			AvatarURL: &user.AvatarURL,
 		}
@@ -220,13 +199,14 @@ func (githubIntegration *githubIntegration) GetUsers(org models.Org) []core.User
 }
 
 func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) error {
-	payload, err := github.ValidatePayload(ctx.Request(), []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))
+	req := ctx.Request()
+	payload, err := github.ValidatePayload(req, []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))
 	if err != nil {
-		slog.Error("could not validate github webhook", "err", err)
-		return err
+		slog.Debug("could not validate github webhook", "err", err)
+		return nil
 	}
 
-	event, err := github.ParseWebHook(github.WebHookType(ctx.Request()), payload)
+	event, err := github.ParseWebHook(github.WebHookType(req), payload)
 	if err != nil {
 		slog.Error("could not parse github webhook", "err", err)
 		return err
@@ -260,19 +240,19 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 				return
 			}
 			// save the user in the database
-			user := models.GithubUser{
-				ID:        event.Comment.User.GetID(),
+			user := models.ExternalUser{
+				ID:        fmt.Sprintf("github:%d", event.Comment.User.GetID()),
 				Username:  event.Comment.User.GetLogin(),
 				AvatarURL: event.Comment.User.GetAvatarURL(),
 			}
 
-			err = githubIntegration.githubUserRepository.Save(nil, &user)
+			err = githubIntegration.externalUserRepository.Save(nil, &user)
 			if err != nil {
 				slog.Error("could not save github user", "err", err)
 				return
 			}
 
-			if err = githubIntegration.githubUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
+			if err = githubIntegration.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
 				slog.Error("could not append user to organization", "err", err)
 			}
 		}()
@@ -455,6 +435,12 @@ func (g *githubIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
+		repoId := utils.SafeDereference(asset.RepositoryID)
+		if !strings.HasPrefix(repoId, "github:") {
+			// this integration only handles github repositories.
+			return nil
+		}
+
 		flawId, err := core.GetFlawID(event.Ctx)
 		if err != nil {
 			return err
@@ -465,11 +451,6 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		repoId := utils.SafeDereference(asset.RepositoryID)
-		if !strings.HasPrefix(repoId, "github:") {
-			// this integration only handles github repositories.
-			return nil
-		}
 		// we create a new ticket in github
 		client, err := g.githubClientFactory(repoId)
 		if err != nil {
@@ -548,8 +529,6 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		return nil
 
 	case core.FlawEvent:
-		// DO NOT RELY ON THE PROVIDED CONTEXT.
-		// This function might run in the context of a github webhook.
 		ev := event.Event
 
 		asset := core.GetAsset(event.Ctx)

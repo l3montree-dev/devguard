@@ -30,11 +30,11 @@ type AuthSession interface {
 	GetUserID() string
 }
 
-func GetThirdPartyIntegration(c Context) ThirdPartyIntegration {
-	return c.Get("thirdPartyIntegration").(ThirdPartyIntegration)
+func GetThirdPartyIntegration(c Context) IntegrationAggregate {
+	return c.Get("thirdPartyIntegration").(IntegrationAggregate)
 }
 
-func SetThirdPartyIntegration(c Context, i ThirdPartyIntegration) {
+func SetThirdPartyIntegration(c Context, i IntegrationAggregate) {
 	c.Set("thirdPartyIntegration", i)
 }
 

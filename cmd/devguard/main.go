@@ -68,11 +68,11 @@ func main() {
 	))
 
 	statisticsDaemon.Start()
-	api.Start(db)
 
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 	flawService.StartRiskRecalculationDaemon(leaderElector)
 	vulndb.StartMirror(db, leaderElector, configService)
 
+	api.Start(db)
 }
