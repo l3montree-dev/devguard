@@ -943,6 +943,9 @@ func groupAffectedComponentsByCVE(csvData [][]string) map[string][]string {
 	// the key will be the cve id. The value will be an array of cpe match criteria ids
 	cveToAffectedComponents := make(map[string][]string)
 	for _, row := range csvData {
+		if len(row) < 2 {
+			continue
+		}
 		affectedComponentHash := row[0]
 		cveId := row[1]
 		if _, ok := cveToAffectedComponents[cveId]; !ok {
