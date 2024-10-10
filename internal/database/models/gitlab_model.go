@@ -29,6 +29,8 @@ type GitLabIntegration struct {
 
 	Org   Org       `json:"org" gorm:"foreignKey:OrgID;constraint:OnDelete:CASCADE;"`
 	OrgID uuid.UUID `json:"orgId" gorm:"column:org_id"`
+
+	WebhookSecretToken uuid.UUID `json:"webhookSecretToken"`
 }
 
 func (GitLabIntegration) TableName() string {

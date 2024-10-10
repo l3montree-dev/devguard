@@ -30,6 +30,10 @@ type gitlabClientFacade interface {
 	CreateIssueComment(ctx context.Context, pid int, issue int, opt *gitlab.CreateIssueNoteOptions) (*gitlab.Note, *gitlab.Response, error)
 	EditIssue(ctx context.Context, pid int, issue int, opt *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
 	EditIssueLabel(ctx context.Context, pid int, issue int, labels []*gitlab.CreateLabelOptions) (*gitlab.Response, error)
+
+	AddProjectHook(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error)
+	DeleteProjectHook(ctx context.Context, projectId int, hookId int) (*gitlab.Response, error)
+	CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
 }
 
 type gitlabIntegrationRepository interface {
@@ -352,6 +356,163 @@ func extractProjectIdFromRepoId(repoId string) (int, error) {
 	// the repo id is formatted like this:
 	// gitlab:<integration id>:<project id>
 	return strconv.Atoi(strings.Split(repoId, ":")[2])
+}
+
+func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
+	err := g.addProjectHook(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = g.addProjectVariable(ctx)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(200, "Installation finished")
+}
+
+func (g *gitlabIntegration) addProjectVariable(ctx core.Context) error {
+	var req struct {
+		DevguardPrivateKey string `json:"devguardPrivateKey"` // we never store this private key - we just need to forward it to gitlab
+	}
+
+	err := ctx.Bind(&req)
+	if err != nil {
+		return err
+	}
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract integration id from repo id: %w", err)
+	}
+
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract project id from repo id: %w", err)
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not create new gitlab client: %w", err)
+	}
+
+	projectVariable := &gitlab.CreateProjectVariableOptions{
+		Key:    gitlab.Ptr("DEVGUARD_TOKEN"),
+		Value:  gitlab.Ptr(req.DevguardPrivateKey),
+		Masked: gitlab.Ptr(true),
+	}
+
+	_, _, err = client.CreateVariable(context.Background(), projectId, projectVariable)
+	if err != nil {
+		return fmt.Errorf("could not create project variable: %w", err)
+	}
+
+	return nil
+}
+
+func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract integration id from repo id: %w", err)
+	}
+
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract project id from repo id: %w", err)
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not create new gitlab client: %w", err)
+	}
+
+	token, err := createToken()
+	if err != nil {
+		return fmt.Errorf("could not create new token: %w", err)
+	}
+
+	projectOptions := &gitlab.AddProjectHookOptions{
+		IssuesEvents:             gitlab.Ptr(true),
+		ConfidentialIssuesEvents: gitlab.Ptr(true),
+		NoteEvents:               gitlab.Ptr(true),
+		ConfidentialNoteEvents:   gitlab.Ptr(true),
+		EnableSSLVerification:    gitlab.Ptr(true),
+		URL:                      gitlab.Ptr(fmt.Sprintf("https://main.devguard.org/api/v1/webhook/")),
+		Token:                    gitlab.Ptr(token.String()),
+	}
+
+	projectHook, _, err := client.AddProjectHook(context.Background(), projectId, projectOptions)
+	if err != nil {
+		return fmt.Errorf("could not add project hook: %w", err)
+	}
+	projectHookID := projectHook.ID
+
+	err = g.saveToken(integrationUUID, token)
+	if err != nil {
+		//delete the hook
+		err = g.deleteProjectHook(integrationUUID, projectId, projectHookID)
+		if err != nil {
+			// we could not delete the hook
+			slog.Error("could not save token and delete hook", "err", err)
+			return fmt.Errorf("could not save token and delete hook: %w", err)
+		}
+		return fmt.Errorf("could not save token: %w", err)
+	}
+
+	return nil
+
+}
+
+func (g *gitlabIntegration) deleteProjectHook(integrationUUID uuid.UUID, projectId int, hookId int) error {
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not create new gitlab client: %w", err)
+	}
+	_, err = client.DeleteProjectHook(context.Background(), projectId, hookId)
+	if err != nil {
+		return fmt.Errorf("could not delete project hook: %w", err)
+	}
+	return nil
+}
+
+func createToken() (uuid.UUID, error) {
+	// create a new token
+	token, err := uuid.NewUUID()
+	if err != nil {
+		slog.Error("could not create new token", "err", err)
+		return uuid.Nil, fmt.Errorf("could not create new token: %w", err)
+	}
+	return token, nil
+}
+
+func (g *gitlabIntegration) saveToken(integrationUUID uuid.UUID, token uuid.UUID) error {
+	gitlabIntegration, err := g.gitlabIntegrationRepository.Read(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not read gitlab integration: %w", err)
+	}
+
+	// save the token in the database
+	gitlabIntegration.WebhookSecretToken = token
+	err = g.gitlabIntegrationRepository.Save(nil, &gitlabIntegration)
+	if err != nil {
+		slog.Error("could not save token", "err", err)
+		return fmt.Errorf("could not save token: %w", err)
+	}
+	return nil
 }
 
 func (g *gitlabIntegration) HandleEvent(event any) error {
