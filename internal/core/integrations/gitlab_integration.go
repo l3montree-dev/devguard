@@ -2,16 +2,25 @@ package integrations
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -23,6 +32,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/xanzy/go-gitlab"
+	"golang.org/x/crypto/ssh"
 )
 
 type gitlabClientFacade interface {
@@ -31,9 +41,15 @@ type gitlabClientFacade interface {
 	EditIssue(ctx context.Context, pid int, issue int, opt *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
 	EditIssueLabel(ctx context.Context, pid int, issue int, labels []*gitlab.CreateLabelOptions) (*gitlab.Response, error)
 
+	ListProjectHooks(ctx context.Context, projectId int, options *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error)
 	AddProjectHook(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error)
 	DeleteProjectHook(ctx context.Context, projectId int, hookId int) (*gitlab.Response, error)
+
+	ListVariables(ctx context.Context, projectId int, options *gitlab.ListProjectVariablesOptions) ([]*gitlab.ProjectVariable, *gitlab.Response, error)
 	CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
+
+	AddSSHKey(ctx context.Context, projectId int, opt *gitlab.AddSSHKeyOptions) (*gitlab.SSHKey, *gitlab.Response, error)
+	DeleteSSHKey(ctx context.Context, keyId int) (*gitlab.Response, error)
 }
 
 type gitlabIntegrationRepository interface {
@@ -364,17 +380,228 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 		return err
 	}
 
-	err = g.addProjectVariable(ctx)
+	err = g.addProjectVariables(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = g.addMergeRequest(ctx)
 	if err != nil {
 		return err
 	}
 
 	return ctx.JSON(200, "Installation finished")
 }
+func generateECDSAKeyPair() (privateKeyPem string, publicKeySsh string, err error) {
+	// Generate the ECDSA private key using the P256 curve
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate private key: %v", err)
+	}
 
-func (g *gitlabIntegration) addProjectVariable(ctx core.Context) error {
+	// Marshal the private key into ASN.1 DER encoded form
+	privateKeyDer, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to marshal private key: %v", err)
+	}
+
+	// Create a PEM block for the private key
+	privateKeyBlock := pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: privateKeyDer,
+	}
+
+	// Convert the private key to a PEM encoded string
+	privateKeyPem = string(pem.EncodeToMemory(&privateKeyBlock))
+
+	// Generate the SSH public key from the ECDSA private key
+	publicKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate public key: %v", err)
+	}
+
+	// Convert the SSH public key to the authorized_keys format
+	publicKeySsh = string(ssh.MarshalAuthorizedKey(publicKey))
+
+	return privateKeyPem, publicKeySsh, nil
+}
+
+func (g *gitlabIntegration) addMergeRequest(ctx core.Context) error {
+
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract integration id from repo id: %v", err)
+	}
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract project id from repo id: %w", err)
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not create new gitlab client: %v", err)
+	}
+
+	privateKey, publicKeySsh, err := generateECDSAKeyPair()
+	if err != nil {
+		return fmt.Errorf("could not generate ECDSA key pair: %v", err)
+	}
+
+	tmpSSHKey, _, err := client.AddSSHKey(context.Background(), projectId, &gitlab.AddSSHKeyOptions{
+		Title: gitlab.Ptr("Devguard temp key"),
+		Key:   gitlab.Ptr(publicKeySsh),
+	})
+	if err != nil {
+		return fmt.Errorf("could not add ssh key: %v", err)
+	}
+
+	sshAuthKeys, err := gitssh.NewPublicKeys("git", []byte(privateKey), "")
+	if err != nil {
+		return fmt.Errorf("could not create ssh keys: %v", err)
+	}
+
+	// Create a temporary directory for the worktree
+	dir, err := os.MkdirTemp("", "repo-clone")
+	if err != nil {
+		return fmt.Errorf("could not create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(dir) // Clean up after the test
+
+	r, err := git.PlainClone(dir, false, &git.CloneOptions{
+		URL:  "git@gitlab.com:l3montree/lab/email-flood-casualty-generator.git",
+		Auth: sshAuthKeys,
+	})
+	if err != nil {
+		return fmt.Errorf("could not clone repository: %v", err)
+	}
+
+	err = r.CreateBranch(&config.Branch{
+		Name: "devguard-autosetup",
+	})
+	if err != nil {
+		return fmt.Errorf("could not create branch: %v", err)
+	}
+	//go to the branch
+	w, err := r.Worktree()
+	if err != nil {
+		return fmt.Errorf("could not get worktree: %v", err)
+	}
+	err = w.Checkout(&git.CheckoutOptions{
+		Branch: "refs/heads/devguard-autosetup",
+		Create: true,
+	})
+	if err != nil {
+		return fmt.Errorf("could not checkout: %v", err)
+	}
+
+	//read the file
+	file, err := w.Filesystem.Open(".gitlab-ci.yml")
+	if err != nil {
+		//make the file
+		file, err = w.Filesystem.Create(".gitlab-ci.yml")
+		if err != nil {
+			return fmt.Errorf("could not create file: %w", err)
+		}
+		_, err = file.Write([]byte(""))
+		if err != nil {
+			return fmt.Errorf("could not write to file: %w", err)
+		}
+	}
+	template := `
+		- component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/sca@$CI_COMMIT_SHA
+		  inputs:
+			asset_name: "$DEVGUARD_ASSET_NAME"
+			token: "$DEVGUARD_TOKEN"
+			#You can change this to the desired stage. Make sure it matches one of your defined stages.
+			scan_stage: test 
+	  
+		- component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/container-scanning@$CI_COMMIT_SHA
+		  inputs:
+			asset_name: "$DEVGUARD_ASSET_NAME"
+			token: "$DEVGUARD_TOKEN"
+			#You can change these to the desired stages. Make sure they match one of your defined stages.
+			scan_stage: test
+			build_stage: "build"`
+
+	// file to string
+	fileContent, err := io.ReadAll(file)
+
+	fileStr := string(fileContent)
+	includeIndex := -1
+	// split the file on each line
+	for index, line := range strings.Split(fileStr, "\n") {
+		// check if the line contains the include key
+		if strings.Contains(line, "include:") {
+			// include does exist
+			includeIndex = index
+			break
+		}
+	}
+
+	if includeIndex != -1 {
+		// insert it right after that index
+		fileArr := strings.Split(fileStr, "\n")
+		fileArr = append(fileArr[:includeIndex+1], append(strings.Split(template, "\n")[1:], fileArr[includeIndex+1:]...)...)
+		fileStr = strings.Join(fileArr, "\n")
+	} else {
+		// include does not exist - just insert it at the end
+		fileStr += `include:` + template
+	}
+
+	err = os.WriteFile(".gitlab-ci.yml", []byte(fileStr), 0644)
+	if err != nil {
+		return fmt.Errorf("could not write to file: %w", err)
+	}
+	//delete the ssh key
+	tmpSSHKeyID := tmpSSHKey.ID
+	_, err = client.DeleteSSHKey(context.Background(), tmpSSHKeyID)
+	if err != nil {
+		return fmt.Errorf("could not delete ssh key: %w", err)
+	}
+
+	return nil
+}
+
+func (g *gitlabIntegration) addProjectVariable(key string, value string, Masked bool, projectId int, client gitlabClientFacade) error {
+
+	projectVariable := &gitlab.CreateProjectVariableOptions{
+		Key:    gitlab.Ptr(key),
+		Value:  gitlab.Ptr(value),
+		Masked: gitlab.Ptr(Masked),
+	}
+
+	// check if the project variable already exists
+	variables, _, err := client.ListVariables(context.Background(), projectId, nil)
+	if err != nil {
+		return fmt.Errorf("could not list project variables: %w", err)
+	}
+
+	for _, variable := range variables {
+		if variable.Key == key {
+			// the variable already exists
+			slog.Debug("project variable already exists", "projectId", projectId)
+			return nil
+		}
+	}
+
+	_, _, err = client.CreateVariable(context.Background(), projectId, projectVariable)
+	if err != nil {
+		return fmt.Errorf("could not create project variable: %w", err)
+	}
+
+	return nil
+}
+func (g *gitlabIntegration) addProjectVariables(ctx core.Context) error {
 	var req struct {
 		DevguardPrivateKey string `json:"devguardPrivateKey"` // we never store this private key - we just need to forward it to gitlab
+		DevguardAssetName  string `json:"devguardAssetName"`
 	}
 
 	err := ctx.Bind(&req)
@@ -403,15 +630,14 @@ func (g *gitlabIntegration) addProjectVariable(ctx core.Context) error {
 		return fmt.Errorf("could not create new gitlab client: %w", err)
 	}
 
-	projectVariable := &gitlab.CreateProjectVariableOptions{
-		Key:    gitlab.Ptr("DEVGUARD_TOKEN"),
-		Value:  gitlab.Ptr(req.DevguardPrivateKey),
-		Masked: gitlab.Ptr(true),
+	err = g.addProjectVariable("DEVGUARD_TOKEN", req.DevguardPrivateKey, true, projectId, client)
+	if err != nil {
+		return err
 	}
 
-	_, _, err = client.CreateVariable(context.Background(), projectId, projectVariable)
+	err = g.addProjectVariable("DEVGUARD_ASSET_NAME", req.DevguardAssetName, false, projectId, client)
 	if err != nil {
-		return fmt.Errorf("could not create project variable: %w", err)
+		return err
 	}
 
 	return nil
@@ -438,6 +664,16 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 	client, err := g.gitlabClientFactory(integrationUUID)
 	if err != nil {
 		return fmt.Errorf("could not create new gitlab client: %w", err)
+	}
+	// check if the project hook already exists
+	hooks, _, err := client.ListProjectHooks(context.Background(), projectId, nil)
+
+	for _, hook := range hooks {
+		if hook.URL == "https://main.devguard.org/api/v1/webhook/" {
+			// the hook already exists
+			slog.Debug("project hook already exists", "projectId", projectId)
+			return nil
+		}
 	}
 
 	token, err := createToken()

@@ -406,7 +406,6 @@ func Start(db core.DB) {
 
 	tenantRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitLabIntegration)
 	tenantRouter.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken)
-	tenantRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup)
 	tenantRouter.GET("/integrations/repositories/", integrationController.
 		ListRepositories)
 	tenantRouter.GET("/stats/risk-history/", statisticsController.GetOrgRiskHistory)
@@ -450,6 +449,7 @@ func Start(db core.DB) {
 
 	assetRouter.GET("/versions/", assetController.Versions)
 
+	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 	assetRouter.PATCH("/", assetController.Update, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 
 	flawRouter := assetRouter.Group("/flaws")

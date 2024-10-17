@@ -57,7 +57,7 @@ func NewIntegrationController() *integrationController {
 
 func (c *integrationController) AutoSetup(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	gl := thirdPartyIntegration.GetIntegration(core.GitHubIntegrationID)
+	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
 	if gl != nil {
 		if err := gl.(*gitlabIntegration).AutoSetup(ctx); err != nil {
 			slog.Error("could not finish installation", "err", err)

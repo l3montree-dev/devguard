@@ -90,6 +90,20 @@ func (client gitlabClient) AddProjectHook(ctx context.Context, projectId int, op
 func (client gitlabClient) DeleteProjectHook(ctx context.Context, projectId int, hookId int) (*gitlab.Response, error) {
 	return client.Projects.DeleteProjectHook(projectId, hookId)
 }
+func (client gitlabClient) AddSSHKey(ctx context.Context, projectId int, opt *gitlab.AddSSHKeyOptions) (*gitlab.SSHKey, *gitlab.Response, error) {
+	return client.Users.AddSSHKey(opt)
+}
+
+func (client gitlabClient) DeleteSSHKey(ctx context.Context, keyId int) (*gitlab.Response, error) {
+	return client.Users.DeleteSSHKey(keyId)
+}
+func (client gitlabClient) ListProjectHooks(ctx context.Context, projectId int, opt *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error) {
+	return client.Projects.ListProjectHooks(projectId, opt)
+}
+
+func (client gitlabClient) ListVariables(ctx context.Context, projectId int, opt *gitlab.ListProjectVariablesOptions) ([]*gitlab.ProjectVariable, *gitlab.Response, error) {
+	return client.ProjectVariables.ListVariables(projectId, opt)
+}
 
 func (client gitlabClient) CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error) {
 	return client.ProjectVariables.CreateVariable(projectId, opt)
