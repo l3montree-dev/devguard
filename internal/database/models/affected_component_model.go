@@ -75,7 +75,6 @@ func (a AffectedComponent) CalculateHash() string {
 
 func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
 	if affectedComponent.ID == "" {
-		slog.Debug("calculating hash for affected component", "purl", affectedComponent.PURL)
 		affectedComponent.ID = affectedComponent.CalculateHash()
 	}
 	return nil
