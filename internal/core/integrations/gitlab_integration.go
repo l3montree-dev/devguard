@@ -14,12 +14,9 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
 	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
@@ -50,6 +47,9 @@ type gitlabClientFacade interface {
 
 	AddSSHKey(ctx context.Context, projectId int, opt *gitlab.AddSSHKeyOptions) (*gitlab.SSHKey, *gitlab.Response, error)
 	DeleteSSHKey(ctx context.Context, keyId int) (*gitlab.Response, error)
+
+	CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error)
+	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
 }
 
 type gitlabIntegrationRepository interface {
@@ -392,256 +392,6 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 
 	return ctx.JSON(200, "Installation finished")
 }
-func generateECDSAKeyPair() (privateKeyPem string, publicKeySsh string, err error) {
-	// Generate the ECDSA private key using the P256 curve
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate private key: %v", err)
-	}
-
-	// Marshal the private key into ASN.1 DER encoded form
-	privateKeyDer, err := x509.MarshalECPrivateKey(privateKey)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to marshal private key: %v", err)
-	}
-
-	// Create a PEM block for the private key
-	privateKeyBlock := pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: privateKeyDer,
-	}
-
-	// Convert the private key to a PEM encoded string
-	privateKeyPem = string(pem.EncodeToMemory(&privateKeyBlock))
-
-	// Generate the SSH public key from the ECDSA private key
-	publicKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate public key: %v", err)
-	}
-
-	// Convert the SSH public key to the authorized_keys format
-	publicKeySsh = string(ssh.MarshalAuthorizedKey(publicKey))
-
-	return privateKeyPem, publicKeySsh, nil
-}
-
-func (g *gitlabIntegration) addMergeRequest(ctx core.Context) error {
-
-	asset := core.GetAsset(ctx)
-	repoId := utils.SafeDereference(asset.RepositoryID)
-	if !strings.HasPrefix(repoId, "gitlab:") {
-		// this integration only handles gitlab repositories
-		return nil
-	}
-
-	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
-	if err != nil {
-		return fmt.Errorf("could not extract integration id from repo id: %v", err)
-	}
-	projectId, err := extractProjectIdFromRepoId(repoId)
-	if err != nil {
-		return fmt.Errorf("could not extract project id from repo id: %w", err)
-	}
-
-	client, err := g.gitlabClientFactory(integrationUUID)
-	if err != nil {
-		return fmt.Errorf("could not create new gitlab client: %v", err)
-	}
-
-	privateKey, publicKeySsh, err := generateECDSAKeyPair()
-	if err != nil {
-		return fmt.Errorf("could not generate ECDSA key pair: %v", err)
-	}
-
-	tmpSSHKey, _, err := client.AddSSHKey(context.Background(), projectId, &gitlab.AddSSHKeyOptions{
-		Title: gitlab.Ptr("Devguard temp key"),
-		Key:   gitlab.Ptr(publicKeySsh),
-	})
-	if err != nil {
-		return fmt.Errorf("could not add ssh key: %v", err)
-	}
-
-	sshAuthKeys, err := gitssh.NewPublicKeys("git", []byte(privateKey), "")
-	if err != nil {
-		return fmt.Errorf("could not create ssh keys: %v", err)
-	}
-
-	// Create a temporary directory for the worktree
-	dir, err := os.MkdirTemp("", "repo-clone")
-	if err != nil {
-		return fmt.Errorf("could not create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(dir) // Clean up after the test
-
-	r, err := git.PlainClone(dir, false, &git.CloneOptions{
-		URL:  "git@gitlab.com:l3montree/lab/email-flood-casualty-generator.git",
-		Auth: sshAuthKeys,
-	})
-	if err != nil {
-		return fmt.Errorf("could not clone repository: %v", err)
-	}
-
-	err = r.CreateBranch(&config.Branch{
-		Name: "devguard-autosetup",
-	})
-	if err != nil {
-		return fmt.Errorf("could not create branch: %v", err)
-	}
-	//go to the branch
-	w, err := r.Worktree()
-	if err != nil {
-		return fmt.Errorf("could not get worktree: %v", err)
-	}
-	err = w.Checkout(&git.CheckoutOptions{
-		Branch: "refs/heads/devguard-autosetup",
-		Create: true,
-	})
-	if err != nil {
-		return fmt.Errorf("could not checkout: %v", err)
-	}
-
-	//read the file
-	file, err := w.Filesystem.Open(".gitlab-ci.yml")
-	if err != nil {
-		//make the file
-		file, err = w.Filesystem.Create(".gitlab-ci.yml")
-		if err != nil {
-			return fmt.Errorf("could not create file: %w", err)
-		}
-		_, err = file.Write([]byte(""))
-		if err != nil {
-			return fmt.Errorf("could not write to file: %w", err)
-		}
-	}
-	template := `
-		- component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/sca@$CI_COMMIT_SHA
-		  inputs:
-			asset_name: "$DEVGUARD_ASSET_NAME"
-			token: "$DEVGUARD_TOKEN"
-			#You can change this to the desired stage. Make sure it matches one of your defined stages.
-			scan_stage: test 
-	  
-		- component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/container-scanning@$CI_COMMIT_SHA
-		  inputs:
-			asset_name: "$DEVGUARD_ASSET_NAME"
-			token: "$DEVGUARD_TOKEN"
-			#You can change these to the desired stages. Make sure they match one of your defined stages.
-			scan_stage: test
-			build_stage: "build"`
-
-	// file to string
-	fileContent, err := io.ReadAll(file)
-
-	fileStr := string(fileContent)
-	includeIndex := -1
-	// split the file on each line
-	for index, line := range strings.Split(fileStr, "\n") {
-		// check if the line contains the include key
-		if strings.Contains(line, "include:") {
-			// include does exist
-			includeIndex = index
-			break
-		}
-	}
-
-	if includeIndex != -1 {
-		// insert it right after that index
-		fileArr := strings.Split(fileStr, "\n")
-		fileArr = append(fileArr[:includeIndex+1], append(strings.Split(template, "\n")[1:], fileArr[includeIndex+1:]...)...)
-		fileStr = strings.Join(fileArr, "\n")
-	} else {
-		// include does not exist - just insert it at the end
-		fileStr += `include:` + template
-	}
-
-	err = os.WriteFile(".gitlab-ci.yml", []byte(fileStr), 0644)
-	if err != nil {
-		return fmt.Errorf("could not write to file: %w", err)
-	}
-	//delete the ssh key
-	tmpSSHKeyID := tmpSSHKey.ID
-	_, err = client.DeleteSSHKey(context.Background(), tmpSSHKeyID)
-	if err != nil {
-		return fmt.Errorf("could not delete ssh key: %w", err)
-	}
-
-	return nil
-}
-
-func (g *gitlabIntegration) addProjectVariable(key string, value string, Masked bool, projectId int, client gitlabClientFacade) error {
-
-	projectVariable := &gitlab.CreateProjectVariableOptions{
-		Key:    gitlab.Ptr(key),
-		Value:  gitlab.Ptr(value),
-		Masked: gitlab.Ptr(Masked),
-	}
-
-	// check if the project variable already exists
-	variables, _, err := client.ListVariables(context.Background(), projectId, nil)
-	if err != nil {
-		return fmt.Errorf("could not list project variables: %w", err)
-	}
-
-	for _, variable := range variables {
-		if variable.Key == key {
-			// the variable already exists
-			slog.Debug("project variable already exists", "projectId", projectId)
-			return nil
-		}
-	}
-
-	_, _, err = client.CreateVariable(context.Background(), projectId, projectVariable)
-	if err != nil {
-		return fmt.Errorf("could not create project variable: %w", err)
-	}
-
-	return nil
-}
-func (g *gitlabIntegration) addProjectVariables(ctx core.Context) error {
-	var req struct {
-		DevguardPrivateKey string `json:"devguardPrivateKey"` // we never store this private key - we just need to forward it to gitlab
-		DevguardAssetName  string `json:"devguardAssetName"`
-	}
-
-	err := ctx.Bind(&req)
-	if err != nil {
-		return err
-	}
-	asset := core.GetAsset(ctx)
-	repoId := utils.SafeDereference(asset.RepositoryID)
-	if !strings.HasPrefix(repoId, "gitlab:") {
-		// this integration only handles gitlab repositories
-		return nil
-	}
-
-	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
-	if err != nil {
-		return fmt.Errorf("could not extract integration id from repo id: %w", err)
-	}
-
-	projectId, err := extractProjectIdFromRepoId(repoId)
-	if err != nil {
-		return fmt.Errorf("could not extract project id from repo id: %w", err)
-	}
-
-	client, err := g.gitlabClientFactory(integrationUUID)
-	if err != nil {
-		return fmt.Errorf("could not create new gitlab client: %w", err)
-	}
-
-	err = g.addProjectVariable("DEVGUARD_TOKEN", req.DevguardPrivateKey, true, projectId, client)
-	if err != nil {
-		return err
-	}
-
-	err = g.addProjectVariable("DEVGUARD_ASSET_NAME", req.DevguardAssetName, false, projectId, client)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
@@ -724,7 +474,6 @@ func (g *gitlabIntegration) deleteProjectHook(integrationUUID uuid.UUID, project
 	}
 	return nil
 }
-
 func createToken() (uuid.UUID, error) {
 	// create a new token
 	token, err := uuid.NewUUID()
@@ -749,6 +498,260 @@ func (g *gitlabIntegration) saveToken(integrationUUID uuid.UUID, token uuid.UUID
 		return fmt.Errorf("could not save token: %w", err)
 	}
 	return nil
+}
+
+func (g *gitlabIntegration) addProjectVariables(ctx core.Context) error {
+	var req struct {
+		DevguardPrivateKey string `json:"devguardPrivateKey"` // we never store this private key - we just need to forward it to gitlab
+		DevguardAssetName  string `json:"devguardAssetName"`
+	}
+
+	err := ctx.Bind(&req)
+	if err != nil {
+		return err
+	}
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract integration id from repo id: %w", err)
+	}
+
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract project id from repo id: %w", err)
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not create new gitlab client: %w", err)
+	}
+
+	err = g.addProjectVariable("DEVGUARD_TOKEN", req.DevguardPrivateKey, true, projectId, client)
+	if err != nil {
+		return err
+	}
+
+	err = g.addProjectVariable("DEVGUARD_ASSET_NAME", req.DevguardAssetName, false, projectId, client)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (g *gitlabIntegration) addProjectVariable(key string, value string, Masked bool, projectId int, client gitlabClientFacade) error {
+
+	projectVariable := &gitlab.CreateProjectVariableOptions{
+		Key:    gitlab.Ptr(key),
+		Value:  gitlab.Ptr(value),
+		Masked: gitlab.Ptr(Masked),
+	}
+
+	// check if the project variable already exists
+	variables, _, err := client.ListVariables(context.Background(), projectId, nil)
+	if err != nil {
+		return fmt.Errorf("could not list project variables: %w", err)
+	}
+
+	for _, variable := range variables {
+		if variable.Key == key {
+			// the variable already exists
+			slog.Debug("project variable already exists", "projectId", projectId)
+			return nil
+		}
+	}
+
+	_, _, err = client.CreateVariable(context.Background(), projectId, projectVariable)
+	if err != nil {
+		return fmt.Errorf("could not create project variable: %w", err)
+	}
+
+	return nil
+}
+
+func (g *gitlabIntegration) addMergeRequest(ctx core.Context) error {
+	var req struct {
+		ScanType string `json:"scanType"`
+	}
+
+	err := ctx.Bind(&req)
+	if err != nil {
+		return err
+	}
+
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract integration id from repo id: %v", err)
+	}
+
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract project id from repo id: %v", err)
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not create new gitlab client: %v", err)
+	}
+
+	// get the project name
+	projectName, err := g.getRepoNameFromProjectId(ctx, projectId)
+	if err != nil {
+		return fmt.Errorf("could not get project name: %v", err)
+	}
+
+	//generate the ssh key and add it to the project and get the sshAuthKeys
+	sshAuthKeys, tmpSSHKeyID, err := g.sshAuthKeys(ctx)
+
+	templatePath := setTemplatePath(req.ScanType)
+	err = cloneAndPushRepo(sshAuthKeys, projectName, templatePath)
+	if err != nil {
+		return fmt.Errorf("could not clone and push repo: %v", err)
+	}
+
+	//create a merge request
+	_, _, err = client.CreateMergeRequest(context.Background(), projectName, &gitlab.CreateMergeRequestOptions{
+		SourceBranch: gitlab.Ptr("devguard-autosetup"),
+		TargetBranch: gitlab.Ptr("main"),
+		Title:        gitlab.Ptr("Add devguard pipeline template"),
+	})
+	if err != nil {
+		return fmt.Errorf("could not create merge request: %v", err)
+	}
+
+	//delete the ssh key
+	_, err = client.DeleteSSHKey(context.Background(), tmpSSHKeyID)
+	if err != nil {
+		return fmt.Errorf("could not delete ssh key: %v", err)
+	}
+	return nil
+}
+func (g *gitlabIntegration) getRepoNameFromProjectId(ctx core.Context, projectId int) (string, error) {
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return "", nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return "", fmt.Errorf("could not extract integration id from repo id: %v", err)
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return "", fmt.Errorf("could not create new gitlab client: %v", err)
+	}
+
+	project, _, err := client.GetProject(context.Background(), projectId)
+	if err != nil {
+		return "", fmt.Errorf("could not get project: %v", err)
+	}
+	projectName := project.PathWithNamespace
+	return strings.ReplaceAll(projectName, " ", ""), nil
+}
+
+func (g *gitlabIntegration) sshAuthKeys(ctx core.Context) (*gitssh.PublicKeys, int, error) {
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil, 0, nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not extract integration id from repo id: %v", err)
+	}
+
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not extract project id from repo id: %w", err)
+	}
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not create new gitlab client: %v", err)
+	}
+
+	privateKey, publicKeySsh, err := generateECDSAKeyPair()
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not generate ECDSA key pair: %v", err)
+	}
+
+	tmpSSHKey, _, err := client.AddSSHKey(context.Background(), projectId, &gitlab.AddSSHKeyOptions{
+		Title: gitlab.Ptr("Devguard temp key"),
+		Key:   gitlab.Ptr(publicKeySsh),
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not add ssh key: %v", err)
+	}
+
+	sshAuthKeys, err := gitssh.NewPublicKeys("git", []byte(privateKey), "")
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not create ssh keys: %v", err)
+	}
+
+	return sshAuthKeys, tmpSSHKey.ID, nil
+
+}
+func generateECDSAKeyPair() (privateKeyPem string, publicKeySsh string, err error) {
+	// Generate the ECDSA private key using the P256 curve
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate private key: %v", err)
+	}
+
+	// Marshal the private key into ASN.1 DER encoded form
+	privateKeyDer, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to marshal private key: %v", err)
+	}
+
+	// Create a PEM block for the private key
+	privateKeyBlock := pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: privateKeyDer,
+	}
+
+	// Convert the private key to a PEM encoded string
+	privateKeyPem = string(pem.EncodeToMemory(&privateKeyBlock))
+
+	// Generate the SSH public key from the ECDSA private key
+	publicKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate public key: %v", err)
+	}
+
+	// Convert the SSH public key to the authorized_keys format
+	publicKeySsh = string(ssh.MarshalAuthorizedKey(publicKey))
+
+	return privateKeyPem, publicKeySsh, nil
+}
+
+func setTemplatePath(scanType string) string {
+	switch scanType {
+	case "full":
+		return "./templates/full_template.yml"
+	case "sca":
+		return "./templates/sca_template.yml"
+	case "container_scanning":
+		return "./templates/container_scanning_template.yml"
+	default:
+		return "./templates/full_template.yml"
+	}
 }
 
 func (g *gitlabIntegration) HandleEvent(event any) error {

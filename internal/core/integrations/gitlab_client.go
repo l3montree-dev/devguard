@@ -94,6 +94,13 @@ func (client gitlabClient) AddSSHKey(ctx context.Context, projectId int, opt *gi
 	return client.Users.AddSSHKey(opt)
 }
 
+func (client gitlabClient) CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error) {
+	return client.MergeRequests.CreateMergeRequest(project, opt)
+}
+
+func (client gitlabClient) GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error) {
+	return client.Projects.GetProject(projectId, nil)
+}
 func (client gitlabClient) DeleteSSHKey(ctx context.Context, keyId int) (*gitlab.Response, error) {
 	return client.Users.DeleteSSHKey(keyId)
 }
