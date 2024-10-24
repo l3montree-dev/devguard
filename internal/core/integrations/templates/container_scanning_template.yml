@@ -1,0 +1,6 @@
+include:
+  - component: $CI_SERVER_FQDN/l3montree/devguard/sca@<VERSION>
+    inputs:
+      asset_name: "$DEVGUARD_ASSET_NAME"
+      token: "$DEVGUARD_TOKEN"
+      scan_stage: "devguard-software-composition-analysis"      

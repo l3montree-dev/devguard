@@ -84,6 +84,37 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]git
 	return utils.Flat(results), nil
 }
 
+func (client gitlabClient) AddProjectHook(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error) {
+	return client.Projects.AddProjectHook(projectId, opt)
+}
+func (client gitlabClient) DeleteProjectHook(ctx context.Context, projectId int, hookId int) (*gitlab.Response, error) {
+	return client.Projects.DeleteProjectHook(projectId, hookId)
+}
+func (client gitlabClient) AddSSHKey(ctx context.Context, projectId int, opt *gitlab.AddSSHKeyOptions) (*gitlab.SSHKey, *gitlab.Response, error) {
+	return client.Users.AddSSHKey(opt)
+}
+
+func (client gitlabClient) CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error) {
+	return client.MergeRequests.CreateMergeRequest(project, opt)
+}
+
+func (client gitlabClient) GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error) {
+	return client.Projects.GetProject(projectId, nil)
+}
+func (client gitlabClient) DeleteSSHKey(ctx context.Context, keyId int) (*gitlab.Response, error) {
+	return client.Users.DeleteSSHKey(keyId)
+}
+func (client gitlabClient) ListProjectHooks(ctx context.Context, projectId int, opt *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error) {
+	return client.Projects.ListProjectHooks(projectId, opt)
+}
+
+func (client gitlabClient) ListVariables(ctx context.Context, projectId int, opt *gitlab.ListProjectVariablesOptions) ([]*gitlab.ProjectVariable, *gitlab.Response, error) {
+	return client.ProjectVariables.ListVariables(projectId, opt)
+}
+
+func (client gitlabClient) CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error) {
+	return client.ProjectVariables.CreateVariable(projectId, opt)
+}
 func (client gitlabClient) CreateIssue(ctx context.Context, projectId int, issue *gitlab.CreateIssueOptions) (*gitlab.Issue, *gitlab.Response, error) {
 	return client.Issues.CreateIssue(projectId, issue)
 }
