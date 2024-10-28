@@ -36,3 +36,9 @@
   - :who: Sebastian Kawelke
     :why: OSI-approved OSS license, permissive, GPL compatible
     :when: 2024-06-10 13:45:20.797550000 Z
+- - :approve
+  - github.com/hashicorp/go-retryablehttp
+  - :who: Sebastian Kawelke
+    :why: Mozilla Public License
+    :versions: []
+    :when: 2024-10-28 11:31:56.724335000 Z
