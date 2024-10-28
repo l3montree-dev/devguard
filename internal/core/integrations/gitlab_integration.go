@@ -416,7 +416,7 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 		return fmt.Errorf("could not create new gitlab client: %w", err)
 	}
 	// check if the project hook already exists
-	hooks, _, err := client.ListProjectHooks(context.Background(), projectId, nil)
+	hooks, _, err := client.ListProjectHooks(ctx.Request().Context(), projectId, nil)
 
 	for _, hook := range hooks {
 		if hook.URL == "https://main.devguard.org/api/v1/webhook/" {

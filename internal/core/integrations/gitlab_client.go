@@ -95,7 +95,7 @@ func (client gitlabClient) AddSSHKey(ctx context.Context, projectId int, opt *gi
 }
 
 func (client gitlabClient) CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error) {
-	return client.MergeRequests.CreateMergeRequest(project, opt)
+	return client.MergeRequests.CreateMergeRequest(project, opt, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error) {
