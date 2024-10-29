@@ -13,7 +13,7 @@ import (
 
 type statisticsRepository interface {
 	TimeTravelFlawState(assetID uuid.UUID, time time.Time) ([]models.Flaw, error)
-	GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error)
+	GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error)
 	AverageFixingTime(assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 }
@@ -286,13 +286,8 @@ func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, en
 	return s.projectRiskHistoryRepository.GetRiskHistory(projectID, start, end)
 }
 
-func (s *service) GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error) {
-	riskDistribution, err := s.statisticsRepository.GetAssetRiskDistribution(assetID)
-	if err != nil {
-		return nil, err
-	}
-
-	return riskDistribution, nil
+func (s *service) GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
+	return s.statisticsRepository.GetAssetRiskDistribution(assetID, assetName)
 }
 
 func (s *service) GetComponentRisk(assetID uuid.UUID) (map[string]float64, error) {

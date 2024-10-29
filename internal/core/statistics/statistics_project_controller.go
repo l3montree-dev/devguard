@@ -19,23 +19,20 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 		return err
 	}
 
-	// aggregate the results
-	aggregatedResults := aggregateRiskDistribution(results)
-
-	return ctx.JSON(200, aggregatedResults)
+	return ctx.JSON(200, results)
 }
 
-func (c *httpController) getProjectRiskDistribution(projectID uuid.UUID) ([][]models.AssetRiskDistribution, error) {
+func (c *httpController) getProjectRiskDistribution(projectID uuid.UUID) ([]models.AssetRiskDistribution, error) {
 	// fetch all assets
 	assets, err := c.assetRepository.GetByProjectID(projectID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch assets by project id")
 	}
 
-	group := utils.ErrGroup[[]models.AssetRiskDistribution](10)
+	group := utils.ErrGroup[models.AssetRiskDistribution](10)
 	for _, asset := range assets {
-		group.Go(func() ([]models.AssetRiskDistribution, error) {
-			return c.statisticsService.GetAssetRiskDistribution(asset.ID)
+		group.Go(func() (models.AssetRiskDistribution, error) {
+			return c.statisticsService.GetAssetRiskDistribution(asset.ID, asset.Name)
 		})
 	}
 

@@ -14,7 +14,7 @@ import (
 
 type statisticsService interface {
 	GetComponentRisk(assetID uuid.UUID) (map[string]float64, error)
-	GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error)
+	GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetRiskHistory(assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
 	GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error)
 
@@ -79,7 +79,7 @@ func (c *httpController) GetFlawCountByScannerId(ctx core.Context) error {
 
 func (c *httpController) GetAssetRiskDistribution(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
-	results, err := c.statisticsService.GetAssetRiskDistribution(asset.ID)
+	results, err := c.statisticsService.GetAssetRiskDistribution(asset.ID, asset.Name)
 
 	if err != nil {
 		return err
@@ -115,36 +115,27 @@ func (c *httpController) GetAverageAssetFixingTime(ctx core.Context) error {
 	})
 }
 
-func aggregateRiskDistribution(results [][]models.AssetRiskDistribution) []models.AssetRiskDistribution {
-	// aggregate the results
-	resultMap := make(map[string]map[string]int64)
-	for _, r := range utils.Flat(results) {
-		if _, ok := resultMap[r.ScannerID]; !ok {
-			// no scanner result exists yet
-			m := map[string]int64{
-				"low":      0,
-				"medium":   0,
-				"high":     0,
-				"critical": 0,
-			}
-			resultMap[r.ScannerID] = m
-		}
+func aggregateRiskDistribution(results []models.AssetRiskDistribution, id uuid.UUID, label string) models.AssetRiskDistribution {
+	lowCount := 0
+	mediumCount := 0
+	highCount := 0
+	criticalCount := 0
 
-		resultMap[r.ScannerID][r.Severity] += r.Count
+	for _, r := range results {
+		lowCount += r.Low
+		mediumCount += r.Medium
+		highCount += r.High
+		criticalCount += r.Critical
 	}
 
-	// create arrays based on the result map
-	aggregatedResults := make([]models.AssetRiskDistribution, 0)
-	for scannerId, severityMap := range resultMap {
-		for severity, count := range severityMap {
-			aggregatedResults = append(aggregatedResults, models.AssetRiskDistribution{
-				ScannerID: scannerId,
-				Severity:  severity,
-				Count:     count,
-			})
-		}
+	return models.AssetRiskDistribution{
+		ID:       id,
+		Label:    label,
+		Low:      lowCount,
+		Medium:   mediumCount,
+		High:     highCount,
+		Critical: criticalCount,
 	}
-	return aggregatedResults
 }
 
 func checkSeverity(severity string) error {
