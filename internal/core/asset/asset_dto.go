@@ -53,7 +53,8 @@ type patchRequest struct {
 	IntegrityRequirement       *models.RequirementLevel `json:"integrityRequirement"`
 	AvailabilityRequirement    *models.RequirementLevel `json:"availabilityRequirement"`
 
-	RepositoryID *string `json:"repositoryId"`
+	RepositoryID   *string `json:"repositoryId"`
+	RepositoryName *string `json:"repositoryName"`
 }
 
 func (a *patchRequest) applyToModel(
@@ -82,6 +83,15 @@ func (a *patchRequest) applyToModel(
 			asset.RepositoryID = nil
 		} else {
 			asset.RepositoryID = a.RepositoryID
+		}
+	}
+
+	if a.RepositoryName != nil {
+		updated = true
+		if *a.RepositoryName == "" {
+			asset.RepositoryName = nil
+		} else {
+			asset.RepositoryName = a.RepositoryName
 		}
 	}
 

@@ -84,21 +84,52 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]git
 	return utils.Flat(results), nil
 }
 
+func (client gitlabClient) AddProjectHook(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error) {
+	return client.Projects.AddProjectHook(projectId, opt, gitlab.WithContext(ctx))
+}
+func (client gitlabClient) DeleteProjectHook(ctx context.Context, projectId int, hookId int) (*gitlab.Response, error) {
+	return client.Projects.DeleteProjectHook(projectId, hookId, gitlab.WithContext(ctx))
+}
+func (client gitlabClient) AddSSHKey(ctx context.Context, projectId int, opt *gitlab.AddSSHKeyOptions) (*gitlab.SSHKey, *gitlab.Response, error) {
+	return client.Users.AddSSHKey(opt, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error) {
+	return client.MergeRequests.CreateMergeRequest(project, opt, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error) {
+	return client.Projects.GetProject(projectId, nil, gitlab.WithContext(ctx))
+}
+func (client gitlabClient) DeleteSSHKey(ctx context.Context, keyId int) (*gitlab.Response, error) {
+	return client.Users.DeleteSSHKey(keyId, gitlab.WithContext(ctx))
+}
+func (client gitlabClient) ListProjectHooks(ctx context.Context, projectId int, opt *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error) {
+	return client.Projects.ListProjectHooks(projectId, opt, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) ListVariables(ctx context.Context, projectId int, opt *gitlab.ListProjectVariablesOptions) ([]*gitlab.ProjectVariable, *gitlab.Response, error) {
+	return client.ProjectVariables.ListVariables(projectId, opt, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error) {
+	return client.ProjectVariables.CreateVariable(projectId, opt, gitlab.WithContext(ctx))
+}
 func (client gitlabClient) CreateIssue(ctx context.Context, projectId int, issue *gitlab.CreateIssueOptions) (*gitlab.Issue, *gitlab.Response, error) {
-	return client.Issues.CreateIssue(projectId, issue)
+	return client.Issues.CreateIssue(projectId, issue, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) CreateIssueComment(ctx context.Context, projectId int, issueId int, comment *gitlab.CreateIssueNoteOptions) (*gitlab.Note, *gitlab.Response, error) {
-	return client.Notes.CreateIssueNote(projectId, issueId, comment)
+	return client.Notes.CreateIssueNote(projectId, issueId, comment, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) EditIssue(ctx context.Context, projectId int, issueId int, issue *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error) {
-	return client.Issues.UpdateIssue(projectId, issueId, issue)
+	return client.Issues.UpdateIssue(projectId, issueId, issue, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) EditIssueLabel(ctx context.Context, projectId int, issueId int, labels []*gitlab.CreateLabelOptions) (*gitlab.Response, error) {
 	// fetch the issue to check the existing labels
-	issue, _, err := client.Issues.GetIssue(projectId, issueId)
+	issue, _, err := client.Issues.GetIssue(projectId, issueId, gitlab.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}

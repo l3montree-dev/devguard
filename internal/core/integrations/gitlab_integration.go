@@ -2,7 +2,12 @@ package integrations
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -23,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/xanzy/go-gitlab"
+	"golang.org/x/crypto/ssh"
 )
 
 type gitlabClientFacade interface {
@@ -30,6 +37,19 @@ type gitlabClientFacade interface {
 	CreateIssueComment(ctx context.Context, pid int, issue int, opt *gitlab.CreateIssueNoteOptions) (*gitlab.Note, *gitlab.Response, error)
 	EditIssue(ctx context.Context, pid int, issue int, opt *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
 	EditIssueLabel(ctx context.Context, pid int, issue int, labels []*gitlab.CreateLabelOptions) (*gitlab.Response, error)
+
+	ListProjectHooks(ctx context.Context, projectId int, options *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error)
+	AddProjectHook(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error)
+	DeleteProjectHook(ctx context.Context, projectId int, hookId int) (*gitlab.Response, error)
+
+	ListVariables(ctx context.Context, projectId int, options *gitlab.ListProjectVariablesOptions) ([]*gitlab.ProjectVariable, *gitlab.Response, error)
+	CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
+
+	AddSSHKey(ctx context.Context, projectId int, opt *gitlab.AddSSHKeyOptions) (*gitlab.SSHKey, *gitlab.Response, error)
+	DeleteSSHKey(ctx context.Context, keyId int) (*gitlab.Response, error)
+
+	CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error)
+	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
 }
 
 type gitlabIntegrationRepository interface {
@@ -285,7 +305,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 				"state:accepted",
 			}
 
-			_, _, err = client.EditIssue(context.Background(), projectId, issueId, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
@@ -298,7 +318,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 				"state:false-positive",
 			}
 
-			_, _, err = client.EditIssue(context.Background(), projectId, issueId, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
@@ -311,7 +331,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 				"state:open",
 			}
 
-			_, _, err = client.EditIssue(context.Background(), projectId, issueId, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("reopen"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
@@ -352,6 +372,393 @@ func extractProjectIdFromRepoId(repoId string) (int, error) {
 	// the repo id is formatted like this:
 	// gitlab:<integration id>:<project id>
 	return strconv.Atoi(strings.Split(repoId, ":")[2])
+}
+
+func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
+	err := g.addProjectHook(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = g.addProjectVariables(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = g.addMergeRequest(ctx)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(200, "Installation finished")
+}
+
+func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract integration id from repo id: %w", err)
+	}
+
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract project id from repo id: %w", err)
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not create new gitlab client: %w", err)
+	}
+	// check if the project hook already exists
+	hooks, _, err := client.ListProjectHooks(ctx.Request().Context(), projectId, nil)
+	if err != nil {
+		return fmt.Errorf("could not list project hooks: %w", err)
+	}
+
+	for _, hook := range hooks {
+		if hook.URL == "https://main.devguard.org/api/v1/webhook/" {
+			// the hook already exists
+			slog.Debug("project hook already exists", "projectId", projectId)
+			return nil
+		}
+	}
+
+	token, err := createToken()
+	if err != nil {
+		return fmt.Errorf("could not create new token: %w", err)
+	}
+
+	projectOptions := &gitlab.AddProjectHookOptions{
+		IssuesEvents:             gitlab.Ptr(true),
+		ConfidentialIssuesEvents: gitlab.Ptr(true),
+		NoteEvents:               gitlab.Ptr(true),
+		ConfidentialNoteEvents:   gitlab.Ptr(true),
+		EnableSSLVerification:    gitlab.Ptr(true),
+		URL:                      gitlab.Ptr("https://main.devguard.org/api/v1/webhook/"),
+		Token:                    gitlab.Ptr(token.String()),
+	}
+
+	projectHook, _, err := client.AddProjectHook(ctx.Request().Context(), projectId, projectOptions)
+	if err != nil {
+		return fmt.Errorf("could not add project hook: %w", err)
+	}
+	projectHookID := projectHook.ID
+
+	err = g.saveToken(integrationUUID, token)
+	if err != nil {
+		//delete the hook
+		err = g.deleteProjectHook(ctx, integrationUUID, projectId, projectHookID)
+		if err != nil {
+			// we could not delete the hook
+			slog.Error("could not save token and delete hook", "err", err)
+			return fmt.Errorf("could not save token and delete hook: %w", err)
+		}
+		return fmt.Errorf("could not save token: %w", err)
+	}
+
+	return nil
+
+}
+
+func (g *gitlabIntegration) deleteProjectHook(ctx core.Context, integrationUUID uuid.UUID, projectId int, hookId int) error {
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not create new gitlab client: %w", err)
+	}
+	_, err = client.DeleteProjectHook(ctx.Request().Context(), projectId, hookId)
+	if err != nil {
+		return fmt.Errorf("could not delete project hook: %w", err)
+	}
+	return nil
+}
+func createToken() (uuid.UUID, error) {
+	// create a new token
+	token, err := uuid.NewUUID()
+	if err != nil {
+		slog.Error("could not create new token", "err", err)
+		return uuid.Nil, fmt.Errorf("could not create new token: %w", err)
+	}
+	return token, nil
+}
+
+func (g *gitlabIntegration) saveToken(integrationUUID uuid.UUID, token uuid.UUID) error {
+	gitlabIntegration, err := g.gitlabIntegrationRepository.Read(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not read gitlab integration: %w", err)
+	}
+
+	// save the token in the database
+	gitlabIntegration.WebhookSecretToken = token
+	err = g.gitlabIntegrationRepository.Save(nil, &gitlabIntegration)
+	if err != nil {
+		slog.Error("could not save token", "err", err)
+		return fmt.Errorf("could not save token: %w", err)
+	}
+	return nil
+}
+
+func (g *gitlabIntegration) addProjectVariables(ctx core.Context) error {
+	var req struct {
+		DevguardPrivateKey string `json:"devguardPrivateKey"` // we never store this private key - we just need to forward it to gitlab
+		DevguardAssetName  string `json:"devguardAssetName"`
+	}
+
+	err := ctx.Bind(&req)
+	if err != nil {
+		return err
+	}
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract integration id from repo id: %w", err)
+	}
+
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract project id from repo id: %w", err)
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not create new gitlab client: %w", err)
+	}
+
+	err = g.addProjectVariable(ctx, "DEVGUARD_TOKEN", req.DevguardPrivateKey, true, projectId, client)
+	if err != nil {
+		return err
+	}
+
+	err = g.addProjectVariable(ctx, "DEVGUARD_ASSET_NAME", req.DevguardAssetName, false, projectId, client)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (g *gitlabIntegration) addProjectVariable(ctx core.Context, key string, value string, Masked bool, projectId int, client gitlabClientFacade) error {
+
+	projectVariable := &gitlab.CreateProjectVariableOptions{
+		Key:    gitlab.Ptr(key),
+		Value:  gitlab.Ptr(value),
+		Masked: gitlab.Ptr(Masked),
+	}
+
+	// check if the project variable already exists
+	variables, _, err := client.ListVariables(ctx.Request().Context(), projectId, nil)
+	if err != nil {
+		return fmt.Errorf("could not list project variables: %w", err)
+	}
+
+	for _, variable := range variables {
+		if variable.Key == key {
+			// the variable already exists
+			slog.Debug("project variable already exists", "projectId", projectId)
+			return nil
+		}
+	}
+
+	_, _, err = client.CreateVariable(ctx.Request().Context(), projectId, projectVariable)
+	if err != nil {
+		return fmt.Errorf("could not create project variable: %w", err)
+	}
+
+	return nil
+}
+
+func (g *gitlabIntegration) addMergeRequest(ctx core.Context) error {
+	var req struct {
+		ScanType string `json:"scanType"`
+	}
+
+	err := ctx.Bind(&req)
+	if err != nil {
+		return err
+	}
+
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract integration id from repo id: %v", err)
+	}
+
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		return fmt.Errorf("could not extract project id from repo id: %v", err)
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return fmt.Errorf("could not create new gitlab client: %v", err)
+	}
+
+	// get the project name
+	projectName, err := g.getRepoNameFromProjectId(ctx, projectId)
+	if err != nil {
+		return fmt.Errorf("could not get project name: %v", err)
+	}
+
+	//generate the ssh key and add it to the project and get the sshAuthKeys
+	sshAuthKeys, tmpSSHKeyID, err := g.sshAuthKeys(ctx)
+	if err != nil {
+		return fmt.Errorf("could not generate ssh key: %v", err)
+	}
+
+	templatePath := setTemplatePath(req.ScanType)
+	err = setupAndPushPipeline(sshAuthKeys, projectName, templatePath)
+	if err != nil {
+		return fmt.Errorf("could not clone and push repo: %v", err)
+	}
+
+	//create a merge request
+	_, _, err = client.CreateMergeRequest(ctx.Request().Context(), projectName, &gitlab.CreateMergeRequestOptions{
+		SourceBranch: gitlab.Ptr("devguard-autosetup"),
+		TargetBranch: gitlab.Ptr("main"),
+		Title:        gitlab.Ptr("Add devguard pipeline template"),
+	})
+	if err != nil {
+		return fmt.Errorf("could not create merge request: %v", err)
+	}
+
+	//delete the ssh key
+	_, err = client.DeleteSSHKey(ctx.Request().Context(), tmpSSHKeyID)
+	if err != nil {
+		return fmt.Errorf("could not delete ssh key: %v", err)
+	}
+
+	return nil
+}
+func (g *gitlabIntegration) getRepoNameFromProjectId(ctx core.Context, projectId int) (string, error) {
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return "", nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return "", fmt.Errorf("could not extract integration id from repo id: %v", err)
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return "", fmt.Errorf("could not create new gitlab client: %v", err)
+	}
+
+	project, _, err := client.GetProject(ctx.Request().Context(), projectId)
+	if err != nil {
+		return "", fmt.Errorf("could not get project: %v", err)
+	}
+	projectName := project.PathWithNamespace
+	return strings.ReplaceAll(projectName, " ", ""), nil
+}
+
+func (g *gitlabIntegration) sshAuthKeys(ctx core.Context) (*gitssh.PublicKeys, int, error) {
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil, 0, nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not extract integration id from repo id: %v", err)
+	}
+
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not extract project id from repo id: %w", err)
+	}
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not create new gitlab client: %v", err)
+	}
+
+	privateKey, publicKeySsh, err := generateECDSAKeyPair()
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not generate ECDSA key pair: %v", err)
+	}
+
+	tmpSSHKey, _, err := client.AddSSHKey(ctx.Request().Context(), projectId, &gitlab.AddSSHKeyOptions{
+		Title: gitlab.Ptr("Devguard temp key"),
+		Key:   gitlab.Ptr(publicKeySsh),
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not add ssh key: %v", err)
+	}
+
+	sshAuthKeys, err := gitssh.NewPublicKeys("git", []byte(privateKey), "")
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not create ssh keys: %v", err)
+	}
+
+	return sshAuthKeys, tmpSSHKey.ID, nil
+
+}
+func generateECDSAKeyPair() (privateKeyPem string, publicKeySsh string, err error) {
+	// Generate the ECDSA private key using the P256 curve
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate private key: %v", err)
+	}
+
+	// Marshal the private key into ASN.1 DER encoded form
+	privateKeyDer, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to marshal private key: %v", err)
+	}
+
+	// Create a PEM block for the private key
+	privateKeyBlock := pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: privateKeyDer,
+	}
+
+	// Convert the private key to a PEM encoded string
+	privateKeyPem = string(pem.EncodeToMemory(&privateKeyBlock))
+
+	// Generate the SSH public key from the ECDSA private key
+	publicKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate public key: %v", err)
+	}
+
+	// Convert the SSH public key to the authorized_keys format
+	publicKeySsh = string(ssh.MarshalAuthorizedKey(publicKey))
+
+	return privateKeyPem, publicKeySsh, nil
+}
+
+func setTemplatePath(scanType string) string {
+	switch scanType {
+	case "full":
+		return "./templates/full_template.yml"
+	case "sca":
+		return "./templates/sca_template.yml"
+	case "container_scanning":
+		return "./templates/container_scanning_template.yml"
+	default:
+		return "./templates/full_template.yml"
+	}
 }
 
 func (g *gitlabIntegration) HandleEvent(event any) error {
@@ -418,7 +825,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 		}
 
-		createdIssue, _, err := client.CreateIssue(context.Background(), projectId, issue)
+		createdIssue, _, err := client.CreateIssue(event.Ctx.Request().Context(), projectId, issue)
 		if err != nil {
 			return err
 		}
@@ -503,7 +910,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		switch ev.Type {
 		case models.EventTypeAccepted:
 			// if a flaw gets accepted, we close the issue and create a comment with that justification
-			_, _, err = client.CreateIssueComment(context.Background(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" accepted the flaw", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
@@ -514,14 +921,14 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 				"severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)),
 				"state:accepted",
 			}
-			_, _, err = client.EditIssue(context.Background(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 		case models.EventTypeFalsePositive:
 
-			_, _, err = client.CreateIssueComment(context.Background(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" marked the flaw as false positive", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
@@ -533,13 +940,13 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 				"severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)),
 				"state:false-positive",
 			}
-			_, _, err = client.EditIssue(context.Background(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 		case models.EventTypeReopened:
-			_, _, err = client.CreateIssueComment(context.Background(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" reopened the flaw", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
@@ -552,14 +959,14 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 				"state:open",
 			}
 
-			_, _, err = client.EditIssue(context.Background(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("reopen"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 
 		case models.EventTypeComment:
-			_, _, err = client.CreateIssueComment(context.Background(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the flaw", utils.SafeDereference(ev.Justification))),
 			})
 			return err
