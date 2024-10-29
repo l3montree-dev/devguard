@@ -621,15 +621,6 @@ func (g *gitlabIntegration) addMergeRequest(ctx core.Context) error {
 		return fmt.Errorf("could not generate ssh key: %v", err)
 	}
 
-	//delete the ssh key
-	defer func() error {
-		_, err = client.DeleteSSHKey(ctx.Request().Context(), tmpSSHKeyID)
-		if err != nil {
-			return fmt.Errorf("could not delete ssh key: %v", err)
-		}
-		return nil
-	}()
-
 	templatePath := setTemplatePath(req.ScanType)
 	err = setupAndPushPipeline(sshAuthKeys, projectName, templatePath)
 	if err != nil {
@@ -644,6 +635,12 @@ func (g *gitlabIntegration) addMergeRequest(ctx core.Context) error {
 	})
 	if err != nil {
 		return fmt.Errorf("could not create merge request: %v", err)
+	}
+
+	//delete the ssh key
+	_, err = client.DeleteSSHKey(ctx.Request().Context(), tmpSSHKeyID)
+	if err != nil {
+		return fmt.Errorf("could not delete ssh key: %v", err)
 	}
 
 	return nil
