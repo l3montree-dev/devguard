@@ -16,19 +16,17 @@ func (c *httpController) GetOrgRiskDistribution(ctx core.Context) error {
 		return err
 	}
 
-	results := make([][]models.AssetRiskDistribution, 0)
+	results := make([]models.AssetRiskDistribution, 0)
 	// iterate over all projects and fetch the assets
 	for _, project := range projects {
-		projectResults, err := c.getProjectRiskDistribution(project.ID)
+		projectDistribution, err := c.getProjectRiskDistribution(project.ID)
 		if err != nil {
 			return err
 		}
-		results = append(results, projectResults...)
+		results = append(results, aggregateRiskDistribution(projectDistribution, project.ID, project.Name))
 	}
 
-	aggregatedResults := aggregateRiskDistribution(results)
-
-	return ctx.JSON(200, aggregatedResults)
+	return ctx.JSON(200, results)
 }
 
 // get the average fixing time

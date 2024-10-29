@@ -7,10 +7,14 @@ import (
 )
 
 type AssetRiskDistribution struct {
-	ScannerID string `json:"scannerId"`
 	// the range of the risk - something like 2-4, 4-6, 6-8, 8-10
-	Severity string `json:"severity"`
-	Count    int64  `json:"count"`
+	Low      int `json:"low"`
+	High     int `json:"high"`
+	Medium   int `json:"medium"`
+	Critical int `json:"critical"`
+
+	ID    uuid.UUID `json:"id" gorm:"primaryKey;type:uuid"`
+	Label string    `json:"label"`
 }
 
 type AssetRiskHistory struct {

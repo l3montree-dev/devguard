@@ -73,12 +73,14 @@ func (r *statisticsRepository) GetFlawCountByScannerId(assetID uuid.UUID) (map[s
 	return counts, nil
 }
 
-func (r *statisticsRepository) GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error) {
-	var results []models.AssetRiskDistribution
+func (r *statisticsRepository) GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
+	var results []struct {
+		Severity string `gorm:"column:severity"`
+		Count    int    `gorm:"column:count"`
+	}
 
 	err := r.db.Raw(`
         SELECT 
-            scanner_id,
             CASE 
                 WHEN raw_risk_assessment >= 0.0 AND raw_risk_assessment < 4.0 THEN 'LOW'
                 WHEN raw_risk_assessment >= 4.0 AND raw_risk_assessment < 7 THEN 'MEDIUM'
@@ -89,14 +91,27 @@ func (r *statisticsRepository) GetAssetRiskDistribution(assetID uuid.UUID) ([]mo
             COUNT(*) as count
         FROM flaws
         WHERE asset_id = ? AND state = 'open'
-        GROUP BY scanner_id, severity
+        GROUP BY severity
     `, assetID).Scan(&results).Error
 
 	if err != nil {
-		return nil, err
+		return models.AssetRiskDistribution{}, err
 	}
 
-	return results, nil
+	// convert to map
+	counts := make(map[string]int)
+	for _, r := range results {
+		counts[r.Severity] = r.Count
+	}
+
+	return models.AssetRiskDistribution{
+		ID:       assetID,
+		Label:    assetName,
+		Low:      counts["LOW"],
+		Medium:   counts["MEDIUM"],
+		High:     counts["HIGH"],
+		Critical: counts["CRITICAL"],
+	}, nil
 }
 
 var fixedEvents = []models.FlawEventType{
