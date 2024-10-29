@@ -1,4 +1,4 @@
-  - component: $CI_SERVER_FQDN/l3montree/devguard/full@<VERSION>
+  - component: $CI_SERVER_FQDN/l3montree/devguard/full@~latest
     inputs:
       asset_name: "$DEVGUARD_ASSET_NAME"
       token: "$DEVGUARD_TOKEN"

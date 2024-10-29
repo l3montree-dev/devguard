@@ -11,7 +11,7 @@ import (
 	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 )
 
-func cloneAndPushRepo(sshAuthKeys *gitssh.PublicKeys, projectName string, templatePath string) error {
+func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, templatePath string) error {
 	dir, err := os.MkdirTemp("", "repo-clone")
 	if err != nil {
 		return fmt.Errorf("could not create temporary directory: %v", err)

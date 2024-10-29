@@ -305,7 +305,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 				"state:accepted",
 			}
 
-			_, _, err = client.EditIssue(context.Background(), projectId, issueId, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
@@ -318,7 +318,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 				"state:false-positive",
 			}
 
-			_, _, err = client.EditIssue(context.Background(), projectId, issueId, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
@@ -331,7 +331,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 				"state:open",
 			}
 
-			_, _, err = client.EditIssue(context.Background(), projectId, issueId, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("reopen"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
@@ -417,6 +417,9 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 	}
 	// check if the project hook already exists
 	hooks, _, err := client.ListProjectHooks(ctx.Request().Context(), projectId, nil)
+	if err != nil {
+		return fmt.Errorf("could not list project hooks: %w", err)
+	}
 
 	for _, hook := range hooks {
 		if hook.URL == "https://main.devguard.org/api/v1/webhook/" {
@@ -437,11 +440,11 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 		NoteEvents:               gitlab.Ptr(true),
 		ConfidentialNoteEvents:   gitlab.Ptr(true),
 		EnableSSLVerification:    gitlab.Ptr(true),
-		URL:                      gitlab.Ptr(fmt.Sprintf("https://main.devguard.org/api/v1/webhook/")),
+		URL:                      gitlab.Ptr("https://main.devguard.org/api/v1/webhook/"),
 		Token:                    gitlab.Ptr(token.String()),
 	}
 
-	projectHook, _, err := client.AddProjectHook(context.Background(), projectId, projectOptions)
+	projectHook, _, err := client.AddProjectHook(ctx.Request().Context(), projectId, projectOptions)
 	if err != nil {
 		return fmt.Errorf("could not add project hook: %w", err)
 	}
@@ -450,7 +453,7 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 	err = g.saveToken(integrationUUID, token)
 	if err != nil {
 		//delete the hook
-		err = g.deleteProjectHook(integrationUUID, projectId, projectHookID)
+		err = g.deleteProjectHook(ctx, integrationUUID, projectId, projectHookID)
 		if err != nil {
 			// we could not delete the hook
 			slog.Error("could not save token and delete hook", "err", err)
@@ -463,12 +466,12 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 
 }
 
-func (g *gitlabIntegration) deleteProjectHook(integrationUUID uuid.UUID, projectId int, hookId int) error {
+func (g *gitlabIntegration) deleteProjectHook(ctx core.Context, integrationUUID uuid.UUID, projectId int, hookId int) error {
 	client, err := g.gitlabClientFactory(integrationUUID)
 	if err != nil {
 		return fmt.Errorf("could not create new gitlab client: %w", err)
 	}
-	_, err = client.DeleteProjectHook(context.Background(), projectId, hookId)
+	_, err = client.DeleteProjectHook(ctx.Request().Context(), projectId, hookId)
 	if err != nil {
 		return fmt.Errorf("could not delete project hook: %w", err)
 	}
@@ -532,19 +535,19 @@ func (g *gitlabIntegration) addProjectVariables(ctx core.Context) error {
 		return fmt.Errorf("could not create new gitlab client: %w", err)
 	}
 
-	err = g.addProjectVariable("DEVGUARD_TOKEN", req.DevguardPrivateKey, true, projectId, client)
+	err = g.addProjectVariable(ctx, "DEVGUARD_TOKEN", req.DevguardPrivateKey, true, projectId, client)
 	if err != nil {
 		return err
 	}
 
-	err = g.addProjectVariable("DEVGUARD_ASSET_NAME", req.DevguardAssetName, false, projectId, client)
+	err = g.addProjectVariable(ctx, "DEVGUARD_ASSET_NAME", req.DevguardAssetName, false, projectId, client)
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
-func (g *gitlabIntegration) addProjectVariable(key string, value string, Masked bool, projectId int, client gitlabClientFacade) error {
+func (g *gitlabIntegration) addProjectVariable(ctx core.Context, key string, value string, Masked bool, projectId int, client gitlabClientFacade) error {
 
 	projectVariable := &gitlab.CreateProjectVariableOptions{
 		Key:    gitlab.Ptr(key),
@@ -553,7 +556,7 @@ func (g *gitlabIntegration) addProjectVariable(key string, value string, Masked 
 	}
 
 	// check if the project variable already exists
-	variables, _, err := client.ListVariables(context.Background(), projectId, nil)
+	variables, _, err := client.ListVariables(ctx.Request().Context(), projectId, nil)
 	if err != nil {
 		return fmt.Errorf("could not list project variables: %w", err)
 	}
@@ -566,7 +569,7 @@ func (g *gitlabIntegration) addProjectVariable(key string, value string, Masked 
 		}
 	}
 
-	_, _, err = client.CreateVariable(context.Background(), projectId, projectVariable)
+	_, _, err = client.CreateVariable(ctx.Request().Context(), projectId, projectVariable)
 	if err != nil {
 		return fmt.Errorf("could not create project variable: %w", err)
 	}
@@ -614,15 +617,27 @@ func (g *gitlabIntegration) addMergeRequest(ctx core.Context) error {
 
 	//generate the ssh key and add it to the project and get the sshAuthKeys
 	sshAuthKeys, tmpSSHKeyID, err := g.sshAuthKeys(ctx)
+	if err != nil {
+		return fmt.Errorf("could not generate ssh key: %v", err)
+	}
+
+	//delete the ssh key
+	defer func() error {
+		_, err = client.DeleteSSHKey(ctx.Request().Context(), tmpSSHKeyID)
+		if err != nil {
+			return fmt.Errorf("could not delete ssh key: %v", err)
+		}
+		return nil
+	}()
 
 	templatePath := setTemplatePath(req.ScanType)
-	err = cloneAndPushRepo(sshAuthKeys, projectName, templatePath)
+	err = setupAndPushPipeline(sshAuthKeys, projectName, templatePath)
 	if err != nil {
 		return fmt.Errorf("could not clone and push repo: %v", err)
 	}
 
 	//create a merge request
-	_, _, err = client.CreateMergeRequest(context.Background(), projectName, &gitlab.CreateMergeRequestOptions{
+	_, _, err = client.CreateMergeRequest(ctx.Request().Context(), projectName, &gitlab.CreateMergeRequestOptions{
 		SourceBranch: gitlab.Ptr("devguard-autosetup"),
 		TargetBranch: gitlab.Ptr("main"),
 		Title:        gitlab.Ptr("Add devguard pipeline template"),
@@ -631,11 +646,6 @@ func (g *gitlabIntegration) addMergeRequest(ctx core.Context) error {
 		return fmt.Errorf("could not create merge request: %v", err)
 	}
 
-	//delete the ssh key
-	_, err = client.DeleteSSHKey(context.Background(), tmpSSHKeyID)
-	if err != nil {
-		return fmt.Errorf("could not delete ssh key: %v", err)
-	}
 	return nil
 }
 func (g *gitlabIntegration) getRepoNameFromProjectId(ctx core.Context, projectId int) (string, error) {
@@ -656,7 +666,7 @@ func (g *gitlabIntegration) getRepoNameFromProjectId(ctx core.Context, projectId
 		return "", fmt.Errorf("could not create new gitlab client: %v", err)
 	}
 
-	project, _, err := client.GetProject(context.Background(), projectId)
+	project, _, err := client.GetProject(ctx.Request().Context(), projectId)
 	if err != nil {
 		return "", fmt.Errorf("could not get project: %v", err)
 	}
@@ -691,7 +701,7 @@ func (g *gitlabIntegration) sshAuthKeys(ctx core.Context) (*gitssh.PublicKeys, i
 		return nil, 0, fmt.Errorf("could not generate ECDSA key pair: %v", err)
 	}
 
-	tmpSSHKey, _, err := client.AddSSHKey(context.Background(), projectId, &gitlab.AddSSHKeyOptions{
+	tmpSSHKey, _, err := client.AddSSHKey(ctx.Request().Context(), projectId, &gitlab.AddSSHKeyOptions{
 		Title: gitlab.Ptr("Devguard temp key"),
 		Key:   gitlab.Ptr(publicKeySsh),
 	})
@@ -818,7 +828,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 		}
 
-		createdIssue, _, err := client.CreateIssue(context.Background(), projectId, issue)
+		createdIssue, _, err := client.CreateIssue(event.Ctx.Request().Context(), projectId, issue)
 		if err != nil {
 			return err
 		}
@@ -903,7 +913,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		switch ev.Type {
 		case models.EventTypeAccepted:
 			// if a flaw gets accepted, we close the issue and create a comment with that justification
-			_, _, err = client.CreateIssueComment(context.Background(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" accepted the flaw", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
@@ -914,14 +924,14 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 				"severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)),
 				"state:accepted",
 			}
-			_, _, err = client.EditIssue(context.Background(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 		case models.EventTypeFalsePositive:
 
-			_, _, err = client.CreateIssueComment(context.Background(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" marked the flaw as false positive", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
@@ -933,13 +943,13 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 				"severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)),
 				"state:false-positive",
 			}
-			_, _, err = client.EditIssue(context.Background(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 		case models.EventTypeReopened:
-			_, _, err = client.CreateIssueComment(context.Background(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" reopened the flaw", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
@@ -952,14 +962,14 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 				"state:open",
 			}
 
-			_, _, err = client.EditIssue(context.Background(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("reopen"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 
 		case models.EventTypeComment:
-			_, _, err = client.CreateIssueComment(context.Background(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the flaw", utils.SafeDereference(ev.Justification))),
 			})
 			return err
