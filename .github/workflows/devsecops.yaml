@@ -24,7 +24,7 @@ jobs:
     - name: Checkout code
       with:
         fetch-depth: 0
-      uses: actions/checkout@282283cadfc4566d4ee887237f00f1d7ab9014b3 # Check out the repository content to the runner
+      uses: actions/checkout@v5 # Check out the repository content to the runner
     - name: Run Gitleaks Scan
       # Running Gitleaks to scan the code for secrets
       run: |
