@@ -84,6 +84,14 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]git
 	return utils.Flat(results), nil
 }
 
+func (client gitlabClient) UpdateVariable(ctx context.Context, projectId int, key string, opt *gitlab.UpdateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error) {
+	return client.ProjectVariables.UpdateVariable(projectId, key, opt, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) RemoveVariable(ctx context.Context, projectId int, key string) (*gitlab.Response, error) {
+	return client.ProjectVariables.RemoveVariable(projectId, key, nil, gitlab.WithContext(ctx))
+}
+
 func (client gitlabClient) AddProjectHook(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error) {
 	return client.Projects.AddProjectHook(projectId, opt, gitlab.WithContext(ctx))
 }

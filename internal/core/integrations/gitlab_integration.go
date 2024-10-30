@@ -8,7 +8,11 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"errors"
+	"time"
+
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+
 	"fmt"
 	"io"
 	"log"
@@ -44,6 +48,8 @@ type gitlabClientFacade interface {
 
 	ListVariables(ctx context.Context, projectId int, options *gitlab.ListProjectVariablesOptions) ([]*gitlab.ProjectVariable, *gitlab.Response, error)
 	CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
+	UpdateVariable(ctx context.Context, projectId int, key string, opt *gitlab.UpdateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
+	RemoveVariable(ctx context.Context, projectId int, key string) (*gitlab.Response, error)
 
 	AddSSHKey(ctx context.Context, projectId int, opt *gitlab.AddSSHKeyOptions) (*gitlab.SSHKey, *gitlab.Response, error)
 	DeleteSSHKey(ctx context.Context, keyId int) (*gitlab.Response, error)
@@ -375,22 +381,111 @@ func extractProjectIdFromRepoId(repoId string) (int, error) {
 }
 
 func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
-	err := g.addProjectHook(ctx)
-	if err != nil {
-		return err
+	asset := core.GetAsset(ctx)
+	repoId := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil
 	}
 
-	err = g.addProjectVariables(ctx)
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not extract integration id from repo id")
+	}
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return errors.Wrap(err, "could not create new gitlab client")
 	}
 
-	err = g.addMergeRequest(ctx)
+	var req struct {
+		DevguardAssetName  string `json:"devguardAssetName"`
+		DevguardPrivateKey string `json:"devguardPrivateKey"`
+	}
+	err = ctx.Bind(&req)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not bind request")
 	}
 
-	return ctx.JSON(200, "Installation finished")
+	ctx.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	ctx.Response().WriteHeader(http.StatusOK) //nolint:errcheck
+
+	enc := json.NewEncoder(ctx.Response())
+
+	err = g.addProjectHook(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not add project hook")
+	}
+
+	// notify the user that the project hook was added
+	enc.Encode(map[string]string{"step": "projectHook", "status": "success"}) //nolint:errcheck
+	ctx.Response().Flush()
+
+	err = g.addProjectVariables(ctx, req.DevguardPrivateKey, req.DevguardAssetName)
+	if err != nil {
+		return errors.Wrap(err, "could not add project variables")
+	}
+
+	// notify the user that the project variables were added
+	enc.Encode(map[string]string{"step": "projectVariables", "status": "success"}) //nolint:errcheck
+	ctx.Response().Flush()
+
+	sshAuthKeys, tmpSSHKeyID, err := g.generateSSHAuthKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not generate ssh key")
+	}
+
+	// notify the user that the ssh key was generated
+	enc.Encode(map[string]string{"step": "sshKey", "status": "success"}) //nolint:errcheck
+	ctx.Response().Flush()
+
+	// get the project name
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		return errors.Wrap(err, "could not extract project id from repo id")
+	}
+
+	projectName, err := g.getRepoNameFromProjectId(ctx, projectId)
+	if err != nil {
+		return errors.Wrap(err, "could not get project name")
+	}
+
+	defer func() {
+		c := context.Background()
+		// use a 10 seconds timeout
+		c, cancel := context.WithTimeout(c, 10*time.Second)
+		defer cancel()
+
+		client.DeleteSSHKey(c, tmpSSHKeyID)                                        //nolint:all delete the ssh key after the function returns - we do not need it anymore
+		enc.Encode(map[string]string{"step": "deleteSSHKey", "status": "success"}) //nolint:errcheck
+		ctx.Response().Flush()
+	}()
+
+	templatePath := getTemplatePath(ctx.QueryParam("scanType"))
+	err = setupAndPushPipeline(sshAuthKeys, projectName, templatePath)
+	if err != nil {
+		return errors.Wrap(err, "could not setup and push pipeline")
+	}
+
+	// notify the user that the pipeline was created
+	enc.Encode(map[string]string{"step": "pipeline", "status": "success"}) //nolint:errcheck
+	ctx.Response().Flush()
+
+	//create a merge request
+	mr, _, err := client.CreateMergeRequest(ctx.Request().Context(), projectName, &gitlab.CreateMergeRequestOptions{
+		SourceBranch: gitlab.Ptr("devguard-autosetup"),
+		TargetBranch: gitlab.Ptr("main"),
+		Title:        gitlab.Ptr("Add devguard pipeline template"),
+	})
+
+	if err != nil {
+		return errors.Wrap(err, "could not create merge request")
+	}
+
+	// notify the user that the merge request was created
+	enc.Encode(map[string]string{"step": "mergeRequest", "url": mr.WebURL, "status": "success"}) //nolint:errcheck
+	ctx.Response().Flush()
+
+	return nil
 }
 
 func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
@@ -424,7 +519,6 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 	for _, hook := range hooks {
 		if hook.URL == "https://main.devguard.org/api/v1/webhook/" {
 			// the hook already exists
-			slog.Debug("project hook already exists", "projectId", projectId)
 			return nil
 		}
 	}
@@ -503,16 +597,8 @@ func (g *gitlabIntegration) saveToken(integrationUUID uuid.UUID, token uuid.UUID
 	return nil
 }
 
-func (g *gitlabIntegration) addProjectVariables(ctx core.Context) error {
-	var req struct {
-		DevguardPrivateKey string `json:"devguardPrivateKey"` // we never store this private key - we just need to forward it to gitlab
-		DevguardAssetName  string `json:"devguardAssetName"`
-	}
+func (g *gitlabIntegration) addProjectVariables(ctx core.Context, devguardPrivateKey, assetName string) error {
 
-	err := ctx.Bind(&req)
-	if err != nil {
-		return err
-	}
 	asset := core.GetAsset(ctx)
 	repoId := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoId, "gitlab:") {
@@ -535,12 +621,13 @@ func (g *gitlabIntegration) addProjectVariables(ctx core.Context) error {
 		return fmt.Errorf("could not create new gitlab client: %w", err)
 	}
 
-	err = g.addProjectVariable(ctx, "DEVGUARD_TOKEN", req.DevguardPrivateKey, true, projectId, client)
+	err = g.addProjectVariable(ctx, "DEVGUARD_TOKEN", devguardPrivateKey, true, projectId, client)
+
 	if err != nil {
 		return err
 	}
 
-	err = g.addProjectVariable(ctx, "DEVGUARD_ASSET_NAME", req.DevguardAssetName, false, projectId, client)
+	err = g.addProjectVariable(ctx, "DEVGUARD_ASSET_NAME", assetName, false, projectId, client)
 	if err != nil {
 		return err
 	}
@@ -564,8 +651,11 @@ func (g *gitlabIntegration) addProjectVariable(ctx core.Context, key string, val
 	for _, variable := range variables {
 		if variable.Key == key {
 			// the variable already exists
-			slog.Debug("project variable already exists", "projectId", projectId)
-			return nil
+			// remove it - we cannot update, since some are protected
+			_, err = client.RemoveVariable(ctx.Request().Context(), projectId, key)
+			if err != nil {
+				return errors.Wrap(err, "could not remove project variable")
+			}
 		}
 	}
 
@@ -577,74 +667,6 @@ func (g *gitlabIntegration) addProjectVariable(ctx core.Context, key string, val
 	return nil
 }
 
-func (g *gitlabIntegration) addMergeRequest(ctx core.Context) error {
-	var req struct {
-		ScanType string `json:"scanType"`
-	}
-
-	err := ctx.Bind(&req)
-	if err != nil {
-		return err
-	}
-
-	asset := core.GetAsset(ctx)
-	repoId := utils.SafeDereference(asset.RepositoryID)
-	if !strings.HasPrefix(repoId, "gitlab:") {
-		// this integration only handles gitlab repositories
-		return nil
-	}
-
-	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
-	if err != nil {
-		return fmt.Errorf("could not extract integration id from repo id: %v", err)
-	}
-
-	projectId, err := extractProjectIdFromRepoId(repoId)
-	if err != nil {
-		return fmt.Errorf("could not extract project id from repo id: %v", err)
-	}
-
-	client, err := g.gitlabClientFactory(integrationUUID)
-	if err != nil {
-		return fmt.Errorf("could not create new gitlab client: %v", err)
-	}
-
-	// get the project name
-	projectName, err := g.getRepoNameFromProjectId(ctx, projectId)
-	if err != nil {
-		return fmt.Errorf("could not get project name: %v", err)
-	}
-
-	//generate the ssh key and add it to the project and get the sshAuthKeys
-	sshAuthKeys, tmpSSHKeyID, err := g.sshAuthKeys(ctx)
-	if err != nil {
-		return fmt.Errorf("could not generate ssh key: %v", err)
-	}
-
-	templatePath := setTemplatePath(req.ScanType)
-	err = setupAndPushPipeline(sshAuthKeys, projectName, templatePath)
-	if err != nil {
-		return fmt.Errorf("could not clone and push repo: %v", err)
-	}
-
-	//create a merge request
-	_, _, err = client.CreateMergeRequest(ctx.Request().Context(), projectName, &gitlab.CreateMergeRequestOptions{
-		SourceBranch: gitlab.Ptr("devguard-autosetup"),
-		TargetBranch: gitlab.Ptr("main"),
-		Title:        gitlab.Ptr("Add devguard pipeline template"),
-	})
-	if err != nil {
-		return fmt.Errorf("could not create merge request: %v", err)
-	}
-
-	//delete the ssh key
-	_, err = client.DeleteSSHKey(ctx.Request().Context(), tmpSSHKeyID)
-	if err != nil {
-		return fmt.Errorf("could not delete ssh key: %v", err)
-	}
-
-	return nil
-}
 func (g *gitlabIntegration) getRepoNameFromProjectId(ctx core.Context, projectId int) (string, error) {
 	asset := core.GetAsset(ctx)
 	repoId := utils.SafeDereference(asset.RepositoryID)
@@ -671,7 +693,7 @@ func (g *gitlabIntegration) getRepoNameFromProjectId(ctx core.Context, projectId
 	return strings.ReplaceAll(projectName, " ", ""), nil
 }
 
-func (g *gitlabIntegration) sshAuthKeys(ctx core.Context) (*gitssh.PublicKeys, int, error) {
+func (g *gitlabIntegration) generateSSHAuthKeys(ctx core.Context) (*gitssh.PublicKeys, int, error) {
 	asset := core.GetAsset(ctx)
 	repoId := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoId, "gitlab:") {
@@ -748,13 +770,13 @@ func generateECDSAKeyPair() (privateKeyPem string, publicKeySsh string, err erro
 	return privateKeyPem, publicKeySsh, nil
 }
 
-func setTemplatePath(scanType string) string {
+func getTemplatePath(scanType string) string {
 	switch scanType {
 	case "full":
 		return "./templates/full_template.yml"
 	case "sca":
 		return "./templates/sca_template.yml"
-	case "container_scanning":
+	case "container-scanning":
 		return "./templates/container_scanning_template.yml"
 	default:
 		return "./templates/full_template.yml"

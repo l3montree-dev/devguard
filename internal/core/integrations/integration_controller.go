@@ -59,13 +59,10 @@ func (c *integrationController) AutoSetup(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
 	if gl != nil {
-		if err := gl.(*gitlabIntegration).AutoSetup(ctx); err != nil {
-			slog.Error("could not finish installation", "err", err)
-			return err
-		}
+		return gl.(*gitlabIntegration).AutoSetup(ctx)
 	}
 
-	return ctx.JSON(200, "Installation finished")
+	return nil
 }
 
 func (c *integrationController) ListRepositories(ctx core.Context) error {

@@ -1,0 +1,4 @@
+- component: $CI_SERVER_FQDN/l3montree/devguard/sca@~latest
+  inputs:
+    asset_name: "$DEVGUARD_ASSET_NAME"
+    token: "$DEVGUARD_TOKEN"

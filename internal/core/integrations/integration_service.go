@@ -50,6 +50,7 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 	}
 	template := string(templateFile)
 	//read the file
+	var newContent string
 	f, err := w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_RDWR, 0644)
 	if err != nil {
 		//make the file
@@ -57,20 +58,24 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 		if err != nil {
 			return fmt.Errorf("could not create file: %v", err)
 		}
-		_, err = f.Write([]byte(template))
-		if err != nil {
-			return fmt.Errorf("could not write to file: %v", err)
-		}
+		newContent = fmt.Sprintf("include:\n%s\n", template)
 	} else {
 		content, err := io.ReadAll(f)
 		if err != nil {
 			return fmt.Errorf("could not read file: %v", err)
 		}
-		fileStr := addPipelineTemplate(content, template)
-		_, err = f.Write([]byte(fileStr))
-		if err != nil {
-			return fmt.Errorf("could not write to file: %v", err)
-		}
+		newContent = addPipelineTemplate(content, template)
+	}
+	f.Close()
+	// open the file in truncate mode to overwrite the content
+	f, err = w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_TRUNC|os.O_RDWR, 0644)
+	if err != nil {
+		return fmt.Errorf("could not open file: %v", err)
+	}
+
+	_, err = f.Write([]byte(newContent))
+	if err != nil {
+		return fmt.Errorf("could not write to file: %v", err)
 	}
 	f.Close()
 
@@ -93,8 +98,8 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 
 	return nil
 }
-func addPipelineTemplate(file []byte, template string) string {
-	fileStr := string(file)
+func addPipelineTemplate(content []byte, template string) string {
+	fileStr := string(content)
 	includeIndex := -1
 	// split the file on each line
 	for index, line := range strings.Split(fileStr, "\n") {
@@ -113,7 +118,7 @@ func addPipelineTemplate(file []byte, template string) string {
 		fileStr = strings.Join(fileArr, "\n")
 	} else {
 		// include does not exist - just insert it at the end
-		fileStr += `include:` + template
+		fileStr += fmt.Sprintf("\ninclude:\n%s\n", template)
 	}
 
 	return fileStr

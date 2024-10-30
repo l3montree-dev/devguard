@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -22,9 +21,6 @@ func registerMiddlewares(e *echo.Echo) {
 		},
 	))
 
-	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-		Timeout: 10 * time.Second,
-	}))
 	e.Use(logger())
 
 	e.Use(recovermiddleware())
@@ -35,21 +31,13 @@ func registerMiddlewares(e *echo.Echo) {
 		slog.Error(err.Error(), "status", c.Response().Status, "method", c.Request().Method, "path", c.Request().URL.Path)
 
 		if c.Response().Committed {
+
 			return
 		}
 
-		he, ok := err.(*echo.HTTPError)
-		if ok {
-			if he.Internal != nil {
-				if herr, ok := he.Internal.(*echo.HTTPError); ok {
-					he = herr
-				}
-			}
-		} else {
-			he = &echo.HTTPError{
-				Code:    http.StatusInternalServerError,
-				Message: http.StatusText(http.StatusInternalServerError),
-			}
+		he := &echo.HTTPError{
+			Code:    http.StatusInternalServerError,
+			Message: http.StatusText(http.StatusInternalServerError),
 		}
 
 		code := he.Code
