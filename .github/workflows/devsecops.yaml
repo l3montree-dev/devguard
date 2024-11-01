@@ -21,16 +21,21 @@ jobs:
   secret-scanning:
     runs-on: ubuntu-latest
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
     - name: Checkout code
       with:
         fetch-depth: 0
-      uses: actions/checkout@v4 # Check out the repository content to the runner
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: Run Gitleaks Scan
       # Running Gitleaks to scan the code for secrets
       run: |
         docker run --rm -v $(pwd):/code -u $(id -u):$(id -g) zricethezav/gitleaks:v8.18.3 -s /code detect --baseline-path /code/leaks-baseline.json -v -f sarif -r /code/gitleaks.sarif.json
     - name: Upload sarif file
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
       with:
         sarif_file: gitleaks.sarif.json
         category: secret-scanning
@@ -38,10 +43,15 @@ jobs:
   sca:
     runs-on: ubuntu-latest
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
     - name: Checkout code
       with:
         fetch-depth: 0
-      uses: actions/checkout@v4 # Check out the repository content to the runner
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: Set up Git
       run: |
         git config --global --add safe.directory /github/workspace
@@ -54,15 +64,20 @@ jobs:
   sast:
     runs-on: ubuntu-latest
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: Run Semgrep
       # Running Semgrep for static code analysis to identify security issues
-      uses: docker://returntocorp/semgrep
+      uses: docker://returntocorp/semgrep:latest@sha256:9927548daa9013430d2c6c67e9513fc1b9e9e87003f6e914f95e54dcb567e800
       with:
         args: semgrep scan /github/workspace --sarif -o /github/workspace/semgrep.sarif.json
     - name: Upload sarif file
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
       with:
         sarif_file: semgrep.sarif.json
         category: sast
@@ -70,13 +85,18 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-go@v5
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+    - uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5.1.0
       with:
         go-version: '1.23'
         cache: false
     - name: golangci-lint
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@971e284b6050e8a5849b72094c50ab08da042db8 # v6.1.1
       with:
         args: --timeout=30m
         # Require: The version of golangci-lint to use.
@@ -113,11 +133,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
     - name: Check out code
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@41dfa10bad2bb2ae585af6ee5bb4d7d973ad74ed # v5.1.0
       with:
         go-version: '1.23'
 
@@ -128,7 +153,12 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: Set IMAGE_TAG if tagged
       # Setting the image tag if the push is a tag push
       run: |
@@ -148,27 +178,27 @@ jobs:
     - name: Build Docker image with Kaniko
       # Building the Docker image using Kaniko
       id: build_image
-      uses: docker://gcr.io/kaniko-project/executor:v1.23.0
+      uses: docker://gcr.io/kaniko-project/executor:v1.23.0@sha256:117c79e6bbd6ba2cde0827767f5ef6aa8c0f8a40ff6e20c8295d46c84d73e1f5
       with:
         args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile --no-push --tarPath /github/workspace/image.tar
     - name: Setup crane
-      uses: imjasonh/setup-crane@v0.1
+      uses: imjasonh/setup-crane@5146f708a817ea23476677995bf2133943b9be0b # v0.1
     - name: Use crane to get the digest
       run: crane digest --tarball=image.tar > digest.txt
     - name: Upload artifact
       # Uploading the built Docker image as an artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
       with:
         name: docker-image
         path: image.tar
     - name: Upload digest
       # Uploading the built Docker image digest as an artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
       with:
         name: digest
         path: digest.txt
     - name: Upload image tag
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
       with:
         name: image-tag
         path: image-tag.txt
@@ -177,7 +207,12 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: Set IMAGE_TAG if tagged
       # Setting the image tag if the push is a tag push
       run: |
@@ -197,27 +232,27 @@ jobs:
     - name: Build Docker image with Kaniko
       # Building the Docker image using Kaniko
       id: build_image
-      uses: docker://gcr.io/kaniko-project/executor:v1.23.0
+      uses: docker://gcr.io/kaniko-project/executor:v1.23.0@sha256:117c79e6bbd6ba2cde0827767f5ef6aa8c0f8a40ff6e20c8295d46c84d73e1f5
       with:
         args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile.scanner --no-push --tarPath /github/workspace/scanner-image.tar
     - name: Setup crane
-      uses: imjasonh/setup-crane@v0.1
+      uses: imjasonh/setup-crane@5146f708a817ea23476677995bf2133943b9be0b # v0.1
     - name: Use crane to get the digest
       run: crane digest --tarball=scanner-image.tar > scanner-digest.txt
     - name: Upload artifact
       # Uploading the built Docker image as an artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
       with:
         name: scanner-docker-image
         path: scanner-image.tar
     - name: Upload digest
       # Uploading the built Docker image digest as an artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
       with:
         name: scanner-digest
         path: scanner-digest.txt
     - name: Upload image tag
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
       with:
         name: scanner-image-tag
         path: scanner-image-tag.txt
@@ -227,10 +262,15 @@ jobs:
     needs: build-image
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         fetch-depth: 0
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: docker-image
         path: .
@@ -248,10 +288,15 @@ jobs:
     needs: build-image
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         fetch-depth: 0
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: docker-image
         path: .
@@ -270,11 +315,16 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
-    - uses: actions/download-artifact@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
+    - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: docker-image
         path: .
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: image-tag
         path: .
@@ -282,7 +332,7 @@ jobs:
       run: |
         export IMAGE_TAG=$(cat image-tag.txt)
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-    - uses: imjasonh/setup-crane@v0.1
+    - uses: imjasonh/setup-crane@5146f708a817ea23476677995bf2133943b9be0b # v0.1
     - name: Push Docker image to GitHub image Registry
       # Pushing the Docker image to GitHub Container Registry
       run: crane push image.tar ${{ env.IMAGE_TAG }}
@@ -292,11 +342,16 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
-    - uses: actions/download-artifact@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
+    - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: scanner-docker-image
         path: .
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: scanner-image-tag
         path: .
@@ -304,7 +359,7 @@ jobs:
       run: |
         export IMAGE_TAG=$(cat scanner-image-tag.txt)
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-    - uses: imjasonh/setup-crane@v0.1
+    - uses: imjasonh/setup-crane@5146f708a817ea23476677995bf2133943b9be0b # v0.1
     - name: Push Docker image to GitHub image Registry
       # Pushing the Docker image to GitHub Container Registry
       run: crane push scanner-image.tar ${{ env.IMAGE_TAG }}
@@ -314,17 +369,22 @@ jobs:
     needs: [publish-scanner]
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
     - name: cosign-installer
-      uses: sigstore/cosign-installer@v3.3.0
+      uses: sigstore/cosign-installer@9614fae9e5c5eddabb09f90a270fcb487c9f7149 # v3.3.0
       with:
         cosign-release: 'v2.2.3' # optional
     - name: Download digest
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: scanner-digest
         path: .
     - name: Download image tag
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: scanner-image-tag
         path: .
@@ -335,7 +395,7 @@ jobs:
         export IMAGE_TAG=$(cat scanner-image-tag.txt)
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
     - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2.1.0
+      uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.1.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
@@ -353,17 +413,22 @@ jobs:
     needs: publish
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
     - name: cosign-installer
-      uses: sigstore/cosign-installer@v3.3.0
+      uses: sigstore/cosign-installer@9614fae9e5c5eddabb09f90a270fcb487c9f7149 # v3.3.0
       with:
         cosign-release: 'v2.2.3' # optional
     - name: Download digest
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: digest
         path: .
     - name: Download image tag
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: image-tag
         path: .
@@ -374,7 +439,7 @@ jobs:
         export IMAGE_TAG=$(cat image-tag.txt)
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
     - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2.1.0
+      uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.1.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
