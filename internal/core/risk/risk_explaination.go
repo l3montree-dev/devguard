@@ -253,6 +253,16 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) s
 	str.WriteString(fmt.Sprintf("%s\n", e.cvssMessage))
 	str.WriteString("\n")
 	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, e.flawId))
+	str.WriteString("\n")
+	// add information about slash commands
+	// ref: https://github.com/l3montree-dev/devguard/issues/180
+	str.WriteString("\n")
+	str.WriteString("### Slash Commands\n")
+	str.WriteString("You can use the following slash commands to interact with this vulnerability:\n")
+	str.WriteString("- `/accept <Justification>` or `/a <Justification>` - Accept the risk\n")
+	str.WriteString("- `/false-positive <Justification>` or `/fp <Justification>` - Mark the risk as false positive\n")
+	str.WriteString("- `/reopen <Justification>` or `/r <Justification>` - Reopen the risk\n")
+
 	return str.String()
 }
 
