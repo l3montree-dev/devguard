@@ -438,6 +438,10 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 	return func(cmd *cobra.Command, args []string) error {
 		core.InitLogger()
 		token, assetName, apiUrl, failOnRisk, webUI := parseConfig(cmd)
+		if token == "" {
+			slog.Error("token seems to be empty. If you provide the token via an environment variable like --token=$DEVGUARD_TOKEN, check, if the environment variable is set or if there are any spelling mistakes", "token", token)
+			os.Exit(1)
+		}
 
 		err := core.LoadConfig()
 		if err != nil {
