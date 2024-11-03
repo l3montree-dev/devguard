@@ -264,22 +264,36 @@ func getCurrentVersion(path string) (string, int, error) {
 	}
 }
 
+func sanitizeApiUrl(apiUrl string) string {
+	// check if the url has a trailing slash
+	apiUrl = strings.TrimSuffix(apiUrl, "/")
+
+	// check if the url has a protocol
+	if !strings.HasPrefix(apiUrl, "http://") && !strings.HasPrefix(apiUrl, "https://") {
+		apiUrl = "https://" + apiUrl
+	}
+
+	return apiUrl
+}
+
 func parseConfig(cmd *cobra.Command) (string, string, string, string, string) {
-	token, err := cmd.Flags().GetString("token")
+	token, err := cmd.PersistentFlags().GetString("token")
 	if err != nil {
 		slog.Error("could not get token", "err", err)
 		os.Exit(1)
 	}
-	assetName, err := cmd.Flags().GetString("assetName")
+	assetName, err := cmd.PersistentFlags().GetString("assetName")
 	if err != nil {
 		slog.Error("could not get asset id", "err", err)
 		os.Exit(1)
 	}
-	apiUrl, err := cmd.Flags().GetString("apiUrl")
+	apiUrl, err := cmd.PersistentFlags().GetString("apiUrl")
 	if err != nil {
 		slog.Error("could not get api url", "err", err)
 		os.Exit(1)
 	}
+	apiUrl = sanitizeApiUrl(apiUrl)
+
 	failOnRisk, err := cmd.Flags().GetString("fail-on-risk")
 	if err != nil {
 		slog.Error("could not get fail-on-risk", "err", err)
