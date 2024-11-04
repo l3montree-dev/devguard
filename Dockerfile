@@ -29,5 +29,6 @@ WORKDIR /
 COPY config/rbac_model.conf /config/rbac_model.conf
 COPY --from=build /go/bin/app /
 COPY --from=build /go/bin/devguard-cli /
+COPY templates /templates
 
 CMD ["/app"]
