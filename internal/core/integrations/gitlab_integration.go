@@ -733,6 +733,8 @@ func (g *gitlabIntegration) generateSSHAuthKeys(ctx core.Context) (*gitssh.Publi
 		return nil, 0, fmt.Errorf("could not create ssh keys: %v", err)
 	}
 
+	sshAuthKeys.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+
 	return sshAuthKeys, tmpSSHKey.ID, nil
 
 }
