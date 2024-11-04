@@ -443,10 +443,7 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 			os.Exit(1)
 		}
 
-		err := core.LoadConfig()
-		if err != nil {
-			slog.Warn("could not initialize config", "err", err)
-		}
+		core.LoadConfig() // nolint:errcheck // just swallow the error: https://github.com/l3montree-dev/devguard/issues/188
 
 		path, err := cmd.Flags().GetString("path")
 		if err != nil {
