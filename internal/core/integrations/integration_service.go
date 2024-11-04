@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 )
 
@@ -84,7 +85,13 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 	if err != nil {
 		return fmt.Errorf("could not add file: %v", err)
 	}
-	_, err = w.Commit("Add devguard pipeline template", &git.CommitOptions{})
+	_, err = w.Commit("Add devguard pipeline template", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "DevGuard",
+			Email: "",
+		},
+	})
+
 	if err != nil {
 		return fmt.Errorf("could not commit: %v", err)
 	}
