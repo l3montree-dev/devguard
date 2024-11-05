@@ -16,6 +16,7 @@
 package scan
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -126,6 +127,7 @@ func (s *httpController) Scan(c core.Context) error {
 
 	// scan the bom we just retrieved.
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
+	fmt.Println("vulns", vulns)
 	if err != nil {
 		slog.Error("could not scan file", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not scan file"})
