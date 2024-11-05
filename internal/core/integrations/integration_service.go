@@ -2,7 +2,6 @@ package integrations
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -61,11 +60,15 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 		}
 		newContent = fmt.Sprintf("include:\n%s\n", template)
 	} else {
-		content, err := io.ReadAll(f)
-		if err != nil {
-			return fmt.Errorf("could not read file: %v", err)
-		}
-		newContent = addPipelineTemplate(content, template)
+		/*
+			content, err := io.ReadAll(f)
+			if err != nil {
+				return fmt.Errorf("could not read file: %v", err)
+			}
+			newContent = addPipelineTemplate(content, template)
+		*/
+		//TODO: we should not read the file and then write it again, we should just append the include to the file and also check if all stages are present
+		newContent = fmt.Sprintf("include:\n%s\n", template)
 	}
 	f.Close()
 	// open the file in truncate mode to overwrite the content
