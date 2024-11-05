@@ -58,7 +58,8 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 		if err != nil {
 			return fmt.Errorf("could not create file: %v", err)
 		}
-		newContent = fmt.Sprintf("include:\n%s\n", template)
+		//newContent = fmt.Sprintf("include:\n%s\n", template)
+		newContent = fmt.Sprintf(template)
 	} else {
 		/*
 			content, err := io.ReadAll(f)
@@ -68,7 +69,7 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 			newContent = addPipelineTemplate(content, template)
 		*/
 		//TODO: we should not read the file and then write it again, we should just append the include to the file and also check if all stages are present
-		newContent = fmt.Sprintf("include:\n%s\n", template)
+		newContent = fmt.Sprintf(template)
 	}
 	f.Close()
 	// open the file in truncate mode to overwrite the content
