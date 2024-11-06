@@ -51,6 +51,8 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 	template := string(templateFile)
 	//read the file
 	//var newContent string
+	//TODO: we should not read the file and then write it again, we should just append the include to the file and also check if all stages are present
+
 	f, err := w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_RDWR, 0644)
 	if err != nil {
 		//make the file
@@ -59,16 +61,17 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 			return fmt.Errorf("could not create file: %v", err)
 		}
 		//newContent = fmt.Sprintf("include:\n%s\n", template)
-	} else {
-		/*
-			content, err := io.ReadAll(f)
-			if err != nil {
-				return fmt.Errorf("could not read file: %v", err)
-			}
-			newContent = addPipelineTemplate(content, template)
-		*/
-		//TODO: we should not read the file and then write it again, we should just append the include to the file and also check if all stages are present
-	}
+	} /*
+		else {
+
+				content, err := io.ReadAll(f)
+				if err != nil {
+					return fmt.Errorf("could not read file: %v", err)
+				}
+				newContent = addPipelineTemplate(content, template)
+		}
+	*/
+
 	f.Close()
 	// open the file in truncate mode to overwrite the content
 	f, err = w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_TRUNC|os.O_RDWR, 0644)
