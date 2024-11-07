@@ -49,6 +49,7 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 		return fmt.Errorf("could not read template file: %v", err)
 	}
 	template := string(templateFile)
+
 	//read the file
 	//var newContent string
 	//TODO: we should not read the file and then write it again, we should just append the include to the file and also check if all stages are present
@@ -63,12 +64,11 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 		//newContent = fmt.Sprintf("include:\n%s\n", template)
 	} /*
 		else {
-
-				content, err := io.ReadAll(f)
-				if err != nil {
-					return fmt.Errorf("could not read file: %v", err)
-				}
-				newContent = addPipelineTemplate(content, template)
+			content, err := io.ReadAll(f)
+			if err != nil {
+				return fmt.Errorf("could not read file: %v", err)
+			}
+			newContent = addPipelineTemplate(content, template)
 		}
 	*/
 
