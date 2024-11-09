@@ -71,14 +71,22 @@ func hexPrivKeyToPrivKeyECDSA(hexPrivKey string) ecdsa.PrivateKey {
 	return *privKeyECDSA
 }
 
-func SignRequest(hexPrivKey string, req *http.Request) error {
-
-	pubKey, err := hexPrivKeyToPubKey(hexPrivKey)
+func HexTokenToECDSA(hexToken string) (ecdsa.PrivateKey, ecdsa.PublicKey, error) {
+	pubKey, err := hexPrivKeyToPubKey(hexToken)
 	if err != nil {
-		return err
+		return ecdsa.PrivateKey{}, ecdsa.PublicKey{}, fmt.Errorf("could not convert hex token to public key: %v", err)
 	}
 
-	privKeyECDSA := hexPrivKeyToPrivKeyECDSA(hexPrivKey)
+	privKeyECDSA := hexPrivKeyToPrivKeyECDSA(hexToken)
+
+	return privKeyECDSA, pubKey, nil
+}
+
+func SignRequest(hexPrivKey string, req *http.Request) error {
+	privKey, pubKey, err := HexTokenToECDSA(hexPrivKey)
+	if err != nil {
+		return fmt.Errorf("could not convert hex token to ECDSA: %v", err)
+	}
 
 	pubKeyString := hex.EncodeToString(pubKey.X.Bytes()) + hex.EncodeToString(pubKey.Y.Bytes())
 
@@ -90,7 +98,7 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 	//config := httpsign.NewSignConfig().SignCreated(false).SetNonce("BADCAB").SetKeyID("my-shared-secret") // SignCreated should be "true" to protect against replay attacks
 	fields := httpsign.Headers("@method", "content-digest")
 
-	signer, _ := httpsign.NewP256Signer(privKeyECDSA, nil, fields)
+	signer, _ := httpsign.NewP256Signer(privKey, nil, fields)
 
 	req.Header.Set("X-Fingerprint", fingerprint)
 

@@ -26,7 +26,7 @@ import (
 func NewHealthCheckCommand() *cobra.Command {
 	healthCheckCommand := &cobra.Command{
 		Use:   "health",
-		Short: "Check the health of the scanner",
+		Short: "Check the health of the scanner. Checks if all dependencies are installed",
 		Long:  `Check if all dependencies are installed for the scanner to function`,
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {

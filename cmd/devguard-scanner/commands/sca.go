@@ -510,7 +510,7 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 func NewSCACommand() *cobra.Command {
 	scaCommand := &cobra.Command{
 		Use:   "sca",
-		Short: "Software composition analysis",
+		Short: "Start a Software composition analysis",
 		Long:  `Scan an application for vulnerabilities. This command will generate a sbom, upload it to devguard and scan it for vulnerabilities.`,
 		// Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
