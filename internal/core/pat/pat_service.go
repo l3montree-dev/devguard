@@ -71,6 +71,19 @@ func hexPrivKeyToPrivKeyECDSA(hexPrivKey string) ecdsa.PrivateKey {
 	return *privKeyECDSA
 }
 
+func HexPubKeyToECDSA(hexPubKey string) ecdsa.PublicKey {
+	pubKey := ecdsa.PublicKey{
+		Curve: elliptic.P256(),
+		X:     new(big.Int),
+		Y:     new(big.Int),
+	}
+
+	pubKey.X, _ = new(big.Int).SetString(hexPubKey[:len(hexPubKey)/2], 16)
+	pubKey.Y, _ = new(big.Int).SetString(hexPubKey[len(hexPubKey)/2:], 16)
+
+	return pubKey
+}
+
 func HexTokenToECDSA(hexToken string) (ecdsa.PrivateKey, ecdsa.PublicKey, error) {
 	pubKey, err := hexPrivKeyToPubKey(hexToken)
 	if err != nil {

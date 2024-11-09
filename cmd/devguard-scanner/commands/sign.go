@@ -214,7 +214,8 @@ func NewSignCommand() *cobra.Command {
 	}
 	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
 	cmd.Flags().Bool("in-toto", false, "The file to sign is an in-toto document")
-	cmd.MarkPersistentFlagRequired("token") // nolint:errcheck
+
+	cmd.MarkPersistentFlagRequired("token")
 
 	return cmd
 }

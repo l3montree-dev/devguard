@@ -11,42 +11,39 @@
 // GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-package main
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+package commands
 
 import (
+	"encoding/hex"
+	"fmt"
+	"log/slog"
 	"os"
 
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands"
+	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "devguard-scanner",
-	Short: "Vulnerability management for devs.",
-	Long:  `Devguard-Scanner is a tool to identify vulnerabilities and flaws in a software. It communicates the result to a devguard instance.`,
-}
+func inspectCmd(cmd *cobra.Command, args []string) {
+	// get the key from the args
+	key := args[0]
 
-func Execute() {
-	err := rootCmd.Execute()
+	_, pubKey, err := pat.HexTokenToECDSA(key)
 	if err != nil {
+		slog.Error("could not parse key", "err", err)
 		os.Exit(1)
 	}
+
+	fmt.Println("PUBLIC KEY:")
+	fmt.Printf("%s%s\n", hex.EncodeToString(pubKey.X.Bytes()), hex.EncodeToString(pubKey.Y.Bytes()))
 }
 
-func init() {
-	rootCmd.AddCommand(
-		commands.NewHealthCheckCommand(),
-		commands.NewSCACommand(),
-		commands.NewContainerScanningCommand(),
-		commands.NewSignCommand(),
-		commands.NewInspectCommand(),
-		commands.NewVerifyCommand(),
-	)
-
-}
-
-func main() {
-	Execute()
+func NewInspectCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "inspect",
+		Short: "Inspect a file or directory",
+		Long:  `Inspect a file or directory for vulnerabilities`,
+		Args:  cobra.ExactArgs(1),
+		Run:   inspectCmd,
+	}
 }
