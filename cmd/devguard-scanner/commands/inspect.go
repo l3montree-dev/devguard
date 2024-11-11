@@ -15,7 +15,9 @@
 package commands
 
 import (
+	"crypto/x509"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"log/slog"
 	"os"
@@ -28,14 +30,46 @@ func inspectCmd(cmd *cobra.Command, args []string) {
 	// get the key from the args
 	key := args[0]
 
-	_, pubKey, err := pat.HexTokenToECDSA(key)
+	privKey, pubKey, err := pat.HexTokenToECDSA(key)
 	if err != nil {
 		slog.Error("could not parse key", "err", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("PUBLIC KEY:")
-	fmt.Printf("%s%s\n", hex.EncodeToString(pubKey.X.Bytes()), hex.EncodeToString(pubKey.Y.Bytes()))
+	fmt.Println("PRIVATE KEY HEX")
+	fmt.Printf("%s\n\n", key)
+
+	fmt.Println("PRIVATE KEY PEM")
+
+	// encode the private key to PEM
+	privKeyBytes, err := x509.MarshalECPrivateKey(&privKey)
+	if err != nil {
+		slog.Error("could not marshal private key", "err", err)
+		os.Exit(1)
+	}
+	// encode the private key to PEM
+	err = pem.Encode(os.Stdout, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privKeyBytes})
+	if err != nil {
+		slog.Error("could not encode private key to PEM", "err", err)
+		os.Exit(1)
+	}
+	fmt.Print("\n\n")
+
+	fmt.Println("PUBLIC KEY HEX")
+	fmt.Printf("%s%s\n\n", hex.EncodeToString(pubKey.X.Bytes()), hex.EncodeToString(pubKey.Y.Bytes()))
+	fmt.Println("PUBLIC KEY PEM")
+	// encode the public key to PEM
+	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&pubKey)
+	if err != nil {
+		slog.Error("could not marshal public key", "err", err)
+		os.Exit(1)
+	}
+
+	err = pem.Encode(os.Stdout, &pem.Block{Type: "EC PUBLIC KEY", Bytes: pubKeyBytes})
+	if err != nil {
+		slog.Error("could not encode public key to PEM", "err", err)
+		os.Exit(1)
+	}
 }
 
 func NewInspectCommand() *cobra.Command {

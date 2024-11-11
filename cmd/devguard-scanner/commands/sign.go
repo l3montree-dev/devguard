@@ -26,6 +26,7 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"os/exec"
 
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/sigstore/sigstore-go/pkg/sign"
@@ -44,7 +45,6 @@ type keypair struct {
 var _ sign.Keypair = &keypair{}
 
 func newKeypair(privateKey *ecdsa.PrivateKey, opts *sign.EphemeralKeypairOptions) (*keypair, error) {
-
 	if opts == nil {
 		opts = &sign.EphemeralKeypairOptions{}
 	}
@@ -143,6 +143,33 @@ func signCmd(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	// encode the private key to PEM
+	privKeyBytes, err := x509.MarshalECPrivateKey(&privKey)
+	if err != nil {
+		slog.Error("could not marshal private key", "err", err)
+		os.Exit(1)
+	}
+	// create a new temporary file to store the private key - the file needs to have minimum permissions
+
+	file, err := os.Create("tmp-cosign.key")
+
+	if err != nil {
+		slog.Error("could not tmp-cosign.key file", "err", err)
+		os.Exit(1)
+	}
+	// remove the file after the function ends
+	defer os.Remove("tmp-cosign.key")
+
+	// encode the private key to PEM
+	err = pem.Encode(file, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privKeyBytes})
+	if err != nil {
+		slog.Error("could not encode private key to PEM", "err", err)
+		os.Exit(1)
+	}
+
+	// use the cosign cli to sign the file
+	err = exec.Command("cosign", "sign-blob", "--key", "tmp-cosign.key", args[0]).Run()
+
 	keypair, err := newKeypair(&privKey, nil)
 	if err != nil {
 		slog.Error("could not create keypair", "err", err)
@@ -215,7 +242,7 @@ func NewSignCommand() *cobra.Command {
 	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
 	cmd.Flags().Bool("in-toto", false, "The file to sign is an in-toto document")
 
-	cmd.MarkPersistentFlagRequired("token")
+	cmd.MarkPersistentFlagRequired("token") // nolint:errcheck
 
 	return cmd
 }
