@@ -2,7 +2,6 @@ package integrations
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -50,8 +49,11 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 		return fmt.Errorf("could not read template file: %v", err)
 	}
 	template := string(templateFile)
+
 	//read the file
-	var newContent string
+	//var newContent string
+	//TODO: we should not read the file and then write it again, we should just append the include to the file and also check if all stages are present
+
 	f, err := w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_RDWR, 0644)
 	if err != nil {
 		//make the file
@@ -59,14 +61,17 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 		if err != nil {
 			return fmt.Errorf("could not create file: %v", err)
 		}
-		newContent = fmt.Sprintf("include:\n%s\n", template)
-	} else {
-		content, err := io.ReadAll(f)
-		if err != nil {
-			return fmt.Errorf("could not read file: %v", err)
+		//newContent = fmt.Sprintf("include:\n%s\n", template)
+	} /*
+		else {
+			content, err := io.ReadAll(f)
+			if err != nil {
+				return fmt.Errorf("could not read file: %v", err)
+			}
+			newContent = addPipelineTemplate(content, template)
 		}
-		newContent = addPipelineTemplate(content, template)
-	}
+	*/
+
 	f.Close()
 	// open the file in truncate mode to overwrite the content
 	f, err = w.Filesystem.OpenFile(".gitlab-ci.yml", os.O_TRUNC|os.O_RDWR, 0644)
@@ -74,7 +79,7 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 		return fmt.Errorf("could not open file: %v", err)
 	}
 
-	_, err = f.Write([]byte(newContent))
+	_, err = f.Write([]byte(template))
 	if err != nil {
 		return fmt.Errorf("could not write to file: %v", err)
 	}
@@ -105,7 +110,7 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 
 	return nil
 }
-func addPipelineTemplate(content []byte, template string) string {
+func addPipelineTemplate(content []byte, template string) string { //nolint:unused
 	fileStr := string(content)
 	includeIndex := -1
 	// split the file on each line

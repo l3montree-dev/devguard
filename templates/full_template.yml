@@ -1,4 +1,10 @@
-  - component: $CI_SERVER_FQDN/l3montree/devguard/full@~latest
-    inputs:
-      asset_name: "$DEVGUARD_ASSET_NAME"
-      token: "$DEVGUARD_TOKEN"
+stages:
+- build
+- test
+- deploy
+
+include:
+- component: $CI_SERVER_FQDN/l3montree/devguard/full@~latest
+  inputs:
+    asset_name: "$DEVGUARD_ASSET_NAME"
+    token: "$DEVGUARD_TOKEN"
