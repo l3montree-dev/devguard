@@ -69,7 +69,10 @@ func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw,
 		return nil
 	}
 	if doRiskManagement {
-		s.userFixedFlaws(tx, userID, flaws)
+		err := s.userFixedFlaws(tx, userID, flaws)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -107,7 +110,10 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 	}
 
 	if doRiskManagement {
-		s.userDetectedFlaws(tx, userID, flaws, asset)
+		err := s.userDetectedFlaws(tx, userID, flaws, asset)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
