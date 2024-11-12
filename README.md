@@ -288,6 +288,16 @@ docker run -v "$(PWD):/app" scanner devguard-scanner sca \
   --path="/app"
 ```
 
+#### Using the scanner during development
+
+```bash
+go run ./cmd/devguard-scanner/main.go sca \
+  --assetName="<ASSET NAME>" \
+  --apiUrl="http://localhost:8080" \
+  --token="<TOKEN>"
+```
+
+
 #### Scan a container
 
 ##### Build a image.tar from a dockerfile using kaniko

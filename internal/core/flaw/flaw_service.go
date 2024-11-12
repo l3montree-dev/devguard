@@ -64,11 +64,27 @@ func NewService(flawRepository flawRepository, flawEventRepository flawEventRepo
 	}
 }
 
-// expect a transaction to be passed
-func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw) error {
+func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, doRiskManagement bool) error {
 	if len(flaws) == 0 {
 		return nil
 	}
+	if doRiskManagement {
+		s.userFixedFlaws(tx, userID, flaws)
+		return nil
+	}
+
+	for i, flaw := range flaws {
+		ev := models.NewFixedEvent(flaw.CalculateHash(), userID)
+		// apply the event on the flaw
+		ev.Apply(&flaws[i])
+
+	}
+	return nil
+}
+
+// expect a transaction to be passed
+func (s *service) userFixedFlaws(tx core.DB, userID string, flaws []models.Flaw) error {
+
 	// create a new flawevent for each fixed flaw
 	events := make([]models.FlawEvent, len(flaws))
 	for i, flaw := range flaws {
@@ -85,11 +101,34 @@ func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw)
 	return s.flawEventRepository.SaveBatch(tx, events)
 }
 
-// expect a transaction to be passed
-func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error {
+func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset, doRiskManagement bool) error {
 	if len(flaws) == 0 {
 		return nil
 	}
+
+	if doRiskManagement {
+		s.userDetectedFlaws(tx, userID, flaws, asset)
+		return nil
+	}
+
+	e := core.Environmental{
+		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
+		IntegrityRequirements:       string(asset.IntegrityRequirement),
+		AvailabilityRequirements:    string(asset.AvailabilityRequirement),
+	}
+
+	for i, flaw := range flaws {
+		riskReport := risk.RawRisk(*flaw.CVE, e, flaw.GetComponentDepth())
+		ev := models.NewDetectedEvent(flaw.CalculateHash(), userID, riskReport)
+		// apply the event on the flaw
+		ev.Apply(&flaws[i])
+	}
+	return nil
+}
+
+// expect a transaction to be passed
+func (s *service) userDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error {
+
 	// create a new flawevent for each detected flaw
 	events := make([]models.FlawEvent, len(flaws))
 	e := core.Environmental{
