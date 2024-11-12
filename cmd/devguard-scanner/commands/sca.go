@@ -325,7 +325,7 @@ git push origin v1.0.1
 }
 
 // can be reused for container scanning as well.
-func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webUI string) {
+func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webUI string, doRiskManagement bool) {
 	slog.Info("Scan completed successfully", "flawAmount", len(scanResponse.Flaws), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.Flaws) == 0 {
@@ -356,7 +356,12 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	tw.AppendRows(utils.Map(
 		scanResponse.Flaws,
 		func(f flaw.FlawDTO) table.Row {
-			clickableLink := fmt.Sprintf("\033]8;;%s/%s/flaws/%s\033\\View in Web UI\033]8;;\033\\", webUI, assetName, f.ID)
+			clickableLink := ""
+			if doRiskManagement {
+				clickableLink = fmt.Sprintf("\033]8;;%s/%s/flaws/%s\033\\View in Web UI\033]8;;\033\\", webUI, assetName, f.ID)
+			} else {
+				clickableLink = "Risk Management is disabled"
+			}
 			return table.Row{f.ArbitraryJsonData["packageName"].(string), f.CVEID, *f.RawRiskAssessment, f.ArbitraryJsonData["installedVersion"], f.ArbitraryJsonData["fixedVersion"], f.State, clickableLink}
 		},
 	))
@@ -465,6 +470,12 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
+		// check if we should do risk management
+		doRiskManagement, err := cmd.Flags().GetBool("riskManagement")
+		if err != nil {
+			return errors.Wrap(err, "could not get risk management flag")
+		}
+
 		req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/scan", file)
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
@@ -475,6 +486,8 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 			return errors.Wrap(err, "could not sign request")
 		}
 
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Risk-Management", strconv.FormatBool(doRiskManagement))
 		req.Header.Set("X-Asset-Name", assetName)
 		req.Header.Set("X-Asset-Version", version)
 		req.Header.Set("X-Scan-Type", scanType)
@@ -502,7 +515,7 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 		if err != nil {
 			return errors.Wrap(err, "could not parse response")
 		}
-		printScaResults(scanResponse, failOnRisk, assetName, webUI)
+		printScaResults(scanResponse, failOnRisk, assetName, webUI, doRiskManagement)
 		return nil
 	}
 }
@@ -521,6 +534,8 @@ func NewSCACommand() *cobra.Command {
 			}
 		},
 	}
+
+	scaCommand.Flags().Bool("riskManagement", true, "Enable risk management (stores the detected vulnerabilities in devguard)")
 
 	addScanFlags(scaCommand)
 	return scaCommand

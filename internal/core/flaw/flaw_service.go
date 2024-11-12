@@ -64,8 +64,7 @@ func NewService(flawRepository flawRepository, flawEventRepository flawEventRepo
 	}
 }
 
-// expect a transaction to be passed
-func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw) error {
+func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, doRiskManagement bool) error {
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -78,18 +77,22 @@ func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw)
 		events[i] = ev
 	}
 
-	err := s.flawRepository.SaveBatch(tx, flaws)
-	if err != nil {
-		return err
+	if doRiskManagement {
+		err := s.flawRepository.SaveBatch(tx, flaws)
+		if err != nil {
+			return err
+		}
+		return s.flawEventRepository.SaveBatch(tx, events)
 	}
-	return s.flawEventRepository.SaveBatch(tx, events)
+
+	return nil
 }
 
-// expect a transaction to be passed
-func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error {
+func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset, doRiskManagement bool) error {
 	if len(flaws) == 0 {
 		return nil
 	}
+
 	// create a new flawevent for each detected flaw
 	events := make([]models.FlawEvent, len(flaws))
 	e := core.Environmental{
@@ -107,12 +110,16 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 		events[i] = ev
 	}
 
-	// run the updates in the transaction to keep a valid state
-	err := s.flawRepository.SaveBatch(tx, flaws)
-	if err != nil {
-		return err
+	if doRiskManagement {
+		// run the updates in the transaction to keep a valid state
+		err := s.flawRepository.SaveBatch(tx, flaws)
+		if err != nil {
+			return err
+		}
+		return s.flawEventRepository.SaveBatch(tx, events)
 	}
-	return s.flawEventRepository.SaveBatch(tx, events)
+
+	return nil
 }
 
 func (s *service) RecalculateAllRawRiskAssessments() error {

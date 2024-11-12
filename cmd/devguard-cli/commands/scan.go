@@ -86,6 +86,7 @@ func newSbomCommand() *cobra.Command {
 							version,
 							"github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scanType,
 							"system",
+							true,
 						)
 
 						if err != nil {

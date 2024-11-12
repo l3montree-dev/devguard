@@ -61,8 +61,8 @@ type assetRepository interface {
 }
 
 type flawService interface {
-	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw) error
-	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset) error
+	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, doRiskManagement bool) error
+	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset, doRiskManagement bool) error
 	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error)
 
 	RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error
@@ -85,7 +85,7 @@ func NewService(assetRepository assetRepository, componentRepository componentRe
 	}
 }
 
-func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanType string, version string, scannerID string, userID string) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
+func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanType string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
 
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}
@@ -138,6 +138,7 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 			"componentDepth":    depthMap[componentPurl],
 			"scanType":          scanType,
 		})
+
 		flaws = append(flaws, flaw)
 	}
 
@@ -147,7 +148,7 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current flaws
-	amountOpened, amountClosed, amountExisting, err := s.handleScanResult(userID, scannerID, asset, flaws)
+	amountOpened, amountClosed, amountExisting, err := s.handleScanResult(userID, scannerID, asset, flaws, doRiskManagement)
 	if err != nil {
 		return 0, 0, []models.Flaw{}, err
 	}
@@ -167,16 +168,17 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 		asset.LastIacScan = utils.Ptr(time.Now())
 	}
 
-	err = s.assetRepository.Save(nil, &asset)
-	if err != nil {
-		// swallow but log
-		slog.Error("could not save asset", "err", err)
+	if doRiskManagement {
+		err = s.assetRepository.Save(nil, &asset)
+		if err != nil {
+			// swallow but log
+			slog.Error("could not save asset", "err", err)
+		}
 	}
-
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
-func (s *service) handleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw) (int, int, []models.Flaw, error) {
+func (s *service) handleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw, doRiskManagement bool) (int, int, []models.Flaw, error) {
 	// get all existing flaws from the database - this is the old state
 	existingFlaws, err := s.flawRepository.ListByScanner(asset.GetID(), scannerID)
 	if err != nil {
@@ -195,22 +197,40 @@ func (s *service) handleScanResult(userID string, scannerID string, asset models
 	fixedFlaws := comparison.OnlyInA
 	newFlaws := comparison.OnlyInB
 
-	// get a transaction
-	if err := s.flawRepository.Transaction(func(tx core.DB) error {
-		if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, asset); err != nil {
-			// this will cancel the transaction
-			return err
+	if doRiskManagement {
+		// get a transaction
+		if err := s.flawRepository.Transaction(func(tx core.DB) error {
+			if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, asset, true); err != nil {
+				// this will cancel the transaction
+				return err
+			}
+			return s.flawService.UserFixedFlaws(tx, userID, utils.Filter(
+				fixedFlaws,
+				func(flaw models.Flaw) bool {
+					return flaw.State == models.FlawStateOpen
+				},
+			), true)
+		}); err != nil {
+			slog.Error("could not save flaws", "err", err)
+			return 0, 0, []models.Flaw{}, err
 		}
-		return s.flawService.UserFixedFlaws(tx, userID, utils.Filter(
+	} else {
+		if err := s.flawService.UserDetectedFlaws(nil, userID, newFlaws, asset, false); err != nil {
+			slog.Error("could not save flaws", "err", err)
+			return 0, 0, []models.Flaw{}, err
+		}
+
+		if err := s.flawService.UserFixedFlaws(nil, userID, utils.Filter(
 			fixedFlaws,
 			func(flaw models.Flaw) bool {
 				return flaw.State == models.FlawStateOpen
 			},
-		))
-	}); err != nil {
-		slog.Error("could not save flaws", "err", err)
-		return 0, 0, []models.Flaw{}, err
+		), false); err != nil {
+			slog.Error("could not save flaws", "err", err)
+			return 0, 0, []models.Flaw{}, err
+		}
 	}
+
 	// the amount we actually fixed, is the amount that was open before
 	fixedFlaws = utils.Filter(fixedFlaws, func(flaw models.Flaw) bool {
 		return flaw.State == models.FlawStateOpen
