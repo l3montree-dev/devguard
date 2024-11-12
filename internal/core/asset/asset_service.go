@@ -197,7 +197,6 @@ func (s *service) handleScanResult(userID string, scannerID string, asset models
 	fixedFlaws := comparison.OnlyInA
 	newFlaws := comparison.OnlyInB
 
-	fmt.Println("doRiskManagement is", doRiskManagement)
 	if doRiskManagement {
 		// get a transaction
 		if err := s.flawRepository.Transaction(func(tx core.DB) error {
@@ -215,9 +214,7 @@ func (s *service) handleScanResult(userID string, scannerID string, asset models
 			slog.Error("could not save flaws", "err", err)
 			return 0, 0, []models.Flaw{}, err
 		}
-	}
-
-	if !doRiskManagement {
+	} else {
 		if err := s.flawService.UserDetectedFlaws(nil, userID, newFlaws, asset, false); err != nil {
 			slog.Error("could not save flaws", "err", err)
 			return 0, 0, []models.Flaw{}, err
