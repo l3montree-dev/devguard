@@ -1,4 +1,8 @@
-- component: $CI_SERVER_FQDN/l3montree/devguard/sca@~latest
+stages:
+- test
+
+include:
+- component: $CI_SERVER_FQDN/l3montree/devguard/software-composition-analysis@~latest
   inputs:
     asset_name: "$DEVGUARD_ASSET_NAME"
     token: "$DEVGUARD_TOKEN"

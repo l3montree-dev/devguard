@@ -40,9 +40,9 @@ func init() {
 		commands.NewHealthCheckCommand(),
 		commands.NewSCACommand(),
 		commands.NewContainerScanningCommand(),
-		commands.NewSignCommand(),
+		commands.NewAttestCommand(),
 		commands.NewInspectCommand(),
-		commands.NewVerifyCommand(),
+		commands.NewSignCommand(),
 	)
 
 }

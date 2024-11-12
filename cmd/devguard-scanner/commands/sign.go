@@ -16,126 +16,20 @@
 package commands
 
 import (
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/sha256"
+	"bytes"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/pem"
-	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
+	"path"
 
 	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/encoding/protojson"
-
-	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 )
 
-type keypair struct {
-	privateKey    *ecdsa.PrivateKey
-	options       *sign.EphemeralKeypairOptions
-	hashAlgorithm protocommon.HashAlgorithm
-}
-
-var _ sign.Keypair = &keypair{}
-
-func newKeypair(privateKey *ecdsa.PrivateKey, opts *sign.EphemeralKeypairOptions) (*keypair, error) {
-	if opts == nil {
-		opts = &sign.EphemeralKeypairOptions{}
-	}
-
-	if opts.Hint == nil {
-		pubKeyBytes, err := x509.MarshalPKIXPublicKey(privateKey.Public())
-		if err != nil {
-			return nil, err
-		}
-		hashedBytes := sha256.Sum256(pubKeyBytes)
-		opts.Hint = []byte(base64.StdEncoding.EncodeToString(hashedBytes[:]))
-	}
-
-	return &keypair{
-		privateKey:    privateKey,
-		options:       opts,
-		hashAlgorithm: protocommon.HashAlgorithm_SHA2_256,
-	}, nil
-}
-
-func (k *keypair) GetHashAlgorithm() protocommon.HashAlgorithm {
-	return k.hashAlgorithm
-}
-
-func (k *keypair) GetHint() []byte {
-	return k.options.Hint
-}
-
-func (k *keypair) GetKeyAlgorithm() string {
-	return "ecdsa"
-}
-
-func (k *keypair) GetPublicKeyPem() (string, error) {
-	pubKeyBytes, err := x509.MarshalPKIXPublicKey(k.privateKey.Public())
-	if err != nil {
-		return "", err
-	}
-
-	pubKeyPem := pem.EncodeToMemory(&pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubKeyBytes,
-	})
-
-	return string(pubKeyPem), nil
-}
-
-func getHashFunc(hashAlgorithm protocommon.HashAlgorithm) (crypto.Hash, error) {
-	switch hashAlgorithm {
-	case protocommon.HashAlgorithm_SHA2_256:
-		return crypto.Hash(crypto.SHA256), nil
-	case protocommon.HashAlgorithm_SHA2_384:
-		return crypto.Hash(crypto.SHA384), nil
-	case protocommon.HashAlgorithm_SHA2_512:
-		return crypto.Hash(crypto.SHA512), nil
-	default:
-		var hash crypto.Hash
-		return hash, errors.New("Unsupported hash algorithm")
-	}
-}
-
-func (k *keypair) SignData(data []byte) ([]byte, []byte, error) {
-	hashFunc, err := getHashFunc(k.hashAlgorithm)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	hasher := hashFunc.New()
-	hasher.Write(data)
-	digest := hasher.Sum(nil)
-
-	signature, err := k.privateKey.Sign(rand.Reader, digest, hashFunc)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return signature, digest, nil
-}
-
-func signCmd(cmd *cobra.Command, args []string) {
-	token, err := cmd.Flags().GetString("token")
-	if err != nil {
-		slog.Error("could not get token", "err", err)
-		os.Exit(1)
-	}
-
-	inToto, err := cmd.Flags().GetBool("in-toto")
-	if err != nil {
-		slog.Error("could not get in-toto flag", "err", err)
-		os.Exit(1)
-	}
-
+func tokenToKey(token string) (string, error) {
 	// transform the hex private key to an ecdsa private key
 	privKey, _, err := pat.HexTokenToECDSA(token)
 	if err != nil {
@@ -147,100 +41,118 @@ func signCmd(cmd *cobra.Command, args []string) {
 	privKeyBytes, err := x509.MarshalECPrivateKey(&privKey)
 	if err != nil {
 		slog.Error("could not marshal private key", "err", err)
-		os.Exit(1)
+		return "", err
 	}
 	// create a new temporary file to store the private key - the file needs to have minimum permissions
+	tempDir := os.TempDir()
 
-	file, err := os.Create("tmp-cosign.key")
+	file, err := os.OpenFile(path.Join(tempDir, "ecdsa.pem"), os.O_CREATE|os.O_WRONLY, 0600)
 
 	if err != nil {
-		slog.Error("could not tmp-cosign.key file", "err", err)
-		os.Exit(1)
+		slog.Error("could not create file", "err", err)
+		return "", err
 	}
 	// remove the file after the function ends
-	defer os.Remove("tmp-cosign.key")
+	defer os.Remove(path.Join(tempDir, "ecdsa.pem"))
 
 	// encode the private key to PEM
 	err = pem.Encode(file, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privKeyBytes})
 	if err != nil {
 		slog.Error("could not encode private key to PEM", "err", err)
-		os.Exit(1)
+		return "", err
+	}
+
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+
+	// import the cosign key
+	importCmd := exec.Command("cosign", "import-key-pair", "--output-key-prefix", "cosign", "--key", "ecdsa.pem")
+	importCmd.Dir = tempDir
+	importCmd.Stdout = &out
+	importCmd.Stderr = &errOut
+	importCmd.Env = []string{"COSIGN_PASSWORD="}
+
+	err = importCmd.Run()
+	if err != nil {
+		slog.Error("could not import key", "err", err, "out", out.String(), "errOut", errOut.String())
+		return "", err
+	}
+
+	return path.Join(tempDir, "cosign.key"), nil
+}
+
+func signCmd(cmd *cobra.Command, args []string) error {
+	token, err := cmd.Flags().GetString("token")
+	if err != nil {
+		slog.Error("could not get token", "err", err)
+		return err
+	}
+
+	// transform the hex private key to an ecdsa private key
+	keyPath, err := tokenToKey(token)
+	if err != nil {
+		slog.Error("could not convert hex token to ecdsa private key", "err", err)
+		return err
+	}
+
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+
+	defer os.Remove(keyPath)
+
+	// check if the argument is a file, which does exist
+	fileOrImageName := args[0]
+	if _, err := os.Stat(fileOrImageName); os.IsNotExist(err) {
+		// it is an image
+		signImageCmd := exec.Command("cosign", "sign", "--tlog-upload=false", "--key", keyPath, fileOrImageName) // nolint:gosec
+		signImageCmd.Stdout = &out
+		signImageCmd.Stderr = &errOut
+		signImageCmd.Env = []string{"COSIGN_PASSWORD="}
+
+		err = signImageCmd.Run()
+		if err != nil {
+			slog.Error("could not sign image", "err", err, "out", out.String(), "errOut", errOut.String())
+			return err
+		}
+
+		slog.Info("signature", "signature", out.String())
+		return nil
 	}
 
 	// use the cosign cli to sign the file
-	err = exec.Command("cosign", "sign-blob", "--key", "tmp-cosign.key", args[0]).Run()
+	signBlobCmd := exec.Command("cosign", "sign-blob", "--tlog-upload=false", "--key", keyPath, fileOrImageName) // nolint:gosec
 
-	keypair, err := newKeypair(&privKey, nil)
+	signBlobCmd.Stdout = &out
+	signBlobCmd.Stderr = &errOut
+	signBlobCmd.Env = []string{"COSIGN_PASSWORD="}
+
+	err = signBlobCmd.Run()
 	if err != nil {
-		slog.Error("could not create keypair", "err", err)
-		os.Exit(1)
+		slog.Error("could not sign blob", "err", err, "out", out.String(), "errOut", errOut.String())
+		return err
 	}
 
-	data, err := os.ReadFile(args[0])
-	if err != nil {
-		slog.Error("could not read file", "err", err)
-		os.Exit(1)
-	}
-
-	var content sign.Content
-
-	if inToto {
-		content = &sign.DSSEData{
-			Data:        data,
-			PayloadType: "application/vnd.in-toto+json",
-		}
-	} else {
-		content = &sign.PlainData{
-			Data: data,
-		}
-	}
-
-	if err != nil {
-		slog.Error("could not read file", "err", err)
-		os.Exit(1)
-	}
-
-	opts := sign.BundleOptions{}
-
-	/*rekorOpts := &sign.RekorOptions{
-		BaseURL: "https://rekor.sigstage.dev",
-		Timeout: time.Duration(90 * time.Second),
-		Retries: 1,
-	}
-
-	opts.TransparencyLogs = append(opts.TransparencyLogs, sign.NewRekor(rekorOpts))
-	*/
-
-	bundle, err := sign.Bundle(content, keypair, opts)
-	if err != nil {
-		slog.Error("could not create bundle", "err", err)
-		os.Exit(1)
-	}
-
-	bundleJSON, err := protojson.Marshal(bundle)
-	if err != nil {
-		slog.Error("could not marshal bundle", "err", err)
-		os.Exit(1)
-	}
-
-	// write the bundle to a file
-	err = os.WriteFile("bundle.json", bundleJSON, 0600)
-	if err != nil {
-		slog.Error("could not write bundle to file", "err", err)
-		os.Exit(1)
-	}
+	// print the signature
+	fmt.Println(out.String())
+	return nil
 }
 
 func NewSignCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sign <file>",
-		Short: "Sign a file",
-		Long:  `Sign a file`,
+		Use:   "sign <file | image>",
+		Short: "Sign a file or image",
+		Long:  `Sign a file or image`,
 		Args:  cobra.ExactArgs(1),
-		Run:   signCmd,
+		Run: func(cmd *cobra.Command, args []string) {
+			err := signCmd(cmd, args)
+			if err != nil {
+				slog.Error("signing failed", "err", err)
+				os.Exit(1)
+			}
+		},
 	}
+
 	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-	cmd.Flags().Bool("in-toto", false, "The file to sign is an in-toto document")
 
 	cmd.MarkPersistentFlagRequired("token") // nolint:errcheck
 
