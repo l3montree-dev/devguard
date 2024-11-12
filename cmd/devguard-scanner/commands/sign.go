@@ -103,38 +103,37 @@ func signCmd(cmd *cobra.Command, args []string) error {
 	// check if the argument is a file, which does exist
 	fileOrImageName := args[0]
 	if _, err := os.Stat(fileOrImageName); os.IsNotExist(err) {
-		// the file does not exist - lets expect it to be an image
-		// use the cosign cli to sign the file
-		signBlobCmd := exec.Command("cosign", "sign-blob", "--tlog-upload=false", "--key", keyPath, args[0]) // nolint:gosec
+		// it is an image
+		signImageCmd := exec.Command("cosign", "sign", "--tlog-upload=false", "--key", keyPath, fileOrImageName) // nolint:gosec
+		signImageCmd.Stdout = &out
+		signImageCmd.Stderr = &errOut
+		signImageCmd.Env = []string{"COSIGN_PASSWORD="}
 
-		signBlobCmd.Stdout = &out
-		signBlobCmd.Stderr = &errOut
-		signBlobCmd.Env = []string{"COSIGN_PASSWORD="}
-
-		err = signBlobCmd.Run()
+		err = signImageCmd.Run()
 		if err != nil {
-			slog.Error("could not sign blob", "err", err, "out", out.String(), "errOut", errOut.String())
+			slog.Error("could not sign image", "err", err, "out", out.String(), "errOut", errOut.String())
 			return err
 		}
 
-		// print the signature
-		fmt.Println(out.String())
+		slog.Info("signature", "signature", out.String())
 		return nil
 	}
-	// it is an image
-	signImageCmd := exec.Command("cosign", "sign", "--tlog-upload=false", "--key", keyPath, args[0]) // nolint:gosec
-	signImageCmd.Stdout = &out
-	signImageCmd.Stderr = &errOut
-	signImageCmd.Env = []string{"COSIGN_PASSWORD="}
 
-	err = signImageCmd.Run()
+	// use the cosign cli to sign the file
+	signBlobCmd := exec.Command("cosign", "sign-blob", "--tlog-upload=false", "--key", keyPath, fileOrImageName) // nolint:gosec
+
+	signBlobCmd.Stdout = &out
+	signBlobCmd.Stderr = &errOut
+	signBlobCmd.Env = []string{"COSIGN_PASSWORD="}
+
+	err = signBlobCmd.Run()
 	if err != nil {
-		slog.Error("could not sign image", "err", err, "out", out.String(), "errOut", errOut.String())
+		slog.Error("could not sign blob", "err", err, "out", out.String(), "errOut", errOut.String())
 		return err
 	}
 
-	slog.Info("signature", "signature", out.String())
-
+	// print the signature
+	fmt.Println(out.String())
 	return nil
 }
 
