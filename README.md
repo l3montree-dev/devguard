@@ -254,10 +254,11 @@ Distributed under the AGPL-3.0-or-later License. See [`LICENSE.txt`](LICENSE.txt
 
 ## Sponsors and Supporters 🚀
 
-We are proud to be supported by the following organizations:
+We are proud to be supported and working together with the following organizations:
 
 [![OWASP](./images/sponsors/sp-owasp.png)](https://owasp.org/)
 [![Bonn-Rhein-Sieg University of Applied Science](./images/sponsors/sp-hbrs.png)](https://www.h-brs.de/)
+[![GitLab](./images/sponsors/sp-gitlab.png)](https://gitlab.com/)
 [![WhereGroup](./images/sponsors/sp-wheregroup.png)](https://wheregroup.com/)
 [![DigitalHub](./images/sponsors/sp-digitalhub.png)](https://www.digitalhub.de/)
 [![WetterOnline](./images/sponsors/sp-wetteronline.png)](https://wetteronline.de/)
