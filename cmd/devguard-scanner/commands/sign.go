@@ -87,6 +87,32 @@ func signCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// check if we should login beforehand
+	username, err := cmd.Flags().GetString("username")
+	if username != "" && err == nil {
+		// the user requests to login
+		password, err := cmd.Flags().GetString("password")
+		if err != nil {
+			slog.Error("could not get password. Since username is provided, failing the signing process since logging in is not possible", "err", err)
+			return err
+		}
+
+		registry, err := cmd.Flags().GetString("registry")
+		if err != nil {
+			slog.Error("could not get registry. Since username is provided, failing the signing process since logging in is not possible", "err", err)
+			return err
+		}
+
+		// login to the registry
+		err = login(cmd.Context(), username, password, registry)
+		if err != nil {
+			slog.Error("login failed", "err", err)
+			return err
+		}
+
+		slog.Info("logged in", "registry", registry)
+	}
+
 	// transform the hex private key to an ecdsa private key
 	keyPath, err := tokenToKey(token)
 	if err != nil {
@@ -159,6 +185,11 @@ func NewSignCommand() *cobra.Command {
 	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
 
 	cmd.MarkPersistentFlagRequired("token") // nolint:errcheck
+
+	// allow username, password and registry to be provided as well as flags
+	cmd.Flags().StringP("username", "u", "", "The username to authenticate the request")
+	cmd.Flags().StringP("password", "p", "", "The password to authenticate the request")
+	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to")
 
 	return cmd
 }

@@ -16,6 +16,7 @@ limitations under the License.
 package commands
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/spf13/cobra"
@@ -39,6 +40,28 @@ func NewLoginCommand() *cobra.Command {
 	return cmd
 }
 
+func login(ctx context.Context, username, password, registryUrl string) error {
+
+	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{
+		AllowPlaintextPut:        true,
+		DetectDefaultNativeStore: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	return credentials.Login(ctx, store, &remote.Registry{
+		RepositoryOptions: remote.RepositoryOptions{
+			Reference: registry.Reference{
+				Registry: registryUrl,
+			},
+		},
+	}, auth.Credential{
+		Username: username,
+		Password: password,
+	})
+}
+
 func runLogin(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
 
@@ -56,30 +79,11 @@ func runLogin(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{
-		AllowPlaintextPut:        true,
-		DetectDefaultNativeStore: true,
-	})
-
-	if err != nil {
-		slog.Error("failed to create credentials store", "err", err)
-	}
-
 	registryUrl := args[0]
 
-	err = credentials.Login(ctx, store, &remote.Registry{
-		RepositoryOptions: remote.RepositoryOptions{
-			Reference: registry.Reference{
-				Registry: registryUrl,
-			},
-		},
-	}, auth.Credential{
-		Username: username,
-		Password: password,
-	})
-
+	err := login(ctx, username, password, registryUrl)
 	if err != nil {
-		slog.Error("failed to login", "err", err)
+		slog.Error("login failed", "err", err)
 	}
 
 	slog.Info("login successful")
