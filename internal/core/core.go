@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/golang-cz/devslog"
 	"github.com/joho/godotenv"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
-	"github.com/lmittmann/tint"
 	"gorm.io/gorm"
 )
 
@@ -38,11 +38,22 @@ func DatabaseFactory() (DB, error) {
 // tint is a simple logging library that allows to add colors to the log output.
 // this is obviously not required, but it makes the logs easier to read.
 func InitLogger() {
-	loggingHandler := tint.NewHandler(os.Stdout, &tint.Options{
+	// slog.HandlerOptions
+	slogOpts := &slog.HandlerOptions{
 		AddSource: true,
 		Level:     slog.LevelDebug,
-	})
-	logger := slog.New(loggingHandler)
+	}
+
+	// new logger with options
+	opts := &devslog.Options{
+		HandlerOptions:    slogOpts,
+		MaxSlicePrintSize: 4,
+		SortKeys:          true,
+		NewLineAfterLog:   true,
+		StringerFormatter: true,
+	}
+
+	logger := slog.New(devslog.NewHandler(os.Stdout, opts))
 	slog.SetDefault(logger)
 }
 

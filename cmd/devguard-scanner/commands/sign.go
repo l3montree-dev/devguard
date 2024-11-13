@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -119,7 +118,7 @@ func signCmd(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		slog.Info("signature", "signature", out.String())
+		slog.Info("signed image", "image", fileOrImageName)
 		return nil
 	}
 
@@ -138,7 +137,7 @@ func signCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	// print the signature
-	fmt.Println(out.String())
+	slog.Info("signed file", "file", fileOrImageName, "signature", out.String())
 	return nil
 }
 
