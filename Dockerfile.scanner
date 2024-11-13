@@ -23,6 +23,8 @@ RUN apk add --no-cache curl
 
 RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.54.1
 
+RUN curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64" && mv cosign-linux-amd64 /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
+
 COPY . .
 
 # build the scanner
@@ -35,5 +37,6 @@ RUN apk add --no-cache git
 
 COPY --from=golang-builder /app/devguard-scanner /usr/local/bin/devguard-scanner
 COPY --from=golang-builder /usr/local/bin/trivy /usr/local/bin/trivy
+COPY --from=golang-builder /usr/local/bin/cosign /usr/local/bin/cosign
 
 ENTRYPOINT [""]
