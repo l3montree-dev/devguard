@@ -25,16 +25,6 @@ import (
 	"oras.land/oras-go/v2/registry/remote/credentials"
 )
 
-// DistributionSpec option struct which implements pflag.Value interface.
-type distributionSpec struct {
-	// ReferrersAPI indicates the preference of the implementation of the Referrers API.
-	// Set to true for referrers API, false for referrers tag scheme, and nil for auto fallback.
-	ReferrersAPI *bool
-
-	// specFlag should be provided in form of`<version>-<api>-<option>`
-	flag string
-}
-
 func NewLoginCommand() *cobra.Command {
 
 	cmd := &cobra.Command{

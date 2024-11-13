@@ -517,7 +517,7 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 	}
 
 	for _, hook := range hooks {
-		if hook.URL == "https://main.devguard.org/api/v1/webhook/" {
+		if hook.URL == "https://api.main.devguard.org/api/v1/webhook/" {
 			// the hook already exists
 			return nil
 		}
@@ -534,7 +534,7 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 		NoteEvents:               gitlab.Ptr(true),
 		ConfidentialNoteEvents:   gitlab.Ptr(true),
 		EnableSSLVerification:    gitlab.Ptr(true),
-		URL:                      gitlab.Ptr("https://main.devguard.org/api/v1/webhook/"),
+		URL:                      gitlab.Ptr("https://api.main.devguard.org/api/v1/webhook/"),
 		Token:                    gitlab.Ptr(token.String()),
 	}
 
