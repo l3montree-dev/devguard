@@ -102,12 +102,16 @@ func signCmd(cmd *cobra.Command, args []string) error {
 
 	// check if the argument is a file, which does exist
 	fileOrImageName := args[0]
+	// forward the current process envs as well
+	envs := os.Environ()
+	envs = append(envs, "COSIGN_PASSWORD=")
+
 	if _, err := os.Stat(fileOrImageName); os.IsNotExist(err) {
 		// it is an image
 		signImageCmd := exec.Command("cosign", "sign", "--tlog-upload=false", "--key", keyPath, fileOrImageName) // nolint:gosec
 		signImageCmd.Stdout = &out
 		signImageCmd.Stderr = &errOut
-		signImageCmd.Env = []string{"COSIGN_PASSWORD="}
+		signImageCmd.Env = envs
 
 		err = signImageCmd.Run()
 		if err != nil {
@@ -124,7 +128,8 @@ func signCmd(cmd *cobra.Command, args []string) error {
 
 	signBlobCmd.Stdout = &out
 	signBlobCmd.Stderr = &errOut
-	signBlobCmd.Env = []string{"COSIGN_PASSWORD="}
+
+	signBlobCmd.Env = envs
 
 	err = signBlobCmd.Run()
 	if err != nil {
