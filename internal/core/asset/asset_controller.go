@@ -148,6 +148,15 @@ func (a *httpController) Metrics(c core.Context) error {
 	})
 }
 
+func (a *httpController) Delete(c core.Context) error {
+	asset := core.GetAsset(c)
+	err := a.assetRepository.Delete(nil, asset.GetID())
+	if err != nil {
+		return err
+	}
+	return c.NoContent(200)
+}
+
 func (a *httpController) Create(c core.Context) error {
 	var req createRequest
 	if err := c.Bind(&req); err != nil {
