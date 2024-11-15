@@ -87,6 +87,28 @@ func (a *httpController) Versions(c core.Context) error {
 	return c.JSON(200, versions)
 }
 
+func (a *httpController) AttachSigningKey(c core.Context) error {
+	asset := core.GetAsset(c)
+
+	// read the fingerprint from request body
+	var req struct {
+		PubKey string `json:"publicKey"`
+	}
+
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	asset.SigningPubKey = &req.PubKey
+	// save the asset
+	err := a.assetRepository.Update(nil, &asset)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not attach signing key").WithInternal(err)
+	}
+
+	return nil
+}
+
 func (a *httpController) AffectedComponents(c core.Context) error {
 	// get the version query param
 	version := c.QueryParam("version")

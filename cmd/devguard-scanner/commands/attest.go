@@ -32,7 +32,7 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	// transform the hex private key to an ecdsa private key
-	keyPath, err := tokenToKey(token)
+	keyPath, _, err := tokenToKey(token)
 	if err != nil {
 		slog.Error("could not convert hex token to ecdsa private key", "err", err)
 		return err

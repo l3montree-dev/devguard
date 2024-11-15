@@ -17,18 +17,60 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
 
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/client"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/spf13/cobra"
 )
 
-func tokenToKey(token string) (string, error) {
+func uploadPublicKey(ctx context.Context, token, apiUrl, publicKeyPath, assetName string) error {
+	devGuardClient := client.NewDevGuardClient(token, apiUrl)
+
+	var body map[string]string = make(map[string]string)
+
+	// read the public key from file
+	publicKey, err := os.ReadFile(publicKeyPath)
+	if err != nil {
+		return err
+	}
+
+	body["publicKey"] = string(publicKey)
+	// marshal
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "/api/v1/organizations/"+assetName+"/signing-key", bytes.NewBuffer(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	if err != nil {
+		return err
+	}
+
+	resp, err := devGuardClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("could not upload public key: %s", resp.Status)
+	}
+
+	return nil
+}
+
+func tokenToKey(token string) (string, string, error) {
 	// transform the hex private key to an ecdsa private key
 	privKey, _, err := pat.HexTokenToECDSA(token)
 	if err != nil {
@@ -40,25 +82,31 @@ func tokenToKey(token string) (string, error) {
 	privKeyBytes, err := x509.MarshalECPrivateKey(&privKey)
 	if err != nil {
 		slog.Error("could not marshal private key", "err", err)
-		return "", err
+		return "", "", err
 	}
 	// create a new temporary file to store the private key - the file needs to have minimum permissions
-	tempDir := os.TempDir()
+	tempDir := uuid.New().String()
+	err = os.Mkdir(
+		tempDir,
+		0700,
+	)
+	if err != nil {
+		slog.Error("could not create temp dir", "err", err)
+		return "", "", err
+	}
 
 	file, err := os.OpenFile(path.Join(tempDir, "ecdsa.pem"), os.O_CREATE|os.O_WRONLY, 0600)
 
 	if err != nil {
 		slog.Error("could not create file", "err", err)
-		return "", err
+		return "", "", err
 	}
-	// remove the file after the function ends
-	defer os.Remove(path.Join(tempDir, "ecdsa.pem"))
 
 	// encode the private key to PEM
 	err = pem.Encode(file, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privKeyBytes})
 	if err != nil {
 		slog.Error("could not encode private key to PEM", "err", err)
-		return "", err
+		return "", "", err
 	}
 
 	var out bytes.Buffer
@@ -74,10 +122,10 @@ func tokenToKey(token string) (string, error) {
 	err = importCmd.Run()
 	if err != nil {
 		slog.Error("could not import key", "err", err, "out", out.String(), "errOut", errOut.String())
-		return "", err
+		return "", "", err
 	}
 
-	return path.Join(tempDir, "cosign.key"), nil
+	return path.Join(tempDir, "cosign.key"), path.Join(tempDir, "cosign.pub"), nil
 }
 
 func signCmd(cmd *cobra.Command, args []string) error {
@@ -114,7 +162,7 @@ func signCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	// transform the hex private key to an ecdsa private key
-	keyPath, err := tokenToKey(token)
+	keyPath, publicKeyPath, err := tokenToKey(token)
 	if err != nil {
 		slog.Error("could not convert hex token to ecdsa private key", "err", err)
 		return err
@@ -123,7 +171,29 @@ func signCmd(cmd *cobra.Command, args []string) error {
 	var out bytes.Buffer
 	var errOut bytes.Buffer
 
-	defer os.Remove(keyPath)
+	defer os.RemoveAll(path.Dir(keyPath))
+
+	// upload the key to the backend
+	// get the asset name
+	assetName, err := cmd.Flags().GetString("assetName")
+	if err != nil {
+		slog.Error("could not get asset name", "err", err)
+		return err
+	}
+
+	// get the apiUrl
+	apiUrl, err := cmd.Flags().GetString("apiUrl")
+	if err != nil {
+		slog.Error("could not get api url", "err", err)
+		return err
+	}
+
+	// upload the public key to the backend
+	err = uploadPublicKey(cmd.Context(), token, apiUrl, publicKeyPath, assetName)
+	if err != nil {
+		slog.Error("could not upload public key", "err", err)
+		return err
+	}
 
 	// check if the argument is a file, which does exist
 	fileOrImageName := args[0]
@@ -182,9 +252,7 @@ func NewSignCommand() *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-
-	cmd.MarkPersistentFlagRequired("token") // nolint:errcheck
+	addDefaultFlags(cmd)
 
 	// allow username, password and registry to be provided as well as flags
 	cmd.Flags().StringP("username", "u", "", "The username to authenticate the request")

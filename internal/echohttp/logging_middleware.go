@@ -15,7 +15,9 @@ func logger() echo.MiddlewareFunc {
 
 			err := next(c)
 
-			slog.Info("handled request", "method", c.Request().Method, "url", c.Request().URL, "status", c.Response().Status, "duration", time.Since(now))
+			if err == nil {
+				slog.Info("handled request", "method", c.Request().Method, "url", c.Request().URL, "status", c.Response().Status, "duration", time.Since(now))
+			}
 			return err
 		}
 	}

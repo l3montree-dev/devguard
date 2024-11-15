@@ -52,6 +52,8 @@ type Asset struct {
 	LastIacScan       *time.Time `json:"lastIacScan"`
 	LastContainerScan *time.Time `json:"lastContainerScan"`
 	LastDastScan      *time.Time `json:"lastDastScan"`
+
+	SigningPubKey *string `json:"signingPubKey" gorm:"type:text;"`
 }
 
 func (m Asset) TableName() string {

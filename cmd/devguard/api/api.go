@@ -452,6 +452,8 @@ func Start(db core.DB) {
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 	assetRouter.PATCH("/", assetController.Update, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 
+	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
+
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)
 	flawRouter.GET("/:flawId/", flawController.Read)

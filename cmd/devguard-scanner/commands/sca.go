@@ -390,11 +390,14 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	}
 }
 
-func addScanFlags(cmd *cobra.Command) {
+func addDefaultFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
 	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
 	cmd.PersistentFlags().String("apiUrl", "https://api.devguard.dev", "The url of the API to send the scan request to")
+}
 
+func addScanFlags(cmd *cobra.Command) {
+	addDefaultFlags(cmd)
 	err := cmd.MarkPersistentFlagRequired("assetName")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)
