@@ -21,14 +21,17 @@ import (
 )
 
 type CreateRequest struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description"`
+	Name                string  `json:"name" validate:"required"`
+	Description         string  `json:"description"`
+	IsPublic            bool    `json:"isPublic"`
+	KubernetesClusterID *string `json:"kubernetesClusterId"`
 }
 
 func (p *CreateRequest) ToModel() models.Project {
 	return models.Project{Name: p.Name,
 		Slug:        slug.Make(p.Name),
 		Description: p.Description,
+		IsPublic:    p.IsPublic,
 	}
 }
 
