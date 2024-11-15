@@ -184,7 +184,7 @@ func isValidPath(path string) (bool, error) {
 func getCurrentVersion(path string) (string, int, error) {
 	// mark the path as safe git directory
 	slog.Debug("marking path as safe", "path", getDirFromPath(path))
-	cmd := exec.Command("git", "config", "--global", "--add", "safe.directory", getDirFromPath(path)) // nolint:all
+	cmd := exec.Command("git", "config", "--global", "--add", "safe.directory", "*") // nolint:all
 	var out bytes.Buffer
 	var errOut bytes.Buffer
 	cmd.Stdout = &out
