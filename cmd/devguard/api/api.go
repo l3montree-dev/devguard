@@ -420,7 +420,9 @@ func Start(db core.DB) {
 	projectRouter.GET("/", projectController.Read)
 
 	projectRouter.PATCH("/", projectController.Update, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
+	projectRouter.DELETE("/", projectController.Delete, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
 
+	projectRouter.POST("/assets/", assetController.Create, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
 	projectRouter.POST("/assets/", assetController.Create, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
 	projectRouter.GET("/assets/", assetController.Read)
 
@@ -431,6 +433,8 @@ func Start(db core.DB) {
 
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC("asset", accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
+	assetRouter.DELETE("/", assetController.Delete, projectScopedRBAC("asset", accesscontrol.ActionDelete))
+
 	assetRouter.GET("/metrics/", assetController.Metrics)
 	assetRouter.GET("/dependency-graph/", assetController.DependencyGraph)
 	assetRouter.GET("/affected-components/", assetController.AffectedComponents)
