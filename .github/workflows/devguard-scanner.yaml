@@ -58,8 +58,7 @@ jobs:
 
   # Image scanning job to detect vulnerabilities in the built Docker image
   container-scanning:
-    needs: build-image
-    uses: actions/download-artifact@v4
+    uses: l3montree-dev/devguard-action/.github/workflows/container-scanning.yml@main
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
