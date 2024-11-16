@@ -81,7 +81,7 @@ jobs:
     needs: 
     - build-scanner-image
     with:
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-scanner
       api-url: https://api.main.devguard.org
       artifact-suffix: "-scanner"
     secrets:
@@ -141,7 +141,7 @@ jobs:
     - tests
     uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@main
     with:
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-scanner
       api-url: https://api.main.devguard.org
       artifact-suffix: "-scanner"
     secrets:
