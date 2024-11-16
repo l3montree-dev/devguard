@@ -60,7 +60,7 @@ jobs:
     uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
     with:
       image-suffix: "-scanner"
-      artefact-suffix: "-scanner"
+      artifact-suffix: "-scanner"
       context: .
       dockerfile: Dockerfile.scanner
 
@@ -83,7 +83,7 @@ jobs:
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artefact-suffix: "-scanner"
+      artifact-suffix: "-scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
       
@@ -110,7 +110,7 @@ jobs:
     - tests
     uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
     with:
-      artefact-suffix: "-scanner"
+      artifact-suffix: "-scanner"
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
 
   sign:
@@ -143,7 +143,7 @@ jobs:
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artefact-suffix: "-scanner"
+      artifact-suffix: "-scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
