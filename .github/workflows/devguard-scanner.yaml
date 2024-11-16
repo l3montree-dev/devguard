@@ -79,7 +79,7 @@ jobs:
   scanner-container-scanning:
     uses: l3montree-dev/devguard-action/.github/workflows/container-scanning.yml@main
     needs: 
-    - build-scanner
+    - build-scanner-image
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
