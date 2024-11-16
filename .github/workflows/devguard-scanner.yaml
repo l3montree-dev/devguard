@@ -1,0 +1,97 @@
+# DevSecOps Workflow Definition
+# This workflow is triggered on every push to the repository
+name: DevGuard-Workflow
+
+on:
+  push:
+
+jobs:
+  # Secret scanning job to detect secrets in codebase
+  secret-scanning:
+    uses: l3montree-dev/devguard-action/.github/workflows/secret-scanning.yml@main
+  
+  sast:
+    uses: l3montree-dev/devguard-action/.github/workflows/sast.yml@main
+
+  sca:
+    uses: l3montree-dev/devguard-action/.github/workflows/software-composition-analysis.yml@main
+    with:
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      api-url: https://api.main.devguard.org
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
+
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        cache: false
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v6
+      with:
+        args: --timeout=30m
+        version: v1.60
+
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+
+    - name: Run unittests
+      run: go test ./... -cover
+
+  # Docker image build job
+  build-image:
+    uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
+
+  # Image scanning job to detect vulnerabilities in the built Docker image
+  container-scanning:
+    uses: l3montree-dev/devguard-action/.github/workflows/container-scanning.yml@main
+    needs: 
+    - build-image
+    with:
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      api-url: https://api.main.devguard.org
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
+      
+  deploy:
+    needs: 
+    - build-image
+    - container-scanning
+    - secret-scanning
+    - sca
+    - sast
+    - golangci
+    - tests
+    uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+
+  sign:
+    needs: 
+    - build-image
+    - container-scanning
+    - secret-scanning
+    - sca
+    - sast
+    - golangci
+    - tests
+    uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@main
+    with:
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      api-url: https://api.main.devguard.org
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
