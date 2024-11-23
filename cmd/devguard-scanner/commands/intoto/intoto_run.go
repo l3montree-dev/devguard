@@ -70,7 +70,9 @@ func getCommitHash() (string, error) {
 		return "", errors.Wrap(err, "failed to run git command")
 	}
 
-	return out.String(), nil
+	// remove the newline
+	str := out.String()
+	return str[:len(str)-1], nil
 }
 
 func NewInTotoRunCommand() *cobra.Command {
@@ -93,7 +95,7 @@ func NewInTotoRunCommand() *cobra.Command {
 				return errors.Wrap(err, "failed to sign metadata")
 			}
 
-			filename := fmt.Sprintf("%s.link.%s.json", step, key.KeyID)
+			filename := fmt.Sprintf("%s.%s.link", step, key.KeyID)
 
 			err = metadata.Dump(filename)
 			if err != nil {
@@ -121,6 +123,7 @@ func NewInTotoRunCommand() *cobra.Command {
 			body := map[string]string{
 				"opaqueIdentifier": commit,
 				"payload":          string(b),
+				"filename":         filename,
 			}
 
 			bodyjson, err := json.Marshal(body)

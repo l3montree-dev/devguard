@@ -15,12 +15,17 @@
 
 package models
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type InTotoLink struct {
 	// this is used to identify the link afterwards.
 	// for the post-commit link this is the commit hash
 	OpaqueIdentifier string `json:"opaqueIdentifier" gorm:"column:opaque_identifier;primaryKey"`
+	Filename         string `json:"filename" gorm:"column:filename"`
 
 	// the real link payload
 	Payload string `json:"payload" gorm:"column:payload"`
@@ -30,6 +35,8 @@ type InTotoLink struct {
 
 	PatID   uuid.UUID `json:"patId" gorm:"column:pat_id;"`
 	AssetID uuid.UUID `json:"assetId" gorm:"column:asset_id;primaryKey"`
+
+	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
 }
 
 func (InTotoLink) TableName() string {

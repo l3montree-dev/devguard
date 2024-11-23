@@ -18,9 +18,9 @@ package intoto
 import (
 	"bytes"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -126,9 +126,10 @@ func (a *httpController) Create(c core.Context) error {
 
 	link := models.InTotoLink{
 		AssetID:          asset.GetID(),
-		OpaqueIdentifier: req.OpaqueIdentifier,
+		OpaqueIdentifier: strings.TrimSpace(req.OpaqueIdentifier),
 		Payload:          req.Payload,
 		PatID:            pat.ID,
+		Filename:         req.Filename,
 	}
 
 	err = a.linkRepository.Save(nil, &link)
@@ -275,13 +276,5 @@ func (a *httpController) Read(c core.Context) error {
 		return echo.NewHTTPError(404, "could not find in-toto link").WithInternal(err)
 	}
 
-	// we found the link
-	// just return the payload
-	var jsonLink map[string]interface{}
-	err = json.Unmarshal([]byte(link.Payload), &jsonLink)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not unmarshal in-toto link").WithInternal(err)
-	}
-
-	return c.JSON(200, jsonLink)
+	return c.JSON(200, link)
 }

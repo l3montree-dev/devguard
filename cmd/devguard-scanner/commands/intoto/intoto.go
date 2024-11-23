@@ -16,11 +16,16 @@
 package intotocmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/client"
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/zalando/go-keyring"
 )
@@ -43,6 +48,85 @@ func storeTokenInKeyring(token string) error {
 
 	// set password
 	return keyring.Set(service, user, token)
+}
+
+func newInTotoFetchCommitLinkCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "fetch-link",
+		Short: "Fetch link",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			token, err := cmd.Flags().GetString("token")
+			if err != nil {
+				return err
+			}
+
+			apiUrl, err := cmd.Flags().GetString("apiUrl")
+			if err != nil {
+				return err
+			}
+
+			opaqueIdentifier, err := cmd.Flags().GetString("opaqueIdentifier")
+			if err != nil {
+				return err
+			}
+
+			if opaqueIdentifier == "" {
+				opaqueIdentifier, err = getCommitHash()
+				if err != nil {
+					return errors.Wrap(err, "failed to get commit hash. Please provide the --opaqueIdentifier")
+				}
+			}
+
+			assetName, err := cmd.Flags().GetString("assetName")
+			if err != nil {
+				return err
+			}
+
+			if assetName == "" {
+				return errors.New("assetName is required")
+			}
+
+			if token == "" {
+				return errors.New("token is required")
+			}
+
+			c := client.NewDevGuardClient(token, apiUrl)
+
+			req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/%s/", apiUrl, assetName, opaqueIdentifier), nil)
+
+			if err != nil {
+				return errors.Wrap(err, "failed to create request")
+			}
+
+			resp, err := c.Do(req)
+
+			if err != nil {
+				return errors.Wrap(err, "failed to send request")
+			}
+
+			// unmarshal the response
+			var link models.InTotoLink
+			if err := json.NewDecoder(resp.Body).Decode(&link); err != nil {
+				return errors.Wrap(err, "failed to unmarshal response")
+			}
+
+			// create a file with the payload
+			file, err := os.Create(link.Filename)
+			if err != nil {
+				return errors.Wrap(err, "failed to create file")
+			}
+
+			_, err = file.Write([]byte(link.Payload))
+			return err
+		},
+	}
+
+	cmd.Flags().String("token", "", "The token to use to authenticate with the devguard api")
+	cmd.Flags().String("apiUrl", "api.main.devguard.org", "The devguard api url")
+	cmd.Flags().String("assetName", "", "The asset name to use")
+	cmd.Flags().String("opaqueIdentifier", "", "The opaque identifier to fetch")
+
+	return cmd
 }
 
 func newInTotoSetupCommand() *cobra.Command {
@@ -146,6 +230,7 @@ func NewInTotoCommand() *cobra.Command {
 		NewInTotoRunCommand(),
 		newInTotoSetupCommand(),
 		NewInTotoVerifyCommand(),
+		newInTotoFetchCommitLinkCommand(),
 	)
 
 	return cmd
