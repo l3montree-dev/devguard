@@ -224,7 +224,10 @@ func (a *httpController) RootLayout(c core.Context) error {
 					SupplyChainItem: toto.SupplyChainItem{
 						Name:              "verify-digest",
 						ExpectedMaterials: [][]string{{"ALLOW", "*"}},
-						ExpectedProducts:  [][]string{{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "deploy"}, {"DISALLOW", "*"}},
+						ExpectedProducts: [][]string{
+							{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "deploy"},
+							{"DISALLOW", "*"},
+						},
 					},
 				},
 			},

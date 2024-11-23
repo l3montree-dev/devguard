@@ -175,6 +175,65 @@ func (_c *AccesscontrolAccessControl_GetAllMembersOfOrganization_Call) RunAndRet
 	return _c
 }
 
+// GetAllMembersOfProject provides a mock function with given fields: organizationID, projectID
+func (_m *AccesscontrolAccessControl) GetAllMembersOfProject(organizationID string, projectID string) ([]string, error) {
+	ret := _m.Called(organizationID, projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllMembersOfProject")
+	}
+
+	var r0 []string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, string) ([]string, error)); ok {
+		return rf(organizationID, projectID)
+	}
+	if rf, ok := ret.Get(0).(func(string, string) []string); ok {
+		r0 = rf(organizationID, projectID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(organizationID, projectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AccesscontrolAccessControl_GetAllMembersOfProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllMembersOfProject'
+type AccesscontrolAccessControl_GetAllMembersOfProject_Call struct {
+	*mock.Call
+}
+
+// GetAllMembersOfProject is a helper method to define mock.On call
+//   - organizationID string
+//   - projectID string
+func (_e *AccesscontrolAccessControl_Expecter) GetAllMembersOfProject(organizationID interface{}, projectID interface{}) *AccesscontrolAccessControl_GetAllMembersOfProject_Call {
+	return &AccesscontrolAccessControl_GetAllMembersOfProject_Call{Call: _e.mock.On("GetAllMembersOfProject", organizationID, projectID)}
+}
+
+func (_c *AccesscontrolAccessControl_GetAllMembersOfProject_Call) Run(run func(organizationID string, projectID string)) *AccesscontrolAccessControl_GetAllMembersOfProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *AccesscontrolAccessControl_GetAllMembersOfProject_Call) Return(_a0 []string, _a1 error) *AccesscontrolAccessControl_GetAllMembersOfProject_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *AccesscontrolAccessControl_GetAllMembersOfProject_Call) RunAndReturn(run func(string, string) ([]string, error)) *AccesscontrolAccessControl_GetAllMembersOfProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllProjectsForUser provides a mock function with given fields: user
 func (_m *AccesscontrolAccessControl) GetAllProjectsForUser(user string) []string {
 	ret := _m.Called(user)
