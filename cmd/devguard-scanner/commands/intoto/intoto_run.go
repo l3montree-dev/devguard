@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package commands
+package intoto
 
 import (
 	"bytes"
@@ -21,25 +21,21 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
-	"strings"
 
-	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-func createLinkFileAfterCommit(token string) (toto.Metadata, error) {
-	var key toto.Key
-
+func tokenToInTotoKey(token string) (toto.Key, error) {
 	privKey, _, err := pat.HexTokenToECDSA(token)
 	if err != nil {
-		return nil, err
+		return toto.Key{}, err
 	}
 	privKeyBytes, err := x509.MarshalECPrivateKey(&privKey)
 	if err != nil {
-		return nil, err
+		return toto.Key{}, err
 	}
 
 	// encode to pem
@@ -51,64 +47,51 @@ func createLinkFileAfterCommit(token string) (toto.Metadata, error) {
 	// create new reader
 	reader := bytes.NewReader(b)
 
+	var key toto.Key
 	err = key.LoadKeyReader(reader, "ecdsa-sha2-nistp521", []string{"sha256"})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to load key")
+		return toto.Key{}, errors.Wrap(err, "failed to load key")
 	}
 
-	// read .gitignore if exists
-	content, err := os.ReadFile(".gitignore")
-	gitignorePatterns := []string{
-		".git/**/*",
-	}
-	if err == nil {
-		gitignorePatterns = append(gitignorePatterns, strings.Split(string(content), "\n")...)
-	}
-
-	metadata, err := toto.InTotoRun("git-commit", ".", []string{}, []string{"."}, []string{}, key, []string{"sha256"}, gitignorePatterns, []string{}, true, true, true)
-	if err != nil {
-		return nil, err
-	}
-
-	err = metadata.Sign(key)
-	if err != nil {
-		return nil, err
-	}
-
-	return metadata, nil
+	return key, nil
 }
 
-func NewInTotoGitCommit() *cobra.Command {
+func NewInTotoRunCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "intoto-git-commit",
+		Use:  "run",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := cmd.Flags().GetString("token")
+			step, key, materials, products, ignore, err := parseCommand(cmd)
+			if err != nil {
+				return errors.Wrap(err, "failed to parse command")
+			}
+
+			metadata, err := toto.InTotoRun(step, ".", materials, products, []string{}, key, []string{"sha256"}, ignore, []string{}, true, true, true)
 			if err != nil {
 				return err
 			}
 
-			metadata, err := createLinkFileAfterCommit(token)
+			err = metadata.Sign(key)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "failed to sign metadata")
 			}
 
-			name := uuid.NewString()
+			filename := fmt.Sprintf("%s.link.%s.json", step, key.KeyID)
 
-			err = metadata.Dump(name)
+			err = metadata.Dump(filename)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "failed to dump metadata")
 			}
 
 			// read the metadata.json file and remove it
-			b, err := os.ReadFile(name)
+			b, err := os.ReadFile(filename)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "failed to read metadata file")
 			}
 
-			err = os.Remove(name)
+			err = os.Remove(filename)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "failed to remove metadata file")
 			}
 
 			fmt.Println(string(b))
@@ -116,7 +99,5 @@ func NewInTotoGitCommit() *cobra.Command {
 			return nil
 		},
 	}
-
-	cmd.Flags().String("token", "", "The token to sign the git commit")
 	return cmd
 }
