@@ -43,6 +43,9 @@ func getTokenFromCommandOrKeyring(cmd *cobra.Command) (string, error) {
 func parseCommand(cmd *cobra.Command) (
 	step string, key toto.Key, materials, products, ignore []string, err error) {
 	token, err := getTokenFromCommandOrKeyring(cmd)
+	if err != nil {
+		return "", toto.Key{}, nil, nil, nil, err
+	}
 
 	step, err = cmd.Flags().GetString("step")
 	if err != nil {
@@ -79,34 +82,35 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 	}
 
 	// read the unfinished link
-	metadata, err := toto.LoadMetadata(fmt.Sprintf("%s.link.%s.unfinished.json", step, key.KeyID))
+	metadata, err := toto.LoadMetadata(fmt.Sprintf("%s.%s.link.unfinished", step, key.KeyID[:8]))
 
 	if err != nil {
 		return err
 	}
 
-	defer os.Remove(fmt.Sprintf("%s.link.%s.unfinished.json", step, key.KeyID))
+	os.Remove(fmt.Sprintf("%s.%s.link.unfinished", step, key.KeyID[:8]))
 
 	err = metadata.VerifySignature(key)
 	if err != nil {
 		return err
 	}
 
-	metdata, err := toto.InTotoRecordStop(metadata, products, key, []string{"sha256"}, ignore, []string{}, true, true, true)
+	m, err := toto.InTotoRecordStop(metadata, products, key, []string{"sha256"}, ignore, []string{}, true, true, true)
 	if err != nil {
 		return err
 	}
-	err = metdata.Sign(key)
+
+	err = m.Sign(key)
 	if err != nil {
 		return err
 	}
 
 	output, err := cmd.Flags().GetString("output")
 	if err != nil || output == "" {
-		output = fmt.Sprintf("%s.link.json", step)
+		output = fmt.Sprintf("%s.%s.link", step, key.KeyID[:8])
 	}
 
-	return metadata.Dump(output)
+	return m.Dump(output)
 }
 
 func startInTotoRecording(cmd *cobra.Command, args []string) error {
@@ -127,7 +131,7 @@ func startInTotoRecording(cmd *cobra.Command, args []string) error {
 	}
 
 	keyId := key.KeyID
-	return metdata.Dump(fmt.Sprintf("%s.link.%s.unfinished.json", step, keyId))
+	return metdata.Dump(fmt.Sprintf("%s.%s.link.unfinished", step, keyId[:8]))
 }
 
 func NewInTotoRecordStartCommand() *cobra.Command {

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"os"
+	"time"
 
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
@@ -41,6 +42,7 @@ type repository interface {
 
 type patRepository interface {
 	GetByFingerprint(fingerprint string) (models.PAT, error)
+	FindByUserIDs(userID []uuid.UUID) ([]models.PAT, error)
 }
 
 type httpController struct {
@@ -136,6 +138,130 @@ func (a *httpController) Create(c core.Context) error {
 	}
 
 	return c.JSON(200, link)
+}
+
+func (a *httpController) RootLayout(c core.Context) error {
+	// get all pats which are part of the asset
+	project := core.GetProject(c)
+	org := core.GetTenant(c)
+	accessControl := core.GetRBAC(c)
+
+	users, err := accessControl.GetAllMembersOfProject(org.ID.String(), project.GetID().String())
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get users").WithInternal(err)
+	}
+
+	userUuids := make([]uuid.UUID, 0, len(users))
+	for _, user := range users {
+		uuid, err := uuid.Parse(user)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not parse user id").WithInternal(err)
+		}
+
+		userUuids = append(userUuids, uuid)
+	}
+
+	pats, err := a.patRepository.FindByUserIDs(userUuids)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get pats").WithInternal(err)
+	}
+
+	keyIds := make([]string, len(pats))
+	totoKeys := make(map[string]toto.Key)
+	for i, pat := range pats {
+		key, err := publicKeyToInTotoKey(pat.PubKey)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not convert public key").WithInternal(err)
+		}
+
+		keyIds[i] = key.KeyID
+		totoKeys[key.KeyID] = key
+	}
+
+	t := time.Now()
+	t = t.Add(30 * 24 * time.Hour)
+
+	// create a new layout
+	var metablock = toto.Metablock{
+		Signed: toto.Layout{
+			Type:    "layout",
+			Expires: t.Format("2006-01-02T15:04:05Z"),
+			Steps: []toto.Step{
+				{
+					Type:    "step",
+					PubKeys: keyIds,
+					SupplyChainItem: toto.SupplyChainItem{
+						Name:              "post-commit",
+						ExpectedMaterials: [][]string{{"ALLOW", "*"}}, // there is no way we can know what the materials are
+						ExpectedProducts:  [][]string{{"ALLOW", "*"}},
+					},
+				},
+				{
+					Type:    "step",
+					PubKeys: keyIds,
+					SupplyChainItem: toto.SupplyChainItem{
+						Name:              "build",
+						ExpectedMaterials: [][]string{{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "post-commit"}, {"DISALLOW", "*"}}, // we expect the post-commit step to
+						ExpectedProducts:  [][]string{{"ALLOW", "*"}},
+					},
+				},
+				{
+					Type:    "step",
+					PubKeys: keyIds,
+					SupplyChainItem: toto.SupplyChainItem{
+						Name:              "deploy",
+						ExpectedMaterials: [][]string{{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "build"}, {"DISALLOW", "*"}},
+						ExpectedProducts:  [][]string{{"ALLOW", "*"}},
+					},
+				},
+			},
+			Inspect: []toto.Inspection{
+				{
+					// just do nothing - we will prepare the folders beforehand
+					Run:  []string{"true"},
+					Type: "inspection",
+					SupplyChainItem: toto.SupplyChainItem{
+						Name:              "verify-digest",
+						ExpectedMaterials: [][]string{{"ALLOW", "*"}},
+						ExpectedProducts:  [][]string{{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "deploy"}, {"DISALLOW", "*"}},
+					},
+				},
+			},
+			Keys: totoKeys,
+		},
+	}
+
+	var devguardKey toto.Key
+	err = devguardKey.LoadKey("ecdsa_private.pem", "ecdsa-sha2-nistp256", []string{"sha256"})
+	if err != nil {
+		return echo.NewHTTPError(500, "could not load devguard key").WithInternal(err)
+	}
+
+	// write the layout to a temp file
+	tmpFileName := uuid.NewString()
+	tmpfile, err := os.CreateTemp("", tmpFileName)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not create temp file").WithInternal(err)
+	}
+
+	defer os.Remove(tmpfile.Name())
+
+	// sign the layout
+	err = metablock.Sign(devguardKey)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not sign layout").WithInternal(err)
+	}
+
+	err = metablock.Dump(tmpfile.Name())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not dump layout").WithInternal(err)
+	}
+
+	// set the filename to root.layout
+	c.Response().Header().Set("Content-Disposition", "attachment; filename=root.layout")
+
+	return c.File(tmpfile.Name())
 }
 
 func (a *httpController) Read(c core.Context) error {

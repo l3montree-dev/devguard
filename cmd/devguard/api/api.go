@@ -462,6 +462,8 @@ func Start(db core.DB) {
 	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 
 	assetRouter.POST("/in-toto/", intotoController.Create, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
+	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
+
 	assetRouter.GET("/in-toto/:opaqueIdentifier/", intotoController.Read)
 
 	flawRouter := assetRouter.Group("/flaws")

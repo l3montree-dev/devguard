@@ -140,16 +140,12 @@ func NewInTotoCommand() *cobra.Command {
 
 	cmd.PersistentFlags().StringArray("products", []string{"."}, "The products to include in the in-toto link. Default is the current directory")
 
-	err := cmd.MarkPersistentFlagRequired("step")
-	if err != nil {
-		panic(err)
-	}
-
 	cmd.AddCommand(
 		NewInTotoRecordStartCommand(),
 		NewInTotoRecordStopCommand(),
 		NewInTotoRunCommand(),
 		newInTotoSetupCommand(),
+		NewInTotoVerifyCommand(),
 	)
 
 	return cmd

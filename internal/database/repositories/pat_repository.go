@@ -61,3 +61,9 @@ func (g *gormPatRepository) GetByFingerprint(fingerprint string) (models.PAT, er
 	err := g.db.First(&t, "fingerprint = ?", fingerprint).Error
 	return t, err
 }
+
+func (g *gormPatRepository) FindByUserIDs(userIDs []uuid.UUID) ([]models.PAT, error) {
+	var pats []models.PAT
+	err := g.db.Where("user_id IN (?)", userIDs).Find(&pats).Error
+	return pats, err
+}
