@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package intoto
+package intotocmd
 
 import (
 	"fmt"
@@ -24,20 +24,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func parseCommand(cmd *cobra.Command) (
-	step string, key toto.Key, materials, products, ignore []string, err error) {
+func getTokenFromCommandOrKeyring(cmd *cobra.Command) (string, error) {
 	token, err := cmd.Flags().GetString("token")
 	if err != nil {
-		return "", toto.Key{}, nil, nil, nil, err
+		return "", err
 	}
 
 	// if the token is not set, try to get it from the keyring
 	if token == "" {
 		token, err = getTokenFromKeyring()
 		if err != nil {
-			return "", toto.Key{}, nil, nil, nil, err
+			return "", err
 		}
 	}
+
+	return token, nil
+}
+func parseCommand(cmd *cobra.Command) (
+	step string, key toto.Key, materials, products, ignore []string, err error) {
+	token, err := getTokenFromCommandOrKeyring(cmd)
 
 	step, err = cmd.Flags().GetString("step")
 	if err != nil {

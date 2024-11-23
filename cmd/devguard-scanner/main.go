@@ -20,7 +20,8 @@ import (
 	"os"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands"
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
+	intotocmd "github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
+
 	"github.com/phsym/console-slog"
 	"github.com/spf13/cobra"
 )
@@ -47,7 +48,7 @@ func init() {
 		commands.NewInspectCommand(),
 		commands.NewSignCommand(),
 		commands.NewLoginCommand(),
-		intoto.NewInTotoCommand(),
+		intotocmd.NewInTotoCommand(),
 	)
 }
 

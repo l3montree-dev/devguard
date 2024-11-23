@@ -22,7 +22,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 
 	_ "github.com/lib/pq"
@@ -72,7 +71,7 @@ func main() {
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 	flawService.StartRiskRecalculationDaemon(leaderElector)
-	vulndb.StartMirror(db, leaderElector, configService)
+	// vulndb.StartMirror(db, leaderElector, configService)
 
 	api.Start(db)
 }

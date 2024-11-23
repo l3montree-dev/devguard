@@ -13,16 +13,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package intoto
+package intotocmd
 
 import (
 	"bytes"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"os"
+	"os/exec"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/l3montree-dev/devguard/client"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -54,6 +58,19 @@ func tokenToInTotoKey(token string) (toto.Key, error) {
 	}
 
 	return key, nil
+}
+
+func getCommitHash() (string, error) {
+	// get the commit hash
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to run git command")
+	}
+
+	return out.String(), nil
 }
 
 func NewInTotoRunCommand() *cobra.Command {
@@ -94,10 +111,60 @@ func NewInTotoRunCommand() *cobra.Command {
 				return errors.Wrap(err, "failed to remove metadata file")
 			}
 
-			fmt.Println(string(b))
+			// get the commit hash
+			commit, err := getCommitHash()
+			if err != nil {
+				return errors.Wrap(err, "failed to get commit hash")
+			}
+
+			// create the request
+			body := map[string]string{
+				"opaqueIdentifier": commit,
+				"payload":          string(b),
+			}
+
+			bodyjson, err := json.Marshal(body)
+			if err != nil {
+				return errors.Wrap(err, "failed to marshal body")
+			}
+
+			// cant error - we already called it in the parseCommand
+			token, _ := getTokenFromCommandOrKeyring(cmd)
+
+			apiUrl, err := cmd.Flags().GetString("apiUrl")
+			if err != nil {
+				return errors.Wrap(err, "failed to get api url")
+			}
+
+			assetName, err := cmd.Flags().GetString("assetName")
+			if err != nil {
+				return errors.Wrap(err, "failed to get asset name")
+			}
+
+			req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto", apiUrl, assetName), bytes.NewBuffer(bodyjson))
+
+			req.Header.Set("Content-Type", "application/json")
+
+			if err != nil {
+				return errors.Wrap(err, "failed to create request")
+			}
+
+			// send the request
+			resp, err := client.NewDevGuardClient(token, apiUrl).Do(req)
+			if err != nil {
+				return errors.Wrap(err, "failed to send request")
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				return errors.Errorf("unexpected status code: %d", resp.StatusCode)
+			}
 
 			return nil
 		},
 	}
+
+	cmd.Flags().String("apiUrl", "", "The devguard api url")
+	cmd.Flags().String("assetName", "", "The asset name to use")
+
 	return cmd
 }

@@ -13,9 +13,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package intoto
+package intotocmd
 
 import (
+	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -55,16 +57,33 @@ func newInTotoSetupCommand() *cobra.Command {
 				return err
 			}
 
+			apiUrl, err := cmd.Flags().GetString("apiUrl")
+			if err != nil {
+				return err
+			}
+
+			assetName, err := cmd.Flags().GetString("assetName")
+			if err != nil {
+				return err
+			}
+
+			if assetName == "" {
+				slog.Error("assetName is required")
+				return fmt.Errorf("assetName is required")
+			}
+
 			// set the token to the keyring
 			err = storeTokenInKeyring(token)
 			if err != nil {
 				return err
 			}
 
+			commandString := fmt.Sprintf(`devguard-scanner intoto run --step=post-commit --apiUrl="%s" --assetName="%s"`, apiUrl, assetName)
+
 			// check if a git post-commit hook exists
 			if _, err := os.Stat(".git/hooks/post-commit"); os.IsNotExist(err) {
 				// create the post-commit hook
-				err = os.WriteFile(".git/hooks/post-commit", []byte("#!/bin/sh\ndevguard-scanner intoto run --step post-commit\n"), 0755) // nolint:gosec// the file needs to be executable
+				err = os.WriteFile(".git/hooks/post-commit", []byte(fmt.Sprintf("#!/bin/sh\n%s\n", commandString)), 0755) // nolint:gosec// the file needs to be executable
 				if err != nil {
 					return err
 				}
@@ -84,7 +103,7 @@ func newInTotoSetupCommand() *cobra.Command {
 					if strings.Contains(line, "devguard-scanner") {
 						// the command is already in the file
 						// lets overwrite that line
-						lines[i] = "devguard-scanner intoto run --step post-commit"
+						lines[i] = commandString
 					}
 				}
 
@@ -98,6 +117,10 @@ func newInTotoSetupCommand() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().String("apiUrl", "api.main.devguard.org", "The devguard api url")
+	cmd.Flags().String("assetName", "", "The asset name to use")
+
 	return cmd
 }
 
