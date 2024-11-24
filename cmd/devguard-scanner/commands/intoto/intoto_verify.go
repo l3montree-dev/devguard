@@ -82,14 +82,17 @@ func verify(cmd *cobra.Command, args []string) error {
 
 	// remove the layout
 	os.Remove("root.layout.json")
-	linkDir := os.TempDir()
+	linkDir, err := os.MkdirTemp("", "links")
+	if err != nil {
+		return errors.Wrap(err, "could not create temp dir")
+	}
 
 	err = downloadSupplyChainLinks(cmd.Context(), c, linkDir, apiUrl, assetName, supplyChainId)
 	if err != nil {
 		return errors.Wrap(err, "could not download supply chain links")
 	}
 
-	defer os.RemoveAll("links")
+	defer os.RemoveAll(linkDir)
 
 	// read the layoutKey
 	layoutKeyPath, err := cmd.Flags().GetString("layoutKey")
@@ -113,7 +116,11 @@ func verify(cmd *cobra.Command, args []string) error {
 
 	// now get the digest from the layout argument - we expect it to be an image tag
 	// use crane to get the digest
-	err = exec.Command("sh", "-c", "crane", "digest", fmt.Sprintf("\"%s\"", imageName), ">", "image-digest.txt").Run() // nolint:gosec//Checked using regex
+	craneCmd := exec.Command("sh", "-c", "crane digest "+fmt.Sprintf("\"%s\"", imageName)+"> image-digest.txt") // nolint:gosec//Checked using regex
+	craneCmd.Stderr = os.Stderr
+	craneCmd.Stdout = os.Stdout
+
+	err = craneCmd.Run()
 	if err != nil {
 		return err
 	}
@@ -127,6 +134,7 @@ func verify(cmd *cobra.Command, args []string) error {
 
 	// if a verify-digest.link was created, delete it
 	os.Remove("verify-digest.link") // nolint:errcheck
+	os.Remove("image-digest.txt")   // nolint:errcheck
 
 	return err
 }
@@ -147,15 +155,11 @@ func NewInTotoVerifyCommand() *cobra.Command {
 
 	cmd.Flags().String("supplyChainId", "", "Supply chain ID")
 	cmd.Flags().String("token", "", "Token")
-	cmd.Flags().String("apiUrl", "", "API URL")
-	cmd.Flags().String("assetName", "", "Asset name")
 
 	cmd.Flags().String("layoutKey", "", "Path to the layout key")
 
 	panicOnError(cmd.MarkFlagRequired("supplyChainId"))
 	panicOnError(cmd.MarkFlagRequired("token"))
-	panicOnError(cmd.MarkFlagRequired("apiUrl"))
-	panicOnError(cmd.MarkFlagRequired("assetName"))
 	panicOnError(cmd.MarkFlagRequired("layoutKey"))
 
 	return cmd

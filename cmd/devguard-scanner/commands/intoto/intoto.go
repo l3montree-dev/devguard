@@ -32,8 +32,8 @@ import (
 	"github.com/zalando/go-keyring"
 )
 
-func getTokenFromKeyring() (string, error) {
-	service := "devguard"
+func getTokenFromKeyring(assetName string) (string, error) {
+	service := "devguard/" + assetName
 	user := "devguard"
 
 	token, err := keyring.Get(service, user)
@@ -44,8 +44,8 @@ func getTokenFromKeyring() (string, error) {
 	return token, nil
 }
 
-func storeTokenInKeyring(token string) error {
-	service := "devguard"
+func storeTokenInKeyring(assetName, token string) error {
+	service := "devguard/" + assetName
 	user := "devguard"
 
 	// set password
@@ -197,7 +197,7 @@ func newInTotoSetupCommand() *cobra.Command {
 			}
 
 			// set the token to the keyring
-			err = storeTokenInKeyring(token)
+			err = storeTokenInKeyring(assetName, token)
 			if err != nil {
 				return err
 			}
@@ -254,6 +254,9 @@ func NewInTotoCommand() *cobra.Command {
 		Short: "InToto commands",
 	}
 
+	cmd.PersistentFlags().String("assetName", "", "The asset name to use")
+	cmd.PersistentFlags().String("apiUrl", "", "The devguard api url")
+
 	// add the token to both commands as needed flag
 	cmd.PersistentFlags().String("token", "", "The token to use for in-toto")
 	cmd.PersistentFlags().String("step", "", "The name of the in-toto link")
@@ -265,6 +268,9 @@ func NewInTotoCommand() *cobra.Command {
 	cmd.PersistentFlags().StringArray("products", []string{"."}, "The products to include in the in-toto link. Default is the current directory")
 
 	cmd.PersistentFlags().String("supplyChainId", "", "The supply chain id to use. If empty, tries to extract the current commit hash.")
+
+	panicOnError(cmd.MarkPersistentFlagRequired("apiUrl"))
+	panicOnError(cmd.MarkPersistentFlagRequired("assetName"))
 
 	cmd.AddCommand(
 		NewInTotoRecordStartCommand(),

@@ -173,7 +173,6 @@ func NewInTotoRunCommand() *cobra.Command {
 	}
 
 	cmd.Flags().String("apiUrl", "", "The devguard api url")
-	cmd.Flags().String("assetName", "", "The asset name to use")
 
 	return cmd
 }

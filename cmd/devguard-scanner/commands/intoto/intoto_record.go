@@ -32,9 +32,14 @@ func getTokenFromCommandOrKeyring(cmd *cobra.Command) (string, error) {
 		return "", err
 	}
 
+	assetName, err := cmd.Flags().GetString("assetName")
+	if err != nil {
+		return "", err
+	}
+
 	// if the token is not set, try to get it from the keyring
 	if token == "" {
-		token, err = getTokenFromKeyring()
+		token, err = getTokenFromKeyring(assetName)
 		if err != nil {
 			return "", err
 		}
@@ -178,9 +183,6 @@ func NewInTotoRecordStopCommand() *cobra.Command {
 	}
 
 	cmd.Flags().String("output", "", "The output file name. Default is the <step>.link.json name")
-
-	cmd.Flags().String("apiUrl", "", "The devguard api url")
-	cmd.Flags().String("assetName", "", "The asset name to use")
 
 	return cmd
 }
