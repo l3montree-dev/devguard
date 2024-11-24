@@ -95,7 +95,7 @@ func NewInTotoRunCommand() *cobra.Command {
 				return errors.Wrap(err, "failed to sign metadata")
 			}
 
-			filename := fmt.Sprintf("%s.%s.link", step, key.KeyID)
+			filename := fmt.Sprintf("%s.%s.link", step, key.KeyID[:8])
 
 			err = metadata.Dump(filename)
 			if err != nil {
