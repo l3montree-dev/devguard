@@ -16,7 +16,8 @@
 package intoto
 
 type createInTotoLinkRequest struct {
-	OpaqueIdentifier string `json:"opaqueIdentifier"`
-	Payload          string `json:"payload"`
-	Filename         string `json:"filename"`
+	SupplyChainID string `json:"supplyChainId"`
+	Step          string `json:"step"`
+	Payload       string `json:"payload"`
+	Filename      string `json:"filename"`
 }

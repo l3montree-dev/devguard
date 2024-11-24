@@ -128,11 +128,12 @@ func (a *httpController) Create(c core.Context) error {
 	asset := core.GetAsset(c)
 
 	link := models.InTotoLink{
-		AssetID:          asset.GetID(),
-		OpaqueIdentifier: strings.TrimSpace(req.OpaqueIdentifier),
-		Payload:          req.Payload,
-		PatID:            pat.ID,
-		Filename:         req.Filename,
+		AssetID:       asset.GetID(),
+		SupplyChainID: strings.TrimSpace(req.SupplyChainID),
+		Step:          strings.TrimSpace(req.Step),
+		Payload:       req.Payload,
+		PatID:         pat.ID,
+		Filename:      req.Filename,
 	}
 
 	err = a.linkRepository.Save(nil, &link)

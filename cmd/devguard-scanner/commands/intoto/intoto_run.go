@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
@@ -75,6 +76,71 @@ func getCommitHash() (string, error) {
 	return str[:len(str)-1], nil
 }
 
+func readAndUploadMetadata(cmd *cobra.Command, step string, filename string) error {
+	// read the metadata.json file and remove it
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		return errors.Wrap(err, "failed to read metadata file")
+	}
+
+	err = os.Remove(filename)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove metadata file")
+	}
+
+	// get the commit hash
+	commit, err := getCommitHash()
+	if err != nil {
+		return errors.Wrap(err, "failed to get commit hash")
+	}
+
+	// create the request
+	body := map[string]string{
+		"step":          step,
+		"supplyChainId": commit,
+		"payload":       string(b),
+		"filename":      filename,
+	}
+
+	bodyjson, err := json.Marshal(body)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal body")
+	}
+
+	// cant error - we already called it in the parseCommand
+	token, _ := getTokenFromCommandOrKeyring(cmd)
+
+	apiUrl, err := cmd.Flags().GetString("apiUrl")
+	if err != nil {
+		return errors.Wrap(err, "failed to get api url")
+	}
+
+	assetName, err := cmd.Flags().GetString("assetName")
+	if err != nil {
+		return errors.Wrap(err, "failed to get asset name")
+	}
+
+	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto", apiUrl, assetName), bytes.NewBuffer(bodyjson))
+
+	req.Header.Set("Content-Type", "application/json")
+
+	if err != nil {
+		return errors.Wrap(err, "failed to create request")
+	}
+
+	// send the request
+	resp, err := client.NewDevGuardClient(token, apiUrl).Do(req)
+	if err != nil {
+		return errors.Wrap(err, "failed to send request")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
 func NewInTotoRunCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "run",
@@ -102,66 +168,12 @@ func NewInTotoRunCommand() *cobra.Command {
 				return errors.Wrap(err, "failed to dump metadata")
 			}
 
-			// read the metadata.json file and remove it
-			b, err := os.ReadFile(filename)
+			err = readAndUploadMetadata(cmd, step, filename)
 			if err != nil {
-				return errors.Wrap(err, "failed to read metadata file")
+				return errors.Wrap(err, "failed to read and upload metadata")
 			}
 
-			err = os.Remove(filename)
-			if err != nil {
-				return errors.Wrap(err, "failed to remove metadata file")
-			}
-
-			// get the commit hash
-			commit, err := getCommitHash()
-			if err != nil {
-				return errors.Wrap(err, "failed to get commit hash")
-			}
-
-			// create the request
-			body := map[string]string{
-				"opaqueIdentifier": commit,
-				"payload":          string(b),
-				"filename":         filename,
-			}
-
-			bodyjson, err := json.Marshal(body)
-			if err != nil {
-				return errors.Wrap(err, "failed to marshal body")
-			}
-
-			// cant error - we already called it in the parseCommand
-			token, _ := getTokenFromCommandOrKeyring(cmd)
-
-			apiUrl, err := cmd.Flags().GetString("apiUrl")
-			if err != nil {
-				return errors.Wrap(err, "failed to get api url")
-			}
-
-			assetName, err := cmd.Flags().GetString("assetName")
-			if err != nil {
-				return errors.Wrap(err, "failed to get asset name")
-			}
-
-			req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto", apiUrl, assetName), bytes.NewBuffer(bodyjson))
-
-			req.Header.Set("Content-Type", "application/json")
-
-			if err != nil {
-				return errors.Wrap(err, "failed to create request")
-			}
-
-			// send the request
-			resp, err := client.NewDevGuardClient(token, apiUrl).Do(req)
-			if err != nil {
-				return errors.Wrap(err, "failed to send request")
-			}
-
-			if resp.StatusCode != http.StatusOK {
-				return errors.Errorf("unexpected status code: %d", resp.StatusCode)
-			}
-
+			slog.Info("successfully uploaded in-toto link", "step", step, "filename", filename)
 			return nil
 		},
 	}

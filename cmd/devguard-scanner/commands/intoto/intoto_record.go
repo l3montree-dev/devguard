@@ -17,6 +17,7 @@ package intotocmd
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -110,7 +111,18 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 		output = fmt.Sprintf("%s.%s.link", step, key.KeyID[:8])
 	}
 
-	return m.Dump(output)
+	err = m.Dump(output)
+	if err != nil {
+		return err
+	}
+
+	err = readAndUploadMetadata(cmd, step, output)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("successfully uploaded in-toto link", "step", step, "filename", output)
+	return nil
 }
 
 func startInTotoRecording(cmd *cobra.Command, args []string) error {
