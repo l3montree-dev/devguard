@@ -25,6 +25,7 @@ import (
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/client"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -71,19 +72,21 @@ func verify(cmd *cobra.Command, args []string) error {
 	// save the file to disk
 	err = os.WriteFile("root.layout.json", b, 0600)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not write root.layout.json")
 	}
-
-	defer os.Remove("root.layout.json")
 
 	rootLayout, err := toto.LoadMetadata("root.layout.json")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not load root.layout.json")
 	}
 
-	err = downloadSupplyChainLinks(cmd.Context(), c, apiUrl, assetName, supplyChainId)
+	// remove the layout
+	os.Remove("root.layout.json")
+	linkDir := os.TempDir()
+
+	err = downloadSupplyChainLinks(cmd.Context(), c, linkDir, apiUrl, assetName, supplyChainId)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not download supply chain links")
 	}
 
 	defer os.RemoveAll("links")
@@ -117,8 +120,21 @@ func verify(cmd *cobra.Command, args []string) error {
 
 	_, err = toto.InTotoVerify(rootLayout, map[string]toto.Key{
 		layoutKey.KeyID: layoutKey,
-	}, "links", "", nil, nil, true)
+	}, linkDir, "", nil, nil, true)
+	if err != nil {
+		return err
+	}
+
+	// if a verify-digest.link was created, delete it
+	os.Remove("verify-digest.link") // nolint:errcheck
+
 	return err
+}
+
+func panicOnError(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
 func NewInTotoVerifyCommand() *cobra.Command {
@@ -135,6 +151,12 @@ func NewInTotoVerifyCommand() *cobra.Command {
 	cmd.Flags().String("assetName", "", "Asset name")
 
 	cmd.Flags().String("layoutKey", "", "Path to the layout key")
+
+	panicOnError(cmd.MarkFlagRequired("supplyChainId"))
+	panicOnError(cmd.MarkFlagRequired("token"))
+	panicOnError(cmd.MarkFlagRequired("apiUrl"))
+	panicOnError(cmd.MarkFlagRequired("assetName"))
+	panicOnError(cmd.MarkFlagRequired("layoutKey"))
 
 	return cmd
 }

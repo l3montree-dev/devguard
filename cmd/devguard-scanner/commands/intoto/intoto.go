@@ -52,7 +52,7 @@ func storeTokenInKeyring(token string) error {
 	return keyring.Set(service, user, token)
 }
 
-func downloadSupplyChainLinks(ctx context.Context, c client.DevGuardClient, apiUrl, assetName, supplyChainId string) error {
+func downloadSupplyChainLinks(ctx context.Context, c client.DevGuardClient, linkDir, apiUrl, assetName, supplyChainId string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/%s/", apiUrl, assetName, supplyChainId), nil)
 
 	if err != nil {
@@ -84,7 +84,7 @@ func downloadSupplyChainLinks(ctx context.Context, c client.DevGuardClient, apiU
 	}
 
 	// create the "links" directory
-	err = os.MkdirAll("links", os.ModePerm)
+	err = os.MkdirAll(linkDir, os.ModePerm)
 	if err != nil {
 		return errors.Wrap(err, "failed to create links directory")
 	}
@@ -98,7 +98,7 @@ func downloadSupplyChainLinks(ctx context.Context, c client.DevGuardClient, apiU
 		}
 
 		// create the file
-		f, err := os.Create(fmt.Sprintf("links/%s", file.Name))
+		f, err := os.Create(fmt.Sprintf("%s/%s", linkDir, file.Name))
 		if err != nil {
 			return errors.Wrap(err, "failed to create file")
 		}
@@ -157,7 +157,7 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 
 			c := client.NewDevGuardClient(token, apiUrl)
 
-			return downloadSupplyChainLinks(cmd.Context(), c, apiUrl, assetName, supplyChainId)
+			return downloadSupplyChainLinks(cmd.Context(), c, "links", apiUrl, assetName, supplyChainId)
 		},
 	}
 

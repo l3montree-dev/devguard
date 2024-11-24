@@ -232,7 +232,8 @@ func (a *httpController) RootLayout(c core.Context) error {
 						Name:              "verify-digest",
 						ExpectedMaterials: [][]string{{"ALLOW", "*"}},
 						ExpectedProducts: [][]string{
-							{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "deploy"},
+							{"REQUIRE", "image-digest.txt"},
+							{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "deploy"}, // makes sure image-digest.txt is the same as the created digest
 							{"DISALLOW", "*"},
 						},
 					},
