@@ -40,7 +40,8 @@ func NewInTotoLinkRepository(db core.DB) *inTotoLinkRepository {
 
 func (g *inTotoLinkRepository) FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainId string) ([]models.InTotoLink, error) {
 	var t []models.InTotoLink
-	err := g.db.Model(models.InTotoLink{}).Where("asset_id = ? AND supply_chain_id = ?", assetID, supplyChainId).Find(&t).Error
+	// only require it to start with the supply chain id
+	err := g.db.Model(models.InTotoLink{}).Where("asset_id = ? AND supply_chain_id LIKE ?", assetID, supplyChainId+"%").Find(&t).Error
 	return t, err
 }
 

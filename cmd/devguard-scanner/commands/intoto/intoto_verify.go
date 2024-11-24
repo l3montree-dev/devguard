@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/client"
@@ -30,10 +31,40 @@ import (
 )
 
 func verify(cmd *cobra.Command, args []string) error {
+	imageName := args[0]
+
+	// image name regex
+	// we expect the image name to be in the format of <registry>/<image>:<tag>[@digest]
+	reg := regexp.MustCompile(`^([a-zA-Z0-9.-]+(?:/[a-zA-Z0-9._-]+)+):([a-zA-Z0-9._-]+)(@sha256:[a-f0-9]{64})?$`)
+	if !reg.MatchString(imageName) {
+		return fmt.Errorf("invalid image name")
+	}
+
 	// download the layout
 	supplyChainId, err := cmd.Flags().GetString("supplyChainId")
 	if err != nil {
 		return err
+	}
+
+	if supplyChainId == "" {
+		// check if the image contains the supply chain id
+		// <registry>/<image>:<branch>-<commit>-<timestamp>
+
+		imageNameParts := strings.Split(imageName, ":")
+		if len(imageNameParts) != 2 {
+			return fmt.Errorf("invalid image name")
+		}
+
+		imageTag := imageNameParts[1]
+		imageTagParts := strings.Split(imageTag, "-")
+		if len(imageTagParts) < 3 {
+			return fmt.Errorf("tag does not contain supply chain id")
+		}
+
+		supplyChainId = imageTagParts[len(imageTagParts)-2]
+		if len(supplyChainId) != 8 {
+			return fmt.Errorf("tag does not contain supply chain id. Expected 8 characters")
+		}
 	}
 
 	token, err := getTokenFromCommandOrKeyring(cmd)
@@ -105,14 +136,6 @@ func verify(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	imageName := args[0]
-
-	// image name regex
-	// we expect the image name to be in the format of <registry>/<image>:<tag>[@digest]
-	reg := regexp.MustCompile(`^([a-zA-Z0-9.-]+(?:/[a-zA-Z0-9._-]+)+):([a-zA-Z0-9._-]+)(@sha256:[a-f0-9]{64})?$`)
-	if !reg.MatchString(imageName) {
-		return fmt.Errorf("invalid image name")
-	}
 
 	// now get the digest from the layout argument - we expect it to be an image tag
 	// use crane to get the digest
@@ -158,7 +181,6 @@ func NewInTotoVerifyCommand() *cobra.Command {
 
 	cmd.Flags().String("layoutKey", "", "Path to the layout key")
 
-	panicOnError(cmd.MarkFlagRequired("supplyChainId"))
 	panicOnError(cmd.MarkFlagRequired("token"))
 	panicOnError(cmd.MarkFlagRequired("layoutKey"))
 
