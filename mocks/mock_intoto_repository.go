@@ -25,27 +25,27 @@ func (_m *IntotoRepository) EXPECT() *IntotoRepository_Expecter {
 	return &IntotoRepository_Expecter{mock: &_m.Mock}
 }
 
-// FindByAssetAndOpaqueIdentifier provides a mock function with given fields: assetID, opaqueIdentifier
-func (_m *IntotoRepository) FindByAssetAndOpaqueIdentifier(assetID uuid.UUID, opaqueIdentifier string) (models.InTotoLink, error) {
-	ret := _m.Called(assetID, opaqueIdentifier)
+// FindByAssetAndSupplyChainId provides a mock function with given fields: assetID, supplyChainId
+func (_m *IntotoRepository) FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainId string) (models.InTotoLink, error) {
+	ret := _m.Called(assetID, supplyChainId)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindByAssetAndOpaqueIdentifier")
+		panic("no return value specified for FindByAssetAndSupplyChainId")
 	}
 
 	var r0 models.InTotoLink
 	var r1 error
 	if rf, ok := ret.Get(0).(func(uuid.UUID, string) (models.InTotoLink, error)); ok {
-		return rf(assetID, opaqueIdentifier)
+		return rf(assetID, supplyChainId)
 	}
 	if rf, ok := ret.Get(0).(func(uuid.UUID, string) models.InTotoLink); ok {
-		r0 = rf(assetID, opaqueIdentifier)
+		r0 = rf(assetID, supplyChainId)
 	} else {
 		r0 = ret.Get(0).(models.InTotoLink)
 	}
 
 	if rf, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
-		r1 = rf(assetID, opaqueIdentifier)
+		r1 = rf(assetID, supplyChainId)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -53,31 +53,31 @@ func (_m *IntotoRepository) FindByAssetAndOpaqueIdentifier(assetID uuid.UUID, op
 	return r0, r1
 }
 
-// IntotoRepository_FindByAssetAndOpaqueIdentifier_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetAndOpaqueIdentifier'
-type IntotoRepository_FindByAssetAndOpaqueIdentifier_Call struct {
+// IntotoRepository_FindByAssetAndSupplyChainId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetAndSupplyChainId'
+type IntotoRepository_FindByAssetAndSupplyChainId_Call struct {
 	*mock.Call
 }
 
-// FindByAssetAndOpaqueIdentifier is a helper method to define mock.On call
+// FindByAssetAndSupplyChainId is a helper method to define mock.On call
 //   - assetID uuid.UUID
-//   - opaqueIdentifier string
-func (_e *IntotoRepository_Expecter) FindByAssetAndOpaqueIdentifier(assetID interface{}, opaqueIdentifier interface{}) *IntotoRepository_FindByAssetAndOpaqueIdentifier_Call {
-	return &IntotoRepository_FindByAssetAndOpaqueIdentifier_Call{Call: _e.mock.On("FindByAssetAndOpaqueIdentifier", assetID, opaqueIdentifier)}
+//   - supplyChainId string
+func (_e *IntotoRepository_Expecter) FindByAssetAndSupplyChainId(assetID interface{}, supplyChainId interface{}) *IntotoRepository_FindByAssetAndSupplyChainId_Call {
+	return &IntotoRepository_FindByAssetAndSupplyChainId_Call{Call: _e.mock.On("FindByAssetAndSupplyChainId", assetID, supplyChainId)}
 }
 
-func (_c *IntotoRepository_FindByAssetAndOpaqueIdentifier_Call) Run(run func(assetID uuid.UUID, opaqueIdentifier string)) *IntotoRepository_FindByAssetAndOpaqueIdentifier_Call {
+func (_c *IntotoRepository_FindByAssetAndSupplyChainId_Call) Run(run func(assetID uuid.UUID, supplyChainId string)) *IntotoRepository_FindByAssetAndSupplyChainId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(uuid.UUID), args[1].(string))
 	})
 	return _c
 }
 
-func (_c *IntotoRepository_FindByAssetAndOpaqueIdentifier_Call) Return(_a0 models.InTotoLink, _a1 error) *IntotoRepository_FindByAssetAndOpaqueIdentifier_Call {
+func (_c *IntotoRepository_FindByAssetAndSupplyChainId_Call) Return(_a0 models.InTotoLink, _a1 error) *IntotoRepository_FindByAssetAndSupplyChainId_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *IntotoRepository_FindByAssetAndOpaqueIdentifier_Call) RunAndReturn(run func(uuid.UUID, string) (models.InTotoLink, error)) *IntotoRepository_FindByAssetAndOpaqueIdentifier_Call {
+func (_c *IntotoRepository_FindByAssetAndSupplyChainId_Call) RunAndReturn(run func(uuid.UUID, string) (models.InTotoLink, error)) *IntotoRepository_FindByAssetAndSupplyChainId_Call {
 	_c.Call.Return(run)
 	return _c
 }

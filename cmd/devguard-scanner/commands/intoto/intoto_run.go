@@ -76,7 +76,7 @@ func getCommitHash() (string, error) {
 	return str[:len(str)-1], nil
 }
 
-func readAndUploadMetadata(cmd *cobra.Command, step string, filename string) error {
+func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string, filename string) error {
 	// read the metadata.json file and remove it
 	b, err := os.ReadFile(filename)
 	if err != nil {
@@ -88,16 +88,10 @@ func readAndUploadMetadata(cmd *cobra.Command, step string, filename string) err
 		return errors.Wrap(err, "failed to remove metadata file")
 	}
 
-	// get the commit hash
-	commit, err := getCommitHash()
-	if err != nil {
-		return errors.Wrap(err, "failed to get commit hash")
-	}
-
 	// create the request
 	body := map[string]string{
 		"step":          step,
-		"supplyChainId": commit,
+		"supplyChainId": supplyChainId,
 		"payload":       string(b),
 		"filename":      filename,
 	}
@@ -146,7 +140,7 @@ func NewInTotoRunCommand() *cobra.Command {
 		Use:  "run",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			step, key, materials, products, ignore, err := parseCommand(cmd)
+			step, supplyChainId, key, materials, products, ignore, err := parseCommand(cmd)
 			if err != nil {
 				return errors.Wrap(err, "failed to parse command")
 			}
@@ -168,7 +162,7 @@ func NewInTotoRunCommand() *cobra.Command {
 				return errors.Wrap(err, "failed to dump metadata")
 			}
 
-			err = readAndUploadMetadata(cmd, step, filename)
+			err = readAndUploadMetadata(cmd, supplyChainId, step, filename)
 			if err != nil {
 				return errors.Wrap(err, "failed to read and upload metadata")
 			}

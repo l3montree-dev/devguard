@@ -22,7 +22,6 @@ import (
 type Tabler interface {
 	TableName() string
 }
-
 type ModelWriter[ID any, T Tabler, Tx any] interface {
 	Create(tx Tx, t *T) error
 	Save(tx Tx, t *T) error

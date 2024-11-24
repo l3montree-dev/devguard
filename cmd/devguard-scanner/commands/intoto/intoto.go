@@ -16,15 +16,16 @@
 package intotocmd
 
 import (
-	"encoding/json"
+	"archive/zip"
+	"bytes"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/client"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/zalando/go-keyring"
@@ -52,8 +53,8 @@ func storeTokenInKeyring(token string) error {
 
 func newInTotoFetchCommitLinkCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "fetch-link",
-		Short: "Fetch link",
+		Use:   "fetch-links",
+		Short: "Fetch links for a given supply chain",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			token, err := cmd.Flags().GetString("token")
 			if err != nil {
@@ -65,15 +66,15 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 				return err
 			}
 
-			opaqueIdentifier, err := cmd.Flags().GetString("opaqueIdentifier")
+			supplyChainId, err := cmd.Flags().GetString("supplyChainId")
 			if err != nil {
 				return err
 			}
 
-			if opaqueIdentifier == "" {
-				opaqueIdentifier, err = getCommitHash()
+			if supplyChainId == "" {
+				supplyChainId, err = getCommitHash()
 				if err != nil {
-					return errors.Wrap(err, "failed to get commit hash. Please provide the --opaqueIdentifier")
+					return errors.Wrap(err, "failed to get commit hash. Please provide the --supplyChainId flag")
 				}
 			}
 
@@ -92,7 +93,7 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 
 			c := client.NewDevGuardClient(token, apiUrl)
 
-			req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/%s/", apiUrl, assetName, opaqueIdentifier), nil)
+			req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/%s/", apiUrl, assetName, supplyChainId), nil)
 
 			if err != nil {
 				return errors.Wrap(err, "failed to create request")
@@ -104,27 +105,61 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 				return errors.Wrap(err, "failed to send request")
 			}
 
-			// unmarshal the response
-			var link models.InTotoLink
-			if err := json.NewDecoder(resp.Body).Decode(&link); err != nil {
-				return errors.Wrap(err, "failed to unmarshal response")
+			if resp.StatusCode != http.StatusOK {
+				return errors.Errorf("unexpected status code: %d", resp.StatusCode)
 			}
 
-			// create a file with the payload
-			file, err := os.Create(link.Filename)
+			// get the zip content and decode it
+			// write the content to the filesystem
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				return errors.Wrap(err, "failed to create file")
+				return errors.Wrap(err, "failed to read response body")
+			}
+			resp.Body.Close()
+
+			reader := bytes.NewReader(body)
+			zipReader, err := zip.NewReader(reader, int64(len(body)))
+			if err != nil {
+				return errors.Wrap(err, "failed to create zip reader")
 			}
 
-			_, err = file.Write([]byte(link.Payload))
-			return err
+			// create the "links" directory
+			err = os.MkdirAll("links", os.ModePerm)
+			if err != nil {
+				return errors.Wrap(err, "failed to create links directory")
+			}
+
+			// process the zip content
+			for _, file := range zipReader.File {
+				// handle each file in the zip archive
+				rc, err := file.Open()
+				if err != nil {
+					return errors.Wrap(err, "failed to open file")
+				}
+
+				// create the file
+				f, err := os.Create(fmt.Sprintf("links/%s", file.Name))
+				if err != nil {
+					return errors.Wrap(err, "failed to create file")
+				}
+
+				// copy the content
+				if file.UncompressedSize64 > 100*1024*1024 { // limit to 10MB
+					return errors.New("file too large")
+				}
+				_, err = io.Copy(f, rc) // nolint:gosec// checks are done above
+				if err != nil {
+					return errors.Wrap(err, "failed to copy content")
+				}
+			}
+			return nil
 		},
 	}
 
 	cmd.Flags().String("token", "", "The token to use to authenticate with the devguard api")
 	cmd.Flags().String("apiUrl", "api.main.devguard.org", "The devguard api url")
 	cmd.Flags().String("assetName", "", "The asset name to use")
-	cmd.Flags().String("opaqueIdentifier", "", "The opaque identifier to fetch")
+	cmd.Flags().String("supplyChainId", "", "The supply chain id to fetch the links for")
 
 	return cmd
 }
@@ -223,6 +258,8 @@ func NewInTotoCommand() *cobra.Command {
 	cmd.PersistentFlags().StringArray("materials", []string{"."}, "The materials to include in the in-toto link. Default is the current directory")
 
 	cmd.PersistentFlags().StringArray("products", []string{"."}, "The products to include in the in-toto link. Default is the current directory")
+
+	cmd.PersistentFlags().String("supplyChainId", "", "The supply chain id to use. If empty, tries to extract the current commit hash.")
 
 	cmd.AddCommand(
 		NewInTotoRecordStartCommand(),

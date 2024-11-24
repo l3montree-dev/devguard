@@ -464,7 +464,7 @@ func Start(db core.DB) {
 	assetRouter.POST("/in-toto/", intotoController.Create, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 
-	assetRouter.GET("/in-toto/:opaqueIdentifier/", intotoController.Read)
+	assetRouter.GET("/in-toto/:supplyChainId/", intotoController.Read)
 
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)

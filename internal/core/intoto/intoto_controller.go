@@ -16,9 +16,11 @@
 package intoto
 
 import (
+	"archive/zip"
 	"bytes"
 	"crypto/x509"
 	"encoding/pem"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -36,7 +38,7 @@ import (
 
 // we use this in multiple files in the asset package itself
 type repository interface {
-	FindByAssetAndOpaqueIdentifier(assetID uuid.UUID, opaqueIdentifier string) (models.InTotoLink, error)
+	FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainId string) ([]models.InTotoLink, error)
 	Save(tx core.DB, model *models.InTotoLink) error
 }
 
@@ -275,10 +277,40 @@ func (a *httpController) RootLayout(c core.Context) error {
 func (a *httpController) Read(c core.Context) error {
 	app := core.GetAsset(c)
 	// find a link with the corresponding opaque id
-	link, err := a.linkRepository.FindByAssetAndOpaqueIdentifier(app.GetID(), c.Param("opaqueIdentifier"))
+	links, err := a.linkRepository.FindByAssetAndSupplyChainId(app.GetID(), c.Param("supplyChainId"))
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find in-toto link").WithInternal(err)
 	}
 
-	return c.JSON(200, link)
+	c.Response().Header().Set("Content-Type", "application/zip")
+	c.Response().Header().Set("Content-Disposition", "attachment; filename=\"links.zip\"")
+	c.Response().WriteHeader(http.StatusOK)
+
+	zipWriter := zip.NewWriter(c.Response().Writer)
+
+	for _, link := range links {
+		header := &zip.FileHeader{
+			Name:     link.Filename,
+			Method:   zip.Deflate, // deflate also works, but at a cost
+			Modified: time.Now(),
+		}
+		entryWriter, err := zipWriter.CreateHeader(header)
+
+		if err != nil {
+			return echo.NewHTTPError(500, "could not create zip entry").WithInternal(err)
+		}
+
+		_, err = entryWriter.Write([]byte(link.Payload))
+		if err != nil {
+			return echo.NewHTTPError(500, "could not write to zip entry").WithInternal(err)
+		}
+
+		zipWriter.Flush()
+		flushingWriter, ok := c.Response().Writer.(http.Flusher)
+		if ok {
+			flushingWriter.Flush()
+		}
+	}
+
+	return zipWriter.Close()
 }

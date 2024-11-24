@@ -38,9 +38,9 @@ func NewInTotoLinkRepository(db core.DB) *inTotoLinkRepository {
 	}
 }
 
-func (g *inTotoLinkRepository) FindByAssetAndOpaqueIdentifier(assetID uuid.UUID, opaqueIdentifier string) (models.InTotoLink, error) {
-	var t models.InTotoLink
-	err := g.db.Model(models.InTotoLink{}).Where("asset_id = ? AND opaque_identifier = ?", assetID, opaqueIdentifier).First(&t).Error
+func (g *inTotoLinkRepository) FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainId string) ([]models.InTotoLink, error) {
+	var t []models.InTotoLink
+	err := g.db.Model(models.InTotoLink{}).Where("asset_id = ? AND supply_chain_id = ?", assetID, supplyChainId).Find(&t).Error
 	return t, err
 }
 

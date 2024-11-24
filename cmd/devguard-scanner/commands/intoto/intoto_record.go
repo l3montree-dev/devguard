@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -42,15 +43,15 @@ func getTokenFromCommandOrKeyring(cmd *cobra.Command) (string, error) {
 	return token, nil
 }
 func parseCommand(cmd *cobra.Command) (
-	step string, key toto.Key, materials, products, ignore []string, err error) {
+	step string, supplyChainId string, key toto.Key, materials, products, ignore []string, err error) {
 	token, err := getTokenFromCommandOrKeyring(cmd)
 	if err != nil {
-		return "", toto.Key{}, nil, nil, nil, err
+		return "", "", toto.Key{}, nil, nil, nil, err
 	}
 
 	step, err = cmd.Flags().GetString("step")
 	if err != nil {
-		return "", toto.Key{}, nil, nil, nil, err
+		return "", "", toto.Key{}, nil, nil, nil, err
 	}
 
 	materials, _ = cmd.Flags().GetStringArray("materials")
@@ -59,7 +60,7 @@ func parseCommand(cmd *cobra.Command) (
 
 	ignore, err = cmd.Flags().GetStringArray("ignore")
 	if err != nil {
-		return "", toto.Key{}, nil, nil, nil, err
+		return "", "", toto.Key{}, nil, nil, nil, err
 	}
 
 	// read .gitignore if exists
@@ -70,14 +71,27 @@ func parseCommand(cmd *cobra.Command) (
 
 	key, err = tokenToInTotoKey(token)
 	if err != nil {
-		return "", toto.Key{}, nil, nil, nil, err
+		return "", "", toto.Key{}, nil, nil, nil, err
 	}
 
-	return step, key, materials, products, ignore, nil
+	supplyChainId, err = cmd.Flags().GetString("supplyChainId")
+	if err != nil {
+		return "", "", toto.Key{}, nil, nil, nil, err
+	}
+
+	if supplyChainId == "" {
+		// get the commit hash
+		supplyChainId, err = getCommitHash()
+		if err != nil {
+			return "", "", toto.Key{}, nil, nil, nil, errors.Wrap(err, "failed to get commit hash. Please provide the --supplyChainId flag")
+		}
+	}
+
+	return step, supplyChainId, key, materials, products, ignore, nil
 }
 
 func stopInTotoRecording(cmd *cobra.Command, args []string) error {
-	step, key, _, products, ignore, err := parseCommand(cmd)
+	step, supplyChainId, key, _, products, ignore, err := parseCommand(cmd)
 	if err != nil {
 		return err
 	}
@@ -116,7 +130,7 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = readAndUploadMetadata(cmd, step, output)
+	err = readAndUploadMetadata(cmd, supplyChainId, step, output)
 	if err != nil {
 		return err
 	}
@@ -126,7 +140,7 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 }
 
 func startInTotoRecording(cmd *cobra.Command, args []string) error {
-	step, key, materials, _, ignore, err := parseCommand(cmd)
+	step, _, key, materials, _, ignore, err := parseCommand(cmd)
 
 	if err != nil {
 		return err
