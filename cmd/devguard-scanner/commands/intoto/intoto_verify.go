@@ -16,9 +16,12 @@
 package intotocmd
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
+	"regexp"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/client"
@@ -93,6 +96,21 @@ func verify(cmd *cobra.Command, args []string) error {
 
 	var layoutKey toto.Key
 	err = layoutKey.LoadKey(layoutKeyPath, "ecdsa-sha2-nistp256", []string{"sha256"})
+	if err != nil {
+		return err
+	}
+	imageName := args[0]
+
+	// image name regex
+	// we expect the image name to be in the format of <registry>/<image>:<tag>[@digest]
+	reg := regexp.MustCompile(`^([a-zA-Z0-9.-]+(?:/[a-zA-Z0-9._-]+)+):([a-zA-Z0-9._-]+)(@sha256:[a-f0-9]{64})?$`)
+	if !reg.MatchString(imageName) {
+		return fmt.Errorf("invalid image name")
+	}
+
+	// now get the digest from the layout argument - we expect it to be an image tag
+	// use crane to get the digest
+	err = exec.Command("sh", "-c", "crane", "digest", fmt.Sprintf("\"%s\"", imageName), ">", "image-digest.txt").Run() // nolint:gosec//Checked using regex
 	if err != nil {
 		return err
 	}

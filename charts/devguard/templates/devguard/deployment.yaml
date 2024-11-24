@@ -99,7 +99,7 @@ spec:
           - mountPath: /github-app-private-key
             name: github-app-private-key
             subPath: privateKey
-          - mountPath: /intoto-private-key
+          - mountPath: /intoto-private-key.pem
             name: intoto-private-key
             subPath: privateKey
 
