@@ -165,5 +165,8 @@ func NewInTotoRecordStopCommand() *cobra.Command {
 
 	cmd.Flags().String("output", "", "The output file name. Default is the <step>.link.json name")
 
+	cmd.Flags().String("apiUrl", "", "The devguard api url")
+	cmd.Flags().String("assetName", "", "The asset name to use")
+
 	return cmd
 }
