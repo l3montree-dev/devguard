@@ -317,3 +317,15 @@ docker run -v "$(PWD):/app" scanner devguard-scanner container-scanning \
 ```
 
 
+#### In-Toto Verify
+```bash
+# we need to create a clean directory for the in-toto verification
+# since we are recording the files inside the directory
+mkdir test-env
+
+go run ../cmd/devguard-scanner intoto verify \
+    --assetName=l3montree-cybersecurity/projects/devguard/assets/devguard-action \
+    --token=<Personal Access Token> \
+    --apiUrl="https://api.main.devguard.org" \
+    --layoutKey=../intoto-public-key.pem ghcr.io/l3montree-dev/devguard-action:in-toto-c23783cd-1732437352  # extracts the commit hash from the image name which we use as "supply chain id"
+```
