@@ -3,7 +3,7 @@ name: VulnDB Workflow
 on: 
   workflow_dispatch:
   schedule:
-    - cron: '0 */2 * * *' # every hour
+    - cron: '0 */6 * * *' # every hour
 
 env:
   POSTGRES_DB: devguard
