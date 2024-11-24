@@ -42,3 +42,9 @@
     :why: Mozilla Public License
     :versions: []
     :when: 2024-10-28 11:31:56.724335000 Z
+- - :approve
+  - github.com/in-toto/in-toto-golang
+  - :who: Tim Bastin
+    :why: Apache-2.0
+    :versions: []
+    :when: 2024-11-24 7:10:00.0000000000 Z

@@ -19,8 +19,10 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/golang-cz/devslog"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands"
+	intotocmd "github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
+
+	"github.com/phsym/console-slog"
 	"github.com/spf13/cobra"
 )
 
@@ -46,26 +48,13 @@ func init() {
 		commands.NewInspectCommand(),
 		commands.NewSignCommand(),
 		commands.NewLoginCommand(),
+		intotocmd.NewInTotoCommand(),
 	)
 }
 
 func main() {
-	// slog.HandlerOptions
-	slogOpts := &slog.HandlerOptions{
-		AddSource: true,
-		Level:     slog.LevelDebug,
-	}
 
-	// new logger with options
-	opts := &devslog.Options{
-		HandlerOptions:    slogOpts,
-		MaxSlicePrintSize: 4,
-		SortKeys:          true,
-		NewLineAfterLog:   true,
-		StringerFormatter: true,
-	}
-
-	logger := slog.New(devslog.NewHandler(os.Stdout, opts))
+	logger := slog.New(console.NewHandler(os.Stderr, &console.HandlerOptions{Level: slog.LevelDebug}))
 
 	// optional: set global logger
 	slog.SetDefault(logger)

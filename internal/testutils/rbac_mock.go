@@ -142,6 +142,10 @@ func (r RBACProviderMock) GetDomainRBAC(domain string) accesscontrol.AccessContr
 	}
 }
 
+func (r RBACMock) GetAllMembersOfProject(organization, project string) ([]string, error) {
+	return []string{}, nil
+}
+
 func (r RBACMock) GetAllProjectsForUser(user string) []string {
 	return []string{}
 }

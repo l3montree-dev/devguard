@@ -25,29 +25,27 @@ func (_m *StatisticsStatisticsService) EXPECT() *StatisticsStatisticsService_Exp
 	return &StatisticsStatisticsService_Expecter{mock: &_m.Mock}
 }
 
-// GetAssetRiskDistribution provides a mock function with given fields: assetID
-func (_m *StatisticsStatisticsService) GetAssetRiskDistribution(assetID uuid.UUID) ([]models.AssetRiskDistribution, error) {
-	ret := _m.Called(assetID)
+// GetAssetRiskDistribution provides a mock function with given fields: assetID, assetName
+func (_m *StatisticsStatisticsService) GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
+	ret := _m.Called(assetID, assetName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAssetRiskDistribution")
 	}
 
-	var r0 []models.AssetRiskDistribution
+	var r0 models.AssetRiskDistribution
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID) ([]models.AssetRiskDistribution, error)); ok {
-		return rf(assetID)
+	if rf, ok := ret.Get(0).(func(uuid.UUID, string) (models.AssetRiskDistribution, error)); ok {
+		return rf(assetID, assetName)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID) []models.AssetRiskDistribution); ok {
-		r0 = rf(assetID)
+	if rf, ok := ret.Get(0).(func(uuid.UUID, string) models.AssetRiskDistribution); ok {
+		r0 = rf(assetID, assetName)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.AssetRiskDistribution)
-		}
+		r0 = ret.Get(0).(models.AssetRiskDistribution)
 	}
 
-	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = rf(assetID)
+	if rf, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
+		r1 = rf(assetID, assetName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -62,23 +60,24 @@ type StatisticsStatisticsService_GetAssetRiskDistribution_Call struct {
 
 // GetAssetRiskDistribution is a helper method to define mock.On call
 //   - assetID uuid.UUID
-func (_e *StatisticsStatisticsService_Expecter) GetAssetRiskDistribution(assetID interface{}) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
-	return &StatisticsStatisticsService_GetAssetRiskDistribution_Call{Call: _e.mock.On("GetAssetRiskDistribution", assetID)}
+//   - assetName string
+func (_e *StatisticsStatisticsService_Expecter) GetAssetRiskDistribution(assetID interface{}, assetName interface{}) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
+	return &StatisticsStatisticsService_GetAssetRiskDistribution_Call{Call: _e.mock.On("GetAssetRiskDistribution", assetID, assetName)}
 }
 
-func (_c *StatisticsStatisticsService_GetAssetRiskDistribution_Call) Run(run func(assetID uuid.UUID)) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
+func (_c *StatisticsStatisticsService_GetAssetRiskDistribution_Call) Run(run func(assetID uuid.UUID, assetName string)) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		run(args[0].(uuid.UUID), args[1].(string))
 	})
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetAssetRiskDistribution_Call) Return(_a0 []models.AssetRiskDistribution, _a1 error) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
+func (_c *StatisticsStatisticsService_GetAssetRiskDistribution_Call) Return(_a0 models.AssetRiskDistribution, _a1 error) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetAssetRiskDistribution_Call) RunAndReturn(run func(uuid.UUID) ([]models.AssetRiskDistribution, error)) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
+func (_c *StatisticsStatisticsService_GetAssetRiskDistribution_Call) RunAndReturn(run func(uuid.UUID, string) (models.AssetRiskDistribution, error)) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type PAT struct {
@@ -15,6 +16,8 @@ type PAT struct {
 	Description string    `json:"description" gorm:"type:text"`
 	ID          uuid.UUID `json:"id" gorm:"type:uuid;default:gen_random_uuid()"`
 	Fingerprint string    `json:"fingerprint"`
+
+	DeletedAt gorm.DeletedAt `json:"deletedAt"`
 }
 
 func (p PAT) TableName() string {

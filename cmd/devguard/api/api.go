@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/intoto"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/project"
@@ -337,6 +338,8 @@ func Start(db core.DB) {
 	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetService, statisticsService)
 
+	intotoController := intoto.NewHttpController(repositories.NewInTotoLinkRepository(db), patRepository)
+
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, project.NewService(projectRepository))
 
 	patService := pat.NewPatService(patRepository)
@@ -457,6 +460,11 @@ func Start(db core.DB) {
 	assetRouter.PATCH("/", assetController.Update, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
 
 	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
+
+	assetRouter.POST("/in-toto/", intotoController.Create, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
+	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
+
+	assetRouter.GET("/in-toto/:opaqueIdentifier/", intotoController.Read)
 
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)

@@ -34,6 +34,14 @@ func registerMiddlewares(e *echo.Echo) {
 			return
 		}
 
+		if he, ok := err.(*echo.HTTPError); ok {
+			// Send response
+			if err := c.JSON(he.Code, he.Message); err != nil {
+				slog.Error("could not send error response", "error", err)
+			}
+			return
+		}
+
 		he := &echo.HTTPError{
 			Code:    http.StatusInternalServerError,
 			Message: http.StatusText(http.StatusInternalServerError),

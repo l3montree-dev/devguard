@@ -71,6 +71,19 @@ func (c *casbinRBAC) GetAllMembersOfOrganization(orgID string) ([]string, error)
 	}), nil
 }
 
+func (c *casbinRBAC) GetAllMembersOfProject(orgID string, projectID string) ([]string, error) {
+	users, err := c.enforcer.GetImplicitUsersForRole("project::"+projectID+"|role::member", "domain::"+orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	return utils.Map(utils.Filter(users, func(u string) bool {
+		return strings.HasPrefix(u, "user::")
+	}), func(u string) string {
+		return strings.TrimPrefix(u, "user::")
+	}), nil
+}
+
 func (c *casbinRBAC) HasAccess(user string) bool {
 	roles := c.enforcer.GetRolesForUserInDomain("user::"+user, "domain::"+c.domain)
 	return len(roles) > 0
