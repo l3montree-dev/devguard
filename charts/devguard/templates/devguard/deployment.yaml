@@ -99,10 +99,17 @@ spec:
           - mountPath: /github-app-private-key
             name: github-app-private-key
             subPath: privateKey
+          - mountPath: /intoto-private-key
+            name: intoto-private-key
+            subPath: privateKey
+
       volumes:
       - name: github-app-private-key
         secret:
           secretName: {{ .Values.api.github.existingPrivateKeySecretName }}
+      - name: intoto-private-key
+        secret:
+          secretName: {{ .Values.api.intoto.existingPrivateKeySecretName }}
       {{- with .Values.api.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

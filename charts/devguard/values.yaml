@@ -53,6 +53,8 @@ api:
       - path: /
         pathType: Prefix
 
+  intoto:
+    existingPrivateKeySecretName: ec-private-key
   github:
     appId: abc
     # needs to contain "webhookSecret"

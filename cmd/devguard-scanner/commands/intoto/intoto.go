@@ -18,6 +18,7 @@ package intotocmd
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -49,6 +50,69 @@ func storeTokenInKeyring(token string) error {
 
 	// set password
 	return keyring.Set(service, user, token)
+}
+
+func downloadSupplyChainLinks(ctx context.Context, c client.DevGuardClient, apiUrl, assetName, supplyChainId string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/%s/", apiUrl, assetName, supplyChainId), nil)
+
+	if err != nil {
+		return errors.Wrap(err, "failed to create request")
+	}
+
+	resp, err := c.Do(req)
+
+	if err != nil {
+		return errors.Wrap(err, "failed to send request")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	// get the zip content and decode it
+	// write the content to the filesystem
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrap(err, "failed to read response body")
+	}
+	resp.Body.Close()
+
+	reader := bytes.NewReader(body)
+	zipReader, err := zip.NewReader(reader, int64(len(body)))
+	if err != nil {
+		return errors.Wrap(err, "failed to create zip reader")
+	}
+
+	// create the "links" directory
+	err = os.MkdirAll("links", os.ModePerm)
+	if err != nil {
+		return errors.Wrap(err, "failed to create links directory")
+	}
+
+	// process the zip content
+	for _, file := range zipReader.File {
+		// handle each file in the zip archive
+		rc, err := file.Open()
+		if err != nil {
+			return errors.Wrap(err, "failed to open file")
+		}
+
+		// create the file
+		f, err := os.Create(fmt.Sprintf("links/%s", file.Name))
+		if err != nil {
+			return errors.Wrap(err, "failed to create file")
+		}
+
+		// copy the content
+		if file.UncompressedSize64 > 100*1024*1024 { // limit to 10MB
+			return errors.New("file too large")
+		}
+		_, err = io.Copy(f, rc) // nolint:gosec// checks are done above
+		if err != nil {
+			return errors.Wrap(err, "failed to copy content")
+		}
+	}
+	return nil
 }
 
 func newInTotoFetchCommitLinkCommand() *cobra.Command {
@@ -93,66 +157,7 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 
 			c := client.NewDevGuardClient(token, apiUrl)
 
-			req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/%s/", apiUrl, assetName, supplyChainId), nil)
-
-			if err != nil {
-				return errors.Wrap(err, "failed to create request")
-			}
-
-			resp, err := c.Do(req)
-
-			if err != nil {
-				return errors.Wrap(err, "failed to send request")
-			}
-
-			if resp.StatusCode != http.StatusOK {
-				return errors.Errorf("unexpected status code: %d", resp.StatusCode)
-			}
-
-			// get the zip content and decode it
-			// write the content to the filesystem
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return errors.Wrap(err, "failed to read response body")
-			}
-			resp.Body.Close()
-
-			reader := bytes.NewReader(body)
-			zipReader, err := zip.NewReader(reader, int64(len(body)))
-			if err != nil {
-				return errors.Wrap(err, "failed to create zip reader")
-			}
-
-			// create the "links" directory
-			err = os.MkdirAll("links", os.ModePerm)
-			if err != nil {
-				return errors.Wrap(err, "failed to create links directory")
-			}
-
-			// process the zip content
-			for _, file := range zipReader.File {
-				// handle each file in the zip archive
-				rc, err := file.Open()
-				if err != nil {
-					return errors.Wrap(err, "failed to open file")
-				}
-
-				// create the file
-				f, err := os.Create(fmt.Sprintf("links/%s", file.Name))
-				if err != nil {
-					return errors.Wrap(err, "failed to create file")
-				}
-
-				// copy the content
-				if file.UncompressedSize64 > 100*1024*1024 { // limit to 10MB
-					return errors.New("file too large")
-				}
-				_, err = io.Copy(f, rc) // nolint:gosec// checks are done above
-				if err != nil {
-					return errors.Wrap(err, "failed to copy content")
-				}
-			}
-			return nil
+			return downloadSupplyChainLinks(cmd.Context(), c, apiUrl, assetName, supplyChainId)
 		},
 	}
 

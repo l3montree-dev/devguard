@@ -243,7 +243,7 @@ func (a *httpController) RootLayout(c core.Context) error {
 	}
 
 	var devguardKey toto.Key
-	err = devguardKey.LoadKey("ecdsa_private.pem", "ecdsa-sha2-nistp256", []string{"sha256"})
+	err = devguardKey.LoadKey("/intoto-private-key.pem", "ecdsa-sha2-nistp256", []string{"sha256"})
 	if err != nil {
 		return echo.NewHTTPError(500, "could not load devguard key").WithInternal(err)
 	}
