@@ -63,6 +63,9 @@ func publicKeyToInTotoKey(hexPubKey string) (toto.Key, error) {
 
 	// marshal
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&ecdsaPubKey)
+	if err != nil {
+		return toto.Key{}, errors.Wrap(err, "failed to marshal public key")
+	}
 
 	// encode to pem
 	b := pem.EncodeToMemory(&pem.Block{
