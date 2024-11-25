@@ -8,19 +8,24 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, templatePath string) error {
+func setupAndPushPipeline(accessToken string, projectName string, templatePath string) error {
 	dir, err := os.MkdirTemp("", "repo-clone")
 	if err != nil {
 		return fmt.Errorf("could not create temporary directory: %v", err)
 	}
 	defer os.RemoveAll(dir) // Clean up after the test
 
+	authentication := &http.BasicAuth{
+		Username: "abc123", // yes, this can be anything except an empty string
+		Password: accessToken,
+	}
+
 	r, err := git.PlainClone(dir, false, &git.CloneOptions{
 		URL:  "git@gitlab.com:" + projectName + ".git",
-		Auth: sshAuthKeys,
+		Auth: authentication,
 	})
 	if err != nil {
 		return fmt.Errorf("could not clone repository: %v", err)
@@ -102,7 +107,7 @@ func setupAndPushPipeline(sshAuthKeys *gitssh.PublicKeys, projectName string, te
 	}
 
 	err = r.Push(&git.PushOptions{
-		Auth: sshAuthKeys,
+		Auth: authentication,
 	})
 	if err != nil {
 		return fmt.Errorf("could not push: %v", err)

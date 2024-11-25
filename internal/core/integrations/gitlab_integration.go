@@ -397,6 +397,12 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 		return errors.Wrap(err, "could not create new gitlab client")
 	}
 
+	integration, err := g.gitlabIntegrationRepository.Read(integrationUUID)
+	if err != nil {
+		return errors.Wrap(err, "could not read gitlab integration")
+	}
+	accessToken := integration.AccessToken
+
 	var req struct {
 		DevguardAssetName  string `json:"devguardAssetName"`
 		DevguardPrivateKey string `json:"devguardPrivateKey"`
@@ -429,7 +435,7 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 	enc.Encode(map[string]string{"step": "projectVariables", "status": "success"}) //nolint:errcheck
 	ctx.Response().Flush()
 
-	sshAuthKeys, tmpSSHKeyID, err := g.generateSSHAuthKeys(ctx)
+	_, tmpSSHKeyID, err := g.generateSSHAuthKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not generate ssh key")
 	}
@@ -461,7 +467,7 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 	}()
 
 	templatePath := getTemplatePath(ctx.QueryParam("scanType"))
-	err = setupAndPushPipeline(sshAuthKeys, projectName, templatePath)
+	err = setupAndPushPipeline(accessToken, projectName, templatePath)
 	if err != nil {
 		return errors.Wrap(err, "could not setup and push pipeline")
 	}
