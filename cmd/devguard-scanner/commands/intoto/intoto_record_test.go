@@ -21,7 +21,7 @@ func TestParseGitIgnore(t *testing.T) {
 
 		filepath := path.Join(dir, ".gitignore")
 
-		err = os.WriteFile(filepath, []byte(gitignoreContent), 0644)
+		err = os.WriteFile(filepath, []byte(gitignoreContent), 0600)
 		assert.NoError(t, err, "failed to create temporary .gitignore file")
 
 		ignorePaths, err := parseGitIgnore(filepath)
