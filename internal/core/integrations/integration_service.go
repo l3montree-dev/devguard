@@ -24,8 +24,10 @@ func setupAndPushPipeline(accessToken string, projectName string, templatePath s
 	}
 
 	r, err := git.PlainClone(dir, false, &git.CloneOptions{
-		URL:  "git@gitlab.com:" + projectName + ".git",
+		//URL:  "git@gitlab.com:" + projectName + ".git",
+		URL:  "https://gitlab.com/" + projectName + ".git",
 		Auth: authentication,
+		//URL:  "https://gitlab.com/l3montree/bachelorarbeit.git",
 	})
 	if err != nil {
 		return fmt.Errorf("could not clone repository: %v", err)

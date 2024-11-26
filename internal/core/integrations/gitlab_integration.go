@@ -2,13 +2,7 @@ package integrations
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -21,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 
-	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -33,7 +26,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/xanzy/go-gitlab"
-	"golang.org/x/crypto/ssh"
 )
 
 type gitlabClientFacade interface {
@@ -50,9 +42,6 @@ type gitlabClientFacade interface {
 	CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
 	UpdateVariable(ctx context.Context, projectId int, key string, opt *gitlab.UpdateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
 	RemoveVariable(ctx context.Context, projectId int, key string) (*gitlab.Response, error)
-
-	AddSSHKey(ctx context.Context, projectId int, opt *gitlab.AddSSHKeyOptions) (*gitlab.SSHKey, *gitlab.Response, error)
-	DeleteSSHKey(ctx context.Context, keyId int) (*gitlab.Response, error)
 
 	CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error)
 	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
@@ -435,15 +424,6 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 	enc.Encode(map[string]string{"step": "projectVariables", "status": "success"}) //nolint:errcheck
 	ctx.Response().Flush()
 
-	_, tmpSSHKeyID, err := g.generateSSHAuthKeys(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not generate ssh key")
-	}
-
-	// notify the user that the ssh key was generated
-	enc.Encode(map[string]string{"step": "sshKey", "status": "success"}) //nolint:errcheck
-	ctx.Response().Flush()
-
 	// get the project name
 	projectId, err := extractProjectIdFromRepoId(repoId)
 	if err != nil {
@@ -454,17 +434,6 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get project name")
 	}
-
-	defer func() {
-		c := context.Background()
-		// use a 10 seconds timeout
-		c, cancel := context.WithTimeout(c, 10*time.Second)
-		defer cancel()
-
-		client.DeleteSSHKey(c, tmpSSHKeyID)                                        //nolint:all delete the ssh key after the function returns - we do not need it anymore
-		enc.Encode(map[string]string{"step": "deleteSSHKey", "status": "success"}) //nolint:errcheck
-		ctx.Response().Flush()
-	}()
 
 	templatePath := getTemplatePath(ctx.QueryParam("scanType"))
 	err = setupAndPushPipeline(accessToken, projectName, templatePath)
@@ -697,85 +666,6 @@ func (g *gitlabIntegration) getRepoNameFromProjectId(ctx core.Context, projectId
 	}
 	projectName := project.PathWithNamespace
 	return strings.ReplaceAll(projectName, " ", ""), nil
-}
-
-func (g *gitlabIntegration) generateSSHAuthKeys(ctx core.Context) (*gitssh.PublicKeys, int, error) {
-	asset := core.GetAsset(ctx)
-	repoId := utils.SafeDereference(asset.RepositoryID)
-	if !strings.HasPrefix(repoId, "gitlab:") {
-		// this integration only handles gitlab repositories
-		return nil, 0, nil
-	}
-
-	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
-	if err != nil {
-		return nil, 0, fmt.Errorf("could not extract integration id from repo id: %v", err)
-	}
-
-	projectId, err := extractProjectIdFromRepoId(repoId)
-	if err != nil {
-		return nil, 0, fmt.Errorf("could not extract project id from repo id: %w", err)
-	}
-	client, err := g.gitlabClientFactory(integrationUUID)
-	if err != nil {
-		return nil, 0, fmt.Errorf("could not create new gitlab client: %v", err)
-	}
-
-	privateKey, publicKeySsh, err := generateECDSAKeyPair()
-	if err != nil {
-		return nil, 0, fmt.Errorf("could not generate ECDSA key pair: %v", err)
-	}
-
-	tmpSSHKey, _, err := client.AddSSHKey(ctx.Request().Context(), projectId, &gitlab.AddSSHKeyOptions{
-		Title: gitlab.Ptr("Devguard temp key"),
-		Key:   gitlab.Ptr(publicKeySsh),
-	})
-	if err != nil {
-		return nil, 0, fmt.Errorf("could not add ssh key: %v", err)
-	}
-
-	sshAuthKeys, err := gitssh.NewPublicKeys("git", []byte(privateKey), "")
-	if err != nil {
-		return nil, 0, fmt.Errorf("could not create ssh keys: %v", err)
-	}
-	//TODO: we should change this to a more secure way
-	sshAuthKeys.HostKeyCallback = ssh.InsecureIgnoreHostKey() //nolint:gosec
-
-	return sshAuthKeys, tmpSSHKey.ID, nil
-
-}
-func generateECDSAKeyPair() (privateKeyPem string, publicKeySsh string, err error) {
-	// Generate the ECDSA private key using the P256 curve
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate private key: %v", err)
-	}
-
-	// Marshal the private key into ASN.1 DER encoded form
-	privateKeyDer, err := x509.MarshalECPrivateKey(privateKey)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to marshal private key: %v", err)
-	}
-
-	// Create a PEM block for the private key
-	privateKeyBlock := pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: privateKeyDer,
-	}
-
-	// Convert the private key to a PEM encoded string
-	privateKeyPem = string(pem.EncodeToMemory(&privateKeyBlock))
-
-	// Generate the SSH public key from the ECDSA private key
-	publicKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to generate public key: %v", err)
-	}
-
-	// Convert the SSH public key to the authorized_keys format
-	publicKeySsh = string(ssh.MarshalAuthorizedKey(publicKey))
-
-	return privateKeyPem, publicKeySsh, nil
 }
 
 func getTemplatePath(scanType string) string {
