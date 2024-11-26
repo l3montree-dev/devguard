@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -47,6 +48,24 @@ func getTokenFromCommandOrKeyring(cmd *cobra.Command) (string, error) {
 
 	return token, nil
 }
+
+func parseGitIgnore(path string) ([]string, error) {
+	// read .gitignore if exists
+	content, err := os.ReadFile(path)
+	if err == nil {
+		ignorePaths := strings.Split(string(content), "\n")
+		// make sure to remove new lines and empty strings
+		ignorePaths = utils.Filter(
+			utils.Map(ignorePaths, strings.TrimSpace),
+			func(e string) bool {
+				return e != "" && e != "\n"
+			})
+		return ignorePaths, nil
+	}
+
+	return nil, err
+}
+
 func parseCommand(cmd *cobra.Command) (
 	step string, supplyChainId string, key toto.Key, materials, products, ignore []string, err error) {
 	token, err := getTokenFromCommandOrKeyring(cmd)
@@ -68,10 +87,12 @@ func parseCommand(cmd *cobra.Command) (
 		return "", "", toto.Key{}, nil, nil, nil, err
 	}
 
-	// read .gitignore if exists
-	content, err := os.ReadFile(".gitignore")
-	if err == nil {
-		ignore = append(ignore, strings.Split(string(content), "\n")...)
+	pathsFromGitIgnore, err := parseGitIgnore(".gitignore")
+	if err != nil {
+		// just swallow the error
+		slog.Warn("could not read .gitignore file. This is not to bad if you do not have a .gitignore file.", "error", err)
+	} else {
+		ignore = append(ignore, pathsFromGitIgnore...)
 	}
 
 	key, err = tokenToInTotoKey(token)
