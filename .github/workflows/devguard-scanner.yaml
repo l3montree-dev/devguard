@@ -125,6 +125,7 @@ jobs:
     uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
     with:
       artifact-suffix: "-scanner"
+      image-suffix: "-scanner"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
     secrets:
