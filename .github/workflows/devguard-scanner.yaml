@@ -55,7 +55,12 @@ jobs:
   # Docker image build job
   build-image:
     uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
-  
+    with:
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      api-url: https://api.main.devguard.org
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
+
   build-scanner-image:
     uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
     with:
@@ -63,6 +68,10 @@ jobs:
       artifact-suffix: "-scanner"
       context: .
       dockerfile: Dockerfile.scanner
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      api-url: https://api.main.devguard.org
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}  
 
   # Image scanning job to detect vulnerabilities in the built Docker image
   container-scanning:
