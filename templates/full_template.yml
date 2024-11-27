@@ -8,4 +8,3 @@ include:
     inputs:
       asset_name: "$DEVGUARD_ASSET_NAME"
       token: "$DEVGUARD_TOKEN"
-      api_url: "https://smee.io/3e8qDFyqv8TVPgOm"
