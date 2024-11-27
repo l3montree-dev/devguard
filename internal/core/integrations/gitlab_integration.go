@@ -391,6 +391,7 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 		return errors.Wrap(err, "could not read gitlab integration")
 	}
 	accessToken := integration.AccessToken
+	gitlabUrl := integration.GitLabUrl
 
 	var req struct {
 		DevguardAssetName  string `json:"devguardAssetName"`
@@ -436,7 +437,7 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 	}
 
 	templatePath := getTemplatePath(ctx.QueryParam("scanType"))
-	err = setupAndPushPipeline(accessToken, projectName, templatePath)
+	err = setupAndPushPipeline(accessToken, gitlabUrl, projectName, templatePath)
 	if err != nil {
 		return errors.Wrap(err, "could not setup and push pipeline")
 	}
@@ -447,9 +448,10 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 
 	//create a merge request
 	mr, _, err := client.CreateMergeRequest(ctx.Request().Context(), projectName, &gitlab.CreateMergeRequestOptions{
-		SourceBranch: gitlab.Ptr("devguard-autosetup"),
-		TargetBranch: gitlab.Ptr("main"),
-		Title:        gitlab.Ptr("Add devguard pipeline template"),
+		SourceBranch:       gitlab.Ptr("devguard-autosetup"),
+		TargetBranch:       gitlab.Ptr("main"),
+		Title:              gitlab.Ptr("Add devguard pipeline template"),
+		RemoveSourceBranch: gitlab.Ptr(true),
 	})
 
 	if err != nil {

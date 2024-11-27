@@ -1,8 +1,8 @@
 stages:
-- test
+  - test
 
 include:
-- component: $CI_SERVER_FQDN/l3montree/devguard/software-composition-analysis@~latest
-  inputs:
-    asset_name: "$DEVGUARD_ASSET_NAME"
-    token: "$DEVGUARD_TOKEN"
+  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/software-composition-analysis.yml"
+    inputs:
+      asset_name: "$DEVGUARD_ASSET_NAME"
+      token: "$DEVGUARD_TOKEN"
