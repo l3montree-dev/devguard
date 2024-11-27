@@ -11,7 +11,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-func setupAndPushPipeline(accessToken string, projectName string, templatePath string) error {
+func setupAndPushPipeline(accessToken string, gitlabUrl string, projectName string, templatePath string) error {
 	dir, err := os.MkdirTemp("", "repo-clone")
 	if err != nil {
 		return fmt.Errorf("could not create temporary directory: %v", err)
@@ -24,10 +24,8 @@ func setupAndPushPipeline(accessToken string, projectName string, templatePath s
 	}
 
 	r, err := git.PlainClone(dir, false, &git.CloneOptions{
-		//URL:  "git@gitlab.com:" + projectName + ".git",
-		URL:  "https://gitlab.com/" + projectName + ".git",
+		URL:  gitlabUrl + "/" + projectName + ".git",
 		Auth: authentication,
-		//URL:  "https://gitlab.com/l3montree/bachelorarbeit.git",
 	})
 	if err != nil {
 		return fmt.Errorf("could not clone repository: %v", err)

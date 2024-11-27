@@ -1,10 +1,10 @@
 stages:
-- build
-- test
-- deploy
+  - build
+  - test
+  - deploy
 
 include:
-- component: $CI_SERVER_FQDN/l3montree/devguard/full@~latest
-  inputs:
-    asset_name: "$DEVGUARD_ASSET_NAME"
-    token: "$DEVGUARD_TOKEN"
+  - remote: "https://gitlab.com/l3montree/devguard/-/raw/main/templates/full.yml"
+    inputs:
+      asset_name: "$DEVGUARD_ASSET_NAME"
+      token: "$DEVGUARD_TOKEN"
