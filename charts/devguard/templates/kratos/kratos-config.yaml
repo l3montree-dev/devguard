@@ -6,56 +6,59 @@ data:
   {{- $publicUrl := (index .Values.web.ingress.hosts 0).host }}
   identity.schema.json: |
     {
-      "$id": "https://schemas.ory.sh/presets/kratos/quickstart/email-password/identity.schema.json",
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Person",
-      "type": "object",
-      "properties": {
-          "traits": {
-              "type": "object",
-              "properties": {
-                  "email": {
-                      "type": "string",
-                      "format": "email",
-                      "title": "E-Mail",
-                      "minLength": 3,
-                      "ory.sh/kratos": {
-                          "credentials": {
-                              "password": {
-                                  "identifier": true
-                              },
-                              "webauthn": {
-                                "identifier": true
-                              }
-                          },
-                          "verification": {
-                              "via": "email"
-                          },
-                          "recovery": {
-                              "via": "email"
-                          }
-                      }
-                  },
-                  "name": {
-                      "type": "object",
-                      "properties": {
-                          "first": {
-                              "title": "First Name",
-                              "type": "string"
-                          },
-                          "last": {
-                              "title": "Last Name",
-                              "type": "string"
-                          }
-                      }
-                  }
-              },
-              "required": [
-                  "email"
-              ],
-              "additionalProperties": false
-          }
-      }
+        "$id": "https://schemas.ory.sh/presets/kratos/quickstart/email-password/identity.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Person",
+        "type": "object",
+        "properties": {
+            "traits": {
+                "required": [
+                    "email"
+                ],
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "E-Mail",
+                        "minLength": 3,
+                        "ory.sh/kratos": {
+                            "credentials": {
+                                "password": {
+                                    "identifier": true
+                                },
+                                "passkey": {
+                                    "display_name": true
+                                },
+                                "webauthn": {
+                                    "identifier": true
+                                }
+                            },
+                            "verification": {
+                                "via": "email"
+                            },
+                            "recovery": {
+                                "via": "email"
+                            }
+                        }
+                    },
+                    "name": {
+                        "type": "object",
+                        "properties": {
+                            "first": {
+                                "title": "First Name",
+                                "type": "string"
+                            },
+                            "last": {
+                                "title": "Last Name",
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     
   kratos.yml: |
@@ -92,6 +95,15 @@ data:
               - user:email
               - read:user
             {{- end}}
+        passkey:
+          enabled: true
+          config:
+            rp:
+              id: {{ index (splitList "." $publicUrl) (sub (len (splitList "." $publicUrl)) 2) }}.{{ index (splitList "." $publicUrl) (sub (len (splitList "." $publicUrl)) 1) }}
+            origins:
+            - https://{{ $publicUrl }}
+            display_name: DevGuard
+
         webauthn:
           enabled: true
           config:
@@ -150,6 +162,12 @@ data:
                   hooks:
                       - hook: session
               oidc:
+                  hooks:
+                      - hook: session
+              passkey:
+                  hooks:
+                      - hook: session
+              webauthn:
                   hooks:
                       - hook: session
 

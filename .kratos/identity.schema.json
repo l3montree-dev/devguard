@@ -5,6 +5,10 @@
     "type": "object",
     "properties": {
         "traits": {
+            "required": [
+                "email"
+            ],
+            "additionalProperties": false,
             "type": "object",
             "properties": {
                 "email": {
@@ -16,6 +20,9 @@
                         "credentials": {
                             "password": {
                                 "identifier": true
+                            },
+                            "passkey": {
+                                "display_name": true
                             },
                             "webauthn": {
                                 "identifier": true
@@ -42,11 +49,7 @@
                         }
                     }
                 }
-            },
-            "required": [
-                "email"
-            ],
-            "additionalProperties": false
+            }
         }
     }
 }

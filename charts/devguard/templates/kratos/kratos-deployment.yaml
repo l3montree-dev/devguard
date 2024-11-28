@@ -18,7 +18,7 @@ spec:
     spec:
       initContainers:
       - name: kratos-automigrate
-        image: "oryd/kratos:v1.1.0-distroless"
+        image: "oryd/kratos:v1.3.1-distroless"
         imagePullPolicy: IfNotPresent
         command: ["kratos"]
         args: ["migrate", "sql", "-e", "--yes", "--config", "/etc/config/kratos.yml"]
@@ -72,7 +72,7 @@ spec:
             path: "identity.schema.json"
       containers:
       - name: kratos
-        image: "oryd/kratos:v1.1.0-distroless"
+        image: "oryd/kratos:v1.3.1-distroless"
         imagePullPolicy: IfNotPresent
         command:
         - kratos

@@ -16,7 +16,7 @@ services:
     - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
 
   kratos-migrate:
-    image: oryd/kratos:v1.1.0
+    image: oryd/kratos:v1.3.1
     depends_on:
     - postgresql
     environment:
@@ -28,7 +28,10 @@ services:
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
 
   kratos:
-    image: oryd/kratos:v1.1.0
+    # build:
+    #   context: ../kratos
+    #   dockerfile: ../kratos/.docker/Dockerfile-build
+    image: oryd/kratos:v1.3.1
     depends_on:
     - kratos-migrate
     - postgresql
