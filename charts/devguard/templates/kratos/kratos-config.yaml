@@ -95,14 +95,6 @@ data:
               - user:email
               - read:user
             {{- end}}
-        passkey:
-          enabled: true
-          config:
-            rp:
-              id: {{ index (splitList "." $publicUrl) (sub (len (splitList "." $publicUrl)) 2) }}.{{ index (splitList "." $publicUrl) (sub (len (splitList "." $publicUrl)) 1) }}
-            origins:
-            - https://{{ $publicUrl }}
-            display_name: DevGuard
 
         webauthn:
           enabled: true
@@ -119,6 +111,17 @@ data:
               - https://{{ $publicUrl }}
               # A display name which will be shown to the user on her/his device.
               display_name: DevGuard
+
+        passkey:
+          enabled: true
+          config:
+            rp:
+              id: {{ index (splitList "." $publicUrl) (sub (len (splitList "." $publicUrl)) 2) }}.{{ index (splitList "." $publicUrl) (sub (len (splitList "." $publicUrl)) 1) }}
+              
+              origins:
+              - https://{{ $publicUrl }}
+              display_name: DevGuard
+
         password:
           enabled: true
         totp:
