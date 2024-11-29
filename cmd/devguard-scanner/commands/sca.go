@@ -75,6 +75,9 @@ func generateSBOM(path string) (*os.File, error) {
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
 		trivyCmd = exec.Command("trivy", "image", "--input", path, "--format", "cyclonedx", "--output", filename)
 	}
+	stderr := &bytes.Buffer{}
+	// get the output
+	trivyCmd.Stderr = stderr
 
 	// cdxgenCmd.Dir = getDirFromPath(path)
 	trivyCmd.Dir = getDirFromPath(path)
@@ -87,7 +90,7 @@ func generateSBOM(path string) (*os.File, error) {
 
 	err := trivyCmd.Run()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, stderr.String())
 	}
 	// trivy generates the cyclonedx spec in version 1.6, while cdxgen generates version 1.5
 	jsonData, err := os.ReadFile(filepath.Join(getDirFromPath(path), filename))
@@ -174,8 +177,10 @@ func isValidPath(path string) (bool, error) {
 	}
 
 	// Check if the path exists
-	if _, err := os.Stat(absPath); os.IsNotExist(err) {
-		return false, fmt.Errorf("path does not exist")
+	_, err = os.Stat(absPath)
+
+	if os.IsNotExist(err) {
+		return false, errors.Wrap(err, "path does not exist: %s"+absPath)
 	}
 
 	return true, nil

@@ -403,6 +403,7 @@ func Start(db core.DB) {
 	tenantRouter.PATCH("/", orgController.Update, accessControlMiddleware("organization", accesscontrol.ActionUpdate))
 
 	tenantRouter.GET("/metrics/", orgController.Metrics)
+	tenantRouter.GET("/content-tree/", orgController.ContentTree)
 
 	tenantRouter.GET("/members/", orgController.Members)
 	tenantRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)

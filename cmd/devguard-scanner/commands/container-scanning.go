@@ -43,6 +43,7 @@ func NewContainerScanningCommand() *cobra.Command {
 			}
 
 			err = scaCommandFactory("container-scanning")(cmd, args)
+
 			if err != nil {
 				slog.Error("container scanning failed", "err", err)
 				os.Exit(1)

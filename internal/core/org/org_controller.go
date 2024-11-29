@@ -17,6 +17,7 @@ package org
 
 import (
 	"encoding/json"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
@@ -162,6 +163,86 @@ func (o *httpController) Delete(c core.Context) error {
 	}
 
 	return c.NoContent(200)
+}
+
+type contentTreeElement struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	Slug   string `json:"slug"`
+	Assets []struct {
+		ID    string `json:"id"`
+		Title string `json:"title"`
+		Slug  string `json:"slug"`
+	} `json:"assets"`
+}
+
+func (c *httpController) ContentTree(ctx core.Context) error {
+	// get the whole content tree of the organization
+	// this means all projects and their corresponding assets
+
+	// get the organization from the context
+	organization := core.GetTenant(ctx)
+	rbac := core.GetRBAC(ctx)
+
+	currentUser := core.GetSession(ctx).GetUserID()
+	projects := rbac.GetAllProjectsForUser(currentUser)
+
+	// fetch all asset ids inside those projects
+	var res []struct {
+		AssetID     uuid.UUID `json:"asset_id"`
+		ProjectID   uuid.UUID `json:"project_id"`
+		AssetName   string    `json:"asset_name"`
+		ProjectName string    `json:"project_name"`
+		AssetSlug   string    `json:"asset_slug"`
+		ProjectSlug string    `json:"project_slug"`
+	}
+
+	contentTreeMap := make(map[uuid.UUID]contentTreeElement)
+
+	c.organizationRepository.GetDB(nil).Raw(`SELECT assets.slug as asset_slug, projects.slug as project_slug, assets.name as asset_name, projects.name as project_name, assets.id as asset_id, project_id FROM assets INNER JOIN projects ON assets.project_id = projects.id WHERE projects.id IN (?) AND projects.organization_id = ?`, projects, organization.ID).Scan(&res)
+
+	for _, r := range res {
+		if _, ok := contentTreeMap[r.ProjectID]; !ok {
+			contentTreeMap[r.ProjectID] = contentTreeElement{
+				ID:    r.ProjectID.String(),
+				Title: r.ProjectName,
+				Slug:  r.ProjectSlug,
+			}
+		}
+
+		project := contentTreeMap[r.ProjectID]
+
+		project.Assets = append(project.Assets, struct {
+			ID    string `json:"id"`
+			Title string `json:"title"`
+			Slug  string `json:"slug"`
+		}{
+			ID:    r.AssetID.String(),
+			Title: r.AssetName,
+			Slug:  r.AssetSlug,
+		})
+
+		contentTreeMap[r.ProjectID] = project
+	}
+
+	// convert map to array
+	var contentTree []contentTreeElement
+	for _, v := range contentTreeMap {
+		contentTree = append(contentTree, v)
+	}
+
+	// do a sort on the id
+	slices.SortFunc(contentTree, func(i, j contentTreeElement) int {
+		if i.ID < j.ID {
+			return -1
+		}
+		if i.ID > j.ID {
+			return 1
+		}
+		return 0
+	})
+
+	return ctx.JSON(200, contentTree)
 }
 
 func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
