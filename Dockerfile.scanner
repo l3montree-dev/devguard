@@ -26,13 +26,14 @@ ARG TARGETPLATFORM
 ENV CRANE_VERSION=v0.19.1
 ENV OS=Linux
 
+# defaults to x86_64
 RUN case "$TARGETPLATFORM" in \
         linux/amd64) ARCH="x86_64" ;; \
         linux/arm64) ARCH="arm64" ;; \
         linux/arm/v6) ARCH="armv6" ;; \
         linux/386) ARCH="i386" ;; \
         linux/s390x) ARCH="s390x" ;; \
-        *) echo "Unsupported platform: $TARGETPLATFORM" && exit 1 ;; \
+        *) ARCH="x86_64" && exit 1 ;; \
     esac && \
     echo "Building for architecture: $ARCH" && \
     echo "$ARCH" > /arch.env
