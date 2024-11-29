@@ -54,12 +54,20 @@ func parseGitIgnore(path string) ([]string, error) {
 	content, err := os.ReadFile(path)
 	if err == nil {
 		ignorePaths := strings.Split(string(content), "\n")
+
 		// make sure to remove new lines and empty strings
 		ignorePaths = utils.Filter(
-			utils.Map(ignorePaths, strings.TrimSpace),
+			utils.Map(utils.Map(ignorePaths, strings.TrimSpace), func(e string) string {
+				// nextjs products a gitignore which contains /node_modules but we need to ignore /node_modules/
+				if e == "/node_modules" {
+					return e + "/"
+				}
+				return e
+			}),
 			func(e string) bool {
-				return e != "" && e != "\n"
+				return e != "" && e != "\n" && !strings.HasPrefix(strings.TrimSpace(e), "#")
 			})
+
 		return ignorePaths, nil
 	}
 
@@ -88,6 +96,7 @@ func parseCommand(cmd *cobra.Command) (
 	}
 
 	pathsFromGitIgnore, err := parseGitIgnore(".gitignore")
+
 	if err != nil {
 		// just swallow the error
 		slog.Warn("could not read .gitignore file. This is not to bad if you do not have a .gitignore file.", "error", err)
