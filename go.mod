@@ -5,6 +5,7 @@ go 1.23.1
 require (
 	github.com/CycloneDX/cyclonedx-go v0.8.0
 	github.com/bradleyfalzon/ghinstallation/v2 v2.11.0
+	github.com/briandowns/spinner v1.23.1
 	github.com/casbin/casbin/v2 v2.89.0
 	github.com/casbin/gorm-adapter/v3 v3.24.0
 	github.com/go-git/go-git/v5 v5.12.0
@@ -30,7 +31,6 @@ require (
 	github.com/xanzy/go-gitlab v0.109.0
 	github.com/yaronf/httpsign v0.3.1
 	github.com/zalando/go-keyring v0.2.6
-	golang.org/x/crypto v0.28.0
 	golang.org/x/mod v0.20.0
 	golang.org/x/sync v0.9.0
 	gorm.io/datatypes v1.2.0
@@ -58,6 +58,7 @@ require (
 	github.com/dunglas/httpsfv v1.0.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
+	github.com/fatih/color v1.16.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/glebarez/go-sqlite v1.22.0 // indirect
 	github.com/glebarez/sqlite v1.11.0 // indirect
@@ -131,6 +132,7 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
+	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
 	golang.org/x/sys v0.27.0 // indirect

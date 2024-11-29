@@ -25,7 +25,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"time"
 
+	"github.com/briandowns/spinner"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/client"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
@@ -140,6 +142,10 @@ func NewInTotoRunCommand() *cobra.Command {
 		Use:  "run",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			s := spinner.New(spinner.CharSets[4], 100*time.Millisecond)
+			s.Suffix = " Devguard: Recording file hashes for supply chain security"
+			s.Start()
+
 			step, supplyChainId, key, materials, products, ignore, err := parseCommand(cmd)
 			if err != nil {
 				return errors.Wrap(err, "failed to parse command")
@@ -166,8 +172,8 @@ func NewInTotoRunCommand() *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "failed to read and upload metadata")
 			}
-
-			slog.Info("successfully uploaded in-toto link", "step", step, "filename", filename)
+			s.Stop()
+			slog.Info("successfully uploaded in-toto link", "step", step)
 			return nil
 		},
 	}
