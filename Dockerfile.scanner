@@ -21,7 +21,28 @@ WORKDIR /app
 
 RUN apk add --no-cache curl
 
+ARG TARGETPLATFORM
+
+ENV CRANE_VERSION=v0.19.1
+ENV OS=Linux
+
+RUN case "$TARGETPLATFORM" in \
+        linux/amd64) ARCH="x86_64" ;; \
+        linux/arm64) ARCH="arm64" ;; \
+        linux/arm/v6) ARCH="armv6" ;; \
+        linux/386) ARCH="i386" ;; \
+        linux/s390x) ARCH="s390x" ;; \
+        *) echo "Unsupported platform: $TARGETPLATFORM" && exit 1 ;; \
+    esac && \
+    echo "Building for architecture: $ARCH" && \
+    echo "$ARCH" > /arch.env
+
+
+RUN curl -sL "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_${OS}_$(cat /arch.env).tar.gz" > go-containerregistry.tar.gz && \
+    tar -zxvf go-containerregistry.tar.gz -C /usr/local/bin/ crane
+
 RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.54.1
+
 
 RUN curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64" && mv cosign-linux-amd64 /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
 
@@ -38,5 +59,6 @@ RUN apk add --no-cache git
 COPY --from=golang-builder /app/devguard-scanner /usr/local/bin/devguard-scanner
 COPY --from=golang-builder /usr/local/bin/trivy /usr/local/bin/trivy
 COPY --from=golang-builder /usr/local/bin/cosign /usr/local/bin/cosign
+COPY --from=golang-builder /usr/local/bin/crane /usr/local/bin/crane
 
 ENTRYPOINT [""]
