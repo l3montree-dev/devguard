@@ -16,12 +16,15 @@
 package main
 
 import (
+	"os"
+
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
+	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 
 	_ "github.com/lib/pq"
@@ -71,7 +74,9 @@ func main() {
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 	flawService.StartRiskRecalculationDaemon(leaderElector)
-	// vulndb.StartMirror(db, leaderElector, configService)
+	if os.Getenv("DISABLE_VULNDB_UPDATE") != "true" {
+		vulndb.StartMirror(db, leaderElector, configService)
+	}
 
 	api.Start(db)
 }
