@@ -176,3 +176,53 @@ func (r *flawRepository) GetOrgFromFlawID(tx core.DB, flawID string) (models.Org
 	}
 	return org, nil
 }
+func (r *flawRepository) GetFlawsPaged(tx core.DB, assetIdInSubQuery core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+	var flaws []models.Flaw = []models.Flaw{}
+
+	q := r.Repository.GetDB(tx).Model(&models.Flaw{}).Preload("Events").Joins("CVE").Joins("Component").Where("flaws.asset_id IN (?)", assetIdInSubQuery)
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+	if search != "" && len(search) > 2 {
+		q = q.Where("(\"CVE\".description ILIKE ?  OR flaws.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
+
+	// apply sorting
+	if len(sort) > 0 {
+		for _, s := range sort {
+			q = q.Order(s.SQL())
+		}
+	} else {
+		q = q.Order("flaws.cve_id DESC")
+	}
+
+	var count int64
+
+	err := q.Count(&count).Error
+	if err != nil {
+		return core.Paged[models.Flaw]{}, err
+	}
+
+	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&flaws).Error
+
+	if err != nil {
+		return core.Paged[models.Flaw]{}, err
+	}
+
+	return core.NewPaged(pageInfo, count, flaws), nil
+}
+
+func (r *flawRepository) GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+	subQuery := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("id").Where("project_id = ?", projectID)
+
+	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
+}
+
+func (r *flawRepository) GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+
+	subQuery := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
+
+	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
+}

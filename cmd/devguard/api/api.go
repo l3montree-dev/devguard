@@ -325,7 +325,8 @@ func Start(db core.DB) {
 	cveRepository := repositories.NewCVERepository(db)
 	flawRepository := repositories.NewFlawRepository(db)
 	flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
-	flawController := flaw.NewHttpController(flawRepository, flawService)
+	projectService := project.NewService(projectRepository)
+	flawController := flaw.NewHttpController(flawRepository, flawService, projectService)
 
 	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
 
@@ -333,14 +334,14 @@ func Start(db core.DB) {
 
 	// init all http controllers using the repositories
 	patController := pat.NewHttpController(patRepository)
-	orgController := org.NewHttpController(orgRepository, casbinRBACProvider)
+	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService)
 	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
 	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetService, statisticsService)
 
 	intotoController := intoto.NewHttpController(repositories.NewInTotoLinkRepository(db), patRepository)
 
-	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, project.NewService(projectRepository))
+	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, projectService)
 
 	patService := pat.NewPatService(patRepository)
 
@@ -404,6 +405,7 @@ func Start(db core.DB) {
 
 	tenantRouter.GET("/metrics/", orgController.Metrics)
 	tenantRouter.GET("/content-tree/", orgController.ContentTree)
+	tenantRouter.GET("/flaws/", flawController.ListByOrgPaged)
 
 	tenantRouter.GET("/members/", orgController.Members)
 	tenantRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
@@ -422,6 +424,7 @@ func Start(db core.DB) {
 
 	projectRouter := tenantRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)
+	projectRouter.GET("/flaws/", flawController.ListByProjectPaged)
 
 	projectRouter.PATCH("/", projectController.Update, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
 	projectRouter.DELETE("/", projectController.Delete, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))

@@ -2,6 +2,7 @@ package flaw
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 
@@ -29,7 +30,15 @@ type repository interface {
 
 	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.Flaw, error)
 	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)
+
+	GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
+	GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
 }
+
+type projectService interface {
+	ListAllowedProjects(c core.Context) ([]models.Project, error)
+}
+
 type flawService interface {
 	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error)
 }
@@ -37,6 +46,7 @@ type flawService interface {
 type flawHttpController struct {
 	flawRepository repository
 	flawService    flawService
+	projectService projectService
 }
 
 type FlawStatus struct {
@@ -44,11 +54,61 @@ type FlawStatus struct {
 	Justification string `json:"justification"`
 }
 
-func NewHttpController(flawRepository repository, flawService flawService) *flawHttpController {
+func NewHttpController(flawRepository repository, flawService flawService, projectService projectService) *flawHttpController {
 	return &flawHttpController{
 		flawRepository: flawRepository,
 		flawService:    flawService,
+		projectService: projectService,
 	}
+}
+
+func (c flawHttpController) ListByOrgPaged(ctx core.Context) error {
+
+	userAllowedProjectIds, err := c.projectService.ListAllowedProjects(ctx)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
+	}
+
+	pagedResp, err := c.flawRepository.GetFlawsByOrgIdPaged(
+		nil,
+
+		utils.Map(userAllowedProjectIds, func(p models.Project) string {
+			return p.GetID().String()
+		}),
+		core.GetPageInfo(ctx),
+		ctx.QueryParam("search"),
+		core.GetFilterQuery(ctx),
+		core.GetSortQuery(ctx),
+	)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
+	}
+
+	return ctx.JSON(200, pagedResp.Map(func(flaw models.Flaw) any {
+		fmt.Println(flaw.Events)
+		return convertToDetailedDTO(flaw)
+	}))
+}
+
+func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
+	project := core.GetProject(ctx)
+
+	pagedResp, err := c.flawRepository.GetFlawsByProjectIdPaged(
+		nil,
+		project.ID,
+
+		core.GetPageInfo(ctx),
+		ctx.QueryParam("search"),
+		core.GetFilterQuery(ctx),
+		core.GetSortQuery(ctx),
+	)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
+	}
+
+	return ctx.JSON(200, pagedResp.Map(func(flaw models.Flaw) any {
+		return convertToDetailedDTO(flaw)
+	}))
 }
 
 func (c flawHttpController) ListPaged(ctx core.Context) error {
