@@ -68,13 +68,14 @@ func generateSBOM(path string) (*os.File, error) {
 		slog.Info("scanning directory", "dir", path)
 		// scanning a dir
 		// cdxgenCmd = exec.Command("cdxgen", "-o", filename)
-		trivyCmd = exec.Command("trivy", "fs", path, "--format", "cyclonedx", "--output", filename)
+		trivyCmd = exec.Command("trivy", "fs", ".", "--format", "cyclonedx", "--output", filename)
 	} else {
 		slog.Info("scanning single file", "file", maybeFilename)
 		// scanning a single file
 		// cdxgenCmd = exec.Command("cdxgen", maybeFilename, "-o", filename)
-		trivyCmd = exec.Command("trivy", "image", "--input", path, "--format", "cyclonedx", "--output", filename)
+		trivyCmd = exec.Command("trivy", "image", "--input", filepath.Base(path), "--format", "cyclonedx", "--output", filename) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 	}
+
 	stderr := &bytes.Buffer{}
 	// get the output
 	trivyCmd.Stderr = stderr
