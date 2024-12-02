@@ -1,6 +1,8 @@
 package normalize
 
 import (
+	"strings"
+
 	cdx "github.com/CycloneDX/cyclonedx-go"
 )
 
@@ -27,6 +29,34 @@ func FromCdxBom(bom *cdx.BOM, convertComponentType bool) *cdxBom {
 	components := []cdx.Component{}
 	for _, c := range *bom.Components {
 		component := c
+
+		// check if the component is a library
+		// we can detect that, if the component has a "properties" object - as long as we are using trivy for sbom generation
+		if component.Properties != nil {
+			// we currently have no idea, why trivy calls it src name and src version
+			// we just stick with it.
+			srcName := ""
+			srcVersion := ""
+
+			// will be exactly the string we need to replace inside the purl
+			// please do not ask me why
+			pkgId := ""
+			for _, property := range *component.Properties {
+				if property.Name == "aquasecurity:trivy:SrcName" {
+					srcName = property.Value
+				} else if property.Name == "aquasecurity:trivy:SrcVersion" {
+					srcVersion = property.Value
+				} else if property.Name == "aquasecurity:trivy:PkgID" {
+					pkgId = property.Value
+				}
+			}
+
+			// if both are defined - we can replace the package url with the new name and version
+			if srcName != "" && srcVersion != "" && pkgId != "" {
+				component.PackageURL = strings.ReplaceAll(component.PackageURL, pkgId, srcName+"@"+srcVersion)
+			}
+		}
+
 		purl, componentType := normalizePurl(component.PackageURL)
 		if convertComponentType {
 			component.Type = componentType
