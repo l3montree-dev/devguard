@@ -10,7 +10,6 @@ require (
 	github.com/casbin/gorm-adapter/v3 v3.24.0
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/go-playground/validator/v10 v10.20.0
-	github.com/golang-cz/devslog v0.0.11
 	github.com/google/go-github/v62 v62.0.0
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.14.0
@@ -19,6 +18,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/lib/pq v1.10.9
+	github.com/lmittmann/tint v1.0.5
 	github.com/ory/client-go v1.11.7
 	github.com/package-url/packageurl-go v0.1.3
 	github.com/pandatix/go-cvss v0.6.2

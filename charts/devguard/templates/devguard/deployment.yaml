@@ -57,6 +57,8 @@ spec:
             value: devguard
           - name: POSTGRES_HOST
             value: postgresql
+          - name: POSTGRES_PORT
+            value: "5432"
           - name: FRONTEND_URL
             value: {{ printf "%s://%s" $protocol $host.host }}
           - name: ORY_KRATOS_PUBLIC
