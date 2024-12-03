@@ -526,6 +526,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			}
 			return err
 		}
+
 		return nil
 
 	case core.FlawEvent:
