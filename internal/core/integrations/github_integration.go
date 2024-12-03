@@ -511,8 +511,8 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		userID := session.GetUserID()
 		// create an event
 		flawEvent := models.NewMitigateEvent(flaw.ID, userID, justification["comment"], map[string]any{
-			"ticketId": *flaw.TicketID,
-			"url":      createdIssue.GetHTMLURL(),
+			"ticketId":  *flaw.TicketID,
+			"ticketUrl": createdIssue.GetHTMLURL(),
 		})
 		// save the flaw and the event in a transaction
 		err = g.flawService.ApplyAndSave(nil, &flaw, &flawEvent)
