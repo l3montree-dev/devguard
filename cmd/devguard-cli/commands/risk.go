@@ -52,6 +52,11 @@ func newCalculateCmd() *cobra.Command {
 				return
 			}
 
+			if err := flawService.RecalculateAllRawRiskAssessments(); err != nil {
+				slog.Error("could not recalculate risk assessments", "err", err)
+				return
+			}
+
 			if shouldCalculateHistory {
 				slog.Info("recalculating risk history")
 				// fetch all assets
@@ -67,11 +72,6 @@ func newCalculateCmd() *cobra.Command {
 						slog.Error("could not recalculate risk history", "err", err)
 						return
 					}
-				}
-			} else {
-				if err := flawService.RecalculateAllRawRiskAssessments(); err != nil {
-					slog.Error("could not recalculate risk assessments", "err", err)
-					return
 				}
 			}
 		},

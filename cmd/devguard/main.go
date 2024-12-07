@@ -16,6 +16,7 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
@@ -76,6 +77,8 @@ func main() {
 	flawService.StartRiskRecalculationDaemon(leaderElector)
 	if os.Getenv("DISABLE_VULNDB_UPDATE") != "true" {
 		vulndb.StartMirror(db, leaderElector, configService)
+	} else {
+		slog.Warn("VulnDB update disabled")
 	}
 
 	api.Start(db)

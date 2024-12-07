@@ -4,13 +4,14 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/golang-cz/devslog"
 	"github.com/joho/godotenv"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
+	"github.com/lmittmann/tint"
 	"gorm.io/gorm"
 )
 
@@ -29,7 +30,7 @@ func SanitizeParam(s string) string {
 }
 
 func DatabaseFactory() (DB, error) {
-	db, err := database.NewConnection(os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_DB"), "5432")
+	db, err := database.NewConnection(os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_DB"), os.Getenv("POSTGRES_PORT"))
 
 	return db, err
 }
@@ -39,22 +40,15 @@ func DatabaseFactory() (DB, error) {
 // this is obviously not required, but it makes the logs easier to read.
 func InitLogger() {
 	// slog.HandlerOptions
-	slogOpts := &slog.HandlerOptions{
-		AddSource: true,
-		Level:     slog.LevelDebug,
-	}
+	w := os.Stderr
 
-	// new logger with options
-	opts := &devslog.Options{
-		HandlerOptions:    slogOpts,
-		MaxSlicePrintSize: 4,
-		SortKeys:          true,
-		NewLineAfterLog:   true,
-		StringerFormatter: true,
-	}
-
-	logger := slog.New(devslog.NewHandler(os.Stdout, opts))
-	slog.SetDefault(logger)
+	// set global logger with custom options
+	slog.SetDefault(slog.New(
+		tint.NewHandler(w, &tint.Options{
+			Level:      slog.LevelDebug,
+			TimeFormat: time.Kitchen,
+		}),
+	))
 }
 
 func LoadConfig() error {
