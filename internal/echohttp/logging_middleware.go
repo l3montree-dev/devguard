@@ -15,7 +15,7 @@ func logger() echo.MiddlewareFunc {
 
 			err := next(c)
 
-			if err == nil {
+			if err == nil && c.Request().URL.String() != "/api/v1/health/" {
 				slog.Info("handled request", "method", c.Request().Method, "url", c.Request().URL, "status", c.Response().Status, "duration", time.Since(now))
 			}
 			return err
