@@ -31,7 +31,7 @@
 package main
 
 import (
-	"os"
+	"log/slog"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-cli/commands"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -47,7 +47,7 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		slog.Error("Error executing command", "err", err)
 	}
 }
 

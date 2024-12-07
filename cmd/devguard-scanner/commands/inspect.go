@@ -33,7 +33,7 @@ func inspectCmd(cmd *cobra.Command, args []string) {
 	privKey, pubKey, err := pat.HexTokenToECDSA(key)
 	if err != nil {
 		slog.Error("could not parse key", "err", err)
-		os.Exit(1)
+		return
 	}
 
 	fmt.Println("PRIVATE KEY HEX")
@@ -45,13 +45,13 @@ func inspectCmd(cmd *cobra.Command, args []string) {
 	privKeyBytes, err := x509.MarshalECPrivateKey(&privKey)
 	if err != nil {
 		slog.Error("could not marshal private key", "err", err)
-		os.Exit(1)
+		return
 	}
 	// encode the private key to PEM
 	err = pem.Encode(os.Stdout, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privKeyBytes})
 	if err != nil {
 		slog.Error("could not encode private key to PEM", "err", err)
-		os.Exit(1)
+		return
 	}
 	fmt.Print("\n\n")
 
@@ -62,13 +62,13 @@ func inspectCmd(cmd *cobra.Command, args []string) {
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&pubKey)
 	if err != nil {
 		slog.Error("could not marshal public key", "err", err)
-		os.Exit(1)
+		return
 	}
 
 	err = pem.Encode(os.Stdout, &pem.Block{Type: "EC PUBLIC KEY", Bytes: pubKeyBytes})
 	if err != nil {
 		slog.Error("could not encode public key to PEM", "err", err)
-		os.Exit(1)
+		return
 	}
 }
 

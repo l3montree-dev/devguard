@@ -26,22 +26,24 @@ func (_m *IntotoRepository) EXPECT() *IntotoRepository_Expecter {
 }
 
 // FindByAssetAndSupplyChainId provides a mock function with given fields: assetID, supplyChainId
-func (_m *IntotoRepository) FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainId string) (models.InTotoLink, error) {
+func (_m *IntotoRepository) FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainId string) ([]models.InTotoLink, error) {
 	ret := _m.Called(assetID, supplyChainId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByAssetAndSupplyChainId")
 	}
 
-	var r0 models.InTotoLink
+	var r0 []models.InTotoLink
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID, string) (models.InTotoLink, error)); ok {
+	if rf, ok := ret.Get(0).(func(uuid.UUID, string) ([]models.InTotoLink, error)); ok {
 		return rf(assetID, supplyChainId)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID, string) models.InTotoLink); ok {
+	if rf, ok := ret.Get(0).(func(uuid.UUID, string) []models.InTotoLink); ok {
 		r0 = rf(assetID, supplyChainId)
 	} else {
-		r0 = ret.Get(0).(models.InTotoLink)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.InTotoLink)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
@@ -72,12 +74,12 @@ func (_c *IntotoRepository_FindByAssetAndSupplyChainId_Call) Run(run func(assetI
 	return _c
 }
 
-func (_c *IntotoRepository_FindByAssetAndSupplyChainId_Call) Return(_a0 models.InTotoLink, _a1 error) *IntotoRepository_FindByAssetAndSupplyChainId_Call {
+func (_c *IntotoRepository_FindByAssetAndSupplyChainId_Call) Return(_a0 []models.InTotoLink, _a1 error) *IntotoRepository_FindByAssetAndSupplyChainId_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *IntotoRepository_FindByAssetAndSupplyChainId_Call) RunAndReturn(run func(uuid.UUID, string) (models.InTotoLink, error)) *IntotoRepository_FindByAssetAndSupplyChainId_Call {
+func (_c *IntotoRepository_FindByAssetAndSupplyChainId_Call) RunAndReturn(run func(uuid.UUID, string) ([]models.InTotoLink, error)) *IntotoRepository_FindByAssetAndSupplyChainId_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -392,6 +392,128 @@ func (_c *FlawRepository_GetDB_Call) RunAndReturn(run func(*gorm.DB) *gorm.DB) *
 	return _c
 }
 
+// GetFlawsByOrgIdPaged provides a mock function with given fields: tx, userAllowedProjectIds, pageInfo, search, filter, sort
+func (_m *FlawRepository) GetFlawsByOrgIdPaged(tx *gorm.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+	ret := _m.Called(tx, userAllowedProjectIds, pageInfo, search, filter, sort)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFlawsByOrgIdPaged")
+	}
+
+	var r0 core.Paged[models.Flaw]
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.Flaw], error)); ok {
+		return rf(tx, userAllowedProjectIds, pageInfo, search, filter, sort)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.Flaw]); ok {
+		r0 = rf(tx, userAllowedProjectIds, pageInfo, search, filter, sort)
+	} else {
+		r0 = ret.Get(0).(core.Paged[models.Flaw])
+	}
+
+	if rf, ok := ret.Get(1).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
+		r1 = rf(tx, userAllowedProjectIds, pageInfo, search, filter, sort)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// FlawRepository_GetFlawsByOrgIdPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFlawsByOrgIdPaged'
+type FlawRepository_GetFlawsByOrgIdPaged_Call struct {
+	*mock.Call
+}
+
+// GetFlawsByOrgIdPaged is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - userAllowedProjectIds []string
+//   - pageInfo core.PageInfo
+//   - search string
+//   - filter []core.FilterQuery
+//   - sort []core.SortQuery
+func (_e *FlawRepository_Expecter) GetFlawsByOrgIdPaged(tx interface{}, userAllowedProjectIds interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *FlawRepository_GetFlawsByOrgIdPaged_Call {
+	return &FlawRepository_GetFlawsByOrgIdPaged_Call{Call: _e.mock.On("GetFlawsByOrgIdPaged", tx, userAllowedProjectIds, pageInfo, search, filter, sort)}
+}
+
+func (_c *FlawRepository_GetFlawsByOrgIdPaged_Call) Run(run func(tx *gorm.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *FlawRepository_GetFlawsByOrgIdPaged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].([]string), args[2].(core.PageInfo), args[3].(string), args[4].([]core.FilterQuery), args[5].([]core.SortQuery))
+	})
+	return _c
+}
+
+func (_c *FlawRepository_GetFlawsByOrgIdPaged_Call) Return(_a0 core.Paged[models.Flaw], _a1 error) *FlawRepository_GetFlawsByOrgIdPaged_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *FlawRepository_GetFlawsByOrgIdPaged_Call) RunAndReturn(run func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.Flaw], error)) *FlawRepository_GetFlawsByOrgIdPaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetFlawsByProjectIdPaged provides a mock function with given fields: tx, projectID, pageInfo, search, filter, sort
+func (_m *FlawRepository) GetFlawsByProjectIdPaged(tx *gorm.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+	ret := _m.Called(tx, projectID, pageInfo, search, filter, sort)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFlawsByProjectIdPaged")
+	}
+
+	var r0 core.Paged[models.Flaw]
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.Flaw], error)); ok {
+		return rf(tx, projectID, pageInfo, search, filter, sort)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.Flaw]); ok {
+		r0 = rf(tx, projectID, pageInfo, search, filter, sort)
+	} else {
+		r0 = ret.Get(0).(core.Paged[models.Flaw])
+	}
+
+	if rf, ok := ret.Get(1).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
+		r1 = rf(tx, projectID, pageInfo, search, filter, sort)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// FlawRepository_GetFlawsByProjectIdPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFlawsByProjectIdPaged'
+type FlawRepository_GetFlawsByProjectIdPaged_Call struct {
+	*mock.Call
+}
+
+// GetFlawsByProjectIdPaged is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - projectID uuid.UUID
+//   - pageInfo core.PageInfo
+//   - search string
+//   - filter []core.FilterQuery
+//   - sort []core.SortQuery
+func (_e *FlawRepository_Expecter) GetFlawsByProjectIdPaged(tx interface{}, projectID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *FlawRepository_GetFlawsByProjectIdPaged_Call {
+	return &FlawRepository_GetFlawsByProjectIdPaged_Call{Call: _e.mock.On("GetFlawsByProjectIdPaged", tx, projectID, pageInfo, search, filter, sort)}
+}
+
+func (_c *FlawRepository_GetFlawsByProjectIdPaged_Call) Run(run func(tx *gorm.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *FlawRepository_GetFlawsByProjectIdPaged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(uuid.UUID), args[2].(core.PageInfo), args[3].(string), args[4].([]core.FilterQuery), args[5].([]core.SortQuery))
+	})
+	return _c
+}
+
+func (_c *FlawRepository_GetFlawsByProjectIdPaged_Call) Return(_a0 core.Paged[models.Flaw], _a1 error) *FlawRepository_GetFlawsByProjectIdPaged_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *FlawRepository_GetFlawsByProjectIdPaged_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.Flaw], error)) *FlawRepository_GetFlawsByProjectIdPaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function with given fields: ids
 func (_m *FlawRepository) List(ids []string) ([]models.Flaw, error) {
 	ret := _m.Called(ids)

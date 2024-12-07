@@ -330,6 +330,62 @@ func (_c *AccesscontrolAccessControl_GetAllRoles_Call) RunAndReturn(run func(str
 	return _c
 }
 
+// GetDomainRole provides a mock function with given fields: user
+func (_m *AccesscontrolAccessControl) GetDomainRole(user string) (string, error) {
+	ret := _m.Called(user)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDomainRole")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (string, error)); ok {
+		return rf(user)
+	}
+	if rf, ok := ret.Get(0).(func(string) string); ok {
+		r0 = rf(user)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(user)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AccesscontrolAccessControl_GetDomainRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDomainRole'
+type AccesscontrolAccessControl_GetDomainRole_Call struct {
+	*mock.Call
+}
+
+// GetDomainRole is a helper method to define mock.On call
+//   - user string
+func (_e *AccesscontrolAccessControl_Expecter) GetDomainRole(user interface{}) *AccesscontrolAccessControl_GetDomainRole_Call {
+	return &AccesscontrolAccessControl_GetDomainRole_Call{Call: _e.mock.On("GetDomainRole", user)}
+}
+
+func (_c *AccesscontrolAccessControl_GetDomainRole_Call) Run(run func(user string)) *AccesscontrolAccessControl_GetDomainRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *AccesscontrolAccessControl_GetDomainRole_Call) Return(_a0 string, _a1 error) *AccesscontrolAccessControl_GetDomainRole_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *AccesscontrolAccessControl_GetDomainRole_Call) RunAndReturn(run func(string) (string, error)) *AccesscontrolAccessControl_GetDomainRole_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetOwnerOfOrganization provides a mock function with given fields: organizationID
 func (_m *AccesscontrolAccessControl) GetOwnerOfOrganization(organizationID string) (string, error) {
 	ret := _m.Called(organizationID)
@@ -382,6 +438,63 @@ func (_c *AccesscontrolAccessControl_GetOwnerOfOrganization_Call) Return(_a0 str
 }
 
 func (_c *AccesscontrolAccessControl_GetOwnerOfOrganization_Call) RunAndReturn(run func(string) (string, error)) *AccesscontrolAccessControl_GetOwnerOfOrganization_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetProjectRole provides a mock function with given fields: user, project
+func (_m *AccesscontrolAccessControl) GetProjectRole(user string, project string) (string, error) {
+	ret := _m.Called(user, project)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetProjectRole")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, string) (string, error)); ok {
+		return rf(user, project)
+	}
+	if rf, ok := ret.Get(0).(func(string, string) string); ok {
+		r0 = rf(user, project)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(user, project)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AccesscontrolAccessControl_GetProjectRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetProjectRole'
+type AccesscontrolAccessControl_GetProjectRole_Call struct {
+	*mock.Call
+}
+
+// GetProjectRole is a helper method to define mock.On call
+//   - user string
+//   - project string
+func (_e *AccesscontrolAccessControl_Expecter) GetProjectRole(user interface{}, project interface{}) *AccesscontrolAccessControl_GetProjectRole_Call {
+	return &AccesscontrolAccessControl_GetProjectRole_Call{Call: _e.mock.On("GetProjectRole", user, project)}
+}
+
+func (_c *AccesscontrolAccessControl_GetProjectRole_Call) Run(run func(user string, project string)) *AccesscontrolAccessControl_GetProjectRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *AccesscontrolAccessControl_GetProjectRole_Call) Return(_a0 string, _a1 error) *AccesscontrolAccessControl_GetProjectRole_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *AccesscontrolAccessControl_GetProjectRole_Call) RunAndReturn(run func(string, string) (string, error)) *AccesscontrolAccessControl_GetProjectRole_Call {
 	_c.Call.Return(run)
 	return _c
 }

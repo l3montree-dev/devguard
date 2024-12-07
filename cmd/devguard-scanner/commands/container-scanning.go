@@ -18,7 +18,6 @@ package commands
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -35,18 +34,18 @@ func NewContainerScanningCommand() *cobra.Command {
 			path, err := cmd.Flags().GetString("path")
 			if err != nil {
 				slog.Error("could not get path", "err", err)
-				os.Exit(1)
+				return
 			}
 			if !strings.HasSuffix(path, ".tar") {
 				slog.Error("invalid path", "err", fmt.Errorf("path must be a tar file"))
-				os.Exit(1)
+				return
 			}
 
 			err = scaCommandFactory("container-scanning")(cmd, args)
 
 			if err != nil {
 				slog.Error("container scanning failed", "err", err)
-				os.Exit(1)
+				return
 			}
 		},
 	}

@@ -146,6 +146,14 @@ func (r RBACMock) GetAllMembersOfProject(organization, project string) ([]string
 	return []string{}, nil
 }
 
+func (r RBACMock) GetDomainRole(domain string) (string, error) {
+	return "", nil
+}
+
+func (r RBACMock) GetProjectRole(domain, project string) (string, error) {
+	return "", nil
+}
+
 func (r RBACMock) GetAllProjectsForUser(user string) []string {
 	return []string{}
 }

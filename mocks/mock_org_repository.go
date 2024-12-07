@@ -7,6 +7,8 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	gorm "gorm.io/gorm"
 
+	obj "github.com/l3montree-dev/devguard/internal/obj"
+
 	uuid "github.com/google/uuid"
 )
 
@@ -66,6 +68,55 @@ func (_c *OrgRepository_Begin_Call) Return(_a0 *gorm.DB) *OrgRepository_Begin_Ca
 }
 
 func (_c *OrgRepository_Begin_Call) RunAndReturn(run func() *gorm.DB) *OrgRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ContentTree provides a mock function with given fields: orgID, projects
+func (_m *OrgRepository) ContentTree(orgID uuid.UUID, projects []string) []obj.ContentTreeElement {
+	ret := _m.Called(orgID, projects)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ContentTree")
+	}
+
+	var r0 []obj.ContentTreeElement
+	if rf, ok := ret.Get(0).(func(uuid.UUID, []string) []obj.ContentTreeElement); ok {
+		r0 = rf(orgID, projects)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]obj.ContentTreeElement)
+		}
+	}
+
+	return r0
+}
+
+// OrgRepository_ContentTree_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ContentTree'
+type OrgRepository_ContentTree_Call struct {
+	*mock.Call
+}
+
+// ContentTree is a helper method to define mock.On call
+//   - orgID uuid.UUID
+//   - projects []string
+func (_e *OrgRepository_Expecter) ContentTree(orgID interface{}, projects interface{}) *OrgRepository_ContentTree_Call {
+	return &OrgRepository_ContentTree_Call{Call: _e.mock.On("ContentTree", orgID, projects)}
+}
+
+func (_c *OrgRepository_ContentTree_Call) Run(run func(orgID uuid.UUID, projects []string)) *OrgRepository_ContentTree_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(uuid.UUID), args[1].([]string))
+	})
+	return _c
+}
+
+func (_c *OrgRepository_ContentTree_Call) Return(_a0 []obj.ContentTreeElement) *OrgRepository_ContentTree_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *OrgRepository_ContentTree_Call) RunAndReturn(run func(uuid.UUID, []string) []obj.ContentTreeElement) *OrgRepository_ContentTree_Call {
 	_c.Call.Return(run)
 	return _c
 }

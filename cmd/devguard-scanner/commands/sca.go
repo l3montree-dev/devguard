@@ -272,30 +272,30 @@ func parseConfig(cmd *cobra.Command) (string, string, string, string, string) {
 	token, err := cmd.PersistentFlags().GetString("token")
 	if err != nil {
 		slog.Error("could not get token", "err", err)
-		os.Exit(1)
+		return "", "", "", "", ""
 	}
 	assetName, err := cmd.PersistentFlags().GetString("assetName")
 	if err != nil {
 		slog.Error("could not get asset id", "err", err)
-		os.Exit(1)
+		return "", "", "", "", ""
 	}
 	apiUrl, err := cmd.PersistentFlags().GetString("apiUrl")
 	if err != nil {
 		slog.Error("could not get api url", "err", err)
-		os.Exit(1)
+		return "", "", "", "", ""
 	}
 	apiUrl = sanitizeApiUrl(apiUrl)
 
 	failOnRisk, err := cmd.Flags().GetString("fail-on-risk")
 	if err != nil {
 		slog.Error("could not get fail-on-risk", "err", err)
-		os.Exit(1)
+		return "", "", "", "", ""
 	}
 
 	webUI, err := cmd.Flags().GetString("webUI")
 	if err != nil {
 		slog.Error("could not get webUI", "err", err)
-		os.Exit(1)
+		return "", "", "", "", ""
 	}
 
 	return token, assetName, apiUrl, failOnRisk, webUI
@@ -377,21 +377,21 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	switch failOnRisk {
 	case "low":
 		if maxRisk > 0.1 {
-			os.Exit(1)
+			return
 		}
 	case "medium":
 		if maxRisk >= 4 {
-			os.Exit(1)
+			return
 		}
 
 	case "high":
 		if maxRisk >= 7 {
-			os.Exit(1)
+			return
 		}
 
 	case "critical":
 		if maxRisk >= 9 {
-			os.Exit(1)
+			return
 		}
 	}
 }
@@ -407,12 +407,12 @@ func addScanFlags(cmd *cobra.Command) {
 	err := cmd.MarkPersistentFlagRequired("assetName")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)
-		os.Exit(1)
+		return
 	}
 	err = cmd.MarkPersistentFlagRequired("token")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)
-		os.Exit(1)
+		return
 	}
 
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
@@ -440,7 +440,7 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 		token, assetName, apiUrl, failOnRisk, webUI := parseConfig(cmd)
 		if token == "" {
 			slog.Error("token seems to be empty. If you provide the token via an environment variable like --token=$DEVGUARD_TOKEN, check, if the environment variable is set or if there are any spelling mistakes", "token", token)
-			os.Exit(1)
+			return fmt.Errorf("token seems to be empty")
 		}
 
 		core.LoadConfig() // nolint:errcheck // just swallow the error: https://github.com/l3montree-dev/devguard/issues/188
@@ -471,6 +471,7 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 		// read the sbom file and post it to the scan endpoint
 		// get the flaws and print them to the console
 		file, err := generateSBOM(path)
+		defer os.Remove(file.Name())
 
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
@@ -507,11 +508,6 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 			return errors.Wrap(err, "could not send request")
 		}
 
-		err = os.Remove(file.Name())
-		if err != nil {
-			return errors.Wrap(err, "could not remove file")
-		}
-
 		if resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("could not scan file: %s", resp.Status)
 		}
@@ -539,7 +535,7 @@ func NewSCACommand() *cobra.Command {
 			err := scaCommandFactory("sca")(cmd, args)
 			if err != nil {
 				slog.Error("software composition analysis failed", "err", err)
-				os.Exit(1)
+				return
 			}
 		},
 	}

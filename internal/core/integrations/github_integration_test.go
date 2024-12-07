@@ -204,7 +204,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			Type:   models.EventTypeMitigate,
 			UserID: "1",
 
-			ArbitraryJsonData: "{\"ticketId\":\"github:0\",\"url\":\"\"}",
+			ArbitraryJsonData: "{\"ticketId\":\"github:0\",\"ticketUrl\":\"\"}",
 
 			Justification: utils.Ptr("that is a justification"),
 		}
