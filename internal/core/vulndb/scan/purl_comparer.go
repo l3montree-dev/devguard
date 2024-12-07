@@ -17,7 +17,6 @@ package scan
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
@@ -47,11 +46,11 @@ func (comparer *purlComparer) GetVulns(purl string, version string, _ string) ([
 
 	debug := false
 
-	if strings.Contains(purl, "debian/git") {
+	/*if strings.Contains(purl, "debian/git") {
 		fmt.Println("purl", purl)
 		fmt.Println(version)
 		debug = true
-	}
+	}*/
 
 	affectedComponents := []models.AffectedComponent{}
 	semVer, err := normalize.SemverFix(version)

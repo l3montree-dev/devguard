@@ -43,6 +43,11 @@ func FromCdxBom(bom *cdx.BOM, convertComponentType bool) *cdxBom {
 			pkgId := ""
 			for _, property := range *component.Properties {
 				if property.Name == "aquasecurity:trivy:SrcName" {
+					// never expand to whole linux - this might happen - not sure why
+					if property.Value == "linux" {
+						break
+					}
+
 					srcName = property.Value
 				} else if property.Name == "aquasecurity:trivy:SrcVersion" {
 					srcVersion = property.Value

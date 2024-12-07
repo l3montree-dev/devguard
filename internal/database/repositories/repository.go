@@ -71,7 +71,18 @@ func (g *GormRepository[ID, T]) SaveBatch(tx *gorm.DB, ts []T) error {
 		return nil
 	}
 
-	return g.GetDB(tx).Save(ts).Error
+	err := g.GetDB(tx).Save(ts).Error
+	// check if "extended protocol limited to 65535 parameters" error
+	if err != nil && err.Error() == "extended protocol limited to 65535 parameters" {
+		// split the batch in half and try again
+		half := len(ts) / 2
+		err = g.SaveBatch(tx, ts[:half])
+		if err != nil {
+			return err
+		}
+		err = g.SaveBatch(tx, ts[half:])
+	}
+	return err
 }
 
 func (g *GormRepository[ID, T]) Transaction(f func(tx *gorm.DB) error) error {
