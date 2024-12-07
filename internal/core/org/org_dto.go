@@ -23,6 +23,24 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
+type acceptInvitationRequest struct {
+	OrgID string `json:"orgId" validate:"required"`
+	Code  string `json:"code" validate:"required"`
+}
+
+type inviteRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+type removeMemberRequest struct {
+	UserID string `json:"userId" validate:"required"`
+}
+
+type changeRoleRequest struct {
+	UserID string `json:"userId" validate:"required"`
+	Role   string `json:"role" validate:"required"`
+}
+
 type createRequest struct {
 	Name                   string  `json:"name" validate:"required"`
 	ContactPhoneNumber     *string `json:"contactPhoneNumber"`

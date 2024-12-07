@@ -331,10 +331,10 @@ func Start(db core.DB) {
 	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
 
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, flawRepository, assetRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
-
+	invitationRepository := repositories.NewInvitationRepository(db)
 	// init all http controllers using the repositories
 	patController := pat.NewHttpController(patRepository)
-	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService)
+	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
 	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetService, statisticsService)
@@ -380,6 +380,7 @@ func Start(db core.DB) {
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
 	// register a simple whoami route for testing purposes
 	sessionRouter.GET("/whoami/", whoami)
+	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation)
 
 	sessionRouter.POST("/scan/", scanController.Scan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
@@ -408,6 +409,10 @@ func Start(db core.DB) {
 	tenantRouter.GET("/flaws/", flawController.ListByOrgPaged)
 
 	tenantRouter.GET("/members/", orgController.Members)
+	tenantRouter.POST("/members/", orgController.InviteMember)
+	tenantRouter.DELETE("/members/:userId/", orgController.RemoveMember)
+	tenantRouter.PUT("/members/:userId/", orgController.ChangeRole)
+
 	tenantRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 
 	tenantRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitLabIntegration)
@@ -437,6 +442,11 @@ func Start(db core.DB) {
 	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory)
 	projectRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetProjectFlawAggregationStateAndChange)
 	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime)
+
+	projectRouter.GET("/members/", projectController.Members)
+	projectRouter.POST("/members/", projectController.InviteMember)
+	projectRouter.DELETE("/members/:userId/", projectController.RemoveMember)
+	projectRouter.PUT("/members/:userId/", projectController.ChangeRole)
 
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC("asset", accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)

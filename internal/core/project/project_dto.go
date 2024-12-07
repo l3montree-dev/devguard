@@ -32,6 +32,16 @@ func (p *CreateRequest) ToModel() models.Project {
 	}
 }
 
+type changeRoleRequest struct {
+	UserId string `json:"userId" validate:"required"`
+	Role   string `json:"role" validate:"required"`
+}
+
+type inviteToProjectRequest struct {
+	UserId string `json:"userId" validate:"required"`
+	Role   string `json:"role" validate:"required"`
+}
+
 type patchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`

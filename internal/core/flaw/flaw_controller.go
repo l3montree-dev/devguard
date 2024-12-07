@@ -2,7 +2,6 @@ package flaw
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"slices"
 
@@ -85,7 +84,6 @@ func (c flawHttpController) ListByOrgPaged(ctx core.Context) error {
 	}
 
 	return ctx.JSON(200, pagedResp.Map(func(flaw models.Flaw) any {
-		fmt.Println(flaw.Events)
 		return convertToDetailedDTO(flaw)
 	}))
 }

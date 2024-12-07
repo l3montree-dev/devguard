@@ -11,6 +11,8 @@ type User struct {
 	Name      string  `json:"name"`
 	ID        string  `json:"id"`
 	AvatarURL *string `json:"avatarUrl"`
+
+	Role string `json:"role"`
 }
 
 type IntegrationID string

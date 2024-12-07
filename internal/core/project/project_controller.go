@@ -23,8 +23,9 @@ import (
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/ory/client-go"
 )
 
 type projectRepository interface {
@@ -79,6 +80,148 @@ func (p *Controller) Create(c core.Context) error {
 	}
 
 	return c.JSON(200, model)
+}
+
+func (p *Controller) Members(c core.Context) error {
+	project := core.GetProject(c)
+	// get rbac
+	rbac := core.GetRBAC(c)
+	tenant := core.GetTenant(c)
+
+	members, err := rbac.GetAllMembersOfProject(tenant.ID.String(), project.ID.String())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
+	}
+
+	// get the auth admin client from the context
+	authAdminClient := core.GetAuthAdminClient(c)
+	// fetch the users from the auth service
+	m, _, err := authAdminClient.IdentityAPI.ListIdentitiesExecute(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members").WithInternal(err)
+	}
+
+	users := utils.Map(m, func(i client.Identity) core.User {
+		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
+		var name string
+		if nameMap != nil {
+			if nameMap["first"] != nil {
+				name += nameMap["first"].(string)
+			}
+			if nameMap["last"] != nil {
+				name += " " + nameMap["last"].(string)
+			}
+		}
+		return core.User{
+			ID:   i.Id,
+			Name: name,
+		}
+	})
+
+	return c.JSON(200, users)
+}
+
+func (p *Controller) InviteMember(c core.Context) error {
+	project := core.GetProject(c)
+	tenant := core.GetTenant(c)
+	// get rbac
+	rbac := core.GetRBAC(c)
+
+	var req inviteToProjectRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	if err := core.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	// check if role is valid
+	if role := req.Role; role != "admin" && role != "member" {
+		return echo.NewHTTPError(400, "invalid role")
+	}
+
+	members, err := rbac.GetAllMembersOfOrganization(tenant.GetID().String())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
+	}
+
+	if !utils.Contains(members, req.UserId) {
+		return echo.NewHTTPError(400, "user is not a member of the organization")
+	}
+
+	if err := rbac.GrantRoleInProject(req.UserId, req.Role, project.ID.String()); err != nil {
+		return err
+	}
+
+	return c.NoContent(200)
+}
+
+func (p *Controller) RemoveMember(c core.Context) error {
+	project := core.GetProject(c)
+
+	// get rbac
+	rbac := core.GetRBAC(c)
+
+	var req inviteToProjectRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	if err := core.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	// revoke admin and member role
+	rbac.RevokeRoleInProject(req.UserId, "admin", project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(req.UserId, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+
+	return c.NoContent(200)
+}
+
+func (p *Controller) ChangeRole(c core.Context) error {
+	project := core.GetProject(c)
+	tenant := core.GetTenant(c)
+	// get rbac
+	rbac := core.GetRBAC(c)
+
+	var req changeRoleRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	if err := core.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	// check if role is valid
+	if role := req.Role; role != "admin" && role != "member" {
+		return echo.NewHTTPError(400, "invalid role")
+	}
+
+	members, err := rbac.GetAllMembersOfOrganization(tenant.GetID().String())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
+	}
+
+	if !utils.Contains(members, req.UserId) {
+		return echo.NewHTTPError(400, "user is not a member of the organization")
+	}
+
+	if err := rbac.RevokeRoleInProject(req.UserId, "admin", project.ID.String()); err != nil {
+		return err
+	}
+
+	if err := rbac.RevokeRoleInProject(req.UserId, "member", project.ID.String()); err != nil {
+		return err
+	}
+
+	if err := rbac.GrantRoleInProject(req.UserId, req.Role, project.ID.String()); err != nil {
+		return err
+	}
+
+	return c.NoContent(200)
 }
 
 func (p *Controller) bootstrapProject(c core.Context, project models.Project) error {

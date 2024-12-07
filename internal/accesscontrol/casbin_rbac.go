@@ -116,6 +116,46 @@ func (c *casbinRBAC) GetAllRoles(user string) []string {
 	return roles
 }
 
+func (c *casbinRBAC) GetDomainRole(user string) (string, error) {
+	roles := c.GetAllRoles(user)
+	// filter the roles to only get the domain roles
+	roles = utils.Map(utils.Filter(roles, func(r string) bool {
+		return strings.HasPrefix(r, "role::")
+	}), func(r string) string {
+		return strings.TrimPrefix(r, "role::")
+	})
+
+	return getMostPowerfulRole(roles)
+}
+
+func getMostPowerfulRole(roles []string) (string, error) {
+	if utils.Contains(roles, "owner") {
+		return "owner", nil
+	}
+
+	if utils.Contains(roles, "admin") {
+		return "admin", nil
+	}
+
+	if utils.Contains(roles, "member") {
+		return "member", nil
+	}
+
+	return "", fmt.Errorf("no domain role found for user")
+}
+
+func (c *casbinRBAC) GetProjectRole(user string, project string) (string, error) {
+	roles := c.GetAllRoles(user)
+	// filter the roles to only get the project roles
+	roles = utils.Map(utils.Filter(roles, func(r string) bool {
+		return strings.HasPrefix(r, "project::"+project+"|role::")
+	}), func(r string) string {
+		return strings.TrimPrefix(r, "project::"+project+"|role::")
+	})
+
+	return getMostPowerfulRole(roles)
+}
+
 func (c *casbinRBAC) GrantRole(user string, role string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("user::"+user, "role::"+string(role), "domain::"+c.domain)
 	return err

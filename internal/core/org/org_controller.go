@@ -38,6 +38,12 @@ type repository interface {
 	ContentTree(orgID uuid.UUID, projects []string) []obj.ContentTreeElement
 }
 
+type invitationRepository interface {
+	Save(tx core.DB, invitation *models.Invitation) error
+	FindByOrganizationIDAndCode(orgID uuid.UUID, code string) (models.Invitation, error)
+	Delete(tx core.DB, id uuid.UUID) error
+}
+
 type projectService interface {
 	ListAllowedProjects(c core.Context) ([]models.Project, error)
 }
@@ -45,13 +51,15 @@ type httpController struct {
 	organizationRepository repository
 	rbacProvider           accesscontrol.RBACProvider
 	projectService         projectService
+	invitationRepository   invitationRepository
 }
 
-func NewHttpController(repository repository, rbacProvider accesscontrol.RBACProvider, projectService projectService) *httpController {
+func NewHttpController(repository repository, rbacProvider accesscontrol.RBACProvider, projectService projectService, invitationRepository invitationRepository) *httpController {
 	return &httpController{
 		organizationRepository: repository,
 		rbacProvider:           rbacProvider,
 		projectService:         projectService,
+		invitationRepository:   invitationRepository,
 	}
 }
 
@@ -191,6 +199,135 @@ func (c *httpController) ContentTree(ctx core.Context) error {
 	return ctx.JSON(200, c.organizationRepository.ContentTree(organization.GetID(), projects))
 }
 
+func (c *httpController) AcceptInvitation(ctx core.Context) error {
+	// get the code and the org id from the path
+	var req acceptInvitationRequest
+	if err := ctx.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
+	}
+
+	if err := core.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	code := req.Code
+	orgId := req.Code
+
+	// parse it to a uuid
+	orgID, err := uuid.Parse(orgId)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not parse org id").WithInternal(err)
+	}
+
+	// find the invitation
+	invitation, err := c.invitationRepository.FindByOrganizationIDAndCode(orgID, code)
+	if err != nil {
+		return echo.NewHTTPError(404, "invitation not found").WithInternal(err)
+	}
+
+	// get the user id from the session
+	userID := core.GetSession(ctx).GetUserID()
+	// get the email of that user
+	// get the auth admin client from the context
+	authAdminClient := core.GetAuthAdminClient(ctx)
+	// fetch the users from the auth service
+	m, _, err := authAdminClient.IdentityAPI.GetIdentity(ctx.Request().Context(), userID).Execute()
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get user").WithInternal(err)
+	}
+
+	email := m.Traits.(map[string]any)["email"].(string)
+	if email != invitation.Email {
+		return echo.NewHTTPError(401, "email does not match")
+	}
+
+	// get the rbac from the context
+	rbac := c.rbacProvider.GetDomainRBAC(orgID.String())
+	// grant the user the role of member
+	err = rbac.GrantRole(userID, "member")
+	if err != nil {
+		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
+	}
+
+	// delete the invitation
+	err = c.invitationRepository.Delete(nil, invitation.ID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not delete invitation").WithInternal(err)
+	}
+
+	return ctx.NoContent(200)
+}
+
+func (c *httpController) InviteMember(ctx core.Context) error {
+	// we expect an email address in the request.
+	// afterwards we create a new invitation model and a code corresponding to the invitation
+	var req inviteRequest
+	if err := ctx.Bind(&req); err != nil {
+		return err
+	}
+
+	if err := core.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	// get the organization from the context
+	organization := core.GetTenant(ctx)
+
+	model := models.Invitation{
+		OrganizationID: organization.GetID(),
+		Email:          req.Email,
+		Code:           uuid.NewString(),
+	}
+
+	// save the model
+	err := c.invitationRepository.Save(nil, &model)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not save invitation").WithInternal(err)
+	}
+
+	return ctx.JSON(200, model) // for now return the model - later on we should send an email
+}
+
+func (c *httpController) ChangeRole(ctx core.Context) error {
+	// get the user id from the request
+	var req changeRoleRequest
+
+	if err := ctx.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
+	}
+
+	if err := core.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	// get the rbac from the context
+	rbac := core.GetRBAC(ctx)
+
+	//
+	rbac.RevokeRole(req.UserID, "member") // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(req.UserID, "admin")  // nolint:errcheck// we do not care if the user is not a member
+
+	if err := rbac.GrantRole(req.UserID, req.Role); err != nil {
+		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
+	}
+
+	return ctx.NoContent(200)
+}
+
+func (c *httpController) RemoveMember(ctx core.Context) error {
+	// get the user id from the request
+	userId := ctx.Param("userId")
+
+	// get the rbac from the context
+	rbac := core.GetRBAC(ctx)
+
+	//
+	rbac.RevokeRole(userId, "member") // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(userId, "admin")  // nolint:errcheck// we do not care if the user is not a member
+
+	return ctx.NoContent(200)
+}
+
 func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	// get all members from the organization
 	organization := core.GetTenant(ctx)
@@ -198,6 +335,19 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 
 	members, err := accessControl.GetAllMembersOfOrganization(organization.GetID().String())
 
+	if err != nil {
+		return nil, err
+	}
+
+	// get the roles for the members
+	errGroup := utils.ErrGroup[string](10)
+	for _, member := range members {
+		errGroup.Go(func() (string, error) {
+			return accessControl.GetDomainRole(member)
+		})
+	}
+
+	roles, err := errGroup.WaitAndCollect()
 	if err != nil {
 		return nil, err
 	}
@@ -211,8 +361,9 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 		return nil, err
 	}
 
-	users := utils.Map(m, func(i client.Identity) core.User {
-		nameMap := i.Traits.(map[string]any)["name"].(map[string]any)
+	users := make([]core.User, len(members))
+	for i, member := range m {
+		nameMap := member.Traits.(map[string]any)["name"].(map[string]any)
 		var name string
 		if nameMap != nil {
 			if nameMap["first"] != nil {
@@ -222,11 +373,14 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 				name += " " + nameMap["last"].(string)
 			}
 		}
-		return core.User{
-			ID:   i.Id,
+		users[i] = core.User{
+			ID:   member.Id,
 			Name: name,
+			Role: roles[i],
 		}
-	})
+	}
+
+	// get the role of the users in the organization
 
 	// fetch all members from third party integrations
 	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
