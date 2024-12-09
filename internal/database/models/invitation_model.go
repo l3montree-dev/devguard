@@ -25,3 +25,7 @@ type Invitation struct {
 	// Email is the email address of the user the invitation is for
 	Email string `json:"email"`
 }
+
+func (i Invitation) TableName() string {
+	return "invitations"
+}

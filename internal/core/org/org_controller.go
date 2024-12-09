@@ -40,7 +40,7 @@ type repository interface {
 
 type invitationRepository interface {
 	Save(tx core.DB, invitation *models.Invitation) error
-	FindByOrganizationIDAndCode(orgID uuid.UUID, code string) (models.Invitation, error)
+	FindByCode(code string) (models.Invitation, error)
 	Delete(tx core.DB, id uuid.UUID) error
 }
 
@@ -211,16 +211,9 @@ func (c *httpController) AcceptInvitation(ctx core.Context) error {
 	}
 
 	code := req.Code
-	orgId := req.Code
-
-	// parse it to a uuid
-	orgID, err := uuid.Parse(orgId)
-	if err != nil {
-		return echo.NewHTTPError(400, "could not parse org id").WithInternal(err)
-	}
 
 	// find the invitation
-	invitation, err := c.invitationRepository.FindByOrganizationIDAndCode(orgID, code)
+	invitation, err := c.invitationRepository.FindByCode(code)
 	if err != nil {
 		return echo.NewHTTPError(404, "invitation not found").WithInternal(err)
 	}
@@ -242,7 +235,7 @@ func (c *httpController) AcceptInvitation(ctx core.Context) error {
 	}
 
 	// get the rbac from the context
-	rbac := c.rbacProvider.GetDomainRBAC(orgID.String())
+	rbac := c.rbacProvider.GetDomainRBAC((invitation.OrganizationID).String())
 	// grant the user the role of member
 	err = rbac.GrantRole(userID, "member")
 	if err != nil {
@@ -255,7 +248,9 @@ func (c *httpController) AcceptInvitation(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not delete invitation").WithInternal(err)
 	}
 
-	return ctx.NoContent(200)
+	return ctx.JSON(200,
+		fromModel(invitation.Organization),
+	)
 }
 
 func (c *httpController) InviteMember(ctx core.Context) error {

@@ -409,9 +409,9 @@ func Start(db core.DB) {
 	tenantRouter.GET("/flaws/", flawController.ListByOrgPaged)
 
 	tenantRouter.GET("/members/", orgController.Members)
-	tenantRouter.POST("/members/", orgController.InviteMember)
-	tenantRouter.DELETE("/members/:userId/", orgController.RemoveMember)
-	tenantRouter.PUT("/members/:userId/", orgController.ChangeRole)
+	tenantRouter.POST("/members/", orgController.InviteMember, accessControlMiddleware("organization", accesscontrol.ActionUpdate))
+	tenantRouter.DELETE("/members/:userId/", orgController.RemoveMember, accessControlMiddleware("organization", accesscontrol.ActionDelete))
+	tenantRouter.PUT("/members/:userId/", orgController.ChangeRole, accessControlMiddleware("organization", accesscontrol.ActionUpdate))
 
 	tenantRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 

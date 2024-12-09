@@ -24,8 +24,7 @@ import (
 )
 
 type acceptInvitationRequest struct {
-	OrgID string `json:"orgId" validate:"required"`
-	Code  string `json:"code" validate:"required"`
+	Code string `json:"code" validate:"required"`
 }
 
 type inviteRequest struct {

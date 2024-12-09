@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"gorm.io/gorm/clause"
 )
 
 type InvitationRepository struct {
@@ -35,8 +36,12 @@ func NewInvitationRepository(db core.DB) *InvitationRepository {
 	}
 }
 
-func (g *InvitationRepository) FindByOrganizationIDAndCode(orgID uuid.UUID, code string) (models.Invitation, error) {
+func (g *InvitationRepository) FindByCode(code string) (models.Invitation, error) {
 	var t models.Invitation
-	err := g.db.Model(models.Invitation{}).Where("organization_id = ? AND code = ?", orgID, code).First(&t).Error
+	err := g.db.Model(models.Invitation{}).Preload("Organization").Where("code = ?", code).First(&t).Error
 	return t, err
+}
+
+func (g *InvitationRepository) Save(db core.DB, invitation *models.Invitation) error {
+	return g.Repository.GetDB(db).Omit(clause.Associations).Save(invitation).Error
 }
