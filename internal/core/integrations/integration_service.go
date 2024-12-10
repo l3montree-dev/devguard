@@ -147,6 +147,6 @@ func addPipelineTemplate(content []byte, template string) string { //nolint:unus
 }
 
 func generateFourDigitNumber() int {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // we don't need a secure random number here
 	return 1000 + r.Intn(9000)
 }
