@@ -4,14 +4,18 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
+
+	"math/rand"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-func setupAndPushPipeline(accessToken string, gitlabUrl string, projectName string, templatePath string) error {
+func setupAndPushPipeline(accessToken string, gitlabUrl string, projectName string, templatePath string, branchName string) error {
 	dir, err := os.MkdirTemp("", "repo-clone")
 	if err != nil {
 		return fmt.Errorf("could not create temporary directory: %v", err)
@@ -31,18 +35,19 @@ func setupAndPushPipeline(accessToken string, gitlabUrl string, projectName stri
 		return fmt.Errorf("could not clone repository: %v", err)
 	}
 	err = r.CreateBranch(&config.Branch{
-		Name: "devguard-autosetup",
+		Name: branchName,
 	})
 	if err != nil {
 		return fmt.Errorf("could not create branch: %v", err)
 	}
+
 	//go to the branch
 	w, err := r.Worktree()
 	if err != nil {
 		return fmt.Errorf("could not get worktree: %v", err)
 	}
 	err = w.Checkout(&git.CheckoutOptions{
-		Branch: "refs/heads/devguard-autosetup",
+		Branch: plumbing.NewBranchReferenceName(branchName),
 		Create: true,
 	})
 	if err != nil {
@@ -139,4 +144,9 @@ func addPipelineTemplate(content []byte, template string) string { //nolint:unus
 	}
 
 	return fileStr
+}
+
+func generateFourDigitNumber() int {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return 1000 + r.Intn(9000)
 }
