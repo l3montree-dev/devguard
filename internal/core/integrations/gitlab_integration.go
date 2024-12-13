@@ -431,13 +431,22 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 		return errors.Wrap(err, "could not extract project id from repo id")
 	}
 
+	project, _, err := client.GetProject(ctx.Request().Context(), projectId)
+	if err != nil {
+		return errors.Wrap(err, "could not get project")
+	}
+	defaultBranch := project.DefaultBranch
+
+	//generate a random branch name
+	branchName := fmt.Sprintf("devguard-autosetup-%s", strconv.Itoa(generateFourDigitNumber()))
+
 	projectName, err := g.getRepoNameFromProjectId(ctx, projectId)
 	if err != nil {
 		return errors.Wrap(err, "could not get project name")
 	}
 
 	templatePath := getTemplatePath(ctx.QueryParam("scanType"))
-	err = setupAndPushPipeline(accessToken, gitlabUrl, projectName, templatePath)
+	err = setupAndPushPipeline(accessToken, gitlabUrl, projectName, templatePath, branchName)
 	if err != nil {
 		return errors.Wrap(err, "could not setup and push pipeline")
 	}
@@ -448,8 +457,8 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 
 	//create a merge request
 	mr, _, err := client.CreateMergeRequest(ctx.Request().Context(), projectName, &gitlab.CreateMergeRequestOptions{
-		SourceBranch:       gitlab.Ptr("devguard-autosetup"),
-		TargetBranch:       gitlab.Ptr("main"),
+		SourceBranch:       gitlab.Ptr(branchName),
+		TargetBranch:       gitlab.Ptr(defaultBranch),
 		Title:              gitlab.Ptr("Add devguard pipeline template"),
 		RemoveSourceBranch: gitlab.Ptr(true),
 	})
