@@ -3,9 +3,9 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
 )
 
@@ -122,6 +122,10 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, s
 	return core.NewPaged(pageInfo, count, flaws), packageNameIndexMap, nil
 }
 
+func (r *flawRepository) GetFlawsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+	return r.GetFlawsPaged(tx, []string{assetId.String()}, pageInfo, search, filter, sort)
+}
+
 func (r *flawRepository) GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error) {
 	var flaws []models.Flaw = []models.Flaw{}
 	if err := r.Repository.GetDB(tx).Where("asset_id = ?", assetID).Find(&flaws).Error; err != nil {
@@ -176,7 +180,7 @@ func (r *flawRepository) GetOrgFromFlawID(tx core.DB, flawID string) (models.Org
 	}
 	return org, nil
 }
-func (r *flawRepository) GetFlawsPaged(tx core.DB, assetIdInSubQuery core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+func (r *flawRepository) GetFlawsPaged(tx core.DB, assetIdInSubQuery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
 	var flaws []models.Flaw = []models.Flaw{}
 
 	q := r.Repository.GetDB(tx).Model(&models.Flaw{}).Preload("Events").Joins("CVE").Joins("Component").Where("flaws.asset_id IN (?)", assetIdInSubQuery)

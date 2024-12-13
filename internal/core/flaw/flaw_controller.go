@@ -32,6 +32,7 @@ type repository interface {
 
 	GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
 	GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
+	GetFlawsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
 }
 
 type projectService interface {
@@ -112,6 +113,19 @@ func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
 func (c flawHttpController) ListPaged(ctx core.Context) error {
 	// get the asset
 	asset := core.GetAsset(ctx)
+
+	// check if we should list flat - this means not grouped by package
+	if ctx.QueryParam("flat") == "true" {
+		flaws, err := c.flawRepository.GetFlawsByAssetIdPagedAndFlat(nil, asset.GetID(), core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
+		if err != nil {
+			return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
+		}
+
+		return ctx.JSON(200, flaws.Map(func(flaw models.Flaw) any {
+			return convertToDetailedDTO(flaw)
+		}))
+	}
+
 	pagedResp, packageNameIndexMap, err := c.flawRepository.GetByAssetIdPaged(
 		nil,
 		core.GetPageInfo(ctx),
