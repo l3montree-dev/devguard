@@ -19,21 +19,6 @@ selfservice:
   allowed_return_urls:
   - http://localhost:3000
   methods:
-    webauthn:
-      enabled: true
-      config:
-        # If set to true will use WebAuthn for passwordless flows intead of multi-factor authentication.
-        passwordless: true
-        rp:
-          # This MUST be your root domain (not a subdomain)
-          id: localhost:3000
-          # This MUST be the exact URL of the page which will prompt for WebAuthn!
-          # Only the scheme (https / http), host (auth.example.org), and port (4455) are relevant. The
-          # path is irrelevant.
-          origins:
-          - http://localhost:3000
-          # A display name which will be shown to the user on her/his device.
-          display_name: DevGuard
     password:
       enabled: true
     totp:
@@ -46,7 +31,19 @@ selfservice:
       enabled: true
     code:
       enabled: true
-
+    passkey:
+      enabled: true
+      config:
+        rp:
+          # This MUST be your root domain (not a subdomain)
+          id: localhost:3000
+          # This MUST be the exact URL of the page which will prompt for WebAuthn!
+          # Only the scheme (https / http), host (auth.example.org), and port (4455) are relevant. The
+          # path is irrelevant.
+          origins:
+          - http://localhost:3000
+          # A display name which will be shown to the user on her/his device.
+          display_name: DevGuard
   flows:
     error:
       ui_url: http://localhost:3000/error
