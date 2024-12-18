@@ -45,6 +45,16 @@ func (g *inTotoLinkRepository) FindByAssetAndSupplyChainId(assetID uuid.UUID, su
 	return t, err
 }
 
+func (g *inTotoLinkRepository) FindBySupplyChainID(supplyChainID string) ([]models.InTotoLink, error) {
+	var t []models.InTotoLink
+
+	err := g.db.Model(&models.InTotoLink{}).
+		Where("LEFT(supply_chain_id, 8) = ?", supplyChainID).
+		Find(&t).Error
+
+	return t, err
+}
+
 func (g *inTotoLinkRepository) Save(tx core.DB, model *models.InTotoLink) error {
 	return g.db.Session(&gorm.Session{
 		FullSaveAssociations: false,

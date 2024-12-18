@@ -328,7 +328,7 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	organization := core.GetTenant(ctx)
 	accessControl := core.GetRBAC(ctx)
 
-	members, err := accessControl.GetAllMembersOfOrganization(organization.GetID().String())
+	members, err := accessControl.GetAllMembersOfOrganization()
 
 	if err != nil {
 		return nil, err
@@ -411,7 +411,6 @@ func (o *httpController) Read(c core.Context) error {
 }
 
 func (o *httpController) List(c core.Context) error {
-
 	// get all organizations the user has access to
 	userID := core.GetSession(c).GetUserID()
 
@@ -442,8 +441,7 @@ func (o *httpController) List(c core.Context) error {
 }
 
 func (o *httpController) Metrics(c core.Context) error {
-	orgID := core.GetTenant(c).GetID().String()
-	owner, err := core.GetRBAC(c).GetOwnerOfOrganization(orgID)
+	owner, err := core.GetRBAC(c).GetOwnerOfOrganization()
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get owner of organization").WithInternal(err)
 	}

@@ -46,8 +46,8 @@ func (c casbinRBACProvider) GetDomainRBAC(domain string) AccessControl {
 	}
 }
 
-func (c *casbinRBAC) GetOwnerOfOrganization(orgID string) (string, error) {
-	listOfUsers := c.enforcer.GetUsersForRoleInDomain("role::owner", "domain::"+orgID)
+func (c *casbinRBAC) GetOwnerOfOrganization() (string, error) {
+	listOfUsers := c.enforcer.GetUsersForRoleInDomain("role::owner", "domain::"+c.domain)
 	if len(listOfUsers) == 0 {
 		// TODO: Add alerting
 		return "", fmt.Errorf("no owner found for organization")
@@ -59,8 +59,8 @@ func (c *casbinRBAC) GetOwnerOfOrganization(orgID string) (string, error) {
 	return strings.TrimPrefix(listOfUsers[0], "user::"), nil
 }
 
-func (c *casbinRBAC) GetAllMembersOfOrganization(orgID string) ([]string, error) {
-	users, err := c.enforcer.GetAllUsersByDomain("domain::" + orgID)
+func (c *casbinRBAC) GetAllMembersOfOrganization() ([]string, error) {
+	users, err := c.enforcer.GetAllUsersByDomain("domain::" + c.domain)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +71,8 @@ func (c *casbinRBAC) GetAllMembersOfOrganization(orgID string) ([]string, error)
 	}), nil
 }
 
-func (c *casbinRBAC) GetAllMembersOfProject(orgID string, projectID string) ([]string, error) {
-	users, err := c.enforcer.GetImplicitUsersForRole("project::"+projectID+"|role::member", "domain::"+orgID)
+func (c *casbinRBAC) GetAllMembersOfProject(projectID string) ([]string, error) {
+	users, err := c.enforcer.GetImplicitUsersForRole("project::"+projectID+"|role::member", "domain::"+c.domain)
 	if err != nil {
 		return nil, err
 	}
