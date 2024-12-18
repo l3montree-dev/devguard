@@ -17,6 +17,7 @@ package intoto
 
 import (
 	"archive/zip"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -130,6 +131,7 @@ func (a *httpController) Create(c core.Context) error {
 	if req.SupplyChainOutputDigest != "" {
 		err = a.inTotoVerifierService.VerifyWithSupplyChainID(req.SupplyChainID)
 		if err != nil {
+			slog.Error("could not verify supply chain", "err", err)
 		}
 		verified = true
 	}
