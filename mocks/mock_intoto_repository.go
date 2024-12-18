@@ -25,6 +25,194 @@ func (_m *IntotoRepository) EXPECT() *IntotoRepository_Expecter {
 	return &IntotoRepository_Expecter{mock: &_m.Mock}
 }
 
+// Begin provides a mock function with given fields:
+func (_m *IntotoRepository) Begin() core.DB {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Begin")
+	}
+
+	var r0 core.DB
+	if rf, ok := ret.Get(0).(func() core.DB); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(core.DB)
+		}
+	}
+
+	return r0
+}
+
+// IntotoRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
+type IntotoRepository_Begin_Call struct {
+	*mock.Call
+}
+
+// Begin is a helper method to define mock.On call
+func (_e *IntotoRepository_Expecter) Begin() *IntotoRepository_Begin_Call {
+	return &IntotoRepository_Begin_Call{Call: _e.mock.On("Begin")}
+}
+
+func (_c *IntotoRepository_Begin_Call) Run(run func()) *IntotoRepository_Begin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *IntotoRepository_Begin_Call) Return(_a0 core.DB) *IntotoRepository_Begin_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *IntotoRepository_Begin_Call) RunAndReturn(run func() core.DB) *IntotoRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Create provides a mock function with given fields: tx, t
+func (_m *IntotoRepository) Create(tx core.DB, t *models.InTotoLink) error {
+	ret := _m.Called(tx, t)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Create")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(core.DB, *models.InTotoLink) error); ok {
+		r0 = rf(tx, t)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// IntotoRepository_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
+type IntotoRepository_Create_Call struct {
+	*mock.Call
+}
+
+// Create is a helper method to define mock.On call
+//   - tx core.DB
+//   - t *models.InTotoLink
+func (_e *IntotoRepository_Expecter) Create(tx interface{}, t interface{}) *IntotoRepository_Create_Call {
+	return &IntotoRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
+}
+
+func (_c *IntotoRepository_Create_Call) Run(run func(tx core.DB, t *models.InTotoLink)) *IntotoRepository_Create_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.DB), args[1].(*models.InTotoLink))
+	})
+	return _c
+}
+
+func (_c *IntotoRepository_Create_Call) Return(_a0 error) *IntotoRepository_Create_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *IntotoRepository_Create_Call) RunAndReturn(run func(core.DB, *models.InTotoLink) error) *IntotoRepository_Create_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateBatch provides a mock function with given fields: tx, ts
+func (_m *IntotoRepository) CreateBatch(tx core.DB, ts []models.InTotoLink) error {
+	ret := _m.Called(tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateBatch")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(core.DB, []models.InTotoLink) error); ok {
+		r0 = rf(tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// IntotoRepository_CreateBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateBatch'
+type IntotoRepository_CreateBatch_Call struct {
+	*mock.Call
+}
+
+// CreateBatch is a helper method to define mock.On call
+//   - tx core.DB
+//   - ts []models.InTotoLink
+func (_e *IntotoRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *IntotoRepository_CreateBatch_Call {
+	return &IntotoRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
+}
+
+func (_c *IntotoRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.InTotoLink)) *IntotoRepository_CreateBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.DB), args[1].([]models.InTotoLink))
+	})
+	return _c
+}
+
+func (_c *IntotoRepository_CreateBatch_Call) Return(_a0 error) *IntotoRepository_CreateBatch_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *IntotoRepository_CreateBatch_Call) RunAndReturn(run func(core.DB, []models.InTotoLink) error) *IntotoRepository_CreateBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Delete provides a mock function with given fields: tx, id
+func (_m *IntotoRepository) Delete(tx core.DB, id uuid.UUID) error {
+	ret := _m.Called(tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+		r0 = rf(tx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// IntotoRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type IntotoRepository_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - tx core.DB
+//   - id uuid.UUID
+func (_e *IntotoRepository_Expecter) Delete(tx interface{}, id interface{}) *IntotoRepository_Delete_Call {
+	return &IntotoRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+}
+
+func (_c *IntotoRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *IntotoRepository_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.DB), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *IntotoRepository_Delete_Call) Return(_a0 error) *IntotoRepository_Delete_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *IntotoRepository_Delete_Call) RunAndReturn(run func(core.DB, uuid.UUID) error) *IntotoRepository_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByAssetAndSupplyChainId provides a mock function with given fields: assetID, supplyChainId
 func (_m *IntotoRepository) FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainId string) ([]models.InTotoLink, error) {
 	ret := _m.Called(assetID, supplyChainId)
@@ -84,6 +272,168 @@ func (_c *IntotoRepository_FindByAssetAndSupplyChainId_Call) RunAndReturn(run fu
 	return _c
 }
 
+// GetDB provides a mock function with given fields: tx
+func (_m *IntotoRepository) GetDB(tx core.DB) core.DB {
+	ret := _m.Called(tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDB")
+	}
+
+	var r0 core.DB
+	if rf, ok := ret.Get(0).(func(core.DB) core.DB); ok {
+		r0 = rf(tx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(core.DB)
+		}
+	}
+
+	return r0
+}
+
+// IntotoRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
+type IntotoRepository_GetDB_Call struct {
+	*mock.Call
+}
+
+// GetDB is a helper method to define mock.On call
+//   - tx core.DB
+func (_e *IntotoRepository_Expecter) GetDB(tx interface{}) *IntotoRepository_GetDB_Call {
+	return &IntotoRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
+}
+
+func (_c *IntotoRepository_GetDB_Call) Run(run func(tx core.DB)) *IntotoRepository_GetDB_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.DB))
+	})
+	return _c
+}
+
+func (_c *IntotoRepository_GetDB_Call) Return(_a0 core.DB) *IntotoRepository_GetDB_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *IntotoRepository_GetDB_Call) RunAndReturn(run func(core.DB) core.DB) *IntotoRepository_GetDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// List provides a mock function with given fields: ids
+func (_m *IntotoRepository) List(ids []uuid.UUID) ([]models.InTotoLink, error) {
+	ret := _m.Called(ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for List")
+	}
+
+	var r0 []models.InTotoLink
+	var r1 error
+	if rf, ok := ret.Get(0).(func([]uuid.UUID) ([]models.InTotoLink, error)); ok {
+		return rf(ids)
+	}
+	if rf, ok := ret.Get(0).(func([]uuid.UUID) []models.InTotoLink); ok {
+		r0 = rf(ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.InTotoLink)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func([]uuid.UUID) error); ok {
+		r1 = rf(ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// IntotoRepository_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
+type IntotoRepository_List_Call struct {
+	*mock.Call
+}
+
+// List is a helper method to define mock.On call
+//   - ids []uuid.UUID
+func (_e *IntotoRepository_Expecter) List(ids interface{}) *IntotoRepository_List_Call {
+	return &IntotoRepository_List_Call{Call: _e.mock.On("List", ids)}
+}
+
+func (_c *IntotoRepository_List_Call) Run(run func(ids []uuid.UUID)) *IntotoRepository_List_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].([]uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *IntotoRepository_List_Call) Return(_a0 []models.InTotoLink, _a1 error) *IntotoRepository_List_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *IntotoRepository_List_Call) RunAndReturn(run func([]uuid.UUID) ([]models.InTotoLink, error)) *IntotoRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Read provides a mock function with given fields: id
+func (_m *IntotoRepository) Read(id uuid.UUID) (models.InTotoLink, error) {
+	ret := _m.Called(id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Read")
+	}
+
+	var r0 models.InTotoLink
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uuid.UUID) (models.InTotoLink, error)); ok {
+		return rf(id)
+	}
+	if rf, ok := ret.Get(0).(func(uuid.UUID) models.InTotoLink); ok {
+		r0 = rf(id)
+	} else {
+		r0 = ret.Get(0).(models.InTotoLink)
+	}
+
+	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
+		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// IntotoRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
+type IntotoRepository_Read_Call struct {
+	*mock.Call
+}
+
+// Read is a helper method to define mock.On call
+//   - id uuid.UUID
+func (_e *IntotoRepository_Expecter) Read(id interface{}) *IntotoRepository_Read_Call {
+	return &IntotoRepository_Read_Call{Call: _e.mock.On("Read", id)}
+}
+
+func (_c *IntotoRepository_Read_Call) Run(run func(id uuid.UUID)) *IntotoRepository_Read_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *IntotoRepository_Read_Call) Return(_a0 models.InTotoLink, _a1 error) *IntotoRepository_Read_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *IntotoRepository_Read_Call) RunAndReturn(run func(uuid.UUID) (models.InTotoLink, error)) *IntotoRepository_Read_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Save provides a mock function with given fields: tx, model
 func (_m *IntotoRepository) Save(tx core.DB, model *models.InTotoLink) error {
 	ret := _m.Called(tx, model)
@@ -127,6 +477,99 @@ func (_c *IntotoRepository_Save_Call) Return(_a0 error) *IntotoRepository_Save_C
 }
 
 func (_c *IntotoRepository_Save_Call) RunAndReturn(run func(core.DB, *models.InTotoLink) error) *IntotoRepository_Save_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBatch provides a mock function with given fields: tx, ts
+func (_m *IntotoRepository) SaveBatch(tx core.DB, ts []models.InTotoLink) error {
+	ret := _m.Called(tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBatch")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(core.DB, []models.InTotoLink) error); ok {
+		r0 = rf(tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// IntotoRepository_SaveBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatch'
+type IntotoRepository_SaveBatch_Call struct {
+	*mock.Call
+}
+
+// SaveBatch is a helper method to define mock.On call
+//   - tx core.DB
+//   - ts []models.InTotoLink
+func (_e *IntotoRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *IntotoRepository_SaveBatch_Call {
+	return &IntotoRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
+}
+
+func (_c *IntotoRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.InTotoLink)) *IntotoRepository_SaveBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.DB), args[1].([]models.InTotoLink))
+	})
+	return _c
+}
+
+func (_c *IntotoRepository_SaveBatch_Call) Return(_a0 error) *IntotoRepository_SaveBatch_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *IntotoRepository_SaveBatch_Call) RunAndReturn(run func(core.DB, []models.InTotoLink) error) *IntotoRepository_SaveBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Transaction provides a mock function with given fields: _a0
+func (_m *IntotoRepository) Transaction(_a0 func(core.DB) error) error {
+	ret := _m.Called(_a0)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Transaction")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(func(core.DB) error) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// IntotoRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
+type IntotoRepository_Transaction_Call struct {
+	*mock.Call
+}
+
+// Transaction is a helper method to define mock.On call
+//   - _a0 func(core.DB) error
+func (_e *IntotoRepository_Expecter) Transaction(_a0 interface{}) *IntotoRepository_Transaction_Call {
+	return &IntotoRepository_Transaction_Call{Call: _e.mock.On("Transaction", _a0)}
+}
+
+func (_c *IntotoRepository_Transaction_Call) Run(run func(_a0 func(core.DB) error)) *IntotoRepository_Transaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(func(core.DB) error))
+	})
+	return _c
+}
+
+func (_c *IntotoRepository_Transaction_Call) Return(_a0 error) *IntotoRepository_Transaction_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *IntotoRepository_Transaction_Call) RunAndReturn(run func(func(core.DB) error) error) *IntotoRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }

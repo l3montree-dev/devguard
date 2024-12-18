@@ -20,21 +20,21 @@ func (_m *IntotoInTotoLinkRepository) EXPECT() *IntotoInTotoLinkRepository_Expec
 	return &IntotoInTotoLinkRepository_Expecter{mock: &_m.Mock}
 }
 
-// FindBySupplyChainId provides a mock function with given fields: supplyChainId
-func (_m *IntotoInTotoLinkRepository) FindBySupplyChainId(supplyChainId string) ([]models.InTotoLink, error) {
-	ret := _m.Called(supplyChainId)
+// FindBySupplyChainID provides a mock function with given fields: supplyChainID
+func (_m *IntotoInTotoLinkRepository) FindBySupplyChainID(supplyChainID string) ([]models.InTotoLink, error) {
+	ret := _m.Called(supplyChainID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindBySupplyChainId")
+		panic("no return value specified for FindBySupplyChainID")
 	}
 
 	var r0 []models.InTotoLink
 	var r1 error
 	if rf, ok := ret.Get(0).(func(string) ([]models.InTotoLink, error)); ok {
-		return rf(supplyChainId)
+		return rf(supplyChainID)
 	}
 	if rf, ok := ret.Get(0).(func(string) []models.InTotoLink); ok {
-		r0 = rf(supplyChainId)
+		r0 = rf(supplyChainID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.InTotoLink)
@@ -42,7 +42,7 @@ func (_m *IntotoInTotoLinkRepository) FindBySupplyChainId(supplyChainId string) 
 	}
 
 	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(supplyChainId)
+		r1 = rf(supplyChainID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -50,30 +50,30 @@ func (_m *IntotoInTotoLinkRepository) FindBySupplyChainId(supplyChainId string) 
 	return r0, r1
 }
 
-// IntotoInTotoLinkRepository_FindBySupplyChainId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindBySupplyChainId'
-type IntotoInTotoLinkRepository_FindBySupplyChainId_Call struct {
+// IntotoInTotoLinkRepository_FindBySupplyChainID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindBySupplyChainID'
+type IntotoInTotoLinkRepository_FindBySupplyChainID_Call struct {
 	*mock.Call
 }
 
-// FindBySupplyChainId is a helper method to define mock.On call
-//   - supplyChainId string
-func (_e *IntotoInTotoLinkRepository_Expecter) FindBySupplyChainId(supplyChainId interface{}) *IntotoInTotoLinkRepository_FindBySupplyChainId_Call {
-	return &IntotoInTotoLinkRepository_FindBySupplyChainId_Call{Call: _e.mock.On("FindBySupplyChainId", supplyChainId)}
+// FindBySupplyChainID is a helper method to define mock.On call
+//   - supplyChainID string
+func (_e *IntotoInTotoLinkRepository_Expecter) FindBySupplyChainID(supplyChainID interface{}) *IntotoInTotoLinkRepository_FindBySupplyChainID_Call {
+	return &IntotoInTotoLinkRepository_FindBySupplyChainID_Call{Call: _e.mock.On("FindBySupplyChainID", supplyChainID)}
 }
 
-func (_c *IntotoInTotoLinkRepository_FindBySupplyChainId_Call) Run(run func(supplyChainId string)) *IntotoInTotoLinkRepository_FindBySupplyChainId_Call {
+func (_c *IntotoInTotoLinkRepository_FindBySupplyChainID_Call) Run(run func(supplyChainID string)) *IntotoInTotoLinkRepository_FindBySupplyChainID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string))
 	})
 	return _c
 }
 
-func (_c *IntotoInTotoLinkRepository_FindBySupplyChainId_Call) Return(_a0 []models.InTotoLink, _a1 error) *IntotoInTotoLinkRepository_FindBySupplyChainId_Call {
+func (_c *IntotoInTotoLinkRepository_FindBySupplyChainID_Call) Return(_a0 []models.InTotoLink, _a1 error) *IntotoInTotoLinkRepository_FindBySupplyChainID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *IntotoInTotoLinkRepository_FindBySupplyChainId_Call) RunAndReturn(run func(string) ([]models.InTotoLink, error)) *IntotoInTotoLinkRepository_FindBySupplyChainId_Call {
+func (_c *IntotoInTotoLinkRepository_FindBySupplyChainID_Call) RunAndReturn(run func(string) ([]models.InTotoLink, error)) *IntotoInTotoLinkRepository_FindBySupplyChainID_Call {
 	_c.Call.Return(run)
 	return _c
 }
