@@ -326,6 +326,9 @@ func verifyInToto(rootLayout toto.Metadata, linkDir string, layoutKey toto.Key) 
 func getIntotoPairKey() (toto.Key, toto.Key, error) {
 	// generate the ecdsa key pair for signing and verifying the layout
 	privateKey, publicKey, err := generateECDSAKey()
+	if err != nil {
+		return toto.Key{}, toto.Key{}, errors.Wrap(err, "could not generate key pair")
+	}
 
 	// convert the private key to in-toto key for signing the layout
 	signKey, err := privateKeyToInTotoKey(privateKey)
