@@ -131,18 +131,17 @@ func (r *RBACMock) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvide
 	return nil
 }
 
-func (r *RBACMock) GetOwnerOfOrganization(organization string) (string, error) {
+func (r *RBACMock) GetOwnerOfOrganization() (string, error) {
 	return "", nil
 }
 
 func (r RBACProviderMock) GetDomainRBAC(domain string) accesscontrol.AccessControl {
 	return &RBACMock{
-		roles: map[string][]string{},
-		rules: map[string][]string{},
+		roles: map[string][]string{}, rules: map[string][]string{},
 	}
 }
 
-func (r RBACMock) GetAllMembersOfProject(organization, project string) ([]string, error) {
+func (r RBACMock) GetAllMembersOfProject(project string) ([]string, error) {
 	return []string{}, nil
 }
 
@@ -158,7 +157,7 @@ func (r RBACMock) GetAllProjectsForUser(user string) []string {
 	return []string{}
 }
 
-func (r RBACMock) GetAllMembersOfOrganization(organization string) ([]string, error) {
+func (r RBACMock) GetAllMembersOfOrganization() ([]string, error) {
 	return []string{}, nil
 }
 
