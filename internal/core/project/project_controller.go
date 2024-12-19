@@ -86,9 +86,8 @@ func (p *Controller) Members(c core.Context) error {
 	project := core.GetProject(c)
 	// get rbac
 	rbac := core.GetRBAC(c)
-	tenant := core.GetTenant(c)
 
-	members, err := rbac.GetAllMembersOfProject(tenant.ID.String(), project.ID.String())
+	members, err := rbac.GetAllMembersOfProject(project.ID.String())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
 	}
@@ -124,7 +123,7 @@ func (p *Controller) Members(c core.Context) error {
 
 func (p *Controller) InviteMember(c core.Context) error {
 	project := core.GetProject(c)
-	tenant := core.GetTenant(c)
+
 	// get rbac
 	rbac := core.GetRBAC(c)
 
@@ -142,7 +141,7 @@ func (p *Controller) InviteMember(c core.Context) error {
 		return echo.NewHTTPError(400, "invalid role")
 	}
 
-	members, err := rbac.GetAllMembersOfOrganization(tenant.GetID().String())
+	members, err := rbac.GetAllMembersOfOrganization()
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
@@ -182,7 +181,7 @@ func (p *Controller) RemoveMember(c core.Context) error {
 
 func (p *Controller) ChangeRole(c core.Context) error {
 	project := core.GetProject(c)
-	tenant := core.GetTenant(c)
+
 	// get rbac
 	rbac := core.GetRBAC(c)
 
@@ -200,7 +199,7 @@ func (p *Controller) ChangeRole(c core.Context) error {
 		return echo.NewHTTPError(400, "invalid role")
 	}
 
-	members, err := rbac.GetAllMembersOfOrganization(tenant.GetID().String())
+	members, err := rbac.GetAllMembersOfOrganization()
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}

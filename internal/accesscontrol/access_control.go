@@ -63,11 +63,11 @@ type AccessControl interface {
 
 	GetAllProjectsForUser(user string) []string
 
-	GetOwnerOfOrganization(organizationID string) (string, error)
+	GetOwnerOfOrganization() (string, error)
 
-	GetAllMembersOfOrganization(organizationID string) ([]string, error)
+	GetAllMembersOfOrganization() ([]string, error)
 
-	GetAllMembersOfProject(organizationID, projectID string) ([]string, error)
+	GetAllMembersOfProject(projectID string) ([]string, error)
 
 	GetDomainRole(user string) (string, error)
 	GetProjectRole(user string, project string) (string, error)

@@ -31,6 +31,7 @@ import (
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/client"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -90,12 +91,15 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string
 		return errors.Wrap(err, "failed to remove metadata file")
 	}
 
+	outputDigest, _ := cmd.Flags().GetString("supplyChainOutputDigest")
+
 	// create the request
-	body := map[string]string{
-		"step":          step,
-		"supplyChainId": supplyChainId,
-		"payload":       string(b),
-		"filename":      filename,
+	body := map[string]any{
+		"step":                    step,
+		"supplyChainId":           supplyChainId,
+		"supplyChainOutputDigest": utils.EmptyThenNil(outputDigest),
+		"payload":                 string(b),
+		"filename":                filename,
 	}
 
 	bodyjson, err := json.Marshal(body)
@@ -179,6 +183,7 @@ func NewInTotoRunCommand() *cobra.Command {
 	}
 
 	cmd.Flags().String("apiUrl", "", "The devguard api url")
+	cmd.Flags().String("supplyChainOutputDigest", "", "If defined, sends this digest to devguard. This should be the digest of the whole supply chain.")
 
 	return cmd
 }

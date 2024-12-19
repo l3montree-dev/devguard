@@ -17,9 +17,7 @@ package intoto
 
 import (
 	"archive/zip"
-	"bytes"
-	"crypto/x509"
-	"encoding/pem"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -28,18 +26,22 @@ import (
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/pat"
-	"github.com/pkg/errors"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
 
 	"github.com/labstack/echo/v4"
 )
 
 // we use this in multiple files in the asset package itself
 type repository interface {
+	repositories.Repository[uuid.UUID, models.InTotoLink, core.DB]
 	FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainId string) ([]models.InTotoLink, error)
 	Save(tx core.DB, model *models.InTotoLink) error
+}
+
+type supplyChainRepository interface {
+	Save(tx core.DB, model *models.SupplyChain) error
 }
 
 type patRepository interface {
@@ -47,44 +49,41 @@ type patRepository interface {
 	FindByUserIDs(userID []uuid.UUID) ([]models.PAT, error)
 }
 
+type inTotoVerifierService interface {
+	VerifySupplyChainWithOutputDigest(supplyChainID string, digest string) error
+	VerifySupplyChain(supplyChainID string) error
+}
+
 type httpController struct {
-	linkRepository repository
+	linkRepository        repository
+	supplyChainRepository supplyChainRepository
 
 	patRepository patRepository
+
+	inTotoVerifierService inTotoVerifierService
 }
 
-func NewHttpController(repository repository, patRepository patRepository) *httpController {
+func NewHttpController(repository repository, supplyChainRepository supplyChainRepository, patRepository patRepository, inTotoVerifierService inTotoVerifierService) *httpController {
 	return &httpController{
-		linkRepository: repository,
-		patRepository:  patRepository,
+		linkRepository:        repository,
+		supplyChainRepository: supplyChainRepository,
+		patRepository:         patRepository,
+		inTotoVerifierService: inTotoVerifierService,
 	}
 }
 
-func publicKeyToInTotoKey(hexPubKey string) (toto.Key, error) {
-	ecdsaPubKey := pat.HexPubKeyToECDSA(hexPubKey)
+func (a *httpController) VerifySupplyChain(ctx core.Context) error {
+	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainId")
+	digest := ctx.QueryParam("digest")
 
-	// marshal
-	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&ecdsaPubKey)
+	err := a.inTotoVerifierService.VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID, digest)
 	if err != nil {
-		return toto.Key{}, errors.Wrap(err, "failed to marshal public key")
+		slog.Info("could not verify supply chain", "supplyChainId", imageNameOrSupplyChainID)
+		return echo.NewHTTPError(400, "could not verify supply chain").WithInternal(err)
 	}
 
-	// encode to pem
-	b := pem.EncodeToMemory(&pem.Block{
-		Type:  "EC PUBLIC KEY",
-		Bytes: pubKeyBytes,
-	})
-
-	// create new reader
-	reader := bytes.NewReader(b)
-
-	var key toto.Key
-	err = key.LoadKeyReader(reader, "ecdsa-sha2-nistp521", []string{"sha256"})
-	if err != nil {
-		return toto.Key{}, errors.Wrap(err, "failed to load key")
-	}
-
-	return key, nil
+	slog.Info("verified supply chain", "supplyChainId", imageNameOrSupplyChainID)
+	return ctx.NoContent(200)
 }
 
 func (a *httpController) Create(c core.Context) error {
@@ -118,7 +117,7 @@ func (a *httpController) Create(c core.Context) error {
 		return echo.NewHTTPError(500, "could not load metadata").WithInternal(err)
 	}
 
-	pubKey, err := publicKeyToInTotoKey(pat.PubKey)
+	pubKey, err := hexPublicKeyToInTotoKey(pat.PubKey)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not convert public key").WithInternal(err)
 	}
@@ -129,6 +128,15 @@ func (a *httpController) Create(c core.Context) error {
 
 	asset := core.GetAsset(c)
 
+	var verified bool
+	if req.SupplyChainOutputDigest != "" {
+		err = a.inTotoVerifierService.VerifySupplyChain(req.SupplyChainID)
+		if err != nil {
+			slog.Error("could not verify supply chain", "err", err)
+		}
+		verified = true
+	}
+
 	link := models.InTotoLink{
 		AssetID:       asset.GetID(),
 		SupplyChainID: strings.TrimSpace(req.SupplyChainID),
@@ -138,11 +146,26 @@ func (a *httpController) Create(c core.Context) error {
 		Filename:      req.Filename,
 	}
 
-	err = a.linkRepository.Save(nil, &link)
-
-	if err != nil {
-		return echo.NewHTTPError(500, "could not create link").WithInternal(err)
+	supplyChain := models.SupplyChain{
+		SupplyChainID:           strings.TrimSpace(req.SupplyChainID),
+		SupplyChainOutputDigest: req.SupplyChainOutputDigest,
+		Verified:                verified,
 	}
+
+	err = a.linkRepository.Transaction(func(tx core.DB) error {
+		err = a.linkRepository.Save(tx, &link)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not create link").WithInternal(err)
+		}
+
+		// save the digest
+		err = a.supplyChainRepository.Save(tx, &supplyChain)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not create supply chain digest").WithInternal(err)
+		}
+
+		return nil
+	})
 
 	return c.JSON(200, link)
 }
@@ -150,10 +173,9 @@ func (a *httpController) Create(c core.Context) error {
 func (a *httpController) RootLayout(c core.Context) error {
 	// get all pats which are part of the asset
 	project := core.GetProject(c)
-	org := core.GetTenant(c)
 	accessControl := core.GetRBAC(c)
 
-	users, err := accessControl.GetAllMembersOfProject(org.ID.String(), project.GetID().String())
+	users, err := accessControl.GetAllMembersOfProject(project.GetID().String())
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get users").WithInternal(err)
@@ -177,7 +199,7 @@ func (a *httpController) RootLayout(c core.Context) error {
 	keyIds := make([]string, len(pats))
 	totoKeys := make(map[string]toto.Key)
 	for i, pat := range pats {
-		key, err := publicKeyToInTotoKey(pat.PubKey)
+		key, err := hexPublicKeyToInTotoKey(pat.PubKey)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not convert public key").WithInternal(err)
 		}
@@ -233,7 +255,7 @@ func (a *httpController) RootLayout(c core.Context) error {
 						ExpectedMaterials: [][]string{{"ALLOW", "*"}},
 						ExpectedProducts: [][]string{
 							{"REQUIRE", "image-digest.txt"},
-							{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "deploy"}, // makes sure image-digest.txt is the same as the created digest
+							{"MATCH", "image-digest", "WITH", "PRODUCTS", "FROM", "deploy"}, // makes sure image-digest.txt is the same as the created digest
 							{"DISALLOW", "*"},
 						},
 					},

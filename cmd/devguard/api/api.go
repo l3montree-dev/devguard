@@ -324,6 +324,9 @@ func Start(db core.DB) {
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 	flawRepository := repositories.NewFlawRepository(db)
+	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
+	supplyChainRepository := repositories.NewSupplyChainRepository(db)
+
 	flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 	projectService := project.NewService(projectRepository)
 	flawController := flaw.NewHttpController(flawRepository, flawService, projectService)
@@ -332,6 +335,8 @@ func Start(db core.DB) {
 
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, flawRepository, assetRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 	invitationRepository := repositories.NewInvitationRepository(db)
+
+	intotoService := intoto.NewInTotoService(casbinRBACProvider, intotoLinkRepository, projectRepository, patRepository, supplyChainRepository)
 	// init all http controllers using the repositories
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService, invitationRepository)
@@ -339,7 +344,7 @@ func Start(db core.DB) {
 	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetService, statisticsService)
 
-	intotoController := intoto.NewHttpController(repositories.NewInTotoLinkRepository(db), patRepository)
+	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, projectService)
 
@@ -479,6 +484,8 @@ func Start(db core.DB) {
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 
 	assetRouter.GET("/in-toto/:supplyChainId/", intotoController.Read)
+
+	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)
