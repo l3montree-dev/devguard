@@ -50,8 +50,8 @@ type patRepository interface {
 }
 
 type inTotoVerifierService interface {
-	VerifyWithImageName(imageName string, digest string) error
-	VerifyWithSupplyChainID(supplyChainID string) error
+	VerifySupplyChainWithOutputDigest(supplyChainID string, digest string) error
+	VerifySupplyChain(supplyChainID string) error
 }
 
 type httpController struct {
@@ -76,20 +76,10 @@ func (a *httpController) VerifySupplyChain(ctx core.Context) error {
 	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainId")
 	digest := ctx.QueryParam("digest")
 
-	// check if image name or supply chain id
-	if strings.Count(imageNameOrSupplyChainID, "-") == 2 {
-		// its an image name main-<digest>-<timestamp>
-		err := a.inTotoVerifierService.VerifyWithImageName(imageNameOrSupplyChainID, digest)
-		if err != nil {
-			slog.Info("could not verify supply chain (image name to supply chain id conversion)", "supplyChainId", imageNameOrSupplyChainID)
-			return echo.NewHTTPError(400, "could not verify supply chain").WithInternal(err)
-		}
-	} else {
-		err := a.inTotoVerifierService.VerifyWithSupplyChainID(imageNameOrSupplyChainID)
-		if err != nil {
-			slog.Info("could not verify supply chain", "supplyChainId", imageNameOrSupplyChainID)
-			return echo.NewHTTPError(400, "could not verify supply chain").WithInternal(err)
-		}
+	err := a.inTotoVerifierService.VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID, digest)
+	if err != nil {
+		slog.Info("could not verify supply chain", "supplyChainId", imageNameOrSupplyChainID)
+		return echo.NewHTTPError(400, "could not verify supply chain").WithInternal(err)
 	}
 
 	slog.Info("verified supply chain", "supplyChainId", imageNameOrSupplyChainID)
@@ -140,7 +130,7 @@ func (a *httpController) Create(c core.Context) error {
 
 	var verified bool
 	if req.SupplyChainOutputDigest != "" {
-		err = a.inTotoVerifierService.VerifyWithSupplyChainID(req.SupplyChainID)
+		err = a.inTotoVerifierService.VerifySupplyChain(req.SupplyChainID)
 		if err != nil {
 			slog.Error("could not verify supply chain", "err", err)
 		}
@@ -265,7 +255,7 @@ func (a *httpController) RootLayout(c core.Context) error {
 						ExpectedMaterials: [][]string{{"ALLOW", "*"}},
 						ExpectedProducts: [][]string{
 							{"REQUIRE", "image-digest.txt"},
-							{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "deploy"}, // makes sure image-digest.txt is the same as the created digest
+							{"MATCH", "image-digest", "WITH", "PRODUCTS", "FROM", "deploy"}, // makes sure image-digest.txt is the same as the created digest
 							{"DISALLOW", "*"},
 						},
 					},

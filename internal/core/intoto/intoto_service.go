@@ -53,7 +53,7 @@ func NewInTotoService(rbacProvider accesscontrol.RBACProvider, inTotoLinkReposit
 	}
 }
 
-func (i inTotoService) VerifyWithImageName(imageNameOrSupplyChainID string, digest string) error {
+func (i inTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID string, digest string) error {
 	var supplyChainID string
 	var err error
 	// check if it is a supply chain id already
@@ -68,30 +68,21 @@ func (i inTotoService) VerifyWithImageName(imageNameOrSupplyChainID string, dige
 		supplyChainID = imageNameOrSupplyChainID
 	}
 
-	supplyChainDigests, err := i.supplyChainRepository.FindBySupplyChainID(supplyChainID)
+	supplyChains, err := i.supplyChainRepository.FindBySupplyChainID(supplyChainID)
 	if err != nil {
 		return errors.Wrap(err, "could not find supply chain digests")
 	}
-	verified := false
-	SupplyChainOutputDigest := ""
-	for _, supplyChainDigest := range supplyChainDigests {
-		if supplyChainDigest.Verified {
-			verified = true
-			SupplyChainOutputDigest = supplyChainDigest.SupplyChainOutputDigest
-			break
-		}
-	}
-	if verified {
-		if SupplyChainOutputDigest == digest {
+
+	for _, supplyChain := range supplyChains {
+		if supplyChain.Verified && supplyChain.SupplyChainOutputDigest == digest {
 			return nil
 		}
-		return fmt.Errorf("supply chain not verified")
 	}
 
 	return fmt.Errorf("could not find verified supply chain")
 }
 
-func (i inTotoService) VerifyWithSupplyChainID(supplyChainID string) error {
+func (i inTotoService) VerifySupplyChain(supplyChainID string) error {
 
 	// get the supply chain links
 	supplyChainLinks, err := i.inTotoLinkRepository.FindBySupplyChainID(supplyChainID)
