@@ -72,17 +72,28 @@ func NewHttpController(repository repository, supplyChainRepository supplyChainR
 	}
 }
 
-func (a *httpController) VerifyWithImageName(c core.Context) error {
-	// get the image name
-	imageName := c.Param("imageName")
-	digest := c.Param("digest")
+func (a *httpController) VerifySupplyChain(ctx core.Context) error {
+	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainId")
+	digest := ctx.QueryParam("digest")
 
-	err := a.inTotoVerifierService.VerifyWithImageName(imageName, digest)
-	if err != nil {
-		return echo.NewHTTPError(400, "could not verify supply chain").WithInternal(err)
+	// check if image name or supply chain id
+	if strings.Count(imageNameOrSupplyChainID, "-") == 2 {
+		// its an image name main-<digest>-<timestamp>
+		err := a.inTotoVerifierService.VerifyWithImageName(imageNameOrSupplyChainID, digest)
+		if err != nil {
+			slog.Info("could not verify supply chain (image name to supply chain id conversion)", "supplyChainId", imageNameOrSupplyChainID)
+			return echo.NewHTTPError(400, "could not verify supply chain").WithInternal(err)
+		}
+	} else {
+		err := a.inTotoVerifierService.VerifyWithSupplyChainID(imageNameOrSupplyChainID)
+		if err != nil {
+			slog.Info("could not verify supply chain", "supplyChainId", imageNameOrSupplyChainID)
+			return echo.NewHTTPError(400, "could not verify supply chain").WithInternal(err)
+		}
 	}
 
-	return c.JSON(200, "verified")
+	slog.Info("verified supply chain", "supplyChainId", imageNameOrSupplyChainID)
+	return ctx.NoContent(200)
 }
 
 func (a *httpController) Create(c core.Context) error {

@@ -485,7 +485,7 @@ func Start(db core.DB) {
 
 	assetRouter.GET("/in-toto/:supplyChainId/", intotoController.Read)
 
-	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifyWithImageName)
+	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
 	flawRouter := assetRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)
