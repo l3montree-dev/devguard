@@ -99,6 +99,8 @@ func (a *patchRequest) applyToModel(
 }
 
 type assetMetrics struct {
-	// keyed by the scanType
-	EnabledScanners []string `json:"enabledScanners"`
+	EnabledContainerScanning       bool    `json:"enabledContainerScanning"`
+	EnabledImageSigning            bool    `json:"enabledImageSigning"`
+	VerifiedSupplyChainsPercentage float64 `json:"verifiedSupplyChainsPercentage"`
+	EnabledSCA                     bool    `json:"enabledSCA"`
 }

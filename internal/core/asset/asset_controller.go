@@ -41,21 +41,27 @@ type assetService interface {
 	BuildVeX(asset models.Asset, version, orgName string, components []models.ComponentDependency, flaws []models.Flaw) *cdx.BOM
 }
 
+type supplyChainRepository interface {
+	PercentageOfVerifiedSupplyChains(assetID uuid.UUID) (float64, error)
+}
+
 type httpController struct {
 	assetRepository       repository
 	assetComponentsLoader assetComponentsLoader
 
-	flawRepository flawRepository
-	assetService   assetService
+	flawRepository        flawRepository
+	assetService          assetService
+	supplyChainRepository supplyChainRepository
 }
 
-func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, flawRepository flawRepository, assetService assetService) *httpController {
+func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, flawRepository flawRepository, assetService assetService, supplyChainRepository supplyChainRepository) *httpController {
 	return &httpController{
 		assetRepository:       repository,
 		assetComponentsLoader: assetComponentsLoader,
 
-		flawRepository: flawRepository,
-		assetService:   assetService,
+		flawRepository:        flawRepository,
+		assetService:          assetService,
+		supplyChainRepository: supplyChainRepository,
 	}
 }
 
@@ -165,8 +171,30 @@ func (a *httpController) Metrics(c core.Context) error {
 		return err
 	}
 
+	var enabledSca bool = false
+	var enabledContainerScanning bool = false
+	var enabledImageSigning bool = asset.SigningPubKey != nil
+
+	for _, scannerId := range scannerIds {
+		if scannerId == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca" {
+			enabledSca = true
+		}
+		if scannerId == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning" {
+			enabledContainerScanning = true
+		}
+	}
+
+	// check if in-toto is enabled
+	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(asset.ID)
+	if err != nil {
+		return err
+	}
+
 	return c.JSON(200, assetMetrics{
-		EnabledScanners: scannerIds,
+		EnabledContainerScanning:       enabledContainerScanning,
+		EnabledSCA:                     enabledSca,
+		EnabledImageSigning:            enabledImageSigning,
+		VerifiedSupplyChainsPercentage: verifiedSupplyChainsPercentage,
 	})
 }
 

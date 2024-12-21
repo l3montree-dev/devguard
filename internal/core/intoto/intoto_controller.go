@@ -156,6 +156,7 @@ func (a *httpController) Create(c core.Context) error {
 				SupplyChainID:           strings.TrimSpace(req.SupplyChainID),
 				SupplyChainOutputDigest: req.SupplyChainOutputDigest,
 				Verified:                verified,
+				AssetID:                 asset.GetID(),
 			}
 
 			// save the digest

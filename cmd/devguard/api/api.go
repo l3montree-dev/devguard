@@ -341,7 +341,7 @@ func Start(db core.DB) {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
-	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService)
+	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService, supplyChainRepository)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetService, statisticsService)
 
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
