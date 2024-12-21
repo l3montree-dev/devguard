@@ -146,14 +146,15 @@ func NewInTotoRunCommand() *cobra.Command {
 		Use:  "run",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
-			s.Suffix = " Devguard: Recording file hashes for supply chain security"
-			s.Start()
 
 			step, supplyChainId, key, materials, products, ignore, err := parseCommand(cmd)
 			if err != nil {
 				return errors.Wrap(err, "failed to parse command")
 			}
+
+			s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
+			s.Suffix = " Devguard: Recording file hashes for supply chain security"
+			s.Start()
 
 			metadata, err := toto.InTotoRun(step, ".", materials, products, []string{}, key, []string{"sha256"}, ignore, []string{}, true, true, true)
 			if err != nil {
@@ -182,7 +183,16 @@ func NewInTotoRunCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("apiUrl", "", "The devguard api url")
+	cmd.Flags().String("apiUrl", "", "The URL of the devguard API")
+	err := cmd.MarkFlagRequired("apiUrl")
+	if err != nil {
+		slog.Error("failed to mark flag as required", "flag", "apiUrl", "err", err)
+	}
+	cmd.Flags().String("step", "", "The step to run")
+	err = cmd.MarkFlagRequired("step")
+	if err != nil {
+		slog.Error("failed to mark flag as required", "flag", "step", "err", err)
+	}
 	cmd.Flags().String("supplyChainOutputDigest", "", "If defined, sends this digest to devguard. This should be the digest of the whole supply chain.")
 
 	return cmd

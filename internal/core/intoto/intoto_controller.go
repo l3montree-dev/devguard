@@ -50,8 +50,8 @@ type patRepository interface {
 }
 
 type inTotoVerifierService interface {
-	VerifySupplyChainWithOutputDigest(supplyChainID string, digest string) error
-	VerifySupplyChain(supplyChainID string) error
+	VerifySupplyChainWithOutputDigest(supplyChainID string, digest string) (bool, error)
+	VerifySupplyChain(supplyChainID string) (bool, error)
 }
 
 type httpController struct {
@@ -76,10 +76,15 @@ func (a *httpController) VerifySupplyChain(ctx core.Context) error {
 	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainId")
 	digest := ctx.QueryParam("digest")
 
-	err := a.inTotoVerifierService.VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID, digest)
+	valid, err := a.inTotoVerifierService.VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID, digest)
 	if err != nil {
+		slog.Error("could not verify supply chain", "err", err)
+		return echo.NewHTTPError(500, "could not verify supply chain").WithInternal(err)
+	}
+
+	if !valid {
 		slog.Info("could not verify supply chain", "supplyChainId", imageNameOrSupplyChainID)
-		return echo.NewHTTPError(400, "could not verify supply chain").WithInternal(err)
+		return echo.NewHTTPError(400, "could not verify supply chain")
 	}
 
 	slog.Info("verified supply chain", "supplyChainId", imageNameOrSupplyChainID)
@@ -93,33 +98,33 @@ func (a *httpController) Create(c core.Context) error {
 	}
 
 	// check if valid - get the signed pat
-	pat, err := a.patRepository.GetByFingerprint(c.Request().Header.Get("X-Fingerprint"))
-	if err != nil {
-		return echo.NewHTTPError(401, "could not find pat").WithInternal(err)
+	pat, valid := a.patRepository.GetByFingerprint(c.Request().Header.Get("X-Fingerprint"))
+	if valid != nil {
+		return echo.NewHTTPError(401, "could not find pat").WithInternal(valid)
 	}
 
 	tmpFileName := uuid.NewString()
 	// write the link for a second to a temp file
-	tmpfile, err := os.CreateTemp("", tmpFileName)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not create temp file").WithInternal(err)
+	tmpfile, valid := os.CreateTemp("", tmpFileName)
+	if valid != nil {
+		return echo.NewHTTPError(500, "could not create temp file").WithInternal(valid)
 	}
 	defer os.Remove(tmpfile.Name())
 
-	_, err = tmpfile.Write([]byte(req.Payload))
-	if err != nil {
-		return echo.NewHTTPError(500, "could not write to temp file").WithInternal(err)
+	_, valid = tmpfile.Write([]byte(req.Payload))
+	if valid != nil {
+		return echo.NewHTTPError(500, "could not write to temp file").WithInternal(valid)
 	}
 
 	// check if the pat matches the signature of the in-toto link
-	metadata, err := toto.LoadMetadata(tmpfile.Name())
-	if err != nil {
-		return echo.NewHTTPError(500, "could not load metadata").WithInternal(err)
+	metadata, valid := toto.LoadMetadata(tmpfile.Name())
+	if valid != nil {
+		return echo.NewHTTPError(500, "could not load metadata").WithInternal(valid)
 	}
 
-	pubKey, err := hexPublicKeyToInTotoKey(pat.PubKey)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not convert public key").WithInternal(err)
+	pubKey, valid := hexPublicKeyToInTotoKey(pat.PubKey)
+	if valid != nil {
+		return echo.NewHTTPError(500, "could not convert public key").WithInternal(valid)
 	}
 
 	if err := metadata.VerifySignature(pubKey); err != nil {
@@ -127,15 +132,6 @@ func (a *httpController) Create(c core.Context) error {
 	}
 
 	asset := core.GetAsset(c)
-
-	var verified bool
-	if req.SupplyChainOutputDigest != "" {
-		err = a.inTotoVerifierService.VerifySupplyChain(req.SupplyChainID)
-		if err != nil {
-			slog.Error("could not verify supply chain", "err", err)
-		}
-		verified = true
-	}
 
 	link := models.InTotoLink{
 		AssetID:       asset.GetID(),
@@ -146,26 +142,29 @@ func (a *httpController) Create(c core.Context) error {
 		Filename:      req.Filename,
 	}
 
-	supplyChain := models.SupplyChain{
-		SupplyChainID:           strings.TrimSpace(req.SupplyChainID),
-		SupplyChainOutputDigest: req.SupplyChainOutputDigest,
-		Verified:                verified,
+	valid = a.linkRepository.Save(nil, &link)
+	if valid != nil {
+		return echo.NewHTTPError(500, "could not save in-toto link").WithInternal(valid)
 	}
 
-	err = a.linkRepository.Transaction(func(tx core.DB) error {
-		err = a.linkRepository.Save(tx, &link)
+	if req.SupplyChainOutputDigest != "" {
+		verified, err := a.inTotoVerifierService.VerifySupplyChain(req.SupplyChainID)
 		if err != nil {
-			return echo.NewHTTPError(500, "could not create link").WithInternal(err)
-		}
+			slog.Error("could not verify supply chain", "err", err)
+		} else {
+			supplyChain := models.SupplyChain{
+				SupplyChainID:           strings.TrimSpace(req.SupplyChainID),
+				SupplyChainOutputDigest: req.SupplyChainOutputDigest,
+				Verified:                verified,
+			}
 
-		// save the digest
-		err = a.supplyChainRepository.Save(tx, &supplyChain)
-		if err != nil {
-			return echo.NewHTTPError(500, "could not create supply chain digest").WithInternal(err)
+			// save the digest
+			err = a.supplyChainRepository.Save(nil, &supplyChain)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not create supply chain").WithInternal(valid)
+			}
 		}
-
-		return nil
-	})
+	}
 
 	return c.JSON(200, link)
 }

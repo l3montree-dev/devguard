@@ -53,7 +53,7 @@ func NewInTotoService(rbacProvider accesscontrol.RBACProvider, inTotoLinkReposit
 	}
 }
 
-func (i inTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID string, digest string) error {
+func (i inTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID string, digest string) (bool, error) {
 	var supplyChainID string
 	var err error
 	// check if it is a supply chain id already
@@ -62,7 +62,7 @@ func (i inTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainI
 		// get the supply chain id from the image name
 		supplyChainID, err = getSupplyChainIDFromImageName(imageNameOrSupplyChainID)
 		if err != nil {
-			return errors.Wrap(err, "could not get supply chain id")
+			return false, errors.Wrap(err, "could not get supply chain id")
 		}
 	} else {
 		supplyChainID = imageNameOrSupplyChainID
@@ -70,36 +70,36 @@ func (i inTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainI
 
 	supplyChains, err := i.supplyChainRepository.FindBySupplyChainID(supplyChainID)
 	if err != nil {
-		return errors.Wrap(err, "could not find supply chain digests")
+		return false, errors.Wrap(err, "could not find supply chain digests")
 	}
 
 	for _, supplyChain := range supplyChains {
 		if supplyChain.Verified && supplyChain.SupplyChainOutputDigest == digest {
-			return nil
+			return true, nil
 		}
 	}
 
-	return fmt.Errorf("could not find verified supply chain")
+	return false, nil
 }
 
-func (i inTotoService) VerifySupplyChain(supplyChainID string) error {
+func (i inTotoService) VerifySupplyChain(supplyChainID string) (bool, error) {
 
 	// get the supply chain links
 	supplyChainLinks, err := i.inTotoLinkRepository.FindBySupplyChainID(supplyChainID)
 	if err != nil {
-		return errors.Wrap(err, "could not find supply chain links")
+		return false, errors.Wrap(err, "could not find supply chain links")
 	}
 
 	// get assetID from links
 	assetID, err := getAssetIdFromLinks(supplyChainLinks)
 	if err != nil {
-		return errors.Wrap(err, "could not get assetID from links")
+		return false, errors.Wrap(err, "could not get assetID from links")
 	}
 
 	//get projectID and organizationID from assetID
 	projectID, organizationID, err := getProjectIdAndOrganizationIDFromAssetId(assetID, i.projectRepository)
 	if err != nil {
-		return errors.Wrap(err, "could not get projectID and organizationID from assetID")
+		return false, errors.Wrap(err, "could not get projectID and organizationID from assetID")
 	}
 
 	// get the access control for the organization
@@ -108,19 +108,19 @@ func (i inTotoService) VerifySupplyChain(supplyChainID string) error {
 	// get all userUuids of the project
 	userUuids, err := getProjectUsersID(projectID, access)
 	if err != nil {
-		return errors.Wrap(err, "could not get project users")
+		return false, errors.Wrap(err, "could not get project users")
 	}
 
 	// get all pats which are part of the asset
 	pats, err := i.patRepository.FindByUserIDs(userUuids)
 	if err != nil {
-		return errors.Wrap(err, "could not get pats")
+		return false, errors.Wrap(err, "could not get pats")
 	}
 
 	// convert the pats to in-toto keys
 	keyIds, totoKeys, err := convertPatsToInTotoKeys(pats)
 	if err != nil {
-		return errors.Wrap(err, "could not convert pats to in-toto keys")
+		return false, errors.Wrap(err, "could not convert pats to in-toto keys")
 	}
 
 	// create a new layout
@@ -130,25 +130,25 @@ func (i inTotoService) VerifySupplyChain(supplyChainID string) error {
 	// it is not very useful here ,but we do need it because the in-toto library requires it
 	signKey, layoutKey, err := getIntotoPairKey()
 	if err != nil {
-		return errors.Wrap(err, "could not get in-toto pair key")
+		return false, errors.Wrap(err, "could not get in-toto pair key")
 	}
 
 	// sign the layout
 	err = layout.Sign(signKey)
 	if err != nil {
-		return errors.Wrap(err, "could not sign layout")
+		return false, errors.Wrap(err, "could not sign layout")
 	}
 
 	// load the metadata from the layout
 	rootLayout, err := loadMetadataFromLayout(layout)
 	if err != nil {
-		return errors.Wrap(err, "could not load metadata")
+		return false, errors.Wrap(err, "could not load metadata")
 	}
 
 	// get the dir with the links files
 	linkDir, err := createDirWithLinkFiles(supplyChainLinks)
 	if err != nil {
-		return errors.Wrap(err, "could not create dir with link files")
+		return false, errors.Wrap(err, "could not create dir with link files")
 	}
 
 	// defer the removal of the link dir
@@ -157,10 +157,10 @@ func (i inTotoService) VerifySupplyChain(supplyChainID string) error {
 	// verify the in-toto
 	err = verifyInToto(rootLayout, linkDir, layoutKey)
 	if err != nil {
-		return errors.Wrap(err, "could not verify in-toto")
+		return false, nil
 	}
 
-	return nil
+	return true, nil
 }
 
 func getSupplyChainIDFromImageName(imageName string) (string, error) {
