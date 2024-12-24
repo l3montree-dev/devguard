@@ -1,4 +1,4 @@
-package client
+package devguard
 
 import (
 	"fmt"
@@ -8,15 +8,15 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 )
 
-type DevGuardClient struct {
+type HTTPClient struct {
 	httpClient *http.Client
 
 	token  string
 	apiUrl string
 }
 
-func NewDevGuardClient(token, apiUrl string) DevGuardClient {
-	return DevGuardClient{
+func NewHTTPClient(token, apiUrl string) HTTPClient {
+	return HTTPClient{
 		token:  token,
 		apiUrl: apiUrl,
 		httpClient: &http.Client{
@@ -27,7 +27,7 @@ func NewDevGuardClient(token, apiUrl string) DevGuardClient {
 	}
 }
 
-func (c DevGuardClient) Do(req *http.Request) (*http.Response, error) {
+func (c HTTPClient) Do(req *http.Request) (*http.Response, error) {
 	err := pat.SignRequest(c.token, req)
 	if err != nil {
 		return nil, err

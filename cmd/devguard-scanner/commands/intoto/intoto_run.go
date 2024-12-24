@@ -29,9 +29,10 @@ import (
 
 	"github.com/briandowns/spinner"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/l3montree-dev/devguard/client"
+
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -129,7 +130,7 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string
 	}
 
 	// send the request
-	resp, err := client.NewDevGuardClient(token, apiUrl).Do(req)
+	resp, err := devguard.NewHTTPClient(token, apiUrl).Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to send request")
 	}

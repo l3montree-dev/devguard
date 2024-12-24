@@ -29,13 +29,14 @@ import (
 	"path"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/client"
+
 	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/spf13/cobra"
 )
 
 func uploadPublicKey(ctx context.Context, token, apiUrl, publicKeyPath, assetName string) error {
-	devGuardClient := client.NewDevGuardClient(token, apiUrl)
+	devGuardClient := devguard.NewHTTPClient(token, apiUrl)
 
 	var body map[string]string = make(map[string]string)
 

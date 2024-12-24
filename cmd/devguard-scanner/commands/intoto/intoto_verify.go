@@ -25,7 +25,8 @@ import (
 	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/l3montree-dev/devguard/client"
+	"github.com/l3montree-dev/devguard/pkg/devguard"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -83,7 +84,7 @@ func verify(cmd *cobra.Command, args []string) error {
 	}
 
 	// download the layout
-	c := client.NewDevGuardClient(token, apiUrl)
+	c := devguard.NewHTTPClient(token, apiUrl)
 
 	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, apiUrl+"/api/v1/organizations/"+assetName+"/in-toto/root.layout.json", nil)
 	if err != nil {

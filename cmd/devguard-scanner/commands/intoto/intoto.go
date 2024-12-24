@@ -26,7 +26,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/client"
+	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/zalando/go-keyring"
@@ -52,7 +52,7 @@ func storeTokenInKeyring(assetName, token string) error {
 	return keyring.Set(service, user, token)
 }
 
-func downloadSupplyChainLinks(ctx context.Context, c client.DevGuardClient, linkDir, apiUrl, assetName, supplyChainId string) error {
+func downloadSupplyChainLinks(ctx context.Context, c devguard.HTTPClient, linkDir, apiUrl, assetName, supplyChainId string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/%s/", apiUrl, assetName, supplyChainId), nil)
 
 	if err != nil {
@@ -155,7 +155,7 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 				return errors.New("token is required")
 			}
 
-			c := client.NewDevGuardClient(token, apiUrl)
+			c := devguard.NewHTTPClient(token, apiUrl)
 
 			return downloadSupplyChainLinks(cmd.Context(), c, "links", apiUrl, assetName, supplyChainId)
 		},
