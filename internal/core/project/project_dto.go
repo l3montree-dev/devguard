@@ -25,15 +25,22 @@ type CreateRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 
-	ParentID *uuid.UUID `json:"parentId"` // if created as a child project
+	ParentID *uuid.UUID         `json:"parentId"` // if created as a child project
+	Type     models.ProjectType `json:"type"`
 }
 
 func (p *CreateRequest) ToModel() models.Project {
+	// check if valid type
+	if p.Type != models.ProjectTypeDefault && p.Type != models.ProjectTypeKubernetesNamespace {
+		p.Type = models.ProjectTypeDefault
+	}
+
 	return models.Project{Name: p.Name,
 		Slug:        slug.Make(p.Name),
 		Description: p.Description,
 
 		ParentID: p.ParentID,
+		Type:     p.Type,
 	}
 }
 

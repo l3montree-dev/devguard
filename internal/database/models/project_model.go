@@ -4,6 +4,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type ProjectType string
+
+const (
+	ProjectTypeDefault             ProjectType = "default"
+	ProjectTypeKubernetesNamespace ProjectType = "kubernetesNamespace"
+)
+
 type Project struct {
 	Model
 	Name           string    `json:"name" gorm:"type:text"`
@@ -17,6 +24,8 @@ type Project struct {
 	Children []Project  `json:"-" gorm:"foreignKey:ParentID;constraint:OnDelete:CASCADE;"` // allowing nested projects
 	ParentID *uuid.UUID `json:"parentId" gorm:"type:uuid;"`
 	Parent   *Project   `json:"parent" gorm:"foreignKey:ParentID;constraint:OnDelete:CASCADE;"`
+
+	Type ProjectType `json:"type" gorm:"type:text;default:'default';"`
 }
 
 func (m Project) TableName() string {
