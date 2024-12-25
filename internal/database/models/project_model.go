@@ -13,6 +13,9 @@ type Project struct {
 	Description    string    `json:"description" gorm:"type:text"`
 
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
+
+	Children []Project  `json:"children" gorm:"foreignKey:ParentID;constraint:OnDelete:CASCADE;"` // allowing nested projects
+	ParentID *uuid.UUID `json:"parentId" gorm:"type:uuid;"`
 }
 
 func (m Project) TableName() string {
