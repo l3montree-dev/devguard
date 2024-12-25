@@ -28,7 +28,19 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 		projectIDs = append(projectIDs, projectID)
 	}
 
-	projects, err := s.projectRepository.List(projectIDs, core.GetTenant(c).GetID())
+	// check if parentId is set
+	parentId := c.QueryParam("parentId")
+	var parentID *uuid.UUID = nil
+	if parentId != "" {
+		tmp, err := uuid.Parse(parentId)
+		if err != nil {
+			return nil, err
+		}
+
+		parentID = &tmp
+	}
+
+	projects, err := s.projectRepository.List(projectIDs, parentID, core.GetTenant(c).GetID())
 
 	if err != nil {
 		return nil, err

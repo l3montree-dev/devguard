@@ -16,6 +16,7 @@
 package project
 
 import (
+	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
@@ -23,12 +24,16 @@ import (
 type CreateRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
+
+	ParentID *uuid.UUID `json:"parentId"` // if created as a child project
 }
 
 func (p *CreateRequest) ToModel() models.Project {
 	return models.Project{Name: p.Name,
 		Slug:        slug.Make(p.Name),
 		Description: p.Description,
+
+		ParentID: p.ParentID,
 	}
 }
 

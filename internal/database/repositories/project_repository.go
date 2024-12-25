@@ -4,6 +4,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type projectRepository struct {
@@ -38,17 +39,67 @@ func (g *projectRepository) GetProjectIdByAssetID(assetID uuid.UUID) (uuid.UUID,
 	err := g.db.Model(&models.Asset{}).Select("project_id").Where("id = ?", assetID).Row().Scan(&projectID)
 	return projectID, err
 }
-func (g *projectRepository) ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error) {
-	var t models.Project
-	err := g.db.Where("slug = ? AND organization_id = ?", slug, organizationID).First(&t).Error
-	return t, err
+func (g *projectRepository) ReadBySlug(orgID uuid.UUID, slug string) (models.Project, error) {
+	var flatProjects []models.Project
+	err := g.db.Raw(`
+        WITH RECURSIVE parents AS (
+            SELECT *
+            FROM projects
+            WHERE organization_id = ? AND slug = ?
+            UNION ALL
+            SELECT p.*
+            FROM projects p
+            INNER JOIN parents c ON p.id = c.parent_id
+        )
+        SELECT * FROM parents
+    `, orgID, slug).Scan(&flatProjects).Error
+	if err != nil {
+		return models.Project{}, err
+	}
+
+	// flatProjects is a slice of all matching + ancestor records.
+	nested := nestProjects(slug, flatProjects)
+	return nested, nil
 }
+
+// nestProjects transforms a flat list of projects into a single chain
+// from child up to the root parent.
+func nestProjects(slug string, projects []models.Project) models.Project {
+	root, _ := utils.Find(
+		projects,
+		func(m models.Project) bool { return m.Slug == slug },
+	)
+
+	// Index by ID for quick lookup.
+	byID := make(map[uuid.UUID]*models.Project)
+	for i := range projects {
+		// copy pointer
+		p := &projects[i]
+		byID[p.ID] = p
+	}
+
+	current := &root
+	// start at the root and set parent until we reach the top.
+	for current.ParentID != nil {
+		// set the parent
+		current.Parent = byID[*current.ParentID]
+		// move to the parent
+		current = current.Parent
+	}
+
+	return root
+}
+
 func (g *projectRepository) Update(tx core.DB, project *models.Project) error {
 	return g.db.Save(project).Error
 }
 
-func (g *projectRepository) List(projectIDs []uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {
+func (g *projectRepository) List(projectIDs []uuid.UUID, parentId *uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
-	err := g.db.Where("id IN ?", projectIDs).Or("organization_id = ? AND is_public = true", orgID).Find(&projects).Error
+	if parentId != nil {
+		err := g.db.Where("id IN ? AND parent_id = ?", projectIDs, parentId).Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentId).Find(&projects).Error
+		return projects, err
+	}
+	err := g.db.Where("id IN ? AND parent_id IS NULL", projectIDs).Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID).Find(&projects).Error
 	return projects, err
 }

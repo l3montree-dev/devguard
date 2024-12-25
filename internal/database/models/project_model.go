@@ -14,8 +14,9 @@ type Project struct {
 
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
-	Children []Project  `json:"children" gorm:"foreignKey:ParentID;constraint:OnDelete:CASCADE;"` // allowing nested projects
+	Children []Project  `json:"-" gorm:"foreignKey:ParentID;constraint:OnDelete:CASCADE;"` // allowing nested projects
 	ParentID *uuid.UUID `json:"parentId" gorm:"type:uuid;"`
+	Parent   *Project   `json:"parent" gorm:"foreignKey:ParentID;constraint:OnDelete:CASCADE;"`
 }
 
 func (m Project) TableName() string {

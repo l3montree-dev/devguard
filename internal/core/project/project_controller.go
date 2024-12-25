@@ -33,7 +33,7 @@ type projectRepository interface {
 	Update(tx core.DB, project *models.Project) error
 	Delete(tx core.DB, projectID uuid.UUID) error
 	Create(tx core.DB, project *models.Project) error
-	List(projectIds []uuid.UUID, orgId uuid.UUID) ([]models.Project, error)
+	List(projectIds []uuid.UUID, parentId *uuid.UUID, orgId uuid.UUID) ([]models.Project, error)
 }
 
 type assetRepository interface {
@@ -232,6 +232,7 @@ func (p *Controller) bootstrapProject(c core.Context, project models.Project) er
 		return err
 	}
 
+	// give the admin of a project all member permissions
 	if err := rbac.InheritProjectRole("admin", "member", project.ID.String()); err != nil {
 		return err
 	}
@@ -270,6 +271,32 @@ func (p *Controller) bootstrapProject(c core.Context, project models.Project) er
 	}); err != nil {
 		return err
 	}
+
+	// check if there is a parent project - if so, we need to further inherit the roles
+	if project.ParentID != nil {
+		// make a parent project admin an admin of the child project
+		if err := rbac.InheritProjectRolesAcrossProjects(accesscontrol.ProjectRole{
+			Role:    "admin",
+			Project: (*project.ParentID).String(),
+		}, accesscontrol.ProjectRole{
+			Role:    "admin",
+			Project: project.ID.String(),
+		}); err != nil {
+			return err
+		}
+
+		// make a parent project member a member of the child project
+		if err := rbac.InheritProjectRolesAcrossProjects(accesscontrol.ProjectRole{
+			Role:    "member",
+			Project: (*project.ParentID).String(),
+		}, accesscontrol.ProjectRole{
+			Role:    "member",
+			Project: project.ID.String(),
+		}); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
