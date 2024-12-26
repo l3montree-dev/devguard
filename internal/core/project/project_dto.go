@@ -16,9 +16,12 @@
 package project
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type CreateRequest struct {
@@ -58,6 +61,7 @@ type patchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 	IsPublic    *bool   `json:"isPublic"`
+	Archive     *bool   `json:"archive"`
 }
 
 func (p *patchRequest) applyToModel(project *models.Project) bool {
@@ -74,6 +78,11 @@ func (p *patchRequest) applyToModel(project *models.Project) bool {
 
 	if p.IsPublic != nil {
 		project.IsPublic = *p.IsPublic
+		updated = true
+	}
+
+	if p.Archive != nil {
+		project.Archived = utils.Ptr(time.Now())
 		updated = true
 	}
 
