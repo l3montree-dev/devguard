@@ -46,6 +46,7 @@ func InitLogger() {
 	slog.SetDefault(slog.New(
 		tint.NewHandler(w, &tint.Options{
 			Level:      slog.LevelDebug,
+			AddSource:  true,
 			TimeFormat: time.Kitchen,
 		}),
 	))

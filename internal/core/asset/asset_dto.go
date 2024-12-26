@@ -1,12 +1,9 @@
 package asset
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type createRequest struct {
@@ -58,8 +55,6 @@ type patchRequest struct {
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
-
-	Archive *bool `json:"archive"`
 }
 
 func (a *patchRequest) applyToModel(
@@ -98,13 +93,6 @@ func (a *patchRequest) applyToModel(
 		} else {
 			asset.RepositoryName = a.RepositoryName
 		}
-	}
-
-	if a.Archive != nil {
-		updated = true
-		asset.Archived = utils.Ptr(
-			time.Now(),
-		)
 	}
 
 	return updated

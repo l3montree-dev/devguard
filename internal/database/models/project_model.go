@@ -1,8 +1,6 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -28,8 +26,6 @@ type Project struct {
 	Parent   *Project   `json:"parent" gorm:"foreignKey:ParentID;constraint:OnDelete:CASCADE;"`
 
 	Type ProjectType `json:"type" gorm:"type:text;default:'default';"`
-
-	Archived *time.Time `json:"archived" gorm:"default:null;"`
 }
 
 func (m Project) TableName() string {
