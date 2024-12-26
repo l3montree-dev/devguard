@@ -22,10 +22,11 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 	projectsIdsStr := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
 
 	// extract the project ids from the roles
-	projectIDs := make([]uuid.UUID, 0)
+	projectIDs := make(map[uuid.UUID]struct{})
 	for _, project := range projectsIdsStr {
 		projectID := uuid.MustParse(project)
-		projectIDs = append(projectIDs, projectID)
+
+		projectIDs[projectID] = struct{}{}
 	}
 
 	// check if parentId is set
@@ -40,7 +41,12 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 		parentID = &tmp
 	}
 
-	projects, err := s.projectRepository.List(projectIDs, parentID, core.GetTenant(c).GetID())
+	projectIDsSlice := make([]uuid.UUID, 0, len(projectIDs))
+	for projectID := range projectIDs {
+		projectIDsSlice = append(projectIDsSlice, projectID)
+	}
+
+	projects, err := s.projectRepository.List(projectIDsSlice, parentID, core.GetTenant(c).GetID())
 
 	if err != nil {
 		return nil, err

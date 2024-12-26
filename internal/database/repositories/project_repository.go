@@ -97,7 +97,7 @@ func (g *projectRepository) Update(tx core.DB, project *models.Project) error {
 func (g *projectRepository) List(projectIDs []uuid.UUID, parentId *uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
 	if parentId != nil {
-		err := g.db.Where("id IN ? AND parent_id = ?", projectIDs, parentId).Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentId).Find(&projects).Error
+		err := g.db.Debug().Where("id IN ? AND parent_id = ?", projectIDs, parentId).Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentId).Find(&projects).Error
 		return projects, err
 	}
 	err := g.db.Where("id IN ? AND parent_id IS NULL", projectIDs).Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID).Find(&projects).Error

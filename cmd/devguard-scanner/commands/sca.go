@@ -93,49 +93,6 @@ func generateSBOM(path string) (*os.File, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, stderr.String())
 	}
-	// trivy generates the cyclonedx spec in version 1.6, while cdxgen generates version 1.5
-	jsonData, err := os.ReadFile(filepath.Join(getDirFromPath(path), filename))
-	if err != nil {
-		return nil, err
-	}
-	// unmashal the json data
-	var data map[string]interface{}
-	err = json.Unmarshal(jsonData, &data)
-	if err != nil {
-		return nil, err
-	}
-	// change the spec version to 1.5
-	data["specVersion"] = "1.5"
-	// marshal the data back to json
-	newJsonData, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-	// write the data back to the file
-	err = os.WriteFile(filepath.Join(getDirFromPath(path), filename), newJsonData, 0600)
-	if err != nil {
-		return nil, err
-	}
-	// merge the two files
-	// mergeCommand := exec.Command("cyclonedx", "merge", "--hierarchical", "--name", "devguard", "--version", "v1.0.0", "--input-files", filename, filename+".1", "--input-format", "json", "--output-format", "json", "--output-file", strings.Replace(filename, ".json", "", 1)+".merged.json")
-	/*mergeCommand.Dir = getDirFromPath(path)
-
-	err = mergeCommand.Run()
-	if err != nil {
-		return nil, err
-	}
-
-	// remove the files
-
-	err = os.Remove(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	err = os.Remove(filename + ".1")
-	if err != nil {
-		return nil, err
-	}*/
 
 	// open the file and return the path
 	return os.Open(filepath.Join(getDirFromPath(path), filename))

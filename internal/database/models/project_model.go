@@ -9,6 +9,7 @@ type ProjectType string
 const (
 	ProjectTypeDefault             ProjectType = "default"
 	ProjectTypeKubernetesNamespace ProjectType = "kubernetesNamespace"
+	ProjectTypeKubernetesCluster   ProjectType = "kubernetesCluster"
 )
 
 type Project struct {

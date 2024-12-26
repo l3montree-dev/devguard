@@ -3,7 +3,7 @@ module github.com/l3montree-dev/devguard
 go 1.23.1
 
 require (
-	github.com/CycloneDX/cyclonedx-go v0.8.0
+	github.com/CycloneDX/cyclonedx-go v0.9.2
 	github.com/bradleyfalzon/ghinstallation/v2 v2.11.0
 	github.com/briandowns/spinner v1.23.1
 	github.com/casbin/casbin/v2 v2.89.0
@@ -26,7 +26,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sigstore/sigstore v1.8.9
 	github.com/spf13/cobra v1.8.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/swag v1.16.3
 	github.com/xanzy/go-gitlab v0.109.0
 	github.com/yaronf/httpsign v0.3.1
