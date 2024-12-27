@@ -27,6 +27,9 @@ type Project struct {
 	Parent   *Project   `json:"parent" gorm:"foreignKey:ParentID;constraint:OnDelete:CASCADE;"`
 
 	Type ProjectType `json:"type" gorm:"type:text;default:'default';"`
+
+	RepositoryID   *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
+	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
 }
 
 func (m Project) TableName() string {
