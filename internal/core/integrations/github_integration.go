@@ -437,7 +437,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		asset := core.GetAsset(event.Ctx)
 		repoId, err := core.GetRepositoryID(event.Ctx)
 		if err != nil {
-			return err
+			return nil
 		}
 
 		if !strings.HasPrefix(repoId, "github:") {

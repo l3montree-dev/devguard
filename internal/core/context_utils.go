@@ -138,6 +138,10 @@ func SetAsset(c Context, asset models.Asset) {
 	c.Set("asset", asset)
 }
 
+func SetProject(c Context, project models.Project) {
+	c.Set("project", project)
+}
+
 func GetProject(c Context) models.Project {
 	return c.Get("project").(models.Project)
 }

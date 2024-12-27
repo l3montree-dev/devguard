@@ -68,6 +68,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 		core.SetAsset(ctx, models.Asset{})
+		core.SetProject(ctx, models.Project{})
 		ctx.SetParamNames("flawId")
 		ctx.SetParamValues("1")
 
@@ -107,6 +108,8 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetOrgSlug(ctx, "test")
 		core.SetProjectSlug(ctx, "test")
 		core.SetAssetSlug(ctx, "test")
+		core.SetProject(ctx, models.Project{})
+
 		ctx.SetParamNames("flawId")
 		ctx.SetParamValues("1")
 
