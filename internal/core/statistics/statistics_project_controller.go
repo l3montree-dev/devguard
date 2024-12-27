@@ -14,17 +14,64 @@ import (
 func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
-	results, err := c.getProjectRiskDistribution(project.ID)
+	// get direct children
+	childProjects, err := c.projectService.GetDirectChildProjects(project.ID)
+
+	// get the risk distribution for this project
+	assets, err := c.assetRepository.GetByProjectID(project.ID)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch assets by project id")
+	}
+
+	group := utils.ErrGroup[models.AssetRiskDistribution](10)
+	for _, asset := range assets {
+		group.Go(func() (models.AssetRiskDistribution, error) {
+			return c.statisticsService.GetAssetRiskDistribution(asset.ID, asset.Name)
+		})
+	}
+
+	projectResults, err := group.WaitAndCollect()
 	if err != nil {
 		return err
 	}
 
-	return ctx.JSON(200, results)
+	for _, childProject := range childProjects {
+		res, err := c.getProjectRiskDistribution(childProject.ID)
+		if err != nil {
+			return errors.Wrap(err, "could not fetch assets by project id")
+		}
+
+		// aggregate the results
+		projectResults = append(projectResults, aggregateRiskDistribution(res, childProject.ID, childProject.Name))
+	}
+
+	return ctx.JSON(200, projectResults)
+}
+
+func (c *httpController) getChildrenProjectIDs(projectID uuid.UUID) ([]uuid.UUID, error) {
+	projects, err := c.projectService.RecursivelyGetChildProjects(projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	projectIDs := make([]uuid.UUID, 0)
+	for _, project := range projects {
+		projectIDs = append(projectIDs, project.ID)
+	}
+
+	projectIDs = append(projectIDs, projectID)
+
+	return projectIDs, nil
 }
 
 func (c *httpController) getProjectRiskDistribution(projectID uuid.UUID) ([]models.AssetRiskDistribution, error) {
 	// fetch all assets
-	assets, err := c.assetRepository.GetByProjectID(projectID)
+	projectIds, err := c.getChildrenProjectIDs(projectID)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not fetch child projects")
+	}
+
+	assets, err := c.assetRepository.GetByProjectIDs(projectIds)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch assets by project id")
 	}
@@ -68,8 +115,13 @@ func (c *httpController) GetAverageProjectFixingTime(ctx core.Context) error {
 }
 
 func (c *httpController) getProjectAverageFixingTime(projectID uuid.UUID, severity string) ([]time.Duration, error) {
+	projectIDs, err := c.getChildrenProjectIDs(projectID)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not fetch child projects")
+	}
+
 	// fetch all assets
-	assets, err := c.assetRepository.GetByProjectID(projectID)
+	assets, err := c.assetRepository.GetByProjectIDs(projectIDs)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch assets by project id")
 	}
@@ -121,7 +173,30 @@ func (c *httpController) GetProjectRiskHistory(ctx core.Context) error {
 		return ctx.JSON(500, nil)
 	}
 
-	return ctx.JSON(200, results)
+	// get all child project histories
+	childProjects, err := c.projectService.GetDirectChildProjects(project.ID)
+	if err != nil {
+		slog.Error("Error getting child projects", "error", err)
+		return ctx.JSON(500, nil)
+	}
+
+	childResults := make([]ProjectRiskHistory, 0)
+	// fetch the project risk history
+	for _, childProject := range childProjects {
+		r, err := c.getProjectRiskHistory(start, end, childProject)
+		if err != nil {
+			slog.Error("Error getting project risk history", "error", err)
+			return ctx.JSON(500, nil)
+		}
+
+		childResults = append(childResults, ProjectRiskHistory{
+			RiskHistory: r,
+			Project:     childProject,
+		})
+	}
+
+	// now we have two arrays. Combine them
+	return ctx.JSON(200, utils.MergeUnrelated(childResults, results))
 }
 
 func (c *httpController) GetProjectFlawAggregationStateAndChange(ctx core.Context) error {
@@ -140,9 +215,14 @@ func (c *httpController) GetProjectFlawAggregationStateAndChange(ctx core.Contex
 }
 
 func (c *httpController) getProjectFlawAggregationStateAndChange(projectID uuid.UUID, compareTo string) ([]FlawAggregationStateAndChange, error) {
+	projectIDs, err := c.getChildrenProjectIDs(projectID)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not fetch child projects")
+	}
+
 	errgroup := utils.ErrGroup[FlawAggregationStateAndChange](10)
 	// get all assets
-	assets, err := c.assetRepository.GetByProjectID(projectID)
+	assets, err := c.assetRepository.GetByProjectIDs(projectIDs)
 	if err != nil {
 		return nil, err
 	}

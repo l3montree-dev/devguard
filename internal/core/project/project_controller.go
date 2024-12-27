@@ -38,6 +38,8 @@ type projectRepository interface {
 	Create(tx core.DB, project *models.Project) error
 	List(projectIds []uuid.UUID, parentId *uuid.UUID, orgId uuid.UUID) ([]models.Project, error)
 	Activate(tx core.DB, projectID uuid.UUID) error
+	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
+	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
 }
 
 type assetRepository interface {

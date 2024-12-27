@@ -139,3 +139,14 @@ func Contains[T comparable](s []T, el T) bool {
 	}
 	return false
 }
+
+func MergeUnrelated[A, B any](a []A, b []B) []any {
+	res := make([]any, 0)
+	for _, v := range a {
+		res = append(res, v)
+	}
+	for _, v := range b {
+		res = append(res, v)
+	}
+	return res
+}

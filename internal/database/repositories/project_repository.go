@@ -35,11 +35,6 @@ func (g *projectRepository) GetProjectByAssetID(assetID uuid.UUID) (models.Proje
 	return project, err
 }
 
-func (g *projectRepository) GetProjectIdByAssetID(assetID uuid.UUID) (uuid.UUID, error) {
-	var projectID uuid.UUID
-	err := g.db.Model(&models.Asset{}).Select("project_id").Where("id = ?", assetID).Row().Scan(&projectID)
-	return projectID, err
-}
 func (g *projectRepository) ReadBySlug(orgID uuid.UUID, slug string) (models.Project, error) {
 	var flatProjects []models.Project
 	err := g.db.Raw(`
@@ -113,5 +108,28 @@ func (g *projectRepository) List(projectIDs []uuid.UUID, parentId *uuid.UUID, or
 		return projects, err
 	}
 	err := g.db.Where("id IN ? AND parent_id IS NULL", projectIDs).Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID).Find(&projects).Error
+	return projects, err
+}
+
+func (g *projectRepository) RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+	var projects []models.Project
+	err := g.db.Raw(`
+		WITH RECURSIVE children AS (
+			SELECT *
+			FROM projects
+			WHERE parent_id = ? AND deleted_at IS NULL
+			UNION ALL
+			SELECT p.*
+			FROM projects p
+			INNER JOIN children c ON p.parent_id = c.id
+		)
+		SELECT * FROM children
+	`, projectID).Scan(&projects).Error
+	return projects, err
+}
+
+func (g *projectRepository) GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+	var projects []models.Project
+	err := g.db.Where("parent_id = ?", projectID).Find(&projects).Error
 	return projects, err
 }

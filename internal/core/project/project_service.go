@@ -54,3 +54,11 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 
 	return projects, nil
 }
+
+func (s *service) RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+	return s.projectRepository.RecursivelyGetChildProjects(projectID)
+}
+
+func (s *service) GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+	return s.projectRepository.GetDirectChildProjects(projectID)
+}
