@@ -16,6 +16,9 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 
 	// get direct children
 	childProjects, err := c.projectService.GetDirectChildProjects(project.ID)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch child projects")
+	}
 
 	// get the risk distribution for this project
 	assets, err := c.assetRepository.GetByProjectID(project.ID)
