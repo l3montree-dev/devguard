@@ -75,6 +75,12 @@ func (g *assetRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.A
 	return t, err
 }
 
+func (g *assetRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error) {
+	var asset models.Asset
+	err := g.db.Unscoped().Where("slug = ? AND project_id = ?", slug, projectID).First(&asset).Error
+	return asset, err
+}
+
 func (g *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
 	app, err := g.ReadBySlug(projectID, slug)
 	if err != nil {

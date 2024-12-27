@@ -18,10 +18,12 @@ package project
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
@@ -30,10 +32,12 @@ import (
 
 type projectRepository interface {
 	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
+	ReadBySlugUnscoped(organizationId uuid.UUID, slug string) (models.Project, error)
 	Update(tx core.DB, project *models.Project) error
 	Delete(tx core.DB, projectID uuid.UUID) error
 	Create(tx core.DB, project *models.Project) error
 	List(projectIds []uuid.UUID, parentId *uuid.UUID, orgId uuid.UUID) ([]models.Project, error)
+	Activate(tx core.DB, projectID uuid.UUID) error
 }
 
 type assetRepository interface {
@@ -72,7 +76,24 @@ func (p *Controller) Create(c core.Context) error {
 	model.OrganizationID = core.GetTenant(c).GetID()
 
 	if err := p.projectRepository.Create(nil, &model); err != nil {
-		return echo.NewHTTPError(500, "could not create project").WithInternal(err)
+		// check if duplicate key error
+		if database.IsDuplicateKeyError(err) {
+			// get the project by slug and project id unscoped
+			project, err := p.projectRepository.ReadBySlugUnscoped(core.GetTenant(c).GetID(), model.Slug)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
+			}
+
+			if err = p.projectRepository.Activate(nil, project.GetID()); err != nil {
+				return echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
+			}
+
+			slog.Info("project activated", "projectSlug", model.Slug, "projectID", project.GetID())
+
+			model = project
+		} else {
+			return echo.NewHTTPError(500, "could not create project").WithInternal(err)
+		}
 	}
 
 	if err := p.bootstrapProject(c, model); err != nil {
@@ -301,12 +322,9 @@ func (p *Controller) bootstrapProject(c core.Context, project models.Project) er
 }
 
 func (p *Controller) Delete(c core.Context) error {
-	projectID, err := uuid.Parse(c.Param("projectID"))
-	if err != nil {
-		return echo.NewHTTPError(400, "invalid project id").WithInternal(err)
-	}
+	project := core.GetProject(c)
 
-	err = p.projectRepository.Delete(nil, projectID)
+	err := p.projectRepository.Delete(nil, project.ID)
 	if err != nil {
 		return err
 	}

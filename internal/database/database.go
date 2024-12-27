@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"strings"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -23,6 +24,10 @@ func NewConnection(host, user, password, dbname, port string) (*gorm.DB, error) 
 	}
 
 	return db, nil
+}
+
+func IsDuplicateKeyError(err error) bool {
+	return strings.HasPrefix(err.Error(), "ERROR: duplicate key value violates unique constraint")
 }
 
 type PageInfo struct {

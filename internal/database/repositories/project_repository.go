@@ -5,6 +5,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"gorm.io/gorm"
 )
 
 type projectRepository struct {
@@ -45,7 +46,7 @@ func (g *projectRepository) ReadBySlug(orgID uuid.UUID, slug string) (models.Pro
         WITH RECURSIVE parents AS (
             SELECT *
             FROM projects
-            WHERE organization_id = ? AND slug = ?
+            WHERE organization_id = ? AND slug = ? AND deleted_at IS NULL
             UNION ALL
             SELECT p.*
             FROM projects p
@@ -57,9 +58,20 @@ func (g *projectRepository) ReadBySlug(orgID uuid.UUID, slug string) (models.Pro
 		return models.Project{}, err
 	}
 
+	// if empty slice, return an error
+	if len(flatProjects) == 0 {
+		return models.Project{}, gorm.ErrRecordNotFound
+	}
+
 	// flatProjects is a slice of all matching + ancestor records.
 	nested := nestProjects(slug, flatProjects)
 	return nested, nil
+}
+
+func (g *projectRepository) ReadBySlugUnscoped(orgID uuid.UUID, slug string) (models.Project, error) {
+	var project models.Project
+	err := g.db.Unscoped().Where("slug = ? AND organization_id = ?", slug, orgID).First(&project).Error
+	return project, err
 }
 
 // nestProjects transforms a flat list of projects into a single chain
@@ -97,7 +109,7 @@ func (g *projectRepository) Update(tx core.DB, project *models.Project) error {
 func (g *projectRepository) List(projectIDs []uuid.UUID, parentId *uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
 	if parentId != nil {
-		err := g.db.Debug().Where("id IN ? AND parent_id = ?", projectIDs, parentId).Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentId).Find(&projects).Error
+		err := g.db.Where("id IN ? AND parent_id = ?", projectIDs, parentId).Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentId).Find(&projects).Error
 		return projects, err
 	}
 	err := g.db.Where("id IN ? AND parent_id IS NULL", projectIDs).Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID).Find(&projects).Error
