@@ -32,8 +32,10 @@ type flawRepository interface {
 	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 }
 
-type assetToProjectIdConverter interface {
-	GetProjectIdByAssetID(assetID uuid.UUID) (uuid.UUID, error)
+type projectRepository interface {
+	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
+	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
+	Read(id uuid.UUID) (models.Project, error)
 }
 
 type projectRiskHistoryRepository interface {
@@ -47,11 +49,11 @@ type service struct {
 	assetRiskHistoryRepository   assetRiskHistoryRepository
 	flawRepository               flawRepository
 	assetRepository              assetRepository
-	projectRepository            assetToProjectIdConverter
+	projectRepository            projectRepository
 	projectRiskHistoryRepository projectRiskHistoryRepository
 }
 
-func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, flawRepository flawRepository, assetRepository assetRepository, projectRepository assetToProjectIdConverter, projectRiskHistoryRepository projectRiskHistoryRepository) *service {
+func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, flawRepository flawRepository, assetRepository assetRepository, projectRepository projectRepository, projectRiskHistoryRepository projectRiskHistoryRepository) *service {
 	return &service{
 		statisticsRepository:         statisticsRepository,
 		componentRepository:          componentRepository,
@@ -263,13 +265,26 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 		// we ALWAYS need to propagate the risk aggregation to the project. The only exception is in the statistics daemon. There
 		// we update all assets and afterwards do a one time project update. This is just optimization.
 		if propagateToProject {
-			projectID, err := s.projectRepository.GetProjectIdByAssetID(assetID)
+			currentProject, err := s.projectRepository.GetProjectByAssetID(assetID)
+
 			if err != nil {
 				return fmt.Errorf("could not get project id by asset id: %w", err)
 			}
-			err = s.updateProjectRiskAggregation(projectID, begin, end)
-			if err != nil {
-				return fmt.Errorf("could not update project risk aggregation: %w", err)
+			for {
+				// update all projects - parent projects as well.
+				err = s.updateProjectRiskAggregation(currentProject.ID, begin, end)
+				if err != nil {
+					return fmt.Errorf("could not update project risk aggregation: %w", err)
+				}
+
+				if currentProject.ParentID != nil {
+					currentProject, err = s.projectRepository.Read(*currentProject.ParentID)
+					if err != nil {
+						return fmt.Errorf("could not get parent project: %w", err)
+					}
+				} else {
+					break
+				}
 			}
 		}
 

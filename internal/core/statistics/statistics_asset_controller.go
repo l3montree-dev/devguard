@@ -28,6 +28,8 @@ type statisticsService interface {
 
 type projectService interface {
 	ListAllowedProjects(c core.Context) ([]models.Project, error)
+	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
+	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
 }
 
 type httpController struct {
@@ -116,6 +118,10 @@ func (c *httpController) GetAverageAssetFixingTime(ctx core.Context) error {
 }
 
 func aggregateRiskDistribution(results []models.AssetRiskDistribution, id uuid.UUID, label string) models.AssetRiskDistribution {
+	if len(results) == 0 {
+		return models.AssetRiskDistribution{}
+	}
+
 	lowCount := 0
 	mediumCount := 0
 	highCount := 0

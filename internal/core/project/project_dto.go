@@ -16,6 +16,7 @@
 package project
 
 import (
+	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
@@ -23,12 +24,23 @@ import (
 type CreateRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
+
+	ParentID *uuid.UUID         `json:"parentId"` // if created as a child project
+	Type     models.ProjectType `json:"type"`
 }
 
 func (p *CreateRequest) ToModel() models.Project {
+	// check if valid type
+	if p.Type != models.ProjectTypeDefault && p.Type != models.ProjectTypeKubernetesNamespace {
+		p.Type = models.ProjectTypeDefault
+	}
+
 	return models.Project{Name: p.Name,
 		Slug:        slug.Make(p.Name),
 		Description: p.Description,
+
+		ParentID: p.ParentID,
+		Type:     p.Type,
 	}
 }
 
@@ -46,6 +58,11 @@ type patchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 	IsPublic    *bool   `json:"isPublic"`
+
+	Type *models.ProjectType `json:"type"`
+
+	RepositoryID   *string `json:"repositoryId"`
+	RepositoryName *string `json:"repositoryName"`
 }
 
 func (p *patchRequest) applyToModel(project *models.Project) bool {
@@ -62,6 +79,21 @@ func (p *patchRequest) applyToModel(project *models.Project) bool {
 
 	if p.IsPublic != nil {
 		project.IsPublic = *p.IsPublic
+		updated = true
+	}
+
+	if p.Type != nil {
+		project.Type = *p.Type
+		updated = true
+	}
+
+	if p.RepositoryID != nil {
+		project.RepositoryID = p.RepositoryID
+		updated = true
+	}
+
+	if p.RepositoryName != nil {
+		project.RepositoryName = p.RepositoryName
 		updated = true
 	}
 

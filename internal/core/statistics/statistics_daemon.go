@@ -15,6 +15,7 @@ type assetRepository interface {
 	GetAllAssetsFromDB() ([]models.Asset, error)
 	Save(tx core.DB, asset *models.Asset) error
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
+	GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asset, error)
 }
 
 type daemon struct {

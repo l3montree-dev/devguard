@@ -4,6 +4,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type ProjectType string
+
+const (
+	ProjectTypeDefault             ProjectType = "default"
+	ProjectTypeKubernetesNamespace ProjectType = "kubernetesNamespace"
+	ProjectTypeKubernetesCluster   ProjectType = "kubernetesCluster"
+)
+
 type Project struct {
 	Model
 	Name           string    `json:"name" gorm:"type:text"`
@@ -13,6 +21,15 @@ type Project struct {
 	Description    string    `json:"description" gorm:"type:text"`
 
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
+
+	Children []Project  `json:"-" gorm:"foreignKey:ParentID;constraint:OnDelete:CASCADE;"` // allowing nested projects
+	ParentID *uuid.UUID `json:"parentId" gorm:"type:uuid;"`
+	Parent   *Project   `json:"parent" gorm:"foreignKey:ParentID;constraint:OnDelete:CASCADE;"`
+
+	Type ProjectType `json:"type" gorm:"type:text;default:'default';"`
+
+	RepositoryID   *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
+	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
 }
 
 func (m Project) TableName() string {

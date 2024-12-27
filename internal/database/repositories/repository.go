@@ -27,6 +27,7 @@ type ModelWriter[ID any, T Tabler, Tx any] interface {
 	Save(tx Tx, t *T) error
 
 	Delete(tx Tx, id ID) error
+	Activate(tx Tx, id ID) error
 }
 
 type ModelReader[ID any, T Tabler] interface {
@@ -138,4 +139,9 @@ func (g *GormRepository[ID, T]) List(ids []ID) ([]T, error) {
 		return ts, err
 	}
 	return ts, nil
+}
+
+func (g *GormRepository[ID, T]) Activate(tx *gorm.DB, id ID) error {
+	var t T
+	return g.GetDB(tx).Debug().Model(&t).Unscoped().Where("id = ?", id).Update("deleted_at", nil).Error
 }

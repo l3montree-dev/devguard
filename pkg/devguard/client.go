@@ -1,7 +1,6 @@
 package devguard
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 
@@ -12,13 +11,18 @@ type HTTPClient struct {
 	httpClient *http.Client
 
 	token  string
-	apiUrl string
+	apiUrl *url.URL
 }
 
 func NewHTTPClient(token, apiUrl string) HTTPClient {
+	u, err := url.Parse(apiUrl)
+	if err != nil {
+		panic(err)
+	}
+
 	return HTTPClient{
 		token:  token,
-		apiUrl: apiUrl,
+		apiUrl: u,
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				MaxIdleConnsPerHost: 10,
@@ -33,11 +37,9 @@ func (c HTTPClient) Do(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	req.URL, err = url.Parse(fmt.Sprintf("%s%s", c.apiUrl, req.URL.Path))
-
-	if err != nil {
-		return nil, err
-	}
+	// prepend the api url to the request url
+	req.URL.Scheme = c.apiUrl.Scheme
+	req.URL.Host = c.apiUrl.Host
 
 	return c.httpClient.Do(req)
 }

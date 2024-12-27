@@ -167,6 +167,16 @@ func (c *casbinRBAC) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvi
 	return err
 }
 
+type ProjectRole struct {
+	Project string
+	Role    string
+}
+
+func (c *casbinRBAC) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error {
+	_, err := c.enforcer.AddRoleForUserInDomain(c.getProjectRoleName(roleWhichGetsPermissions.Role, roleWhichGetsPermissions.Project), c.getProjectRoleName(roleWhichProvidesPermissions.Role, roleWhichProvidesPermissions.Project), "domain::"+c.domain)
+	return err
+}
+
 func (c *casbinRBAC) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error {
 	_, err := c.enforcer.AddRoleForUserInDomain("role::"+string(roleWhichGetsPermissions), "role::"+string(roleWhichProvidesPermissions), "domain::"+c.domain)
 	return err

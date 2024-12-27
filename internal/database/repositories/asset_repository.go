@@ -69,10 +69,25 @@ func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, e
 	return apps, nil
 }
 
+func (a *assetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asset, error) {
+	var apps []models.Asset
+	err := a.db.Where("project_id IN (?)", projectIDs).Find(&apps).Error
+	if err != nil {
+		return nil, err
+	}
+	return apps, nil
+}
+
 func (g *assetRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error) {
 	var t models.Asset
 	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
 	return t, err
+}
+
+func (g *assetRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error) {
+	var asset models.Asset
+	err := g.db.Unscoped().Where("slug = ? AND project_id = ?", slug, projectID).First(&asset).Error
+	return asset, err
 }
 
 func (g *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {

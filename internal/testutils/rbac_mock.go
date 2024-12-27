@@ -141,6 +141,10 @@ func (r RBACProviderMock) GetDomainRBAC(domain string) accesscontrol.AccessContr
 	}
 }
 
+func (r RBACMock) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions accesscontrol.ProjectRole) error {
+	return nil
+}
+
 func (r RBACMock) GetAllMembersOfProject(project string) ([]string, error) {
 	return []string{}, nil
 }

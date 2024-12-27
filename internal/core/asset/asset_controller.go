@@ -3,12 +3,14 @@ package asset
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/database"
 
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -28,6 +30,7 @@ type repository interface {
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
 	Update(tx core.DB, asset *models.Asset) error
+	ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error)
 }
 
 type assetComponentsLoader interface {
@@ -224,7 +227,21 @@ func (a *httpController) Create(c core.Context) error {
 	err := a.assetRepository.Create(nil, &app)
 
 	if err != nil {
-		return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
+		if database.IsDuplicateKeyError(err) {
+			// get the asset by slug and project id unscoped
+			asset, err := a.assetRepository.ReadBySlugUnscoped(project.GetID(), app.Slug)
+			if err != nil {
+				return echo.NewHTTPError(500, "could not read asset").WithInternal(err)
+			}
+
+			if err = a.assetRepository.Activate(nil, asset.GetID()); err != nil {
+				return echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
+			}
+			slog.Info("Asset activated", "assetSlug", asset.Slug, "projectID", project.GetID())
+			app = asset
+		} else {
+			return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
+		}
 	}
 
 	return c.JSON(200, app)

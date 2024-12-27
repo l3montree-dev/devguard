@@ -78,7 +78,7 @@ func (g *cveRepository) SaveCveAffectedComponents(tx core.DB, cveId string, affe
 	})
 
 	// add cpeCveMatches to the cve
-	m := g.GetDB(tx).Debug().Session(&gorm.Session{
+	m := g.GetDB(tx).Session(&gorm.Session{
 		// disable logging
 		// it might log slow queries or a missing cve.
 		Logger:               logger.Default.LogMode(logger.Silent),

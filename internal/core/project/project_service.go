@@ -22,17 +22,43 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 	projectsIdsStr := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
 
 	// extract the project ids from the roles
-	projectIDs := make([]uuid.UUID, 0)
+	projectIDs := make(map[uuid.UUID]struct{})
 	for _, project := range projectsIdsStr {
 		projectID := uuid.MustParse(project)
-		projectIDs = append(projectIDs, projectID)
+
+		projectIDs[projectID] = struct{}{}
 	}
 
-	projects, err := s.projectRepository.List(projectIDs, core.GetTenant(c).GetID())
+	// check if parentId is set
+	parentId := c.QueryParam("parentId")
+	var parentID *uuid.UUID = nil
+	if parentId != "" {
+		tmp, err := uuid.Parse(parentId)
+		if err != nil {
+			return nil, err
+		}
+
+		parentID = &tmp
+	}
+
+	projectIDsSlice := make([]uuid.UUID, 0, len(projectIDs))
+	for projectID := range projectIDs {
+		projectIDsSlice = append(projectIDsSlice, projectID)
+	}
+
+	projects, err := s.projectRepository.List(projectIDsSlice, parentID, core.GetTenant(c).GetID())
 
 	if err != nil {
 		return nil, err
 	}
 
 	return projects, nil
+}
+
+func (s *service) RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+	return s.projectRepository.RecursivelyGetChildProjects(projectID)
+}
+
+func (s *service) GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+	return s.projectRepository.GetDirectChildProjects(projectID)
 }

@@ -696,7 +696,11 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
-		repoId := utils.SafeDereference(asset.RepositoryID)
+		repoId, err := core.GetRepositoryID(event.Ctx)
+		if err != nil {
+			return err
+		}
+
 		if !strings.HasPrefix(repoId, "gitlab:") {
 			// this integration only handles gitlab repositories
 			return nil

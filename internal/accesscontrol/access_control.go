@@ -53,6 +53,8 @@ type AccessControl interface {
 	RevokeRoleInProject(subject string, role string, project string) error
 	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string, project string) error
 
+	InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error
+
 	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions string, project string) error
 
 	AllowRole(role string, object string, action []Action) error

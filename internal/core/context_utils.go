@@ -138,8 +138,36 @@ func SetAsset(c Context, asset models.Asset) {
 	c.Set("asset", asset)
 }
 
+func SetProject(c Context, project models.Project) {
+	c.Set("project", project)
+}
+
 func GetProject(c Context) models.Project {
 	return c.Get("project").(models.Project)
+}
+
+func recursiveGetProjectRepositoryID(project models.Project) (string, error) {
+	if project.RepositoryID != nil {
+		return *project.RepositoryID, nil
+	}
+
+	if project.Parent == nil {
+		return "", fmt.Errorf("could not get repository id")
+	}
+
+	return recursiveGetProjectRepositoryID(*project.Parent)
+}
+
+func GetRepositoryID(c Context) (string, error) {
+	// get the asset
+	asset := GetAsset(c)
+	if asset.RepositoryID != nil {
+		return *asset.RepositoryID, nil
+	}
+
+	// get the project
+	project := GetProject(c)
+	return recursiveGetProjectRepositoryID(project)
 }
 
 type PageInfo struct {
