@@ -28,6 +28,7 @@ type inTotoLinkRepository interface {
 
 type supplyChainRepositoryS interface {
 	FindBySupplyChainID(supplyChainID string) ([]models.SupplyChain, error)
+	FindByDigest(digest string) ([]models.SupplyChain, error)
 }
 
 type projectRepository interface {
@@ -51,6 +52,21 @@ func NewInTotoService(rbacProvider accesscontrol.RBACProvider, inTotoLinkReposit
 		patRepository:         patRepository,
 		supplyChainRepository: supplyChainRepository,
 	}
+}
+
+func (i inTotoService) VerifySupplyChainByDigestOnly(digest string) (bool, error) {
+	supplyChains, err := i.supplyChainRepository.FindByDigest(digest)
+	if err != nil {
+		return false, errors.Wrap(err, "could not find supply chain digests")
+	}
+
+	for _, supplyChain := range supplyChains {
+		if supplyChain.Verified {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (i inTotoService) VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID string, digest string) (bool, error) {

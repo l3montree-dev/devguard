@@ -23,6 +23,16 @@ func NewSupplyChainRepository(db core.DB) *supplyChainRepository {
 	}
 }
 
+func (g *supplyChainRepository) FindByDigest(digest string) ([]models.SupplyChain, error) {
+	var t []models.SupplyChain
+
+	err := g.db.Model(&models.SupplyChain{}).
+		Where("supply_chain_output_digest = ?", digest).
+		Find(&t).Error
+
+	return t, err
+}
+
 func (g *supplyChainRepository) FindBySupplyChainID(supplyChainID string) ([]models.SupplyChain, error) {
 	var t []models.SupplyChain
 

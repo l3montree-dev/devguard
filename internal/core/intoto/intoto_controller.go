@@ -52,6 +52,7 @@ type patRepository interface {
 type inTotoVerifierService interface {
 	VerifySupplyChainWithOutputDigest(supplyChainID string, digest string) (bool, error)
 	VerifySupplyChain(supplyChainID string) (bool, error)
+	VerifySupplyChainByDigestOnly(digest string) (bool, error)
 }
 
 type httpController struct {
@@ -75,6 +76,20 @@ func NewHttpController(repository repository, supplyChainRepository supplyChainR
 func (a *httpController) VerifySupplyChain(ctx core.Context) error {
 	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainId")
 	digest := ctx.QueryParam("digest")
+
+	if imageNameOrSupplyChainID == "" {
+		// just verify the digest
+		valid, err := a.inTotoVerifierService.VerifySupplyChainByDigestOnly(digest)
+		if err != nil {
+			slog.Error("could not verify supply chain", "err", err)
+			return echo.NewHTTPError(500, "could not verify supply chain").WithInternal(err)
+		}
+
+		if !valid {
+			slog.Info("could not verify supply chain", "digest", digest)
+			return echo.NewHTTPError(400, "could not verify supply chain")
+		}
+	}
 
 	valid, err := a.inTotoVerifierService.VerifySupplyChainWithOutputDigest(imageNameOrSupplyChainID, digest)
 	if err != nil {
