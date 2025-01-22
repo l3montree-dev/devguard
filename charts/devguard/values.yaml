@@ -56,6 +56,7 @@ api:
   intoto:
     existingPrivateKeySecretName: ec-private-key
   github:
+    enabled: true
     appId: abc
     # needs to contain "webhookSecret"
     existingWebhookSecretSecretName: github-app-webhook-secret
