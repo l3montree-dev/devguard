@@ -45,7 +45,8 @@ spec:
           valueFrom:
             secretKeyRef:
               name: "{{ .Values.oidc.github.existingClientSecret }}"
-              key: "secret" 
+              key: "secret"
+              optional: true
         {{- end }}
         securityContext:
           allowPrivilegeEscalation: false

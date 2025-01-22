@@ -95,7 +95,9 @@ data:
               - user:email
               - read:user
             {{- end}}
-
+            {{- if not .Values.oidc.github.enabled }}
+            []
+            {{- end }}
         webauthn:
           enabled: true
           config:
