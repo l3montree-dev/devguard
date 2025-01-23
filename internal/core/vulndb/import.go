@@ -1113,8 +1113,8 @@ func verifySignature(pubKeyFile string, sigFile string, blobFile string, ctx con
 		return fmt.Errorf("could not decode base64 signature: %w", err)
 	}
 
-	// Load the blob
-	blob, err := os.ReadFile(blobFile)
+	// load the block using a reader
+	file, err := os.Open(blobFile)
 	if err != nil {
 		return fmt.Errorf("could not read blob file: %w", err)
 	}
@@ -1126,7 +1126,7 @@ func verifySignature(pubKeyFile string, sigFile string, blobFile string, ctx con
 	}
 
 	// Verify the signature
-	err = verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(blob), options.WithContext(ctx))
+	err = verifier.VerifySignature(bytes.NewReader(sig), file, options.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("could not verify signature: %w", err)
 	}
