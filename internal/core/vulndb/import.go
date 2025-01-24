@@ -129,7 +129,7 @@ func (s importService) Import(tx database.DB, tag string) error {
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb"
 
 	// create a file store
-	// defer os.RemoveAll(tmp)
+	defer os.RemoveAll(tmp)
 	fs, err := file.New(tmp)
 	if err != nil {
 		panic(err)
@@ -204,10 +204,7 @@ func (s importService) importCves(tx database.DB, f *os.File) error {
 		return err
 	}
 
-	amountOfCves := amountRead
-	amountOfOldCves := len(cvesID)
-
-	slog.Info("finished importing cves", "amountOfCves", amountOfCves, "amountOfOldCves", amountOfOldCves, "amountOfOldCvesNotInNewImportedList", amountOfOldCves-amountOfCves, "duration", time.Since(begin))
+	slog.Info("finished importing cves", "amountOfCves", amountRead, "amountOfOldCves", len(cvesID), "duration", time.Since(begin))
 	return nil
 }
 
