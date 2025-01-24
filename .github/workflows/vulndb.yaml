@@ -24,8 +24,6 @@ jobs:
           POSTGRES_DB: ${{env.POSTGRES_DB}}
           POSTGRES_USER: ${{env.POSTGRES_USER}}
           POSTGRES_PASSWORD: ${{env.POSTGRES_PASSWORD}}
-
-
         ports:
         - 5432:5432
         options: "--health-cmd=\"pg_isready -U devguard\"  --health-interval=10s  --health-timeout=5s  --health-retries=5 "
@@ -49,9 +47,9 @@ jobs:
         go-version: 1.22
 
      
-    # - name: Import the last database version (this takes some time)
-    #   run: |
-    #     go run ./cmd/devguard-cli/main.go vulndb import || true
+    - name: Import the last database version (this takes some time)
+      run: |
+        go run ./cmd/devguard-cli/main.go vulndb import || true
     - name: Build the database (this takes some time)
       run: |
         # will fetch the latest build database from ghcr.io
