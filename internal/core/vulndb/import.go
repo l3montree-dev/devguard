@@ -129,7 +129,7 @@ func (s importService) Import(tx database.DB, tag string) error {
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb"
 
 	// create a file store
-	defer os.RemoveAll(tmp)
+	// defer os.RemoveAll(tmp)
 	fs, err := file.New(tmp)
 	if err != nil {
 		panic(err)
@@ -642,7 +642,7 @@ func (s importService) importAffectedComponents(tx database.DB, f *os.File) erro
 func (s importService) modelAndSaveAffectedComponent(tx database.DB, reader *csv.Reader) (int, error) {
 	return utils.ReadCsvInChunks(reader, 100, func(rows [][]string) error {
 		affectedComponents := utils.Map(rows, func(row []string) models.AffectedComponent {
-			model, _ := CsvRowToAffectedComponentModel(row)
+			model, _ := csvRowToAffectedComponentModel(row)
 			return model
 		})
 
@@ -650,7 +650,7 @@ func (s importService) modelAndSaveAffectedComponent(tx database.DB, reader *csv
 	})
 }
 
-func CsvRowToAffectedComponentModel(row []string) (models.AffectedComponent, error) {
+func csvRowToAffectedComponentModel(row []string) (models.AffectedComponent, error) {
 	var semverIntroduced *string
 	if row[11] != "" {
 		semverIntroduced = &row[11]
@@ -692,7 +692,7 @@ func (s importService) importWeaknesses(tx database.DB, f *os.File) error {
 		return err
 	}
 	// model and save
-	amountRead, err := s.modelAndSaveWeaknesses(reader)
+	amountRead, err := s.modelAndSaveWeaknesses(tx, reader)
 	if err != nil {
 		return err
 	}
@@ -702,14 +702,14 @@ func (s importService) importWeaknesses(tx database.DB, f *os.File) error {
 	return nil
 }
 
-func (s importService) modelAndSaveWeaknesses(reader *csv.Reader) (int, error) {
+func (s importService) modelAndSaveWeaknesses(tx database.DB, reader *csv.Reader) (int, error) {
 	return utils.ReadCsvInChunks(reader, 100, func(rows [][]string) error {
 		weaknesses := utils.Map(rows, func(row []string) models.Weakness {
 			model, _ := csvRowToWeaknessModel(row)
 			return model
 		})
 
-		return s.saveWeaknesses(nil, weaknesses)
+		return s.saveWeaknesses(tx, weaknesses)
 	})
 }
 

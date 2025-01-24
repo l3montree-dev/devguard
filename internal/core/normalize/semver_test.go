@@ -58,4 +58,15 @@ func TestSemverFix(t *testing.T) {
 		}
 	})
 
+	t.Run("test 2.4.27-10.sarge1.040815-1", func(t *testing.T) {
+		semver, err := SemverFix("2.4.27-10.sarge1.040815-1")
+		if err != nil {
+			t.Errorf("Expected no error, got %s", err)
+		}
+		if semver != "2.4.27-10.sarge1.040815-1" {
+			t.Errorf("Expected 2.4.27-10.sarge1.040815-1, got %s", semver)
+		}
+
+		t.Fatal(semver)
+	})
 }

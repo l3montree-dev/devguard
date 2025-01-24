@@ -227,8 +227,10 @@ func AffectedComponentFromOSV(osv obj.OSV) []AffectedComponent {
 				notSemverVersionedComponents = append(notSemverVersionedComponents, affectedComponent)
 			}
 
-			// combine the affected components using ranges
-			affectedComponents = append(affectedComponents, combineAffectedComponentsUsingRanges(notSemverVersionedComponents)...)
+			// combine the affected components using ranges - This adds a layer of heuristic to it.
+			// affectedComponents = append(affectedComponents, combineAffectedComponentsUsingRanges(notSemverVersionedComponents)...)
+
+			affectedComponents = append(affectedComponents, notSemverVersionedComponents...)
 		}
 	}
 	return affectedComponents
