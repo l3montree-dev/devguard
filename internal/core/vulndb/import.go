@@ -193,7 +193,10 @@ func (s importService) importCves(tx database.DB, f *os.File) error {
 	}
 
 	// Skip the header
-	reader.Read()
+	_, err = reader.Read()
+	if err != nil {
+		return err
+	}
 
 	// csv to model and save
 	amountRead, err := s.modelAndSaveCve(tx, reader)
@@ -369,7 +372,10 @@ func (s importService) importCpeMatches(tx database.DB, f *os.File) error {
 	}
 
 	// Skip the header
-	reader.Read()
+	_, err = reader.Read()
+	if err != nil {
+		return err
+	}
 	// model and save
 	amountRead, err := s.modelAndSaveCpeMatch(tx, reader)
 	if err != nil {
@@ -433,7 +439,10 @@ func (s importService) importCwes(tx database.DB, f *os.File) error {
 	}
 
 	// Skip the header
-	reader.Read()
+	_, err = reader.Read()
+	if err != nil {
+		return err
+	}
 	// model and save
 	amountRead, err := s.modelAndSaveCwe(tx, reader)
 	if err != nil {
@@ -498,7 +507,10 @@ func (s importService) importExploits(tx database.DB, f *os.File) error {
 	}
 
 	// Skip the header
-	reader.Read()
+	_, err = reader.Read()
+	if err != nil {
+		return err
+	}
 	// Save all exploits
 	amountRead, err := s.modelAndSaveExploit(tx, reader)
 	if err != nil {
@@ -612,7 +624,10 @@ func (s importService) importAffectedComponents(tx database.DB, f *os.File) erro
 	}
 
 	// Skip the header
-	reader.Read()
+	_, err = reader.Read()
+	if err != nil {
+		return err
+	}
 	// model and save
 	amountRead, err := s.modelAndSaveAffectedComponent(tx, reader)
 	if err != nil {
@@ -672,7 +687,10 @@ func (s importService) importWeaknesses(tx database.DB, f *os.File) error {
 	// Read weaknesses.csv
 	reader := readCSVFile(f)
 	// Skip the header
-	reader.Read()
+	_, err := reader.Read()
+	if err != nil {
+		return err
+	}
 	// model and save
 	amountRead, err := s.modelAndSaveWeaknesses(reader)
 	if err != nil {
@@ -741,8 +759,10 @@ func (s importService) importCveCpeMatches(tx database.DB, f *os.File) error {
 	reader := readCSVFile(f)
 
 	// Skip the header
-	reader.Read()
-
+	_, err := reader.Read()
+	if err != nil {
+		return err
+	}
 	// Save all cpe_cve_matches
 	amountRead, err := s.saveCpeCveMatches(tx, reader)
 	if err != nil {
@@ -809,7 +829,10 @@ func (s importService) importCveAffectedComponent(tx database.DB, f *os.File) er
 	reader := readCSVFile(f)
 
 	// Skip the header
-	reader.Read()
+	_, err := reader.Read()
+	if err != nil {
+		return err
+	}
 	// model and save
 	amountRead, err := s.saveCveAffectedComponents(tx, reader)
 	if err != nil {

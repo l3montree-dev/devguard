@@ -130,7 +130,7 @@ func TestFromOSV(t *testing.T) {
 		// check the hash
 		affectedComponents[0].BeforeSave(nil) // nolint:errcheck
 
-		if affectedComponents[0].ID != "cd146d09f2bf86c428c8798954c4783ef9e6b02d47da039eb980b4c7f01405db" { // nolint:all
+		if affectedComponents[0].ID != "cd146d09f2bf86c4" { // nolint:all
 			t.Errorf("Expected ID to be set, got %s", affectedComponents[0].ID)
 		}
 	})
@@ -217,16 +217,16 @@ func TestFromOSV(t *testing.T) {
 		}
 
 		affectedComponents := AffectedComponentFromOSV(osv)
-		if len(affectedComponents) != 2 {
-			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
+		if len(affectedComponents) != 1 {
+			t.Errorf("Expected 1 affected packages, got %d", len(affectedComponents))
 		}
 
 		// check if both affected versions are present
-		if *affectedComponents[0].Version != "1.14.14" {
+		if *affectedComponents[0].SemverIntroduced != "1.14.14" {
 			t.Errorf("Expected version to be 1.14.14, got %s", *affectedComponents[0].Version)
 		}
 
-		if *affectedComponents[1].Version != "1.14.15" {
+		if *affectedComponents[0].SemverFixed != "1.14.15" {
 			t.Errorf("Expected version to be 1.14.15, got %s", *affectedComponents[1].Version)
 		}
 	})
@@ -280,13 +280,13 @@ func TestSetIdHash(t *testing.T) {
 func TestVersionsToRange(t *testing.T) {
 	t.Run("Test patch updates", func(t *testing.T) {
 		versions := []string{
-			"0.24.0-r1",
-			"0.24.1-r0",
-			"0.24.2-r0",
+			"0.24.0",
+			"0.24.1",
+			"0.24.2",
 		}
 
 		expected := [][2]string{
-			{"0.24.0-r1", "0.24.2-r0"},
+			{"0.24.0", "0.24.2"},
 		}
 
 		actual := versionsToRange(versions)

@@ -271,7 +271,6 @@ func newSyncCommand() *cobra.Command {
 				}
 				slog.Info("finished dsa database sync", "duration", time.Since(now))
 			}
-
 		},
 	}
 	syncCmd.Flags().String("after", "", "allows to only sync a subset of data. This is used to identify the 'last correct' date in the nvd database. The sync will only include cve modifications in the interval [after, now]. Format: 2006-01-02")
