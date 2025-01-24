@@ -66,7 +66,5 @@ func TestSemverFix(t *testing.T) {
 		if semver != "2.4.27-10.sarge1.040815-1" {
 			t.Errorf("Expected 2.4.27-10.sarge1.040815-1, got %s", semver)
 		}
-
-		t.Fatal(semver)
 	})
 }

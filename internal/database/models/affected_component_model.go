@@ -82,6 +82,7 @@ func (affectedComponent *AffectedComponent) BeforeSave(tx *gorm.DB) error {
 	return nil
 }
 
+/*
 func combineAffectedComponentsUsingRanges(affectedComponents []AffectedComponent) []AffectedComponent {
 	// get all the versions
 	versions := make([]string, 0)
@@ -115,6 +116,7 @@ func combineAffectedComponentsUsingRanges(affectedComponents []AffectedComponent
 
 	return newAffectedComponents
 }
+*/
 
 func AffectedComponentFromOSV(osv obj.OSV) []AffectedComponent {
 	affectedComponents := make([]AffectedComponent, 0)

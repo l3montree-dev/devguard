@@ -937,7 +937,7 @@ func (s importService) copyCSVToDB(tx database.DB, tmp string) error {
 	slog.Info("Importing vulndb done")
 
 	//import affected_components
-	affectedCmpCsv, err := os.Open(tmp + "/" + "affected_component.csv")
+	affectedCmpCsv, err := os.Open(tmp + "/" + "affected_components.csv")
 	if err != nil {
 		panic(err)
 	}

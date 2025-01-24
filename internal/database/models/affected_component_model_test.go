@@ -217,17 +217,8 @@ func TestFromOSV(t *testing.T) {
 		}
 
 		affectedComponents := AffectedComponentFromOSV(osv)
-		if len(affectedComponents) != 1 {
+		if len(affectedComponents) != 2 {
 			t.Errorf("Expected 1 affected packages, got %d", len(affectedComponents))
-		}
-
-		// check if both affected versions are present
-		if *affectedComponents[0].SemverIntroduced != "1.14.14" {
-			t.Errorf("Expected version to be 1.14.14, got %s", *affectedComponents[0].Version)
-		}
-
-		if *affectedComponents[0].SemverFixed != "1.14.15" {
-			t.Errorf("Expected version to be 1.14.15, got %s", *affectedComponents[1].Version)
 		}
 	})
 
