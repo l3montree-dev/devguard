@@ -174,21 +174,18 @@ func (s importService) Import(tx database.DB, tag string) error {
 	return nil
 }
 
-func readCSVFile(f *os.File) ([][]string, error) {
+func readCSVFile(f *os.File) *csv.Reader {
 	reader := csv.NewReader(f)
 	reader.FieldsPerRecord = -1 // Allow variable number of fields
-	return reader.ReadAll()
+	return reader
 }
 
-// import cves
 func (s importService) importCves(tx database.DB, f *os.File) error {
 	slog.Info("Importing cves started")
 	begin := time.Now()
 	// Read cves.csv
-	data, err := readCSVFile(f)
-	if err != nil {
-		return err
-	}
+	reader := readCSVFile(f)
+
 	// Get all existing cve ids in the database
 	cvesID, err := s.cveRepository.GetAllCVEsID()
 	if err != nil {
@@ -196,43 +193,29 @@ func (s importService) importCves(tx database.DB, f *os.File) error {
 	}
 
 	// Skip the header
-	data = data[1:]
+	reader.Read()
 
 	// csv to model and save
-	err = s.modelAndSaveCve(tx, data)
+	amountRead, err := s.modelAndSaveCve(tx, reader)
 	if err != nil {
 		return err
 	}
 
-	amounjtOfCves := len(data)
+	amountOfCves := amountRead
 	amountOfOldCves := len(cvesID)
 
-	slog.Info("finished importing cves", "amountOfCves", amounjtOfCves, "amountOfOldCves", amountOfOldCves, "amountOfOldCvesNotInNewImportedList", amountOfOldCves-amounjtOfCves, "duration", time.Since(begin))
+	slog.Info("finished importing cves", "amountOfCves", amountOfCves, "amountOfOldCves", amountOfOldCves, "amountOfOldCvesNotInNewImportedList", amountOfOldCves-amountOfCves, "duration", time.Since(begin))
 	return nil
 }
 
-func (s importService) modelAndSaveCve(tx database.DB, data [][]string) error {
-	cves := make([]models.CVE, 0)
-	alreadyPushedInSlice := make(map[string]bool)
-
-	// csv to model and save
-	for _, row := range data {
-		cve, err := csvRowToCveModel(row)
-		if err != nil {
-			return err
-		}
-
-		if _, ok := alreadyPushedInSlice[cve.CVE]; ok {
-			continue
-		}
-		cves = append(cves, cve)
-	}
-	// save the cves
-	err := s.cveRepository.SaveBatch(tx, cves)
-	if err != nil {
-		return err
-	}
-	return nil
+func (s importService) modelAndSaveCve(tx database.DB, reader *csv.Reader) (int, error) {
+	return utils.ReadCsvInChunks(reader, 100, func(rows [][]string) error {
+		cves := utils.Map(rows, func(row []string) models.CVE {
+			model, _ := csvRowToCveModel(row)
+			return model
+		})
+		return s.cveRepository.SaveBatch(tx, cves)
+	})
 }
 
 func csvRowToCveModel(row []string) (models.CVE, error) {
@@ -377,10 +360,8 @@ func (s importService) importCpeMatches(tx database.DB, f *os.File) error {
 	slog.Info("Importing cpe_matches started")
 	begin := time.Now()
 	// Read cpe_matches.csv
-	data, err := readCSVFile(f)
-	if err != nil {
-		return err
-	}
+	reader := readCSVFile(f)
+
 	// Get all existing cpesID in the database
 	cpeMatchesID, err := s.cveRepository.GetAllCPEMatchesID()
 	if err != nil {
@@ -388,42 +369,26 @@ func (s importService) importCpeMatches(tx database.DB, f *os.File) error {
 	}
 
 	// Skip the header
-	data = data[1:]
+	reader.Read()
 	// model and save
-	err = s.modelAndSaveCpeMatch(tx, data)
+	amountRead, err := s.modelAndSaveCpeMatch(tx, reader)
 	if err != nil {
 		return err
 	}
 
-	amountOfCpeMatches := len(data)
-	amountOfOldCpeMatches := len(cpeMatchesID)
-
-	slog.Info("finished importing cpe_matches", "amountOfCpeMatches", amountOfCpeMatches, "amountOfOldCpeMatches", amountOfOldCpeMatches, "amountOfOldCpeMatchesNotInNewImportedList", amountOfOldCpeMatches-amountOfCpeMatches, "duration", time.Since(begin))
+	slog.Info("finished importing cpe_matches", "amountOfCpeMatches", amountRead, "amountOfOldCpeMatches", len(cpeMatchesID), "duration", time.Since(begin))
 
 	return nil
 }
 
-func (s importService) modelAndSaveCpeMatch(tx database.DB, data [][]string) error {
-	cpes := make([]models.CPEMatch, 0)
-	alreadyPushedInSlice := make(map[string]bool)
-	// csv to model and save
-	for _, row := range data {
-		cpeMatch, err := csvRowToCpeMatchModel(row)
-		if err != nil {
-			return err
-		}
-		if _, ok := alreadyPushedInSlice[cpeMatch.MatchCriteriaID]; ok {
-			continue
-		}
-		cpes = append(cpes, cpeMatch)
-	}
-	// save the cpes
-	err := s.cveRepository.SaveBatchCPEMatch(tx, cpes)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (s importService) modelAndSaveCpeMatch(tx database.DB, reader *csv.Reader) (int, error) {
+	return utils.ReadCsvInChunks(reader, 100, func(rows [][]string) error {
+		models := utils.Map(rows, func(row []string) models.CPEMatch {
+			model, _ := csvRowToCpeMatchModel(row)
+			return model
+		})
+		return s.cveRepository.SaveBatchCPEMatch(tx, models)
+	})
 }
 
 func csvRowToCpeMatchModel(row []string) (models.CPEMatch, error) {
@@ -459,10 +424,7 @@ func (s importService) importCwes(tx database.DB, f *os.File) error {
 	slog.Info("Importing cwes started")
 	begin := time.Now()
 	// Read cwes.csv
-	data, err := readCSVFile(f)
-	if err != nil {
-		return err
-	}
+	reader := readCSVFile(f)
 
 	// Get all existing cwesID in the database
 	cwesID, err := s.cweRepository.GetAllCWEsID()
@@ -471,41 +433,25 @@ func (s importService) importCwes(tx database.DB, f *os.File) error {
 	}
 
 	// Skip the header
-	data = data[1:]
+	reader.Read()
 	// model and save
-	err = s.modelAndSaveCwe(tx, data)
+	amountRead, err := s.modelAndSaveCwe(tx, reader)
 	if err != nil {
 		return err
 	}
 
-	amountOfCwes := len(data)
-	amountOfOldCwes := len(cwesID)
-
-	slog.Info("finished importing cwes", "amountOfCwes", amountOfCwes, "amountOfOldCwes", amountOfOldCwes, "amountOfOldCwesNotInNewImportedList", amountOfOldCwes-amountOfCwes, "duration", time.Since(begin))
+	slog.Info("finished importing cwes", "amountOfCwes", amountRead, "amountOfOldCwes", len(cwesID), "duration", time.Since(begin))
 	return nil
 }
 
-func (s importService) modelAndSaveCwe(tx database.DB, data [][]string) error {
-	cwes := make([]models.CWE, 0)
-	alreadyPushedInSlice := make(map[string]bool)
-	for _, row := range data {
-		cwe, err := csvRowToCweModel(row)
-		if err != nil {
-			return err
-		}
-		if _, ok := alreadyPushedInSlice[cwe.CWE]; ok {
-			continue
-		}
-		cwes = append(cwes, cwe)
-
-	}
-	// save the cwe
-	err := s.cweRepository.SaveBatch(tx, cwes)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (s importService) modelAndSaveCwe(tx database.DB, reader *csv.Reader) (int, error) {
+	return utils.ReadCsvInChunks(reader, 100, func(rows [][]string) error {
+		models := utils.Map(rows, func(row []string) models.CWE {
+			model, _ := csvRowToCweModel(row)
+			return model
+		})
+		return s.cweRepository.SaveBatch(tx, models)
+	})
 }
 
 func csvRowToCweModel(row []string) (models.CWE, error) {
@@ -543,10 +489,7 @@ func (s importService) importExploits(tx database.DB, f *os.File) error {
 	slog.Info("Importing exploits started")
 	begin := time.Now()
 	// Read exploits.csv
-	data, err := readCSVFile(f)
-	if err != nil {
-		return err
-	}
+	reader := readCSVFile(f)
 
 	// Get all existing exploitsID in the database
 	exploitsID, err := s.exploitRepository.GetAllExploitsID()
@@ -555,43 +498,27 @@ func (s importService) importExploits(tx database.DB, f *os.File) error {
 	}
 
 	// Skip the header
-	data = data[1:]
+	reader.Read()
 	// Save all exploits
-	err = s.modelAndSaveExploit(tx, data)
+	amountRead, err := s.modelAndSaveExploit(tx, reader)
 	if err != nil {
 		return err
 	}
 
-	amountOfExploits := len(data)
-	amountOfOldExploits := len(exploitsID)
-
-	slog.Info("finished importing exploits", "amountOfExploits", amountOfExploits, "amountOfOldExploits", amountOfOldExploits, "amountOfOldExploitsNotInNewImportedList", amountOfOldExploits-amountOfExploits, "duration", time.Since(begin))
+	slog.Info("finished importing exploits", "amountOfExploits", amountRead, "amountOfOldExploits", len(exploitsID), "duration", time.Since(begin))
 
 	return nil
 }
-func (s importService) modelAndSaveExploit(tx database.DB, data [][]string) error {
-	exploits := make([]models.Exploit, 0)
-	alreadyPushedInSlice := make(map[string]bool)
-	// csv to model and save
-	for _, row := range data {
-		exploit, err := csvRowToExploitModel(row)
-		if err != nil {
-			return err
-		}
-		if _, ok := alreadyPushedInSlice[exploit.ID]; ok {
-			continue
-		}
-		exploits = append(exploits, exploit)
-	}
-
-	// save the exploits
-	err := s.exploitRepository.SaveBatch(tx, exploits)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (s importService) modelAndSaveExploit(tx database.DB, reader *csv.Reader) (int, error) {
+	return utils.ReadCsvInChunks(reader, 100, func(rows [][]string) error {
+		exploits := utils.Map(rows, func(row []string) models.Exploit {
+			model, _ := csvRowToExploitModel(row)
+			return model
+		})
+		return s.exploitRepository.SaveBatch(tx, exploits)
+	})
 }
+
 func csvRowToExploitModel(row []string) (models.Exploit, error) {
 	var exploit models.Exploit
 
@@ -676,10 +603,8 @@ func (s importService) importAffectedComponents(tx database.DB, f *os.File) erro
 	slog.Info("Importing affected_components started")
 	begin := time.Now()
 	// Read affected_components.csv
-	data, err := readCSVFile(f)
-	if err != nil {
-		return err
-	}
+	reader := readCSVFile(f)
+
 	// Get all existing affectedComponentsID in the database
 	affectedComponentsID, err := s.affectedComponentsRepository.GetAllAffectedComponentsID()
 	if err != nil {
@@ -687,45 +612,30 @@ func (s importService) importAffectedComponents(tx database.DB, f *os.File) erro
 	}
 
 	// Skip the header
-	data = data[1:]
+	reader.Read()
 	// model and save
-	err = s.modelAndSaveAffectedComponent(tx, data)
+	amountRead, err := s.modelAndSaveAffectedComponent(tx, reader)
 	if err != nil {
 		return err
 	}
 
-	amountOfAffectedComponents := len(data)
-	amountOfOldAffectedComponents := len(affectedComponentsID)
-
-	slog.Info("finished importing affected_components", "amountOfAffectedComponents", amountOfAffectedComponents, "amountOfOldAffectedComponents", amountOfOldAffectedComponents, "amountOfOldAffectedComponentsNotInNewImportedList", amountOfOldAffectedComponents-amountOfAffectedComponents, "duration", time.Since(begin))
+	slog.Info("finished importing affected_components", "amountOfAffectedComponents", amountRead, "amountOfOldAffectedComponents", len(affectedComponentsID), "duration", time.Since(begin))
 
 	return nil
 }
 
-func (s importService) modelAndSaveAffectedComponent(tx database.DB, data [][]string) error {
-	affectedComponents := make([]models.AffectedComponent, 0)
-	alreadyPushedInSlice := make(map[string]bool)
-	// csv to model and save
-	for _, row := range data {
-		affectedComponent, err := csvRowToAffectedComponentModel(row)
-		if err != nil {
-			return err
-		}
-		if _, ok := alreadyPushedInSlice[affectedComponent.ID]; ok {
-			continue
-		}
-		affectedComponents = append(affectedComponents, affectedComponent)
-	}
-	// save the affectedComponents
-	err := s.affectedComponentsRepository.SaveBatch(tx, affectedComponents)
-	if err != nil {
-		return err
-	}
+func (s importService) modelAndSaveAffectedComponent(tx database.DB, reader *csv.Reader) (int, error) {
+	return utils.ReadCsvInChunks(reader, 100, func(rows [][]string) error {
+		affectedComponents := utils.Map(rows, func(row []string) models.AffectedComponent {
+			model, _ := CsvRowToAffectedComponentModel(row)
+			return model
+		})
 
-	return nil
+		return s.affectedComponentsRepository.SaveBatch(tx, affectedComponents)
+	})
 }
 
-func csvRowToAffectedComponentModel(row []string) (models.AffectedComponent, error) {
+func CsvRowToAffectedComponentModel(row []string) (models.AffectedComponent, error) {
 	var semverIntroduced *string
 	if row[11] != "" {
 		semverIntroduced = &row[11]
@@ -760,43 +670,29 @@ func (s importService) importWeaknesses(tx database.DB, f *os.File) error {
 	slog.Info("Importing weaknesses started")
 	begin := time.Now()
 	// Read weaknesses.csv
-	data, err := readCSVFile(f)
-	if err != nil {
-		return err
-	}
-
+	reader := readCSVFile(f)
 	// Skip the header
-	data = data[1:]
+	reader.Read()
 	// model and save
-	weaknesses, err := modelWeaknesses(data)
+	amountRead, err := s.modelAndSaveWeaknesses(reader)
 	if err != nil {
 		return err
 	}
-
-	// Save all weaknesses
-	err = s.saveWeaknesses(tx, weaknesses)
-	if err != nil {
-		return err
-	}
-
-	amountOfWeaknesses := len(data)
+	amountOfWeaknesses := amountRead
 
 	slog.Info("finished importing weaknesses", "amountOfWeaknesses", amountOfWeaknesses, "duration", time.Since(begin))
 	return nil
 }
 
-func modelWeaknesses(data [][]string) ([]models.Weakness, error) {
-	weaknesses := []models.Weakness{}
-	// csv to model
-	for _, row := range data {
-		weakness, err := csvRowToWeaknessModel(row)
-		if err != nil {
-			return nil, err
-		}
-		weaknesses = append(weaknesses, weakness)
+func (s importService) modelAndSaveWeaknesses(reader *csv.Reader) (int, error) {
+	return utils.ReadCsvInChunks(reader, 100, func(rows [][]string) error {
+		weaknesses := utils.Map(rows, func(row []string) models.Weakness {
+			model, _ := csvRowToWeaknessModel(row)
+			return model
+		})
 
-	}
-	return weaknesses, nil
+		return s.saveWeaknesses(nil, weaknesses)
+	})
 }
 
 func groupWeaknessesByCVE(weaknesses []models.Weakness) map[string][]models.Weakness {
@@ -806,12 +702,12 @@ func groupWeaknessesByCVE(weaknesses []models.Weakness) map[string][]models.Weak
 	}
 	return weaknessesByCVE
 }
+
 func (s importService) saveWeaknesses(tx database.DB, weaknesses []models.Weakness) error {
 	// Group weaknesses by cveID
 	weaknessesByCVE := groupWeaknessesByCVE(weaknesses)
 
 	for cveId, weaknessesGroup := range weaknessesByCVE {
-
 		// add weaknesses to the cve
 		if err := s.cveRepository.GetDB(tx).Model(&models.CVE{
 			CVE: cveId,
@@ -829,14 +725,12 @@ func (s importService) saveWeaknesses(tx database.DB, weaknesses []models.Weakne
 	return nil
 }
 func csvRowToWeaknessModel(row []string) (models.Weakness, error) {
-
 	return models.Weakness{
 		Source: row[0],
 		Type:   row[1],
 		CVEID:  row[2],
 		CWEID:  row[3],
 	}, nil
-
 }
 
 // import cpe_cve_matches
@@ -844,28 +738,26 @@ func (s importService) importCveCpeMatches(tx database.DB, f *os.File) error {
 	slog.Info("Importing cpe_cve_matches started")
 	begin := time.Now()
 	// Read cpe_cve_matches.csv
-	data, err := readCSVFile(f)
-	if err != nil {
-		return err
-	}
+	reader := readCSVFile(f)
 
 	// Skip the header
-	data = data[1:]
+	reader.Read()
+
 	// Save all cpe_cve_matches
-	err = s.saveCpeCveMatches(tx, data)
+	amountRead, err := s.saveCpeCveMatches(tx, reader)
 	if err != nil {
 		return err
 	}
 
-	amountOfCpeCveMatches := len(data)
-
-	slog.Info("finished importing cpe_cve_matches", "amountOfCpeCveMatches", amountOfCpeCveMatches, "duration", time.Since(begin))
+	slog.Info("finished importing cpe_cve_matches", "amountOfCpeCveMatches", amountRead, "duration", time.Since(begin))
 	return nil
 }
-func (s importService) saveCpeCveMatches(tx database.DB, csvData [][]string) error {
-	//Group cpeCveMatches by cveID
-	cpeCveMatchesByCVE := groupCpeCveMatchesByCVE(csvData)
-	return s.saveCpeCveMatchesGroup(tx, cpeCveMatchesByCVE)
+func (s importService) saveCpeCveMatches(tx database.DB, csvData *csv.Reader) (int, error) {
+	return utils.ReadCsvInChunks(csvData, 100, func(rows [][]string) error {
+		//Group cpeCveMatches by cveID
+		cpeCveMatchesByCVE := groupCpeCveMatchesByCVE(rows)
+		return s.saveCpeCveMatchesGroup(tx, cpeCveMatchesByCVE)
+	})
 }
 func groupCpeCveMatchesByCVE(csvData [][]string) map[string][]string {
 	// the key will be the cve id. The value will be an array of cpe match criteria ids
@@ -914,29 +806,28 @@ func (s importService) importCveAffectedComponent(tx database.DB, f *os.File) er
 	slog.Info("Importing cve_affects_component started")
 	begin := time.Now()
 	// Read cve_affects_component.csv
-	data, err := readCSVFile(f)
-	if err != nil {
-		return err
-	}
+	reader := readCSVFile(f)
 
 	// Skip the header
-	data = data[1:]
+	reader.Read()
 	// model and save
-	err = s.saveCveAffectedComponents(tx, data)
+	amountRead, err := s.saveCveAffectedComponents(tx, reader)
 	if err != nil {
 		return err
 	}
 
-	amountOfCveAffectedComponents := len(data)
-
-	slog.Info("finished importing cve_affects_component", "amountOfCveAffectedComponents", amountOfCveAffectedComponents, "duration", time.Since(begin))
+	slog.Info("finished importing cve_affects_component", "amountOfCveAffectedComponents", amountRead, "duration", time.Since(begin))
 
 	return nil
 }
-func (s importService) saveCveAffectedComponents(tx database.DB, csvData [][]string) error {
-	//Group affectedComponents by cveID
-	cveToAffectedComponents := groupAffectedComponentsByCVE(csvData)
-	return s.saveCveAffectedComponentsGroup(tx, cveToAffectedComponents)
+func (s importService) saveCveAffectedComponents(tx database.DB, reader *csv.Reader) (int, error) {
+
+	return utils.ReadCsvInChunks(reader, 100, func(rows [][]string) error {
+		// model and save
+		//Group affectedComponents by cveID
+		cveToAffectedComponents := groupAffectedComponentsByCVE(rows)
+		return s.saveCveAffectedComponentsGroup(tx, cveToAffectedComponents)
+	})
 }
 
 func groupAffectedComponentsByCVE(csvData [][]string) map[string][]string {

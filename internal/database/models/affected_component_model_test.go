@@ -276,3 +276,156 @@ func TestSetIdHash(t *testing.T) {
 		}
 	})
 }
+
+func TestVersionsToRange(t *testing.T) {
+	t.Run("Test patch updates", func(t *testing.T) {
+		versions := []string{
+			"0.24.0-r1",
+			"0.24.1-r0",
+			"0.24.2-r0",
+		}
+
+		expected := [][2]string{
+			{"0.24.0-r1", "0.24.2-r0"},
+		}
+
+		actual := versionsToRange(versions)
+
+		if len(actual) != len(expected) {
+			t.Fatalf("Expected %v, got %v", expected, actual)
+		}
+
+		for i, v := range actual {
+			if v != expected[i] {
+				t.Fatalf("Expected %v, got %v", expected, actual)
+			}
+		}
+	})
+
+	t.Run("Test minor updates", func(t *testing.T) {
+		versions := []string{
+			"1.0.0",
+			"1.1.0",
+			"1.2.0",
+		}
+
+		expected := [][2]string{
+			{"1.0.0", "1.2.0"},
+		}
+
+		actual := versionsToRange(versions)
+
+		if len(actual) != len(expected) {
+			t.Fatalf("Expected %v, got %v", expected, actual)
+		}
+
+		for i, v := range actual {
+			if v != expected[i] {
+				t.Fatalf("Expected %v, got %v", expected, actual)
+			}
+		}
+	})
+
+	t.Run("Test major updates should NEVER be in a range", func(t *testing.T) {
+		versions := []string{
+			"1.0.0",
+			"2.0.0",
+			"3.0.0",
+		}
+
+		expected := [][2]string{
+			{"1.0.0", "1.0.0"},
+			{"2.0.0", "2.0.0"},
+			{"3.0.0", "3.0.0"},
+		}
+
+		actual := versionsToRange(versions)
+
+		if len(actual) != len(expected) {
+			t.Fatalf("Expected %v, got %v", expected, actual)
+		}
+
+		for i, v := range actual {
+			if v != expected[i] {
+				t.Fatalf("Expected %v, got %v", expected, actual)
+			}
+		}
+	})
+
+	t.Run("Test prerelease updates", func(t *testing.T) {
+		versions := []string{
+			"1.0.0-beta1",
+			"1.0.0-beta2",
+			"1.0.0-beta3",
+		}
+
+		expected := [][2]string{
+			{"1.0.0-beta1", "1.0.0-beta3"},
+		}
+
+		actual := versionsToRange(versions)
+
+		if len(actual) != len(expected) {
+			t.Fatalf("Expected %v, got %v", expected, actual)
+		}
+
+		for i, v := range actual {
+			if v != expected[i] {
+				t.Fatalf("Expected %v, got %v", expected, actual)
+			}
+		}
+	})
+
+	t.Run("Test prerelease updates with patch updates", func(t *testing.T) {
+		versions := []string{
+			"1.0.0-beta1",
+			"1.0.0-beta2",
+			"1.0.0-beta3",
+			"1.0.0",
+			"1.0.1",
+			"1.0.2",
+		}
+
+		expected := [][2]string{
+			{"1.0.0-beta1", "1.0.2"},
+		}
+
+		actual := versionsToRange(versions)
+
+		if len(actual) != len(expected) {
+			t.Fatalf("Expected %v, got %v", expected, actual)
+		}
+
+		for i, v := range actual {
+			if v != expected[i] {
+				t.Fatalf("Expected %v, got %v", expected, actual)
+			}
+		}
+	})
+
+	t.Run("test different patch and prerelease versions", func(t *testing.T) {
+		versions := []string{
+			"1.0.0-beta1",
+			"1.0.1-beta2",
+			"1.0.2",
+		}
+
+		expected := [][2]string{
+			{"1.0.0-beta1", "1.0.0-beta1"},
+			{"1.0.1-beta2", "1.0.1-beta2"},
+			{"1.0.2", "1.0.2"},
+		}
+
+		actual := versionsToRange(versions)
+
+		if len(actual) != len(expected) {
+			t.Fatalf("Expected %v, got %v", expected, actual)
+		}
+
+		for i, v := range actual {
+			if v != expected[i] {
+				t.Fatalf("Expected %v, got %v", expected, actual)
+			}
+		}
+	})
+}
