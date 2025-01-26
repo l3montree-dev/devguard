@@ -129,7 +129,7 @@ func (s importService) Import(tx database.DB, tag string) error {
 	reg := "ghcr.io/l3montree-dev/devguard/vulndb"
 
 	// create a file store
-	// defer os.RemoveAll(tmp)
+	defer os.RemoveAll(tmp)
 	fs, err := file.New(tmp)
 	if err != nil {
 		panic(err)
@@ -164,7 +164,7 @@ func (s importService) Import(tx database.DB, tag string) error {
 	slog.Info("Unzipping vulndb completed")
 
 	//copy csv files to database
-	err = s.copyCSVToDB(tmp + "/vulndb")
+	err = s.copyCSVToDB(tmp)
 	if err != nil {
 		return err
 	}
