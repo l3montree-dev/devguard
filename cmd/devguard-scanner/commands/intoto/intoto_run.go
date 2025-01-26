@@ -29,6 +29,8 @@ import (
 
 	"github.com/briandowns/spinner"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
+	slsa1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
 
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -160,6 +162,47 @@ func NewInTotoRunCommand() *cobra.Command {
 			metadata, err := toto.InTotoRun(step, ".", materials, products, []string{}, key, []string{"sha256"}, ignore, []string{}, true, true, true)
 			if err != nil {
 				return err
+			}
+
+			mb, ok := metadata.(*toto.Metablock)
+			if !ok {
+				return errors.New("failed to cast metadata to link")
+			}
+
+			link, ok := mb.Signed.(toto.Link)
+			if !ok {
+				return errors.New("failed to cast metadata to link")
+			}
+
+			subjects := make([]toto.Subject, 0, len(link.Products))
+			for productName, product := range link.Products {
+				subjects = append(subjects, toto.Subject{
+					Name:   productName,
+					Digest: common.DigestSet(product.(map[string]string)),
+				})
+			}
+
+			// map the materials to resolved dependencies
+			resolvedDependencies := make([]slsa1.ResourceDescriptor, 0, len(link.Materials))
+			for materialName, material := range link.Materials {
+				resolvedDependencies = append(resolvedDependencies, slsa1.ResourceDescriptor{
+					URI:    fmt.Sprintf("file://%s", materialName), // TODO: Replace with URI of the file in the gitlab repo. Need to get the repo URL from devguard - if set
+					Digest: common.DigestSet(material.(map[string]string)),
+				})
+			}
+
+			provenance := toto.ProvenanceStatementSLSA1{
+				StatementHeader: toto.StatementHeader{
+					Type:          toto.StatementInTotoV01,
+					PredicateType: slsa1.PredicateSLSAProvenance,
+					Subject:       subjects,
+				},
+				Predicate: slsa1.ProvenancePredicate{
+					BuildDefinition: slsa1.ProvenanceBuildDefinition{
+						ResolvedDependencies: resolvedDependencies,
+						ExternalParameters:   map[string]interface{}{},
+					},
+				},
 			}
 
 			err = metadata.Sign(key)
