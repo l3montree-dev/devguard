@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/spf13/cobra"
 )
@@ -53,49 +54,53 @@ func newSbomCommand() *cobra.Command {
 				return
 			}
 			for _, asset := range assets {
-				versions, err := componentRepository.GetVersions(nil, asset)
-				if err != nil {
-					slog.Error("could not get versions", "err", err)
-					continue
+				components, err := componentRepository.LoadAllLatestComponentFromAsset(nil, asset)
+
+				// group the components by scanner
+				scannerComponents := make(map[string][]models.ComponentDependency)
+				for _, component := range components {
+					if _, ok := scannerComponents[component.ScannerID]; !ok {
+						scannerComponents[component.ScannerID] = make([]models.ComponentDependency, 0)
+					}
+					scannerComponents[component.ScannerID] = append(scannerComponents[component.ScannerID], component)
 				}
 
-				for _, scanType := range []string{"container-scanning"} {
-					for _, version := range versions {
-						now := time.Now()
-						// build the sbom of the asset
-						components, err := componentRepository.LoadComponents(nil, asset, scanType, version)
-						if err != nil {
-							slog.Error("could not load asset components", "err", err)
-							continue
-						}
+				for scanner, scannerComponents := range scannerComponents {
 
-						sbom := assetService.BuildSBOM(asset, version, "", components)
+					now := time.Now()
+					// build the sbom of the asset
 
-						normalizedSBOM := normalize.FromCdxBom(sbom, false)
-
-						vulns, err := sbomScanner.Scan(normalizedSBOM)
-						if err != nil {
-							slog.Error("could not scan sbom", "err", err)
-							continue
-						}
-
-						amountOpened, amountClosed, flaws, err := assetService.HandleScanResult(
-							asset,
-							vulns,
-							scanType,
-							version,
-							"github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scanType,
-							"system",
-							true,
-						)
-
-						if err != nil {
-							slog.Error("could not handle scan result", "err", err)
-							continue
-						}
-
-						slog.Info("scan result", "asset", asset.Name, "scanType", scanType, "version", version, "totalAmount", len(flaws), "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
+					if err != nil {
+						slog.Error("could not load asset components", "err", err)
+						continue
 					}
+
+					sbom := assetService.BuildSBOM(asset, "latest", "", scannerComponents)
+
+					normalizedSBOM := normalize.FromCdxBom(sbom, false)
+
+					vulns, err := sbomScanner.Scan(normalizedSBOM)
+					if err != nil {
+						slog.Error("could not scan sbom", "err", err)
+						continue
+					}
+
+					amountOpened, amountClosed, flaws, err := assetService.HandleScanResult(
+						asset,
+						vulns,
+						scanner,
+						"latest",
+						scanner,
+						"system",
+						true,
+					)
+
+					if err != nil {
+						slog.Error("could not handle scan result", "err", err)
+						continue
+					}
+
+					slog.Info("scan result", "asset", asset.Name, "totalAmount", len(flaws), "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
 
 				}
 			}

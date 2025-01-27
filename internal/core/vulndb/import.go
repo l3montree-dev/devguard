@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -26,7 +25,6 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 
-	"gorm.io/gorm"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry/remote"
@@ -60,51 +58,6 @@ type importService struct {
 	cweRepository                cwesRepository
 	exploitRepository            exploitsRepository
 	affectedComponentsRepository affectedComponentsRepository
-}
-
-type configService interface {
-	GetJSONConfig(key string, v any) error
-	SetJSONConfig(key string, v any) error
-}
-
-type leaderElector interface {
-	IfLeader(ctx context.Context, fn func() error)
-}
-
-func StartMirror(db core.DB, leaderElector leaderElector, configService configService) {
-	cveRepository := repositories.NewCVERepository(db)
-	cweRepository := repositories.NewCWERepository(db)
-	exploitsRepository := repositories.NewExploitRepository(db)
-	affectedComponentsRepository := repositories.NewAffectedComponentRepository(db)
-
-	v := NewImportService(cveRepository, cweRepository, exploitsRepository, affectedComponentsRepository)
-	leaderElector.IfLeader(context.Background(), func() error {
-		var lastMirror struct {
-			Time time.Time `json:"time"`
-		}
-
-		err := configService.GetJSONConfig("vulndb.lastMirror", &lastMirror)
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			slog.Error("could not get last mirror time", "err", err)
-			return nil
-		} else if errors.Is(err, gorm.ErrRecordNotFound) {
-			slog.Info("no last mirror time found. Setting to 0")
-			lastMirror.Time = time.Time{}
-		}
-
-		if time.Since(lastMirror.Time) > 2*time.Hour {
-			slog.Info("last mirror was more than 2 hours ago. Starting mirror process")
-
-			if err := v.Import(db, "latest"); err != nil {
-				slog.Error("could not import vulndb", "err", err)
-			}
-		} else {
-			slog.Info("last mirror was less than 2 hours ago. Not mirroring", "lastMirror", lastMirror.Time, "now", time.Now())
-		}
-		slog.Info("done. Waiting for 2 hours to check again")
-		time.Sleep(2 * time.Hour)
-		return nil
-	})
 }
 
 func NewImportService(cvesRepository cvesRepository, cweRepository cwesRepository, exploitRepository exploitsRepository, affectedComponentsRepository affectedComponentsRepository) *importService {

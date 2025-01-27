@@ -34,12 +34,12 @@ type cveRepository interface {
 
 type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
-	LoadComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
+	LoadComponents(tx core.DB, asset models.Asset, scanner, version string) ([]models.ComponentDependency, error)
 }
 
 type assetService interface {
-	HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanType string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
-	UpdateSBOM(asset models.Asset, scanType string, version string, sbom normalize.SBOM) error
+	HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
+	UpdateSBOM(asset models.Asset, scanner string, version string, sbom normalize.SBOM) error
 }
 
 type assetRepository interface {
@@ -100,11 +100,11 @@ func (s *httpController) Scan(c core.Context) error {
 		version = models.NoVersion
 	}
 
-	scanType := c.Request().Header.Get("X-Scan-Type")
-	if scanType == "" {
-		slog.Error("no scan type header found")
+	scanner := c.Request().Header.Get("X-Scanner")
+	if scanner == "" {
+		slog.Error("no X-Scanner header found")
 		return c.JSON(400, map[string]string{
-			"error": "no scan type header found",
+			"error": "no X-Scanner header found",
 		})
 	}
 
@@ -123,7 +123,7 @@ func (s *httpController) Scan(c core.Context) error {
 
 	if doRiskManagement {
 		// update the sbom in the database in parallel
-		if err := s.assetService.UpdateSBOM(assetObj, scanType, version, normalizedBom); err != nil {
+		if err := s.assetService.UpdateSBOM(assetObj, scanner, version, normalizedBom); err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return c.JSON(500, map[string]string{"error": "could not update sbom"})
 		}
@@ -140,11 +140,11 @@ func (s *httpController) Scan(c core.Context) error {
 
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
-		scannerID = "github.com/l3montree-dev/devguard/cmd/devguard-scanner/" + scanType
+		return c.JSON(400, map[string]string{"error": "no scanner id provided"})
 	}
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(assetObj, vulns, scanType, version, scannerID, userID, doRiskManagement)
+	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(assetObj, vulns, scannerID, version, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
@@ -161,23 +161,5 @@ func (s *httpController) Scan(c core.Context) error {
 	return c.JSON(200, ScanResponse{
 		AmountOpened: amountOpened,
 		AmountClosed: amountClose,
-		Flaws: utils.Map(newState, func(f models.Flaw) flaw.FlawDTO {
-			return flaw.FlawDTO{
-				ID:                 f.ID,
-				ScannerID:          f.AssetID.String(),
-				State:              f.State,
-				CVE:                f.CVE,
-				Component:          f.Component,
-				CVEID:              f.CVEID,
-				ComponentPurl:      f.ComponentPurl,
-				Effort:             f.Effort,
-				RiskAssessment:     f.RiskAssessment,
-				RawRiskAssessment:  f.RawRiskAssessment,
-				Priority:           f.Priority,
-				ArbitraryJsonData:  f.GetArbitraryJsonData(),
-				LastDetected:       f.LastDetected,
-				CreatedAt:          f.CreatedAt,
-				RiskRecalculatedAt: f.RiskRecalculatedAt,
-			}
-		})})
+		Flaws:        utils.Map(newState, flaw.FlawToDto)})
 }

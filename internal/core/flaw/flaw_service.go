@@ -16,7 +16,6 @@
 package flaw
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"time"
@@ -51,8 +50,9 @@ type cveRepository interface {
 type service struct {
 	flawRepository      flawRepository
 	flawEventRepository flawEventRepository
-	assetRepository     assetRepository
-	cveRepository       cveRepository
+
+	assetRepository assetRepository
+	cveRepository   cveRepository
 }
 
 func NewService(flawRepository flawRepository, flawEventRepository flawEventRepository, assetRepository assetRepository, cveRepository cveRepository) *service {
@@ -102,8 +102,7 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 	}
 
 	for i, flaw := range flaws {
-		riskReport := risk.RawRisk(*flaw.CVE, e, flaw.GetComponentDepth())
-
+		riskReport := risk.RawRisk(*flaw.CVE, e, *flaw.ComponentDepth)
 		ev := models.NewDetectedEvent(flaw.CalculateHash(), userID, riskReport)
 		// apply the event on the flaw
 		ev.Apply(&flaws[i])
@@ -178,15 +177,15 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 
 	events := make([]models.FlawEvent, 0)
 	for i, flaw := range flaws {
-		cviID := flaw.CVEID
-		cve, err := s.cveRepository.FindCVE(nil, cviID)
+		cveID := *flaw.CVEID
+		cve, err := s.cveRepository.FindCVE(nil, cveID)
 		if err != nil {
 			slog.Info("error getting cve", "err", err)
 			continue
 		}
 
 		oldRiskAssessment := flaw.RawRiskAssessment
-		newRiskAssessment := risk.RawRisk(cve, env, flaw.GetComponentDepth())
+		newRiskAssessment := risk.RawRisk(cve, env, *flaw.ComponentDepth)
 
 		if *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(flaw.CalculateHash(), userID, justification, newRiskAssessment)
@@ -288,20 +287,4 @@ func (s *service) applyAndSave(tx core.DB, flaw *models.Flaw, ev *models.FlawEve
 	}
 	flaw.Events = append(flaw.Events, *ev)
 	return *ev, nil
-}
-
-type leaderElector interface {
-	IfLeader(ctx context.Context, fn func() error)
-}
-
-func (service *service) StartRiskRecalculationDaemon(leaderElector leaderElector) {
-	slog.Info("starting risk recalculation daemon")
-	leaderElector.IfLeader(context.Background(), func() error {
-		err := service.RecalculateAllRawRiskAssessments()
-		if err != nil {
-			slog.Error("could not recalculate risk assessments", "err", err)
-		}
-		time.Sleep(1 * time.Hour)
-		return nil
-	})
 }

@@ -469,7 +469,7 @@ func Start(db core.DB) {
 	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetRiskDistribution)
 	assetRouter.GET("/stats/risk-history/", statisticsController.GetAssetRiskHistory)
 	assetRouter.GET("/stats/flaw-count-by-scanner/", statisticsController.GetFlawCountByScannerId)
-	assetRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanType)
+	assetRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanner)
 	assetRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetFlawAggregationStateAndChange)
 	assetRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetFixingTime)
 

@@ -164,6 +164,64 @@ func (_c *ProjectProjectRepository_Delete_Call) RunAndReturn(run func(*gorm.DB, 
 	return _c
 }
 
+// GetDirectChildProjects provides a mock function with given fields: projectID
+func (_m *ProjectProjectRepository) GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+	ret := _m.Called(projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDirectChildProjects")
+	}
+
+	var r0 []models.Project
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uuid.UUID) ([]models.Project, error)); ok {
+		return rf(projectID)
+	}
+	if rf, ok := ret.Get(0).(func(uuid.UUID) []models.Project); ok {
+		r0 = rf(projectID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Project)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
+		r1 = rf(projectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ProjectProjectRepository_GetDirectChildProjects_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDirectChildProjects'
+type ProjectProjectRepository_GetDirectChildProjects_Call struct {
+	*mock.Call
+}
+
+// GetDirectChildProjects is a helper method to define mock.On call
+//   - projectID uuid.UUID
+func (_e *ProjectProjectRepository_Expecter) GetDirectChildProjects(projectID interface{}) *ProjectProjectRepository_GetDirectChildProjects_Call {
+	return &ProjectProjectRepository_GetDirectChildProjects_Call{Call: _e.mock.On("GetDirectChildProjects", projectID)}
+}
+
+func (_c *ProjectProjectRepository_GetDirectChildProjects_Call) Run(run func(projectID uuid.UUID)) *ProjectProjectRepository_GetDirectChildProjects_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *ProjectProjectRepository_GetDirectChildProjects_Call) Return(_a0 []models.Project, _a1 error) *ProjectProjectRepository_GetDirectChildProjects_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *ProjectProjectRepository_GetDirectChildProjects_Call) RunAndReturn(run func(uuid.UUID) ([]models.Project, error)) *ProjectProjectRepository_GetDirectChildProjects_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function with given fields: projectIds, parentId, orgId
 func (_m *ProjectProjectRepository) List(projectIds []uuid.UUID, parentId *uuid.UUID, orgId uuid.UUID) ([]models.Project, error) {
 	ret := _m.Called(projectIds, parentId, orgId)
@@ -334,6 +392,64 @@ func (_c *ProjectProjectRepository_ReadBySlugUnscoped_Call) Return(_a0 models.Pr
 }
 
 func (_c *ProjectProjectRepository_ReadBySlugUnscoped_Call) RunAndReturn(run func(uuid.UUID, string) (models.Project, error)) *ProjectProjectRepository_ReadBySlugUnscoped_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RecursivelyGetChildProjects provides a mock function with given fields: projectID
+func (_m *ProjectProjectRepository) RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error) {
+	ret := _m.Called(projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RecursivelyGetChildProjects")
+	}
+
+	var r0 []models.Project
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uuid.UUID) ([]models.Project, error)); ok {
+		return rf(projectID)
+	}
+	if rf, ok := ret.Get(0).(func(uuid.UUID) []models.Project); ok {
+		r0 = rf(projectID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Project)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
+		r1 = rf(projectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ProjectProjectRepository_RecursivelyGetChildProjects_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecursivelyGetChildProjects'
+type ProjectProjectRepository_RecursivelyGetChildProjects_Call struct {
+	*mock.Call
+}
+
+// RecursivelyGetChildProjects is a helper method to define mock.On call
+//   - projectID uuid.UUID
+func (_e *ProjectProjectRepository_Expecter) RecursivelyGetChildProjects(projectID interface{}) *ProjectProjectRepository_RecursivelyGetChildProjects_Call {
+	return &ProjectProjectRepository_RecursivelyGetChildProjects_Call{Call: _e.mock.On("RecursivelyGetChildProjects", projectID)}
+}
+
+func (_c *ProjectProjectRepository_RecursivelyGetChildProjects_Call) Run(run func(projectID uuid.UUID)) *ProjectProjectRepository_RecursivelyGetChildProjects_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *ProjectProjectRepository_RecursivelyGetChildProjects_Call) Return(_a0 []models.Project, _a1 error) *ProjectProjectRepository_RecursivelyGetChildProjects_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *ProjectProjectRepository_RecursivelyGetChildProjects_Call) RunAndReturn(run func(uuid.UUID) ([]models.Project, error)) *ProjectProjectRepository_RecursivelyGetChildProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }

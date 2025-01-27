@@ -117,3 +117,10 @@ func BuildDependencyTree(elements []models.ComponentDependency) tree {
 
 	return tree
 }
+
+func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
+	depthMap := make(map[string]int)
+	tree := BuildDependencyTree(elements)
+	CalculateDepth(tree.Root, 0, depthMap)
+	return depthMap
+}

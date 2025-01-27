@@ -4,14 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"slices"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+
 	"github.com/l3montree-dev/devguard/internal/database"
 
+	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -35,7 +37,7 @@ type repository interface {
 
 type assetComponentsLoader interface {
 	GetVersions(tx core.DB, asset models.Asset) ([]string, error)
-	LoadComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
+	LoadComponents(tx core.DB, asset models.Asset, scanner, version string) ([]models.ComponentDependency, error)
 }
 
 type assetService interface {
@@ -131,13 +133,13 @@ func (a *httpController) AffectedComponents(c core.Context) error {
 		}
 	}
 
-	scanType := c.QueryParam("scanType")
-	if scanType == "" {
-		return echo.NewHTTPError(400, "scanType query param is required")
+	scanner := c.QueryParam("scanner")
+	if scanner == "" {
+		return echo.NewHTTPError(400, "scanner query param is required")
 	}
 
 	asset := core.GetAsset(c)
-	_, flaws, err := a.getComponentsAndFlaws(asset, scanType, version)
+	_, flaws, err := a.getComponentsAndFlaws(asset, scanner, version)
 	if err != nil {
 		return err
 	}
@@ -147,8 +149,8 @@ func (a *httpController) AffectedComponents(c core.Context) error {
 	}))
 }
 
-func (a *httpController) getComponentsAndFlaws(asset models.Asset, scanType, version string) ([]models.ComponentDependency, []models.Flaw, error) {
-	components, err := a.assetComponentsLoader.LoadComponents(nil, asset, scanType, version)
+func (a *httpController) getComponentsAndFlaws(asset models.Asset, scanner, version string) ([]models.ComponentDependency, []models.Flaw, error) {
+	components, err := a.assetComponentsLoader.LoadComponents(nil, asset, scanner, version)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -266,12 +268,12 @@ func (a *httpController) DependencyGraph(c core.Context) error {
 		}
 	}
 
-	scanType := c.QueryParam("scanType")
-	if scanType == "" {
-		return echo.NewHTTPError(400, "scanType query param is required")
+	scanner := c.QueryParam("scanner")
+	if scanner == "" {
+		return echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.assetComponentsLoader.LoadComponents(nil, app, scanType, version)
+	components, err := a.assetComponentsLoader.LoadComponents(nil, app, scanner, version)
 	if err != nil {
 		return err
 	}
@@ -334,12 +336,12 @@ func (a *httpController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 		}
 	}
 
-	scanType := c.QueryParam("scanType")
-	if scanType == "" {
-		return nil, echo.NewHTTPError(400, "scanType query param is required")
+	scanner := c.QueryParam("scanner")
+	if scanner == "" {
+		return nil, echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.assetComponentsLoader.LoadComponents(nil, asset, scanType, version)
+	components, err := a.assetComponentsLoader.LoadComponents(nil, asset, scanner, version)
 	if err != nil {
 		return nil, err
 	}
@@ -361,13 +363,19 @@ func (a *httpController) buildVeX(c core.Context) (*cdx.BOM, error) {
 		}
 	}
 
-	scanType := c.QueryParam("scanType")
-	if scanType == "" {
-		return nil, echo.NewHTTPError(400, "scanType query param is required")
+	scanner := c.QueryParam("scanner")
+	if scanner == "" {
+		return nil, echo.NewHTTPError(400, "scanner query param is required")
+	}
+
+	// url decode the scanner
+	scanner, err := url.QueryUnescape(scanner)
+	if err != nil {
+		return nil, err
 	}
 
 	// get all associated flaws
-	components, flaws, err := a.getComponentsAndFlaws(asset, scanType, version)
+	components, flaws, err := a.getComponentsAndFlaws(asset, scanner, version)
 	if err != nil {
 		return nil, err
 	}

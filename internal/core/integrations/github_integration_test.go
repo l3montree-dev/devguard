@@ -85,8 +85,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
-			ArbitraryJsonData: `{"componentDepth": 1, "packageName": "test", "scanType": "sca", "fixedVersion": ""}`,
-			CVEID:             "CVE-2021-1234",
+			CVEID:             utils.Ptr("CVE-2021-1234"),
 			RawRiskAssessment: utils.Ptr(8.5),
 		}, nil)
 
@@ -132,8 +131,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
-			ArbitraryJsonData: `{"componentDepth": 1, "packageName": "test", "scanType": "sca", "fixedVersion": ""}`,
-			CVEID:             "CVE-2021-1234",
+			CVEID:             utils.Ptr("CVE-2021-1234"),
 			RawRiskAssessment: utils.Ptr(8.5),
 		}, nil)
 		flawService.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save flaw"))
@@ -191,8 +189,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
-			ArbitraryJsonData: `{"componentDepth": 1, "packageName": "test", "scanType": "sca", "fixedVersion": ""}`,
-			CVEID:             "CVE-2021-1234",
+			CVEID:             utils.Ptr("CVE-2021-1234"),
 			RawRiskAssessment: utils.Ptr(8.5),
 
 			TicketID:  utils.Ptr("github:0"),

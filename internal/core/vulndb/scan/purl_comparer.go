@@ -16,8 +16,6 @@
 package scan
 
 import (
-	"fmt"
-
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -35,35 +33,35 @@ func NewPurlComparer(db core.DB) *purlComparer {
 	}
 }
 
-// some purls do contain versions, which cannot be found in the database. An example is git.
-// the purl looks like: pkg:deb/debian/git@v2.30.2-1, while the version we would like it to match is: 1:2.30.2-1 ("1:" prefix)
-func (comparer *purlComparer) GetVulns(purl string, version string, _ string) ([]models.VulnInPackage, error) {
+// if version is an empty string, the version provided by the purl gets used.
+// if that is an empty string as well - an error gets returned
+func (comparer *purlComparer) GetAffectedComponents(purl, version string) ([]models.AffectedComponent, error) {
 	// parse the purl
 	p, err := packageurl.FromString(purl)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse purl")
 	}
 
-	debug := false
-
-	/*if strings.Contains(purl, "debian/git") {
-		fmt.Println("purl", purl)
-		fmt.Println(version)
-		debug = true
-	}*/
-
 	affectedComponents := []models.AffectedComponent{}
-	semVer, err := normalize.SemverFix(version)
-	p.Version = "" // we save the purl without any version inside the database.
+
+	var semVer string
+	if version == "" {
+		semVer, err = normalize.SemverFix(p.Version)
+		if err != nil {
+			// we cannot find anything without a version
+			return []models.AffectedComponent{}, nil
+		}
+	} else {
+		semVer, err = normalize.SemverFix(version)
+	}
+
+	// reset the purl version - the affected components are not version specific - instead range specific - not part of the purl
+	p.Version = ""
 	if err != nil {
 		// we use the fake semver version - if we can convert it.
 		// this just allows best effort ordering
 		comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", p.ToString()).Where("version = ?", version).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)
 	} else {
-		if debug {
-			fmt.Println("semver", semVer, version)
-		}
-
 		// we can use the version from the purl todo a semver range check
 		// check if the package is present in the database
 		comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", p.ToString()).Where(
@@ -74,26 +72,34 @@ func (comparer *purlComparer) GetVulns(purl string, version string, _ string) ([
 				Or("semver_introduced < ? AND semver_fixed > ?", semVer, semVer),
 		).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)
 	}
+	return affectedComponents, nil
+}
+
+// some purls do contain versions, which cannot be found in the database. An example is git.
+// the purl looks like: pkg:deb/debian/git@v2.30.2-1, while the version we would like it to match is: 1:2.30.2-1 ("1:" prefix)
+func (comparer *purlComparer) GetVulns(purl string, version string, _ string) ([]models.VulnInPackage, error) {
+	// get the affected components
+	affectedComponents, err := comparer.GetAffectedComponents(purl, version)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get affected components")
+	}
 
 	vulnerabilities := []models.VulnInPackage{}
 
 	// transform the affected packages to the vulnInPackage struct
 	for _, affectedComponent := range affectedComponents {
 		for _, cve := range affectedComponent.CVE {
-			fixedVersion := affectedComponent.VersionFixed
-			if fixedVersion == nil {
-				fixedVersion = affectedComponent.SemverFixed
+			fixed := affectedComponent.SemverFixed
+			if fixed == nil {
+				fixed = affectedComponent.VersionFixed
 			}
 
 			// append the cve to the vulnerabilities
 			vulnerabilities = append(vulnerabilities, models.VulnInPackage{
-				CVEID:             cve.CVE,
-				FixedVersion:      fixedVersion,
-				IntroducedVersion: affectedComponent.SemverIntroduced,
-				PackageName:       affectedComponent.PURL,
-				Purl:              purl,
-				CVE:               cve,
-				InstalledVersion:  version,
+				CVEID:        cve.CVE,
+				Purl:         purl,
+				CVE:          cve,
+				FixedVersion: fixed,
 			})
 		}
 	}

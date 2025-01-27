@@ -130,9 +130,9 @@ func (_c *AssetComponentRepository_HandleStateDiff_Call) RunAndReturn(run func(*
 	return _c
 }
 
-// LoadComponents provides a mock function with given fields: tx, _a1, scanType, version
-func (_m *AssetComponentRepository) LoadComponents(tx *gorm.DB, _a1 models.Asset, scanType string, version string) ([]models.ComponentDependency, error) {
-	ret := _m.Called(tx, _a1, scanType, version)
+// LoadComponents provides a mock function with given fields: tx, _a1, scanner, version
+func (_m *AssetComponentRepository) LoadComponents(tx *gorm.DB, _a1 models.Asset, scanner string, version string) ([]models.ComponentDependency, error) {
+	ret := _m.Called(tx, _a1, scanner, version)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LoadComponents")
@@ -141,10 +141,10 @@ func (_m *AssetComponentRepository) LoadComponents(tx *gorm.DB, _a1 models.Asset
 	var r0 []models.ComponentDependency
 	var r1 error
 	if rf, ok := ret.Get(0).(func(*gorm.DB, models.Asset, string, string) ([]models.ComponentDependency, error)); ok {
-		return rf(tx, _a1, scanType, version)
+		return rf(tx, _a1, scanner, version)
 	}
 	if rf, ok := ret.Get(0).(func(*gorm.DB, models.Asset, string, string) []models.ComponentDependency); ok {
-		r0 = rf(tx, _a1, scanType, version)
+		r0 = rf(tx, _a1, scanner, version)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ComponentDependency)
@@ -152,7 +152,7 @@ func (_m *AssetComponentRepository) LoadComponents(tx *gorm.DB, _a1 models.Asset
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, models.Asset, string, string) error); ok {
-		r1 = rf(tx, _a1, scanType, version)
+		r1 = rf(tx, _a1, scanner, version)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -168,13 +168,13 @@ type AssetComponentRepository_LoadComponents_Call struct {
 // LoadComponents is a helper method to define mock.On call
 //   - tx *gorm.DB
 //   - _a1 models.Asset
-//   - scanType string
+//   - scanner string
 //   - version string
-func (_e *AssetComponentRepository_Expecter) LoadComponents(tx interface{}, _a1 interface{}, scanType interface{}, version interface{}) *AssetComponentRepository_LoadComponents_Call {
-	return &AssetComponentRepository_LoadComponents_Call{Call: _e.mock.On("LoadComponents", tx, _a1, scanType, version)}
+func (_e *AssetComponentRepository_Expecter) LoadComponents(tx interface{}, _a1 interface{}, scanner interface{}, version interface{}) *AssetComponentRepository_LoadComponents_Call {
+	return &AssetComponentRepository_LoadComponents_Call{Call: _e.mock.On("LoadComponents", tx, _a1, scanner, version)}
 }
 
-func (_c *AssetComponentRepository_LoadComponents_Call) Run(run func(tx *gorm.DB, _a1 models.Asset, scanType string, version string)) *AssetComponentRepository_LoadComponents_Call {
+func (_c *AssetComponentRepository_LoadComponents_Call) Run(run func(tx *gorm.DB, _a1 models.Asset, scanner string, version string)) *AssetComponentRepository_LoadComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(*gorm.DB), args[1].(models.Asset), args[2].(string), args[3].(string))
 	})

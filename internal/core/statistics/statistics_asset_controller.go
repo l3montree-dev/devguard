@@ -19,7 +19,7 @@ type statisticsService interface {
 	GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error)
 
 	GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error)
-	GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error)
+	GetDependencyCountPerscanner(assetID uuid.UUID) (map[string]int, error)
 	GetAverageFixingTime(assetID uuid.UUID, severity string) (time.Duration, error)
 	UpdateAssetRiskAggregation(assetID uuid.UUID, start time.Time, end time.Time, updateProject bool) error
 
@@ -57,9 +57,9 @@ func (c *httpController) GetComponentRisk(ctx core.Context) error {
 	return ctx.JSON(200, results)
 }
 
-func (c *httpController) GetDependencyCountPerScanType(ctx core.Context) error {
+func (c *httpController) GetDependencyCountPerScanner(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
-	results, err := c.statisticsService.GetDependencyCountPerScanType(asset.ID)
+	results, err := c.statisticsService.GetDependencyCountPerscanner(asset.ID)
 
 	if err != nil {
 		return err

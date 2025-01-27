@@ -218,7 +218,7 @@ type Explanation struct {
 	cveDescription string
 
 	affectedComponentName string
-	scanType              string
+	scanner               string
 	fixedVersion          *string
 }
 
@@ -228,7 +228,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) s
 	str.WriteString(e.cveDescription)
 	str.WriteString("\n")
 	str.WriteString("### Affected component \n")
-	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.affectedComponentName, e.scanType))
+	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.affectedComponentName, e.scanner))
 	str.WriteString("### Recommended fix\n")
 	if e.fixedVersion != nil {
 		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))
@@ -272,8 +272,6 @@ func Explain(flaw models.Flaw, asset models.Asset, vector string, riskMetrics ob
 
 	shortMsg, longMsg := exploitMessage(flaw, cvss)
 
-	depth := int(flaw.GetArbitraryJsonData()["componentDepth"].(float64))
-
 	return Explanation{
 		exploitMessage: struct {
 			Short string
@@ -284,20 +282,20 @@ func Explain(flaw models.Flaw, asset models.Asset, vector string, riskMetrics ob
 		},
 		epssMessage:           epssMessage(utils.OrDefault(flaw.CVE.EPSS, 0)),
 		cvssBEMessage:         cvssBE(asset, cvss),
-		componentDepthMessage: componentDepthMessages(depth),
+		componentDepthMessage: componentDepthMessages(*flaw.ComponentDepth),
 		cvssMessage:           describeCVSS(cvss),
 		flawId:                flaw.ID,
 
 		risk:  utils.OrDefault(flaw.RawRiskAssessment, 0),
 		epss:  utils.OrDefault(flaw.CVE.EPSS, 0),
-		depth: depth,
+		depth: utils.OrDefault(flaw.ComponentDepth, 0),
 
 		RiskMetrics:    riskMetrics,
-		cveId:          flaw.CVEID,
+		cveId:          *flaw.CVEID,
 		cveDescription: flaw.CVE.Description,
 
-		affectedComponentName: flaw.GetArbitraryJsonData()["packageName"].(string),
-		scanType:              flaw.GetArbitraryJsonData()["scanType"].(string),
-		fixedVersion:          utils.EmptyThenNil(flaw.GetArbitraryJsonData()["fixedVersion"].(string)),
+		affectedComponentName: utils.SafeDereference(flaw.ComponentPurl),
+		scanner:               flaw.ScannerID,
+		fixedVersion:          flaw.ComponentFixedVersion,
 	}
 }

@@ -11,6 +11,13 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
+type assetRepository interface {
+	GetAllAssetsFromDB() ([]models.Asset, error)
+	Save(tx core.DB, asset *models.Asset) error
+	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
+	GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asset, error)
+}
+
 type statisticsRepository interface {
 	TimeTravelFlawState(assetID uuid.UUID, time time.Time) ([]models.Flaw, error)
 	GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
@@ -19,7 +26,7 @@ type statisticsRepository interface {
 }
 
 type componentRepository interface {
-	GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error)
+	GetDependencyCountPerscanner(assetID uuid.UUID) (map[string]int, error)
 }
 type assetRiskHistoryRepository interface {
 	GetRiskHistory(assetId uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error)
@@ -315,9 +322,9 @@ func (s *service) GetComponentRisk(assetID uuid.UUID) (map[string]float64, error
 
 	for _, f := range flaws {
 		damagedPkg := f.ComponentPurl
-		parts := strings.Split(damagedPkg, ":")
-		damagedPkg = parts[1]
-		totalRiskPerComponent[damagedPkg] += utils.OrDefault(f.RawRiskAssessment, 0)
+		parts := strings.Split(*damagedPkg, ":")
+		damagedPkg = &parts[1]
+		totalRiskPerComponent[*damagedPkg] += utils.OrDefault(f.RawRiskAssessment, 0)
 	}
 
 	return totalRiskPerComponent, nil
@@ -327,8 +334,8 @@ func (s *service) GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, er
 	return s.statisticsRepository.GetFlawCountByScannerId(assetID)
 }
 
-func (s *service) GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error) {
-	return s.componentRepository.GetDependencyCountPerScanType(assetID)
+func (s *service) GetDependencyCountPerscanner(assetID uuid.UUID) (map[string]int, error) {
+	return s.componentRepository.GetDependencyCountPerscanner(assetID)
 }
 
 func (s *service) GetAverageFixingTime(assetID uuid.UUID, severity string) (time.Duration, error) {
