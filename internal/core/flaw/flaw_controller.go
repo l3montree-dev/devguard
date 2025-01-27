@@ -150,20 +150,22 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 		flawsByPackage := res[*flaw.ComponentPurl]
 		// append the flaw to the package
 		flawsByPackage.Flaws = append(res[*flaw.ComponentPurl].Flaws, FlawDTO{
-			ID:                flaw.ID,
-			ScannerID:         flaw.ScannerID,
-			Message:           flaw.Message,
-			AssetID:           flaw.AssetID.String(),
-			State:             flaw.State,
-			CVE:               flaw.CVE,
-			CVEID:             flaw.CVEID,
-			ComponentPurl:     flaw.ComponentPurl,
-			Effort:            flaw.Effort,
-			RiskAssessment:    flaw.RiskAssessment,
-			RawRiskAssessment: flaw.RawRiskAssessment,
-			Priority:          flaw.Priority,
-			LastDetected:      flaw.LastDetected,
-			CreatedAt:         flaw.CreatedAt,
+			ID:                    flaw.ID,
+			ScannerID:             flaw.ScannerID,
+			Message:               flaw.Message,
+			AssetID:               flaw.AssetID.String(),
+			State:                 flaw.State,
+			CVE:                   flaw.CVE,
+			CVEID:                 flaw.CVEID,
+			ComponentPurl:         flaw.ComponentPurl,
+			ComponentDepth:        flaw.ComponentDepth,
+			ComponentFixedVersion: flaw.ComponentFixedVersion,
+			Effort:                flaw.Effort,
+			RiskAssessment:        flaw.RiskAssessment,
+			RawRiskAssessment:     flaw.RawRiskAssessment,
+			Priority:              flaw.Priority,
+			LastDetected:          flaw.LastDetected,
+			CreatedAt:             flaw.CreatedAt,
 		})
 		res[*flaw.ComponentPurl] = flawsByPackage
 	}
