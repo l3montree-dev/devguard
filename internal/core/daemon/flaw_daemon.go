@@ -53,32 +53,44 @@ func UpdateComponentProperties(db database.DB) error {
 
 			depthMap := asset.GetComponentDepth(components)
 
+			updateFlaws := make([]models.Flaw, 0, len(flaws))
 			// update the component depth
 			for _, flaw := range flaws {
 				flaw.ComponentDepth = utils.Ptr(depthMap[*flaw.ComponentPurl])
 
-				if flaw.ComponentFixedVersion == nil {
-					// update the fixed version
-					affected, err := purlComparer.GetAffectedComponents(*flaw.ComponentPurl, "")
-					if err != nil {
-						continue
-					}
-					// check if there is a fix for the flaw
-					for _, c := range affected {
-						if c.SemverFixed != nil {
-							flaw.ComponentFixedVersion = c.SemverFixed
-							slog.Info("found fixed version", "purl", flaw.ComponentPurl, "fixedVersion", *flaw.ComponentFixedVersion)
-							break
-						} else if c.VersionFixed != nil {
-							flaw.ComponentFixedVersion = c.VersionFixed
-							slog.Info("found fixed version", "purl", flaw.ComponentPurl, "fixedVersion", *flaw.ComponentFixedVersion)
-						}
-					}
+				// update the fixed version
+				affected, err := purlComparer.GetAffectedComponents(*flaw.ComponentPurl, "")
+				if err != nil {
+					continue
 				}
 
-				if err := flawRepository.Save(nil, &flaw); err != nil {
-					return err
+				var fixedVersion *string
+
+				// check if there is a fix for the flaw
+				for _, c := range affected {
+					// check if this affected component comes from the same cve
+					if utils.Contains(utils.Map(c.CVE, func(c models.CVE) string {
+						return c.CVE
+					}), *flaw.CVEID) {
+						continue
+					}
+
+					if c.SemverFixed != nil {
+						slog.Info("found fixed version", "purl", *flaw.ComponentPurl, "fixedVersion", *flaw.ComponentFixedVersion)
+						fixedVersion = c.SemverFixed
+						break
+					} else if c.VersionFixed != nil {
+						slog.Info("found fixed version", "purl", *flaw.ComponentPurl, "fixedVersion", *flaw.ComponentFixedVersion)
+						fixedVersion = c.VersionFixed
+						break
+					}
 				}
+				flaw.ComponentFixedVersion = fixedVersion
+
+				updateFlaws = append(updateFlaws, flaw)
+			}
+			if err := flawRepository.SaveBatch(nil, updateFlaws); err != nil {
+				return err
 			}
 		}
 	}

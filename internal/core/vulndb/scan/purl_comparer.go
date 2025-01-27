@@ -51,6 +51,7 @@ func (comparer *purlComparer) GetAffectedComponents(purl, version string) ([]mod
 			// we cannot find anything without a version
 			return []models.AffectedComponent{}, nil
 		}
+		version = semVer
 	} else {
 		semVer, err = normalize.SemverFix(version)
 	}
@@ -58,6 +59,7 @@ func (comparer *purlComparer) GetAffectedComponents(purl, version string) ([]mod
 	// reset the purl version - the affected components are not version specific - instead range specific - not part of the purl
 	p.Version = ""
 	if err != nil {
+		// will be not null if the version is not a semver version
 		// we use the fake semver version - if we can convert it.
 		// this just allows best effort ordering
 		comparer.db.Model(&models.AffectedComponent{}).Where("purl = ?", p.ToString()).Where("version = ?", version).Preload("CVE").Preload("CVE.Exploits").Find(&affectedComponents)

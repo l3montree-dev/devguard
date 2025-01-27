@@ -70,7 +70,7 @@ func (m Flaw) TableName() string {
 }
 
 func (m *Flaw) CalculateHash() string {
-	hash := utils.HashString(fmt.Sprintf("%s/%s/%s", *m.CVEID, m.ScannerID, m.AssetID.String()))
+	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, m.AssetID.String()))
 	return hash
 }
 
