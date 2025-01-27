@@ -23,19 +23,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-type purlComparer struct {
+type PurlComparer struct {
 	db core.DB
 }
 
-func NewPurlComparer(db core.DB) *purlComparer {
-	return &purlComparer{
+func NewPurlComparer(db core.DB) *PurlComparer {
+	return &PurlComparer{
 		db: db,
 	}
 }
 
 // if version is an empty string, the version provided by the purl gets used.
 // if that is an empty string as well - an error gets returned
-func (comparer *purlComparer) GetAffectedComponents(purl, version string) ([]models.AffectedComponent, error) {
+func (comparer *PurlComparer) GetAffectedComponents(purl, version string) ([]models.AffectedComponent, error) {
 	// parse the purl
 	p, err := packageurl.FromString(purl)
 	if err != nil {
@@ -79,7 +79,7 @@ func (comparer *purlComparer) GetAffectedComponents(purl, version string) ([]mod
 
 // some purls do contain versions, which cannot be found in the database. An example is git.
 // the purl looks like: pkg:deb/debian/git@v2.30.2-1, while the version we would like it to match is: 1:2.30.2-1 ("1:" prefix)
-func (comparer *purlComparer) GetVulns(purl string, version string, _ string) ([]models.VulnInPackage, error) {
+func (comparer *PurlComparer) GetVulns(purl string, version string, _ string) ([]models.VulnInPackage, error) {
 	// get the affected components
 	affectedComponents, err := comparer.GetAffectedComponents(purl, version)
 	if err != nil {
