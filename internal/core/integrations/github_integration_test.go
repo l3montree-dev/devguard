@@ -85,8 +85,11 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
-			CVEID:             utils.Ptr("CVE-2021-1234"),
-			RawRiskAssessment: utils.Ptr(8.5),
+			CVEID:                 utils.Ptr("CVE-2021-1234"),
+			RawRiskAssessment:     utils.Ptr(8.5),
+			ComponentDepth:        utils.Ptr(1),
+			ComponentPurl:         utils.Ptr("pkg:github/owner/repo@1.0.0"),
+			ComponentFixedVersion: utils.Ptr("1.0.0"),
 		}, nil)
 
 		githubIntegration := githubIntegration{
@@ -131,8 +134,11 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
-			CVEID:             utils.Ptr("CVE-2021-1234"),
-			RawRiskAssessment: utils.Ptr(8.5),
+			CVEID:                 utils.Ptr("CVE-2021-1234"),
+			RawRiskAssessment:     utils.Ptr(8.5),
+			ComponentPurl:         utils.Ptr("pkg:github/owner/repo@1.0.0"),
+			ComponentDepth:        utils.Ptr(1),
+			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}, nil)
 		flawService.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save flaw"))
 
@@ -194,6 +200,10 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 			TicketID:  utils.Ptr("github:0"),
 			TicketURL: utils.Ptr(""),
+
+			ComponentPurl:         utils.Ptr("pkg:github/owner/repo@1.0.0"),
+			ComponentDepth:        utils.Ptr(1),
+			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}
 
 		flawRepository := mocks.NewIntegrationsFlawRepository(t)

@@ -28,8 +28,8 @@ type Flaw struct {
 
 	Message  *string     `json:"message"`
 	Comments []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
-	Events   []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"events"`
-	AssetID  uuid.UUID   `json:"assetId" gorm:"not null;"`
+	Events   []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
+	AssetID  uuid.UUID   `json:"assetId" gorm:"not null;type:uuid;"`
 	State    FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
 
 	CVE   *CVE    `json:"cve"`
