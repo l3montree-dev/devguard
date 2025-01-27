@@ -30,6 +30,11 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
+var pruneTablesBeforeInsert = []string{
+	"affected_components",
+	"cve_affected_component",
+}
+
 type cvesRepository interface {
 	repositories.Repository[string, models.CVE, database.DB]
 	GetAllCVEsID() ([]string, error)
@@ -200,20 +205,28 @@ func importCSV(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath s
 		}
 	}()
 
-	if err != nil {
-		return fmt.Errorf("failed to lock table: %w", err)
-	}
-
 	_, err = tx.Exec(ctx, "SET session_replication_role = 'replica';")
 	if err != nil {
 		return fmt.Errorf("failed to disable triggers: %w", err)
 	}
 
 	// Truncate the table
-	/*_, err = tx.Exec(ctx, fmt.Sprintf("DELETE FROM %s;", tableName))
-	if err != nil {
-		return fmt.Errorf("failed to truncate table: %w", err)
-	}*/
+	if utils.Contains(pruneTablesBeforeInsert, tableName) {
+		_, err = tx.Exec(ctx, fmt.Sprintf("TRUNCATE %s CASCADE;", tableName))
+		if err != nil {
+			return fmt.Errorf("failed to truncate table: %w", err)
+		}
+
+		slog.Info("Truncated table", "table", tableName)
+		// paste the csv straight into the table
+		// Import the CSV
+		_, err = tx.Conn().PgConn().CopyFrom(ctx, file, fmt.Sprintf("COPY %s FROM STDIN WITH CSV HEADER;", tableName))
+		if err != nil {
+			return fmt.Errorf("failed to import CSV: %w", err)
+		}
+		_, err = tx.Exec(ctx, "SET session_replication_role = 'origin';")
+		return nil
+	}
 
 	tx.Exec(ctx, fmt.Sprintf("CREATE TEMP TABLE tmp_%s AS SELECT * from %s LIMIT 0;", tableName, tableName)) // nolint:errcheck
 
