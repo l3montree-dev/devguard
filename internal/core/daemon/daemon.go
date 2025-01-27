@@ -64,6 +64,10 @@ func Start(db database.DB) {
 			}
 			// wait for 6 hours before updating the vulndb again
 			time.Sleep(6 * time.Hour)
+			if err := configService.SetJSONConfig("vulndb.lastMirror", lastMirror); err != nil {
+				slog.Error("could not set last mirror time", "err", err)
+				return nil
+			}
 		}
 		// wait for 5 minutes before checking again
 		time.Sleep(5 * time.Minute)

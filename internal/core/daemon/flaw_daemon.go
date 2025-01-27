@@ -22,7 +22,7 @@ func getFixedVersion(purlComparer *scan.PurlComparer, flaw models.Flaw) (*string
 	// check if there is a fix for the flaw
 	for _, c := range affected {
 		// check if this affected component comes from the same cve
-		if utils.Contains(utils.Map(c.CVE, func(c models.CVE) string {
+		if !utils.Contains(utils.Map(c.CVE, func(c models.CVE) string {
 			return c.CVE
 		}), *flaw.CVEID) {
 			continue
