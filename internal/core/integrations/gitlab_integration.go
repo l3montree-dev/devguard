@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 
 	"fmt"
 	"io"
@@ -25,7 +26,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
-	"github.com/xanzy/go-gitlab"
 )
 
 type gitlabClientFacade interface {
