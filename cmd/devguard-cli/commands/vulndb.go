@@ -170,7 +170,7 @@ func newSyncCommand() *cobra.Command {
 			mitreService := vulndb.NewMitreService(cweRepository)
 			epssService := vulndb.NewEPSSService(nvdService, cveRepository)
 			osvService := vulndb.NewOSVService(affectedCmpRepository)
-			cvelistService := vulndb.NewCVEListService(cveRepository)
+			// cvelistService := vulndb.NewCVEListService(cveRepository)
 			debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 
 			expoitDBService := vulndb.NewExploitDBService(nvdService, repositories.NewExploitRepository(database))
@@ -216,7 +216,7 @@ func newSyncCommand() *cobra.Command {
 				slog.Info("finished nvd database sync", "duration", time.Since(now))
 			}
 
-			if emptyOrContains(databasesToSync, "cvelist") {
+			/*if emptyOrContains(databasesToSync, "cvelist") {
 				slog.Info("starting cvelist database sync")
 				now := time.Now()
 
@@ -224,7 +224,7 @@ func newSyncCommand() *cobra.Command {
 					slog.Error("could not mirror cvelist database", "err", err)
 				}
 				slog.Info("finished cvelist database sync", "duration", time.Since(now))
-			}
+			}*/
 
 			if emptyOrContains(databasesToSync, "epss") {
 				slog.Info("starting epss database sync")
