@@ -13,8 +13,8 @@ type SupplyChain struct {
 	CreatedAt               time.Time `json:"createdAt" gorm:"column:created_at"`
 	UpdatedAt               time.Time `json:"updatedAt" gorm:"column:updated_at"`
 
-	Asset   Asset     `json:"asset" gorm:"foreignKey:AssetID;"`
-	AssetID uuid.UUID `json:"assetId" gorm:"column:asset_id"`
+	AssetVersion   AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionID;references:AssetVersionID"`
+	AssetVersionID uuid.UUID    `json:"assetVersionId" gorm:"column:asset_version_id;not null"`
 }
 
 func (SupplyChain) TableName() string {

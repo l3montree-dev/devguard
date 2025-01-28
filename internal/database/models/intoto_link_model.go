@@ -32,11 +32,10 @@ type InTotoLink struct {
 	// the real link payload
 	Payload string `json:"payload" gorm:"column:payload"`
 
-	PAT   PAT   `json:"pat" gorm:"foreignKey:PatID;constraint:OnDelete:CASCADE;"`
-	Asset Asset `gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
-
-	PatID   uuid.UUID `json:"patId" gorm:"column:pat_id;"`
-	AssetID uuid.UUID `json:"assetId" gorm:"column:asset_id;primaryKey"`
+	PAT            PAT          `json:"pat" gorm:"foreignKey:PatID;constraint:OnDelete:CASCADE;"`
+	AssetVersionID AssetVersion `gorm:"foreignKey:AssetVersionID;constraint:OnDelete:CASCADE;"`
+	PatID          uuid.UUID    `json:"patId" gorm:"column:pat_id;"`
+	AssetID        uuid.UUID    `json:"assetId" gorm:"column:asset_id;primaryKey"`
 
 	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
 }

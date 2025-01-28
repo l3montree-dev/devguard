@@ -22,25 +22,25 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-type assetRepository struct {
+type assetVersionRepository struct {
 	db database.DB
-	Repository[uuid.UUID, models.Asset, core.DB]
+	Repository[uuid.UUID, models.AssetVersion, core.DB]
 }
 
-func NewAssetRepository(db core.DB) *assetRepository {
-	err := db.AutoMigrate(&models.Asset{})
+func NewAssetVersionRepository(db core.DB) *assetVersionRepository {
+	err := db.AutoMigrate(&models.AssetVersion{})
 	if err != nil {
 		panic(err)
 	}
 
-	return &assetRepository{
+	return &assetVersionRepository{
 		db:         db,
-		Repository: newGormRepository[uuid.UUID, models.Asset](db),
+		Repository: newGormRepository[uuid.UUID, models.AssetVersion](db),
 	}
 }
 
-func (a *assetRepository) FindByName(name string) (models.Asset, error) {
-	var app models.Asset
+func (a *assetVersionRepository) FindByName(name string) (models.AssetVersion, error) {
+	var app models.AssetVersion
 	err := a.db.Where("name = ?", name).First(&app).Error
 	if err != nil {
 		return app, err
@@ -48,10 +48,10 @@ func (a *assetRepository) FindByName(name string) (models.Asset, error) {
 	return app, nil
 }
 
-func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, error) {
+func (a *assetVersionRepository) FindOrCreate(tx core.DB, name string) (models.AssetVersion, error) {
 	app, err := a.FindByName(name)
 	if err != nil {
-		app = models.Asset{Name: name}
+		app = models.AssetVersion{Name: name}
 		err = a.Create(tx, &app)
 		if err != nil {
 			return app, err
@@ -60,8 +60,8 @@ func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, e
 	return app, nil
 }
 
-func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, error) {
-	var apps []models.Asset
+func (a *assetVersionRepository) GetByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {
+	var apps []models.AssetVersion
 	err := a.db.Where("project_id = ?", projectID).Find(&apps).Error
 	if err != nil {
 		return nil, err
@@ -69,8 +69,8 @@ func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, e
 	return apps, nil
 }
 
-func (a *assetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asset, error) {
-	var apps []models.Asset
+func (a *assetVersionRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error) {
+	var apps []models.AssetVersion
 	err := a.db.Where("project_id IN (?)", projectIDs).Find(&apps).Error
 	if err != nil {
 		return nil, err
@@ -78,19 +78,19 @@ func (a *assetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asse
 	return apps, nil
 }
 
-func (g *assetRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error) {
-	var t models.Asset
+func (g *assetVersionRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.AssetVersion, error) {
+	var t models.AssetVersion
 	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
 	return t, err
 }
 
-func (g *assetRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error) {
-	var asset models.Asset
+func (g *assetVersionRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.AssetVersion, error) {
+	var asset models.AssetVersion
 	err := g.db.Unscoped().Where("slug = ? AND project_id = ?", slug, projectID).First(&asset).Error
 	return asset, err
 }
 
-func (g *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
+func (g *assetVersionRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
 	app, err := g.ReadBySlug(projectID, slug)
 	if err != nil {
 		return uuid.UUID{}, err
@@ -98,12 +98,12 @@ func (g *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uu
 	return app.ID, nil
 }
 
-func (g *assetRepository) Update(tx core.DB, asset *models.Asset) error {
+func (g *assetVersionRepository) Update(tx core.DB, asset *models.AssetVersion) error {
 	return g.db.Save(asset).Error
 }
 
-func (g *assetRepository) GetAllAssetsFromDB() ([]models.Asset, error) {
-	var assets []models.Asset
+func (g *assetVersionRepository) GetAllAssetsFromDB() ([]models.AssetVersion, error) {
+	var assets []models.AssetVersion
 	err := g.db.Find(&assets).Error
 	return assets, err
 }

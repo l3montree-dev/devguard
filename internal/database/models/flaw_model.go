@@ -26,11 +26,11 @@ type Flaw struct {
 	// the scanner which was used to detect this flaw
 	ScannerID string `json:"scanner" gorm:"not null;"`
 
-	Message  *string     `json:"message"`
-	Comments []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
-	Events   []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
-	AssetID  uuid.UUID   `json:"assetId" gorm:"not null;type:uuid;"`
-	State    FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
+	Message        *string     `json:"message"`
+	Comments       []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
+	Events         []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
+	AssetVersionID uuid.UUID   `json:"assetVersionId" gorm:"not null;type:uuid;"`
+	State          FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
 
 	CVE   *CVE    `json:"cve"`
 	CVEID *string `json:"cveId" gorm:"null;type:text;default:null;"`
@@ -70,7 +70,7 @@ func (m Flaw) TableName() string {
 }
 
 func (m *Flaw) CalculateHash() string {
-	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, m.AssetID.String()))
+	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, m.AssetVersionID.String()))
 	return hash
 }
 

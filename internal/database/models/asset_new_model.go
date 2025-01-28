@@ -21,14 +21,13 @@ const (
 	RequirementLevelHigh   RequirementLevel = "high"
 )
 
-type Asset struct {
+type AssetNew struct {
 	Model
 	Name string `json:"name" gorm:"type:text"`
 	Slug string `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
 
 	ProjectID   uuid.UUID `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`
 	Description string    `json:"description" gorm:"type:text"`
-	Flaws       []Flaw    `json:"flaws" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
 
 	Type AssetType `json:"type" gorm:"type:text;not null;"`
 
@@ -57,16 +56,6 @@ type Asset struct {
 	SigningPubKey *string `json:"signingPubKey" gorm:"type:text;"`
 }
 
-func (m Asset) TableName() string {
+func (m AssetNew) TableName() string {
 	return "assets"
-}
-
-func (m Asset) GetCurrentAssetComponents() []ComponentDependency {
-	AssetComponents := make([]ComponentDependency, 0)
-	for _, assetComponent := range m.Components {
-		if assetComponent.AssetSemverEnd == nil {
-			AssetComponents = append(AssetComponents, assetComponent)
-		}
-	}
-	return AssetComponents
 }

@@ -180,10 +180,10 @@ func (r *flawRepository) GetOrgFromFlawID(tx core.DB, flawID string) (models.Org
 	}
 	return org, nil
 }
-func (r *flawRepository) GetFlawsPaged(tx core.DB, assetIdInSubQuery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+func (r *flawRepository) GetFlawsPaged(tx core.DB, assetVersionIdInSubQuery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
 	var flaws []models.Flaw = []models.Flaw{}
 
-	q := r.Repository.GetDB(tx).Model(&models.Flaw{}).Preload("Events").Joins("CVE").Joins("Component").Where("flaws.asset_id IN (?)", assetIdInSubQuery)
+	q := r.Repository.GetDB(tx).Model(&models.Flaw{}).Preload("Events").Joins("CVE").Joins("Component").Where("flaws.asset_version_id IN (?)", assetVersionIdInSubQuery)
 
 	// apply filters
 	for _, f := range filter {
@@ -219,14 +219,18 @@ func (r *flawRepository) GetFlawsPaged(tx core.DB, assetIdInSubQuery any, pageIn
 }
 
 func (r *flawRepository) GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
-	subQuery := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("id").Where("project_id = ?", projectID)
+	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.AssetNew{}).Select("id").Where("project_id = ?", projectID)
+
+	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("asset_id").Where("asset_id IN (?)", subQueryAssetIDs, "default_branch", true)
 
 	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
 }
 
 func (r *flawRepository) GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
 
-	subQuery := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
+	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.AssetNew{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
+
+	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("asset_id").Where("asset_id IN (?)", subQueryAssetIDs, "default_branch", true)
 
 	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
 }

@@ -51,15 +51,15 @@ type ComponentDependency struct {
 	// the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
 	// we use edges, which provide the information, that a component is used by another component in one asset
-	AssetSemverStart string    `json:"semverStart" gorm:"column:semver_start;type:semver"`
-	AssetSemverEnd   *string   `json:"semverEnd" gorm:"column:semver_end;type:semver"`
-	Component        Component `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl"`
-	ComponentPurl    *string   `json:"componentPurl" gorm:"column:component_purl;"` // will be nil, for direct dependencies
-	Dependency       Component `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl"`
-	DependencyPurl   string    `json:"dependencyPurl" gorm:"column:dependency_purl;"`
-	AssetID          uuid.UUID `json:"assetId" gorm:"column:asset_id;type:uuid;"`
-	Asset            Asset     `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
-	ScannerID        string    `json:"scannerId" gorm:"column:scanner_id"` // the id of the scanner
+	AssetSemverStart string       `json:"semverStart" gorm:"column:semver_start;type:semver"`
+	AssetSemverEnd   *string      `json:"semverEnd" gorm:"column:semver_end;type:semver"`
+	Component        Component    `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl"`
+	ComponentPurl    *string      `json:"componentPurl" gorm:"column:component_purl;"` // will be nil, for direct dependencies
+	Dependency       Component    `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl"`
+	DependencyPurl   string       `json:"dependencyPurl" gorm:"column:dependency_purl;"`
+	AssetVersionID   uuid.UUID    `json:"assetVersionId" gorm:"column:asset_version_id;"`
+	Asset            AssetVersion `json:"asset" gorm:"foreignKey:AssetVersionID;constraint:OnDelete:CASCADE;"`
+	ScannerID        string       `json:"scannerId" gorm:"column:scanner_id"` // the id of the scanner
 
 	Depth int `json:"depth" gorm:"column:depth"`
 }

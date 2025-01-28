@@ -58,7 +58,7 @@ func LoadConfig() error {
 
 var V = validator.New()
 
-func GetEnvironmentalFromAsset(m models.Asset) Environmental {
+func GetEnvironmentalFromAsset(m models.AssetNew) Environmental {
 	return SanitizeEnv(Environmental{
 		ConfidentialityRequirements: string(m.ConfidentialityRequirement),
 		AvailabilityRequirements:    string(m.AvailabilityRequirement),

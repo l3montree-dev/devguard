@@ -130,12 +130,20 @@ func GetAssetSlug(c Context) (string, error) {
 	return assetSlug, nil
 }
 
-func GetAsset(c Context) models.Asset {
-	return c.Get("asset").(models.Asset)
+func GetAsset(c Context) models.AssetNew {
+	return c.Get("asset").(models.AssetNew)
 }
 
-func SetAsset(c Context, asset models.Asset) {
+func SetAsset(c Context, asset models.AssetNew) {
 	c.Set("asset", asset)
+}
+
+func GetAssetVersion(c Context) models.AssetVersion {
+	return c.Get("assetVersion").(models.AssetVersion)
+}
+
+func SetAssetVersion(c Context, assetVersion models.AssetVersion) {
+	c.Set("assetVersion", assetVersion)
 }
 
 func SetProject(c Context, project models.Project) {

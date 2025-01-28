@@ -1,19 +1,4 @@
-// Copyright (C) 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-package asset
+package assetversion
 
 import (
 	"fmt"
@@ -35,36 +20,35 @@ import (
 	"github.com/pkg/errors"
 )
 
-type assetRepository interface {
-	Save(tx core.DB, asset *models.Asset) error
-	Transaction(txFunc func(core.DB) error) error
+type assetVersionRepository interface {
+	Save(tx core.DB, assetVersion *models.AssetVersion) error
 }
 
 type service struct {
-	flawRepository      flawRepository
-	componentRepository componentRepository
-	flawService         flawService
-	assetRepository     assetRepository
-	httpClient          *http.Client
+	flawRepository         flawRepository
+	componentRepository    componentRepository
+	flawService            flawService
+	assetVersionRepository assetVersionRepository
+	httpClient             *http.Client
 }
 
-func NewService(assetRepository assetRepository, componentRepository componentRepository, flawRepository flawRepository, flawService flawService) *service {
+func NewService(assetVersionRepository assetVersionRepository, componentRepository componentRepository, flawRepository flawRepository, flawService flawService) *service {
 	return &service{
-		assetRepository:     assetRepository,
-		componentRepository: componentRepository,
-		flawRepository:      flawRepository,
-		flawService:         flawService,
-		httpClient:          &http.Client{},
+		assetVersionRepository: assetVersionRepository,
+		componentRepository:    componentRepository,
+		flawRepository:         flawRepository,
+		flawService:            flawService,
+		httpClient:             &http.Client{},
 	}
 }
 
-func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
+func (s *service) HandleScanResult(assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
 
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, asset, scanner, version)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion, scanner, version)
 	if err != nil {
 		return 0, 0, []models.Flaw{}, errors.Wrap(err, "could not load asset components")
 	}
@@ -83,7 +67,7 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 		v := vuln
 
 		flaw := models.Flaw{
-			AssetID:               asset.ID,
+			AssetVersionID:        assetVersion.ID,
 			CVEID:                 utils.Ptr(v.CVEID),
 			ScannerID:             scannerID,
 			ComponentPurl:         utils.Ptr(v.Purl),
@@ -101,28 +85,28 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current flaws
-	amountOpened, amountClosed, amountExisting, err := s.handleScanResult(userID, scannerID, asset, flaws, doRiskManagement)
+	amountOpened, amountClosed, amountExisting, err := s.handleScanResult(userID, scannerID, assetVersion, flaws, doRiskManagement)
 	if err != nil {
 		return 0, 0, []models.Flaw{}, err
 	}
 
 	switch scanner {
 	case "sast":
-		asset.LastSastScan = utils.Ptr(time.Now())
+		assetVersion.LastSastScan = utils.Ptr(time.Now())
 	case "dast":
-		asset.LastDastScan = utils.Ptr(time.Now())
+		assetVersion.LastDastScan = utils.Ptr(time.Now())
 	case "sca":
-		asset.LastScaScan = utils.Ptr(time.Now())
+		assetVersion.LastScaScan = utils.Ptr(time.Now())
 	case "container-scanning":
-		asset.LastContainerScan = utils.Ptr(time.Now())
+		assetVersion.LastContainerScan = utils.Ptr(time.Now())
 	case "secret-scanning":
-		asset.LastSecretScan = utils.Ptr(time.Now())
+		assetVersion.LastSecretScan = utils.Ptr(time.Now())
 	case "iac":
-		asset.LastIacScan = utils.Ptr(time.Now())
+		assetVersion.LastIacScan = utils.Ptr(time.Now())
 	}
 
 	if doRiskManagement {
-		err = s.assetRepository.Save(nil, &asset)
+		err = s.assetVersionRepository.Save(nil, &assetVersion)
 		if err != nil {
 			// swallow but log
 			slog.Error("could not save asset", "err", err)
@@ -131,9 +115,9 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
-func (s *service) handleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.Flaw, doRiskManagement bool) (int, int, []models.Flaw, error) {
+func (s *service) handleScanResult(userID string, scannerID string, assetVersion models.AssetVersion, flaws []models.Flaw, doRiskManagement bool) (int, int, []models.Flaw, error) {
 	// get all existing flaws from the database - this is the old state
-	existingFlaws, err := s.flawRepository.ListByScanner(asset.GetID(), scannerID)
+	existingFlaws, err := s.flawRepository.ListByScanner(assetVersion.ID, scannerID)
 	if err != nil {
 		slog.Error("could not get existing flaws", "err", err)
 		return 0, 0, []models.Flaw{}, err
@@ -153,7 +137,7 @@ func (s *service) handleScanResult(userID string, scannerID string, asset models
 	if doRiskManagement {
 		// get a transaction
 		if err := s.flawRepository.Transaction(func(tx core.DB) error {
-			if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, asset, true); err != nil {
+			if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, assetVersion, true); err != nil {
 				// this will cancel the transaction
 				return err
 			}
@@ -168,7 +152,7 @@ func (s *service) handleScanResult(userID string, scannerID string, asset models
 			return 0, 0, []models.Flaw{}, err
 		}
 	} else {
-		if err := s.flawService.UserDetectedFlaws(nil, userID, newFlaws, asset, false); err != nil {
+		if err := s.flawService.UserDetectedFlaws(nil, userID, newFlaws, assetVersion, false); err != nil {
 			slog.Error("could not save flaws", "err", err)
 			return 0, 0, []models.Flaw{}, err
 		}
@@ -240,9 +224,9 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 	return res
 }
 
-func (s *service) UpdateSBOM(asset models.Asset, scannerID string, currentVersion string, sbom normalize.SBOM) error {
+func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, currentVersion string, sbom normalize.SBOM) error {
 	// load the asset components
-	assetComponents, err := s.componentRepository.LoadComponents(nil, asset, scannerID, currentVersion)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion, scannerID, currentVersion)
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
 	}
@@ -326,40 +310,11 @@ func (s *service) UpdateSBOM(asset models.Asset, scannerID string, currentVersio
 		return err
 	}
 
-	return s.componentRepository.HandleStateDiff(nil, asset.ID, currentVersion, assetComponents, dependencies)
+	return s.componentRepository.HandleStateDiff(nil, assetVersion.ID, currentVersion, assetComponents, dependencies)
 }
 
-func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error {
-	err := s.flawRepository.Transaction(func(tx core.DB) error {
+func (s *service) BuildSBOM(asset models.AssetNew, assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {
 
-		err := s.assetRepository.Save(tx, &asset)
-		if err != nil {
-			slog.Info("error saving asset", "err", err)
-			return fmt.Errorf("could not save asset: %v", err)
-		}
-		// get the flaws
-		flaws, err := s.flawRepository.GetAllFlawsByAssetID(tx, asset.GetID())
-		if err != nil {
-			slog.Info("error getting flaws", "err", err)
-			return fmt.Errorf("could not get flaws: %v", err)
-		}
-
-		err = s.flawService.RecalculateRawRiskAssessment(tx, responsible, flaws, justification, asset)
-		if err != nil {
-			slog.Info("error updating raw risk assessment", "err", err)
-			return fmt.Errorf("could not update raw risk assessment: %v", err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("could not update asset: %v", err)
-	}
-
-	return nil
-}
-
-func (s *service) BuildSBOM(asset models.Asset, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {
 	if version == models.NoVersion {
 		version = "latest"
 	}
@@ -371,9 +326,9 @@ func (s *service) BuildSBOM(asset models.Asset, version string, organizationName
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    asset.Slug,
+				BOMRef:    assetVersion.Slug,
 				Type:      cdx.ComponentTypeApplication,
-				Name:      asset.Name,
+				Name:      assetVersion.Name,
 				Version:   version,
 				Author:    organizationName,
 				Publisher: "github.com/l3montree-dev/devguard",
@@ -423,11 +378,11 @@ func (s *service) BuildSBOM(asset models.Asset, version string, organizationName
 	dependencyMap := make(map[string][]string)
 	for _, c := range components {
 		if c.ComponentPurl == nil {
-			if _, ok := dependencyMap[asset.Slug]; !ok {
-				dependencyMap[asset.Slug] = []string{c.DependencyPurl}
+			if _, ok := dependencyMap[assetVersion.Slug]; !ok {
+				dependencyMap[assetVersion.Slug] = []string{c.DependencyPurl}
 				continue
 			}
-			dependencyMap[asset.Slug] = append(dependencyMap[asset.Slug], c.DependencyPurl)
+			dependencyMap[assetVersion.Slug] = append(dependencyMap[assetVersion.Slug], c.DependencyPurl)
 			continue
 		}
 		if _, ok := dependencyMap[*c.ComponentPurl]; !ok {
@@ -452,7 +407,7 @@ func (s *service) BuildSBOM(asset models.Asset, version string, organizationName
 	return &bom
 }
 
-func (s *service) BuildVeX(asset models.Asset, version string, organizationName string, components []models.ComponentDependency, flaws []models.Flaw) *cdx.BOM {
+func (s *service) BuildVeX(asset models.AssetNew, assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency, flaws []models.Flaw) *cdx.BOM {
 	if version == models.NoVersion {
 		version = "latest"
 	}
@@ -464,9 +419,9 @@ func (s *service) BuildVeX(asset models.Asset, version string, organizationName 
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
-				BOMRef:    asset.Slug,
+				BOMRef:    assetVersion.Slug,
 				Type:      cdx.ComponentTypeApplication,
-				Name:      asset.Name,
+				Name:      assetVersion.Name,
 				Version:   version,
 				Author:    organizationName,
 				Publisher: "github.com/l3montree-dev/devguard",

@@ -55,14 +55,14 @@ func (c *componentRepository) CreateComponents(tx database.DB, components []mode
 	return c.GetDB(tx).Create(&components).Error
 }
 
-func (c *componentRepository) LoadComponents(tx database.DB, asset models.Asset, scannerID, version string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadComponents(tx database.DB, assetVersion models.AssetVersion, scannerID, version string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 
 	if version == models.NoVersion || version == "" {
-		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_id = ? AND scanner_id = ? AND semver_end is NULL", asset.ID, scannerID).Find(&components).Error
+		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_id = ? AND scanner_id = ? AND semver_end is NULL", assetVersion.ID, scannerID).Find(&components).Error
 	} else {
-		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where(`asset_id = ? AND scanner_id = ? AND semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)`, asset.ID, scannerID, version, version).Find(&components).Error
+		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where(`asset_version_id = ? AND scanner_id = ? AND semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)`, assetVersion.ID, scannerID, version, version).Find(&components).Error
 	}
 
 	if err != nil {
@@ -72,15 +72,15 @@ func (c *componentRepository) LoadComponents(tx database.DB, asset models.Asset,
 	return components, err
 }
 
-func (c *componentRepository) LoadAllLatestComponentFromAsset(tx database.DB, asset models.Asset) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadAllLatestComponentFromAssetVersion(tx database.DB, assetVersion models.AssetVersion) ([]models.ComponentDependency, error) {
 	var component []models.ComponentDependency
-	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_id = ? AND scanner_id = ? AND semver_end is NULL", asset.ID).Find(&component).Error
+	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_id = ? AND scanner_id = ? AND semver_end is NULL", assetVersion.ID).Find(&component).Error
 	return component, err
 }
 
-func (c *componentRepository) GetVersions(tx database.DB, asset models.Asset) ([]string, error) {
+func (c *componentRepository) GetVersions(tx database.DB, asset models.AssetVersion) ([]string, error) {
 	var versions []string
-	err := c.GetDB(tx).Model(&models.ComponentDependency{}).Where("asset_id = ?", asset.ID).Distinct("semver_start").Pluck("semver_start", &versions).Error
+	err := c.GetDB(tx).Model(&models.ComponentDependency{}).Where("asset_version_id = ?", asset.ID).Distinct("semver_start").Pluck("semver_start", &versions).Error
 	return versions, err
 }
 
@@ -90,7 +90,7 @@ func (c *componentRepository) FindByPurl(tx database.DB, purl string) (models.Co
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx database.DB, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
+func (c *componentRepository) HandleStateDiff(tx database.DB, assetVersionID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
 		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})
@@ -129,7 +129,7 @@ func (c *componentRepository) HandleStateDiff(tx database.DB, assetID uuid.UUID,
 		}
 		// make sure the asset id is set
 		for i := range added {
-			added[i].AssetID = assetID
+			added[i].AssetVersionID = assetVersionID
 		}
 
 		return c.CreateComponents(tx, added)
@@ -144,7 +144,7 @@ func (c *componentRepository) GetDependencyCountPerscanner(assetID uuid.UUID) (m
 	err := c.db.Model(&models.Component{}).
 		Select("scanner_id , COUNT(*) as count").
 		Group("scanner_id").
-		Where("asset_id = ?", assetID).
+		Where("asset_version_id = ?", assetID).
 		Find(&results).Error
 
 	if err != nil {

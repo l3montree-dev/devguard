@@ -34,17 +34,17 @@ type cveRepository interface {
 
 type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
-	LoadComponents(tx core.DB, asset models.Asset, scanner, version string) ([]models.ComponentDependency, error)
+	LoadComponents(tx core.DB, asset models.AssetVersion, scanner, version string) ([]models.ComponentDependency, error)
 }
 
 type assetService interface {
-	HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
-	UpdateSBOM(asset models.Asset, scanner string, version string, sbom normalize.SBOM) error
+	HandleScanResult(asset models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
+	UpdateSBOM(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM) error
 }
 
 type assetRepository interface {
-	GetAllAssetsFromDB() ([]models.Asset, error)
-	Save(tx core.DB, asset *models.Asset) error
+	GetAllAssetsFromDB() ([]models.AssetNew, error)
+	Save(tx core.DB, asset *models.AssetNew) error
 }
 
 type statisticsService interface {
