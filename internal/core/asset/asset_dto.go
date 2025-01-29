@@ -27,8 +27,8 @@ func sanitizeRequirementLevel(level string) models.RequirementLevel {
 	}
 }
 
-func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
-	return models.Asset{
+func (a *createRequest) toModel(projectID uuid.UUID) models.AssetNew {
+	return models.AssetNew{
 		Name:        a.Name,
 		Slug:        slug.Make(a.Name),
 		ProjectID:   projectID,
@@ -58,7 +58,7 @@ type patchRequest struct {
 }
 
 func (a *patchRequest) applyToModel(
-	asset *models.Asset,
+	asset *models.AssetNew,
 ) bool {
 	updated := false
 	if a.Name != nil {
@@ -96,11 +96,4 @@ func (a *patchRequest) applyToModel(
 	}
 
 	return updated
-}
-
-type assetMetrics struct {
-	EnabledContainerScanning       bool    `json:"enabledContainerScanning"`
-	EnabledImageSigning            bool    `json:"enabledImageSigning"`
-	VerifiedSupplyChainsPercentage float64 `json:"verifiedSupplyChainsPercentage"`
-	EnabledSCA                     bool    `json:"enabledSCA"`
 }

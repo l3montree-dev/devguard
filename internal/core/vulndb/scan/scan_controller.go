@@ -47,33 +47,39 @@ type assetRepository interface {
 	Save(tx core.DB, asset *models.AssetNew) error
 }
 
+type assetVersionRepository interface {
+	FindOrCreate(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
+}
+
 type statisticsService interface {
 	UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error
 }
 
 type httpController struct {
-	db                  core.DB
-	sbomScanner         *sbomScanner
-	cveRepository       cveRepository
-	componentRepository componentRepository
-	assetRepository     assetRepository
-	assetService        assetService
-	statisticsService   statisticsService
+	db                     core.DB
+	sbomScanner            *sbomScanner
+	cveRepository          cveRepository
+	componentRepository    componentRepository
+	assetRepository        assetRepository
+	assetVersionRepository assetVersionRepository
+	assetService           assetService
+	statisticsService      statisticsService
 }
 
-func NewHttpController(db core.DB, cveRepository cveRepository, componentRepository componentRepository, assetRepository assetRepository, assetService assetService, statisticsService statisticsService) *httpController {
+func NewHttpController(db core.DB, cveRepository cveRepository, componentRepository componentRepository, assetRepository assetRepository, assetVersionRepository assetVersionRepository, assetService assetService, statisticsService statisticsService) *httpController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
 	scanner := NewSBOMScanner(cpeComparer, purlComparer, cveRepository)
 	return &httpController{
-		db:                  db,
-		sbomScanner:         scanner,
-		cveRepository:       cveRepository,
-		componentRepository: componentRepository,
-		assetService:        assetService,
-		assetRepository:     assetRepository,
-		statisticsService:   statisticsService,
+		db:                     db,
+		sbomScanner:            scanner,
+		cveRepository:          cveRepository,
+		componentRepository:    componentRepository,
+		assetService:           assetService,
+		assetRepository:        assetRepository,
+		assetVersionRepository: assetVersionRepository,
+		statisticsService:      statisticsService,
 	}
 }
 
@@ -90,7 +96,8 @@ func (s *httpController) Scan(c core.Context) error {
 		return err
 	}
 	normalizedBom := normalize.FromCdxBom(bom, true)
-	assetObj := core.GetAsset(c)
+
+	asset := core.GetAsset(c)
 
 	userID := core.GetSession(c).GetUserID()
 
@@ -98,6 +105,13 @@ func (s *httpController) Scan(c core.Context) error {
 	version := c.Request().Header.Get("X-Asset-Version")
 	if version == "" {
 		version = models.NoVersion
+	}
+
+	assetVersionName := c.Request().Header.Get("X-Asset-Version-New")
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID)
+	if err != nil {
+		slog.Error("could not find or create asset version", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
 	}
 
 	scanner := c.Request().Header.Get("X-Scanner")
@@ -123,7 +137,7 @@ func (s *httpController) Scan(c core.Context) error {
 
 	if doRiskManagement {
 		// update the sbom in the database in parallel
-		if err := s.assetService.UpdateSBOM(assetObj, scanner, version, normalizedBom); err != nil {
+		if err := s.assetService.UpdateSBOM(assetVersion, scanner, version, normalizedBom); err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return c.JSON(500, map[string]string{"error": "could not update sbom"})
 		}
@@ -144,15 +158,15 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(assetObj, vulns, scannerID, version, scannerID, userID, doRiskManagement)
+	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(assetVersion, vulns, scannerID, version, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
 	}
 
 	if doRiskManagement {
-		slog.Info("recalculating risk history for asset", "asset", assetObj.ID)
-		if err := s.statisticsService.UpdateAssetRiskAggregation(assetObj.ID, utils.OrDefault(assetObj.LastHistoryUpdate, assetObj.CreatedAt), time.Now(), true); err != nil {
+		slog.Info("recalculating risk history for asset", "asset", assetVersion.ID)
+		if err := s.statisticsService.UpdateAssetRiskAggregation(assetVersion.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 			return c.JSON(500, map[string]string{"error": "could not recalculate risk history"})
 		}

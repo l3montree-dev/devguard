@@ -29,6 +29,12 @@ func (g *projectRepository) GetByOrgID(organizationID uuid.UUID) ([]models.Proje
 	return projects, err
 }
 
+func (g *projectRepository) GetProjectByAssetVersionID(assetVersionID uuid.UUID) (models.Project, error) {
+	var project models.Project
+	err := g.db.Model(&models.AssetVersion{}).Select("projects.*").Joins("JOIN projects ON projects.id = assets.project_id").Where("assets.id = ?", assetVersionID).First(&project).Error
+	return project, err
+}
+
 func (g *projectRepository) GetProjectByAssetID(assetID uuid.UUID) (models.Project, error) {
 	var project models.Project
 	err := g.db.Model(&models.AssetNew{}).Select("projects.*").Joins("JOIN projects ON projects.id = assets.project_id").Where("assets.id = ?", assetID).First(&project).Error

@@ -39,6 +39,12 @@ func NewAssetVersionRepository(db core.DB) *assetVersionRepository {
 	}
 }
 
+func (a *assetVersionRepository) Read(id uuid.UUID) (models.AssetVersion, error) {
+	var asset models.AssetVersion
+	err := a.db.First(&asset, id).Error
+	return asset, err
+}
+
 func (a *assetVersionRepository) FindByName(name string) (models.AssetVersion, error) {
 	var app models.AssetVersion
 	err := a.db.Where("name = ?", name).First(&app).Error
@@ -48,30 +54,36 @@ func (a *assetVersionRepository) FindByName(name string) (models.AssetVersion, e
 	return app, nil
 }
 
-func (a *assetVersionRepository) FindOrCreate(tx core.DB, name string) (models.AssetVersion, error) {
-	app, err := a.FindByName(name)
+func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
+	var app models.AssetVersion
+	err := a.db.Where("name = ? AND asset_id = ?", assetVersionName, assetID).First(&app).Error
 	if err != nil {
-		app = models.AssetVersion{Name: name}
-		err = a.Create(tx, &app)
-		if err != nil {
-			return app, err
+		if err := a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetId: assetID}).Error; err != nil {
+			return models.AssetVersion{}, err
 		}
+		return a.FindOrCreate(assetVersionName, assetID)
 	}
 	return app, nil
 }
 
-func (a *assetVersionRepository) GetByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {
+func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
-	err := a.db.Where("project_id = ?", projectID).Find(&apps).Error
+	err := a.db.Joins("JOIN assets ON assets.asset_id = asset_versions.asset_id").
+		Joins("JOIN projects ON projects.project_id = assets.project_id").
+		Where("projects.project_id = ?", projectID).
+		Find(&apps).Error
 	if err != nil {
 		return nil, err
 	}
 	return apps, nil
 }
 
-func (a *assetVersionRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error) {
+func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
-	err := a.db.Where("project_id IN (?)", projectIDs).Find(&apps).Error
+	err := a.db.Joins("JOIN assets ON assets.asset_id = asset_versions.asset_id").
+		Joins("JOIN projects ON projects.project_id = assets.project_id").
+		Where("projects.project_id IN (?)", projectIDs).
+		Find(&apps).Error
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +102,7 @@ func (g *assetVersionRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug st
 	return asset, err
 }
 
-func (g *assetVersionRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
+func (g *assetVersionRepository) GetAssetVersionIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
 	app, err := g.ReadBySlug(projectID, slug)
 	if err != nil {
 		return uuid.UUID{}, err
@@ -102,7 +114,7 @@ func (g *assetVersionRepository) Update(tx core.DB, asset *models.AssetVersion) 
 	return g.db.Save(asset).Error
 }
 
-func (g *assetVersionRepository) GetAllAssetsFromDB() ([]models.AssetVersion, error) {
+func (g *assetVersionRepository) GetAllAssetsVersionFromDB(tx core.DB) ([]models.AssetVersion, error) {
 	var assets []models.AssetVersion
 	err := g.db.Find(&assets).Error
 	return assets, err

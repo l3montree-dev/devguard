@@ -11,18 +11,19 @@ import (
 )
 
 func UpdateStatistics(db database.DB) error {
-	assetRepository := repositories.NewAssetRepository(db)
+	assetVersionRepository := repositories.NewAssetVersionRepository(db)
+
 	statisticsService := statistics.NewService(
 		repositories.NewStatisticsRepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewAssetRiskHistoryRepository(db),
 		repositories.NewFlawRepository(db),
-		repositories.NewAssetRepository(db),
+		repositories.NewAssetVersionRepository(db),
 		repositories.NewProjectRepository(db),
 		repositories.NewProjectRiskHistoryRepository(db),
 	)
 
-	assets, err := assetRepository.GetAllAssetsFromDB()
+	assets, err := assetVersionRepository.GetAllAssetsVersionFromDB(db)
 
 	if err != nil {
 		slog.Error("could not get assets from database", "err", err)
@@ -41,7 +42,7 @@ func UpdateStatistics(db database.DB) error {
 		a.LastHistoryUpdate = &t
 
 		// save the asset
-		if err := assetRepository.Save(nil, &a); err != nil {
+		if err := assetVersionRepository.Save(nil, &a); err != nil {
 			slog.Error("could not save asset", "err", err)
 			continue
 		}

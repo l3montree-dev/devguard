@@ -70,11 +70,12 @@ type gitlabIntegration struct {
 	gitlabIntegrationRepository gitlabIntegrationRepository
 	externalUserRepository      externalUserRepository
 
-	flawRepository      flawRepository
-	flawEventRepository flawEventRepository
-	frontendUrl         string
-	assetRepository     assetRepository
-	flawService         flawService
+	flawRepository         flawRepository
+	flawEventRepository    flawEventRepository
+	frontendUrl            string
+	assetRepository        assetRepository
+	assetVersionRepository assetVersionRepository
+	flawService            flawService
 
 	gitlabClientFactory func(id uuid.UUID) (gitlabClientFacade, error)
 }
@@ -109,6 +110,7 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	flawEventRepository := repositories.NewFlawEventRepository(db)
 	externalUserRepository := repositories.NewExternalUserRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
+	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 
 	return &gitlabIntegration{
@@ -118,6 +120,7 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 		flawService:            flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository),
 		flawEventRepository:    flawEventRepository,
 		assetRepository:        assetRepository,
+		assetVersionRepository: assetVersionRepository,
 		externalUserRepository: externalUserRepository,
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
@@ -265,7 +268,8 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}
 
 		// get the asset
-		asset, err := g.assetRepository.Read(flaw.AssetID)
+		assetVersion, err := g.assetVersionRepository.Read(flaw.AssetVersionID)
+		asset, err := g.assetRepository.Read(assetVersion.AssetId)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err

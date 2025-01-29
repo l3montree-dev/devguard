@@ -78,43 +78,6 @@ func (a *httpController) AttachSigningKey(c core.Context) error {
 	return nil
 }
 
-func (a *httpController) Metrics(c core.Context) error {
-	asset := core.GetAsset(c)
-	scannerIds := []string{}
-	// get the latest events of this asset per scan type
-	err := a.assetRepository.GetDB(nil).Table("flaws").Select("DISTINCT scanner_id").Where("asset_id  = ?", asset.ID).Pluck("scanner_id", &scannerIds).Error
-
-	if err != nil {
-		return err
-	}
-
-	var enabledSca bool = false
-	var enabledContainerScanning bool = false
-	var enabledImageSigning bool = asset.SigningPubKey != nil
-
-	for _, scannerId := range scannerIds {
-		if scannerId == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca" {
-			enabledSca = true
-		}
-		if scannerId == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning" {
-			enabledContainerScanning = true
-		}
-	}
-
-	// check if in-toto is enabled
-	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(asset.ID)
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(200, assetMetrics{
-		EnabledContainerScanning:       enabledContainerScanning,
-		EnabledSCA:                     enabledSca,
-		EnabledImageSigning:            enabledImageSigning,
-		VerifiedSupplyChainsPercentage: verifiedSupplyChainsPercentage,
-	})
-}
-
 func (a *httpController) Delete(c core.Context) error {
 	asset := core.GetAsset(c)
 	err := a.assetRepository.Delete(nil, asset.GetID())

@@ -10,6 +10,7 @@ import (
 
 	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
@@ -24,26 +25,36 @@ type assetVersionRepository interface {
 	Save(tx core.DB, assetVersion *models.AssetVersion) error
 }
 
+type assetService interface {
+	GetByAssetID(assetID uuid.UUID) (models.AssetNew, error)
+}
+
 type service struct {
 	flawRepository         flawRepository
 	componentRepository    componentRepository
 	flawService            flawService
 	assetVersionRepository assetVersionRepository
 	httpClient             *http.Client
+	assetService           assetService
 }
 
-func NewService(assetVersionRepository assetVersionRepository, componentRepository componentRepository, flawRepository flawRepository, flawService flawService) *service {
+func NewService(assetVersionRepository assetVersionRepository, componentRepository componentRepository, flawRepository flawRepository, flawService flawService, assetService assetService) *service {
 	return &service{
 		assetVersionRepository: assetVersionRepository,
 		componentRepository:    componentRepository,
 		flawRepository:         flawRepository,
 		flawService:            flawService,
 		httpClient:             &http.Client{},
+		assetService:           assetService,
 	}
 }
 
 func (s *service) HandleScanResult(assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
 
+	asset, err := s.assetService.GetByAssetID(assetVersion.AssetId)
+	if err != nil {
+		return 0, 0, []models.Flaw{}, errors.Wrap(err, "could not get asset")
+	}
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}
 
@@ -85,7 +96,7 @@ func (s *service) HandleScanResult(assetVersion models.AssetVersion, vulns []mod
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current flaws
-	amountOpened, amountClosed, amountExisting, err := s.handleScanResult(userID, scannerID, assetVersion, flaws, doRiskManagement)
+	amountOpened, amountClosed, amountExisting, err := s.handleScanResult(userID, scannerID, assetVersion, flaws, doRiskManagement, asset)
 	if err != nil {
 		return 0, 0, []models.Flaw{}, err
 	}
@@ -115,7 +126,7 @@ func (s *service) HandleScanResult(assetVersion models.AssetVersion, vulns []mod
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
-func (s *service) handleScanResult(userID string, scannerID string, assetVersion models.AssetVersion, flaws []models.Flaw, doRiskManagement bool) (int, int, []models.Flaw, error) {
+func (s *service) handleScanResult(userID string, scannerID string, assetVersion models.AssetVersion, flaws []models.Flaw, doRiskManagement bool, asset models.AssetNew) (int, int, []models.Flaw, error) {
 	// get all existing flaws from the database - this is the old state
 	existingFlaws, err := s.flawRepository.ListByScanner(assetVersion.ID, scannerID)
 	if err != nil {
@@ -137,7 +148,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 	if doRiskManagement {
 		// get a transaction
 		if err := s.flawRepository.Transaction(func(tx core.DB) error {
-			if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, assetVersion, true); err != nil {
+			if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, assetVersion, asset, true); err != nil {
 				// this will cancel the transaction
 				return err
 			}
@@ -152,7 +163,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 			return 0, 0, []models.Flaw{}, err
 		}
 	} else {
-		if err := s.flawService.UserDetectedFlaws(nil, userID, newFlaws, assetVersion, false); err != nil {
+		if err := s.flawService.UserDetectedFlaws(nil, userID, newFlaws, assetVersion, asset, false); err != nil {
 			slog.Error("could not save flaws", "err", err)
 			return 0, 0, []models.Flaw{}, err
 		}
@@ -313,7 +324,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	return s.componentRepository.HandleStateDiff(nil, assetVersion.ID, currentVersion, assetComponents, dependencies)
 }
 
-func (s *service) BuildSBOM(asset models.AssetNew, assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {
+func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {
 
 	if version == models.NoVersion {
 		version = "latest"

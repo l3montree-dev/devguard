@@ -17,6 +17,8 @@ type AssetVersion struct {
 	Model
 	Name string `json:"name" gorm:"type:text"`
 
+	DefaultBranch bool `json:"defaultBranch" gorm:"default:false;"`
+
 	Slug string `json:"slug" gorm:"uniqueIndex:idx_app_project_slug;not null;type:text;"`
 
 	AssetId uuid.UUID `json:"assetId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`

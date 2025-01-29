@@ -18,7 +18,7 @@ type AssetRiskDistribution struct {
 }
 
 type AssetRiskHistory struct {
-	AssetID uuid.UUID `json:"id" gorm:"primaryKey;type:uuid"`
+	AssetVersionID uuid.UUID `json:"id" gorm:"primaryKey;type:uuid"`
 	// on the day 2024-08-12 the asset had a sumRisk of 25.
 	Day time.Time `json:"day" gorm:"primaryKey;type:date"`
 

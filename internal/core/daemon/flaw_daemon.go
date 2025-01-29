@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/core/asset"
+	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -45,12 +45,12 @@ func UpdateComponentProperties(db database.DB) error {
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.
 
-	assetRepository := repositories.NewAssetRepository(db)
+	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	purlComparer := scan.NewPurlComparer(db)
 	componentRepository := repositories.NewComponentRepository(db)
 	flawRepository := repositories.NewFlawRepository(db)
 
-	allAssets, err := assetRepository.GetAllAssetsFromDB()
+	allAssets, err := assetVersionRepository.GetAllAssetsVersionFromDB(db)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func UpdateComponentProperties(db database.DB) error {
 				slog.Info("updated asset", "asset", a.ID, "duration", time.Since(now))
 			}()
 			// get all flaws of that asset
-			flaws, err := flawRepository.GetByAssetId(nil, a.ID)
+			flaws, err := flawRepository.GetFlawsByAssetVersionId(nil, a.ID)
 			if err != nil {
 				slog.Warn("could not get flaws", "asset", a.ID, "err", err)
 				return nil, err
@@ -90,7 +90,7 @@ func UpdateComponentProperties(db database.DB) error {
 					continue
 				}
 
-				depthMap := asset.GetComponentDepth(components)
+				depthMap := assetversion.GetComponentDepth(components)
 
 				for _, flaw := range flaws {
 					depth := depthMap[*flaw.ComponentPurl]

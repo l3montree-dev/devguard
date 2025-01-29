@@ -75,7 +75,11 @@ type externalUserRepository interface {
 }
 
 type assetRepository interface {
-	Read(id uuid.UUID) (models.Asset, error)
+	Read(id uuid.UUID) (models.AssetNew, error)
+}
+
+type assetVersionRepository interface {
+	Read(id uuid.UUID) (models.AssetVersion, error)
 }
 
 type flawService interface {
@@ -95,11 +99,12 @@ type githubIntegration struct {
 	githubAppInstallationRepository githubAppInstallationRepository
 	externalUserRepository          externalUserRepository
 
-	flawRepository      flawRepository
-	flawEventRepository flawEventRepository
-	frontendUrl         string
-	assetRepository     assetRepository
-	flawService         flawService
+	flawRepository         flawRepository
+	flawEventRepository    flawEventRepository
+	frontendUrl            string
+	assetRepository        assetRepository
+	assetVersionRepository assetVersionRepository
+	flawService            flawService
 
 	githubClientFactory func(repoId string) (githubClientFacade, error)
 }
@@ -127,8 +132,9 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 		flawEventRepository: flawEventRepository,
 		flawService:         flaw.NewService(flawRepository, flawEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
 
-		frontendUrl:     frontendUrl,
-		assetRepository: repositories.NewAssetRepository(db),
+		frontendUrl:            frontendUrl,
+		assetRepository:        repositories.NewAssetRepository(db),
+		assetVersionRepository: repositories.NewAssetVersionRepository(db),
 
 		githubClientFactory: func(repoId string) (githubClientFacade, error) {
 			return NewGithubClient(installationIdFromRepositoryID(repoId))
@@ -279,7 +285,12 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		}
 
 		// get the asset
-		asset, err := githubIntegration.assetRepository.Read(flaw.AssetID)
+		assetVersion, err := githubIntegration.assetVersionRepository.Read(flaw.AssetVersionID)
+		if err != nil {
+			slog.Error("could not read asset version", "err", err)
+			return err
+		}
+		asset, err := githubIntegration.assetRepository.Read(assetVersion.AssetId)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err

@@ -214,9 +214,9 @@ func getAssetIdFromLinks(supplyChainLinks []models.InTotoLink) (uuid.UUID, error
 		return uuid.Nil, errors.New("no links found")
 	}
 
-	assetID := supplyChainLinks[0].AssetID
+	assetVersionID := supplyChainLinks[0].AssetVersionID
 
-	return assetID, nil
+	return assetVersionID, nil
 
 }
 

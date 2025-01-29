@@ -38,13 +38,14 @@ func newCalculateCmd() *cobra.Command {
 			flawEventRepository := repositories.NewFlawEventRepository(database)
 			cveRepository := repositories.NewCVERepository(database)
 			assetRepository := repositories.NewAssetRepository(database)
+			assetVersionRepository := repositories.NewAssetVersionRepository(database)
 			flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 			statisticsRepository := repositories.NewStatisticsRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
 			projectRepository := repositories.NewProjectRepository(database)
 			projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(database)
 
-			statisticService := statistics.NewService(statisticsRepository, componentRepository, repositories.NewAssetRiskHistoryRepository(database), flawRepository, assetRepository, projectRepository, projectRiskHistoryRepository)
+			statisticService := statistics.NewService(statisticsRepository, componentRepository, repositories.NewAssetRiskHistoryRepository(database), flawRepository, assetVersionRepository, projectRepository, projectRiskHistoryRepository)
 
 			shouldCalculateHistory, err := cmd.Flags().GetBool("history")
 			if err != nil {

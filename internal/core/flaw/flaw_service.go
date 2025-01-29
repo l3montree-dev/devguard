@@ -28,8 +28,7 @@ import (
 )
 
 type assetRepository interface {
-	Update(tx core.DB, asset *models.Asset) error
-	GetAllAssetsFromDB() ([]models.Asset, error)
+	GetAllAssetsFromDB() ([]models.AssetNew, error)
 }
 
 type flawRepository interface {
@@ -37,7 +36,7 @@ type flawRepository interface {
 	Save(db core.DB, flaws *models.Flaw) error
 	Transaction(txFunc func(core.DB) error) error
 	Begin() core.DB
-	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
+	GetAllFlawsByAssetVersionID(tx core.DB, assetVersionID uuid.UUID) ([]models.Flaw, error)
 }
 
 type flawEventRepository interface {
@@ -88,7 +87,7 @@ func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw,
 	return nil
 }
 
-func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset, doRiskManagement bool) error {
+func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.AssetNew, doRiskManagement bool) error {
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -136,7 +135,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	err = s.flawRepository.Transaction(func(tx core.DB) error {
 		for _, asset := range assets {
 			// get all flaws of the asset
-			flaws, err := s.flawRepository.GetAllFlawsByAssetID(tx, asset.ID)
+			flaws, err := s.flawRepository.GetAllFlawsByAssetVersionID(tx, asset.ID)
 			if len(flaws) == 0 {
 				continue
 			}
@@ -161,7 +160,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 
 }
 
-func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error {
+func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.AssetNew) error {
 
 	if len(flaws) == 0 {
 		return nil

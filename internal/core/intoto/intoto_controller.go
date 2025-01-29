@@ -146,15 +146,15 @@ func (a *httpController) Create(c core.Context) error {
 		return echo.NewHTTPError(401, "could not verify signature").WithInternal(err)
 	}
 
-	asset := core.GetAsset(c)
+	assetVersion := core.GetAssetVersion(c)
 
 	link := models.InTotoLink{
-		AssetID:       asset.GetID(),
-		SupplyChainID: strings.TrimSpace(req.SupplyChainID),
-		Step:          strings.TrimSpace(req.Step),
-		Payload:       req.Payload,
-		PatID:         pat.ID,
-		Filename:      req.Filename,
+		AssetVersionID: assetVersion.AssetId,
+		SupplyChainID:  strings.TrimSpace(req.SupplyChainID),
+		Step:           strings.TrimSpace(req.Step),
+		Payload:        req.Payload,
+		PatID:          pat.ID,
+		Filename:       req.Filename,
 	}
 
 	valid = a.linkRepository.Save(nil, &link)
@@ -171,7 +171,7 @@ func (a *httpController) Create(c core.Context) error {
 				SupplyChainID:           strings.TrimSpace(req.SupplyChainID),
 				SupplyChainOutputDigest: req.SupplyChainOutputDigest,
 				Verified:                verified,
-				AssetID:                 asset.GetID(),
+				AssetVersionID:          assetVersion.AssetId,
 			}
 
 			// save the digest

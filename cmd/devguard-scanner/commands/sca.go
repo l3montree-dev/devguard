@@ -226,37 +226,43 @@ func sanitizeApiUrl(apiUrl string) string {
 	return apiUrl
 }
 
-func parseConfig(cmd *cobra.Command) (string, string, string, string, string) {
+func parseConfig(cmd *cobra.Command) (string, string, string, string, string, string) {
 	token, err := cmd.PersistentFlags().GetString("token")
 	if err != nil {
 		slog.Error("could not get token", "err", err)
-		return "", "", "", "", ""
+		return "", "", "", "", "", ""
 	}
 	assetName, err := cmd.PersistentFlags().GetString("assetName")
 	if err != nil {
 		slog.Error("could not get asset id", "err", err)
-		return "", "", "", "", ""
+		return "", "", "", "", "", ""
 	}
 	apiUrl, err := cmd.PersistentFlags().GetString("apiUrl")
 	if err != nil {
 		slog.Error("could not get api url", "err", err)
-		return "", "", "", "", ""
+		return "", "", "", "", "", ""
 	}
 	apiUrl = sanitizeApiUrl(apiUrl)
 
 	failOnRisk, err := cmd.Flags().GetString("fail-on-risk")
 	if err != nil {
 		slog.Error("could not get fail-on-risk", "err", err)
-		return "", "", "", "", ""
+		return "", "", "", "", "", ""
 	}
 
 	webUI, err := cmd.Flags().GetString("webUI")
 	if err != nil {
 		slog.Error("could not get webUI", "err", err)
-		return "", "", "", "", ""
+		return "", "", "", "", "", ""
 	}
 
-	return token, assetName, apiUrl, failOnRisk, webUI
+	assetVersion, err := cmd.Flags().GetString("assetVersion")
+	if err != nil {
+		slog.Error("could not get asset version", "err", err)
+		return "", "", "", "", "", ""
+	}
+
+	return token, assetName, apiUrl, failOnRisk, webUI, assetVersion
 }
 
 func printGitHelp(err error) {
@@ -403,7 +409,7 @@ func getDirFromPath(path string) string {
 func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		core.InitLogger()
-		token, assetName, apiUrl, failOnRisk, webUI := parseConfig(cmd)
+		token, assetName, apiUrl, failOnRisk, webUI, assetVersion := parseConfig(cmd)
 		if token == "" {
 			slog.Error("token seems to be empty. If you provide the token via an environment variable like --token=$DEVGUARD_TOKEN, check, if the environment variable is set or if there are any spelling mistakes", "token", token)
 			return fmt.Errorf("token seems to be empty")
@@ -434,6 +440,7 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		}
 
 		slog.Info("starting scan", "version", version, "asset", assetName)
+
 		// read the sbom file and post it to the scan endpoint
 		// get the flaws and print them to the console
 		file, err := generateSBOM(path)
@@ -466,6 +473,7 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		req.Header.Set("X-Risk-Management", strconv.FormatBool(doRiskManagement))
 		req.Header.Set("X-Asset-Name", assetName)
 		req.Header.Set("X-Asset-Version", version)
+		req.Header.Set("X-Asset-Version-New", assetVersion)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanner)
 
 		resp, err := http.DefaultClient.Do(req)

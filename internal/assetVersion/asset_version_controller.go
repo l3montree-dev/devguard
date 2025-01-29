@@ -35,7 +35,6 @@ type flawRepository interface {
 	Transaction(txFunc func(core.DB) error) error
 	ListByScanner(assetID uuid.UUID, scannerID string) ([]models.Flaw, error)
 
-	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 	SaveBatch(db core.DB, flaws []models.Flaw) error
 
 	GetFlawsByPurl(tx core.DB, purl []string) ([]models.Flaw, error)
@@ -54,10 +53,8 @@ type supplyChainRepository interface {
 
 type flawService interface {
 	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, doRiskManagement bool) error
-	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, doRiskManagement bool) error
+	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.AssetNew, doRiskManagement bool) error
 	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error)
-
-	RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, assetVersion models.AssetVersion) error
 }
 
 type assetVersionController struct {
@@ -281,4 +278,41 @@ func (a *assetVersionController) buildVeX(c core.Context) (*cdx.BOM, error) {
 	}
 
 	return a.assetVersionService.BuildVeX(asset, assetVersion, version, org.Name, components, flaws), nil
+}
+
+func (a *assetVersionController) Metrics(c core.Context) error {
+	assetVersion := core.GetAssetVersion(c)
+	scannerIds := []string{}
+	// get the latest events of this asset per scan type
+	err := a.assetVersionRepository.GetDB(nil).Table("flaws").Select("DISTINCT scanner_id").Where("asset_version_id  = ?", assetVersion.ID).Pluck("scanner_id", &scannerIds).Error
+
+	if err != nil {
+		return err
+	}
+
+	var enabledSca bool = false
+	var enabledContainerScanning bool = false
+	var enabledImageSigning bool = assetVersion.SigningPubKey != nil
+
+	for _, scannerId := range scannerIds {
+		if scannerId == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca" {
+			enabledSca = true
+		}
+		if scannerId == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning" {
+			enabledContainerScanning = true
+		}
+	}
+
+	// check if in-toto is enabled
+	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(assetVersion.ID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, assetMetrics{
+		EnabledContainerScanning:       enabledContainerScanning,
+		EnabledSCA:                     enabledSca,
+		EnabledImageSigning:            enabledImageSigning,
+		VerifiedSupplyChainsPercentage: verifiedSupplyChainsPercentage,
+	})
 }

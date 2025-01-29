@@ -27,12 +27,12 @@ type flawsByPackage struct {
 type repository interface {
 	repositories.Repository[string, models.Flaw, core.DB]
 
-	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.Flaw, error)
-	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)
+	GetFlawsByAssetVersionId(tx core.DB, assetVersionId uuid.UUID) ([]models.Flaw, error)
+	GetByAssetVersionIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetVersionId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)
 
-	GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
-	GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
-	GetFlawsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
+	GetDefaultFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
+	GetDefaultFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
+	GetFlawsByAssetVersionIdPagedAndFlat(tx core.DB, assetVersionId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
 }
 
 type projectService interface {
@@ -69,7 +69,7 @@ func (c flawHttpController) ListByOrgPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
 
-	pagedResp, err := c.flawRepository.GetFlawsByOrgIdPaged(
+	pagedResp, err := c.flawRepository.GetDefaultFlawsByOrgIdPaged(
 		nil,
 
 		utils.Map(userAllowedProjectIds, func(p models.Project) string {
@@ -92,7 +92,7 @@ func (c flawHttpController) ListByOrgPaged(ctx core.Context) error {
 func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
-	pagedResp, err := c.flawRepository.GetFlawsByProjectIdPaged(
+	pagedResp, err := c.flawRepository.GetDefaultFlawsByProjectIdPaged(
 		nil,
 		project.ID,
 
@@ -112,11 +112,11 @@ func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
 
 func (c flawHttpController) ListPaged(ctx core.Context) error {
 	// get the asset
-	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
 
 	// check if we should list flat - this means not grouped by package
 	if ctx.QueryParam("flat") == "true" {
-		flaws, err := c.flawRepository.GetFlawsByAssetIdPagedAndFlat(nil, asset.GetID(), core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
+		flaws, err := c.flawRepository.GetFlawsByAssetVersionIdPagedAndFlat(nil, assetVersion.ID, core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
 		if err != nil {
 			return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 		}
@@ -126,13 +126,13 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 		}))
 	}
 
-	pagedResp, packageNameIndexMap, err := c.flawRepository.GetByAssetIdPaged(
+	pagedResp, packageNameIndexMap, err := c.flawRepository.GetByAssetVersionIdPaged(
 		nil,
 		core.GetPageInfo(ctx),
 		ctx.QueryParam("search"),
 		core.GetFilterQuery(ctx),
 		core.GetSortQuery(ctx),
-		asset.GetID(),
+		assetVersion.ID,
 	)
 
 	if err != nil {
@@ -153,7 +153,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 			ID:                    flaw.ID,
 			ScannerID:             flaw.ScannerID,
 			Message:               flaw.Message,
-			AssetID:               flaw.AssetID.String(),
+			AssetVersionID:        flaw.AssetVersionID.String(),
 			State:                 flaw.State,
 			CVE:                   flaw.CVE,
 			CVEID:                 flaw.CVEID,
@@ -293,7 +293,7 @@ func convertToDetailedDTO(flaw models.Flaw) detailedFlawDTO {
 		FlawDTO: FlawDTO{
 			ID:                    flaw.ID,
 			Message:               flaw.Message,
-			AssetID:               flaw.AssetID.String(),
+			AssetVersionID:        flaw.AssetVersionID.String(),
 			State:                 flaw.State,
 			CVE:                   flaw.CVE,
 			CVEID:                 flaw.CVEID,
