@@ -75,6 +75,7 @@ data:
     courier:
       smtp:
         from_address: {{ .Values.mail.fromAddress }}
+        from_name: {{ .Values.mail.fromName }}
     selfservice:
       default_browser_return_url: https://{{ $publicUrl }}/
       allowed_return_urls: 

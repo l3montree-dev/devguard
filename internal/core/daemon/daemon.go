@@ -35,6 +35,7 @@ func Start(db database.DB) {
 		// we only update the vulnerability database each 6 hours.
 		// thus there is no need to recalculate the risk or anything earlier
 		if time.Since(lastMirror.Time) > 6*time.Hour {
+			slog.Info("starting background jobs", "time", time.Now())
 			// first update the vulndb
 			// this will give us the latest cves, cwes, exploits and affected components
 
@@ -68,6 +69,8 @@ func Start(db database.DB) {
 				slog.Error("could not set last mirror time", "err", err)
 				return nil
 			}
+		} else {
+			slog.Info("no need to update vulndb", "time", time.Now())
 		}
 		// wait for 5 minutes before checking again
 		time.Sleep(5 * time.Minute)
