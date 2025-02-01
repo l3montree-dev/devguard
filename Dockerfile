@@ -19,8 +19,11 @@ WORKDIR /go/src/app
 COPY . .
 
 RUN go mod download
-RUN CGO_ENABLED=0 go build -o /go/bin/app cmd/devguard/main.go
-RUN CGO_ENABLED=0 go build -o /go/bin/devguard-cli cmd/devguard-cli/main.go
+RUN make app
+RUN make cli
+
+RUN mv /go/src/app/devguard-cli /go/bin/devguard-cli && \
+    mv /go/src/app/devguard /go/bin/app
 
 FROM alpine:3.20.2@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5
 
