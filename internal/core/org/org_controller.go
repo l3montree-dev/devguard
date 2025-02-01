@@ -334,24 +334,28 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 		return nil, err
 	}
 
-	// get the roles for the members
-	errGroup := utils.ErrGroup[string](10)
-	for _, member := range members {
-		errGroup.Go(func() (string, error) {
-			return accessControl.GetDomainRole(member)
-		})
-	}
-
-	roles, err := errGroup.WaitAndCollect()
-	if err != nil {
-		return nil, err
-	}
-
 	// get the auth admin client from the context
 	authAdminClient := core.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
 	m, _, err := authAdminClient.IdentityAPI.ListIdentitiesExecute(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
+	if err != nil {
+		return nil, err
+	}
 
+	// get the roles for the members
+	errGroup := utils.ErrGroup[string](10)
+	for _, member := range m {
+		errGroup.Go(func() (string, error) {
+			role, err := accessControl.GetDomainRole(member.Id)
+			if err != nil {
+				return "", err
+			}
+
+			return role, nil
+		})
+	}
+
+	roles, err := errGroup.WaitAndCollect()
 	if err != nil {
 		return nil, err
 	}
