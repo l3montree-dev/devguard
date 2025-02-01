@@ -14,7 +14,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-FROM golang:1.23.1-alpine AS golang-builder
+FROM golang:1.23.5-alpine AS golang-builder
 
 # set the working directory
 WORKDIR /app
@@ -40,7 +40,7 @@ RUN curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosi
 COPY . .
 
 # build the scanner
-RUN CGO_ENABLED=0 go build -o devguard-scanner ./cmd/devguard-scanner
+RUN make scanner
 # ----------------------
 # create final image with node:alpine
 FROM alpine:3.20.2@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5
