@@ -343,15 +343,14 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	}
 
 	// get the roles for the members
-	errGroup := utils.ErrGroup[string](10)
+	errGroup := utils.ErrGroup[map[string]string](10)
 	for _, member := range m {
-		errGroup.Go(func() (string, error) {
+		errGroup.Go(func() (map[string]string, error) {
 			role, err := accessControl.GetDomainRole(member.Id)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
-
-			return role, nil
+			return map[string]string{member.Id: role}, nil
 		})
 	}
 
@@ -360,7 +359,14 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 		return nil, err
 	}
 
-	users := make([]core.User, len(members))
+	roleMap := utils.Reduce(roles, func(acc map[string]string, r map[string]string) map[string]string {
+		for k, v := range r {
+			acc[k] = v
+		}
+		return acc
+	}, make(map[string]string))
+
+	users := make([]core.User, len(m))
 	for i, member := range m {
 		nameMap := member.Traits.(map[string]any)["name"].(map[string]any)
 		var name string
@@ -372,10 +378,11 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 				name += " " + nameMap["last"].(string)
 			}
 		}
+
 		users[i] = core.User{
 			ID:   member.Id,
 			Name: name,
-			Role: roles[i],
+			Role: roleMap[member.Id],
 		}
 	}
 
