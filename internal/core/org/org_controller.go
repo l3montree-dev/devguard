@@ -46,6 +46,7 @@ type invitationRepository interface {
 
 type projectService interface {
 	ListAllowedProjects(c core.Context) ([]models.Project, error)
+	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 }
 type httpController struct {
 	organizationRepository repository
@@ -159,7 +160,7 @@ func (o *httpController) Update(ctx core.Context) error {
 		}
 	}
 
-	resp := orgDetails{
+	resp := orgDetailsDTO{
 		OrgDTO:  fromModel(organization),
 		Members: members,
 	}
@@ -287,6 +288,11 @@ func (c *httpController) ChangeRole(ctx core.Context) error {
 	// get the user id from the request
 	var req changeRoleRequest
 
+	userId := ctx.Param("userId")
+	if userId == "" {
+		return echo.NewHTTPError(400, "userId is required")
+	}
+
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
 	}
@@ -299,10 +305,10 @@ func (c *httpController) ChangeRole(ctx core.Context) error {
 	rbac := core.GetRBAC(ctx)
 
 	//
-	rbac.RevokeRole(req.UserID, "member") // nolint:errcheck// we do not care if the user is not a member
-	rbac.RevokeRole(req.UserID, "admin")  // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(userId, "member") // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(userId, "admin")  // nolint:errcheck// we do not care if the user is not a member
 
-	if err := rbac.GrantRole(req.UserID, req.Role); err != nil {
+	if err := rbac.GrantRole(userId, req.Role); err != nil {
 		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
 	}
 
@@ -318,7 +324,18 @@ func (c *httpController) RemoveMember(ctx core.Context) error {
 
 	//
 	rbac.RevokeRole(userId, "member") // nolint:errcheck// we do not care if the user is not a member
-	rbac.RevokeRole(userId, "admin")  // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(userId, "admin")  // nolint:errcheck// we do not care if the user is not an admin
+
+	// remove member from all projects
+	projects, err := c.projectService.ListProjectsByOrganizationID(core.GetTenant(ctx).GetID())
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
+	}
+
+	for _, project := range projects {
+		rbac.RevokeRoleInProject(userId, "member", project.ID.String()) // nolint:errcheck// we do not care if the user is not a member
+		rbac.RevokeRoleInProject(userId, "admin", project.ID.String())  // nolint:errcheck// we do not care if the user is not an admin
+	}
 
 	return ctx.NoContent(200)
 }
@@ -413,7 +430,7 @@ func (o *httpController) Read(c core.Context) error {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
-	resp := orgDetails{
+	resp := orgDetailsDTO{
 		OrgDTO:  fromModel(organization),
 		Members: members,
 	}
