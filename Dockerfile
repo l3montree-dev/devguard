@@ -19,21 +19,18 @@ WORKDIR /go/src/app
 COPY . .
 
 RUN go mod download
-RUN make app
-RUN make cli
-
-RUN mv /go/src/app/devguard-cli /go/bin/devguard-cli && \
-    mv /go/src/app/devguard /go/bin/app
+RUN make devguard
+RUN make devguard-cli
 
 FROM alpine:3.20.2@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5
 
 WORKDIR /
 
 COPY config/rbac_model.conf /config/rbac_model.conf
-COPY --from=build /go/bin/app /
-COPY --from=build /go/bin/devguard-cli /
+COPY --from=build /go/src/app/devguard /
+COPY --from=build /go/src/app/devguard-cli /
 COPY templates /templates
 COPY intoto-public-key.pem /intoto-public-key.pem
 COPY cosign.pub /cosign.pub
 
-CMD ["/app"]
+CMD ["/devguard"]

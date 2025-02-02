@@ -12,11 +12,11 @@ mocks::
 lint::
 	golangci-lint run ./...
 
-app::
+devguard::
 	go build $(FLAGS) -o devguard ./cmd/devguard/main.go
 
-cli::
+devguard-cli::
 	go build $(FLAGS) -o devguard-cli cmd/devguard-cli/main.go
 
-scanner::
+devguard-scanner::
 	go build $(FLAGS) -o devguard-scanner cmd/devguard-scanner/main.go
