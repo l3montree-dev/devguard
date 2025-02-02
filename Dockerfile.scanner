@@ -19,8 +19,6 @@ FROM golang:1.23.5 AS golang-builder
 # set the working directory
 WORKDIR /app
 
-RUN apk add --no-cache curl
-
 ARG TARGETPLATFORM
 
 ENV CRANE_VERSION=v0.19.1
