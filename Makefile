@@ -1,4 +1,4 @@
-FLAGS=-ldflags -w -trimpath -tags netgo,osusergo -buildmode=pie
+FLAGS=#-ldflags -w -trimpath -tags netgo,osusergo -buildmode=pie
 
 run::
 	go run ./cmd/devguard/main.go
