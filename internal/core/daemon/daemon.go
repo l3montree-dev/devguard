@@ -12,8 +12,39 @@ import (
 	"gorm.io/gorm"
 )
 
-var lastMirror struct {
-	Time time.Time `json:"time"`
+func getLastMirrorTime(configService config.Service, key string) (time.Time, error) {
+	var lastMirror struct {
+		Time time.Time `json:"time"`
+	}
+
+	err := configService.GetJSONConfig(key, &lastMirror)
+
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		slog.Error("could not get last mirror time", "err", err, "key", key)
+		return time.Time{}, err
+	} else if errors.Is(err, gorm.ErrRecordNotFound) {
+		slog.Info("no last mirror time found. Setting to 0", "key", key)
+		return time.Time{}, nil
+	}
+
+	return lastMirror.Time, nil
+}
+
+func shouldMirror(configService config.Service, key string) bool {
+	lastTime, err := getLastMirrorTime(configService, key)
+	if err != nil {
+		return false
+	}
+
+	return time.Since(lastTime) > 6*time.Hour
+}
+
+func markMirrored(configService config.Service, key string) error {
+	return configService.SetJSONConfig(key, struct {
+		Time time.Time `json:"time"`
+	}{
+		Time: time.Now(),
+	})
 }
 
 func Start(db database.DB) {
@@ -22,56 +53,65 @@ func Start(db database.DB) {
 
 	// only run this function if leader
 	leaderElector.IfLeader(context.Background(), func() error {
-		err := configService.GetJSONConfig("vulndb.lastMirror", &lastMirror)
-
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			slog.Error("could not get last mirror time", "err", err)
-			return nil
-		} else if errors.Is(err, gorm.ErrRecordNotFound) {
-			slog.Info("no last mirror time found. Setting to 0")
-			lastMirror.Time = time.Time{}
-		}
-
 		// we only update the vulnerability database each 6 hours.
 		// thus there is no need to recalculate the risk or anything earlier
-		if time.Since(lastMirror.Time) > 6*time.Hour {
-			slog.Info("starting background jobs", "time", time.Now())
-			// first update the vulndb
-			// this will give us the latest cves, cwes, exploits and affected components
-
+		slog.Info("starting background jobs", "time", time.Now())
+		// first update the vulndb
+		// this will give us the latest cves, cwes, exploits and affected components
+		var start time.Time
+		if shouldMirror(configService, "vulndb.vulndb") {
+			start = time.Now()
 			if err := UpdateVulnDB(db); err != nil {
 				slog.Error("could not update vulndb", "err", err)
 				return nil
 			}
+			if err := markMirrored(configService, "vulndb.vulndb"); err != nil {
+				slog.Error("could not mark vulndb.vulndb as mirrored", "err", err)
+			}
+			slog.Info("vulndb updated", "duration", time.Since(start))
+		}
 
-			// after we have a fresh vulndb we can update the flaws.
-			// we save data inside the flaws table: ComponentDepth and ComponentFixedVersion
-			// those need to be updated before recalculating the risk
+		// after we have a fresh vulndb we can update the flaws.
+		// we save data inside the flaws table: ComponentDepth and ComponentFixedVersion
+		// those need to be updated before recalculating the risk
+		if shouldMirror(configService, "vulndb.componentProperties") {
+			start = time.Now()
 			if err := UpdateComponentProperties(db); err != nil {
 				slog.Error("could not update component properties", "err", err)
 				return nil
 			}
+			if err := markMirrored(configService, "vulndb.componentProperties"); err != nil {
+				slog.Error("could not mark vulndb.componentProperties as mirrored", "err", err)
+			}
+			slog.Info("component properties updated", "duration", time.Since(start))
+		}
 
+		if shouldMirror(configService, "vulndb.risk") {
+			start = time.Now()
 			// finally, recalculate the risk.
 			if err := RecalculateRisk(db); err != nil {
 				slog.Error("could not recalculate risk", "err", err)
 				return nil
 			}
+			if err := markMirrored(configService, "vulndb.risk"); err != nil {
+				slog.Error("could not mark vulndb.risk as mirrored", "err", err)
+			}
+			slog.Info("risk recalculated", "duration", time.Since(start))
+		}
 
+		if shouldMirror(configService, "vulndb.statistics") {
+			start = time.Now()
 			// as a last step - update the statistics
 			if err := UpdateStatistics(db); err != nil {
 				slog.Error("could not update statistics", "err", err)
 				return nil
 			}
-			// wait for 6 hours before updating the vulndb again
-			time.Sleep(6 * time.Hour)
-			if err := configService.SetJSONConfig("vulndb.lastMirror", lastMirror); err != nil {
-				slog.Error("could not set last mirror time", "err", err)
-				return nil
+			if err := markMirrored(configService, "vulndb.statistics"); err != nil {
+				slog.Error("could not mark vulndb.statistics as mirrored", "err", err)
 			}
-		} else {
-			slog.Info("no need to update vulndb", "time", time.Now())
+			slog.Info("statistics updated", "duration", time.Since(start))
 		}
+
 		// wait for 5 minutes before checking again
 		time.Sleep(5 * time.Minute)
 		return nil
