@@ -242,11 +242,11 @@ func (g *cveRepository) FindCVE(tx database.DB, cveId string) (models.CVE, error
 }
 
 // this method is used inside the risk_daemon to get all cves.
-// we need this to run FAST. Do not add any preloading here. We do not need it in the risk_daemon.
+// we need this to run FAST. Do not add any preloading here (except exploits). We do not need it in the risk_daemon.
 // create your own method if you need preloading.
 func (g *cveRepository) FindCVEs(tx database.DB, cveIds []string) ([]models.CVE, error) {
 	var cves []models.CVE
 
-	err := g.GetDB(tx).Where("cve IN ?", cveIds).Find(&cves).Error
+	err := g.GetDB(tx).Where("cve IN ?", cveIds).Preload("Exploits").Find(&cves).Error
 	return cves, err
 }
