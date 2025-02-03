@@ -42,7 +42,7 @@ func newSbomCommand() *cobra.Command {
 			flawRepository := repositories.NewFlawRepository(database)
 			flawService := flaw.NewService(flawRepository, repositories.NewFlawEventRepository(database), assetRepository, repositories.NewCVERepository(database))
 			componentRepository := repositories.NewComponentRepository(database)
-			assetService := asset.NewService(assetRepository)
+			assetService := asset.NewService(assetRepository, flawRepository, flawService)
 			assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, flawRepository, flawService, assetService)
 
 			sbomScanner := scan.NewSBOMScanner(scan.NewCPEComparer(database), scan.NewPurlComparer(database), repositories.NewCVERepository(database))

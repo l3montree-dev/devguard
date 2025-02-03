@@ -72,6 +72,10 @@ func NewService(statisticsRepository statisticsRepository, componentRepository c
 	}
 }
 
+func (s *service) GetAssetVersionRiskHistory(assetVersionID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
+	return s.assetRiskHistoryRepository.GetRiskHistory(assetVersionID, start, end)
+}
+
 func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end time.Time) error {
 	// set begin to last second of date
 	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
@@ -300,16 +304,12 @@ func (s *service) UpdateAssetRiskAggregation(assetVersionID uuid.UUID, begin tim
 
 }
 
-func (s *service) GetAssetRiskHistory(assetVersionID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
-	return s.assetRiskHistoryRepository.GetRiskHistory(assetVersionID, start, end)
+func (s *service) GetAssetVersionRiskDistribution(assetVersionID uuid.UUID, assetVersionName string) (models.AssetRiskDistribution, error) {
+	return s.statisticsRepository.GetAssetRiskDistribution(assetVersionID, assetVersionName)
 }
 
 func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error) {
 	return s.projectRiskHistoryRepository.GetRiskHistory(projectID, start, end)
-}
-
-func (s *service) GetAssetRiskDistribution(assetVersionID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
-	return s.statisticsRepository.GetAssetRiskDistribution(assetVersionID, assetName)
 }
 
 func (s *service) GetComponentRisk(assetVersionID uuid.UUID) (map[string]float64, error) {

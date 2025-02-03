@@ -16,6 +16,8 @@
 package asset
 
 import (
+	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -30,18 +32,61 @@ type assetRepository interface {
 	GetByAssetID(assetID uuid.UUID) (models.AssetNew, error)
 }
 
+type flawRepository interface {
+	GetFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
+	Transaction(txFunc func(core.DB) error) error
+}
+
+type flawService interface {
+	RecalculateRawRiskAssessment(tx core.DB, responsible string, flaws []models.Flaw, justification string, asset models.AssetNew) error
+}
+
 type service struct {
 	assetRepository assetRepository
+	flawRepository  flawRepository
+	flawService     flawService
 	httpClient      *http.Client
 }
 
-func NewService(assetRepository assetRepository) *service {
+func NewService(assetRepository assetRepository, flawRepository flawRepository, flawService flawService) *service {
 	return &service{
 		assetRepository: assetRepository,
+		flawRepository:  flawRepository,
+		flawService:     flawService,
 		httpClient:      &http.Client{},
 	}
 }
 
 func (s *service) GetByAssetID(assetID uuid.UUID) (models.AssetNew, error) {
 	return s.assetRepository.GetByAssetID(assetID)
+}
+
+func (s *service) UpdateAssetRequirements(asset models.AssetNew, responsible string, justification string) error {
+	err := s.flawRepository.Transaction(func(tx core.DB) error {
+
+		err := s.assetRepository.Save(tx, &asset)
+		if err != nil {
+			slog.Info("error saving asset", "err", err)
+			return fmt.Errorf("could not save asset: %v", err)
+		}
+		// get the flaws
+		flaws, err := s.flawRepository.GetFlawsByAssetID(tx, asset.GetID())
+		if err != nil {
+			slog.Info("error getting flaws", "err", err)
+			return fmt.Errorf("could not get flaws: %v", err)
+		}
+
+		err = s.flawService.RecalculateRawRiskAssessment(tx, responsible, flaws, justification, asset)
+		if err != nil {
+			slog.Info("error updating raw risk assessment", "err", err)
+			return fmt.Errorf("could not update raw risk assessment: %v", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("could not update asset: %v", err)
+	}
+
+	return nil
 }

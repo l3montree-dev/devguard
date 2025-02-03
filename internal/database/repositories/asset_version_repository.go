@@ -80,7 +80,7 @@ func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uu
 
 func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
-	err := a.db.Joins("JOIN assets ON assets.asset_id = asset_versions.asset_id").
+	err := a.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").
 		Joins("JOIN projects ON projects.project_id = assets.project_id").
 		Where("projects.project_id IN (?)", projectIDs).
 		Find(&apps).Error

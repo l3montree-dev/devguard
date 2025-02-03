@@ -37,7 +37,7 @@ type componentRepository interface {
 	LoadComponents(tx core.DB, asset models.AssetVersion, scanner, version string) ([]models.ComponentDependency, error)
 }
 
-type assetService interface {
+type assetVersionService interface {
 	HandleScanResult(asset models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
 	UpdateSBOM(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM) error
 }
@@ -62,11 +62,11 @@ type httpController struct {
 	componentRepository    componentRepository
 	assetRepository        assetRepository
 	assetVersionRepository assetVersionRepository
-	assetService           assetService
+	assetVersionService    assetVersionService
 	statisticsService      statisticsService
 }
 
-func NewHttpController(db core.DB, cveRepository cveRepository, componentRepository componentRepository, assetRepository assetRepository, assetVersionRepository assetVersionRepository, assetService assetService, statisticsService statisticsService) *httpController {
+func NewHttpController(db core.DB, cveRepository cveRepository, componentRepository componentRepository, assetRepository assetRepository, assetVersionRepository assetVersionRepository, assetVersionService assetVersionService, statisticsService statisticsService) *httpController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -76,7 +76,7 @@ func NewHttpController(db core.DB, cveRepository cveRepository, componentReposit
 		sbomScanner:            scanner,
 		cveRepository:          cveRepository,
 		componentRepository:    componentRepository,
-		assetService:           assetService,
+		assetVersionService:    assetVersionService,
 		assetRepository:        assetRepository,
 		assetVersionRepository: assetVersionRepository,
 		statisticsService:      statisticsService,
@@ -137,7 +137,7 @@ func (s *httpController) Scan(c core.Context) error {
 
 	if doRiskManagement {
 		// update the sbom in the database in parallel
-		if err := s.assetService.UpdateSBOM(assetVersion, scanner, version, normalizedBom); err != nil {
+		if err := s.assetVersionService.UpdateSBOM(assetVersion, scanner, version, normalizedBom); err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return c.JSON(500, map[string]string{"error": "could not update sbom"})
 		}
@@ -158,7 +158,7 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetService.HandleScanResult(assetVersion, vulns, scannerID, version, scannerID, userID, doRiskManagement)
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(assetVersion, vulns, scannerID, version, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})

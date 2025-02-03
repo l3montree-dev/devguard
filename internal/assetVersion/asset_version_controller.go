@@ -11,23 +11,16 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
-
-type Repository interface {
-	repositories.Repository[uuid.UUID, models.AssetVersion, core.DB]
-	FindByAssetID(assetID string) ([]models.AssetVersion, error)
-	FindOrCreateByNameVersionAndAssetID(nameVersion, assetID string) (models.AssetVersion, error)
-}
 
 type assetVersionComponentsLoader interface {
 	GetVersions(tx core.DB, assetVersion models.AssetVersion) ([]string, error)
 	LoadComponents(tx core.DB, assetVersion models.AssetVersion, scanner, version string) ([]models.ComponentDependency, error)
 }
 type assetVersionService interface {
-	BuildSBOM(asset models.AssetNew, assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) *cdx.BOM
+	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) *cdx.BOM
 	BuildVeX(asset models.AssetNew, assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency, flaws []models.Flaw) *cdx.BOM
 }
 
@@ -58,7 +51,7 @@ type flawService interface {
 }
 
 type assetVersionController struct {
-	assetVersionRepository       Repository
+	assetVersionRepository       assetVersionRepository
 	assetVersionService          assetVersionService
 	flawRepository               flawRepository
 	componentRepository          componentRepository
@@ -68,7 +61,7 @@ type assetVersionController struct {
 }
 
 func NewAssetVersionController(
-	assetVersionRepository Repository,
+	assetVersionRepository assetVersionRepository,
 	assetVersionService assetVersionService,
 	flawRepository flawRepository,
 	componentRepository componentRepository,
@@ -217,7 +210,7 @@ func (a *assetVersionController) VEXJSON(c core.Context) error {
 }
 
 func (a *assetVersionController) buildSBOM(c core.Context) (*cdx.BOM, error) {
-	asset := core.GetAsset(c)
+
 	assetVersion := core.GetAssetVersion(c)
 	org := core.GetTenant(c)
 	// check for version query param
@@ -241,7 +234,7 @@ func (a *assetVersionController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 	if err != nil {
 		return nil, err
 	}
-	return a.assetVersionService.BuildSBOM(asset, assetVersion, version, org.Name, components), nil
+	return a.assetVersionService.BuildSBOM(assetVersion, version, org.Name, components), nil
 }
 
 func (a *assetVersionController) buildVeX(c core.Context) (*cdx.BOM, error) {

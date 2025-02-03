@@ -24,6 +24,31 @@ func NewFlawRepository(db core.DB) *flawRepository {
 	}
 }
 
+func (r *flawRepository) GetFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error) {
+	var flaws []models.Flaw = []models.Flaw{}
+
+	var assetVersionIds []uuid.UUID = []uuid.UUID{}
+
+	if err := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Where("asset_id = ?", assetID).Pluck("id", &assetVersionIds).Error; err != nil {
+		return nil, err
+	}
+
+	if len(assetVersionIds) == 0 {
+		return flaws, nil
+	}
+
+	for _, assetVersionId := range assetVersionIds {
+		var assetFlaws []models.Flaw = []models.Flaw{}
+		if err := r.Repository.GetDB(tx).Where("asset_version_id = ?", assetVersionId).Find(&assetFlaws).Error; err != nil {
+			return nil, err
+		}
+		flaws = append(flaws, assetFlaws...)
+	}
+
+	return flaws, nil
+
+}
+
 func (r *flawRepository) GetFlawsByAssetVersionId(tx *gorm.DB, assetVersionId uuid.UUID) ([]models.Flaw, error) {
 
 	var flaws []models.Flaw = []models.Flaw{}
@@ -49,7 +74,7 @@ type riskStats struct {
 	PackageName string  `json:"package_name"`
 }
 
-func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetVersionId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error) {
+func (r *flawRepository) GetByAssetVersionIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetVersionId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error) {
 	var count int64
 	var flaws []models.Flaw = []models.Flaw{}
 
@@ -120,14 +145,6 @@ func (r *flawRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, s
 
 func (r *flawRepository) GetFlawsByAssetVersionIdPagedAndFlat(tx core.DB, assetVersionId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
 	return r.GetFlawsPaged(tx, []string{assetVersionId.String()}, pageInfo, search, filter, sort)
-}
-
-func (r *flawRepository) GetAllFlawsByAssetVersionID(tx core.DB, assetVersionID uuid.UUID) ([]models.Flaw, error) {
-	var flaws []models.Flaw = []models.Flaw{}
-	if err := r.Repository.GetDB(tx).Where("asset_version_id = ?", assetVersionID).Find(&flaws).Error; err != nil {
-		return nil, err
-	}
-	return flaws, nil
 }
 
 func (r *flawRepository) GetAllOpenFlawsByAssetVersionID(tx core.DB, assetVersionID uuid.UUID) ([]models.Flaw, error) {

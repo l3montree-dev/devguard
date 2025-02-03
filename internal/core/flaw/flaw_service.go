@@ -36,7 +36,7 @@ type flawRepository interface {
 	Save(db core.DB, flaws *models.Flaw) error
 	Transaction(txFunc func(core.DB) error) error
 	Begin() core.DB
-	GetAllFlawsByAssetVersionID(tx core.DB, assetVersionID uuid.UUID) ([]models.Flaw, error)
+	GetFlawsByAssetVersionId(tx core.DB, assetVersionID uuid.UUID) ([]models.Flaw, error)
 }
 
 type flawEventRepository interface {
@@ -135,7 +135,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	err = s.flawRepository.Transaction(func(tx core.DB) error {
 		for _, asset := range assets {
 			// get all flaws of the asset
-			flaws, err := s.flawRepository.GetAllFlawsByAssetVersionID(tx, asset.ID)
+			flaws, err := s.flawRepository.GetFlawsByAssetVersionId(tx, asset.ID)
 			if len(flaws) == 0 {
 				continue
 			}

@@ -31,15 +31,14 @@ type AssetNew struct {
 
 	Type AssetType `json:"type" gorm:"type:text;not null;"`
 
+	AssetVersions []AssetVersion `json:"assetVersions" gorm:"foreignKey:AssetId;constraint:OnDelete:CASCADE;"`
+
 	Importance            int  `json:"importance" gorm:"default:1;"`
 	ReachableFromInternet bool `json:"reachableFromInternet" gorm:"default:false;"`
 
 	ConfidentialityRequirement RequirementLevel `json:"confidentialityRequirement" gorm:"default:'high';not null;type:text;"`
 	IntegrityRequirement       RequirementLevel `json:"integrityRequirement" gorm:"default:'high';not null;type:text;"`
 	AvailabilityRequirement    RequirementLevel `json:"availabilityRequirement" gorm:"default:'high';not null;type:text;"`
-
-	Components   []ComponentDependency `json:"components" gorm:"hasMany;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	SupplyChains []SupplyChain         `json:"supplyChains" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
 
 	RepositoryID   *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
 	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`

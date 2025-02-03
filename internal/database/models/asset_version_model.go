@@ -19,16 +19,15 @@ type AssetVersion struct {
 
 	DefaultBranch bool `json:"defaultBranch" gorm:"default:false;"`
 
-	Slug string `json:"slug" gorm:"uniqueIndex:idx_app_project_slug;not null;type:text;"`
+	Slug string `json:"slug" gorm:"uniqueIndex:idx_app_asset_slug;not null;type:text;"`
 
-	AssetId uuid.UUID `json:"assetId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`
-
-	Flaws []Flaw `json:"flaws" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
+	AssetId uuid.UUID `json:"assetId" gorm:"uniqueIndex:idx_app_asset_slug;not null;type:uuid;"`
+	Flaws   []Flaw    `json:"flaws" gorm:"foreignKey:AssetVersionID;constraint:OnDelete:CASCADE;"`
 
 	Type AssetVersionType `json:"type" gorm:"type:text;not null;"`
 
 	Components   []ComponentDependency `json:"components" gorm:"hasMany;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	SupplyChains []SupplyChain         `json:"supplyChains" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
+	SupplyChains []SupplyChain         `json:"supplyChains" gorm:"foreignKey:AssetVersionID;constraint:OnDelete:CASCADE;"`
 
 	RepositoryID   *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
 	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
@@ -46,9 +45,8 @@ type AssetVersion struct {
 }
 
 func (m AssetVersion) TableName() string {
-	return "assets"
+	return "asset_versions"
 }
-
 func (m AssetVersion) GetCurrentAssetVersionComponents() []ComponentDependency {
 	AssetVersionComponents := make([]ComponentDependency, 0)
 	for _, assetComponent := range m.Components {

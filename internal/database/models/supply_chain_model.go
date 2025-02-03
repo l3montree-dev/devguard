@@ -13,7 +13,7 @@ type SupplyChain struct {
 	CreatedAt               time.Time `json:"createdAt" gorm:"column:created_at"`
 	UpdatedAt               time.Time `json:"updatedAt" gorm:"column:updated_at"`
 
-	AssetVersion   AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionID;references:AssetVersionID"`
+	AssetVersion   AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionID;"`
 	AssetVersionID uuid.UUID    `json:"assetVersionId" gorm:"column:asset_version_id;not null"`
 }
 

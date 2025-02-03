@@ -15,6 +15,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
 
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
@@ -22,10 +23,11 @@ import (
 )
 
 type assetVersionRepository interface {
+	repositories.Repository[uuid.UUID, models.AssetVersion, core.DB]
 	Save(tx core.DB, assetVersion *models.AssetVersion) error
 }
 
-type assetService interface {
+type assetRepository interface {
 	GetByAssetID(assetID uuid.UUID) (models.AssetNew, error)
 }
 
@@ -34,24 +36,24 @@ type service struct {
 	componentRepository    componentRepository
 	flawService            flawService
 	assetVersionRepository assetVersionRepository
+	assetRepository        assetRepository
 	httpClient             *http.Client
-	assetService           assetService
 }
 
-func NewService(assetVersionRepository assetVersionRepository, componentRepository componentRepository, flawRepository flawRepository, flawService flawService, assetService assetService) *service {
+func NewService(assetVersionRepository assetVersionRepository, componentRepository componentRepository, flawRepository flawRepository, flawService flawService, assetRepository assetRepository) *service {
 	return &service{
 		assetVersionRepository: assetVersionRepository,
 		componentRepository:    componentRepository,
 		flawRepository:         flawRepository,
 		flawService:            flawService,
+		assetRepository:        assetRepository,
 		httpClient:             &http.Client{},
-		assetService:           assetService,
 	}
 }
 
 func (s *service) HandleScanResult(assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
 
-	asset, err := s.assetService.GetByAssetID(assetVersion.AssetId)
+	asset, err := s.assetRepository.GetByAssetID(assetVersion.AssetId)
 	if err != nil {
 		return 0, 0, []models.Flaw{}, errors.Wrap(err, "could not get asset")
 	}
