@@ -25,6 +25,7 @@ import (
 type assetVersionRepository interface {
 	repositories.Repository[uuid.UUID, models.AssetVersion, core.DB]
 	Save(tx core.DB, assetVersion *models.AssetVersion) error
+	GetAllAssetsVersionFromDBByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 }
 
 type assetRepository interface {
@@ -51,12 +52,12 @@ func NewService(assetVersionRepository assetVersionRepository, componentReposito
 	}
 }
 
-func (s *service) HandleScanResult(assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
+func (s *service) GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error) {
+	return s.assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(nil, assetID)
+}
 
-	asset, err := s.assetRepository.GetByAssetID(assetVersion.AssetId)
-	if err != nil {
-		return 0, 0, []models.Flaw{}, errors.Wrap(err, "could not get asset")
-	}
+func (s *service) HandleScanResult(asset models.AssetNew, assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
+
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}
 

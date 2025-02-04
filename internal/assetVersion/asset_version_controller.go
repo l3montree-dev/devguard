@@ -1,6 +1,7 @@
 package assetversion
 
 import (
+	"fmt"
 	"net/url"
 	"slices"
 
@@ -22,6 +23,7 @@ type assetVersionComponentsLoader interface {
 type assetVersionService interface {
 	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) *cdx.BOM
 	BuildVeX(asset models.AssetNew, assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency, flaws []models.Flaw) *cdx.BOM
+	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 }
 
 type flawRepository interface {
@@ -78,6 +80,17 @@ func NewAssetVersionController(
 		supplyChainRepository:        supplyChainRepository,
 		assetVersionComponentsLoader: assetVersionComponentsLoader,
 	}
+}
+
+func (a *assetVersionController) GetAssetVersionsByAssetID(c core.Context) error {
+	asset := core.GetAsset(c)
+	fmt.Println("asset", asset)
+
+	assetVersions, err := a.assetVersionService.GetAssetVersionsByAssetID(asset.ID)
+	if err != nil {
+		return err
+	}
+	return c.JSON(200, assetVersions)
 }
 
 func (a *assetVersionController) Versions(c core.Context) error {

@@ -46,6 +46,10 @@ type assetRepository interface {
 	ReadBySlug(projectID uuid.UUID, slug string) (models.AssetNew, error)
 }
 
+type assetVersionRepository interface {
+	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
+}
+
 type orgRepository interface {
 	ReadBySlug(slugOrId string) (models.Org, error)
 }
@@ -88,6 +92,7 @@ func assetMiddleware(repository assetRepository) func(next echo.HandlerFunc) ech
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		// get the project
 		return func(c echo.Context) error {
+
 			project := core.GetProject(c)
 
 			assetSlug, err := core.GetAssetSlug(c)
@@ -102,6 +107,35 @@ func assetMiddleware(repository assetRepository) func(next echo.HandlerFunc) ech
 			}
 
 			core.SetAsset(c, asset)
+
+			return next(c)
+		}
+	}
+}
+
+func assetVersionMiddleware(repository assetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+
+			asset := core.GetAsset(c)
+
+			assetVersionSlug, err := core.GetAssetVersionSlug(c)
+			if err != nil {
+				return echo.NewHTTPError(400, "invalid asset version slug")
+			}
+
+			assetVersion, err := repository.ReadBySlug(asset.GetID(), assetVersionSlug)
+
+			if err != nil {
+				if assetVersionSlug == "default" {
+					core.SetAssetVersion(c, models.AssetVersion{})
+
+					return next(c)
+				}
+				return echo.NewHTTPError(404, "could not find asset version")
+			}
+
+			core.SetAssetVersion(c, assetVersion)
 
 			return next(c)
 		}
@@ -236,6 +270,7 @@ func assetNameMiddleware() core.MiddlewareFunc {
 func multiTenantMiddleware(rbacProvider accesscontrol.RBACProvider, organizationRepo orgRepository) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c core.Context) (err error) {
+
 			// get the tenant from the provided context
 			tenant := core.GetParam(c, "tenant")
 			if tenant == "" {
@@ -462,7 +497,10 @@ func Start(db core.DB) {
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.DELETE("/", assetController.Delete, projectScopedRBAC("asset", accesscontrol.ActionDelete))
 
-	assetVersionRouter := assetRouter.Group("/tree/:assetVersionName", projectScopedRBAC("asset", accesscontrol.ActionRead))
+	assetRouter.GET("/asset-versions/", assetVersionController.GetAssetVersionsByAssetID)
+
+	//TODO: add the projectScopedRBAC middleware to the following routes
+	assetVersionRouter := assetRouter.Group("/assetVersionSlug/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
 	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
@@ -494,7 +532,7 @@ func Start(db core.DB) {
 
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
-	flawRouter := assetRouter.Group("/flaws")
+	flawRouter := assetVersionRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)
 	flawRouter.GET("/:flawId/", flawController.Read)
 

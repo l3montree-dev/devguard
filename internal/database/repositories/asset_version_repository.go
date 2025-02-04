@@ -58,7 +58,7 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 	var app models.AssetVersion
 	err := a.db.Where("name = ? AND asset_id = ?", assetVersionName, assetID).First(&app).Error
 	if err != nil {
-		if err := a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetId: assetID}).Error; err != nil {
+		if err := a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetId: assetID, Slug: assetVersionName}).Error; err != nil {
 			return models.AssetVersion{}, err
 		}
 		return a.FindOrCreate(assetVersionName, assetID)
@@ -68,9 +68,9 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 
 func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
-	err := a.db.Joins("JOIN assets ON assets.asset_id = asset_versions.asset_id").
-		Joins("JOIN projects ON projects.project_id = assets.project_id").
-		Where("projects.project_id = ?", projectID).
+	err := a.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").
+		Joins("JOIN projects ON projects.id = assets.project_id").
+		Where("projects.id = ?", projectID).
 		Find(&apps).Error
 	if err != nil {
 		return nil, err
@@ -81,8 +81,8 @@ func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uu
 func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
 	err := a.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").
-		Joins("JOIN projects ON projects.project_id = assets.project_id").
-		Where("projects.project_id IN (?)", projectIDs).
+		Joins("JOIN projects ON projects.id = assets.project_id").
+		Where("projects.id IN (?)", projectIDs).
 		Find(&apps).Error
 	if err != nil {
 		return nil, err
@@ -90,9 +90,9 @@ func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(projectIDs 
 	return apps, nil
 }
 
-func (g *assetVersionRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.AssetVersion, error) {
+func (g *assetVersionRepository) ReadBySlug(AssetID uuid.UUID, slug string) (models.AssetVersion, error) {
 	var t models.AssetVersion
-	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
+	err := g.db.Where("slug = ? AND asset_id = ?", slug, AssetID).First(&t).Error
 	return t, err
 }
 
@@ -117,5 +117,11 @@ func (g *assetVersionRepository) Update(tx core.DB, asset *models.AssetVersion) 
 func (g *assetVersionRepository) GetAllAssetsVersionFromDB(tx core.DB) ([]models.AssetVersion, error) {
 	var assets []models.AssetVersion
 	err := g.db.Find(&assets).Error
+	return assets, err
+}
+
+func (g *assetVersionRepository) GetAllAssetsVersionFromDBByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+	var assets []models.AssetVersion
+	err := g.db.Where("asset_id = ?", assetID).Find(&assets).Error
 	return assets, err
 }

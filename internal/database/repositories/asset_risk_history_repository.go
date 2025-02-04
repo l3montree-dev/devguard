@@ -58,9 +58,22 @@ func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectId uuid.UUID
 	`, projectId)
 
 	// get all assetRisk of the project
-	if err := r.Repository.GetDB(r.db).Where("asset_id IN (?)", r.Repository.GetDB(r.db).Table("assets").Select("id::uuid").Where("project_id IN (?)", projectAndChildProjectsQuery)).Where(
-		"day = ?", day,
-	).Order("day ASC").Find(&assetRisk).Error; err != nil {
+	db := r.Repository.GetDB(r.db)
+
+	subQueryAssets := db.Table("assets").
+		Select("id::uuid").
+		Where("project_id IN (?)", projectAndChildProjectsQuery)
+
+	subQueryAssetVersions := db.Table("asset_versions").
+		Select("id::uuid").
+		Where("asset_id IN (?)", subQueryAssets)
+
+	if err := db.
+		Where("asset_version_id IN (?)", subQueryAssetVersions).
+		Where("day = ?", day).
+		Order("day ASC").
+		Find(&assetRisk).
+		Error; err != nil {
 		return nil, err
 	}
 

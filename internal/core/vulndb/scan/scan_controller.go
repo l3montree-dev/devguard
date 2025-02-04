@@ -16,6 +16,7 @@
 package scan
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -38,7 +39,7 @@ type componentRepository interface {
 }
 
 type assetVersionService interface {
-	HandleScanResult(asset models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
+	HandleScanResult(asset models.AssetNew, assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
 	UpdateSBOM(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM) error
 }
 
@@ -144,6 +145,8 @@ func (s *httpController) Scan(c core.Context) error {
 
 	}
 
+	fmt.Println("normalizedBom", normalizedBom)
+
 	// scan the bom we just retrieved.
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
@@ -158,7 +161,7 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(assetVersion, vulns, scannerID, version, scannerID, userID, doRiskManagement)
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, assetVersion, vulns, scannerID, version, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})

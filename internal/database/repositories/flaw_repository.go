@@ -108,7 +108,7 @@ func (r *flawRepository) GetByAssetVersionIdPaged(tx core.DB, pageInfo core.Page
 	packageNameQuery := r.GetDB(tx).Table("components").
 		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, COUNT(f.id) as flaw_count, components.purl as package_name").
 		Joins("INNER JOIN flaws f ON components.purl = f.component_purl").
-		Where("f.asset_id = ?", assetVersionId.String()).
+		Where("f.asset_version_id = ?", assetVersionId.String()).
 		Group("components.purl").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
 
 	// apply sorting
@@ -196,7 +196,7 @@ func (r *flawRepository) GetOrgFromFlawID(tx core.DB, flawID string) (models.Org
 func (r *flawRepository) GetFlawsPaged(tx core.DB, assetVersionIdInSubQuery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
 	var flaws []models.Flaw = []models.Flaw{}
 
-	q := r.Repository.GetDB(tx).Model(&models.Flaw{}).Preload("Events").Joins("CVE").Joins("Component").Where("flaws.asset_version_id IN (?)", assetVersionIdInSubQuery)
+	q := r.Repository.GetDB(tx).Model(&models.Flaw{}).Preload("Events").Joins("CVE").Where("flaws.asset_version_id IN (?)", assetVersionIdInSubQuery)
 
 	// apply filters
 	for _, f := range filter {

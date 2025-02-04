@@ -130,6 +130,14 @@ func GetAssetSlug(c Context) (string, error) {
 	return assetSlug, nil
 }
 
+func GetAssetVersionSlug(c Context) (string, error) {
+	assetVersionSlug := GetParam(c, "assetVersionSlug")
+	if assetVersionSlug == "" {
+		return "", fmt.Errorf("could not get asset version slug")
+	}
+	return assetVersionSlug, nil
+}
+
 func GetAsset(c Context) models.AssetNew {
 	return c.Get("asset").(models.AssetNew)
 }
