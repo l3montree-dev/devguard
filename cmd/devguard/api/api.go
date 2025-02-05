@@ -500,7 +500,9 @@ func Start(db core.DB) {
 	assetRouter.GET("/asset-versions/", assetVersionController.GetAssetVersionsByAssetID)
 
 	//TODO: add the projectScopedRBAC middleware to the following routes
-	assetVersionRouter := assetRouter.Group("/assetVersionSlug/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
+	assetVersionRouter := assetRouter.Group("/asset-version/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
+
+	assetVersionRouter.GET("/", assetVersionController.Read)
 
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
 	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)

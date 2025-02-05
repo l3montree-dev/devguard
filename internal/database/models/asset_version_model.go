@@ -19,9 +19,9 @@ type AssetVersion struct {
 
 	DefaultBranch bool `json:"defaultBranch" gorm:"default:false;"`
 
-	Slug string `json:"slug" gorm:"uniqueIndex:idx_app_asset_slug;not null;type:text;"`
+	Slug string `json:"slug" gorm:"type:text;uniqueIndex:idx_ver_asset_slug;not null;type:text;"`
 
-	AssetId uuid.UUID `json:"assetId" gorm:"uniqueIndex:idx_app_asset_slug;not null;type:uuid;"`
+	AssetId uuid.UUID `json:"assetId" gorm:"uniqueIndex:idx_ver_asset_slug;not null;type:uuid;"`
 	Flaws   []Flaw    `json:"flaws" gorm:"foreignKey:AssetVersionID;constraint:OnDelete:CASCADE;"`
 
 	Type AssetVersionType `json:"type" gorm:"type:text;not null;"`

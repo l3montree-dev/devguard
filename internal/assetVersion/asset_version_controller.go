@@ -82,6 +82,11 @@ func NewAssetVersionController(
 	}
 }
 
+func (a *assetVersionController) Read(c core.Context) error {
+	assetVersion := core.GetAssetVersion(c)
+	return c.JSON(200, assetVersion)
+}
+
 func (a *assetVersionController) GetAssetVersionsByAssetID(c core.Context) error {
 	asset := core.GetAsset(c)
 	fmt.Println("asset", asset)
