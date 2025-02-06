@@ -26,6 +26,9 @@ type Flaw struct {
 	// the scanner which was used to detect this flaw
 	ScannerID string `json:"scanner" gorm:"not null;"`
 
+	//TODO: add not null constraint
+	FlawAssetID string `json:"flawAssetId"`
+
 	Message        *string     `json:"message"`
 	Comments       []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
 	Events         []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
@@ -69,14 +72,15 @@ func (m Flaw) TableName() string {
 	return "flaws"
 }
 
-func (m *Flaw) CalculateHash() string {
-	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, m.AssetVersionID.String()))
+func (m *Flaw) CalculateHash(id string) string {
+	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, id))
+	fmt.Println("hash", hash)
 	return hash
 }
 
 // hook to calculate the hash before creating the flaw
 func (f *Flaw) BeforeSave(tx *gorm.DB) (err error) {
-	hash := f.CalculateHash()
+	hash := f.CalculateHash(string(f.AssetVersionID.String()))
 	f.ID = hash
 	return nil
 }

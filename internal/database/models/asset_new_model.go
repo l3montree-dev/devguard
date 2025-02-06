@@ -26,6 +26,8 @@ type AssetNew struct {
 	Name string `json:"name" gorm:"type:text"`
 	Slug string `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
 
+	CentralFlawManagement bool `json:"centralFlawManagement" gorm:"default:false;"`
+
 	ProjectID   uuid.UUID `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`
 	Description string    `json:"description" gorm:"type:text"`
 

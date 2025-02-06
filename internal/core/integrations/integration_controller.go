@@ -26,28 +26,28 @@ import (
 type integrationController struct {
 }
 
-func createNewFlawEventBasedOnComment(flawId, userId, comment string) models.FlawEvent {
+func createNewFlawEventBasedOnComment(flawAssetId, flawId, userId, comment, assetVersionName string) models.FlawEvent {
 	if strings.HasPrefix(comment, "/accept") {
 		// create a new flaw accept event
-		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
+		return models.NewAcceptedEvent(flawAssetId, flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")), assetVersionName)
 	} else if strings.HasPrefix(comment, "/false-positive") {
 		// create a new flaw false positive event
-		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
+		return models.NewFalsePositiveEvent(flawAssetId, flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")), assetVersionName)
 	} else if strings.HasPrefix(comment, "/reopen") {
 		// create a new flaw reopen event
-		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
+		return models.NewReopenedEvent(flawAssetId, flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")), assetVersionName)
 	} else if strings.HasPrefix(comment, "/a") {
 		// create a new flaw accept event
-		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
+		return models.NewAcceptedEvent(flawAssetId, flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")), assetVersionName)
 	} else if strings.HasPrefix(comment, "/fp") {
 		// create a new flaw false positive event
-		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
+		return models.NewFalsePositiveEvent(flawAssetId, flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")), assetVersionName)
 	} else if strings.HasPrefix(comment, "/r") {
 		// create a new flaw reopen event
-		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
+		return models.NewReopenedEvent(flawAssetId, flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")), assetVersionName)
 	} else {
 		// create a new comment event
-		return models.NewCommentEvent(flawId, userId, comment)
+		return models.NewCommentEvent(flawAssetId, flawId, userId, comment, assetVersionName)
 	}
 }
 

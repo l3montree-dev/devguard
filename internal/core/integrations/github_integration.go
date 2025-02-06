@@ -58,6 +58,7 @@ type githubAppInstallationRepository interface {
 
 type flawRepository interface {
 	Read(id string) (models.Flaw, error)
+	ReadFlaws(id string, centralFlawManagement bool) (models.Flaw, error)
 	Save(db core.DB, flaw *models.Flaw) error
 	Transaction(fn func(tx core.DB) error) error
 	FindByTicketID(tx core.DB, ticketID string) (models.Flaw, error)
@@ -205,6 +206,7 @@ func (githubIntegration *githubIntegration) GetUsers(org models.Org) []core.User
 }
 
 func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) error {
+
 	req := ctx.Request()
 	payload, err := github.ValidatePayload(req, []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))
 	if err != nil {
@@ -231,6 +233,19 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		if err != nil {
 			slog.Debug("could not find flaw by ticket id", "err", err, "ticketId", issueId)
 			return nil
+		}
+
+		// get the asset
+		assetVersion, err := githubIntegration.assetVersionRepository.Read(flaw.AssetVersionID)
+		if err != nil {
+			slog.Error("could not read asset version", "err", err)
+			return err
+		}
+		assetVersionName := assetVersion.Name
+		asset, err := githubIntegration.assetRepository.Read(assetVersion.AssetId)
+		if err != nil {
+			slog.Error("could not read asset", "err", err)
+			return err
 		}
 
 		// the issue is a devguard issue.
@@ -264,7 +279,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		}()
 
 		// create a new event based on the comment
-		flawEvent := createNewFlawEventBasedOnComment(flaw.ID, fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment)
+		flawEvent := createNewFlawEventBasedOnComment(flaw.FlawAssetID, flaw.ID, fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment, assetVersionName)
 
 		flawEvent.Apply(&flaw)
 		// save the flaw and the event in a transaction
@@ -284,17 +299,6 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
-		// get the asset
-		assetVersion, err := githubIntegration.assetVersionRepository.Read(flaw.AssetVersionID)
-		if err != nil {
-			slog.Error("could not read asset version", "err", err)
-			return err
-		}
-		asset, err := githubIntegration.assetRepository.Read(assetVersion.AssetId)
-		if err != nil {
-			slog.Error("could not read asset", "err", err)
-			return err
-		}
 		// make sure to update the github issue accordingly
 		client, err := githubIntegration.githubClientFactory(utils.SafeDereference(asset.RepositoryID))
 		if err != nil {
@@ -461,7 +465,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		flaw, err := g.flawRepository.Read(flawId)
+		flaw, err := g.flawRepository.ReadFlaws(flawId, asset.CentralFlawManagement)
 		if err != nil {
 			return err
 		}
@@ -478,6 +482,8 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		orgSlug, _ := core.GetOrgSlug(event.Ctx)
 		projectSlug, _ := core.GetProjectSlug(event.Ctx)
 		assetSlug, _ := core.GetAssetSlug(event.Ctx)
+
+		assetVersionSlug, _ := core.GetAssetVersionSlug(event.Ctx)
 
 		// read the justification from the body
 		var justification map[string]string
@@ -525,7 +531,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		session := core.GetSession(event.Ctx)
 		userID := session.GetUserID()
 		// create an event
-		flawEvent := models.NewMitigateEvent(flaw.ID, userID, justification["comment"], map[string]any{
+		flawEvent := models.NewMitigateEvent(flaw.ID, userID, justification["comment"], assetVersionSlug, map[string]any{
 			"ticketId":  *flaw.TicketID,
 			"ticketUrl": createdIssue.GetHTMLURL(),
 		})

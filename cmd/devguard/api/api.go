@@ -480,7 +480,7 @@ func Start(db core.DB) {
 	projectRouter.DELETE("/", projectController.Delete, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
 
 	projectRouter.POST("/assets/", assetController.Create, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
-	projectRouter.POST("/assets/", assetController.Create, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
+
 	projectRouter.GET("/assets/", assetController.List)
 
 	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution)

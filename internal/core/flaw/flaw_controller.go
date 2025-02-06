@@ -2,6 +2,7 @@ package flaw
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 
@@ -30,6 +31,8 @@ type repository interface {
 	GetFlawsByAssetVersionId(tx core.DB, assetVersionId uuid.UUID) ([]models.Flaw, error)
 	GetByAssetVersionIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetVersionId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)
 
+	ReadFlaws(id string, CentralFlawManagement bool) (models.Flaw, error)
+
 	GetDefaultFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
 	GetDefaultFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
 	GetFlawsByAssetVersionIdPagedAndFlat(tx core.DB, assetVersionId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
@@ -40,7 +43,7 @@ type projectService interface {
 }
 
 type flawService interface {
-	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error)
+	UpdateFlawState(tx core.DB, assetID uuid.UUID, userID string, flaw *models.Flaw, statusType string, justification string, assetVersionName string) (models.FlawEvent, error)
 }
 
 type flawHttpController struct {
@@ -121,6 +124,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 			return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 		}
 
+		fmt.Println("flaws", flaws)
 		return ctx.JSON(200, flaws.Map(func(flaw models.Flaw) any {
 			return convertToDetailedDTO(flaw)
 		}))
@@ -141,6 +145,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 
 	res := map[string]flawsByPackage{}
 	for _, flaw := range pagedResp.Data {
+		fmt.Println(flaw)
 		// get the package name
 		if _, ok := res[*flaw.ComponentPurl]; !ok {
 			res[*flaw.ComponentPurl] = flawsByPackage{
@@ -212,7 +217,7 @@ func (c flawHttpController) Mitigate(ctx core.Context) error {
 	}
 
 	// fetch the flaw again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the flaw.
-	flaw, err := c.flawRepository.Read(flawId)
+	flaw, err := c.flawRepository.ReadFlaws(flawId, false)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find flaw")
 	}
@@ -221,13 +226,14 @@ func (c flawHttpController) Mitigate(ctx core.Context) error {
 }
 
 func (c flawHttpController) Read(ctx core.Context) error {
+
 	flawId, err := core.GetFlawID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid flaw id")
 	}
 	asset := core.GetAsset(ctx)
 
-	flaw, err := c.flawRepository.Read(flawId)
+	flaw, err := c.flawRepository.ReadFlaws(flawId, asset.CentralFlawManagement)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find flaw")
 	}
@@ -240,13 +246,15 @@ func (c flawHttpController) Read(ctx core.Context) error {
 }
 
 func (c flawHttpController) CreateEvent(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	flawId, err := core.GetFlawID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid flaw id")
 	}
 
-	flaw, err := c.flawRepository.Read(flawId)
+	flaw, err := c.flawRepository.ReadFlaws(flawId, asset.CentralFlawManagement)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find flaw")
 	}
@@ -266,7 +274,7 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 	justification := status.Justification
 
 	err = c.flawRepository.Transaction(func(tx core.DB) error {
-		ev, err := c.flawService.UpdateFlawState(tx, userID, &flaw, statusType, justification)
+		ev, err := c.flawService.UpdateFlawState(tx, asset.ID, userID, &flaw, statusType, justification, assetVersion.Name)
 		if err != nil {
 			return err
 		}
@@ -320,6 +328,7 @@ func convertToDetailedDTO(flaw models.Flaw) detailedFlawDTO {
 				Justification:     ev.Justification,
 				ArbitraryJsonData: ev.GetArbitraryJsonData(),
 				CreatedAt:         ev.CreatedAt,
+				AssetVersion:      ev.AssetVersion,
 			}
 		}),
 	}

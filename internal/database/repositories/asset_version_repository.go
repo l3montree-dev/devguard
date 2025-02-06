@@ -54,14 +54,21 @@ func (a *assetVersionRepository) FindByName(name string) (models.AssetVersion, e
 	return app, nil
 }
 
-func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
+func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string) (models.AssetVersion, error) {
 	var app models.AssetVersion
 	err := a.db.Where("name = ? AND asset_id = ?", assetVersionName, assetID).First(&app).Error
 	if err != nil {
-		if err := a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetId: assetID, Slug: assetVersionName}).Error; err != nil {
+		var assetVersionType models.AssetVersionType
+		if tag == "" {
+			assetVersionType = "branch"
+		} else {
+			assetVersionType = "tag"
+		}
+
+		if err := a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetId: assetID, Slug: assetVersionName, Type: assetVersionType}).Error; err != nil {
 			return models.AssetVersion{}, err
 		}
-		return a.FindOrCreate(assetVersionName, assetID)
+		return a.FindOrCreate(assetVersionName, assetID, tag)
 	}
 	return app, nil
 }

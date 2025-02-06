@@ -47,9 +47,9 @@ type supplyChainRepository interface {
 }
 
 type flawService interface {
-	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, doRiskManagement bool) error
+	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.AssetNew, doRiskManagement bool) error
 	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.AssetNew, doRiskManagement bool) error
-	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error)
+	UpdateFlawState(tx core.DB, assetID uuid.UUID, userID string, flaw *models.Flaw, statusType string, justification string, assetVersionName string) (models.FlawEvent, error)
 }
 
 type assetVersionController struct {

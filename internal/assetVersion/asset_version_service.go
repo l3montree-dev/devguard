@@ -90,11 +90,13 @@ func (s *service) HandleScanResult(asset models.AssetNew, assetVersion models.As
 			CVE:                   &v.CVE,
 		}
 
+		flaw.FlawAssetID = flaw.CalculateHash(asset.ID.String())
+
 		flaws = append(flaws, flaw)
 	}
 
 	flaws = utils.UniqBy(flaws, func(f models.Flaw) string {
-		return f.CalculateHash()
+		return f.CalculateHash(f.AssetVersionID.String())
 	})
 
 	// let the asset service handle the new scan result - we do not need
@@ -142,25 +144,29 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 	})
 
 	comparison := utils.CompareSlices(existingFlaws, flaws, func(flaw models.Flaw) string {
-		return flaw.CalculateHash()
+		return flaw.CalculateHash(assetVersion.ID.String())
 	})
 
 	fixedFlaws := comparison.OnlyInA
 	newFlaws := comparison.OnlyInB
 
+	fmt.Println("newFlaws", newFlaws)
+
 	if doRiskManagement {
 		// get a transaction
 		if err := s.flawRepository.Transaction(func(tx core.DB) error {
 			if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, assetVersion, asset, true); err != nil {
+				fmt.Println("hier passiert was")
 				// this will cancel the transaction
 				return err
 			}
+			fmt.Println("es geht weiter")
 			return s.flawService.UserFixedFlaws(tx, userID, utils.Filter(
 				fixedFlaws,
 				func(flaw models.Flaw) bool {
 					return flaw.State == models.FlawStateOpen
 				},
-			), true)
+			), assetVersion, asset, true)
 		}); err != nil {
 			slog.Error("could not save flaws", "err", err)
 			return 0, 0, []models.Flaw{}, err
@@ -176,7 +182,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 			func(flaw models.Flaw) bool {
 				return flaw.State == models.FlawStateOpen
 			},
-		), false); err != nil {
+		), assetVersion, asset, false); err != nil {
 			slog.Error("could not save flaws", "err", err)
 			return 0, 0, []models.Flaw{}, err
 		}

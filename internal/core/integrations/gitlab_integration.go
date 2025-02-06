@@ -220,6 +220,19 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return nil
 		}
 
+		// get the asset
+		assetVersion, err := g.assetVersionRepository.Read(flaw.AssetVersionID)
+		if err != nil {
+			slog.Error("could not read asset version", "err", err)
+			return err
+		}
+		assetVersionName := assetVersion.Name
+		asset, err := g.assetRepository.Read(assetVersion.AssetId)
+		if err != nil {
+			slog.Error("could not read asset", "err", err)
+			return err
+		}
+
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
@@ -247,7 +260,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}()
 
 		// create a new event based on the comment
-		flawEvent := createNewFlawEventBasedOnComment(flaw.ID, fmt.Sprintf("gitlab:%d", event.User.ID), comment)
+		flawEvent := createNewFlawEventBasedOnComment(flaw.FlawAssetID, flaw.ID, fmt.Sprintf("gitlab:%d", event.User.ID), comment, assetVersionName)
 
 		flawEvent.Apply(&flaw)
 		// save the flaw and the event in a transaction
@@ -267,13 +280,6 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
-		// get the asset
-		assetVersion, err := g.assetVersionRepository.Read(flaw.AssetVersionID)
-		asset, err := g.assetRepository.Read(assetVersion.AssetId)
-		if err != nil {
-			slog.Error("could not read asset", "err", err)
-			return err
-		}
 		// get the integration id based on the asset
 		integrationId, err := extractIntegrationIdFromRepoId(utils.SafeDereference(asset.RepositoryID))
 		if err != nil {
@@ -727,7 +733,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		flaw, err := g.flawRepository.Read(flawId)
+		flaw, err := g.flawRepository.ReadFlaws(flawId, asset.CentralFlawManagement)
 		if err != nil {
 			return err
 		}
@@ -746,6 +752,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		orgSlug, _ := core.GetOrgSlug(event.Ctx)
 		projectSlug, _ := core.GetProjectSlug(event.Ctx)
 		assetSlug, _ := core.GetAssetSlug(event.Ctx)
+		assetVersionSlug, _ := core.GetAssetVersionSlug(event.Ctx)
 
 		// read the justification from the body
 		var justification map[string]string
@@ -776,6 +783,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		flawEvent := models.NewMitigateEvent(
 			flaw.ID,
 			userId,
+			assetVersionSlug,
 			justification["comment"],
 			map[string]any{
 				"ticketId":  *flaw.TicketID,

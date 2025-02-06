@@ -18,6 +18,8 @@ type FlawEventDTO struct {
 	ArbitraryJsonData map[string]any `json:"arbitraryJsonData"`
 
 	CreatedAt time.Time `json:"createdAt"`
+
+	AssetVersion string `json:"assetVersion"`
 }
 
 func (dto FlawEventDTO) ToModel() models.FlawEvent {

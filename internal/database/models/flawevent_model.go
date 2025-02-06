@@ -29,9 +29,12 @@ const (
 
 type FlawEvent struct {
 	Model
-	Type   FlawEventType `json:"type" gorm:"type:text"`
-	FlawID string        `json:"flawId"`
-	UserID string        `json:"userId"`
+	Type        FlawEventType `json:"type" gorm:"type:text"`
+	FlawID      string        `json:"flawId"`
+	FlawAssetID string        `json:"flawAssetId"`
+	UserID      string        `json:"userId"`
+
+	AssetVersion string `json:"assetVersion" gorm:"type:text;"`
 
 	Justification *string `json:"justification" gorm:"type:text;"`
 
@@ -98,55 +101,68 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 	}
 }
 
-func NewAcceptedEvent(flawID, userID, justification string) FlawEvent {
+func NewAcceptedEvent(flawAssetID string, flawID, userID, justification string, assetVersion string) FlawEvent {
+	fmt.Println("flawAssetID", flawAssetID, "flawID", flawID)
 	return FlawEvent{
 		Type:          EventTypeAccepted,
 		FlawID:        flawID,
+		FlawAssetID:   flawAssetID,
 		UserID:        userID,
 		Justification: &justification,
+		AssetVersion:  assetVersion,
 	}
 }
 
-func NewReopenedEvent(flawID, userID, justification string) FlawEvent {
+func NewReopenedEvent(flawAssetID string, flawID, userID, justification string, assetVersion string) FlawEvent {
 	return FlawEvent{
 		Type:          EventTypeReopened,
 		FlawID:        flawID,
+		FlawAssetID:   flawAssetID,
 		UserID:        userID,
 		Justification: &justification,
+		AssetVersion:  assetVersion,
 	}
 }
 
-func NewCommentEvent(flawID, userID, justification string) FlawEvent {
+func NewCommentEvent(flawAssetID string, flawID, userID, justification string, assetVersion string) FlawEvent {
 	return FlawEvent{
 		Type:          EventTypeComment,
 		FlawID:        flawID,
+		FlawAssetID:   flawAssetID,
 		UserID:        userID,
 		Justification: &justification,
+		AssetVersion:  assetVersion,
 	}
 }
 
-func NewFalsePositiveEvent(flawID, userID, justification string) FlawEvent {
+func NewFalsePositiveEvent(flawAssetID string, flawID, userID, justification string, assetVersion string) FlawEvent {
 	return FlawEvent{
 		Type:          EventTypeFalsePositive,
 		FlawID:        flawID,
+		FlawAssetID:   flawAssetID,
 		UserID:        userID,
 		Justification: &justification,
+		AssetVersion:  assetVersion,
 	}
 }
 
-func NewFixedEvent(flawID string, userID string) FlawEvent {
+func NewFixedEvent(flawAssetID string, flawID string, userID string, assetVersion string) FlawEvent {
 	return FlawEvent{
-		Type:   EventTypeFixed,
-		FlawID: flawID,
-		UserID: userID,
+		Type:         EventTypeFixed,
+		FlawID:       flawID,
+		FlawAssetID:  flawAssetID,
+		UserID:       userID,
+		AssetVersion: assetVersion,
 	}
 }
 
-func NewDetectedEvent(flawID string, userID string, riskCalculationReport obj.RiskCalculationReport) FlawEvent {
+func NewDetectedEvent(flawAssetID string, flawID string, userID string, assetVersion string, riskCalculationReport obj.RiskCalculationReport) FlawEvent {
 	ev := FlawEvent{
-		Type:   EventTypeDetected,
-		FlawID: flawID,
-		UserID: userID,
+		Type:         EventTypeDetected,
+		FlawID:       flawID,
+		FlawAssetID:  flawAssetID,
+		UserID:       userID,
+		AssetVersion: assetVersion,
 	}
 
 	ev.SetArbitraryJsonData(riskCalculationReport.Map())
@@ -154,12 +170,13 @@ func NewDetectedEvent(flawID string, userID string, riskCalculationReport obj.Ri
 	return ev
 }
 
-func NewMitigateEvent(flawID string, userID string, justification string, arbitraryData map[string]any) FlawEvent {
+func NewMitigateEvent(flawID string, userID string, assetVersion string, justification string, arbitraryData map[string]any) FlawEvent {
 	ev := FlawEvent{
 		Type:          EventTypeMitigate,
 		FlawID:        flawID,
 		UserID:        userID,
 		Justification: &justification,
+		AssetVersion:  assetVersion,
 	}
 	ev.SetArbitraryJsonData(arbitraryData)
 	return ev

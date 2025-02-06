@@ -155,8 +155,21 @@ func (r *flawRepository) GetAllOpenFlawsByAssetVersionID(tx core.DB, assetVersio
 	return flaws, nil
 }
 
-func (g flawRepository) Read(id string) (models.Flaw, error) {
+func (g flawRepository) ReadFlaws(id string, CentralFlawManagement bool) (models.Flaw, error) {
 	var t models.Flaw
+	if CentralFlawManagement {
+		id, err := g.GetFlawAssetIDByFlawID(g.db, id)
+		if err != nil {
+			return models.Flaw{}, err
+		}
+
+		err = g.db.Preload("CVE.Weaknesses").Preload("Events", func(db core.DB) core.DB {
+			return db.Order("created_at ASC")
+		}).Preload("CVE").Preload("CVE.Exploits").First(&t, "flaw_asset_id = ?", id).Error
+
+		return t, err
+
+	}
 	err := g.db.Preload("CVE.Weaknesses").Preload("Events", func(db core.DB) core.DB {
 		return db.Order("created_at ASC")
 	}).Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", id).Error
@@ -247,4 +260,12 @@ func (r *flawRepository) GetDefaultFlawsByOrgIdPaged(tx core.DB, userAllowedProj
 	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("asset_id").Where("asset_id IN (?)", subQueryAssetIDs, "default_branch", true)
 
 	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
+}
+
+func (r *flawRepository) GetFlawAssetIDByFlawID(tx core.DB, flawID string) (string, error) {
+	var flawAssetID string
+	if err := r.Repository.GetDB(tx).Model(&models.Flaw{}).Select("flaw_asset_id").Where("id = ?", flawID).Row().Scan(&flawAssetID); err != nil {
+		return "", err
+	}
+	return flawAssetID, nil
 }
