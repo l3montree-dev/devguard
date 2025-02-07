@@ -733,7 +733,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		flaw, err := g.flawRepository.ReadFlaws(flawId, asset.CentralFlawManagement)
+		flaw, err := g.flawRepository.Read(flawId)
 		if err != nil {
 			return err
 		}

@@ -150,6 +150,8 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 	fixedFlaws := comparison.OnlyInA
 	newFlaws := comparison.OnlyInB
 
+	fmt.Println("flaws", flaws)
+	fmt.Println("fixedFlaws", fixedFlaws)
 	fmt.Println("newFlaws", newFlaws)
 
 	if doRiskManagement {

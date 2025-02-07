@@ -37,6 +37,8 @@ type flawRepository interface {
 	Transaction(txFunc func(core.DB) error) error
 	Begin() core.DB
 	GetFlawsByAssetVersionId(tx core.DB, assetVersionID uuid.UUID) ([]models.Flaw, error)
+
+	GetFlawEventsByFlawAssetID(tx core.DB, flawAssetID string) ([]models.FlawEvent, error)
 }
 
 type flawEventRepository interface {
@@ -303,4 +305,8 @@ func (s *service) applyAndSave(tx core.DB, flaw *models.Flaw, ev *models.FlawEve
 	}
 	flaw.Events = append(flaw.Events, *ev)
 	return *ev, nil
+}
+
+func (s *service) GetFlawEventsByFlawAssetID(tx core.DB, flawAssetID string) ([]models.FlawEvent, error) {
+	return s.flawRepository.GetFlawEventsByFlawAssetID(tx, flawAssetID)
 }

@@ -58,7 +58,6 @@ type githubAppInstallationRepository interface {
 
 type flawRepository interface {
 	Read(id string) (models.Flaw, error)
-	ReadFlaws(id string, centralFlawManagement bool) (models.Flaw, error)
 	Save(db core.DB, flaw *models.Flaw) error
 	Transaction(fn func(tx core.DB) error) error
 	FindByTicketID(tx core.DB, ticketID string) (models.Flaw, error)
@@ -465,7 +464,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		flaw, err := g.flawRepository.ReadFlaws(flawId, asset.CentralFlawManagement)
+		flaw, err := g.flawRepository.Read(flawId)
 		if err != nil {
 			return err
 		}

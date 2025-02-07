@@ -155,26 +155,39 @@ func (r *flawRepository) GetAllOpenFlawsByAssetVersionID(tx core.DB, assetVersio
 	return flaws, nil
 }
 
-func (g flawRepository) ReadFlaws(id string, CentralFlawManagement bool) (models.Flaw, error) {
+func (g flawRepository) Read(id string) (models.Flaw, error) {
 	var t models.Flaw
-	if CentralFlawManagement {
-		id, err := g.GetFlawAssetIDByFlawID(g.db, id)
-		if err != nil {
-			return models.Flaw{}, err
-		}
-
-		err = g.db.Preload("CVE.Weaknesses").Preload("Events", func(db core.DB) core.DB {
-			return db.Order("created_at ASC")
-		}).Preload("CVE").Preload("CVE.Exploits").First(&t, "flaw_asset_id = ?", id).Error
-
-		return t, err
-
-	}
 	err := g.db.Preload("CVE.Weaknesses").Preload("Events", func(db core.DB) core.DB {
 		return db.Order("created_at ASC")
 	}).Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", id).Error
 
 	return t, err
+}
+
+func (g flawRepository) ReadFlawWithAssetEvents(id string) (models.Flaw, error) {
+	var t models.Flaw
+	err := g.db.Preload("CVE.Weaknesses").Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", id).Error
+
+	if err != nil {
+		return models.Flaw{}, err
+	}
+
+	flawEvents, err := g.GetFlawEventsByFlawAssetID(g.db, t.FlawAssetID)
+	if err != nil {
+		return models.Flaw{}, err
+	}
+
+	t.Events = flawEvents
+
+	return t, err
+}
+
+func (g flawRepository) GetFlawEventsByFlawAssetID(tx core.DB, flawAssetID string) ([]models.FlawEvent, error) {
+	var flawEvents []models.FlawEvent = []models.FlawEvent{}
+	if err := g.Repository.GetDB(tx).Where("flaw_asset_id = ?", flawAssetID).Find(&flawEvents).Order("created_at ASC").Error; err != nil {
+		return nil, err
+	}
+	return flawEvents, nil
 }
 
 func (r *flawRepository) GetFlawsByPurl(tx core.DB, purl []string) ([]models.Flaw, error) {

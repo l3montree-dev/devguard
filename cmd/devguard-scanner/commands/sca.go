@@ -145,6 +145,38 @@ func isValidPath(path string) (bool, error) {
 	return true, nil
 }
 
+func getCurrentBranchName(path string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	cmd.Dir = getDirFromPath(path)
+	err := cmd.Run()
+	if err != nil {
+		slog.Error("could not run git rev-parse --abbrev-ref HEAD", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
+		return "", err
+	}
+
+	//check if is the default branch
+	if strings.TrimSpace(out.String()) == "HEAD" {
+		cmd = exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+		out.Reset()
+		errOut.Reset()
+		cmd.Stdout = &out
+		cmd.Stderr = &errOut
+		cmd.Dir = getDirFromPath(path)
+		err = cmd.Run()
+		if err != nil {
+			slog.Error("could not run git rev-parse --abbrev-ref HEAD", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
+			return "", err
+		}
+	}
+
+	return strings.TrimSpace(out.String()), nil
+
+}
+
 func getCurrentVersion(path string) (string, int, error) {
 	// mark the path as safe git directory
 	slog.Debug("marking path as safe", "path", getDirFromPath(path))
@@ -226,49 +258,37 @@ func sanitizeApiUrl(apiUrl string) string {
 	return apiUrl
 }
 
-func parseConfig(cmd *cobra.Command) (string, string, string, string, string, string, string) {
+func parseConfig(cmd *cobra.Command) (string, string, string, string, string) {
 	token, err := cmd.PersistentFlags().GetString("token")
 	if err != nil {
 		slog.Error("could not get token", "err", err)
-		return "", "", "", "", "", "", ""
+		return "", "", "", "", ""
 	}
 	assetName, err := cmd.PersistentFlags().GetString("assetName")
 	if err != nil {
 		slog.Error("could not get asset id", "err", err)
-		return "", "", "", "", "", "", ""
+		return "", "", "", "", ""
 	}
 	apiUrl, err := cmd.PersistentFlags().GetString("apiUrl")
 	if err != nil {
 		slog.Error("could not get api url", "err", err)
-		return "", "", "", "", "", "", ""
+		return "", "", "", "", ""
 	}
 	apiUrl = sanitizeApiUrl(apiUrl)
 
 	failOnRisk, err := cmd.Flags().GetString("fail-on-risk")
 	if err != nil {
 		slog.Error("could not get fail-on-risk", "err", err)
-		return "", "", "", "", "", "", ""
+		return "", "", "", "", ""
 	}
 
 	webUI, err := cmd.Flags().GetString("webUI")
 	if err != nil {
 		slog.Error("could not get webUI", "err", err)
-		return "", "", "", "", "", "", ""
+		return "", "", "", "", ""
 	}
 
-	assetVersion, err := cmd.Flags().GetString("assetVersion")
-	if err != nil {
-		slog.Error("could not get asset version", "err", err)
-		return "", "", "", "", "", "", ""
-	}
-
-	tag, err := cmd.Flags().GetString("tag")
-	if err != nil {
-		slog.Error("could not get tag", "err", err)
-		return "", "", "", "", "", "", ""
-	}
-
-	return token, assetName, apiUrl, failOnRisk, webUI, assetVersion, tag
+	return token, assetName, apiUrl, failOnRisk, webUI
 }
 
 func printGitHelp(err error) {
@@ -396,8 +416,7 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("fail-on-risk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")
-	cmd.Flags().String("assetVersion", "main", "The tag or branch of the asset version. Defaults to 'main'.")
-	cmd.Flags().String("tag", "", "The tag of the asset version.")
+
 }
 
 func getDirFromPath(path string) string {
@@ -417,7 +436,7 @@ func getDirFromPath(path string) string {
 func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		core.InitLogger()
-		token, assetName, apiUrl, failOnRisk, webUI, assetVersion, tag := parseConfig(cmd)
+		token, assetName, apiUrl, failOnRisk, webUI := parseConfig(cmd)
 		if token == "" {
 			slog.Error("token seems to be empty. If you provide the token via an environment variable like --token=$DEVGUARD_TOKEN, check, if the environment variable is set or if there are any spelling mistakes", "token", token)
 			return fmt.Errorf("token seems to be empty")
@@ -448,6 +467,17 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		}
 
 		slog.Info("starting scan", "version", version, "asset", assetName)
+
+		branch, err := getCurrentBranchName(path)
+		if err != nil {
+			return errors.Wrap(err, "could not get branch name")
+		}
+
+		assetVersion := branch
+
+		if commitAfterTag == 0 {
+			assetVersion = version
+		}
 
 		// read the sbom file and post it to the scan endpoint
 		// get the flaws and print them to the console
@@ -483,7 +513,6 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		req.Header.Set("X-Asset-Version", version)
 		req.Header.Set("X-Asset-Version-New", assetVersion)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanner)
-		req.Header.Set("X-Tag", tag)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
