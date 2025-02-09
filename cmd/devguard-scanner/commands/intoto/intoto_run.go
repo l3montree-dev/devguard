@@ -28,6 +28,11 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
+	"github.com/in-toto/go-witness/attestation"
+	envAttestor "github.com/in-toto/go-witness/attestation/environment"
+	"github.com/in-toto/go-witness/attestation/git"
+	githubAttestor "github.com/in-toto/go-witness/attestation/github"
+	gitlabAttestor "github.com/in-toto/go-witness/attestation/gitlab"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
 	slsa1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
@@ -164,31 +169,84 @@ func NewInTotoRunCommand() *cobra.Command {
 				return err
 			}
 
-			mb, ok := metadata.(*toto.Metablock)
+			mb, ok := metadata.(*toto.Envelope)
 			if !ok {
 				return errors.New("failed to cast metadata to link")
 			}
 
-			link, ok := mb.Signed.(toto.Link)
+			link, ok := mb.GetPayload().(toto.Link)
 			if !ok {
 				return errors.New("failed to cast metadata to link")
 			}
 
 			subjects := make([]toto.Subject, 0, len(link.Products))
 			for productName, product := range link.Products {
+				digestSet := make(map[string]string)
+				for k, v := range product.(map[string]interface{}) {
+					digestSet[k] = v.(string)
+				}
+
 				subjects = append(subjects, toto.Subject{
 					Name:   productName,
-					Digest: common.DigestSet(product.(map[string]string)),
+					Digest: common.DigestSet(digestSet),
 				})
 			}
 
 			// map the materials to resolved dependencies
 			resolvedDependencies := make([]slsa1.ResourceDescriptor, 0, len(link.Materials))
 			for materialName, material := range link.Materials {
+				digestSet := make(map[string]string)
+				for k, v := range material.(map[string]interface{}) {
+					digestSet[k] = v.(string)
+				}
+
 				resolvedDependencies = append(resolvedDependencies, slsa1.ResourceDescriptor{
 					URI:    fmt.Sprintf("file://%s", materialName), // TODO: Replace with URI of the file in the gitlab repo. Need to get the repo URL from devguard - if set
-					Digest: common.DigestSet(material.(map[string]string)),
+					Digest: common.DigestSet(digestSet),
 				})
+			}
+
+			var attestors []attestation.Attestor = []attestation.Attestor{
+				gitlabAttestor.New(),
+				githubAttestor.New(),
+				envAttestor.New(),
+				git.New(),
+			}
+
+			attestationContext, err := attestation.NewContext(step, attestors)
+			if err != nil {
+				return errors.Wrap(err, "failed to create attestation context")
+			}
+
+			err = attestationContext.RunAttestors()
+			if err != nil {
+				return errors.Wrap(err, "failed to run attestation context")
+			}
+
+			// combine all attestors data into a single map
+			attestorData := make(map[string]any)
+			for _, attestor := range attestors {
+				var m map[string]any
+				b, err := json.Marshal(attestor)
+				if err != nil {
+					continue
+				}
+
+				err = json.Unmarshal(b, &m)
+				if err != nil {
+					continue
+				}
+
+				for k, v := range m {
+					switch v := v.(type) {
+					case string:
+						if v != "" {
+							attestorData[k] = v
+						}
+					default:
+						attestorData[k] = v
+					}
+				}
 			}
 
 			provenance := toto.ProvenanceStatementSLSA1{
@@ -198,11 +256,45 @@ func NewInTotoRunCommand() *cobra.Command {
 					Subject:       subjects,
 				},
 				Predicate: slsa1.ProvenancePredicate{
+					RunDetails: slsa1.ProvenanceRunDetails{
+						Builder: slsa1.Builder{
+							ID: "devguard.org",
+						},
+					},
 					BuildDefinition: slsa1.ProvenanceBuildDefinition{
 						ResolvedDependencies: resolvedDependencies,
-						ExternalParameters:   map[string]interface{}{},
+						ExternalParameters:   attestorData,
 					},
 				},
+			}
+
+			// put the provenance into an envelope
+			provenanceEnvelope := toto.Envelope{}
+			err = provenanceEnvelope.SetPayload(provenance)
+			if err != nil {
+				return errors.Wrap(err, "failed to set payload")
+			}
+
+			err = provenanceEnvelope.Sign(key)
+			if err != nil {
+				return errors.Wrap(err, "failed to sign envelope")
+			}
+
+			err = provenanceEnvelope.Dump(fmt.Sprintf("%s.provenance.json", step))
+			if err != nil {
+				return errors.Wrap(err, "failed to dump envelope")
+			}
+
+			// write the provenance to a file
+			provenanceBytes, err := json.MarshalIndent(provenance, "", "  ")
+			if err != nil {
+				return errors.Wrap(err, "failed to marshal provenance")
+			}
+
+			err = os.WriteFile(fmt.Sprintf("%s.provenance.json", step), provenanceBytes, 0644) //nolint:gosec
+
+			if err != nil {
+				return errors.Wrap(err, "failed to write provenance file")
 			}
 
 			err = metadata.Sign(key)
