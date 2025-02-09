@@ -7,7 +7,15 @@ metadata:
     app.kubernetes.io/name: kratos
   annotations: {}
 spec:
-  replicas: 1
+  replicas: 1 # keep that at 1 - or use a singleton courier job for kratos mail queue processing.
+  #
+  # https://www.ory.sh/docs/kratos/self-hosted/mail-courier-selfhosted
+  #
+  # Single-instance setup
+  # To run the mail courier in the background on your single Kratos instance, add the --watch-courier flag to your kratos serve command, as outlined in the CLI docs
+
+  # Multi-instance setup
+  # If you're running multiple instances of Kratos (for example replicated Kubernetes deployment), you need to run the mail courier as a separate singleton job. The courier can be started with the kratos courier watch command (CLI docs).
   selector:
     matchLabels:
       app.kubernetes.io/name: kratos
@@ -45,7 +53,8 @@ spec:
           valueFrom:
             secretKeyRef:
               name: "{{ .Values.oidc.github.existingClientSecret }}"
-              key: "secret" 
+              key: "secret"
+              optional: true
         {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
@@ -79,6 +88,7 @@ spec:
         args:
         - serve
         - all
+        - --watch-courier
         - --config
         - /etc/config/kratos.yml
         volumeMounts:
@@ -119,7 +129,8 @@ spec:
           valueFrom:
             secretKeyRef:
               name: "{{ .Values.oidc.github.existingClientSecret }}"
-              key: "secret" 
+              key: "secret"
+              optional: true
         {{- end }}
         ports:
         - name: http-admin

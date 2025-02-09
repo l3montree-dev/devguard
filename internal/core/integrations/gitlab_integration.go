@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 
 	"fmt"
 	"io"
@@ -25,7 +26,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
-	"github.com/xanzy/go-gitlab"
 )
 
 type gitlabClientFacade interface {
@@ -445,7 +445,7 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 		return errors.Wrap(err, "could not get project name")
 	}
 
-	templatePath := getTemplatePath(ctx.QueryParam("scanType"))
+	templatePath := getTemplatePath(ctx.QueryParam("scanner"))
 	err = setupAndPushPipeline(accessToken, gitlabUrl, projectName, templatePath, branchName)
 	if err != nil {
 		return errors.Wrap(err, "could not setup and push pipeline")
@@ -679,8 +679,8 @@ func (g *gitlabIntegration) getRepoNameFromProjectId(ctx core.Context, projectId
 	return strings.ReplaceAll(projectName, " ", ""), nil
 }
 
-func getTemplatePath(scanType string) string {
-	switch scanType {
+func getTemplatePath(scanner string) string {
+	switch scanner {
 	case "full":
 		return "./templates/full_template.yml"
 	case "sca":

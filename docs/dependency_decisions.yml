@@ -26,11 +26,11 @@
     :when: 2024-05-13 13:45:20.797550000 Z
 - - :approve
   - modernc.org/mathutil
-  - :who: Sebastian Kawelke
+  - :who: Tim Bastin
     :why: Is New BSD, OSI-approved OSS license, https://gitlab.com/cznic/mathutil, https://dwheeler.com/essays/floss-license-slide.html
     :versions:
-    - v1.6.0
-    :when: 2024-05-13 13:45:20.797550000 Z
+    - v1.7.1
+    :when: 2025-01-28 09:25:20.797550000 Z
 - - :permit
   - ISC
   - :who: Sebastian Kawelke

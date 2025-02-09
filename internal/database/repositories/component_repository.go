@@ -55,13 +55,14 @@ func (c *componentRepository) CreateComponents(tx database.DB, components []mode
 	return c.GetDB(tx).Create(&components).Error
 }
 
-func (c *componentRepository) LoadComponents(tx database.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadComponents(tx database.DB, asset models.Asset, scannerID, version string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
-	if version == models.NoVersion {
-		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_id = ? AND scan_type = ? AND semver_end is NULL", asset.ID, scanType).Find(&components).Error
+
+	if version == models.NoVersion || version == "" {
+		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_id = ? AND scanner_id = ? AND semver_end is NULL", asset.ID, scannerID).Find(&components).Error
 	} else {
-		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where(`asset_id = ? AND scan_type = ? AND semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)`, asset.ID, scanType, version, version).Find(&components).Error
+		err = c.GetDB(tx).Preload("Component").Preload("Dependency").Where(`asset_id = ? AND scanner_id = ? AND semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)`, asset.ID, scannerID, version, version).Find(&components).Error
 	}
 
 	if err != nil {
@@ -69,6 +70,12 @@ func (c *componentRepository) LoadComponents(tx database.DB, asset models.Asset,
 	}
 
 	return components, err
+}
+
+func (c *componentRepository) LoadAllLatestComponentFromAsset(tx database.DB, asset models.Asset) ([]models.ComponentDependency, error) {
+	var component []models.ComponentDependency
+	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_id = ? AND scanner_id = ? AND semver_end is NULL", asset.ID).Find(&component).Error
+	return component, err
 }
 
 func (c *componentRepository) GetVersions(tx database.DB, asset models.Asset) ([]string, error) {
@@ -129,14 +136,14 @@ func (c *componentRepository) HandleStateDiff(tx database.DB, assetID uuid.UUID,
 	})
 }
 
-func (c *componentRepository) GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error) {
+func (c *componentRepository) GetDependencyCountPerscanner(assetID uuid.UUID) (map[string]int, error) {
 	var results []struct {
-		ScanType string `gorm:"column:scan_type"`
-		Count    int    `gorm:"column:count"`
+		ScannerID string `gorm:"column:scanner_id"`
+		Count     int    `gorm:"column:count"`
 	}
 	err := c.db.Model(&models.Component{}).
-		Select("scan_type , COUNT(*) as count").
-		Group("scan_type").
+		Select("scanner_id , COUNT(*) as count").
+		Group("scanner_id").
 		Where("asset_id = ?", assetID).
 		Find(&results).Error
 
@@ -147,7 +154,7 @@ func (c *componentRepository) GetDependencyCountPerScanType(assetID uuid.UUID) (
 	// convert to map
 	counts := make(map[string]int)
 	for _, r := range results {
-		counts[r.ScanType] = r.Count
+		counts[r.ScannerID] = r.Count
 	}
 
 	return counts, nil

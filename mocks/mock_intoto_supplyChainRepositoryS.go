@@ -20,6 +20,64 @@ func (_m *IntotoSupplyChainRepositoryS) EXPECT() *IntotoSupplyChainRepositoryS_E
 	return &IntotoSupplyChainRepositoryS_Expecter{mock: &_m.Mock}
 }
 
+// FindByDigest provides a mock function with given fields: digest
+func (_m *IntotoSupplyChainRepositoryS) FindByDigest(digest string) ([]models.SupplyChain, error) {
+	ret := _m.Called(digest)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByDigest")
+	}
+
+	var r0 []models.SupplyChain
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) ([]models.SupplyChain, error)); ok {
+		return rf(digest)
+	}
+	if rf, ok := ret.Get(0).(func(string) []models.SupplyChain); ok {
+		r0 = rf(digest)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.SupplyChain)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(digest)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// IntotoSupplyChainRepositoryS_FindByDigest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByDigest'
+type IntotoSupplyChainRepositoryS_FindByDigest_Call struct {
+	*mock.Call
+}
+
+// FindByDigest is a helper method to define mock.On call
+//   - digest string
+func (_e *IntotoSupplyChainRepositoryS_Expecter) FindByDigest(digest interface{}) *IntotoSupplyChainRepositoryS_FindByDigest_Call {
+	return &IntotoSupplyChainRepositoryS_FindByDigest_Call{Call: _e.mock.On("FindByDigest", digest)}
+}
+
+func (_c *IntotoSupplyChainRepositoryS_FindByDigest_Call) Run(run func(digest string)) *IntotoSupplyChainRepositoryS_FindByDigest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *IntotoSupplyChainRepositoryS_FindByDigest_Call) Return(_a0 []models.SupplyChain, _a1 error) *IntotoSupplyChainRepositoryS_FindByDigest_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *IntotoSupplyChainRepositoryS_FindByDigest_Call) RunAndReturn(run func(string) ([]models.SupplyChain, error)) *IntotoSupplyChainRepositoryS_FindByDigest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindBySupplyChainID provides a mock function with given fields: supplyChainID
 func (_m *IntotoSupplyChainRepositoryS) FindBySupplyChainID(supplyChainID string) ([]models.SupplyChain, error) {
 	ret := _m.Called(supplyChainID)

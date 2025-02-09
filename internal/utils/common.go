@@ -15,6 +15,8 @@
 
 package utils
 
+import "encoding/csv"
+
 func Ptr[T any](t T) *T {
 	return &t
 }
@@ -48,4 +50,52 @@ func Or[T any](
 		return fallback
 	}
 	return val
+}
+
+func ReadCsvInChunks(reader *csv.Reader, chunkSize int, fn func(rows [][]string) error) (int, error) {
+	count := 0
+
+	chunk := make([][]string, 0, chunkSize)
+	for {
+		rows, err := reader.Read()
+		if err != nil {
+			break
+		}
+		count++
+
+		chunk = append(chunk, rows)
+
+		if len(chunk) == chunkSize {
+			err := fn(chunk)
+			if err != nil {
+				return count, err
+			}
+			chunk = make([][]string, 0, chunkSize)
+		}
+	}
+
+	if len(chunk) > 0 {
+		return count, fn(chunk)
+	}
+
+	return count, nil
+}
+
+func ReadCsv(reader *csv.Reader, fn func(row []string) error) (int, error) {
+	count := 0
+
+	for {
+		row, err := reader.Read()
+		if err != nil {
+			break
+		}
+		count++
+
+		err = fn(row)
+		if err != nil {
+			return count, err
+		}
+	}
+
+	return count, nil
 }

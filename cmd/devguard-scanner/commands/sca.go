@@ -40,6 +40,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/package-url/packageurl-go"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -325,7 +326,15 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 			} else {
 				clickableLink = "Risk Management is disabled"
 			}
-			return table.Row{f.ArbitraryJsonData["packageName"].(string), f.CVEID, *f.RawRiskAssessment, f.ArbitraryJsonData["installedVersion"], f.ArbitraryJsonData["fixedVersion"], f.State, clickableLink}
+
+			// extract package name and version from purl
+			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
+			pURL, err := packageurl.FromString(*f.ComponentPurl)
+			if err != nil {
+				slog.Error("could not parse purl", "err", err)
+			}
+
+			return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), *f.CVEID, *f.RawRiskAssessment, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
 		},
 	))
 
@@ -391,7 +400,7 @@ func getDirFromPath(path string) string {
 	return path
 }
 
-func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) error {
+func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		core.InitLogger()
 		token, assetName, apiUrl, failOnRisk, webUI := parseConfig(cmd)
@@ -457,8 +466,7 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 		req.Header.Set("X-Risk-Management", strconv.FormatBool(doRiskManagement))
 		req.Header.Set("X-Asset-Name", assetName)
 		req.Header.Set("X-Asset-Version", version)
-		req.Header.Set("X-Scan-Type", scanType)
-		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanType)
+		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanner)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -477,6 +485,7 @@ func scaCommandFactory(scanType string) func(cmd *cobra.Command, args []string) 
 		if err != nil {
 			return errors.Wrap(err, "could not parse response")
 		}
+
 		printScaResults(scanResponse, failOnRisk, assetName, webUI, doRiskManagement)
 		return nil
 	}

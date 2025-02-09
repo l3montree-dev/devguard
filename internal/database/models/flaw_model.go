@@ -2,9 +2,7 @@ package models
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,14 +28,16 @@ type Flaw struct {
 
 	Message  *string     `json:"message"`
 	Comments []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
-	Events   []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"events"`
-	AssetID  uuid.UUID   `json:"assetId" gorm:"not null;"`
+	Events   []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
+	AssetID  uuid.UUID   `json:"assetId" gorm:"not null;type:uuid;"`
 	State    FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
 
-	CVE           *CVE       `json:"cve"`
-	CVEID         string     `json:"cveId" gorm:"null;type:text;default:null;"`
-	Component     *Component `json:"component" gorm:"foreignKey:ComponentPurl;constraint:OnDelete:CASCADE;"`
-	ComponentPurl string     `json:"componentPurl" gorm:"type:text;default:null;"`
+	CVE   *CVE    `json:"cve"`
+	CVEID *string `json:"cveId" gorm:"null;type:text;default:null;"`
+
+	ComponentPurl         *string `json:"componentPurl" gorm:"type:text;default:null;"`
+	ComponentDepth        *int    `json:"componentDepth" gorm:"default:null;"`
+	ComponentFixedVersion *string `json:"componentFixedVersion" gorm:"default:null;"`
 
 	Effort            *int     `json:"effort" gorm:"default:null;"`
 	RiskAssessment    *int     `json:"riskAssessment" gorm:"default:null;"`
@@ -45,13 +45,7 @@ type Flaw struct {
 
 	Priority *int `json:"priority" gorm:"default:null;"`
 
-	ArbitraryJsonData string `json:"arbitraryJsonData" gorm:"type:text;"`
-
 	LastDetected time.Time `json:"lastDetected" gorm:"default:now();not null;"`
-
-	// this is a map of additional data that is parsed from the ArbitraryJsonData field
-	// this is not stored in the database - it just caches the parsed data
-	arbitraryJsonData map[string]any
 
 	TicketID  *string `json:"ticketId" gorm:"default:null;"` // might be set by integrations
 	TicketURL *string `json:"ticketUrl" gorm:"default:null;"`
@@ -60,7 +54,7 @@ type Flaw struct {
 	UpdatedAt time.Time    `json:"updatedAt"`
 	DeletedAt sql.NullTime `gorm:"index" json:"-"`
 
-	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt" gorm:"default:null;"`
+	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt" gorm:"default:now();"`
 }
 
 type FlawRisk struct {
@@ -75,31 +69,8 @@ func (m Flaw) TableName() string {
 	return "flaws"
 }
 
-func (m *Flaw) GetArbitraryJsonData() map[string]any {
-	// parse the additional data
-	if m.arbitraryJsonData == nil {
-		m.arbitraryJsonData = make(map[string]any)
-		err := json.Unmarshal([]byte(m.ArbitraryJsonData), &m.arbitraryJsonData)
-		if err != nil {
-			slog.Error("could not parse additional data", "err", err, "flawId", m.ID)
-		}
-	}
-	return m.arbitraryJsonData
-}
-
-func (m *Flaw) SetArbitraryJsonData(data map[string]any) {
-	m.arbitraryJsonData = data
-	// parse the additional data
-	dataBytes, err := json.Marshal(m.arbitraryJsonData)
-	if err != nil {
-		slog.Error("could not marshal additional data", "err", err, "flawId", m.ID)
-	}
-	m.ArbitraryJsonData = string(dataBytes)
-}
-
 func (m *Flaw) CalculateHash() string {
-	// hash the additional data, scanner id and asset id to create a unique id - if there is a hash collision, we can be sure, that the flaw with all its data is the same
-	hash := utils.HashString(fmt.Sprintf("%s/%s/%s", m.ScannerID, m.AssetID.String(), m.ArbitraryJsonData))
+	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, m.AssetID.String()))
 	return hash
 }
 
@@ -108,17 +79,4 @@ func (f *Flaw) BeforeSave(tx *gorm.DB) (err error) {
 	hash := f.CalculateHash()
 	f.ID = hash
 	return nil
-}
-
-func (f *Flaw) GetComponentDepth() int {
-	if v, ok := f.GetArbitraryJsonData()["componentDepth"]; ok {
-		// make sure to return an int
-		if i, ok := v.(int); ok {
-			return i
-		}
-		if f, ok := v.(float64); ok {
-			return int(f)
-		}
-	}
-	return 0
 }

@@ -11,7 +11,8 @@ oidc:
 mail:
   # needs to contain key: "uri". Format should be like: smtps://<user>@<your-domain.com>:<secret>@<mail-server.de>:465/?skip_ssl_verify=false
   existingSMTPConnectionUriSecret:
-  fromAddress: ""
+  fromAddress: "noreply@devguard.org"
+  fromName: "DevGuard"
 api:
   replicaCount: 1
   image:
@@ -56,6 +57,7 @@ api:
   intoto:
     existingPrivateKeySecretName: ec-private-key
   github:
+    enabled: true
     appId: abc
     # needs to contain "webhookSecret"
     existingWebhookSecretSecretName: github-app-webhook-secret

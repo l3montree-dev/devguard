@@ -35,8 +35,10 @@ const (
 type Object string
 
 const (
-	ObjectProject Object = "project"
-	ObjectAsset   Object = "asset"
+	ObjectProject      Object = "project"
+	ObjectAsset        Object = "asset"
+	ObjectUser         Object = "user"
+	ObjectOrganization Object = "organization"
 )
 
 type AccessControl interface {

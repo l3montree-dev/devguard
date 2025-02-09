@@ -133,13 +133,9 @@ func (c *cpeComparer) GetVulns(purl string, notASemverVersion string, componentT
 
 		for _, cve := range cpeMatch.CVEs {
 			vulns = append(vulns, models.VulnInPackage{
-				CVEID:             cve.CVE,
-				Purl:              purl,
-				FixedVersion:      fixedVersion,
-				IntroducedVersion: tmp.VersionStartIncluding,
-				InstalledVersion:  version,
-				CVE:               *cve,
-				PackageName:       purl,
+				CVEID: cve.CVE,
+				Purl:  purl,
+				CVE:   *cve,
 			})
 		}
 	}

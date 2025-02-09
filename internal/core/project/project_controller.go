@@ -40,6 +40,7 @@ type projectRepository interface {
 	Activate(tx core.DB, projectID uuid.UUID) error
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
+	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
 }
 
 type assetRepository interface {
@@ -105,23 +106,23 @@ func (p *Controller) Create(c core.Context) error {
 	return c.JSON(200, model)
 }
 
-func (p *Controller) Members(c core.Context) error {
-	project := core.GetProject(c)
+func FetchMembersOfProject(ctx core.Context) ([]core.User, error) {
+	project := core.GetProject(ctx)
 	// get rbac
-	rbac := core.GetRBAC(c)
+	rbac := core.GetRBAC(ctx)
 
 	members, err := rbac.GetAllMembersOfProject(project.ID.String())
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
+		return nil, echo.NewHTTPError(500, "could not get members of project").WithInternal(err)
 	}
 
 	// get the auth admin client from the context
-	authAdminClient := core.GetAuthAdminClient(c)
+	authAdminClient := core.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
 	m, _, err := authAdminClient.IdentityAPI.ListIdentitiesExecute(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
 
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get members").WithInternal(err)
+		return nil, echo.NewHTTPError(500, "could not get members").WithInternal(err)
 	}
 
 	users := utils.Map(m, func(i client.Identity) core.User {
@@ -135,16 +136,33 @@ func (p *Controller) Members(c core.Context) error {
 				name += " " + nameMap["last"].(string)
 			}
 		}
+		role, err := rbac.GetProjectRole(i.Id, project.ID.String())
+		if err != nil {
+			return core.User{
+				ID:   i.Id,
+				Name: name,
+			}
+		}
 		return core.User{
 			ID:   i.Id,
 			Name: name,
+			Role: role,
 		}
 	})
 
-	return c.JSON(200, users)
+	return users, nil
 }
 
-func (p *Controller) InviteMember(c core.Context) error {
+func (p *Controller) Members(c core.Context) error {
+	members, err := FetchMembersOfProject(c)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(200, members)
+}
+
+func (p *Controller) InviteMembers(c core.Context) error {
 	project := core.GetProject(c)
 
 	// get rbac
@@ -159,24 +177,20 @@ func (p *Controller) InviteMember(c core.Context) error {
 		return echo.NewHTTPError(400, err.Error())
 	}
 
-	// check if role is valid
-	if role := req.Role; role != "admin" && role != "member" {
-		return echo.NewHTTPError(400, "invalid role")
-	}
-
 	members, err := rbac.GetAllMembersOfOrganization()
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
-	if !utils.Contains(members, req.UserId) {
-		return echo.NewHTTPError(400, "user is not a member of the organization")
-	}
+	for _, newMemberId := range req.Ids {
+		if !utils.Contains(members, newMemberId) {
+			return echo.NewHTTPError(400, "user is not a member of the organization")
+		}
 
-	if err := rbac.GrantRoleInProject(req.UserId, req.Role, project.ID.String()); err != nil {
-		return err
+		if err := rbac.GrantRoleInProject(newMemberId, "member", project.ID.String()); err != nil {
+			return err
+		}
 	}
-
 	return c.NoContent(200)
 }
 
@@ -186,18 +200,14 @@ func (p *Controller) RemoveMember(c core.Context) error {
 	// get rbac
 	rbac := core.GetRBAC(c)
 
-	var req inviteToProjectRequest
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
-	}
-
-	if err := core.V.Struct(req); err != nil {
-		return echo.NewHTTPError(400, err.Error())
+	userId := c.Param("userId")
+	if userId == "" {
+		return echo.NewHTTPError(400, "userId is required")
 	}
 
 	// revoke admin and member role
-	rbac.RevokeRoleInProject(req.UserId, "admin", project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInProject(req.UserId, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(userId, "admin", project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(userId, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	return c.NoContent(200)
 }
@@ -209,6 +219,12 @@ func (p *Controller) ChangeRole(c core.Context) error {
 	rbac := core.GetRBAC(c)
 
 	var req changeRoleRequest
+
+	userId := c.Param("userId")
+	if userId == "" {
+		return echo.NewHTTPError(400, "userId is required")
+	}
+
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
@@ -227,19 +243,15 @@ func (p *Controller) ChangeRole(c core.Context) error {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
-	if !utils.Contains(members, req.UserId) {
+	if !utils.Contains(members, userId) {
 		return echo.NewHTTPError(400, "user is not a member of the organization")
 	}
 
-	if err := rbac.RevokeRoleInProject(req.UserId, "admin", project.ID.String()); err != nil {
-		return err
-	}
+	rbac.RevokeRoleInProject(userId, "admin", project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
 
-	if err := rbac.RevokeRoleInProject(req.UserId, "member", project.ID.String()); err != nil {
-		return err
-	}
+	rbac.RevokeRoleInProject(userId, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
-	if err := rbac.GrantRoleInProject(req.UserId, req.Role, project.ID.String()); err != nil {
+	if err := rbac.GrantRoleInProject(userId, req.Role, project.ID.String()); err != nil {
 		return err
 	}
 
@@ -344,9 +356,20 @@ func (p *Controller) Read(c core.Context) error {
 		return err
 	}
 
+	// lets fetch the members of the project
+	members, err := FetchMembersOfProject(c)
+	if err != nil {
+		return err
+	}
+
 	project.Assets = assets
 
-	return c.JSON(200, project)
+	resp := projectDetailsDTO{
+		ProjectDTO: fromModel(project),
+		Members:    members,
+	}
+
+	return c.JSON(200, resp)
 }
 
 func (p *Controller) List(c core.Context) error {
@@ -378,5 +401,23 @@ func (p *Controller) Update(c core.Context) error {
 			return fmt.Errorf("could not update project: %w", err)
 		}
 	}
-	return c.JSON(200, project)
+	// lets fetch the assets related to this project
+	assets, err := p.assetRepository.GetByProjectID(project.ID)
+	if err != nil {
+		return err
+	}
+
+	// lets fetch the members of the project
+	members, err := FetchMembersOfProject(c)
+	if err != nil {
+		return err
+	}
+
+	project.Assets = assets
+
+	resp := projectDetailsDTO{
+		ProjectDTO: fromModel(project),
+		Members:    members,
+	}
+	return c.JSON(200, resp)
 }

@@ -138,6 +138,64 @@ func (_c *StatisticsAssetRepository_GetByProjectID_Call) RunAndReturn(run func(u
 	return _c
 }
 
+// GetByProjectIDs provides a mock function with given fields: projectIDs
+func (_m *StatisticsAssetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asset, error) {
+	ret := _m.Called(projectIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByProjectIDs")
+	}
+
+	var r0 []models.Asset
+	var r1 error
+	if rf, ok := ret.Get(0).(func([]uuid.UUID) ([]models.Asset, error)); ok {
+		return rf(projectIDs)
+	}
+	if rf, ok := ret.Get(0).(func([]uuid.UUID) []models.Asset); ok {
+		r0 = rf(projectIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Asset)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func([]uuid.UUID) error); ok {
+		r1 = rf(projectIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StatisticsAssetRepository_GetByProjectIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByProjectIDs'
+type StatisticsAssetRepository_GetByProjectIDs_Call struct {
+	*mock.Call
+}
+
+// GetByProjectIDs is a helper method to define mock.On call
+//   - projectIDs []uuid.UUID
+func (_e *StatisticsAssetRepository_Expecter) GetByProjectIDs(projectIDs interface{}) *StatisticsAssetRepository_GetByProjectIDs_Call {
+	return &StatisticsAssetRepository_GetByProjectIDs_Call{Call: _e.mock.On("GetByProjectIDs", projectIDs)}
+}
+
+func (_c *StatisticsAssetRepository_GetByProjectIDs_Call) Run(run func(projectIDs []uuid.UUID)) *StatisticsAssetRepository_GetByProjectIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].([]uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *StatisticsAssetRepository_GetByProjectIDs_Call) Return(_a0 []models.Asset, _a1 error) *StatisticsAssetRepository_GetByProjectIDs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *StatisticsAssetRepository_GetByProjectIDs_Call) RunAndReturn(run func([]uuid.UUID) ([]models.Asset, error)) *StatisticsAssetRepository_GetByProjectIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Save provides a mock function with given fields: tx, asset
 func (_m *StatisticsAssetRepository) Save(tx *gorm.DB, asset *models.Asset) error {
 	ret := _m.Called(tx, asset)

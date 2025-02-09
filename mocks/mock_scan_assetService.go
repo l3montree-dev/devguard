@@ -21,9 +21,9 @@ func (_m *ScanAssetService) EXPECT() *ScanAssetService_Expecter {
 	return &ScanAssetService_Expecter{mock: &_m.Mock}
 }
 
-// HandleScanResult provides a mock function with given fields: asset, vulns, scanType, version, scannerID, userID, doRiskManagement
-func (_m *ScanAssetService) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanType string, version string, scannerID string, userID string, doRiskManagement bool) (int, int, []models.Flaw, error) {
-	ret := _m.Called(asset, vulns, scanType, version, scannerID, userID, doRiskManagement)
+// HandleScanResult provides a mock function with given fields: asset, vulns, scanner, version, scannerID, userID, doRiskManagement
+func (_m *ScanAssetService) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (int, int, []models.Flaw, error) {
+	ret := _m.Called(asset, vulns, scanner, version, scannerID, userID, doRiskManagement)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleScanResult")
@@ -34,22 +34,22 @@ func (_m *ScanAssetService) HandleScanResult(asset models.Asset, vulns []models.
 	var r2 []models.Flaw
 	var r3 error
 	if rf, ok := ret.Get(0).(func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) (int, int, []models.Flaw, error)); ok {
-		return rf(asset, vulns, scanType, version, scannerID, userID, doRiskManagement)
+		return rf(asset, vulns, scanner, version, scannerID, userID, doRiskManagement)
 	}
 	if rf, ok := ret.Get(0).(func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) int); ok {
-		r0 = rf(asset, vulns, scanType, version, scannerID, userID, doRiskManagement)
+		r0 = rf(asset, vulns, scanner, version, scannerID, userID, doRiskManagement)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
 
 	if rf, ok := ret.Get(1).(func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) int); ok {
-		r1 = rf(asset, vulns, scanType, version, scannerID, userID, doRiskManagement)
+		r1 = rf(asset, vulns, scanner, version, scannerID, userID, doRiskManagement)
 	} else {
 		r1 = ret.Get(1).(int)
 	}
 
 	if rf, ok := ret.Get(2).(func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) []models.Flaw); ok {
-		r2 = rf(asset, vulns, scanType, version, scannerID, userID, doRiskManagement)
+		r2 = rf(asset, vulns, scanner, version, scannerID, userID, doRiskManagement)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]models.Flaw)
@@ -57,7 +57,7 @@ func (_m *ScanAssetService) HandleScanResult(asset models.Asset, vulns []models.
 	}
 
 	if rf, ok := ret.Get(3).(func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) error); ok {
-		r3 = rf(asset, vulns, scanType, version, scannerID, userID, doRiskManagement)
+		r3 = rf(asset, vulns, scanner, version, scannerID, userID, doRiskManagement)
 	} else {
 		r3 = ret.Error(3)
 	}
@@ -73,16 +73,16 @@ type ScanAssetService_HandleScanResult_Call struct {
 // HandleScanResult is a helper method to define mock.On call
 //   - asset models.Asset
 //   - vulns []models.VulnInPackage
-//   - scanType string
+//   - scanner string
 //   - version string
 //   - scannerID string
 //   - userID string
 //   - doRiskManagement bool
-func (_e *ScanAssetService_Expecter) HandleScanResult(asset interface{}, vulns interface{}, scanType interface{}, version interface{}, scannerID interface{}, userID interface{}, doRiskManagement interface{}) *ScanAssetService_HandleScanResult_Call {
-	return &ScanAssetService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", asset, vulns, scanType, version, scannerID, userID, doRiskManagement)}
+func (_e *ScanAssetService_Expecter) HandleScanResult(asset interface{}, vulns interface{}, scanner interface{}, version interface{}, scannerID interface{}, userID interface{}, doRiskManagement interface{}) *ScanAssetService_HandleScanResult_Call {
+	return &ScanAssetService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", asset, vulns, scanner, version, scannerID, userID, doRiskManagement)}
 }
 
-func (_c *ScanAssetService_HandleScanResult_Call) Run(run func(asset models.Asset, vulns []models.VulnInPackage, scanType string, version string, scannerID string, userID string, doRiskManagement bool)) *ScanAssetService_HandleScanResult_Call {
+func (_c *ScanAssetService_HandleScanResult_Call) Run(run func(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool)) *ScanAssetService_HandleScanResult_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(models.Asset), args[1].([]models.VulnInPackage), args[2].(string), args[3].(string), args[4].(string), args[5].(string), args[6].(bool))
 	})
@@ -99,9 +99,9 @@ func (_c *ScanAssetService_HandleScanResult_Call) RunAndReturn(run func(models.A
 	return _c
 }
 
-// UpdateSBOM provides a mock function with given fields: asset, scanType, version, sbom
-func (_m *ScanAssetService) UpdateSBOM(asset models.Asset, scanType string, version string, sbom normalize.SBOM) error {
-	ret := _m.Called(asset, scanType, version, sbom)
+// UpdateSBOM provides a mock function with given fields: asset, scanner, version, sbom
+func (_m *ScanAssetService) UpdateSBOM(asset models.Asset, scanner string, version string, sbom normalize.SBOM) error {
+	ret := _m.Called(asset, scanner, version, sbom)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateSBOM")
@@ -109,7 +109,7 @@ func (_m *ScanAssetService) UpdateSBOM(asset models.Asset, scanType string, vers
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(models.Asset, string, string, normalize.SBOM) error); ok {
-		r0 = rf(asset, scanType, version, sbom)
+		r0 = rf(asset, scanner, version, sbom)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -124,14 +124,14 @@ type ScanAssetService_UpdateSBOM_Call struct {
 
 // UpdateSBOM is a helper method to define mock.On call
 //   - asset models.Asset
-//   - scanType string
+//   - scanner string
 //   - version string
 //   - sbom normalize.SBOM
-func (_e *ScanAssetService_Expecter) UpdateSBOM(asset interface{}, scanType interface{}, version interface{}, sbom interface{}) *ScanAssetService_UpdateSBOM_Call {
-	return &ScanAssetService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", asset, scanType, version, sbom)}
+func (_e *ScanAssetService_Expecter) UpdateSBOM(asset interface{}, scanner interface{}, version interface{}, sbom interface{}) *ScanAssetService_UpdateSBOM_Call {
+	return &ScanAssetService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", asset, scanner, version, sbom)}
 }
 
-func (_c *ScanAssetService_UpdateSBOM_Call) Run(run func(asset models.Asset, scanType string, version string, sbom normalize.SBOM)) *ScanAssetService_UpdateSBOM_Call {
+func (_c *ScanAssetService_UpdateSBOM_Call) Run(run func(asset models.Asset, scanner string, version string, sbom normalize.SBOM)) *ScanAssetService_UpdateSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(models.Asset), args[1].(string), args[2].(string), args[3].(normalize.SBOM))
 	})

@@ -20,7 +20,6 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -50,7 +49,7 @@ type flawRepository interface {
 
 type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
-	LoadComponents(tx core.DB, asset models.Asset, scanType, version string) ([]models.ComponentDependency, error)
+	LoadComponents(tx core.DB, asset models.Asset, scanner, version string) ([]models.ComponentDependency, error)
 	FindByPurl(tx core.DB, purl string) (models.Component, error)
 	HandleStateDiff(tx database.DB, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error
 }
@@ -67,6 +66,7 @@ type flawService interface {
 
 	RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error
 }
+
 type service struct {
 	flawRepository      flawRepository
 	componentRepository componentRepository
@@ -85,13 +85,13 @@ func NewService(assetRepository assetRepository, componentRepository componentRe
 	}
 }
 
-func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanType string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
+func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
 
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, asset, scanType, version)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, asset, scanner, version)
 	if err != nil {
 		return 0, 0, []models.Flaw{}, errors.Wrap(err, "could not load asset components")
 	}
@@ -109,35 +109,15 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 	for _, vuln := range vulns {
 		v := vuln
 
-		componentPurl, err := url.PathUnescape(v.Purl)
-		if err != nil {
-			slog.Error("could not unescape purl", "err", err)
-			continue
-		}
-
-		// remove any qualifiers from the purl
-		parts := strings.Split(componentPurl, "?")
-		componentPurl = parts[0]
-
-		// check if the component has an cve
-
 		flaw := models.Flaw{
-			AssetID:       asset.ID,
-			CVEID:         v.CVEID,
-			ScannerID:     scannerID,
-			ComponentPurl: componentPurl,
-			CVE:           &v.CVE,
+			AssetID:               asset.ID,
+			CVEID:                 utils.Ptr(v.CVEID),
+			ScannerID:             scannerID,
+			ComponentPurl:         utils.Ptr(v.Purl),
+			ComponentFixedVersion: v.FixedVersion,
+			ComponentDepth:        utils.Ptr(depthMap[v.Purl]),
+			CVE:                   &v.CVE,
 		}
-
-		flaw.SetArbitraryJsonData(map[string]any{
-			"introducedVersion": v.GetIntroducedVersion(),
-			"fixedVersion":      v.GetFixedVersion(),
-			"packageName":       componentPurl,
-			"cveId":             v.CVEID,
-			"installedVersion":  v.InstalledVersion,
-			"componentDepth":    depthMap[componentPurl],
-			"scanType":          scanType,
-		})
 
 		flaws = append(flaws, flaw)
 	}
@@ -153,7 +133,7 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 		return 0, 0, []models.Flaw{}, err
 	}
 
-	switch scanType {
+	switch scanner {
 	case "sast":
 		asset.LastSastScan = utils.Ptr(time.Now())
 	case "dast":
@@ -287,9 +267,9 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 	return res
 }
 
-func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion string, sbom normalize.SBOM) error {
+func (s *service) UpdateSBOM(asset models.Asset, scannerID string, currentVersion string, sbom normalize.SBOM) error {
 	// load the asset components
-	assetComponents, err := s.componentRepository.LoadComponents(nil, asset, scanType, currentVersion)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, asset, scannerID, currentVersion)
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
 	}
@@ -320,7 +300,7 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:    nil, // direct dependency - therefore set it to nil
-					ScanType:         scanType,
+					ScannerID:        scannerID,
 					DependencyPurl:   componentPackageUrl,
 					AssetSemverStart: currentVersion,
 				},
@@ -328,8 +308,6 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 			components[componentPackageUrl] = models.Component{
 				Purl:          componentPackageUrl,
 				ComponentType: models.ComponentType(component.Type),
-				AssetID:       asset.GetID(),
-				ScanType:      scanType,
 				Version:       component.Version,
 			}
 		}
@@ -347,22 +325,18 @@ func (s *service) UpdateSBOM(asset models.Asset, scanType string, currentVersion
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:    utils.EmptyThenNil(compPackageUrl),
-					ScanType:         scanType,
+					ScannerID:        scannerID,
 					DependencyPurl:   depPurlOrName,
 					AssetSemverStart: currentVersion,
 				},
 			)
 			components[depPurlOrName] = models.Component{
 				Purl:          depPurlOrName,
-				AssetID:       asset.GetID(),
-				ScanType:      scanType,
 				ComponentType: models.ComponentType(dep.Type),
 				Version:       dep.Version,
 			}
 			components[compPackageUrl] = models.Component{
 				Purl:          compPackageUrl,
-				AssetID:       asset.GetID(),
-				ScanType:      scanType,
 				ComponentType: models.ComponentType(comp.Type),
 				Version:       comp.Version,
 			}
@@ -535,10 +509,10 @@ func (s *service) BuildVeX(asset models.Asset, version string, organizationName 
 				ID: cve.CVE,
 				Source: &cdx.Source{
 					Name: "NVD",
-					URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", flaw.CVEID),
+					URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", *flaw.CVEID),
 				},
 				Affects: &[]cdx.Affects{{
-					Ref: flaw.ComponentPurl,
+					Ref: *flaw.ComponentPurl,
 				}},
 				Analysis: &cdx.VulnerabilityAnalysis{
 					State: flawStateToImpactAnalysisState(flaw.State),
@@ -557,7 +531,7 @@ func (s *service) BuildVeX(asset models.Asset, version string, organizationName 
 
 			cvss := math.Round(float64(cve.CVSS)*100) / 100
 
-			risk := risk.RawRisk(*cve, core.GetEnvironmentalFromAsset(asset), int(flaw.GetArbitraryJsonData()["componentDepth"].(float64)))
+			risk := risk.RawRisk(*cve, core.GetEnvironmentalFromAsset(asset), *flaw.ComponentDepth)
 
 			vuln.Ratings = &[]cdx.VulnerabilityRating{
 				{

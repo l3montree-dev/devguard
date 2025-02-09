@@ -41,9 +41,6 @@ type Component struct {
 	// either cpe or purl is set
 	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"` // without qualifiers!
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
-	Asset         Asset                 `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
-	AssetID       uuid.UUID             `json:"assetId" gorm:"column:asset_id;type:uuid;"`
-	ScanType      string                `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
 	ComponentType ComponentType         `json:"componentType"`
 	Version       string                `json:"version"`
 }
@@ -62,7 +59,7 @@ type ComponentDependency struct {
 	DependencyPurl   string    `json:"dependencyPurl" gorm:"column:dependency_purl;"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"column:asset_id;type:uuid;"`
 	Asset            Asset     `json:"asset" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
-	ScanType         string    `json:"scanType"` // the type of scan, which detected this component. It might be sca or container-scanning - whatever can generate a sbom.
+	ScannerID        string    `json:"scannerId" gorm:"column:scanner_id"` // the id of the scanner
 
 	Depth int `json:"depth" gorm:"column:depth"`
 }
@@ -84,26 +81,8 @@ func (c ComponentDependency) TableName() string {
 }
 
 type VulnInPackage struct {
-	CVEID             string
-	CVE               CVE
-	FixedVersion      *string
-	IntroducedVersion *string
-	PackageName       string
-	Purl              string
-	InstalledVersion  string
-	Depth             int
-}
-
-func (v VulnInPackage) GetIntroducedVersion() string {
-	if v.IntroducedVersion != nil {
-		return *v.IntroducedVersion
-	}
-	return ""
-}
-
-func (v VulnInPackage) GetFixedVersion() string {
-	if v.FixedVersion != nil {
-		return *v.FixedVersion
-	}
-	return ""
+	CVEID        string
+	CVE          CVE
+	Purl         string
+	FixedVersion *string
 }

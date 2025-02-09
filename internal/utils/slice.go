@@ -54,6 +54,16 @@ func Disjoin[T any](a []T, predicate func(el T) bool) ([]T, []T) {
 	return trueList, falseList
 }
 
+func Intersect[T comparable](a, b []T) []T {
+	res := make([]T, 0)
+	for _, el := range a {
+		if Contains(b, el) {
+			res = append(res, el)
+		}
+	}
+	return res
+}
+
 func Flat[T any](s [][]T) []T {
 	res := make([]T, 0)
 	for _, subslice := range s {

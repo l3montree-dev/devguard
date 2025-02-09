@@ -66,11 +66,11 @@ jobs:
     with:
       image-suffix: "-scanner"
       artifact-suffix: "-scanner"
-      build-args: "--context=. --dockerfile=Dockerfile.scanner"
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-scanner
       api-url: https://api.main.devguard.org
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}  
+      build-args: "--context=. --dockerfile=Dockerfile.scanner"
 
   # Image scanning job to detect vulnerabilities in the built Docker image
   container-scanning:

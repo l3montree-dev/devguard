@@ -75,6 +75,7 @@ data:
     courier:
       smtp:
         from_address: {{ .Values.mail.fromAddress }}
+        from_name: {{ .Values.mail.fromName }}
     selfservice:
       default_browser_return_url: https://{{ $publicUrl }}/
       allowed_return_urls: 
@@ -83,8 +84,8 @@ data:
         oidc:
           enabled: {{ .Values.oidc.enabled }}
           config:
-            providers:
             {{- if .Values.oidc.github.enabled }}
+            providers:
             - id: github
               provider: github-app
               client_id: {{ .Values.oidc.github.clientId }}
@@ -94,8 +95,9 @@ data:
               scope:
               - user:email
               - read:user
-            {{- end}}
-
+            {{- else}}
+            providers: []
+            {{- end }}
         webauthn:
           enabled: true
           config:

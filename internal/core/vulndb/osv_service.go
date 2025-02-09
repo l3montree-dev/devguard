@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/database"
@@ -35,6 +36,7 @@ import (
 
 type affectedCmpRepository interface {
 	SaveBatch(tx database.DB, affectedComponents []models.AffectedComponent) error
+	DeleteAll(tx database.DB, ecosystem string) error
 }
 type osvService struct {
 	httpClient            *http.Client
@@ -171,63 +173,79 @@ func (s osvService) Mirror() error {
 		slog.Error("could not get ecosystems", "err", err)
 		return err
 	}
+	wg := sync.WaitGroup{}
 
 	for _, ecosystem := range ecosystems {
 		if ecosystem == "" {
 			continue
 		}
-		// cleanup the string
-		ecosystem = strings.TrimSpace(ecosystem)
-
-		// download the zip and extract it in memory
-		zipReader, err := s.getOSVZipContainingEcosystem(ecosystem)
-
-		if err != nil {
-			slog.Error("could not read zip", "err", err)
-			continue
-		}
-
-		if len(zipReader.File) == 0 {
-			slog.Error("no files found in zip")
-			continue
-		}
-
-		totalPackagesSaved := 0
-		packageErrors := 0
-		// iterate over all files in the zip
-		for _, file := range zipReader.File {
-			// read the file
-			unzippedFileBytes, err := utils.ReadZipFile(file)
+		wg.Add(1)
+		go func(ecosystem string) {
+			defer wg.Done()
+			slog.Info("importing ecosystem", "ecosystem", ecosystem)
+			start := time.Now()
+			// remove all affected packages for this ecosystem
+			err := s.affectedCmpRepository.DeleteAll(nil, ecosystem)
 			if err != nil {
-				slog.Error("could not read file", "err", err, "file", file.Name)
-				continue
+				slog.Error("could not delete affected packages", "err", err)
+				return
 			}
+			slog.Info("deleted all affected packages", "ecosystem", ecosystem, "duration", time.Since(start))
 
-			osv := obj.OSV{}
-			err = json.Unmarshal(unzippedFileBytes, &osv)
+			// cleanup the string
+			ecosystem = strings.TrimSpace(ecosystem)
+
+			// download the zip and extract it in memory
+			zipReader, err := s.getOSVZipContainingEcosystem(ecosystem)
+
 			if err != nil {
-				slog.Error("could not unmarshal osv", "err", err)
-				continue
+				slog.Error("could not read zip", "err", err)
+				return
 			}
 
-			if !osv.IsCVE() {
-				continue
+			if len(zipReader.File) == 0 {
+				slog.Error("no files found in zip")
+				return
 			}
 
-			// convert the osv to affected packages
-			affectedComponents := models.AffectedComponentFromOSV(osv)
-			// save the affected packages
-			err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
-			if err != nil {
-				packageErrors += len(affectedComponents)
-				slog.Error("could not save affected packages", "err", err, "file", file.Name, "ecosystem", ecosystem)
-				continue
-			} else {
-				totalPackagesSaved += len(affectedComponents)
+			totalPackagesSaved := 0
+			packageErrors := 0
+			// iterate over all files in the zip
+			for _, file := range zipReader.File {
+				// read the file
+				unzippedFileBytes, err := utils.ReadZipFile(file)
+				if err != nil {
+					slog.Error("could not read file", "err", err, "file", file.Name)
+					continue
+				}
+
+				osv := obj.OSV{}
+				err = json.Unmarshal(unzippedFileBytes, &osv)
+				if err != nil {
+					slog.Error("could not unmarshal osv", "err", err)
+					continue
+				}
+
+				if !osv.IsCVE() {
+					continue
+				}
+
+				// convert the osv to affected packages
+				affectedComponents := models.AffectedComponentFromOSV(osv)
+				// save the affected packages
+				err = s.affectedCmpRepository.SaveBatch(nil, affectedComponents)
+				if err != nil {
+					packageErrors += len(affectedComponents)
+					slog.Error("could not save affected packages", "err", err, "file", file.Name, "ecosystem", ecosystem)
+					continue
+				} else {
+					totalPackagesSaved += len(affectedComponents)
+				}
 			}
-		}
-		// add the affected packages to the list
-		slog.Info("saved affected packages", "ecosystem", ecosystem, "total", totalPackagesSaved, "errors", packageErrors)
+			// add the affected packages to the list
+			slog.Info("saved affected packages", "ecosystem", ecosystem, "total", totalPackagesSaved, "errors", packageErrors)
+		}(ecosystem)
 	}
+	wg.Wait()
 	return nil
 }

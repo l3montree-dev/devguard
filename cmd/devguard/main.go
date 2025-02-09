@@ -16,17 +16,9 @@
 package main
 
 import (
-	"log/slog"
-	"os"
-
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/config"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
-	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
-	"github.com/l3montree-dev/devguard/internal/core/statistics"
-	"github.com/l3montree-dev/devguard/internal/core/vulndb"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/core/daemon"
 
 	_ "github.com/lib/pq"
 )
@@ -53,33 +45,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	flawService := flaw.NewService(
-		repositories.NewFlawRepository(db),
-		repositories.NewFlawEventRepository(db),
-		repositories.NewAssetRepository(db),
-		repositories.NewCVERepository(db),
-	)
 
-	statisticsDaemon := statistics.NewDaemon(repositories.NewAssetRepository(db), statistics.NewService(
-		repositories.NewStatisticsRepository(db),
-		repositories.NewComponentRepository(db),
-		repositories.NewAssetRiskHistoryRepository(db),
-		repositories.NewFlawRepository(db),
-		repositories.NewAssetRepository(db),
-		repositories.NewProjectRepository(db),
-		repositories.NewProjectRiskHistoryRepository(db),
-	))
-
-	statisticsDaemon.Start()
-
-	configService := config.NewService(db)
-	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
-	flawService.StartRiskRecalculationDaemon(leaderElector)
-	if os.Getenv("DISABLE_VULNDB_UPDATE") != "true" {
-		vulndb.StartMirror(db, leaderElector, configService)
-	} else {
-		slog.Warn("VulnDB update disabled")
-	}
+	daemon.Start(db)
 
 	api.Start(db)
 }

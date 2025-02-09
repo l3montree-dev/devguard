@@ -21,12 +21,12 @@ func (_m *StatisticsComponentRepository) EXPECT() *StatisticsComponentRepository
 	return &StatisticsComponentRepository_Expecter{mock: &_m.Mock}
 }
 
-// GetDependencyCountPerScanType provides a mock function with given fields: assetID
-func (_m *StatisticsComponentRepository) GetDependencyCountPerScanType(assetID uuid.UUID) (map[string]int, error) {
+// GetDependencyCountPerscanner provides a mock function with given fields: assetID
+func (_m *StatisticsComponentRepository) GetDependencyCountPerscanner(assetID uuid.UUID) (map[string]int, error) {
 	ret := _m.Called(assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetDependencyCountPerScanType")
+		panic("no return value specified for GetDependencyCountPerscanner")
 	}
 
 	var r0 map[string]int
@@ -51,30 +51,30 @@ func (_m *StatisticsComponentRepository) GetDependencyCountPerScanType(assetID u
 	return r0, r1
 }
 
-// StatisticsComponentRepository_GetDependencyCountPerScanType_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyCountPerScanType'
-type StatisticsComponentRepository_GetDependencyCountPerScanType_Call struct {
+// StatisticsComponentRepository_GetDependencyCountPerscanner_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyCountPerscanner'
+type StatisticsComponentRepository_GetDependencyCountPerscanner_Call struct {
 	*mock.Call
 }
 
-// GetDependencyCountPerScanType is a helper method to define mock.On call
+// GetDependencyCountPerscanner is a helper method to define mock.On call
 //   - assetID uuid.UUID
-func (_e *StatisticsComponentRepository_Expecter) GetDependencyCountPerScanType(assetID interface{}) *StatisticsComponentRepository_GetDependencyCountPerScanType_Call {
-	return &StatisticsComponentRepository_GetDependencyCountPerScanType_Call{Call: _e.mock.On("GetDependencyCountPerScanType", assetID)}
+func (_e *StatisticsComponentRepository_Expecter) GetDependencyCountPerscanner(assetID interface{}) *StatisticsComponentRepository_GetDependencyCountPerscanner_Call {
+	return &StatisticsComponentRepository_GetDependencyCountPerscanner_Call{Call: _e.mock.On("GetDependencyCountPerscanner", assetID)}
 }
 
-func (_c *StatisticsComponentRepository_GetDependencyCountPerScanType_Call) Run(run func(assetID uuid.UUID)) *StatisticsComponentRepository_GetDependencyCountPerScanType_Call {
+func (_c *StatisticsComponentRepository_GetDependencyCountPerscanner_Call) Run(run func(assetID uuid.UUID)) *StatisticsComponentRepository_GetDependencyCountPerscanner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
 
-func (_c *StatisticsComponentRepository_GetDependencyCountPerScanType_Call) Return(_a0 map[string]int, _a1 error) *StatisticsComponentRepository_GetDependencyCountPerScanType_Call {
+func (_c *StatisticsComponentRepository_GetDependencyCountPerscanner_Call) Return(_a0 map[string]int, _a1 error) *StatisticsComponentRepository_GetDependencyCountPerscanner_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *StatisticsComponentRepository_GetDependencyCountPerScanType_Call) RunAndReturn(run func(uuid.UUID) (map[string]int, error)) *StatisticsComponentRepository_GetDependencyCountPerScanType_Call {
+func (_c *StatisticsComponentRepository_GetDependencyCountPerscanner_Call) RunAndReturn(run func(uuid.UUID) (map[string]int, error)) *StatisticsComponentRepository_GetDependencyCountPerscanner_Call {
 	_c.Call.Return(run)
 	return _c
 }

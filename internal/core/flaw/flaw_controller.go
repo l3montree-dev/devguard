@@ -142,32 +142,32 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	res := map[string]flawsByPackage{}
 	for _, flaw := range pagedResp.Data {
 		// get the package name
-		if _, ok := res[flaw.ComponentPurl]; !ok {
-			res[flaw.ComponentPurl] = flawsByPackage{
-				PackageName: flaw.ComponentPurl,
+		if _, ok := res[*flaw.ComponentPurl]; !ok {
+			res[*flaw.ComponentPurl] = flawsByPackage{
+				PackageName: *flaw.ComponentPurl,
 			}
 		}
-		flawsByPackage := res[flaw.ComponentPurl]
+		flawsByPackage := res[*flaw.ComponentPurl]
 		// append the flaw to the package
-		flawsByPackage.Flaws = append(res[flaw.ComponentPurl].Flaws, FlawDTO{
-			ID:                flaw.ID,
-			ScannerID:         flaw.ScannerID,
-			Message:           flaw.Message,
-			AssetID:           flaw.AssetID.String(),
-			State:             flaw.State,
-			CVE:               flaw.CVE,
-			Component:         flaw.Component,
-			CVEID:             flaw.CVEID,
-			ComponentPurl:     flaw.ComponentPurl,
-			Effort:            flaw.Effort,
-			RiskAssessment:    flaw.RiskAssessment,
-			RawRiskAssessment: flaw.RawRiskAssessment,
-			Priority:          flaw.Priority,
-			ArbitraryJsonData: flaw.GetArbitraryJsonData(),
-			LastDetected:      flaw.LastDetected,
-			CreatedAt:         flaw.CreatedAt,
+		flawsByPackage.Flaws = append(res[*flaw.ComponentPurl].Flaws, FlawDTO{
+			ID:                    flaw.ID,
+			ScannerID:             flaw.ScannerID,
+			Message:               flaw.Message,
+			AssetID:               flaw.AssetID.String(),
+			State:                 flaw.State,
+			CVE:                   flaw.CVE,
+			CVEID:                 flaw.CVEID,
+			ComponentPurl:         flaw.ComponentPurl,
+			ComponentDepth:        flaw.ComponentDepth,
+			ComponentFixedVersion: flaw.ComponentFixedVersion,
+			Effort:                flaw.Effort,
+			RiskAssessment:        flaw.RiskAssessment,
+			RawRiskAssessment:     flaw.RawRiskAssessment,
+			Priority:              flaw.Priority,
+			LastDetected:          flaw.LastDetected,
+			CreatedAt:             flaw.CreatedAt,
 		})
-		res[flaw.ComponentPurl] = flawsByPackage
+		res[*flaw.ComponentPurl] = flawsByPackage
 	}
 
 	values := make([]flawsByPackage, 0, len(res))
@@ -291,25 +291,25 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 func convertToDetailedDTO(flaw models.Flaw) detailedFlawDTO {
 	return detailedFlawDTO{
 		FlawDTO: FlawDTO{
-			ID:                 flaw.ID,
-			Message:            flaw.Message,
-			AssetID:            flaw.AssetID.String(),
-			State:              flaw.State,
-			CVE:                flaw.CVE,
-			Component:          flaw.Component,
-			CVEID:              flaw.CVEID,
-			ComponentPurl:      flaw.ComponentPurl,
-			Effort:             flaw.Effort,
-			RiskAssessment:     flaw.RiskAssessment,
-			RawRiskAssessment:  flaw.RawRiskAssessment,
-			Priority:           flaw.Priority,
-			ArbitraryJsonData:  flaw.GetArbitraryJsonData(),
-			LastDetected:       flaw.LastDetected,
-			CreatedAt:          flaw.CreatedAt,
-			ScannerID:          flaw.ScannerID,
-			TicketID:           flaw.TicketID,
-			TicketURL:          flaw.TicketURL,
-			RiskRecalculatedAt: flaw.RiskRecalculatedAt,
+			ID:                    flaw.ID,
+			Message:               flaw.Message,
+			AssetID:               flaw.AssetID.String(),
+			State:                 flaw.State,
+			CVE:                   flaw.CVE,
+			CVEID:                 flaw.CVEID,
+			ComponentPurl:         flaw.ComponentPurl,
+			ComponentDepth:        flaw.ComponentDepth,
+			ComponentFixedVersion: flaw.ComponentFixedVersion,
+			Effort:                flaw.Effort,
+			RiskAssessment:        flaw.RiskAssessment,
+			RawRiskAssessment:     flaw.RawRiskAssessment,
+			Priority:              flaw.Priority,
+			LastDetected:          flaw.LastDetected,
+			CreatedAt:             flaw.CreatedAt,
+			ScannerID:             flaw.ScannerID,
+			TicketID:              flaw.TicketID,
+			TicketURL:             flaw.TicketURL,
+			RiskRecalculatedAt:    flaw.RiskRecalculatedAt,
 		},
 		Events: utils.Map(flaw.Events, func(ev models.FlawEvent) FlawEventDTO {
 			return FlawEventDTO{

@@ -67,6 +67,7 @@ spec:
             value: http://kratos:4434
           - name: GOMEMLIMIT
             value: 1024MiB
+        {{- if .Values.api.github.enabled }}
           - name: GITHUB_APP_ID
             value: {{ .Values.api.github.appId | quote }}
           - name: GITHUB_PRIVATE_KEY
@@ -76,6 +77,8 @@ spec:
               secretKeyRef:
                 key: webhookSecret
                 name: {{ .Values.api.github.existingWebhookSecretSecretName }}
+                optional: true
+        {{- end }}
           ports:
             - name: http
               containerPort: 8080
@@ -109,6 +112,7 @@ spec:
       - name: github-app-private-key
         secret:
           secretName: {{ .Values.api.github.existingPrivateKeySecretName }}
+          optional: true
       - name: intoto-private-key
         secret:
           secretName: {{ .Values.api.intoto.existingPrivateKeySecretName }}

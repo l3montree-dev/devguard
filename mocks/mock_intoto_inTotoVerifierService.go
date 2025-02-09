@@ -73,6 +73,62 @@ func (_c *IntotoInTotoVerifierService_VerifySupplyChain_Call) RunAndReturn(run f
 	return _c
 }
 
+// VerifySupplyChainByDigestOnly provides a mock function with given fields: digest
+func (_m *IntotoInTotoVerifierService) VerifySupplyChainByDigestOnly(digest string) (bool, error) {
+	ret := _m.Called(digest)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifySupplyChainByDigestOnly")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (bool, error)); ok {
+		return rf(digest)
+	}
+	if rf, ok := ret.Get(0).(func(string) bool); ok {
+		r0 = rf(digest)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(digest)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// IntotoInTotoVerifierService_VerifySupplyChainByDigestOnly_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifySupplyChainByDigestOnly'
+type IntotoInTotoVerifierService_VerifySupplyChainByDigestOnly_Call struct {
+	*mock.Call
+}
+
+// VerifySupplyChainByDigestOnly is a helper method to define mock.On call
+//   - digest string
+func (_e *IntotoInTotoVerifierService_Expecter) VerifySupplyChainByDigestOnly(digest interface{}) *IntotoInTotoVerifierService_VerifySupplyChainByDigestOnly_Call {
+	return &IntotoInTotoVerifierService_VerifySupplyChainByDigestOnly_Call{Call: _e.mock.On("VerifySupplyChainByDigestOnly", digest)}
+}
+
+func (_c *IntotoInTotoVerifierService_VerifySupplyChainByDigestOnly_Call) Run(run func(digest string)) *IntotoInTotoVerifierService_VerifySupplyChainByDigestOnly_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *IntotoInTotoVerifierService_VerifySupplyChainByDigestOnly_Call) Return(_a0 bool, _a1 error) *IntotoInTotoVerifierService_VerifySupplyChainByDigestOnly_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *IntotoInTotoVerifierService_VerifySupplyChainByDigestOnly_Call) RunAndReturn(run func(string) (bool, error)) *IntotoInTotoVerifierService_VerifySupplyChainByDigestOnly_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // VerifySupplyChainWithOutputDigest provides a mock function with given fields: supplyChainID, digest
 func (_m *IntotoInTotoVerifierService) VerifySupplyChainWithOutputDigest(supplyChainID string, digest string) (bool, error) {
 	ret := _m.Called(supplyChainID, digest)

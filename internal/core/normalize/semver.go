@@ -26,7 +26,7 @@ import (
 )
 
 // Regex for validating a correct semver.
-var validSemverRegex = regexp.MustCompile(`^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
+var ValidSemverRegex = regexp.MustCompile(`^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
 // normalizeVersionPart removes leading zeros from a version part.
 func normalizeVersionPart(versionPart string) string {
@@ -63,7 +63,7 @@ func SemverFix(version string) (string, error) {
 	// lets check if we need to fix the semver - there are some cases where the semver is not valid
 	// examples are: "1.5", "1.0", "19.03.9", "3.0-beta1"
 	// we need to fix these to be valid semver
-	if validSemverRegex.MatchString(version) {
+	if ValidSemverRegex.MatchString(version) {
 		// If the version is already a valid semver, no need to fix.
 		return version, nil
 	}
@@ -97,7 +97,7 @@ func SemverFix(version string) (string, error) {
 	}
 
 	// Re-check if the fixed version is now valid.
-	if validSemverRegex.MatchString(fixedVersion) {
+	if ValidSemverRegex.MatchString(fixedVersion) {
 		return fixedVersion, nil
 	}
 

@@ -13,24 +13,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM golang:1.23.1 as build
+FROM golang:1.23.5 as build
 
 WORKDIR /go/src/app
 COPY . .
 
 RUN go mod download
-RUN CGO_ENABLED=0 go build -o /go/bin/app cmd/devguard/main.go
-RUN CGO_ENABLED=0 go build -o /go/bin/devguard-cli cmd/devguard-cli/main.go
+RUN CGO_ENABLED=0 make devguard
+RUN CGO_ENABLED=0 make devguard-cli
 
 FROM alpine:3.20.2@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5
 
 WORKDIR /
 
 COPY config/rbac_model.conf /config/rbac_model.conf
-COPY --from=build /go/bin/app /
-COPY --from=build /go/bin/devguard-cli /
+COPY --from=build /go/src/app/devguard /usr/local/bin/devguard
+COPY --from=build /go/src/app/devguard-cli /usr/local/bin/devguard-cli
 COPY templates /templates
 COPY intoto-public-key.pem /intoto-public-key.pem
 COPY cosign.pub /cosign.pub
 
-CMD ["/app"]
+CMD ["devguard"]

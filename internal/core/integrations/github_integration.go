@@ -477,7 +477,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 
 		// create a new issue
 		issue := &github.IssueRequest{
-			Title:  github.String(flaw.CVEID),
+			Title:  flaw.CVEID,
 			Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug) + "\n\n------\n\n" + justification["comment"]),
 			Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment))},
 		}

@@ -16,7 +16,6 @@
 package flaw
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"time"
@@ -26,6 +25,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type assetRepository interface {
@@ -47,12 +47,14 @@ type flawEventRepository interface {
 }
 type cveRepository interface {
 	FindCVE(tx database.DB, cveId string) (models.CVE, error)
+	FindCVEs(tx database.DB, cveIds []string) ([]models.CVE, error)
 }
 type service struct {
 	flawRepository      flawRepository
 	flawEventRepository flawEventRepository
-	assetRepository     assetRepository
-	cveRepository       cveRepository
+
+	assetRepository assetRepository
+	cveRepository   cveRepository
 }
 
 func NewService(flawRepository flawRepository, flawEventRepository flawEventRepository, assetRepository assetRepository, cveRepository cveRepository) *service {
@@ -102,8 +104,7 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 	}
 
 	for i, flaw := range flaws {
-		riskReport := risk.RawRisk(*flaw.CVE, e, flaw.GetComponentDepth())
-
+		riskReport := risk.RawRisk(*flaw.CVE, e, *flaw.ComponentDepth)
 		ev := models.NewDetectedEvent(flaw.CalculateHash(), userID, riskReport)
 		// apply the event on the flaw
 		ev.Apply(&flaws[i])
@@ -163,7 +164,6 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 }
 
 func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error {
-
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -177,16 +177,42 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 	// create a new flawevent for each updated flaw
 
 	events := make([]models.FlawEvent, 0)
+
+	// get all cveIds of the flaws
+	cveIds := utils.Filter(utils.Map(flaws, func(f models.Flaw) string {
+		return utils.SafeDereference(f.CVEID)
+	}), func(s string) bool {
+		return s != ""
+	})
+
+	cves, err := s.cveRepository.FindCVEs(nil, cveIds)
+	if err != nil {
+		return fmt.Errorf("could not get all cves: %v", err)
+	}
+	// create a map of cveId -> cve
+	cveMap := make(map[string]models.CVE)
+	for _, cve := range cves {
+		cveMap[cve.CVE] = cve
+	}
+
 	for i, flaw := range flaws {
-		cviID := flaw.CVEID
-		cve, err := s.cveRepository.FindCVE(nil, cviID)
+		if flaw.CVEID == nil {
+			continue
+		}
+		cveID := *flaw.CVEID
+		cve, ok := cveMap[cveID]
+		if !ok {
+			slog.Info("could not find cve", "cve", cveID)
+			continue
+		}
+
 		if err != nil {
 			slog.Info("error getting cve", "err", err)
 			continue
 		}
 
 		oldRiskAssessment := flaw.RawRiskAssessment
-		newRiskAssessment := risk.RawRisk(cve, env, flaw.GetComponentDepth())
+		newRiskAssessment := risk.RawRisk(cve, env, *flaw.ComponentDepth)
 
 		if *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(flaw.CalculateHash(), userID, justification, newRiskAssessment)
@@ -219,7 +245,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 		return nil
 	}
 
-	err := s.flawRepository.SaveBatch(tx, flaws)
+	err = s.flawRepository.SaveBatch(tx, flaws)
 	if err != nil {
 		return fmt.Errorf("could not save flaws: %v", err)
 	}
@@ -288,20 +314,4 @@ func (s *service) applyAndSave(tx core.DB, flaw *models.Flaw, ev *models.FlawEve
 	}
 	flaw.Events = append(flaw.Events, *ev)
 	return *ev, nil
-}
-
-type leaderElector interface {
-	IfLeader(ctx context.Context, fn func() error)
-}
-
-func (service *service) StartRiskRecalculationDaemon(leaderElector leaderElector) {
-	slog.Info("starting risk recalculation daemon")
-	leaderElector.IfLeader(context.Background(), func() error {
-		err := service.RecalculateAllRawRiskAssessments()
-		if err != nil {
-			slog.Error("could not recalculate risk assessments", "err", err)
-		}
-		time.Sleep(1 * time.Hour)
-		return nil
-	})
 }
