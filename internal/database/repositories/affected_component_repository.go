@@ -50,6 +50,10 @@ func NewAffectedComponentRepository(db core.DB) *affectedCmpRepository {
 	}
 }
 
+func (g *affectedCmpRepository) DeleteAll(tx core.DB, ecosystem string) error {
+	return g.GetDB(tx).Where("ecosystem = ?", ecosystem).Delete(&models.AffectedComponent{}).Error
+}
+
 func (g *affectedCmpRepository) GetAllAffectedComponentsID() ([]string, error) {
 	var affectedComponents []string
 	err := g.db.Model(&models.AffectedComponent{}).
