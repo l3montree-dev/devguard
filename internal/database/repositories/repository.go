@@ -143,5 +143,5 @@ func (g *GormRepository[ID, T]) List(ids []ID) ([]T, error) {
 
 func (g *GormRepository[ID, T]) Activate(tx *gorm.DB, id ID) error {
 	var t T
-	return g.GetDB(tx).Debug().Model(&t).Unscoped().Where("id = ?", id).Update("deleted_at", nil).Error
+	return g.GetDB(tx).Model(&t).Unscoped().Where("id = ?", id).Update("deleted_at", nil).Error
 }

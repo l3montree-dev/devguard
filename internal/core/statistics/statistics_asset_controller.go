@@ -35,14 +35,16 @@ type projectService interface {
 type httpController struct {
 	statisticsService      statisticsService
 	assetVersionRepository assetVersionRepository
+	assetRepository        assetRepository
 	projectService         projectService
 }
 
-func NewHttpController(statisticsService statisticsService, assetVersionRepository assetVersionRepository, projectService projectService) *httpController {
+func NewHttpController(statisticsService statisticsService, assetRepository assetRepository, assetVersionRepository assetVersionRepository, projectService projectService) *httpController {
 	return &httpController{
 		statisticsService:      statisticsService,
 		assetVersionRepository: assetVersionRepository,
 		projectService:         projectService,
+		assetRepository:        assetRepository,
 	}
 }
 

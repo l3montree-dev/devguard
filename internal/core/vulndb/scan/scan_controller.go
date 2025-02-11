@@ -49,7 +49,7 @@ type assetRepository interface {
 }
 
 type assetVersionRepository interface {
-	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string) (models.AssetVersion, error)
+	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranch string) (models.AssetVersion, error)
 }
 
 type statisticsService interface {
@@ -110,8 +110,10 @@ func (s *httpController) Scan(c core.Context) error {
 
 	tag := c.Request().Header.Get("X-Tag")
 
+	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
 	assetVersionName := c.Request().Header.Get("X-Asset-Version-New")
-	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag)
+
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})

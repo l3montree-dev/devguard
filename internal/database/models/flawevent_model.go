@@ -102,7 +102,7 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 }
 
 func NewAcceptedEvent(flawAssetID string, flawID, userID, justification string, assetVersion string) FlawEvent {
-	fmt.Println("flawAssetID", flawAssetID, "flawID", flawID)
+
 	return FlawEvent{
 		Type:          EventTypeAccepted,
 		FlawID:        flawID,

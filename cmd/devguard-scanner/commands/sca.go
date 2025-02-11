@@ -146,6 +146,7 @@ func isValidPath(path string) (bool, error) {
 }
 
 func getCurrentBranchName(path string) (string, error) {
+
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	var out bytes.Buffer
 	var errOut bytes.Buffer
@@ -158,23 +159,29 @@ func getCurrentBranchName(path string) (string, error) {
 		return "", err
 	}
 
-	//check if is the default branch
-	if strings.TrimSpace(out.String()) == "HEAD" {
-		cmd = exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-		out.Reset()
-		errOut.Reset()
-		cmd.Stdout = &out
-		cmd.Stderr = &errOut
-		cmd.Dir = getDirFromPath(path)
-		err = cmd.Run()
-		if err != nil {
-			slog.Error("could not run git rev-parse --abbrev-ref HEAD", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
-			return "", err
-		}
-	}
-
 	return strings.TrimSpace(out.String()), nil
 
+}
+
+func getDefaultBranchName(path string) (string, error) {
+	cmd := exec.Command("git", "symbolic-ref", "refs/remotes/origin/HEAD")
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	cmd.Dir = getDirFromPath(path)
+	err := cmd.Run()
+	if err != nil {
+		slog.Error("could not determine default branch", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
+		return "", err
+	}
+
+	parts := strings.Split(strings.TrimSpace(out.String()), "/")
+	if len(parts) == 0 {
+		return "", fmt.Errorf("unexpected format for default branch output")
+	}
+
+	return parts[len(parts)-1], nil
 }
 
 func getCurrentVersion(path string) (string, int, error) {
@@ -473,6 +480,11 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 			return errors.Wrap(err, "could not get branch name")
 		}
 
+		defaultBranch, err := getDefaultBranchName(path)
+		if err != nil {
+			return errors.Wrap(err, "could not get default branch name")
+		}
+
 		assetVersion := branch
 
 		if commitAfterTag == 0 {
@@ -512,6 +524,7 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		req.Header.Set("X-Asset-Name", assetName)
 		req.Header.Set("X-Asset-Version", version)
 		req.Header.Set("X-Asset-Version-New", assetVersion)
+		req.Header.Set("X-Asset-Default-Branch", defaultBranch)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanner)
 
 		resp, err := http.DefaultClient.Do(req)

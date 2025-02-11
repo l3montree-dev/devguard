@@ -66,8 +66,6 @@ func NewService(flawRepository flawRepository, flawEventRepository flawEventRepo
 }
 
 func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.AssetNew, doRiskManagement bool) error {
-	fmt.Println("!!!!!!!!")
-
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -98,11 +96,8 @@ func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw,
 
 func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.AssetNew, doRiskManagement bool) error {
 
-	fmt.Println("2Hallo!!")
 	assetId := asset.ID.String()
 	assetVersionId := assetVersion.ID.String()
-
-	fmt.Println("assetId", assetId, "assetVersionId", assetVersionId)
 
 	if len(flaws) == 0 {
 		return nil

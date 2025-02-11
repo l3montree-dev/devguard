@@ -386,7 +386,7 @@ func Start(db core.DB) {
 
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
 
-	statisticsController := statistics.NewHttpController(statisticsService, assetVersionRepository, projectService)
+	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
 
 	patService := pat.NewPatService(patRepository)
 

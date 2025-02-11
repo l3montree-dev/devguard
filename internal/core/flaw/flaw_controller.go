@@ -97,6 +97,8 @@ func (c flawHttpController) ListByOrgPaged(ctx core.Context) error {
 func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
+	fmt.Println("Start.........")
+
 	pagedResp, err := c.flawRepository.GetDefaultFlawsByProjectIdPaged(
 		nil,
 		project.ID,
@@ -106,9 +108,14 @@ func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
 		core.GetFilterQuery(ctx),
 		core.GetSortQuery(ctx),
 	)
+
+	fmt.Println("End.........")
+
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 	}
+
+	fmt.Println("End2222222222")
 
 	return ctx.JSON(200, pagedResp.Map(func(flaw models.Flaw) any {
 		return convertToDetailedDTO(flaw)
@@ -119,6 +126,8 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	// get the asset
 	assetVersion := core.GetAssetVersion(ctx)
 
+	fmt.Println("hier viellleicht .....")
+
 	// check if we should list flat - this means not grouped by package
 	if ctx.QueryParam("flat") == "true" {
 		flaws, err := c.flawRepository.GetFlawsByAssetVersionIdPagedAndFlat(nil, assetVersion.ID, core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
@@ -126,7 +135,6 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 			return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 		}
 
-		fmt.Println("flaws", flaws)
 		return ctx.JSON(200, flaws.Map(func(flaw models.Flaw) any {
 			return convertToDetailedDTO(flaw)
 		}))
@@ -147,7 +155,6 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 
 	res := map[string]flawsByPackage{}
 	for _, flaw := range pagedResp.Data {
-		fmt.Println(flaw)
 		// get the package name
 		if _, ok := res[*flaw.ComponentPurl]; !ok {
 			res[*flaw.ComponentPurl] = flawsByPackage{

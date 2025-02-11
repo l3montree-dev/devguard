@@ -154,9 +154,14 @@ func (c *httpController) getAssetVersionsRiskHistory(projectID uuid.UUID, start 
 			if err != nil {
 				return AssetRiskHistory{}, err
 			}
+			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetId)
+			if err != nil {
+				return AssetRiskHistory{}, err
+			}
+
 			return AssetRiskHistory{
-				RiskHistory:  results,
-				AssetVersion: assetVersion,
+				RiskHistory: results,
+				Asset:       asset,
 			}, nil
 		})
 	}

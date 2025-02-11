@@ -18,6 +18,10 @@ type assetVersionRepository interface {
 	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
 }
 
+type assetRepository interface {
+	GetByAssetID(assetID uuid.UUID) (models.AssetNew, error)
+}
+
 type statisticsRepository interface {
 	TimeTravelFlawState(assetVersionID uuid.UUID, time time.Time) ([]models.Flaw, error)
 	GetAssetRiskDistribution(assetVersionID uuid.UUID, assetVersionName string) (models.AssetRiskDistribution, error)

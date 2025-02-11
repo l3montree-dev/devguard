@@ -1,7 +1,6 @@
 package assetversion
 
 import (
-	"fmt"
 	"net/url"
 	"slices"
 
@@ -89,7 +88,6 @@ func (a *assetVersionController) Read(c core.Context) error {
 
 func (a *assetVersionController) GetAssetVersionsByAssetID(c core.Context) error {
 	asset := core.GetAsset(c)
-	fmt.Println("asset", asset)
 
 	assetVersions, err := a.assetVersionService.GetAssetVersionsByAssetID(asset.ID)
 	if err != nil {

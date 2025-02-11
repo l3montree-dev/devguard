@@ -62,7 +62,7 @@ func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.AssetNew
 
 func (a *assetRepository) GetByAssetID(assetID uuid.UUID) (models.AssetNew, error) {
 	var app models.AssetNew
-	err := a.db.Where("asset_id = ?", assetID).First(&app).Error
+	err := a.db.Where("id = ?", assetID).First(&app).Error
 	if err != nil {
 		return models.AssetNew{}, err
 	}
@@ -115,4 +115,14 @@ func (g *assetRepository) GetAllAssetsFromDB() ([]models.AssetNew, error) {
 	var assets []models.AssetNew
 	err := g.db.Find(&assets).Error
 	return assets, err
+}
+
+func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (models.AssetNew, error) {
+	var asset models.AssetNew
+	err := g.db.Model(&models.AssetVersion{}).
+		Select("assets.*").
+		Joins("JOIN assets ON assets.id = asset_versions.asset_id").
+		Where("asset_versions.id = ?", assetVersionID).
+		First(&asset).Error
+	return asset, err
 }

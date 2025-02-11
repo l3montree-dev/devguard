@@ -74,7 +74,6 @@ func (m Flaw) TableName() string {
 
 func (m *Flaw) CalculateHash(id string) string {
 	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, id))
-	fmt.Println("hash", hash)
 	return hash
 }
 

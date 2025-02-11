@@ -54,7 +54,13 @@ func (a *assetVersionRepository) FindByName(name string) (models.AssetVersion, e
 	return app, nil
 }
 
-func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string) (models.AssetVersion, error) {
+func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error) {
+
+	var defaultBranch bool
+	if defaultBranchName == assetVersionName {
+		defaultBranch = true
+	}
+
 	var app models.AssetVersion
 	err := a.db.Where("name = ? AND asset_id = ?", assetVersionName, assetID).First(&app).Error
 	if err != nil {
@@ -65,17 +71,25 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 			assetVersionType = "tag"
 		}
 
-		if err = a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetId: assetID, Slug: assetVersionName, Type: assetVersionType}).Error; err != nil {
+		if err = a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetId: assetID, Slug: assetVersionName, Type: assetVersionType, DefaultBranch: defaultBranch}).Error; err != nil {
 			return models.AssetVersion{}, err
 		}
-		return a.FindOrCreate(assetVersionName, assetID, tag)
+		return a.FindOrCreate(assetVersionName, assetID, tag, defaultBranchName)
 	}
+	if app.DefaultBranch != defaultBranch {
+		app.DefaultBranch = defaultBranch
+		if err = a.db.Save(&app).Error; err != nil {
+			return models.AssetVersion{}, err
+		}
+
+	}
+
 	return app, nil
 }
 
 func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
-	err := a.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").
+	err := a.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").Where("default_branch = true").
 		Joins("JOIN projects ON projects.id = assets.project_id").
 		Where("projects.id = ?", projectID).
 		Find(&apps).Error
@@ -109,13 +123,13 @@ func (g *assetVersionRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug st
 	return asset, err
 }
 
-func (g *assetVersionRepository) GetAssetVersionIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
+/* func (g *assetVersionRepository) GetAssetVersionIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
 	app, err := g.ReadBySlug(projectID, slug)
 	if err != nil {
 		return uuid.UUID{}, err
 	}
 	return app.ID, nil
-}
+} */
 
 func (g *assetVersionRepository) Update(tx core.DB, asset *models.AssetVersion) error {
 	return g.db.Save(asset).Error

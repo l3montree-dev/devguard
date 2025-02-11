@@ -259,9 +259,9 @@ func (r *flawRepository) GetFlawsPaged(tx core.DB, assetVersionIdInSubQuery any,
 
 func (r *flawRepository) GetDefaultFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
 
-	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.AssetNew{}).Select("id").Where("project_id = ?", projectID)
+	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.AssetNew{}).Select("assets.id").Where("project_id = ?", projectID)
 
-	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("asset_id").Where("asset_id IN (?)", subQueryAssetIDs, "default_branch", true)
+	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("id").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
 
 	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
 }
@@ -270,7 +270,7 @@ func (r *flawRepository) GetDefaultFlawsByOrgIdPaged(tx core.DB, userAllowedProj
 
 	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.AssetNew{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
 
-	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("asset_id").Where("asset_id IN (?)", subQueryAssetIDs, "default_branch", true)
+	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("id").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
 
 	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
 }

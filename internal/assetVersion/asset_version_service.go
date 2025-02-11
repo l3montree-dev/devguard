@@ -158,11 +158,10 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		// get a transaction
 		if err := s.flawRepository.Transaction(func(tx core.DB) error {
 			if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, assetVersion, asset, true); err != nil {
-				fmt.Println("hier passiert was")
+
 				// this will cancel the transaction
 				return err
 			}
-			fmt.Println("es geht weiter")
 			return s.flawService.UserFixedFlaws(tx, userID, utils.Filter(
 				fixedFlaws,
 				func(flaw models.Flaw) bool {
