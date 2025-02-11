@@ -21,13 +21,13 @@ func NewStatisticsRepository(db core.DB) *statisticsRepository {
 }
 
 // returns all flaws for the asset including the events, which were created before the given time
-func (r *statisticsRepository) TimeTravelFlawState(assetVersionID uuid.UUID, time time.Time) ([]models.Flaw, error) {
+func (r *statisticsRepository) TimeTravelFlawState(assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.Flaw, error) {
 	flaws := []models.Flaw{}
 
 	err := r.db.Model(&models.Flaw{}).Preload("Events", func(db core.DB) core.DB {
 		return db.Where("created_at <= ?", time).Order("created_at ASC")
 	}).
-		Where("asset_version_id = ?", assetVersionID).Where("created_at <= ?", time).
+		Where("asset_version_id = ?", assetVersionName).Where("asset_id = ?", assetID).Where("created_at <= ?", time).
 		Find(&flaws).Error
 
 	if err != nil {
@@ -73,7 +73,7 @@ func (r *statisticsRepository) GetFlawCountByScannerId(assetVersionID uuid.UUID)
 	return counts, nil
 }
 
-func (r *statisticsRepository) GetAssetRiskDistribution(assetVersionID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
+func (r *statisticsRepository) GetAssetRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
 	var results []struct {
 		Severity string `gorm:"column:severity"`
 		Count    int    `gorm:"column:count"`
@@ -90,9 +90,9 @@ func (r *statisticsRepository) GetAssetRiskDistribution(assetVersionID uuid.UUID
             END AS severity,
             COUNT(*) as count
         FROM flaws
-        WHERE asset_version_id = ? AND state = 'open'
+        WHERE asset_version_name = ? AND asset_id = ? AND state = 'open'
         GROUP BY severity
-    `, assetVersionID).Scan(&results).Error
+    `, assetVersionName, assetID).Scan(&results).Error
 
 	if err != nil {
 		return models.AssetRiskDistribution{}, err
@@ -105,12 +105,13 @@ func (r *statisticsRepository) GetAssetRiskDistribution(assetVersionID uuid.UUID
 	}
 
 	return models.AssetRiskDistribution{
-		ID:       assetVersionID,
-		Label:    assetName,
-		Low:      counts["LOW"],
-		Medium:   counts["MEDIUM"],
-		High:     counts["HIGH"],
-		Critical: counts["CRITICAL"],
+		AssetID:          assetID,
+		AssetVersionName: assetVersionName,
+		Label:            assetName,
+		Low:              counts["LOW"],
+		Medium:           counts["MEDIUM"],
+		High:             counts["HIGH"],
+		Critical:         counts["CRITICAL"],
 	}, nil
 }
 

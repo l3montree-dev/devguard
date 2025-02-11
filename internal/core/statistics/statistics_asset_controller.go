@@ -13,15 +13,15 @@ import (
 )
 
 type statisticsService interface {
-	GetComponentRisk(assetVersionID uuid.UUID) (map[string]float64, error)
-	GetAssetVersionRiskDistribution(assetVersionID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
-	GetAssetVersionRiskHistory(assetVersionID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
-	GetFlawAggregationStateAndChangeSince(assetVersionID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error)
+	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error)
+	GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID) (models.AssetRiskDistribution, error)
+	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
+	GetFlawAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error)
 
-	GetFlawCountByScannerId(assetVersionID uuid.UUID) (map[string]int, error)
-	GetDependencyCountPerscanner(assetVersionID uuid.UUID) (map[string]int, error)
-	GetAverageFixingTime(assetVersionID uuid.UUID, severity string) (time.Duration, error)
-	UpdateAssetRiskAggregation(assetVersionID uuid.UUID, start time.Time, end time.Time, updateProject bool) error
+	GetFlawCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
+	GetDependencyCountPerscanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
+	GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
+	UpdateAssetRiskAggregation(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time, updateProject bool) error
 
 	GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)
 }
@@ -50,7 +50,7 @@ func NewHttpController(statisticsService statisticsService, assetRepository asse
 
 func (c *httpController) GetComponentRisk(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetComponentRisk(assetVersion.ID)
+	results, err := c.statisticsService.GetComponentRisk(assetVersion.Name, assetVersion.AssetId)
 
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (c *httpController) GetComponentRisk(ctx core.Context) error {
 
 func (c *httpController) GetDependencyCountPerScanner(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetDependencyCountPerscanner(assetVersion.ID)
+	results, err := c.statisticsService.GetDependencyCountPerscanner(assetVersion.Name, assetVersion.AssetId)
 
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func (c *httpController) GetDependencyCountPerScanner(ctx core.Context) error {
 
 func (c *httpController) GetFlawCountByScannerId(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetFlawCountByScannerId(assetVersion.ID)
+	results, err := c.statisticsService.GetFlawCountByScannerId(assetVersion.Name, assetVersion.AssetId)
 
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func (c *httpController) GetFlawCountByScannerId(ctx core.Context) error {
 
 func (c *httpController) GetAssetVersionRiskDistribution(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.ID, assetVersion.Name)
+	results, err := c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetId)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (c *httpController) GetAverageAssetVersionFixingTime(ctx core.Context) erro
 		})
 	}
 
-	duration, err := c.statisticsService.GetAverageFixingTime(assetVersion.ID, severity)
+	duration, err := c.statisticsService.GetAverageFixingTime(assetVersion.Name, assetVersion.AssetId, severity)
 	if err != nil {
 		return ctx.JSON(500, nil)
 	}
@@ -136,12 +136,13 @@ func aggregateRiskDistribution(results []models.AssetRiskDistribution, id uuid.U
 	}
 
 	return models.AssetRiskDistribution{
-		ID:       id,
-		Label:    label,
-		Low:      lowCount,
-		Medium:   mediumCount,
-		High:     highCount,
-		Critical: criticalCount,
+		AssetID:          assetID,
+		AssetVersionName: assetVersionName,
+		Label:            label,
+		Low:              lowCount,
+		Medium:           mediumCount,
+		High:             highCount,
+		Critical:         criticalCount,
 	}
 }
 

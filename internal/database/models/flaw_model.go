@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -27,13 +26,13 @@ type Flaw struct {
 	ScannerID string `json:"scanner" gorm:"not null;"`
 
 	//TODO: add not null constraint
-	FlawAssetID string `json:"flawAssetId"`
+	AssetID string `json:"flawAssetId" gorm:"not null;"`
 
-	Message        *string     `json:"message"`
-	Comments       []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
-	Events         []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
-	AssetVersionID uuid.UUID   `json:"assetVersionId" gorm:"not null;type:uuid;"`
-	State          FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
+	Message          *string     `json:"message"`
+	Comments         []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
+	Events           []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
+	AssetVersionName string      `json:"assetVersionName" gorm:"not null;"`
+	State            FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
 
 	CVE   *CVE    `json:"cve"`
 	CVEID *string `json:"cveId" gorm:"null;type:text;default:null;"`
@@ -79,7 +78,7 @@ func (m *Flaw) CalculateHash(id string) string {
 
 // hook to calculate the hash before creating the flaw
 func (f *Flaw) BeforeSave(tx *gorm.DB) (err error) {
-	hash := f.CalculateHash(string(f.AssetVersionID.String()))
+	hash := f.CalculateHash(string(f.AssetVersionName + f.AssetID))
 	f.ID = hash
 	return nil
 }

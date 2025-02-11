@@ -53,7 +53,7 @@ type assetVersionRepository interface {
 }
 
 type statisticsService interface {
-	UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error
+	UpdateAssetRiskAggregation(assetVersionName string, assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error
 }
 
 type httpController struct {
@@ -172,8 +172,8 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	if doRiskManagement {
-		slog.Info("recalculating risk history for asset", "asset", assetVersion.ID)
-		if err := s.statisticsService.UpdateAssetRiskAggregation(assetVersion.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
+		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+		if err := s.statisticsService.UpdateAssetRiskAggregation(assetVersion.Name, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 			return c.JSON(500, map[string]string{"error": "could not recalculate risk history"})
 		}

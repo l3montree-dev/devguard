@@ -13,12 +13,14 @@ type AssetRiskDistribution struct {
 	Medium   int `json:"medium"`
 	Critical int `json:"critical"`
 
-	ID    uuid.UUID `json:"id" gorm:"primaryKey;type:uuid"`
-	Label string    `json:"label"`
+	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
+	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
+	Label            string    `json:"label"`
 }
 
 type AssetRiskHistory struct {
-	AssetVersionID uuid.UUID `json:"id" gorm:"primaryKey;type:uuid"`
+	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
+	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
 	// on the day 2024-08-12 the asset had a sumRisk of 25.
 	Day time.Time `json:"day" gorm:"primaryKey;type:date"`
 

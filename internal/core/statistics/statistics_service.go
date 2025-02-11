@@ -23,8 +23,8 @@ type assetRepository interface {
 }
 
 type statisticsRepository interface {
-	TimeTravelFlawState(assetVersionID uuid.UUID, time time.Time) ([]models.Flaw, error)
-	GetAssetRiskDistribution(assetVersionID uuid.UUID, assetVersionName string) (models.AssetRiskDistribution, error)
+	TimeTravelFlawState(assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.Flaw, error)
+	GetAssetRiskDistribution(assetVersionName string, assetID uuid.UUID) (models.AssetRiskDistribution, error)
 	GetFlawCountByScannerId(assetVersionID uuid.UUID) (map[string]int, error)
 	AverageFixingTime(assetVersionID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 }
@@ -39,12 +39,12 @@ type assetRiskHistoryRepository interface {
 }
 
 type flawRepository interface {
-	GetAllOpenFlawsByAssetVersionID(tx core.DB, assetVersionID uuid.UUID) ([]models.Flaw, error)
-	GetFlawsByAssetVersionId(tx core.DB, assetVersionID uuid.UUID) ([]models.Flaw, error)
+	GetAllOpenFlawsByAssetVersionID(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.Flaw, error)
+	GetFlawsByAssetVersionId(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.Flaw, error)
 }
 
 type projectRepository interface {
-	GetProjectByAssetVersionID(assetVersionID uuid.UUID) (models.Project, error)
+	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	Read(id uuid.UUID) (models.Project, error)
 }
@@ -181,14 +181,14 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 	return nil
 }
 
-func (s *service) UpdateAssetRiskAggregation(assetVersionID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
+func (s *service) UpdateAssetRiskAggregation(assetVersionName string, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
 	// set begin to last second of date
 	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
 	// set end to last second of date
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		flaws, err := s.statisticsRepository.TimeTravelFlawState(assetVersionID, time)
+		flaws, err := s.statisticsRepository.TimeTravelFlawState(assetVersionName, assetID, time)
 		if err != nil {
 			return err
 		}
@@ -255,8 +255,9 @@ func (s *service) UpdateAssetRiskAggregation(assetVersionID uuid.UUID, begin tim
 		}
 
 		result := models.AssetRiskHistory{
-			AssetVersionID: assetVersionID,
-			Day:            time,
+			AssetVersionName: assetVersionName,
+			AssetID:          assetID,
+			Day:              time,
 
 			SumOpenRisk: openRisk.Sum,
 			AvgOpenRisk: openRisk.Avg,
@@ -280,7 +281,7 @@ func (s *service) UpdateAssetRiskAggregation(assetVersionID uuid.UUID, begin tim
 		// we ALWAYS need to propagate the risk aggregation to the project. The only exception is in the statistics daemon. There
 		// we update all assets and afterwards do a one time project update. This is just optimization.
 		if propagateToProject {
-			currentProject, err := s.projectRepository.GetProjectByAssetVersionID(assetVersionID)
+			currentProject, err := s.projectRepository.GetProjectByAssetID(assetID)
 
 			if err != nil {
 				return fmt.Errorf("could not get project id by asset id: %w", err)
@@ -308,16 +309,17 @@ func (s *service) UpdateAssetRiskAggregation(assetVersionID uuid.UUID, begin tim
 
 }
 
-func (s *service) GetAssetVersionRiskDistribution(assetVersionID uuid.UUID, assetVersionName string) (models.AssetRiskDistribution, error) {
-	return s.statisticsRepository.GetAssetRiskDistribution(assetVersionID, assetVersionName)
+func (s *service) GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID) (models.AssetRiskDistribution, error) {
+	return s.statisticsRepository.GetAssetRiskDistribution(assetVersionName, assetID)
 }
 
 func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error) {
 	return s.projectRiskHistoryRepository.GetRiskHistory(projectID, start, end)
 }
 
-func (s *service) GetComponentRisk(assetVersionID uuid.UUID) (map[string]float64, error) {
-	flaws, err := s.flawRepository.GetAllOpenFlawsByAssetVersionID(nil, assetVersionID)
+func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error) {
+
+	flaws, err := s.flawRepository.GetAllOpenFlawsByAssetVersionID(nil, assetVersionName, assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +363,7 @@ func (s *service) GetAverageFixingTime(assetVersionID uuid.UUID, severity string
 	return s.statisticsRepository.AverageFixingTime(assetVersionID, riskIntervalStart, riskIntervalEnd)
 }
 
-func (s *service) GetFlawAggregationStateAndChangeSince(assetVersionID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error) {
+func (s *service) GetFlawAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error) {
 	// check if calculateChangeTo is in the future
 	if calculateChangeTo.After(time.Now()) {
 		return FlawAggregationStateAndChange{}, fmt.Errorf("Cannot calculate change to the future")
@@ -369,10 +371,10 @@ func (s *service) GetFlawAggregationStateAndChangeSince(assetVersionID uuid.UUID
 
 	results := utils.Concurrently(
 		func() (any, error) {
-			return s.flawRepository.GetFlawsByAssetVersionId(nil, assetVersionID)
+			return s.flawRepository.GetFlawsByAssetVersionId(nil, assetVersionName, assetID)
 		},
 		func() (any, error) {
-			return s.statisticsRepository.TimeTravelFlawState(assetVersionID, calculateChangeTo)
+			return s.statisticsRepository.TimeTravelFlawState(assetVersionName, assetID, calculateChangeTo)
 		},
 	)
 

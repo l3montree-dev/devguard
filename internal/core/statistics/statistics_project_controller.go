@@ -29,7 +29,7 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 	group := utils.ErrGroup[models.AssetRiskDistribution](10)
 	for _, assetVersion := range assetVersions {
 		group.Go(func() (models.AssetRiskDistribution, error) {
-			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.ID, assetVersion.Name)
+			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetId)
 		})
 	}
 

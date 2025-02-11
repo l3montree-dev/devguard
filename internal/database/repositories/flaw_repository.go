@@ -172,7 +172,7 @@ func (g flawRepository) ReadFlawWithAssetEvents(id string) (models.Flaw, error) 
 		return models.Flaw{}, err
 	}
 
-	flawEvents, err := g.GetFlawEventsByFlawAssetID(g.db, t.FlawAssetID)
+	flawEvents, err := g.GetFlawEventsByFlawAssetID(g.db, t.AssetID)
 	if err != nil {
 		return models.Flaw{}, err
 	}
