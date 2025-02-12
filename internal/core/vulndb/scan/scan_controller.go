@@ -16,7 +16,10 @@
 package scan
 
 import (
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -26,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/labstack/echo/v4"
 )
 
 type cveRepository interface {
@@ -162,4 +166,46 @@ func (s *httpController) Scan(c core.Context) error {
 		AmountOpened: amountOpened,
 		AmountClosed: amountClose,
 		Flaws:        utils.Map(newState, flaw.FlawToDto)})
+}
+
+func (s *httpController) SarifScan(c core.Context) error {
+	var sarifScan models.SarifResult
+	if err := c.Bind(&sarifScan); err != nil {
+		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
+	}
+
+	/* 	assetObj := core.GetAsset(c)
+	   	userID := core.GetSession(c).GetUserID() */
+
+	scanner := c.Request().Header.Get("X-Scanner")
+	if scanner == "" {
+		slog.Error("no X-Scanner header found")
+		return c.JSON(400, map[string]string{
+			"error": "no X-Scanner header found",
+		})
+	}
+
+	//check if risk management is enabled
+	/* 	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
+	   	doRiskManagement := riskManagementEnabled != "false"
+	   	if doRiskManagement {
+	   		//TODO
+	   	} */
+
+	fmt.Println(sarifScan)
+	//save the scan result to json file
+	file, err := os.Create("sarif_scan.json")
+	if err != nil {
+		slog.Error("could not create temp file", "err", err)
+
+		return c.JSON(500, map[string]string{"error": "could not create temp file"})
+	}
+
+	// write the scan result to the file
+	if err := json.NewEncoder(file).Encode(sarifScan); err != nil {
+		slog.Error("could not write scan result to file", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not write scan result to file"})
+	}
+	return c.JSON(200, map[string]string{"message": "sarif scan received"})
+
 }

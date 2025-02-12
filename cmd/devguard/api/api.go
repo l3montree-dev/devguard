@@ -389,6 +389,8 @@ func Start(db core.DB) {
 
 	sessionRouter.POST("/scan/", scanController.Scan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
+	sessionRouter.POST("/sarif-scan/", scanController.SarifScan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+
 	patRouter := sessionRouter.Group("/pats")
 	patRouter.POST("/", patController.Create)
 	patRouter.GET("/", patController.List)
