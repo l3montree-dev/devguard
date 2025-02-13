@@ -25,6 +25,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/in-toto/go-witness/attestation"
@@ -75,6 +76,9 @@ func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
 		})
 	}
 
+	// check if we might leak our own token
+	tokenRegex := regexp.MustCompile("--token=.{64}")
+
 	// map the materials to resolved dependencies
 	resolvedDependencies := make([]slsa1.ResourceDescriptor, 0, len(link.Materials))
 	for materialName, material := range link.Materials {
@@ -123,6 +127,8 @@ func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
 		for k, v := range m {
 			switch v := v.(type) {
 			case string:
+				// replace the token with a placeholder
+				v = tokenRegex.ReplaceAllString(v, "--token=REDACTED")
 				if v != "" {
 					attestorData[k] = v
 				}
