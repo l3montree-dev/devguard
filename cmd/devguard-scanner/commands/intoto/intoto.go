@@ -378,7 +378,7 @@ func NewInTotoCommand() *cobra.Command {
 	cmd.PersistentFlags().StringArray("products", []string{"."}, "The products to include in the in-toto link. Default is the current directory")
 
 	cmd.PersistentFlags().String("supplyChainId", "", "The supply chain id to use. If empty, tries to extract the current commit hash.")
-	cmd.PersistentFlags().Bool("generateSlsaProvenance", true, "Generate SLSA provenance for the in-toto link. The provenance will be stored in <stepname>.provenance.json. It will be signed using the intoto token.")
+	cmd.PersistentFlags().Bool("generateSlsaProvenance", false, "Generate SLSA provenance for the in-toto link. The provenance will be stored in <stepname>.provenance.json. It will be signed using the intoto token.")
 
 	panicOnError(cmd.MarkPersistentFlagRequired("apiUrl"))
 	panicOnError(cmd.MarkPersistentFlagRequired("assetName"))
