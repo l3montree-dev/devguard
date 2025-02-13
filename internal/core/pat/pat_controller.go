@@ -30,15 +30,19 @@ type repository interface {
 	ListByUserID(userId string) ([]models.PAT, error)
 	GetUserIDByToken(token string) (string, error)
 	GetByFingerprint(fingerprint string) (models.PAT, error)
+	MarkAsLastUsedNow(fingerprint string) error
+	DeleteByFingerprint(fingerprint string) error
 }
 
 type PatController struct {
 	patRepository repository
+	service       *PatService
 }
 
 func NewHttpController(repository repository) *PatController {
 	return &PatController{
 		patRepository: repository,
+		service:       NewPatService(repository),
 	}
 }
 
@@ -72,6 +76,27 @@ func (p *PatController) Create(c core.Context) error {
 		"pubKey":      patStruct.PubKey,
 		"fingerprint": patStruct.Fingerprint,
 	})
+}
+
+func (p *PatController) RevokeByPrivateKey(c core.Context) error {
+	// get the json body
+	var req RevokeByPrivateKeyRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	// validate the request
+	if err := core.V.Struct(req); err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	// get the pat by the fingerprint
+	err := p.service.RevokeByPrivateKey(req.PrivateKey)
+	if err != nil {
+		return echo.NewHTTPError(500, err.Error())
+	}
+
+	return c.NoContent(200)
 }
 
 func (p *PatController) Delete(c core.Context) error {

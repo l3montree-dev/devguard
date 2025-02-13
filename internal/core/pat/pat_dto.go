@@ -22,6 +22,10 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
+type RevokeByPrivateKeyRequest struct {
+	PrivateKey string `json:"privkey" validate:"required"`
+}
+
 type CreateRequest struct {
 	Description string `json:"description"`
 	PubKey      string `json:"pubKey"`

@@ -14,12 +14,12 @@ import (
 )
 
 type PatService struct {
-	patService repository
+	patRepository repository
 }
 
 func NewPatService(repository repository) *PatService {
 	return &PatService{
-		patService: repository,
+		patRepository: repository,
 	}
 }
 
@@ -133,7 +133,7 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 }
 
 func (p *PatService) getPubKeyAndUserIdUsingFingerprint(fingerprint string) (ecdsa.PublicKey, uuid.UUID, error) {
-	pat, err := p.patService.GetByFingerprint(fingerprint)
+	pat, err := p.patRepository.GetByFingerprint(fingerprint)
 	if err != nil {
 		return ecdsa.PublicKey{}, uuid.New(), fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
@@ -149,6 +149,10 @@ func (p *PatService) getPubKeyAndUserIdUsingFingerprint(fingerprint string) (ecd
 	pubKeyECDSA.X, _ = new(big.Int).SetString(pubKey[:len(pubKey)/2], 16)
 	pubKeyECDSA.Y, _ = new(big.Int).SetString(pubKey[len(pubKey)/2:], 16)
 	return pubKeyECDSA, pat.UserID, nil
+}
+
+func (p *PatService) markAsLastUsedNow(fingerprint string) error {
+	return p.patRepository.MarkAsLastUsedNow(fingerprint)
 }
 
 func (p *PatService) VerifyRequestSignature(req *http.Request) (string, error) {
@@ -168,5 +172,23 @@ func (p *PatService) VerifyRequestSignature(req *http.Request) (string, error) {
 		return "", fmt.Errorf("could not verify request: %v", err)
 	}
 
+	go p.markAsLastUsedNow(fingerprint)
+
 	return userId.String(), nil
+}
+
+func (p *PatService) RevokeByPrivateKey(privKey string) error {
+	pubKey, _, err := HexTokenToECDSA(privKey)
+	if err != nil {
+		return fmt.Errorf("could not convert hex token to ECDSA: %v", err)
+	}
+
+	pubKeyString := hex.EncodeToString(pubKey.X.Bytes()) + hex.EncodeToString(pubKey.Y.Bytes())
+
+	fingerprint, err := pubKeyToFingerprint(pubKeyString)
+	if err != nil {
+		return err
+	}
+
+	return p.patRepository.DeleteByFingerprint(fingerprint)
 }

@@ -393,6 +393,7 @@ func Start(db core.DB) {
 	patRouter.POST("/", patController.Create)
 	patRouter.GET("/", patController.List)
 	patRouter.DELETE("/:tokenId/", patController.Delete)
+	patRouter.POST("/revoke-by-private-key/", patController.RevokeByPrivateKey)
 
 	cveRouter := apiV1Router.Group("/vulndb")
 	cveRouter.GET("/", vulndbController.ListPaged)
