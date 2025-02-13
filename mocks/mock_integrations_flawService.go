@@ -24,7 +24,7 @@ func (_m *IntegrationsFlawService) EXPECT() *IntegrationsFlawService_Expecter {
 }
 
 // ApplyAndSave provides a mock function with given fields: tx, flaw, flawEvent
-func (_m *IntegrationsFlawService) ApplyAndSave(tx *gorm.DB, flaw *models.Flaw, flawEvent *models.FlawEvent) error {
+func (_m *IntegrationsFlawService) ApplyAndSave(tx *gorm.DB, flaw *models.DependencyVulnerability, flawEvent *models.FlawEvent) error {
 	ret := _m.Called(tx, flaw, flawEvent)
 
 	if len(ret) == 0 {
@@ -32,7 +32,7 @@ func (_m *IntegrationsFlawService) ApplyAndSave(tx *gorm.DB, flaw *models.Flaw, 
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.Flaw, *models.FlawEvent) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.DependencyVulnerability, *models.FlawEvent) error); ok {
 		r0 = rf(tx, flaw, flawEvent)
 	} else {
 		r0 = ret.Error(0)
@@ -54,9 +54,9 @@ func (_e *IntegrationsFlawService_Expecter) ApplyAndSave(tx interface{}, flaw in
 	return &IntegrationsFlawService_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", tx, flaw, flawEvent)}
 }
 
-func (_c *IntegrationsFlawService_ApplyAndSave_Call) Run(run func(tx *gorm.DB, flaw *models.Flaw, flawEvent *models.FlawEvent)) *IntegrationsFlawService_ApplyAndSave_Call {
+func (_c *IntegrationsFlawService_ApplyAndSave_Call) Run(run func(tx *gorm.DB, flaw *models.DependencyVulnerability, flawEvent *models.FlawEvent)) *IntegrationsFlawService_ApplyAndSave_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(*models.Flaw), args[2].(*models.FlawEvent))
+		run(args[0].(*gorm.DB), args[1].(*models.DependencyVulnerability), args[2].(*models.FlawEvent))
 	})
 	return _c
 }
@@ -66,7 +66,7 @@ func (_c *IntegrationsFlawService_ApplyAndSave_Call) Return(_a0 error) *Integrat
 	return _c
 }
 
-func (_c *IntegrationsFlawService_ApplyAndSave_Call) RunAndReturn(run func(*gorm.DB, *models.Flaw, *models.FlawEvent) error) *IntegrationsFlawService_ApplyAndSave_Call {
+func (_c *IntegrationsFlawService_ApplyAndSave_Call) RunAndReturn(run func(*gorm.DB, *models.DependencyVulnerability, *models.FlawEvent) error) *IntegrationsFlawService_ApplyAndSave_Call {
 	_c.Call.Return(run)
 	return _c
 }

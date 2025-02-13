@@ -38,7 +38,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 	t.Run("it should return an error, if the flaw could not be found", func(t *testing.T) {
 		flawRepository := mocks.NewIntegrationsFlawRepository(t)
-		flawRepository.On("Read", "1").Return(models.Flaw{}, fmt.Errorf("flaw not found"))
+		flawRepository.On("Read", "1").Return(models.DependencyVulnerability{}, fmt.Errorf("flaw not found"))
 
 		githubIntegration := githubIntegration{
 			flawRepository: flawRepository,
@@ -81,7 +81,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 	t.Run("it should return an error if the owner or repo could not be extracted from the repositoryId", func(t *testing.T) {
 
 		flawRepository := mocks.NewIntegrationsFlawRepository(t)
-		flawRepository.On("Read", "1").Return(models.Flaw{
+		flawRepository.On("Read", "1").Return(models.DependencyVulnerability{
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
@@ -130,7 +130,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		flawService := mocks.NewIntegrationsFlawService(t)
 		flawRepository := mocks.NewIntegrationsFlawRepository(t)
-		flawRepository.On("Read", "1").Return(models.Flaw{
+		flawRepository.On("Read", "1").Return(models.DependencyVulnerability{
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
@@ -191,7 +191,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		expectFlaw := models.Flaw{
+		expectFlaw := models.DependencyVulnerability{
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},

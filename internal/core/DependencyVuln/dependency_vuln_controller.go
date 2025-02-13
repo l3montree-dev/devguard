@@ -1,4 +1,4 @@
-package flaw
+package DependencyVuln
 
 import (
 	"encoding/json"
@@ -25,14 +25,14 @@ type flawsByPackage struct {
 }
 
 type repository interface {
-	repositories.Repository[string, models.Flaw, core.DB]
+	repositories.Repository[string, models.DependencyVulnerability, core.DB]
 
-	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.Flaw, error)
-	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)
+	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.DependencyVulnerability, error)
+	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.DependencyVulnerability], map[string]int, error)
 
-	GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
-	GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
-	GetFlawsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
+	GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)
+	GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)
+	GetFlawsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)
 }
 
 type projectService interface {
@@ -40,7 +40,7 @@ type projectService interface {
 }
 
 type flawService interface {
-	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error)
+	UpdateFlawState(tx core.DB, userID string, flaw *models.DependencyVulnerability, statusType string, justification string) (models.FlawEvent, error)
 }
 
 type flawHttpController struct {
@@ -84,7 +84,7 @@ func (c flawHttpController) ListByOrgPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(flaw models.Flaw) any {
+	return ctx.JSON(200, pagedResp.Map(func(flaw models.DependencyVulnerability) any {
 		return convertToDetailedDTO(flaw)
 	}))
 }
@@ -105,7 +105,7 @@ func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(flaw models.Flaw) any {
+	return ctx.JSON(200, pagedResp.Map(func(flaw models.DependencyVulnerability) any {
 		return convertToDetailedDTO(flaw)
 	}))
 }
@@ -121,7 +121,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 			return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 		}
 
-		return ctx.JSON(200, flaws.Map(func(flaw models.Flaw) any {
+		return ctx.JSON(200, flaws.Map(func(flaw models.DependencyVulnerability) any {
 			return convertToDetailedDTO(flaw)
 		}))
 	}
@@ -288,7 +288,7 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 	return ctx.JSON(200, convertToDetailedDTO(flaw))
 }
 
-func convertToDetailedDTO(flaw models.Flaw) detailedFlawDTO {
+func convertToDetailedDTO(flaw models.DependencyVulnerability) detailedFlawDTO {
 	return detailedFlawDTO{
 		FlawDTO: FlawDTO{
 			ID:                    flaw.ID,

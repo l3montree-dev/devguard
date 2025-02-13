@@ -3,43 +3,44 @@ package repositories
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/utils"
-
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-type DependencyVulnerability struct {
+type FirstPartyVulnerabilityRepository struct {
 	db core.DB
-	VulnerabilityRepository[models.DependencyVulnerability]
+	VulnerabilityRepository[models.FirstPartyVulnerability]
 }
 
-func NewDependencyVulnerability(db core.DB) *DependencyVulnerability {
-	if err := db.AutoMigrate(&models.DependencyVulnerability{}); err != nil {
+func NewFirstPartyVulnerabilityRepository(db core.DB) *FirstPartyVulnerabilityRepository {
+	if err := db.AutoMigrate(&models.FirstPartyVulnerability{}); err != nil {
 		panic(err)
 	}
-	return &DependencyVulnerability{
+	return &FirstPartyVulnerabilityRepository{
 		db:                      db,
-		VulnerabilityRepository: *NewVulnerabilityRepository[models.DependencyVulnerability](db),
+		VulnerabilityRepository: *NewVulnerabilityRepository[models.FirstPartyVulnerability](db),
 	}
 }
 
-func (r *DependencyVulnerability) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.DependencyVulnerability], map[string]int, error) {
+// TODO: change it
+func (r *FirstPartyVulnerabilityRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.FirstPartyVulnerability], map[string]int, error) {
 	var count int64
-	var flaws []models.DependencyVulnerability = []models.DependencyVulnerability{}
+	var flaws []models.FirstPartyVulnerability = []models.FirstPartyVulnerability{}
 
-	q := r.Repository.GetDB(tx).Model(&models.DependencyVulnerability{}).Joins("CVE").Where("flaws.asset_id = ?", assetId)
+	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVulnerability{}).Where("flaws.asset_id = ?", assetId)
 
 	// apply filters
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value())
 	}
+
 	if search != "" && len(search) > 2 {
 		q = q.Where("(\"CVE\".description ILIKE ?  OR flaws.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	err := q.Distinct("flaws.component_purl").Count(&count).Error
 	if err != nil {
-		return core.Paged[models.DependencyVulnerability]{}, map[string]int{}, err
+		return core.Paged[models.FirstPartyVulnerability]{}, map[string]int{}, err
 	}
 
 	// get all flaws of the asset
@@ -71,7 +72,7 @@ func (r *DependencyVulnerability) GetByAssetIdPaged(tx core.DB, pageInfo core.Pa
 
 	res := []VulnStats{}
 	if err := packageNameQuery.Scan(&res).Error; err != nil {
-		return core.Paged[models.DependencyVulnerability]{}, map[string]int{}, err
+		return core.Paged[models.FirstPartyVulnerability]{}, map[string]int{}, err
 	}
 
 	packageNames := utils.Map(res, func(r VulnStats) string {
@@ -81,7 +82,7 @@ func (r *DependencyVulnerability) GetByAssetIdPaged(tx core.DB, pageInfo core.Pa
 	err = q.Where("flaws.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Find(&flaws).Error
 
 	if err != nil {
-		return core.Paged[models.DependencyVulnerability]{}, map[string]int{}, err
+		return core.Paged[models.FirstPartyVulnerability]{}, map[string]int{}, err
 	}
 	// order the flaws based on the package name ordering
 	packageNameIndexMap := make(map[string]int)
@@ -92,37 +93,22 @@ func (r *DependencyVulnerability) GetByAssetIdPaged(tx core.DB, pageInfo core.Pa
 	return core.NewPaged(pageInfo, count, flaws), packageNameIndexMap, nil
 }
 
-func (r *DependencyVulnerability) GetFlawsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error) {
+func (r *FirstPartyVulnerabilityRepository) GetFlawsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
 	return r.GetFlawsPaged(tx, []string{assetId.String()}, pageInfo, search, filter, sort)
 }
 
-func (r DependencyVulnerability) Read(id string) (models.DependencyVulnerability, error) {
-	var t models.DependencyVulnerability
-	err := r.db.Preload("CVE.Weaknesses").Preload("Events", func(db core.DB) core.DB {
-		return db.Order("created_at ASC")
-	}).Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", id).Error
+func (r FirstPartyVulnerabilityRepository) Read(id string) (models.FirstPartyVulnerability, error) {
+	var t models.FirstPartyVulnerability
+	err := r.db.First(&t, id).Error
 
 	return t, err
 }
 
-func (r *DependencyVulnerability) GetFlawsByPurl(tx core.DB, purl []string) ([]models.DependencyVulnerability, error) {
+// TODO: change it
+func (r *FirstPartyVulnerabilityRepository) GetFlawsPaged(tx core.DB, assetIdInSubQuery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+	var flaws []models.FirstPartyVulnerability = []models.FirstPartyVulnerability{}
 
-	var flaws []models.DependencyVulnerability = []models.DependencyVulnerability{}
-	if len(purl) == 0 {
-		return flaws, nil
-	}
-
-	if err := r.Repository.GetDB(tx).Preload("Events").Joins("CVE").Where("component_purl IN ?", purl).Find(&flaws).Error; err != nil {
-		return nil, err
-	}
-
-	return flaws, nil
-}
-
-func (r *DependencyVulnerability) GetFlawsPaged(tx core.DB, assetIdInSubQuery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error) {
-	var flaws []models.DependencyVulnerability = []models.DependencyVulnerability{}
-
-	q := r.Repository.GetDB(tx).Model(&models.DependencyVulnerability{}).Preload("Events").Joins("CVE").Where("flaws.asset_id IN (?)", assetIdInSubQuery)
+	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVulnerability{}).Where("flaws.asset_id IN (?)", assetIdInSubQuery)
 
 	// apply filters
 	for _, f := range filter {
@@ -145,25 +131,25 @@ func (r *DependencyVulnerability) GetFlawsPaged(tx core.DB, assetIdInSubQuery an
 
 	err := q.Count(&count).Error
 	if err != nil {
-		return core.Paged[models.DependencyVulnerability]{}, err
+		return core.Paged[models.FirstPartyVulnerability]{}, err
 	}
 
 	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&flaws).Error
 
 	if err != nil {
-		return core.Paged[models.DependencyVulnerability]{}, err
+		return core.Paged[models.FirstPartyVulnerability]{}, err
 	}
 
 	return core.NewPaged(pageInfo, count, flaws), nil
 }
 
-func (r *DependencyVulnerability) GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error) {
+func (r *FirstPartyVulnerabilityRepository) GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
 	subQuery := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("id").Where("project_id = ?", projectID)
 
 	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
 }
 
-func (r *DependencyVulnerability) GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error) {
+func (r *FirstPartyVulnerabilityRepository) GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
 
 	subQuery := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
 

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/DependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -37,9 +37,9 @@ func newSbomCommand() *cobra.Command {
 				return
 			}
 			assetRepository := repositories.NewAssetRepository(database)
-			flawRepository := repositories.NewFlawRepository(database)
+			flawRepository := repositories.NewDependencyVulnerability(database)
 			componentRepository := repositories.NewComponentRepository(database)
-			assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flaw.NewService(
+			assetService := asset.NewService(assetRepository, componentRepository, flawRepository, DependencyVuln.NewService(
 				flawRepository,
 				repositories.NewFlawEventRepository(database),
 				assetRepository,

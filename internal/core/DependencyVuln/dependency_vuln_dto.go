@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package flaw
+package DependencyVuln
 
 import (
 	"time"
@@ -49,7 +49,7 @@ type detailedFlawDTO struct {
 	Events []FlawEventDTO `json:"events"`
 }
 
-func FlawToDto(f models.Flaw) FlawDTO {
+func FlawToDto(f models.DependencyVulnerability) FlawDTO {
 
 	return FlawDTO{
 		ID:                    f.ID,

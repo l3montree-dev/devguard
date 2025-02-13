@@ -36,7 +36,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/DependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -297,14 +297,14 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	}
 
 	// order the flaws by their risk
-	slices.SortFunc(scanResponse.Flaws, func(a, b flaw.FlawDTO) int {
+	slices.SortFunc(scanResponse.Flaws, func(a, b DependencyVuln.FlawDTO) int {
 		return int(*(a.RawRiskAssessment)*100) - int(*b.RawRiskAssessment*100)
 	})
 
 	// get the max risk of open!!! flaws
-	openRisks := utils.Map(utils.Filter(scanResponse.Flaws, func(f flaw.FlawDTO) bool {
+	openRisks := utils.Map(utils.Filter(scanResponse.Flaws, func(f DependencyVuln.FlawDTO) bool {
 		return f.State == "open"
-	}), func(f flaw.FlawDTO) float64 {
+	}), func(f DependencyVuln.FlawDTO) float64 {
 		return *f.RawRiskAssessment
 	})
 
@@ -319,7 +319,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status", "URL"})
 	tw.AppendRows(utils.Map(
 		scanResponse.Flaws,
-		func(f flaw.FlawDTO) table.Row {
+		func(f DependencyVuln.FlawDTO) table.Row {
 			clickableLink := ""
 			if doRiskManagement {
 				clickableLink = fmt.Sprintf("%s/%s/flaws/%s", webUI, assetName, f.ID)

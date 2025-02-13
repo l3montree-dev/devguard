@@ -29,7 +29,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/DependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -57,10 +57,10 @@ type githubAppInstallationRepository interface {
 }
 
 type flawRepository interface {
-	Read(id string) (models.Flaw, error)
-	Save(db core.DB, flaw *models.Flaw) error
+	Read(id string) (models.DependencyVulnerability, error)
+	Save(db core.DB, flaw *models.DependencyVulnerability) error
 	Transaction(fn func(tx core.DB) error) error
-	FindByTicketID(tx core.DB, ticketID string) (models.Flaw, error)
+	FindByTicketID(tx core.DB, ticketID string) (models.DependencyVulnerability, error)
 	GetOrgFromFlawID(tx core.DB, flawID string) (models.Org, error)
 }
 
@@ -79,7 +79,7 @@ type assetRepository interface {
 }
 
 type flawService interface {
-	ApplyAndSave(tx core.DB, flaw *models.Flaw, flawEvent *models.FlawEvent) error
+	ApplyAndSave(tx core.DB, flaw *models.DependencyVulnerability, flawEvent *models.FlawEvent) error
 }
 
 // wrapper around the github package - which provides only the methods
@@ -111,7 +111,7 @@ var NoGithubAppInstallationError = fmt.Errorf("no github app installations found
 func NewGithubIntegration(db core.DB) *githubIntegration {
 	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
 
-	flawRepository := repositories.NewFlawRepository(db)
+	flawRepository := repositories.NewDependencyVulnerability(db)
 	flawEventRepository := repositories.NewFlawEventRepository(db)
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
@@ -125,7 +125,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 
 		flawRepository:      flawRepository,
 		flawEventRepository: flawEventRepository,
-		flawService:         flaw.NewService(flawRepository, flawEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
+		flawService:         DependencyVuln.NewService(flawRepository, flawEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
 
 		frontendUrl:     frontendUrl,
 		assetRepository: repositories.NewAssetRepository(db),

@@ -25,8 +25,8 @@ import (
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/DependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
 	"github.com/l3montree-dev/devguard/internal/core/org"
@@ -323,13 +323,13 @@ func Start(db core.DB) {
 	projectScopedRBAC := projectAccessControlFactory(projectRepository)
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
-	flawRepository := repositories.NewFlawRepository(db)
+	flawRepository := repositories.NewDependencyVulnerability(db)
 	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 
-	flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
+	flawService := DependencyVuln.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 	projectService := project.NewService(projectRepository)
-	flawController := flaw.NewHttpController(flawRepository, flawService, projectService)
+	flawController := DependencyVuln.NewHttpController(flawRepository, flawService, projectService)
 
 	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
 
@@ -387,9 +387,9 @@ func Start(db core.DB) {
 	sessionRouter.GET("/whoami/", whoami)
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation)
 
-	sessionRouter.POST("/scan/", scanController.Scan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/scan/", scanController.DependencyVulnScan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
-	sessionRouter.POST("/sarif-scan/", scanController.SarifScan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
 	patRouter := sessionRouter.Group("/pats")
 	patRouter.POST("/", patController.Create)

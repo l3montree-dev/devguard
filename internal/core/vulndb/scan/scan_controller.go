@@ -25,7 +25,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/DependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -42,7 +42,7 @@ type componentRepository interface {
 }
 
 type assetService interface {
-	HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
+	HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVulnerability, err error)
 	UpdateSBOM(asset models.Asset, scanner string, version string, sbom normalize.SBOM) error
 }
 
@@ -82,12 +82,12 @@ func NewHttpController(db core.DB, cveRepository cveRepository, componentReposit
 }
 
 type ScanResponse struct {
-	AmountOpened int            `json:"amountOpened"`
-	AmountClosed int            `json:"amountClosed"`
-	Flaws        []flaw.FlawDTO `json:"flaws"`
+	AmountOpened int                      `json:"amountOpened"`
+	AmountClosed int                      `json:"amountClosed"`
+	Flaws        []DependencyVuln.FlawDTO `json:"flaws"`
 }
 
-func (s *httpController) Scan(c core.Context) error {
+func (s *httpController) DependencyVulnScan(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
 	if err := decoder.Decode(bom); err != nil {
@@ -165,10 +165,10 @@ func (s *httpController) Scan(c core.Context) error {
 	return c.JSON(200, ScanResponse{
 		AmountOpened: amountOpened,
 		AmountClosed: amountClose,
-		Flaws:        utils.Map(newState, flaw.FlawToDto)})
+		Flaws:        utils.Map(newState, DependencyVuln.FlawToDto)})
 }
 
-func (s *httpController) SarifScan(c core.Context) error {
+func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	var sarifScan models.SarifResult
 	if err := c.Bind(&sarifScan); err != nil {
 		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
@@ -193,6 +193,10 @@ func (s *httpController) SarifScan(c core.Context) error {
 	   	} */
 
 	fmt.Println(sarifScan)
+
+	// handle the scan result
+	/* 	amountOpened, amountClose, newState, err := HandleSarifResult(sarifScan, scanner) */
+
 	//save the scan result to json file
 	file, err := os.Create("sarif_scan.json")
 	if err != nil {
@@ -208,4 +212,37 @@ func (s *httpController) SarifScan(c core.Context) error {
 	}
 	return c.JSON(200, map[string]string{"message": "sarif scan received"})
 
+}
+
+func HandleSarifResult(sarifScan models.SarifResult, scanner string) (int, int, []models.FirstPartyVulnerability, error) {
+
+	sarifFlaws := []models.FirstPartyVulnerability{}
+
+	for _, run := range sarifScan.Runs {
+		for _, result := range run.Results {
+
+			snippet := result.Locations[0].PhysicalLocation.Region.Snippet.Text
+			snippetMax := 20
+			if snippetMax < len(snippet)/2 {
+				snippetMax = len(snippet) / 2
+			}
+			snippet = snippet[:snippetMax] + "***"
+
+			sarifFlaw := models.FirstPartyVulnerability{
+				Vulnerability: models.Vulnerability{
+					Message: &result.Message.Text,
+				},
+				RuleID:      result.RuleId,
+				Uri:         result.Locations[0].PhysicalLocation.ArtifactLocation.Uri,
+				StartLine:   result.Locations[0].PhysicalLocation.Region.StartLine,
+				StartColumn: result.Locations[0].PhysicalLocation.Region.StartColumn,
+				EndLine:     result.Locations[0].PhysicalLocation.Region.EndLine,
+				EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
+				Snippet:     snippet,
+			}
+			sarifFlaws = append(sarifFlaws, sarifFlaw)
+		}
+	}
+
+	return 0, 0, sarifFlaws, nil
 }

@@ -122,7 +122,7 @@ func (_c *FlawRepository_Begin_Call) RunAndReturn(run func() *gorm.DB) *FlawRepo
 }
 
 // Create provides a mock function with given fields: tx, t
-func (_m *FlawRepository) Create(tx *gorm.DB, t *models.Flaw) error {
+func (_m *FlawRepository) Create(tx *gorm.DB, t *models.DependencyVulnerability) error {
 	ret := _m.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -130,7 +130,7 @@ func (_m *FlawRepository) Create(tx *gorm.DB, t *models.Flaw) error {
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.Flaw) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.DependencyVulnerability) error); ok {
 		r0 = rf(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -151,9 +151,9 @@ func (_e *FlawRepository_Expecter) Create(tx interface{}, t interface{}) *FlawRe
 	return &FlawRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
-func (_c *FlawRepository_Create_Call) Run(run func(tx *gorm.DB, t *models.Flaw)) *FlawRepository_Create_Call {
+func (_c *FlawRepository_Create_Call) Run(run func(tx *gorm.DB, t *models.DependencyVulnerability)) *FlawRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(*models.Flaw))
+		run(args[0].(*gorm.DB), args[1].(*models.DependencyVulnerability))
 	})
 	return _c
 }
@@ -163,13 +163,13 @@ func (_c *FlawRepository_Create_Call) Return(_a0 error) *FlawRepository_Create_C
 	return _c
 }
 
-func (_c *FlawRepository_Create_Call) RunAndReturn(run func(*gorm.DB, *models.Flaw) error) *FlawRepository_Create_Call {
+func (_c *FlawRepository_Create_Call) RunAndReturn(run func(*gorm.DB, *models.DependencyVulnerability) error) *FlawRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function with given fields: tx, ts
-func (_m *FlawRepository) CreateBatch(tx *gorm.DB, ts []models.Flaw) error {
+func (_m *FlawRepository) CreateBatch(tx *gorm.DB, ts []models.DependencyVulnerability) error {
 	ret := _m.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -177,7 +177,7 @@ func (_m *FlawRepository) CreateBatch(tx *gorm.DB, ts []models.Flaw) error {
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.Flaw) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.DependencyVulnerability) error); ok {
 		r0 = rf(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -198,9 +198,9 @@ func (_e *FlawRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *
 	return &FlawRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
-func (_c *FlawRepository_CreateBatch_Call) Run(run func(tx *gorm.DB, ts []models.Flaw)) *FlawRepository_CreateBatch_Call {
+func (_c *FlawRepository_CreateBatch_Call) Run(run func(tx *gorm.DB, ts []models.DependencyVulnerability)) *FlawRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].([]models.Flaw))
+		run(args[0].(*gorm.DB), args[1].([]models.DependencyVulnerability))
 	})
 	return _c
 }
@@ -210,7 +210,7 @@ func (_c *FlawRepository_CreateBatch_Call) Return(_a0 error) *FlawRepository_Cre
 	return _c
 }
 
-func (_c *FlawRepository_CreateBatch_Call) RunAndReturn(run func(*gorm.DB, []models.Flaw) error) *FlawRepository_CreateBatch_Call {
+func (_c *FlawRepository_CreateBatch_Call) RunAndReturn(run func(*gorm.DB, []models.DependencyVulnerability) error) *FlawRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -263,23 +263,23 @@ func (_c *FlawRepository_Delete_Call) RunAndReturn(run func(*gorm.DB, string) er
 }
 
 // GetByAssetId provides a mock function with given fields: tx, assetId
-func (_m *FlawRepository) GetByAssetId(tx *gorm.DB, assetId uuid.UUID) ([]models.Flaw, error) {
+func (_m *FlawRepository) GetByAssetId(tx *gorm.DB, assetId uuid.UUID) ([]models.DependencyVulnerability, error) {
 	ret := _m.Called(tx, assetId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByAssetId")
 	}
 
-	var r0 []models.Flaw
+	var r0 []models.DependencyVulnerability
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) ([]models.Flaw, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) ([]models.DependencyVulnerability, error)); ok {
 		return rf(tx, assetId)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) []models.Flaw); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) []models.DependencyVulnerability); ok {
 		r0 = rf(tx, assetId)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Flaw)
+			r0 = ret.Get(0).([]models.DependencyVulnerability)
 		}
 	}
 
@@ -311,34 +311,34 @@ func (_c *FlawRepository_GetByAssetId_Call) Run(run func(tx *gorm.DB, assetId uu
 	return _c
 }
 
-func (_c *FlawRepository_GetByAssetId_Call) Return(_a0 []models.Flaw, _a1 error) *FlawRepository_GetByAssetId_Call {
+func (_c *FlawRepository_GetByAssetId_Call) Return(_a0 []models.DependencyVulnerability, _a1 error) *FlawRepository_GetByAssetId_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FlawRepository_GetByAssetId_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.Flaw, error)) *FlawRepository_GetByAssetId_Call {
+func (_c *FlawRepository_GetByAssetId_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.DependencyVulnerability, error)) *FlawRepository_GetByAssetId_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetByAssetIdPaged provides a mock function with given fields: tx, pageInfo, search, filter, sort, assetId
-func (_m *FlawRepository) GetByAssetIdPaged(tx *gorm.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error) {
+func (_m *FlawRepository) GetByAssetIdPaged(tx *gorm.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.DependencyVulnerability], map[string]int, error) {
 	ret := _m.Called(tx, pageInfo, search, filter, sort, assetId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByAssetIdPaged")
 	}
 
-	var r0 core.Paged[models.Flaw]
+	var r0 core.Paged[models.DependencyVulnerability]
 	var r1 map[string]int
 	var r2 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) (core.Paged[models.DependencyVulnerability], map[string]int, error)); ok {
 		return rf(tx, pageInfo, search, filter, sort, assetId)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) core.Paged[models.Flaw]); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) core.Paged[models.DependencyVulnerability]); ok {
 		r0 = rf(tx, pageInfo, search, filter, sort, assetId)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.Flaw])
+		r0 = ret.Get(0).(core.Paged[models.DependencyVulnerability])
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) map[string]int); ok {
@@ -381,12 +381,12 @@ func (_c *FlawRepository_GetByAssetIdPaged_Call) Run(run func(tx *gorm.DB, pageI
 	return _c
 }
 
-func (_c *FlawRepository_GetByAssetIdPaged_Call) Return(_a0 core.Paged[models.Flaw], _a1 map[string]int, _a2 error) *FlawRepository_GetByAssetIdPaged_Call {
+func (_c *FlawRepository_GetByAssetIdPaged_Call) Return(_a0 core.Paged[models.DependencyVulnerability], _a1 map[string]int, _a2 error) *FlawRepository_GetByAssetIdPaged_Call {
 	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *FlawRepository_GetByAssetIdPaged_Call) RunAndReturn(run func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)) *FlawRepository_GetByAssetIdPaged_Call {
+func (_c *FlawRepository_GetByAssetIdPaged_Call) RunAndReturn(run func(*gorm.DB, core.PageInfo, string, []core.FilterQuery, []core.SortQuery, uuid.UUID) (core.Paged[models.DependencyVulnerability], map[string]int, error)) *FlawRepository_GetByAssetIdPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -440,22 +440,22 @@ func (_c *FlawRepository_GetDB_Call) RunAndReturn(run func(*gorm.DB) *gorm.DB) *
 }
 
 // GetFlawsByAssetIdPagedAndFlat provides a mock function with given fields: tx, assetId, pageInfo, search, filter, sort
-func (_m *FlawRepository) GetFlawsByAssetIdPagedAndFlat(tx *gorm.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+func (_m *FlawRepository) GetFlawsByAssetIdPagedAndFlat(tx *gorm.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error) {
 	ret := _m.Called(tx, assetId, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetFlawsByAssetIdPagedAndFlat")
 	}
 
-	var r0 core.Paged[models.Flaw]
+	var r0 core.Paged[models.DependencyVulnerability]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.Flaw], error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)); ok {
 		return rf(tx, assetId, pageInfo, search, filter, sort)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.Flaw]); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.DependencyVulnerability]); ok {
 		r0 = rf(tx, assetId, pageInfo, search, filter, sort)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.Flaw])
+		r0 = ret.Get(0).(core.Paged[models.DependencyVulnerability])
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
@@ -490,33 +490,33 @@ func (_c *FlawRepository_GetFlawsByAssetIdPagedAndFlat_Call) Run(run func(tx *go
 	return _c
 }
 
-func (_c *FlawRepository_GetFlawsByAssetIdPagedAndFlat_Call) Return(_a0 core.Paged[models.Flaw], _a1 error) *FlawRepository_GetFlawsByAssetIdPagedAndFlat_Call {
+func (_c *FlawRepository_GetFlawsByAssetIdPagedAndFlat_Call) Return(_a0 core.Paged[models.DependencyVulnerability], _a1 error) *FlawRepository_GetFlawsByAssetIdPagedAndFlat_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FlawRepository_GetFlawsByAssetIdPagedAndFlat_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.Flaw], error)) *FlawRepository_GetFlawsByAssetIdPagedAndFlat_Call {
+func (_c *FlawRepository_GetFlawsByAssetIdPagedAndFlat_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)) *FlawRepository_GetFlawsByAssetIdPagedAndFlat_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetFlawsByOrgIdPaged provides a mock function with given fields: tx, userAllowedProjectIds, pageInfo, search, filter, sort
-func (_m *FlawRepository) GetFlawsByOrgIdPaged(tx *gorm.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+func (_m *FlawRepository) GetFlawsByOrgIdPaged(tx *gorm.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error) {
 	ret := _m.Called(tx, userAllowedProjectIds, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetFlawsByOrgIdPaged")
 	}
 
-	var r0 core.Paged[models.Flaw]
+	var r0 core.Paged[models.DependencyVulnerability]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.Flaw], error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)); ok {
 		return rf(tx, userAllowedProjectIds, pageInfo, search, filter, sort)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.Flaw]); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.DependencyVulnerability]); ok {
 		r0 = rf(tx, userAllowedProjectIds, pageInfo, search, filter, sort)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.Flaw])
+		r0 = ret.Get(0).(core.Paged[models.DependencyVulnerability])
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
@@ -551,33 +551,33 @@ func (_c *FlawRepository_GetFlawsByOrgIdPaged_Call) Run(run func(tx *gorm.DB, us
 	return _c
 }
 
-func (_c *FlawRepository_GetFlawsByOrgIdPaged_Call) Return(_a0 core.Paged[models.Flaw], _a1 error) *FlawRepository_GetFlawsByOrgIdPaged_Call {
+func (_c *FlawRepository_GetFlawsByOrgIdPaged_Call) Return(_a0 core.Paged[models.DependencyVulnerability], _a1 error) *FlawRepository_GetFlawsByOrgIdPaged_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FlawRepository_GetFlawsByOrgIdPaged_Call) RunAndReturn(run func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.Flaw], error)) *FlawRepository_GetFlawsByOrgIdPaged_Call {
+func (_c *FlawRepository_GetFlawsByOrgIdPaged_Call) RunAndReturn(run func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)) *FlawRepository_GetFlawsByOrgIdPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetFlawsByProjectIdPaged provides a mock function with given fields: tx, projectID, pageInfo, search, filter, sort
-func (_m *FlawRepository) GetFlawsByProjectIdPaged(tx *gorm.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+func (_m *FlawRepository) GetFlawsByProjectIdPaged(tx *gorm.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error) {
 	ret := _m.Called(tx, projectID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetFlawsByProjectIdPaged")
 	}
 
-	var r0 core.Paged[models.Flaw]
+	var r0 core.Paged[models.DependencyVulnerability]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.Flaw], error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)); ok {
 		return rf(tx, projectID, pageInfo, search, filter, sort)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.Flaw]); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.DependencyVulnerability]); ok {
 		r0 = rf(tx, projectID, pageInfo, search, filter, sort)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.Flaw])
+		r0 = ret.Get(0).(core.Paged[models.DependencyVulnerability])
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
@@ -612,34 +612,34 @@ func (_c *FlawRepository_GetFlawsByProjectIdPaged_Call) Run(run func(tx *gorm.DB
 	return _c
 }
 
-func (_c *FlawRepository_GetFlawsByProjectIdPaged_Call) Return(_a0 core.Paged[models.Flaw], _a1 error) *FlawRepository_GetFlawsByProjectIdPaged_Call {
+func (_c *FlawRepository_GetFlawsByProjectIdPaged_Call) Return(_a0 core.Paged[models.DependencyVulnerability], _a1 error) *FlawRepository_GetFlawsByProjectIdPaged_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FlawRepository_GetFlawsByProjectIdPaged_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.Flaw], error)) *FlawRepository_GetFlawsByProjectIdPaged_Call {
+func (_c *FlawRepository_GetFlawsByProjectIdPaged_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)) *FlawRepository_GetFlawsByProjectIdPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function with given fields: ids
-func (_m *FlawRepository) List(ids []string) ([]models.Flaw, error) {
+func (_m *FlawRepository) List(ids []string) ([]models.DependencyVulnerability, error) {
 	ret := _m.Called(ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []models.Flaw
+	var r0 []models.DependencyVulnerability
 	var r1 error
-	if rf, ok := ret.Get(0).(func([]string) ([]models.Flaw, error)); ok {
+	if rf, ok := ret.Get(0).(func([]string) ([]models.DependencyVulnerability, error)); ok {
 		return rf(ids)
 	}
-	if rf, ok := ret.Get(0).(func([]string) []models.Flaw); ok {
+	if rf, ok := ret.Get(0).(func([]string) []models.DependencyVulnerability); ok {
 		r0 = rf(ids)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Flaw)
+			r0 = ret.Get(0).([]models.DependencyVulnerability)
 		}
 	}
 
@@ -670,33 +670,33 @@ func (_c *FlawRepository_List_Call) Run(run func(ids []string)) *FlawRepository_
 	return _c
 }
 
-func (_c *FlawRepository_List_Call) Return(_a0 []models.Flaw, _a1 error) *FlawRepository_List_Call {
+func (_c *FlawRepository_List_Call) Return(_a0 []models.DependencyVulnerability, _a1 error) *FlawRepository_List_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FlawRepository_List_Call) RunAndReturn(run func([]string) ([]models.Flaw, error)) *FlawRepository_List_Call {
+func (_c *FlawRepository_List_Call) RunAndReturn(run func([]string) ([]models.DependencyVulnerability, error)) *FlawRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function with given fields: id
-func (_m *FlawRepository) Read(id string) (models.Flaw, error) {
+func (_m *FlawRepository) Read(id string) (models.DependencyVulnerability, error) {
 	ret := _m.Called(id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
 	}
 
-	var r0 models.Flaw
+	var r0 models.DependencyVulnerability
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string) (models.Flaw, error)); ok {
+	if rf, ok := ret.Get(0).(func(string) (models.DependencyVulnerability, error)); ok {
 		return rf(id)
 	}
-	if rf, ok := ret.Get(0).(func(string) models.Flaw); ok {
+	if rf, ok := ret.Get(0).(func(string) models.DependencyVulnerability); ok {
 		r0 = rf(id)
 	} else {
-		r0 = ret.Get(0).(models.Flaw)
+		r0 = ret.Get(0).(models.DependencyVulnerability)
 	}
 
 	if rf, ok := ret.Get(1).(func(string) error); ok {
@@ -726,18 +726,18 @@ func (_c *FlawRepository_Read_Call) Run(run func(id string)) *FlawRepository_Rea
 	return _c
 }
 
-func (_c *FlawRepository_Read_Call) Return(_a0 models.Flaw, _a1 error) *FlawRepository_Read_Call {
+func (_c *FlawRepository_Read_Call) Return(_a0 models.DependencyVulnerability, _a1 error) *FlawRepository_Read_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FlawRepository_Read_Call) RunAndReturn(run func(string) (models.Flaw, error)) *FlawRepository_Read_Call {
+func (_c *FlawRepository_Read_Call) RunAndReturn(run func(string) (models.DependencyVulnerability, error)) *FlawRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function with given fields: tx, t
-func (_m *FlawRepository) Save(tx *gorm.DB, t *models.Flaw) error {
+func (_m *FlawRepository) Save(tx *gorm.DB, t *models.DependencyVulnerability) error {
 	ret := _m.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -745,7 +745,7 @@ func (_m *FlawRepository) Save(tx *gorm.DB, t *models.Flaw) error {
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.Flaw) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.DependencyVulnerability) error); ok {
 		r0 = rf(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -766,9 +766,9 @@ func (_e *FlawRepository_Expecter) Save(tx interface{}, t interface{}) *FlawRepo
 	return &FlawRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
-func (_c *FlawRepository_Save_Call) Run(run func(tx *gorm.DB, t *models.Flaw)) *FlawRepository_Save_Call {
+func (_c *FlawRepository_Save_Call) Run(run func(tx *gorm.DB, t *models.DependencyVulnerability)) *FlawRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(*models.Flaw))
+		run(args[0].(*gorm.DB), args[1].(*models.DependencyVulnerability))
 	})
 	return _c
 }
@@ -778,13 +778,13 @@ func (_c *FlawRepository_Save_Call) Return(_a0 error) *FlawRepository_Save_Call 
 	return _c
 }
 
-func (_c *FlawRepository_Save_Call) RunAndReturn(run func(*gorm.DB, *models.Flaw) error) *FlawRepository_Save_Call {
+func (_c *FlawRepository_Save_Call) RunAndReturn(run func(*gorm.DB, *models.DependencyVulnerability) error) *FlawRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function with given fields: tx, ts
-func (_m *FlawRepository) SaveBatch(tx *gorm.DB, ts []models.Flaw) error {
+func (_m *FlawRepository) SaveBatch(tx *gorm.DB, ts []models.DependencyVulnerability) error {
 	ret := _m.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -792,7 +792,7 @@ func (_m *FlawRepository) SaveBatch(tx *gorm.DB, ts []models.Flaw) error {
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.Flaw) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.DependencyVulnerability) error); ok {
 		r0 = rf(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -813,9 +813,9 @@ func (_e *FlawRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *Fl
 	return &FlawRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
-func (_c *FlawRepository_SaveBatch_Call) Run(run func(tx *gorm.DB, ts []models.Flaw)) *FlawRepository_SaveBatch_Call {
+func (_c *FlawRepository_SaveBatch_Call) Run(run func(tx *gorm.DB, ts []models.DependencyVulnerability)) *FlawRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].([]models.Flaw))
+		run(args[0].(*gorm.DB), args[1].([]models.DependencyVulnerability))
 	})
 	return _c
 }
@@ -825,7 +825,7 @@ func (_c *FlawRepository_SaveBatch_Call) Return(_a0 error) *FlawRepository_SaveB
 	return _c
 }
 
-func (_c *FlawRepository_SaveBatch_Call) RunAndReturn(run func(*gorm.DB, []models.Flaw) error) *FlawRepository_SaveBatch_Call {
+func (_c *FlawRepository_SaveBatch_Call) RunAndReturn(run func(*gorm.DB, []models.DependencyVulnerability) error) *FlawRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -876,9 +876,9 @@ func (_c *FlawRepository_Transaction_Call) RunAndReturn(run func(func(*gorm.DB) 
 	return _c
 }
 
-// NewFlawRepository creates a new instance of FlawRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
+// NewDependencyVulnerability creates a new instance of FlawRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
-func NewFlawRepository(t interface {
+func NewDependencyVulnerability(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *FlawRepository {

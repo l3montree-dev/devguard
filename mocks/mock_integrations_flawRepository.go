@@ -24,22 +24,22 @@ func (_m *IntegrationsFlawRepository) EXPECT() *IntegrationsFlawRepository_Expec
 }
 
 // FindByTicketID provides a mock function with given fields: tx, ticketID
-func (_m *IntegrationsFlawRepository) FindByTicketID(tx *gorm.DB, ticketID string) (models.Flaw, error) {
+func (_m *IntegrationsFlawRepository) FindByTicketID(tx *gorm.DB, ticketID string) (models.DependencyVulnerability, error) {
 	ret := _m.Called(tx, ticketID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByTicketID")
 	}
 
-	var r0 models.Flaw
+	var r0 models.DependencyVulnerability
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string) (models.Flaw, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string) (models.DependencyVulnerability, error)); ok {
 		return rf(tx, ticketID)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string) models.Flaw); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string) models.DependencyVulnerability); ok {
 		r0 = rf(tx, ticketID)
 	} else {
-		r0 = ret.Get(0).(models.Flaw)
+		r0 = ret.Get(0).(models.DependencyVulnerability)
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, string) error); ok {
@@ -70,12 +70,12 @@ func (_c *IntegrationsFlawRepository_FindByTicketID_Call) Run(run func(tx *gorm.
 	return _c
 }
 
-func (_c *IntegrationsFlawRepository_FindByTicketID_Call) Return(_a0 models.Flaw, _a1 error) *IntegrationsFlawRepository_FindByTicketID_Call {
+func (_c *IntegrationsFlawRepository_FindByTicketID_Call) Return(_a0 models.DependencyVulnerability, _a1 error) *IntegrationsFlawRepository_FindByTicketID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *IntegrationsFlawRepository_FindByTicketID_Call) RunAndReturn(run func(*gorm.DB, string) (models.Flaw, error)) *IntegrationsFlawRepository_FindByTicketID_Call {
+func (_c *IntegrationsFlawRepository_FindByTicketID_Call) RunAndReturn(run func(*gorm.DB, string) (models.DependencyVulnerability, error)) *IntegrationsFlawRepository_FindByTicketID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -138,22 +138,22 @@ func (_c *IntegrationsFlawRepository_GetOrgFromFlawID_Call) RunAndReturn(run fun
 }
 
 // Read provides a mock function with given fields: id
-func (_m *IntegrationsFlawRepository) Read(id string) (models.Flaw, error) {
+func (_m *IntegrationsFlawRepository) Read(id string) (models.DependencyVulnerability, error) {
 	ret := _m.Called(id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
 	}
 
-	var r0 models.Flaw
+	var r0 models.DependencyVulnerability
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string) (models.Flaw, error)); ok {
+	if rf, ok := ret.Get(0).(func(string) (models.DependencyVulnerability, error)); ok {
 		return rf(id)
 	}
-	if rf, ok := ret.Get(0).(func(string) models.Flaw); ok {
+	if rf, ok := ret.Get(0).(func(string) models.DependencyVulnerability); ok {
 		r0 = rf(id)
 	} else {
-		r0 = ret.Get(0).(models.Flaw)
+		r0 = ret.Get(0).(models.DependencyVulnerability)
 	}
 
 	if rf, ok := ret.Get(1).(func(string) error); ok {
@@ -183,18 +183,18 @@ func (_c *IntegrationsFlawRepository_Read_Call) Run(run func(id string)) *Integr
 	return _c
 }
 
-func (_c *IntegrationsFlawRepository_Read_Call) Return(_a0 models.Flaw, _a1 error) *IntegrationsFlawRepository_Read_Call {
+func (_c *IntegrationsFlawRepository_Read_Call) Return(_a0 models.DependencyVulnerability, _a1 error) *IntegrationsFlawRepository_Read_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *IntegrationsFlawRepository_Read_Call) RunAndReturn(run func(string) (models.Flaw, error)) *IntegrationsFlawRepository_Read_Call {
+func (_c *IntegrationsFlawRepository_Read_Call) RunAndReturn(run func(string) (models.DependencyVulnerability, error)) *IntegrationsFlawRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function with given fields: db, flaw
-func (_m *IntegrationsFlawRepository) Save(db *gorm.DB, flaw *models.Flaw) error {
+func (_m *IntegrationsFlawRepository) Save(db *gorm.DB, flaw *models.DependencyVulnerability) error {
 	ret := _m.Called(db, flaw)
 
 	if len(ret) == 0 {
@@ -202,7 +202,7 @@ func (_m *IntegrationsFlawRepository) Save(db *gorm.DB, flaw *models.Flaw) error
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.Flaw) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.DependencyVulnerability) error); ok {
 		r0 = rf(db, flaw)
 	} else {
 		r0 = ret.Error(0)
@@ -223,9 +223,9 @@ func (_e *IntegrationsFlawRepository_Expecter) Save(db interface{}, flaw interfa
 	return &IntegrationsFlawRepository_Save_Call{Call: _e.mock.On("Save", db, flaw)}
 }
 
-func (_c *IntegrationsFlawRepository_Save_Call) Run(run func(db *gorm.DB, flaw *models.Flaw)) *IntegrationsFlawRepository_Save_Call {
+func (_c *IntegrationsFlawRepository_Save_Call) Run(run func(db *gorm.DB, flaw *models.DependencyVulnerability)) *IntegrationsFlawRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(*models.Flaw))
+		run(args[0].(*gorm.DB), args[1].(*models.DependencyVulnerability))
 	})
 	return _c
 }
@@ -235,7 +235,7 @@ func (_c *IntegrationsFlawRepository_Save_Call) Return(_a0 error) *IntegrationsF
 	return _c
 }
 
-func (_c *IntegrationsFlawRepository_Save_Call) RunAndReturn(run func(*gorm.DB, *models.Flaw) error) *IntegrationsFlawRepository_Save_Call {
+func (_c *IntegrationsFlawRepository_Save_Call) RunAndReturn(run func(*gorm.DB, *models.DependencyVulnerability) error) *IntegrationsFlawRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

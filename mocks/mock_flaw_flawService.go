@@ -22,7 +22,7 @@ func (_m *FlawFlawService) EXPECT() *FlawFlawService_Expecter {
 }
 
 // UpdateFlawState provides a mock function with given fields: tx, userID, _a2, statusType, justification
-func (_m *FlawFlawService) UpdateFlawState(tx *gorm.DB, userID string, _a2 *models.Flaw, statusType string, justification string) (models.FlawEvent, error) {
+func (_m *FlawFlawService) UpdateFlawState(tx *gorm.DB, userID string, _a2 *models.DependencyVulnerability, statusType string, justification string) (models.FlawEvent, error) {
 	ret := _m.Called(tx, userID, _a2, statusType, justification)
 
 	if len(ret) == 0 {
@@ -31,16 +31,16 @@ func (_m *FlawFlawService) UpdateFlawState(tx *gorm.DB, userID string, _a2 *mode
 
 	var r0 models.FlawEvent
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.Flaw, string, string) (models.FlawEvent, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.DependencyVulnerability, string, string) (models.FlawEvent, error)); ok {
 		return rf(tx, userID, _a2, statusType, justification)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.Flaw, string, string) models.FlawEvent); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.DependencyVulnerability, string, string) models.FlawEvent); ok {
 		r0 = rf(tx, userID, _a2, statusType, justification)
 	} else {
 		r0 = ret.Get(0).(models.FlawEvent)
 	}
 
-	if rf, ok := ret.Get(1).(func(*gorm.DB, string, *models.Flaw, string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(*gorm.DB, string, *models.DependencyVulnerability, string, string) error); ok {
 		r1 = rf(tx, userID, _a2, statusType, justification)
 	} else {
 		r1 = ret.Error(1)
@@ -64,9 +64,9 @@ func (_e *FlawFlawService_Expecter) UpdateFlawState(tx interface{}, userID inter
 	return &FlawFlawService_UpdateFlawState_Call{Call: _e.mock.On("UpdateFlawState", tx, userID, _a2, statusType, justification)}
 }
 
-func (_c *FlawFlawService_UpdateFlawState_Call) Run(run func(tx *gorm.DB, userID string, _a2 *models.Flaw, statusType string, justification string)) *FlawFlawService_UpdateFlawState_Call {
+func (_c *FlawFlawService_UpdateFlawState_Call) Run(run func(tx *gorm.DB, userID string, _a2 *models.DependencyVulnerability, statusType string, justification string)) *FlawFlawService_UpdateFlawState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].(*models.Flaw), args[3].(string), args[4].(string))
+		run(args[0].(*gorm.DB), args[1].(string), args[2].(*models.DependencyVulnerability), args[3].(string), args[4].(string))
 	})
 	return _c
 }
@@ -76,7 +76,7 @@ func (_c *FlawFlawService_UpdateFlawState_Call) Return(_a0 models.FlawEvent, _a1
 	return _c
 }
 
-func (_c *FlawFlawService_UpdateFlawState_Call) RunAndReturn(run func(*gorm.DB, string, *models.Flaw, string, string) (models.FlawEvent, error)) *FlawFlawService_UpdateFlawState_Call {
+func (_c *FlawFlawService_UpdateFlawState_Call) RunAndReturn(run func(*gorm.DB, string, *models.DependencyVulnerability, string, string) (models.FlawEvent, error)) *FlawFlawService_UpdateFlawState_Call {
 	_c.Call.Return(run)
 	return _c
 }

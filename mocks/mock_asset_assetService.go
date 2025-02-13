@@ -74,7 +74,7 @@ func (_c *AssetAssetService_BuildSBOM_Call) RunAndReturn(run func(models.Asset, 
 }
 
 // BuildVeX provides a mock function with given fields: _a0, version, orgName, components, flaws
-func (_m *AssetAssetService) BuildVeX(_a0 models.Asset, version string, orgName string, components []models.ComponentDependency, flaws []models.Flaw) *cyclonedx.BOM {
+func (_m *AssetAssetService) BuildVeX(_a0 models.Asset, version string, orgName string, components []models.ComponentDependency, flaws []models.DependencyVulnerability) *cyclonedx.BOM {
 	ret := _m.Called(_a0, version, orgName, components, flaws)
 
 	if len(ret) == 0 {
@@ -82,7 +82,7 @@ func (_m *AssetAssetService) BuildVeX(_a0 models.Asset, version string, orgName 
 	}
 
 	var r0 *cyclonedx.BOM
-	if rf, ok := ret.Get(0).(func(models.Asset, string, string, []models.ComponentDependency, []models.Flaw) *cyclonedx.BOM); ok {
+	if rf, ok := ret.Get(0).(func(models.Asset, string, string, []models.ComponentDependency, []models.DependencyVulnerability) *cyclonedx.BOM); ok {
 		r0 = rf(_a0, version, orgName, components, flaws)
 	} else {
 		if ret.Get(0) != nil {
@@ -108,9 +108,9 @@ func (_e *AssetAssetService_Expecter) BuildVeX(_a0 interface{}, version interfac
 	return &AssetAssetService_BuildVeX_Call{Call: _e.mock.On("BuildVeX", _a0, version, orgName, components, flaws)}
 }
 
-func (_c *AssetAssetService_BuildVeX_Call) Run(run func(_a0 models.Asset, version string, orgName string, components []models.ComponentDependency, flaws []models.Flaw)) *AssetAssetService_BuildVeX_Call {
+func (_c *AssetAssetService_BuildVeX_Call) Run(run func(_a0 models.Asset, version string, orgName string, components []models.ComponentDependency, flaws []models.DependencyVulnerability)) *AssetAssetService_BuildVeX_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(models.Asset), args[1].(string), args[2].(string), args[3].([]models.ComponentDependency), args[4].([]models.Flaw))
+		run(args[0].(models.Asset), args[1].(string), args[2].(string), args[3].([]models.ComponentDependency), args[4].([]models.DependencyVulnerability))
 	})
 	return _c
 }
@@ -120,7 +120,7 @@ func (_c *AssetAssetService_BuildVeX_Call) Return(_a0 *cyclonedx.BOM) *AssetAsse
 	return _c
 }
 
-func (_c *AssetAssetService_BuildVeX_Call) RunAndReturn(run func(models.Asset, string, string, []models.ComponentDependency, []models.Flaw) *cyclonedx.BOM) *AssetAssetService_BuildVeX_Call {
+func (_c *AssetAssetService_BuildVeX_Call) RunAndReturn(run func(models.Asset, string, string, []models.ComponentDependency, []models.DependencyVulnerability) *cyclonedx.BOM) *AssetAssetService_BuildVeX_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -1,4 +1,4 @@
-package flaw
+package DependencyVuln
 
 import (
 	"time"

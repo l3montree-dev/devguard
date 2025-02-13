@@ -24,23 +24,23 @@ func (_m *StatisticsFlawRepository) EXPECT() *StatisticsFlawRepository_Expecter 
 }
 
 // GetAllFlawsByAssetID provides a mock function with given fields: tx, assetID
-func (_m *StatisticsFlawRepository) GetAllFlawsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.Flaw, error) {
+func (_m *StatisticsFlawRepository) GetAllFlawsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error) {
 	ret := _m.Called(tx, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllFlawsByAssetID")
 	}
 
-	var r0 []models.Flaw
+	var r0 []models.DependencyVulnerability
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) ([]models.Flaw, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) ([]models.DependencyVulnerability, error)); ok {
 		return rf(tx, assetID)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) []models.Flaw); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) []models.DependencyVulnerability); ok {
 		r0 = rf(tx, assetID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Flaw)
+			r0 = ret.Get(0).([]models.DependencyVulnerability)
 		}
 	}
 
@@ -72,34 +72,34 @@ func (_c *StatisticsFlawRepository_GetAllFlawsByAssetID_Call) Run(run func(tx *g
 	return _c
 }
 
-func (_c *StatisticsFlawRepository_GetAllFlawsByAssetID_Call) Return(_a0 []models.Flaw, _a1 error) *StatisticsFlawRepository_GetAllFlawsByAssetID_Call {
+func (_c *StatisticsFlawRepository_GetAllFlawsByAssetID_Call) Return(_a0 []models.DependencyVulnerability, _a1 error) *StatisticsFlawRepository_GetAllFlawsByAssetID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *StatisticsFlawRepository_GetAllFlawsByAssetID_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.Flaw, error)) *StatisticsFlawRepository_GetAllFlawsByAssetID_Call {
+func (_c *StatisticsFlawRepository_GetAllFlawsByAssetID_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.DependencyVulnerability, error)) *StatisticsFlawRepository_GetAllFlawsByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetAllOpenFlawsByAssetID provides a mock function with given fields: tx, assetID
-func (_m *StatisticsFlawRepository) GetAllOpenFlawsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.Flaw, error) {
+func (_m *StatisticsFlawRepository) GetAllOpenFlawsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error) {
 	ret := _m.Called(tx, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllOpenFlawsByAssetID")
 	}
 
-	var r0 []models.Flaw
+	var r0 []models.DependencyVulnerability
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) ([]models.Flaw, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) ([]models.DependencyVulnerability, error)); ok {
 		return rf(tx, assetID)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) []models.Flaw); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) []models.DependencyVulnerability); ok {
 		r0 = rf(tx, assetID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Flaw)
+			r0 = ret.Get(0).([]models.DependencyVulnerability)
 		}
 	}
 
@@ -131,12 +131,12 @@ func (_c *StatisticsFlawRepository_GetAllOpenFlawsByAssetID_Call) Run(run func(t
 	return _c
 }
 
-func (_c *StatisticsFlawRepository_GetAllOpenFlawsByAssetID_Call) Return(_a0 []models.Flaw, _a1 error) *StatisticsFlawRepository_GetAllOpenFlawsByAssetID_Call {
+func (_c *StatisticsFlawRepository_GetAllOpenFlawsByAssetID_Call) Return(_a0 []models.DependencyVulnerability, _a1 error) *StatisticsFlawRepository_GetAllOpenFlawsByAssetID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *StatisticsFlawRepository_GetAllOpenFlawsByAssetID_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.Flaw, error)) *StatisticsFlawRepository_GetAllOpenFlawsByAssetID_Call {
+func (_c *StatisticsFlawRepository_GetAllOpenFlawsByAssetID_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.DependencyVulnerability, error)) *StatisticsFlawRepository_GetAllOpenFlawsByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }

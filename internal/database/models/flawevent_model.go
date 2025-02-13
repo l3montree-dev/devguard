@@ -67,7 +67,7 @@ func (m FlawEvent) TableName() string {
 	return "flaw_events"
 }
 
-func (e FlawEvent) Apply(flaw *Flaw) {
+func (e FlawEvent) Apply(flaw *DependencyVulnerability) {
 	switch e.Type {
 	case EventTypeFixed:
 		flaw.State = FlawStateFixed

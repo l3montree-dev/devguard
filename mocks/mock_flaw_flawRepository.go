@@ -71,23 +71,23 @@ func (_c *FlawFlawRepository_Begin_Call) RunAndReturn(run func() *gorm.DB) *Flaw
 }
 
 // GetAllFlawsByAssetID provides a mock function with given fields: tx, assetID
-func (_m *FlawFlawRepository) GetAllFlawsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.Flaw, error) {
+func (_m *FlawFlawRepository) GetAllFlawsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error) {
 	ret := _m.Called(tx, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllFlawsByAssetID")
 	}
 
-	var r0 []models.Flaw
+	var r0 []models.DependencyVulnerability
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) ([]models.Flaw, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) ([]models.DependencyVulnerability, error)); ok {
 		return rf(tx, assetID)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) []models.Flaw); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) []models.DependencyVulnerability); ok {
 		r0 = rf(tx, assetID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Flaw)
+			r0 = ret.Get(0).([]models.DependencyVulnerability)
 		}
 	}
 
@@ -119,18 +119,18 @@ func (_c *FlawFlawRepository_GetAllFlawsByAssetID_Call) Run(run func(tx *gorm.DB
 	return _c
 }
 
-func (_c *FlawFlawRepository_GetAllFlawsByAssetID_Call) Return(_a0 []models.Flaw, _a1 error) *FlawFlawRepository_GetAllFlawsByAssetID_Call {
+func (_c *FlawFlawRepository_GetAllFlawsByAssetID_Call) Return(_a0 []models.DependencyVulnerability, _a1 error) *FlawFlawRepository_GetAllFlawsByAssetID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FlawFlawRepository_GetAllFlawsByAssetID_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.Flaw, error)) *FlawFlawRepository_GetAllFlawsByAssetID_Call {
+func (_c *FlawFlawRepository_GetAllFlawsByAssetID_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.DependencyVulnerability, error)) *FlawFlawRepository_GetAllFlawsByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function with given fields: db, flaws
-func (_m *FlawFlawRepository) Save(db *gorm.DB, flaws *models.Flaw) error {
+func (_m *FlawFlawRepository) Save(db *gorm.DB, flaws *models.DependencyVulnerability) error {
 	ret := _m.Called(db, flaws)
 
 	if len(ret) == 0 {
@@ -138,7 +138,7 @@ func (_m *FlawFlawRepository) Save(db *gorm.DB, flaws *models.Flaw) error {
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.Flaw) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.DependencyVulnerability) error); ok {
 		r0 = rf(db, flaws)
 	} else {
 		r0 = ret.Error(0)
@@ -159,9 +159,9 @@ func (_e *FlawFlawRepository_Expecter) Save(db interface{}, flaws interface{}) *
 	return &FlawFlawRepository_Save_Call{Call: _e.mock.On("Save", db, flaws)}
 }
 
-func (_c *FlawFlawRepository_Save_Call) Run(run func(db *gorm.DB, flaws *models.Flaw)) *FlawFlawRepository_Save_Call {
+func (_c *FlawFlawRepository_Save_Call) Run(run func(db *gorm.DB, flaws *models.DependencyVulnerability)) *FlawFlawRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(*models.Flaw))
+		run(args[0].(*gorm.DB), args[1].(*models.DependencyVulnerability))
 	})
 	return _c
 }
@@ -171,13 +171,13 @@ func (_c *FlawFlawRepository_Save_Call) Return(_a0 error) *FlawFlawRepository_Sa
 	return _c
 }
 
-func (_c *FlawFlawRepository_Save_Call) RunAndReturn(run func(*gorm.DB, *models.Flaw) error) *FlawFlawRepository_Save_Call {
+func (_c *FlawFlawRepository_Save_Call) RunAndReturn(run func(*gorm.DB, *models.DependencyVulnerability) error) *FlawFlawRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function with given fields: db, flaws
-func (_m *FlawFlawRepository) SaveBatch(db *gorm.DB, flaws []models.Flaw) error {
+func (_m *FlawFlawRepository) SaveBatch(db *gorm.DB, flaws []models.DependencyVulnerability) error {
 	ret := _m.Called(db, flaws)
 
 	if len(ret) == 0 {
@@ -185,7 +185,7 @@ func (_m *FlawFlawRepository) SaveBatch(db *gorm.DB, flaws []models.Flaw) error 
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.Flaw) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.DependencyVulnerability) error); ok {
 		r0 = rf(db, flaws)
 	} else {
 		r0 = ret.Error(0)
@@ -206,9 +206,9 @@ func (_e *FlawFlawRepository_Expecter) SaveBatch(db interface{}, flaws interface
 	return &FlawFlawRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", db, flaws)}
 }
 
-func (_c *FlawFlawRepository_SaveBatch_Call) Run(run func(db *gorm.DB, flaws []models.Flaw)) *FlawFlawRepository_SaveBatch_Call {
+func (_c *FlawFlawRepository_SaveBatch_Call) Run(run func(db *gorm.DB, flaws []models.DependencyVulnerability)) *FlawFlawRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].([]models.Flaw))
+		run(args[0].(*gorm.DB), args[1].([]models.DependencyVulnerability))
 	})
 	return _c
 }
@@ -218,7 +218,7 @@ func (_c *FlawFlawRepository_SaveBatch_Call) Return(_a0 error) *FlawFlawReposito
 	return _c
 }
 
-func (_c *FlawFlawRepository_SaveBatch_Call) RunAndReturn(run func(*gorm.DB, []models.Flaw) error) *FlawFlawRepository_SaveBatch_Call {
+func (_c *FlawFlawRepository_SaveBatch_Call) RunAndReturn(run func(*gorm.DB, []models.DependencyVulnerability) error) *FlawFlawRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

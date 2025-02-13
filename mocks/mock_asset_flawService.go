@@ -22,7 +22,7 @@ func (_m *AssetFlawService) EXPECT() *AssetFlawService_Expecter {
 }
 
 // RecalculateRawRiskAssessment provides a mock function with given fields: tx, userID, flaws, justification, _a4
-func (_m *AssetFlawService) RecalculateRawRiskAssessment(tx *gorm.DB, userID string, flaws []models.Flaw, justification string, _a4 models.Asset) error {
+func (_m *AssetFlawService) RecalculateRawRiskAssessment(tx *gorm.DB, userID string, flaws []models.DependencyVulnerability, justification string, _a4 models.Asset) error {
 	ret := _m.Called(tx, userID, flaws, justification, _a4)
 
 	if len(ret) == 0 {
@@ -30,7 +30,7 @@ func (_m *AssetFlawService) RecalculateRawRiskAssessment(tx *gorm.DB, userID str
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, []models.Flaw, string, models.Asset) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, []models.DependencyVulnerability, string, models.Asset) error); ok {
 		r0 = rf(tx, userID, flaws, justification, _a4)
 	} else {
 		r0 = ret.Error(0)
@@ -54,9 +54,9 @@ func (_e *AssetFlawService_Expecter) RecalculateRawRiskAssessment(tx interface{}
 	return &AssetFlawService_RecalculateRawRiskAssessment_Call{Call: _e.mock.On("RecalculateRawRiskAssessment", tx, userID, flaws, justification, _a4)}
 }
 
-func (_c *AssetFlawService_RecalculateRawRiskAssessment_Call) Run(run func(tx *gorm.DB, userID string, flaws []models.Flaw, justification string, _a4 models.Asset)) *AssetFlawService_RecalculateRawRiskAssessment_Call {
+func (_c *AssetFlawService_RecalculateRawRiskAssessment_Call) Run(run func(tx *gorm.DB, userID string, flaws []models.DependencyVulnerability, justification string, _a4 models.Asset)) *AssetFlawService_RecalculateRawRiskAssessment_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].([]models.Flaw), args[3].(string), args[4].(models.Asset))
+		run(args[0].(*gorm.DB), args[1].(string), args[2].([]models.DependencyVulnerability), args[3].(string), args[4].(models.Asset))
 	})
 	return _c
 }
@@ -66,13 +66,13 @@ func (_c *AssetFlawService_RecalculateRawRiskAssessment_Call) Return(_a0 error) 
 	return _c
 }
 
-func (_c *AssetFlawService_RecalculateRawRiskAssessment_Call) RunAndReturn(run func(*gorm.DB, string, []models.Flaw, string, models.Asset) error) *AssetFlawService_RecalculateRawRiskAssessment_Call {
+func (_c *AssetFlawService_RecalculateRawRiskAssessment_Call) RunAndReturn(run func(*gorm.DB, string, []models.DependencyVulnerability, string, models.Asset) error) *AssetFlawService_RecalculateRawRiskAssessment_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateFlawState provides a mock function with given fields: tx, userID, flaw, statusType, justification
-func (_m *AssetFlawService) UpdateFlawState(tx *gorm.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error) {
+func (_m *AssetFlawService) UpdateFlawState(tx *gorm.DB, userID string, flaw *models.DependencyVulnerability, statusType string, justification string) (models.FlawEvent, error) {
 	ret := _m.Called(tx, userID, flaw, statusType, justification)
 
 	if len(ret) == 0 {
@@ -81,16 +81,16 @@ func (_m *AssetFlawService) UpdateFlawState(tx *gorm.DB, userID string, flaw *mo
 
 	var r0 models.FlawEvent
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.Flaw, string, string) (models.FlawEvent, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.DependencyVulnerability, string, string) (models.FlawEvent, error)); ok {
 		return rf(tx, userID, flaw, statusType, justification)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.Flaw, string, string) models.FlawEvent); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.DependencyVulnerability, string, string) models.FlawEvent); ok {
 		r0 = rf(tx, userID, flaw, statusType, justification)
 	} else {
 		r0 = ret.Get(0).(models.FlawEvent)
 	}
 
-	if rf, ok := ret.Get(1).(func(*gorm.DB, string, *models.Flaw, string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(*gorm.DB, string, *models.DependencyVulnerability, string, string) error); ok {
 		r1 = rf(tx, userID, flaw, statusType, justification)
 	} else {
 		r1 = ret.Error(1)
@@ -114,9 +114,9 @@ func (_e *AssetFlawService_Expecter) UpdateFlawState(tx interface{}, userID inte
 	return &AssetFlawService_UpdateFlawState_Call{Call: _e.mock.On("UpdateFlawState", tx, userID, flaw, statusType, justification)}
 }
 
-func (_c *AssetFlawService_UpdateFlawState_Call) Run(run func(tx *gorm.DB, userID string, flaw *models.Flaw, statusType string, justification string)) *AssetFlawService_UpdateFlawState_Call {
+func (_c *AssetFlawService_UpdateFlawState_Call) Run(run func(tx *gorm.DB, userID string, flaw *models.DependencyVulnerability, statusType string, justification string)) *AssetFlawService_UpdateFlawState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].(*models.Flaw), args[3].(string), args[4].(string))
+		run(args[0].(*gorm.DB), args[1].(string), args[2].(*models.DependencyVulnerability), args[3].(string), args[4].(string))
 	})
 	return _c
 }
@@ -126,13 +126,13 @@ func (_c *AssetFlawService_UpdateFlawState_Call) Return(_a0 models.FlawEvent, _a
 	return _c
 }
 
-func (_c *AssetFlawService_UpdateFlawState_Call) RunAndReturn(run func(*gorm.DB, string, *models.Flaw, string, string) (models.FlawEvent, error)) *AssetFlawService_UpdateFlawState_Call {
+func (_c *AssetFlawService_UpdateFlawState_Call) RunAndReturn(run func(*gorm.DB, string, *models.DependencyVulnerability, string, string) (models.FlawEvent, error)) *AssetFlawService_UpdateFlawState_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UserDetectedFlaws provides a mock function with given fields: tx, userID, flaws, _a3, doRiskManagement
-func (_m *AssetFlawService) UserDetectedFlaws(tx *gorm.DB, userID string, flaws []models.Flaw, _a3 models.Asset, doRiskManagement bool) error {
+func (_m *AssetFlawService) UserDetectedFlaws(tx *gorm.DB, userID string, flaws []models.DependencyVulnerability, _a3 models.Asset, doRiskManagement bool) error {
 	ret := _m.Called(tx, userID, flaws, _a3, doRiskManagement)
 
 	if len(ret) == 0 {
@@ -140,7 +140,7 @@ func (_m *AssetFlawService) UserDetectedFlaws(tx *gorm.DB, userID string, flaws 
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, []models.Flaw, models.Asset, bool) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, []models.DependencyVulnerability, models.Asset, bool) error); ok {
 		r0 = rf(tx, userID, flaws, _a3, doRiskManagement)
 	} else {
 		r0 = ret.Error(0)
@@ -164,9 +164,9 @@ func (_e *AssetFlawService_Expecter) UserDetectedFlaws(tx interface{}, userID in
 	return &AssetFlawService_UserDetectedFlaws_Call{Call: _e.mock.On("UserDetectedFlaws", tx, userID, flaws, _a3, doRiskManagement)}
 }
 
-func (_c *AssetFlawService_UserDetectedFlaws_Call) Run(run func(tx *gorm.DB, userID string, flaws []models.Flaw, _a3 models.Asset, doRiskManagement bool)) *AssetFlawService_UserDetectedFlaws_Call {
+func (_c *AssetFlawService_UserDetectedFlaws_Call) Run(run func(tx *gorm.DB, userID string, flaws []models.DependencyVulnerability, _a3 models.Asset, doRiskManagement bool)) *AssetFlawService_UserDetectedFlaws_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].([]models.Flaw), args[3].(models.Asset), args[4].(bool))
+		run(args[0].(*gorm.DB), args[1].(string), args[2].([]models.DependencyVulnerability), args[3].(models.Asset), args[4].(bool))
 	})
 	return _c
 }
@@ -176,13 +176,13 @@ func (_c *AssetFlawService_UserDetectedFlaws_Call) Return(_a0 error) *AssetFlawS
 	return _c
 }
 
-func (_c *AssetFlawService_UserDetectedFlaws_Call) RunAndReturn(run func(*gorm.DB, string, []models.Flaw, models.Asset, bool) error) *AssetFlawService_UserDetectedFlaws_Call {
+func (_c *AssetFlawService_UserDetectedFlaws_Call) RunAndReturn(run func(*gorm.DB, string, []models.DependencyVulnerability, models.Asset, bool) error) *AssetFlawService_UserDetectedFlaws_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UserFixedFlaws provides a mock function with given fields: tx, userID, flaws, doRiskManagement
-func (_m *AssetFlawService) UserFixedFlaws(tx *gorm.DB, userID string, flaws []models.Flaw, doRiskManagement bool) error {
+func (_m *AssetFlawService) UserFixedFlaws(tx *gorm.DB, userID string, flaws []models.DependencyVulnerability, doRiskManagement bool) error {
 	ret := _m.Called(tx, userID, flaws, doRiskManagement)
 
 	if len(ret) == 0 {
@@ -190,7 +190,7 @@ func (_m *AssetFlawService) UserFixedFlaws(tx *gorm.DB, userID string, flaws []m
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, []models.Flaw, bool) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, []models.DependencyVulnerability, bool) error); ok {
 		r0 = rf(tx, userID, flaws, doRiskManagement)
 	} else {
 		r0 = ret.Error(0)
@@ -213,9 +213,9 @@ func (_e *AssetFlawService_Expecter) UserFixedFlaws(tx interface{}, userID inter
 	return &AssetFlawService_UserFixedFlaws_Call{Call: _e.mock.On("UserFixedFlaws", tx, userID, flaws, doRiskManagement)}
 }
 
-func (_c *AssetFlawService_UserFixedFlaws_Call) Run(run func(tx *gorm.DB, userID string, flaws []models.Flaw, doRiskManagement bool)) *AssetFlawService_UserFixedFlaws_Call {
+func (_c *AssetFlawService_UserFixedFlaws_Call) Run(run func(tx *gorm.DB, userID string, flaws []models.DependencyVulnerability, doRiskManagement bool)) *AssetFlawService_UserFixedFlaws_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].([]models.Flaw), args[3].(bool))
+		run(args[0].(*gorm.DB), args[1].(string), args[2].([]models.DependencyVulnerability), args[3].(bool))
 	})
 	return _c
 }
@@ -225,7 +225,7 @@ func (_c *AssetFlawService_UserFixedFlaws_Call) Return(_a0 error) *AssetFlawServ
 	return _c
 }
 
-func (_c *AssetFlawService_UserFixedFlaws_Call) RunAndReturn(run func(*gorm.DB, string, []models.Flaw, bool) error) *AssetFlawService_UserFixedFlaws_Call {
+func (_c *AssetFlawService_UserFixedFlaws_Call) RunAndReturn(run func(*gorm.DB, string, []models.DependencyVulnerability, bool) error) *AssetFlawService_UserFixedFlaws_Call {
 	_c.Call.Return(run)
 	return _c
 }

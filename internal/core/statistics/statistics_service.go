@@ -19,7 +19,7 @@ type assetRepository interface {
 }
 
 type statisticsRepository interface {
-	TimeTravelFlawState(assetID uuid.UUID, time time.Time) ([]models.Flaw, error)
+	TimeTravelFlawState(assetID uuid.UUID, time time.Time) ([]models.DependencyVulnerability, error)
 	GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error)
 	AverageFixingTime(assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
@@ -35,8 +35,8 @@ type assetRiskHistoryRepository interface {
 }
 
 type flawRepository interface {
-	GetAllOpenFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
-	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
+	GetAllOpenFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
+	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
 }
 
 type projectRepository interface {
@@ -376,8 +376,8 @@ func (s *service) GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calcu
 		return FlawAggregationStateAndChange{}, results.Error()
 	}
 
-	now := results.GetValue(0).([]models.Flaw)
-	was := results.GetValue(1).([]models.Flaw)
+	now := results.GetValue(0).([]models.DependencyVulnerability)
+	was := results.GetValue(1).([]models.DependencyVulnerability)
 
 	nowState := calculateFlawAggregationState(now)
 	wasState := calculateFlawAggregationState(was)
@@ -388,7 +388,7 @@ func (s *service) GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calcu
 	}, nil
 }
 
-func calculateFlawAggregationState(flaws []models.Flaw) FlawAggregationState {
+func calculateFlawAggregationState(flaws []models.DependencyVulnerability) FlawAggregationState {
 	state := FlawAggregationState{}
 
 	for _, flaw := range flaws {

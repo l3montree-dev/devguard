@@ -12,7 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-func getFixedVersion(purlComparer *scan.PurlComparer, flaw models.Flaw) (*string, error) {
+func getFixedVersion(purlComparer *scan.PurlComparer, flaw models.DependencyVulnerability) (*string, error) {
 	// we only need to update the fixed version
 	// update the fixed version
 	affected, err := purlComparer.GetAffectedComponents(*flaw.ComponentPurl, "")
@@ -48,7 +48,7 @@ func UpdateComponentProperties(db database.DB) error {
 	assetRepository := repositories.NewAssetRepository(db)
 	purlComparer := scan.NewPurlComparer(db)
 	componentRepository := repositories.NewComponentRepository(db)
-	flawRepository := repositories.NewFlawRepository(db)
+	flawRepository := repositories.NewDependencyVulnerability(db)
 
 	allAssets, err := assetRepository.GetAllAssetsFromDB()
 	if err != nil {
@@ -72,10 +72,10 @@ func UpdateComponentProperties(db database.DB) error {
 			}
 
 			// group by scanner id
-			groups := make(map[string][]models.Flaw)
+			groups := make(map[string][]models.DependencyVulnerability)
 			for _, f := range flaws {
 				if _, ok := groups[f.ScannerID]; !ok {
-					groups[f.ScannerID] = []models.Flaw{}
+					groups[f.ScannerID] = []models.DependencyVulnerability{}
 				}
 
 				groups[f.ScannerID] = append(groups[f.ScannerID], f)

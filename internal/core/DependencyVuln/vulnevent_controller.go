@@ -1,4 +1,4 @@
-package flaw
+package DependencyVuln
 
 import (
 	"github.com/l3montree-dev/devguard/internal/core"

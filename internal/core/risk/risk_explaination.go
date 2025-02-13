@@ -52,7 +52,7 @@ func parseCvssVector(vector string) map[string]string {
 }
 
 // exploitMessage generates a short and long message based on the exploitability.
-func exploitMessage(flaw models.Flaw, obj map[string]string) (short string, long string) {
+func exploitMessage(flaw models.DependencyVulnerability, obj map[string]string) (short string, long string) {
 	if obj["E"] == "POC" || obj["E"] == "P" {
 		short = "Proof of Concept"
 		long = "A proof of concept is available for this vulnerability:\n"
@@ -267,7 +267,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) s
 }
 
 // provide the vector and risk metrics obtained from the risk calculation
-func Explain(flaw models.Flaw, asset models.Asset, vector string, riskMetrics obj.RiskMetrics) Explanation {
+func Explain(flaw models.DependencyVulnerability, asset models.Asset, vector string, riskMetrics obj.RiskMetrics) Explanation {
 	cvss := parseCvssVector(vector)
 
 	shortMsg, longMsg := exploitMessage(flaw, cvss)

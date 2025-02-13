@@ -198,23 +198,23 @@ func (_c *StatisticsStatisticsRepository_GetFlawCountByScannerId_Call) RunAndRet
 }
 
 // TimeTravelFlawState provides a mock function with given fields: assetID, _a1
-func (_m *StatisticsStatisticsRepository) TimeTravelFlawState(assetID uuid.UUID, _a1 time.Time) ([]models.Flaw, error) {
+func (_m *StatisticsStatisticsRepository) TimeTravelFlawState(assetID uuid.UUID, _a1 time.Time) ([]models.DependencyVulnerability, error) {
 	ret := _m.Called(assetID, _a1)
 
 	if len(ret) == 0 {
 		panic("no return value specified for TimeTravelFlawState")
 	}
 
-	var r0 []models.Flaw
+	var r0 []models.DependencyVulnerability
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) ([]models.Flaw, error)); ok {
+	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) ([]models.DependencyVulnerability, error)); ok {
 		return rf(assetID, _a1)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) []models.Flaw); ok {
+	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) []models.DependencyVulnerability); ok {
 		r0 = rf(assetID, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Flaw)
+			r0 = ret.Get(0).([]models.DependencyVulnerability)
 		}
 	}
 
@@ -246,12 +246,12 @@ func (_c *StatisticsStatisticsRepository_TimeTravelFlawState_Call) Run(run func(
 	return _c
 }
 
-func (_c *StatisticsStatisticsRepository_TimeTravelFlawState_Call) Return(_a0 []models.Flaw, _a1 error) *StatisticsStatisticsRepository_TimeTravelFlawState_Call {
+func (_c *StatisticsStatisticsRepository_TimeTravelFlawState_Call) Return(_a0 []models.DependencyVulnerability, _a1 error) *StatisticsStatisticsRepository_TimeTravelFlawState_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *StatisticsStatisticsRepository_TimeTravelFlawState_Call) RunAndReturn(run func(uuid.UUID, time.Time) ([]models.Flaw, error)) *StatisticsStatisticsRepository_TimeTravelFlawState_Call {
+func (_c *StatisticsStatisticsRepository_TimeTravelFlawState_Call) RunAndReturn(run func(uuid.UUID, time.Time) ([]models.DependencyVulnerability, error)) *StatisticsStatisticsRepository_TimeTravelFlawState_Call {
 	_c.Call.Return(run)
 	return _c
 }

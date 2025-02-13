@@ -13,7 +13,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/database"
 
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/DependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -43,7 +43,7 @@ type assetComponentsLoader interface {
 type assetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 	BuildSBOM(asset models.Asset, version, orgName string, components []models.ComponentDependency) *cdx.BOM
-	BuildVeX(asset models.Asset, version, orgName string, components []models.ComponentDependency, flaws []models.Flaw) *cdx.BOM
+	BuildVeX(asset models.Asset, version, orgName string, components []models.ComponentDependency, flaws []models.DependencyVulnerability) *cdx.BOM
 }
 
 type supplyChainRepository interface {
@@ -144,12 +144,12 @@ func (a *httpController) AffectedComponents(c core.Context) error {
 		return err
 	}
 
-	return c.JSON(200, utils.Map(flaws, func(m models.Flaw) flaw.FlawDTO {
-		return flaw.FlawToDto(m)
+	return c.JSON(200, utils.Map(flaws, func(m models.DependencyVulnerability) DependencyVuln.FlawDTO {
+		return DependencyVuln.FlawToDto(m)
 	}))
 }
 
-func (a *httpController) getComponentsAndFlaws(asset models.Asset, scanner, version string) ([]models.ComponentDependency, []models.Flaw, error) {
+func (a *httpController) getComponentsAndFlaws(asset models.Asset, scanner, version string) ([]models.ComponentDependency, []models.DependencyVulnerability, error) {
 	components, err := a.assetComponentsLoader.LoadComponents(nil, asset, scanner, version)
 	if err != nil {
 		return nil, nil, err

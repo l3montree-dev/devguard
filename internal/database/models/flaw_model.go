@@ -1,11 +1,9 @@
 package models
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -21,16 +19,12 @@ const (
 	FlawStateMarkedForTransfer FlawState = "markedForTransfer"
 )
 
-type Flaw struct {
-	ID string `json:"id" gorm:"primaryKey;not null;"`
-	// the scanner which was used to detect this flaw
-	ScannerID string `json:"scanner" gorm:"not null;"`
+type DependencyVulnerability struct {
+	Vulnerability
 
-	Message  *string     `json:"message"`
-	Comments []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
-	Events   []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
-	AssetID  uuid.UUID   `json:"assetId" gorm:"not null;type:uuid;"`
-	State    FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
+	Comments []Comment `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
+
+	State FlawState `json:"state" gorm:"default:'open';not null;type:text;"`
 
 	CVE   *CVE    `json:"cve"`
 	CVEID *string `json:"cveId" gorm:"null;type:text;default:null;"`
@@ -47,13 +41,6 @@ type Flaw struct {
 
 	LastDetected time.Time `json:"lastDetected" gorm:"default:now();not null;"`
 
-	TicketID  *string `json:"ticketId" gorm:"default:null;"` // might be set by integrations
-	TicketURL *string `json:"ticketUrl" gorm:"default:null;"`
-
-	CreatedAt time.Time    `json:"createdAt"`
-	UpdatedAt time.Time    `json:"updatedAt"`
-	DeletedAt sql.NullTime `gorm:"index" json:"-"`
-
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt" gorm:"default:now();"`
 }
 
@@ -65,17 +52,17 @@ type FlawRisk struct {
 	Type              FlawEventType
 }
 
-func (m Flaw) TableName() string {
+func (m DependencyVulnerability) TableName() string {
 	return "flaws"
 }
 
-func (m *Flaw) CalculateHash() string {
+func (m *DependencyVulnerability) CalculateHash() string {
 	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, m.AssetID.String()))
 	return hash
 }
 
 // hook to calculate the hash before creating the flaw
-func (f *Flaw) BeforeSave(tx *gorm.DB) (err error) {
+func (f *DependencyVulnerability) BeforeSave(tx *gorm.DB) (err error) {
 	hash := f.CalculateHash()
 	f.ID = hash
 	return nil

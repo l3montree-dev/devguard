@@ -21,10 +21,10 @@ func NewStatisticsRepository(db core.DB) *statisticsRepository {
 }
 
 // returns all flaws for the asset including the events, which were created before the given time
-func (r *statisticsRepository) TimeTravelFlawState(assetID uuid.UUID, time time.Time) ([]models.Flaw, error) {
-	flaws := []models.Flaw{}
+func (r *statisticsRepository) TimeTravelFlawState(assetID uuid.UUID, time time.Time) ([]models.DependencyVulnerability, error) {
+	flaws := []models.DependencyVulnerability{}
 
-	err := r.db.Model(&models.Flaw{}).Preload("Events", func(db core.DB) core.DB {
+	err := r.db.Model(&models.DependencyVulnerability{}).Preload("Events", func(db core.DB) core.DB {
 		return db.Where("created_at <= ?", time).Order("created_at ASC")
 	}).
 		Where("asset_id = ?", assetID).Where("created_at <= ?", time).
@@ -54,7 +54,7 @@ func (r *statisticsRepository) GetFlawCountByScannerId(assetID uuid.UUID) (map[s
 		Count     int    `gorm:"column:count"`
 	}
 
-	err := r.db.Model(&models.Flaw{}).
+	err := r.db.Model(&models.DependencyVulnerability{}).
 		Select("scanner_id , COUNT(*) as count").
 		Group("scanner_id").
 		Where("asset_id = ?", assetID).

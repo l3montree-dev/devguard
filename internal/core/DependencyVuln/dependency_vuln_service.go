@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package flaw
+package DependencyVuln
 
 import (
 	"fmt"
@@ -34,11 +34,11 @@ type assetRepository interface {
 }
 
 type flawRepository interface {
-	SaveBatch(db core.DB, flaws []models.Flaw) error
-	Save(db core.DB, flaws *models.Flaw) error
+	SaveBatch(db core.DB, flaws []models.DependencyVulnerability) error
+	Save(db core.DB, flaws *models.DependencyVulnerability) error
 	Transaction(txFunc func(core.DB) error) error
 	Begin() core.DB
-	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
+	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
 }
 
 type flawEventRepository interface {
@@ -66,7 +66,7 @@ func NewService(flawRepository flawRepository, flawEventRepository flawEventRepo
 	}
 }
 
-func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, doRiskManagement bool) error {
+func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.DependencyVulnerability, doRiskManagement bool) error {
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -90,7 +90,7 @@ func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw,
 	return nil
 }
 
-func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset, doRiskManagement bool) error {
+func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.DependencyVulnerability, asset models.Asset, doRiskManagement bool) error {
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -163,7 +163,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 
 }
 
-func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error {
+func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.DependencyVulnerability, justification string, asset models.Asset) error {
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -179,7 +179,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 	events := make([]models.FlawEvent, 0)
 
 	// get all cveIds of the flaws
-	cveIds := utils.Filter(utils.Map(flaws, func(f models.Flaw) string {
+	cveIds := utils.Filter(utils.Map(flaws, func(f models.DependencyVulnerability) string {
 		return utils.SafeDereference(f.CVEID)
 	}), func(s string) bool {
 		return s != ""
@@ -257,7 +257,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 	return nil
 }
 
-func (s *service) UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error) {
+func (s *service) UpdateFlawState(tx core.DB, userID string, flaw *models.DependencyVulnerability, statusType string, justification string) (models.FlawEvent, error) {
 	if tx == nil {
 		var ev models.FlawEvent
 		var err error
@@ -271,7 +271,7 @@ func (s *service) UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, 
 	return s.updateFlawState(tx, userID, flaw, statusType, justification)
 }
 
-func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error) {
+func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.DependencyVulnerability, statusType string, justification string) (models.FlawEvent, error) {
 	var ev models.FlawEvent
 	switch models.FlawEventType(statusType) {
 	case models.EventTypeAccepted:
@@ -287,7 +287,7 @@ func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, 
 	return s.applyAndSave(tx, flaw, &ev)
 }
 
-func (s *service) ApplyAndSave(tx core.DB, flaw *models.Flaw, flawEvent *models.FlawEvent) error {
+func (s *service) ApplyAndSave(tx core.DB, flaw *models.DependencyVulnerability, flawEvent *models.FlawEvent) error {
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
 		return s.flawRepository.Transaction(func(d core.DB) error {
@@ -300,7 +300,7 @@ func (s *service) ApplyAndSave(tx core.DB, flaw *models.Flaw, flawEvent *models.
 	return err
 }
 
-func (s *service) applyAndSave(tx core.DB, flaw *models.Flaw, ev *models.FlawEvent) (models.FlawEvent, error) {
+func (s *service) applyAndSave(tx core.DB, flaw *models.DependencyVulnerability, ev *models.FlawEvent) (models.FlawEvent, error) {
 	// apply the event on the flaw
 	ev.Apply(flaw)
 

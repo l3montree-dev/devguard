@@ -19,7 +19,7 @@ import (
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/DependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -105,7 +105,7 @@ func messageWasCreatedByDevguard(message string) bool {
 
 func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
-	flawRepository := repositories.NewFlawRepository(db)
+	flawRepository := repositories.NewDependencyVulnerability(db)
 	flawEventRepository := repositories.NewFlawEventRepository(db)
 	externalUserRepository := repositories.NewExternalUserRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
@@ -115,7 +115,7 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
 
 		flawRepository:         flawRepository,
-		flawService:            flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository),
+		flawService:            DependencyVuln.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository),
 		flawEventRepository:    flawEventRepository,
 		assetRepository:        assetRepository,
 		externalUserRepository: externalUserRepository,
