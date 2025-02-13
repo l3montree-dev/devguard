@@ -187,6 +187,8 @@ func NewInTotoRunCommand() *cobra.Command {
 				if err != nil {
 					return errors.Wrap(err, "failed to dump envelope")
 				}
+
+				slog.Info("successfully generated provenance", "step", step)
 			}
 
 			err = metadata.Sign(key)

@@ -179,6 +179,8 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 		if err := provenanceEnvelope.Dump(fmt.Sprintf("%s.provenance.json", step)); err != nil {
 			return err
 		}
+
+		slog.Info("successfully generated provenance", "step", step)
 	}
 
 	output, err := cmd.Flags().GetString("output")
