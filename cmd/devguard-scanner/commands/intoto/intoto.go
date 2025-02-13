@@ -25,6 +25,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/in-toto/go-witness/attestation"
@@ -59,6 +60,19 @@ func storeTokenInKeyring(assetName, token string) error {
 
 	// set password
 	return keyring.Set(service, user, token)
+}
+
+var patterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)(api[_-]?key|token|secret|password|bearer)[:=\s]?([a-zA-Z0-9-_]+)`),
+	regexp.MustCompile(`(?i)(authorization)[:=\s]?(Bearer\s+[a-zA-Z0-9-_]+)`),
+}
+
+func redactSecrets(input string) string {
+	for _, pattern := range patterns {
+		input = pattern.ReplaceAllString(input, "REDACTED")
+	}
+
+	return input
 }
 
 func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
@@ -124,7 +138,7 @@ func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
 			switch v := v.(type) {
 			case string:
 				if v != "" {
-					attestorData[k] = v
+					attestorData[k] = redactSecrets(v)
 				}
 			default:
 				attestorData[k] = v
