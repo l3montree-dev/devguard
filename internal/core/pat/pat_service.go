@@ -172,7 +172,7 @@ func (p *PatService) VerifyRequestSignature(req *http.Request) (string, error) {
 		return "", fmt.Errorf("could not verify request: %v", err)
 	}
 
-	go p.markAsLastUsedNow(fingerprint)
+	p.markAsLastUsedNow(fingerprint) //nolint:errcheck// we don't care if this fails
 
 	return userId.String(), nil
 }
