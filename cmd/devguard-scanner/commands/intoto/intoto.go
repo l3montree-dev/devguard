@@ -75,6 +75,19 @@ func redactSecrets(input string) string {
 	return input
 }
 
+func cleanMap(m map[string]interface{}) map[string]interface{} {
+	for k, v := range m {
+		switch v := v.(type) {
+		case string:
+			m[k] = redactSecrets(v)
+		case map[string]interface{}:
+			m[k] = cleanMap(v)
+		}
+	}
+
+	return m
+}
+
 func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
 	subjects := make([]toto.Subject, 0, len(link.Products))
 	for productName, product := range link.Products {
@@ -138,7 +151,7 @@ func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
 			switch v := v.(type) {
 			case string:
 				if v != "" {
-					attestorData[k] = redactSecrets(v)
+					attestorData[k] = v
 				}
 			default:
 				attestorData[k] = v
@@ -160,7 +173,7 @@ func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
 			},
 			BuildDefinition: slsa1.ProvenanceBuildDefinition{
 				ResolvedDependencies: resolvedDependencies,
-				ExternalParameters:   attestorData,
+				ExternalParameters:   cleanMap(attestorData),
 			},
 		},
 	}
