@@ -38,31 +38,31 @@ type dependencyVulnRepository interface {
 	Save(db core.DB, dependencyVulns *models.DependencyVulnerability) error
 	Transaction(txFunc func(core.DB) error) error
 	Begin() core.DB
-	GetAllDependencyVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
+	GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
 }
 
-type dependencyVulnEventRepository interface {
-	SaveBatch(db core.DB, events []models.DependencyVulnEvent) error
-	Save(db core.DB, event *models.DependencyVulnEvent) error
+type vulnEventRepository interface {
+	SaveBatch(db core.DB, events []models.VulnEvent) error
+	Save(db core.DB, event *models.VulnEvent) error
 }
 type cveRepository interface {
 	FindCVE(tx database.DB, cveId string) (models.CVE, error)
 	FindCVEs(tx database.DB, cveIds []string) ([]models.CVE, error)
 }
 type service struct {
-	dependencyVulnRepository      dependencyVulnRepository
-	dependencyVulnEventRepository dependencyVulnEventRepository
+	dependencyVulnRepository dependencyVulnRepository
+	vulnEventRepository      vulnEventRepository
 
 	assetRepository assetRepository
 	cveRepository   cveRepository
 }
 
-func NewService(dependencyVulnRepository dependencyVulnRepository, dependencyVulnEventRepository dependencyVulnEventRepository, assetRepository assetRepository, cveRepository cveRepository) *service {
+func NewService(dependencyVulnRepository dependencyVulnRepository, vulnEventRepository vulnEventRepository, assetRepository assetRepository, cveRepository cveRepository) *service {
 	return &service{
-		dependencyVulnRepository:      dependencyVulnRepository,
-		dependencyVulnEventRepository: dependencyVulnEventRepository,
-		assetRepository:               assetRepository,
-		cveRepository:                 cveRepository,
+		dependencyVulnRepository: dependencyVulnRepository,
+		vulnEventRepository:      vulnEventRepository,
+		assetRepository:          assetRepository,
+		cveRepository:            cveRepository,
 	}
 }
 
@@ -71,7 +71,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 		return nil
 	}
 	// create a new dependencyVulnevent for each fixed dependencyVuln
-	events := make([]models.DependencyVulnEvent, len(dependencyVulns))
+	events := make([]models.VulnEvent, len(dependencyVulns))
 	for i, dependencyVuln := range dependencyVulns {
 		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), userID)
 		// apply the event on the dependencyVuln
@@ -84,7 +84,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 		if err != nil {
 			return err
 		}
-		return s.dependencyVulnEventRepository.SaveBatch(tx, events)
+		return s.vulnEventRepository.SaveBatch(tx, events)
 	}
 
 	return nil
@@ -96,7 +96,7 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, userID string, depende
 	}
 
 	// create a new dependencyVulnevent for each detected dependencyVuln
-	events := make([]models.DependencyVulnEvent, len(dependencyVulns))
+	events := make([]models.VulnEvent, len(dependencyVulns))
 	e := core.Environmental{
 		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
 		IntegrityRequirements:       string(asset.IntegrityRequirement),
@@ -117,7 +117,7 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, userID string, depende
 		if err != nil {
 			return err
 		}
-		return s.dependencyVulnEventRepository.SaveBatch(tx, events)
+		return s.vulnEventRepository.SaveBatch(tx, events)
 	}
 
 	return nil
@@ -138,7 +138,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	err = s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 		for _, asset := range assets {
 			// get all dependencyVulns of the asset
-			dependencyVulns, err := s.dependencyVulnRepository.GetAllDependencyVulnsByAssetID(tx, asset.ID)
+			dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(tx, asset.ID)
 			if len(dependencyVulns) == 0 {
 				continue
 			}
@@ -176,7 +176,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 
 	// create a new dependencyVulnevent for each updated dependencyVuln
 
-	events := make([]models.DependencyVulnEvent, 0)
+	events := make([]models.VulnEvent, 0)
 
 	// get all cveIds of the dependencyVulns
 	cveIds := utils.Filter(utils.Map(dependencyVulns, func(f models.DependencyVulnerability) string {
@@ -234,7 +234,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 			if err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns); err != nil {
 				return fmt.Errorf("could not save dependencyVulns: %v", err)
 			}
-			if err := s.dependencyVulnEventRepository.SaveBatch(tx, events); err != nil {
+			if err := s.vulnEventRepository.SaveBatch(tx, events); err != nil {
 				return fmt.Errorf("could not save events: %v", err)
 			}
 			return nil
@@ -250,16 +250,16 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		return fmt.Errorf("could not save dependencyVulns: %v", err)
 	}
 
-	err = s.dependencyVulnEventRepository.SaveBatch(tx, events)
+	err = s.vulnEventRepository.SaveBatch(tx, events)
 	if err != nil {
 		return fmt.Errorf("could not save events: %v", err)
 	}
 	return nil
 }
 
-func (s *service) UpdateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVulnerability, statusType string, justification string) (models.DependencyVulnEvent, error) {
+func (s *service) UpdateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVulnerability, statusType string, justification string) (models.VulnEvent, error) {
 	if tx == nil {
-		var ev models.DependencyVulnEvent
+		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.dependencyVulnRepository.Transaction(func(d core.DB) error {
@@ -271,9 +271,9 @@ func (s *service) UpdateDependencyVulnState(tx core.DB, userID string, dependenc
 	return s.updateDependencyVulnState(tx, userID, dependencyVuln, statusType, justification)
 }
 
-func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVulnerability, statusType string, justification string) (models.DependencyVulnEvent, error) {
-	var ev models.DependencyVulnEvent
-	switch models.DependencyVulnEventType(statusType) {
+func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVulnerability, statusType string, justification string) (models.VulnEvent, error) {
+	var ev models.VulnEvent
+	switch models.VulnEventType(statusType) {
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), userID, justification)
 	case models.EventTypeFalsePositive:
@@ -287,30 +287,30 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	return s.applyAndSave(tx, dependencyVuln, &ev)
 }
 
-func (s *service) ApplyAndSave(tx core.DB, dependencyVuln *models.DependencyVulnerability, dependencyVulnEvent *models.DependencyVulnEvent) error {
+func (s *service) ApplyAndSave(tx core.DB, dependencyVuln *models.DependencyVulnerability, vulnEvent *models.VulnEvent) error {
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
 		return s.dependencyVulnRepository.Transaction(func(d core.DB) error {
-			_, err := s.applyAndSave(d, dependencyVuln, dependencyVulnEvent)
+			_, err := s.applyAndSave(d, dependencyVuln, vulnEvent)
 			return err
 		})
 	}
 
-	_, err := s.applyAndSave(tx, dependencyVuln, dependencyVulnEvent)
+	_, err := s.applyAndSave(tx, dependencyVuln, vulnEvent)
 	return err
 }
 
-func (s *service) applyAndSave(tx core.DB, dependencyVuln *models.DependencyVulnerability, ev *models.DependencyVulnEvent) (models.DependencyVulnEvent, error) {
+func (s *service) applyAndSave(tx core.DB, dependencyVuln *models.DependencyVulnerability, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the dependencyVuln
 	ev.Apply(dependencyVuln)
 
 	// run the updates in the transaction to keep a valid state
 	err := s.dependencyVulnRepository.Save(tx, dependencyVuln)
 	if err != nil {
-		return models.DependencyVulnEvent{}, err
+		return models.VulnEvent{}, err
 	}
-	if err := s.dependencyVulnEventRepository.Save(tx, ev); err != nil {
-		return models.DependencyVulnEvent{}, err
+	if err := s.vulnEventRepository.Save(tx, ev); err != nil {
+		return models.VulnEvent{}, err
 	}
 	dependencyVuln.Events = append(dependencyVuln.Events, *ev)
 	return *ev, nil

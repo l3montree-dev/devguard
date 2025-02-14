@@ -9,7 +9,7 @@ import (
 func RecalculateRisk(db database.DB) error {
 	dependencyVulnService := DependencyVuln.NewService(
 		repositories.NewDependencyVulnerability(db),
-		repositories.NewDependencyVulnEventRepository(db),
+		repositories.NewVulnEventRepository(db),
 		repositories.NewAssetRepository(db),
 		repositories.NewCVERepository(db),
 	)

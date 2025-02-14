@@ -41,10 +41,18 @@ type dependencyVulnRepository interface {
 	Transaction(txFunc func(core.DB) error) error
 	ListByScanner(assetID uuid.UUID, scannerID string) ([]models.DependencyVulnerability, error)
 
-	GetAllDependencyVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
+	GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
 	SaveBatch(db core.DB, dependencyVulns []models.DependencyVulnerability) error
 
 	GetDependencyVulnsByPurl(tx core.DB, purl []string) ([]models.DependencyVulnerability, error)
+}
+
+type firstPartyVulnRepository interface {
+	Transaction(txFunc func(core.DB) error) error
+	ListByScanner(assetID uuid.UUID, scannerID string) ([]models.FirstPartyVulnerability, error)
+
+	GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.FirstPartyVulnerability, error)
+	SaveBatch(db core.DB, firstPartyVulns []models.FirstPartyVulnerability) error
 }
 
 type componentRepository interface {
@@ -62,27 +70,168 @@ type assetRepository interface {
 type dependencyVulnService interface {
 	UserFixedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVulnerability, doRiskManagement bool) error
 	UserDetectedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVulnerability, asset models.Asset, doRiskManagement bool) error
-	UpdateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVulnerability, statusType string, justification string) (models.DependencyVulnEvent, error)
+	UpdateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVulnerability, statusType string, justification string) (models.VulnEvent, error)
 
 	RecalculateRawRiskAssessment(tx core.DB, userID string, dependencyVulns []models.DependencyVulnerability, justification string, asset models.Asset) error
 }
 
+type firstPartyVulnService interface {
+	UserFixedFirstPartyVulns(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error
+	UserDetectedFirstPartyVulns(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error
+	UpdateFirstPartyVulnState(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVulnerability, statusType string, justification string) (models.VulnEvent, error)
+}
+
 type service struct {
 	dependencyVulnRepository dependencyVulnRepository
+	firstPartyVulnRepository firstPartyVulnRepository
 	componentRepository      componentRepository
 	dependencyVulnService    dependencyVulnService
+	firstPartyVulnService    firstPartyVulnService
 	assetRepository          assetRepository
 	httpClient               *http.Client
 }
 
-func NewService(assetRepository assetRepository, componentRepository componentRepository, dependencyVulnRepository dependencyVulnRepository, dependencyVulnService dependencyVulnService) *service {
+func NewService(assetRepository assetRepository, componentRepository componentRepository, dependencyVulnRepository dependencyVulnRepository, firstPartyVulnRepository firstPartyVulnRepository, dependencyVulnService dependencyVulnService, firstPartyVulnService firstPartyVulnService) *service {
 	return &service{
 		assetRepository:          assetRepository,
 		componentRepository:      componentRepository,
 		dependencyVulnRepository: dependencyVulnRepository,
+		firstPartyVulnRepository: firstPartyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
+		firstPartyVulnService:    firstPartyVulnService,
 		httpClient:               &http.Client{},
 	}
+}
+
+func (s *service) HandleFirstPartyVulnResult(asset models.Asset, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error) {
+
+	firstPartyVulnerabilities := []models.FirstPartyVulnerability{}
+
+	for _, run := range sarifScan.Runs {
+		for _, result := range run.Results {
+
+			snippet := result.Locations[0].PhysicalLocation.Region.Snippet.Text
+			snippetMax := 20
+			if snippetMax < len(snippet)/2 {
+				snippetMax = len(snippet) / 2
+			}
+			snippet = snippet[:snippetMax] + "***"
+
+			firstPartyVulnerability := models.FirstPartyVulnerability{
+				Vulnerability: models.Vulnerability{
+					Message: &result.Message.Text,
+				},
+				RuleID:      result.RuleId,
+				Uri:         result.Locations[0].PhysicalLocation.ArtifactLocation.Uri,
+				StartLine:   result.Locations[0].PhysicalLocation.Region.StartLine,
+				StartColumn: result.Locations[0].PhysicalLocation.Region.StartColumn,
+				EndLine:     result.Locations[0].PhysicalLocation.Region.EndLine,
+				EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
+				Snippet:     snippet,
+			}
+
+			firstPartyVulnerability.ScannerID = scannerID
+			firstPartyVulnerability.AssetID = asset.GetID()
+
+			firstPartyVulnerabilities = append(firstPartyVulnerabilities, firstPartyVulnerability)
+		}
+	}
+
+	firstPartyVulnerabilities = utils.UniqBy(firstPartyVulnerabilities, func(f models.FirstPartyVulnerability) string {
+		return f.CalculateHash()
+	})
+
+	amountOpened, amountClosed, amountExisting, err := s.handleFirstPartyVulnResult(userID, scannerID, asset, firstPartyVulnerabilities, doRiskManagement)
+	if err != nil {
+		return 0, 0, []models.FirstPartyVulnerability{}, err
+	}
+
+	switch scannerID {
+	case "sast":
+		asset.LastSastScan = utils.Ptr(time.Now())
+	case "dast":
+		asset.LastDastScan = utils.Ptr(time.Now())
+	case "sca":
+		asset.LastScaScan = utils.Ptr(time.Now())
+	case "container-scanning":
+		asset.LastContainerScan = utils.Ptr(time.Now())
+	case "secret-scanning":
+		asset.LastSecretScan = utils.Ptr(time.Now())
+	case "iac":
+		asset.LastIacScan = utils.Ptr(time.Now())
+	}
+
+	if doRiskManagement {
+		err = s.assetRepository.Save(nil, &asset)
+		if err != nil {
+			// swallow but log
+			slog.Error("could not save asset", "err", err)
+		}
+	}
+	return amountOpened, amountClosed, amountExisting, nil
+}
+
+func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, asset models.Asset, vulns []models.FirstPartyVulnerability, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error) {
+	// get all existing vulns from the database - this is the old state
+	existingVulns, err := s.firstPartyVulnRepository.ListByScanner(asset.GetID(), scannerID)
+	if err != nil {
+		slog.Error("could not get existing vulns", "err", err)
+		return 0, 0, []models.FirstPartyVulnerability{}, err
+	}
+
+	// remove all fixed vulns from the existing vulns
+	existingVulns = utils.Filter(existingVulns, func(vuln models.FirstPartyVulnerability) bool {
+		return vuln.State != models.VulnStateFixed
+	})
+
+	comparison := utils.CompareSlices(existingVulns, vulns, func(vuln models.FirstPartyVulnerability) string {
+		return vuln.CalculateHash()
+	})
+
+	fixedVulns := comparison.OnlyInA
+	newVulns := comparison.OnlyInB
+
+	if doRiskManagement {
+		// get a transaction
+		if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
+			if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, newVulns, true); err != nil {
+				fmt.Println("could not save vulns", err)
+				// this will cancel the transaction
+				return err
+			}
+			return s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, utils.Filter(
+				fixedVulns,
+				func(vuln models.FirstPartyVulnerability) bool {
+					return vuln.State == models.VulnStateOpen
+				},
+			), true)
+		}); err != nil {
+			slog.Error("could not save vulns", "err", err)
+			return 0, 0, []models.FirstPartyVulnerability{}, err
+		}
+	} else {
+		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(nil, userID, newVulns, false); err != nil {
+			slog.Error("could not save vulns", "err", err)
+			return 0, 0, []models.FirstPartyVulnerability{}, err
+		}
+
+		if err := s.firstPartyVulnService.UserFixedFirstPartyVulns(nil, userID, utils.Filter(
+			fixedVulns,
+			func(vuln models.FirstPartyVulnerability) bool {
+				return vuln.State == models.VulnStateOpen
+			},
+		), false); err != nil {
+			slog.Error("could not save vulns", "err", err)
+			return 0, 0, []models.FirstPartyVulnerability{}, err
+		}
+	}
+
+	// the amount we actually fixed, is the amount that was open before
+	fixedVulns = utils.Filter(fixedVulns, func(vuln models.FirstPartyVulnerability) bool {
+		return vuln.State == models.VulnStateOpen
+	})
+
+	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
 
 func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVulnerability, err error) {
@@ -169,7 +318,7 @@ func (s *service) handleScanResult(userID string, scannerID string, asset models
 	}
 	// remove all fixed dependencyVulns from the existing dependencyVulns
 	existingDependencyVulns = utils.Filter(existingDependencyVulns, func(dependencyVuln models.DependencyVulnerability) bool {
-		return dependencyVuln.State != models.DependencyVulnStateFixed
+		return dependencyVuln.State != models.VulnStateFixed
 	})
 
 	comparison := utils.CompareSlices(existingDependencyVulns, dependencyVulns, func(dependencyVuln models.DependencyVulnerability) string {
@@ -189,7 +338,7 @@ func (s *service) handleScanResult(userID string, scannerID string, asset models
 			return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, utils.Filter(
 				fixedDependencyVulns,
 				func(dependencyVuln models.DependencyVulnerability) bool {
-					return dependencyVuln.State == models.DependencyVulnStateOpen
+					return dependencyVuln.State == models.VulnStateOpen
 				},
 			), true)
 		}); err != nil {
@@ -205,7 +354,7 @@ func (s *service) handleScanResult(userID string, scannerID string, asset models
 		if err := s.dependencyVulnService.UserFixedDependencyVulns(nil, userID, utils.Filter(
 			fixedDependencyVulns,
 			func(dependencyVuln models.DependencyVulnerability) bool {
-				return dependencyVuln.State == models.DependencyVulnStateOpen
+				return dependencyVuln.State == models.VulnStateOpen
 			},
 		), false); err != nil {
 			slog.Error("could not save dependencyVulns", "err", err)
@@ -215,7 +364,7 @@ func (s *service) handleScanResult(userID string, scannerID string, asset models
 
 	// the amount we actually fixed, is the amount that was open before
 	fixedDependencyVulns = utils.Filter(fixedDependencyVulns, func(dependencyVuln models.DependencyVulnerability) bool {
-		return dependencyVuln.State == models.DependencyVulnStateOpen
+		return dependencyVuln.State == models.VulnStateOpen
 	})
 	return len(newDependencyVulns), len(fixedDependencyVulns), append(newDependencyVulns, comparison.InBoth...), nil
 }
@@ -367,7 +516,7 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 			return fmt.Errorf("could not save asset: %v", err)
 		}
 		// get the dependencyVulns
-		dependencyVulns, err := s.dependencyVulnRepository.GetAllDependencyVulnsByAssetID(tx, asset.GetID())
+		dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(tx, asset.GetID())
 		if err != nil {
 			slog.Info("error getting dependencyVulns", "err", err)
 			return fmt.Errorf("could not get dependencyVulns: %v", err)
@@ -581,17 +730,17 @@ func vectorToCVSSScoringMethod(vector string) cdx.ScoringMethod {
 	return cdx.ScoringMethodCVSSv4
 }
 
-func dependencyVulnStateToImpactAnalysisState(state models.DependencyVulnState) cdx.ImpactAnalysisState {
+func dependencyVulnStateToImpactAnalysisState(state models.VulnState) cdx.ImpactAnalysisState {
 	switch state {
-	case models.DependencyVulnStateOpen:
+	case models.VulnStateOpen:
 		return cdx.IASInTriage
-	case models.DependencyVulnStateFixed:
+	case models.VulnStateFixed:
 		return cdx.IASResolved
-	case models.DependencyVulnStateAccepted:
+	case models.VulnStateAccepted:
 		return cdx.IASExploitable
-	case models.DependencyVulnStateFalsePositive:
+	case models.VulnStateFalsePositive:
 		return cdx.IASFalsePositive
-	case models.DependencyVulnStateMarkedForTransfer:
+	case models.VulnStateMarkedForTransfer:
 		return cdx.IASInTriage
 	default:
 		return cdx.IASInTriage
@@ -611,17 +760,17 @@ func getJustification(dependencyVuln models.DependencyVulnerability) *string {
 	return nil
 }
 
-func dependencyVulnStateToResponseStatus(state models.DependencyVulnState) cdx.ImpactAnalysisResponse {
+func dependencyVulnStateToResponseStatus(state models.VulnState) cdx.ImpactAnalysisResponse {
 	switch state {
-	case models.DependencyVulnStateOpen:
+	case models.VulnStateOpen:
 		return ""
-	case models.DependencyVulnStateFixed:
+	case models.VulnStateFixed:
 		return cdx.IARUpdate
-	case models.DependencyVulnStateAccepted:
+	case models.VulnStateAccepted:
 		return cdx.IARWillNotFix
-	case models.DependencyVulnStateFalsePositive:
+	case models.VulnStateFalsePositive:
 		return cdx.IARWillNotFix
-	case models.DependencyVulnStateMarkedForTransfer:
+	case models.VulnStateMarkedForTransfer:
 		return ""
 	default:
 		return ""

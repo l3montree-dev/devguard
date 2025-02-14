@@ -61,11 +61,11 @@ type dependencyVulnRepository interface {
 	Save(db core.DB, dependencyVuln *models.DependencyVulnerability) error
 	Transaction(fn func(tx core.DB) error) error
 	FindByTicketID(tx core.DB, ticketID string) (models.DependencyVulnerability, error)
-	GetOrgFromDependencyVulnID(tx core.DB, dependencyVulnID string) (models.Org, error)
+	GetOrgFromVulnID(tx core.DB, dependencyVulnID string) (models.Org, error)
 }
 
-type dependencyVulnEventRepository interface {
-	Save(db core.DB, event *models.DependencyVulnEvent) error
+type vulnEventRepository interface {
+	Save(db core.DB, event *models.VulnEvent) error
 }
 
 type externalUserRepository interface {
@@ -79,7 +79,7 @@ type assetRepository interface {
 }
 
 type dependencyVulnService interface {
-	ApplyAndSave(tx core.DB, dependencyVuln *models.DependencyVulnerability, dependencyVulnEvent *models.DependencyVulnEvent) error
+	ApplyAndSave(tx core.DB, dependencyVuln *models.DependencyVulnerability, vulnEvent *models.VulnEvent) error
 }
 
 // wrapper around the github package - which provides only the methods
@@ -95,11 +95,11 @@ type githubIntegration struct {
 	githubAppInstallationRepository githubAppInstallationRepository
 	externalUserRepository          externalUserRepository
 
-	dependencyVulnRepository      dependencyVulnRepository
-	dependencyVulnEventRepository dependencyVulnEventRepository
-	frontendUrl                   string
-	assetRepository               assetRepository
-	dependencyVulnService         dependencyVulnService
+	dependencyVulnRepository dependencyVulnRepository
+	vulnEventRepository      vulnEventRepository
+	frontendUrl              string
+	assetRepository          assetRepository
+	dependencyVulnService    dependencyVulnService
 
 	githubClientFactory func(repoId string) (githubClientFacade, error)
 }
@@ -112,7 +112,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
 
 	dependencyVulnRepository := repositories.NewDependencyVulnerability(db)
-	dependencyVulnEventRepository := repositories.NewDependencyVulnEventRepository(db)
+	vulnEventRepository := repositories.NewVulnEventRepository(db)
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -123,9 +123,9 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 		githubAppInstallationRepository: githubAppInstallationRepository,
 		externalUserRepository:          repositories.NewExternalUserRepository(db),
 
-		dependencyVulnRepository:      dependencyVulnRepository,
-		dependencyVulnEventRepository: dependencyVulnEventRepository,
-		dependencyVulnService:         DependencyVuln.NewService(dependencyVulnRepository, dependencyVulnEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
+		dependencyVulnRepository: dependencyVulnRepository,
+		vulnEventRepository:      vulnEventRepository,
+		dependencyVulnService:    DependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
 
 		frontendUrl:     frontendUrl,
 		assetRepository: repositories.NewAssetRepository(db),
@@ -234,7 +234,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
-			org, err := githubIntegration.dependencyVulnRepository.GetOrgFromDependencyVulnID(nil, dependencyVuln.ID)
+			org, err := githubIntegration.dependencyVulnRepository.GetOrgFromVulnID(nil, dependencyVuln.ID)
 			if err != nil {
 				slog.Error("could not get org from dependencyVuln id", "err", err)
 				return
@@ -258,16 +258,16 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		}()
 
 		// create a new event based on the comment
-		dependencyVulnEvent := createNewDependencyVulnEventBasedOnComment(dependencyVuln.ID, fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment)
+		vulnEvent := createNewDependencyVulnEventBasedOnComment(dependencyVuln.ID, fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment)
 
-		dependencyVulnEvent.Apply(&dependencyVuln)
+		vulnEvent.Apply(&dependencyVuln)
 		// save the dependencyVuln and the event in a transaction
 		err = githubIntegration.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 			err := githubIntegration.dependencyVulnRepository.Save(tx, &dependencyVuln)
 			if err != nil {
 				return err
 			}
-			err = githubIntegration.dependencyVulnEventRepository.Save(tx, &dependencyVulnEvent)
+			err = githubIntegration.vulnEventRepository.Save(tx, &vulnEvent)
 			if err != nil {
 				return err
 			}
@@ -297,7 +297,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
-		switch dependencyVulnEvent.Type {
+		switch vulnEvent.Type {
 		case models.EventTypeAccepted:
 			_, _, err = client.EditIssue(context.Background(), owner, repo, issueId, &github.IssueRequest{
 				State:  github.String("closed"),
@@ -514,12 +514,12 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		session := core.GetSession(event.Ctx)
 		userID := session.GetUserID()
 		// create an event
-		dependencyVulnEvent := models.NewMitigateEvent(dependencyVuln.ID, userID, justification["comment"], map[string]any{
+		vulnEvent := models.NewMitigateEvent(dependencyVuln.ID, userID, justification["comment"], map[string]any{
 			"ticketId":  *dependencyVuln.TicketID,
 			"ticketUrl": createdIssue.GetHTMLURL(),
 		})
 		// save the dependencyVuln and the event in a transaction
-		err = g.dependencyVulnService.ApplyAndSave(nil, &dependencyVuln, &dependencyVulnEvent)
+		err = g.dependencyVulnService.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
 		// if an error did happen, delete the issue from github
 		if err != nil {
 			_, _, err := client.EditIssue(context.TODO(), owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
@@ -533,7 +533,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 
 		return nil
 
-	case core.DependencyVulnEvent:
+	case core.VulnEvent:
 		ev := event.Event
 
 		asset := core.GetAsset(event.Ctx)

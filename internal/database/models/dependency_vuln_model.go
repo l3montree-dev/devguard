@@ -9,14 +9,14 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-type DependencyVulnState string
+type VulnState string
 
 const (
-	DependencyVulnStateOpen              DependencyVulnState = "open"
-	DependencyVulnStateFixed             DependencyVulnState = "fixed"         // we did not find the dependencyVuln anymore in the last scan!
-	DependencyVulnStateAccepted          DependencyVulnState = "accepted"      // like ignore
-	DependencyVulnStateFalsePositive     DependencyVulnState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
-	DependencyVulnStateMarkedForTransfer DependencyVulnState = "markedForTransfer"
+	VulnStateOpen              VulnState = "open"
+	VulnStateFixed             VulnState = "fixed"         // we did not find the dependencyVuln anymore in the last scan!
+	VulnStateAccepted          VulnState = "accepted"      // like ignore
+	VulnStateFalsePositive     VulnState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
+	VulnStateMarkedForTransfer VulnState = "markedForTransfer"
 )
 
 type DependencyVulnerability struct {
@@ -24,7 +24,7 @@ type DependencyVulnerability struct {
 
 	Comments []Comment `gorm:"foreignKey:DependencyVulnID;constraint:OnDelete:CASCADE;" json:"comments"`
 
-	State DependencyVulnState `json:"state" gorm:"default:'open';not null;type:text;"`
+	State VulnState `json:"state" gorm:"default:'open';not null;type:text;"`
 
 	CVE   *CVE    `json:"cve"`
 	CVEID *string `json:"cveId" gorm:"null;type:text;default:null;"`
@@ -49,7 +49,7 @@ type DependencyVulnRisk struct {
 	CreatedAt         time.Time
 	ArbitraryJsonData string
 	Risk              float64
-	Type              DependencyVulnEventType
+	Type              VulnEventType
 }
 
 func (m DependencyVulnerability) TableName() string {

@@ -70,11 +70,11 @@ type gitlabIntegration struct {
 	gitlabIntegrationRepository gitlabIntegrationRepository
 	externalUserRepository      externalUserRepository
 
-	dependencyVulnRepository      dependencyVulnRepository
-	dependencyVulnEventRepository dependencyVulnEventRepository
-	frontendUrl                   string
-	assetRepository               assetRepository
-	dependencyVulnService         dependencyVulnService
+	dependencyVulnRepository dependencyVulnRepository
+	vulnEventRepository      vulnEventRepository
+	frontendUrl              string
+	assetRepository          assetRepository
+	dependencyVulnService    dependencyVulnService
 
 	gitlabClientFactory func(id uuid.UUID) (gitlabClientFacade, error)
 }
@@ -106,7 +106,7 @@ func messageWasCreatedByDevguard(message string) bool {
 func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnerability(db)
-	dependencyVulnEventRepository := repositories.NewDependencyVulnEventRepository(db)
+	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	externalUserRepository := repositories.NewExternalUserRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
@@ -114,11 +114,11 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	return &gitlabIntegration{
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
 
-		dependencyVulnRepository:      dependencyVulnRepository,
-		dependencyVulnService:         DependencyVuln.NewService(dependencyVulnRepository, dependencyVulnEventRepository, assetRepository, cveRepository),
-		dependencyVulnEventRepository: dependencyVulnEventRepository,
-		assetRepository:               assetRepository,
-		externalUserRepository:        externalUserRepository,
+		dependencyVulnRepository: dependencyVulnRepository,
+		dependencyVulnService:    DependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository),
+		vulnEventRepository:      vulnEventRepository,
+		assetRepository:          assetRepository,
+		externalUserRepository:   externalUserRepository,
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -220,7 +220,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
-			org, err := g.dependencyVulnRepository.GetOrgFromDependencyVulnID(nil, dependencyVuln.ID)
+			org, err := g.dependencyVulnRepository.GetOrgFromVulnID(nil, dependencyVuln.ID)
 			if err != nil {
 				slog.Error("could not get org from dependencyVuln id", "err", err)
 				return
@@ -244,16 +244,16 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}()
 
 		// create a new event based on the comment
-		dependencyVulnEvent := createNewDependencyVulnEventBasedOnComment(dependencyVuln.ID, fmt.Sprintf("gitlab:%d", event.User.ID), comment)
+		vulnEvent := createNewDependencyVulnEventBasedOnComment(dependencyVuln.ID, fmt.Sprintf("gitlab:%d", event.User.ID), comment)
 
-		dependencyVulnEvent.Apply(&dependencyVuln)
+		vulnEvent.Apply(&dependencyVuln)
 		// save the dependencyVuln and the event in a transaction
 		err = g.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 			err := g.dependencyVulnRepository.Save(tx, &dependencyVuln)
 			if err != nil {
 				return err
 			}
-			err = g.dependencyVulnEventRepository.Save(tx, &dependencyVulnEvent)
+			err = g.vulnEventRepository.Save(tx, &vulnEvent)
 			if err != nil {
 				return err
 			}
@@ -291,7 +291,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
-		switch dependencyVulnEvent.Type {
+		switch vulnEvent.Type {
 		case models.EventTypeAccepted:
 
 			labels := []string{
@@ -769,7 +769,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		dependencyVuln.TicketURL = utils.Ptr(createdIssue.WebURL)
 
 		userId := core.GetSession(event.Ctx).GetUserID()
-		dependencyVulnEvent := models.NewMitigateEvent(
+		vulnEvent := models.NewMitigateEvent(
 			dependencyVuln.ID,
 			userId,
 			justification["comment"],
@@ -778,8 +778,8 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 				"ticketUrl": createdIssue.WebURL,
 			})
 
-		return g.dependencyVulnService.ApplyAndSave(nil, &dependencyVuln, &dependencyVulnEvent)
-	case core.DependencyVulnEvent:
+		return g.dependencyVulnService.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
+	case core.VulnEvent:
 		ev := event.Event
 
 		asset := core.GetAsset(event.Ctx)

@@ -38,13 +38,24 @@ func newSbomCommand() *cobra.Command {
 			}
 			assetRepository := repositories.NewAssetRepository(database)
 			dependencyVulnRepository := repositories.NewDependencyVulnerability(database)
+			firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
-			assetService := asset.NewService(assetRepository, componentRepository, dependencyVulnRepository, DependencyVuln.NewService(
+			vulnEventRepository := repositories.NewVulnEventRepository(database)
+
+			DependencyVulnService := DependencyVuln.NewService(
 				dependencyVulnRepository,
-				repositories.NewDependencyVulnEventRepository(database),
+				vulnEventRepository,
 				assetRepository,
 				repositories.NewCVERepository(database),
-			))
+			)
+
+			FirstPartyVulnService := DependencyVuln.NewFirstPartyVulnService(
+				firstPartyVulnRepository,
+				vulnEventRepository,
+				assetRepository,
+			)
+
+			assetService := asset.NewService(assetRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, DependencyVulnService, FirstPartyVulnService)
 
 			sbomScanner := scan.NewSBOMScanner(scan.NewCPEComparer(database), scan.NewPurlComparer(database), repositories.NewCVERepository(database))
 

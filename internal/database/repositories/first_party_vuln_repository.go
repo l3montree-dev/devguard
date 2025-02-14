@@ -22,6 +22,14 @@ func NewFirstPartyVulnerabilityRepository(db core.DB) *FirstPartyVulnerabilityRe
 	}
 }
 
+func (r *FirstPartyVulnerabilityRepository) ListByScanner(assetID uuid.UUID, scannerID string) ([]models.FirstPartyVulnerability, error) {
+	var vulns []models.FirstPartyVulnerability = []models.FirstPartyVulnerability{}
+	if err := r.Repository.GetDB(r.db).Where("asset_id = ? AND scanner_id = ?", assetID, scannerID).Find(&vulns).Error; err != nil {
+		return nil, err
+	}
+	return vulns, nil
+}
+
 // TODO: change it
 func (r *FirstPartyVulnerabilityRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.FirstPartyVulnerability], map[string]int, error) {
 	var count int64

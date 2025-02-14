@@ -22,31 +22,31 @@ import (
 )
 
 type DependencyVulnDTO struct {
-	ID                    string                     `json:"id"`
-	ScannerID             string                     `json:"scanner"`
-	Message               *string                    `json:"message"`
-	AssetID               string                     `json:"assetId"`
-	State                 models.DependencyVulnState `json:"state"`
-	CVE                   *models.CVE                `json:"cve"`
-	CVEID                 *string                    `json:"cveId"`
-	ComponentPurl         *string                    `json:"componentPurl"`
-	ComponentDepth        *int                       `json:"componentDepth"`
-	ComponentFixedVersion *string                    `json:"componentFixedVersion"`
-	Effort                *int                       `json:"effort"`
-	RiskAssessment        *int                       `json:"riskAssessment"`
-	RawRiskAssessment     *float64                   `json:"rawRiskAssessment"`
-	Priority              *int                       `json:"priority"`
-	LastDetected          time.Time                  `json:"lastDetected"`
-	CreatedAt             time.Time                  `json:"createdAt"`
-	TicketID              *string                    `json:"ticketId"`
-	TicketURL             *string                    `json:"ticketUrl"`
+	ID                    string           `json:"id"`
+	ScannerID             string           `json:"scanner"`
+	Message               *string          `json:"message"`
+	AssetID               string           `json:"assetId"`
+	State                 models.VulnState `json:"state"`
+	CVE                   *models.CVE      `json:"cve"`
+	CVEID                 *string          `json:"cveId"`
+	ComponentPurl         *string          `json:"componentPurl"`
+	ComponentDepth        *int             `json:"componentDepth"`
+	ComponentFixedVersion *string          `json:"componentFixedVersion"`
+	Effort                *int             `json:"effort"`
+	RiskAssessment        *int             `json:"riskAssessment"`
+	RawRiskAssessment     *float64         `json:"rawRiskAssessment"`
+	Priority              *int             `json:"priority"`
+	LastDetected          time.Time        `json:"lastDetected"`
+	CreatedAt             time.Time        `json:"createdAt"`
+	TicketID              *string          `json:"ticketId"`
+	TicketURL             *string          `json:"ticketUrl"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
 
 type detailedDependencyVulnDTO struct {
 	DependencyVulnDTO
-	Events []DependencyVulnEventDTO `json:"events"`
+	Events []VulnEventDTO `json:"events"`
 }
 
 func DependencyVulnToDto(f models.DependencyVulnerability) DependencyVulnDTO {

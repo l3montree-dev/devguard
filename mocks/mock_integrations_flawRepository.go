@@ -80,12 +80,12 @@ func (_c *IntegrationsDependencyVulnRepository_FindByTicketID_Call) RunAndReturn
 	return _c
 }
 
-// GetOrgFromDependencyVulnID provides a mock function with given fields: tx, dependencyVulnID
-func (_m *IntegrationsDependencyVulnRepository) GetOrgFromDependencyVulnID(tx *gorm.DB, dependencyVulnID string) (models.Org, error) {
+// GetOrgFromVulnID provides a mock function with given fields: tx, dependencyVulnID
+func (_m *IntegrationsDependencyVulnRepository) GetOrgFromVulnID(tx *gorm.DB, dependencyVulnID string) (models.Org, error) {
 	ret := _m.Called(tx, dependencyVulnID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetOrgFromDependencyVulnID")
+		panic("no return value specified for GetOrgFromVulnID")
 	}
 
 	var r0 models.Org
@@ -108,31 +108,31 @@ func (_m *IntegrationsDependencyVulnRepository) GetOrgFromDependencyVulnID(tx *g
 	return r0, r1
 }
 
-// IntegrationsDependencyVulnRepository_GetOrgFromDependencyVulnID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrgFromDependencyVulnID'
-type IntegrationsDependencyVulnRepository_GetOrgFromDependencyVulnID_Call struct {
+// IntegrationsDependencyVulnRepository_GetOrgFromVulnID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrgFromVulnID'
+type IntegrationsDependencyVulnRepository_GetOrgFromVulnID_Call struct {
 	*mock.Call
 }
 
-// GetOrgFromDependencyVulnID is a helper method to define mock.On call
+// GetOrgFromVulnID is a helper method to define mock.On call
 //   - tx *gorm.DB
 //   - dependencyVulnID string
-func (_e *IntegrationsDependencyVulnRepository_Expecter) GetOrgFromDependencyVulnID(tx interface{}, dependencyVulnID interface{}) *IntegrationsDependencyVulnRepository_GetOrgFromDependencyVulnID_Call {
-	return &IntegrationsDependencyVulnRepository_GetOrgFromDependencyVulnID_Call{Call: _e.mock.On("GetOrgFromDependencyVulnID", tx, dependencyVulnID)}
+func (_e *IntegrationsDependencyVulnRepository_Expecter) GetOrgFromVulnID(tx interface{}, dependencyVulnID interface{}) *IntegrationsDependencyVulnRepository_GetOrgFromVulnID_Call {
+	return &IntegrationsDependencyVulnRepository_GetOrgFromVulnID_Call{Call: _e.mock.On("GetOrgFromVulnID", tx, dependencyVulnID)}
 }
 
-func (_c *IntegrationsDependencyVulnRepository_GetOrgFromDependencyVulnID_Call) Run(run func(tx *gorm.DB, dependencyVulnID string)) *IntegrationsDependencyVulnRepository_GetOrgFromDependencyVulnID_Call {
+func (_c *IntegrationsDependencyVulnRepository_GetOrgFromVulnID_Call) Run(run func(tx *gorm.DB, dependencyVulnID string)) *IntegrationsDependencyVulnRepository_GetOrgFromVulnID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(*gorm.DB), args[1].(string))
 	})
 	return _c
 }
 
-func (_c *IntegrationsDependencyVulnRepository_GetOrgFromDependencyVulnID_Call) Return(_a0 models.Org, _a1 error) *IntegrationsDependencyVulnRepository_GetOrgFromDependencyVulnID_Call {
+func (_c *IntegrationsDependencyVulnRepository_GetOrgFromVulnID_Call) Return(_a0 models.Org, _a1 error) *IntegrationsDependencyVulnRepository_GetOrgFromVulnID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *IntegrationsDependencyVulnRepository_GetOrgFromDependencyVulnID_Call) RunAndReturn(run func(*gorm.DB, string) (models.Org, error)) *IntegrationsDependencyVulnRepository_GetOrgFromDependencyVulnID_Call {
+func (_c *IntegrationsDependencyVulnRepository_GetOrgFromVulnID_Call) RunAndReturn(run func(*gorm.DB, string) (models.Org, error)) *IntegrationsDependencyVulnRepository_GetOrgFromVulnID_Call {
 	_c.Call.Return(run)
 	return _c
 }

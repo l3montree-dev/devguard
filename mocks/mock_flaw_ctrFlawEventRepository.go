@@ -21,17 +21,17 @@ func (_m *DependencyVulnCtrDependencyVulnEventRepository) EXPECT() *DependencyVu
 	return &DependencyVulnCtrDependencyVulnEventRepository_Expecter{mock: &_m.Mock}
 }
 
-// Create provides a mock function with given fields: tx, dependencyVulnEvent
-func (_m *DependencyVulnCtrDependencyVulnEventRepository) Create(tx *gorm.DB, dependencyVulnEvent *models.DependencyVulnEvent) error {
-	ret := _m.Called(tx, dependencyVulnEvent)
+// Create provides a mock function with given fields: tx, vulnEvent
+func (_m *DependencyVulnCtrDependencyVulnEventRepository) Create(tx *gorm.DB, vulnEvent *models.VulnEvent) error {
+	ret := _m.Called(tx, vulnEvent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.DependencyVulnEvent) error); ok {
-		r0 = rf(tx, dependencyVulnEvent)
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.VulnEvent) error); ok {
+		r0 = rf(tx, vulnEvent)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -46,14 +46,14 @@ type DependencyVulnCtrDependencyVulnEventRepository_Create_Call struct {
 
 // Create is a helper method to define mock.On call
 //   - tx *gorm.DB
-//   - dependencyVulnEvent *models.DependencyVulnEvent
-func (_e *DependencyVulnCtrDependencyVulnEventRepository_Expecter) Create(tx interface{}, dependencyVulnEvent interface{}) *DependencyVulnCtrDependencyVulnEventRepository_Create_Call {
-	return &DependencyVulnCtrDependencyVulnEventRepository_Create_Call{Call: _e.mock.On("Create", tx, dependencyVulnEvent)}
+//   - vulnEvent *models.VulnEvent
+func (_e *DependencyVulnCtrDependencyVulnEventRepository_Expecter) Create(tx interface{}, vulnEvent interface{}) *DependencyVulnCtrDependencyVulnEventRepository_Create_Call {
+	return &DependencyVulnCtrDependencyVulnEventRepository_Create_Call{Call: _e.mock.On("Create", tx, vulnEvent)}
 }
 
-func (_c *DependencyVulnCtrDependencyVulnEventRepository_Create_Call) Run(run func(tx *gorm.DB, dependencyVulnEvent *models.DependencyVulnEvent)) *DependencyVulnCtrDependencyVulnEventRepository_Create_Call {
+func (_c *DependencyVulnCtrDependencyVulnEventRepository_Create_Call) Run(run func(tx *gorm.DB, vulnEvent *models.VulnEvent)) *DependencyVulnCtrDependencyVulnEventRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(*models.DependencyVulnEvent))
+		run(args[0].(*gorm.DB), args[1].(*models.VulnEvent))
 	})
 	return _c
 }
@@ -63,7 +63,7 @@ func (_c *DependencyVulnCtrDependencyVulnEventRepository_Create_Call) Return(_a0
 	return _c
 }
 
-func (_c *DependencyVulnCtrDependencyVulnEventRepository_Create_Call) RunAndReturn(run func(*gorm.DB, *models.DependencyVulnEvent) error) *DependencyVulnCtrDependencyVulnEventRepository_Create_Call {
+func (_c *DependencyVulnCtrDependencyVulnEventRepository_Create_Call) RunAndReturn(run func(*gorm.DB, *models.VulnEvent) error) *DependencyVulnCtrDependencyVulnEventRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }

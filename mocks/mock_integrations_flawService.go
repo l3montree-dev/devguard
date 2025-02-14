@@ -23,17 +23,17 @@ func (_m *IntegrationsDependencyVulnService) EXPECT() *IntegrationsDependencyVul
 	return &IntegrationsDependencyVulnService_Expecter{mock: &_m.Mock}
 }
 
-// ApplyAndSave provides a mock function with given fields: tx, dependencyVuln, dependencyVulnEvent
-func (_m *IntegrationsDependencyVulnService) ApplyAndSave(tx *gorm.DB, dependencyVuln *models.DependencyVulnerability, dependencyVulnEvent *models.DependencyVulnEvent) error {
-	ret := _m.Called(tx, dependencyVuln, dependencyVulnEvent)
+// ApplyAndSave provides a mock function with given fields: tx, dependencyVuln, vulnEvent
+func (_m *IntegrationsDependencyVulnService) ApplyAndSave(tx *gorm.DB, dependencyVuln *models.DependencyVulnerability, vulnEvent *models.VulnEvent) error {
+	ret := _m.Called(tx, dependencyVuln, vulnEvent)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ApplyAndSave")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.DependencyVulnerability, *models.DependencyVulnEvent) error); ok {
-		r0 = rf(tx, dependencyVuln, dependencyVulnEvent)
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.DependencyVulnerability, *models.VulnEvent) error); ok {
+		r0 = rf(tx, dependencyVuln, vulnEvent)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -49,14 +49,14 @@ type IntegrationsDependencyVulnService_ApplyAndSave_Call struct {
 // ApplyAndSave is a helper method to define mock.On call
 //   - tx *gorm.DB
 //   - dependencyVuln *models.DependencyVuln
-//   - dependencyVulnEvent *models.DependencyVulnEvent
-func (_e *IntegrationsDependencyVulnService_Expecter) ApplyAndSave(tx interface{}, dependencyVuln interface{}, dependencyVulnEvent interface{}) *IntegrationsDependencyVulnService_ApplyAndSave_Call {
-	return &IntegrationsDependencyVulnService_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", tx, dependencyVuln, dependencyVulnEvent)}
+//   - vulnEvent *models.VulnEvent
+func (_e *IntegrationsDependencyVulnService_Expecter) ApplyAndSave(tx interface{}, dependencyVuln interface{}, vulnEvent interface{}) *IntegrationsDependencyVulnService_ApplyAndSave_Call {
+	return &IntegrationsDependencyVulnService_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", tx, dependencyVuln, vulnEvent)}
 }
 
-func (_c *IntegrationsDependencyVulnService_ApplyAndSave_Call) Run(run func(tx *gorm.DB, dependencyVuln *models.DependencyVulnerability, dependencyVulnEvent *models.DependencyVulnEvent)) *IntegrationsDependencyVulnService_ApplyAndSave_Call {
+func (_c *IntegrationsDependencyVulnService_ApplyAndSave_Call) Run(run func(tx *gorm.DB, dependencyVuln *models.DependencyVulnerability, vulnEvent *models.VulnEvent)) *IntegrationsDependencyVulnService_ApplyAndSave_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(*models.DependencyVulnerability), args[2].(*models.DependencyVulnEvent))
+		run(args[0].(*gorm.DB), args[1].(*models.DependencyVulnerability), args[2].(*models.VulnEvent))
 	})
 	return _c
 }
@@ -66,7 +66,7 @@ func (_c *IntegrationsDependencyVulnService_ApplyAndSave_Call) Return(_a0 error)
 	return _c
 }
 
-func (_c *IntegrationsDependencyVulnService_ApplyAndSave_Call) RunAndReturn(run func(*gorm.DB, *models.DependencyVulnerability, *models.DependencyVulnEvent) error) *IntegrationsDependencyVulnService_ApplyAndSave_Call {
+func (_c *IntegrationsDependencyVulnService_ApplyAndSave_Call) RunAndReturn(run func(*gorm.DB, *models.DependencyVulnerability, *models.VulnEvent) error) *IntegrationsDependencyVulnService_ApplyAndSave_Call {
 	_c.Call.Return(run)
 	return _c
 }

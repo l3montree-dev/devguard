@@ -19,7 +19,7 @@ type assetRepository interface {
 }
 
 type statisticsRepository interface {
-	TimeTravelDependencyVulnState(assetID uuid.UUID, time time.Time) ([]models.DependencyVulnerability, error)
+	TimeTravelVulnState(assetID uuid.UUID, time time.Time) ([]models.DependencyVulnerability, error)
 	GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetDependencyVulnCountByScannerId(assetID uuid.UUID) (map[string]int, error)
 	AverageFixingTime(assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
@@ -35,8 +35,8 @@ type assetRiskHistoryRepository interface {
 }
 
 type dependencyVulnRepository interface {
-	GetAllOpenDependencyVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
-	GetAllDependencyVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
+	GetAllOpenVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
+	GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
 }
 
 type projectRepository interface {
@@ -180,7 +180,7 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(assetID, time)
+		dependencyVulns, err := s.statisticsRepository.TimeTravelVulnState(assetID, time)
 		if err != nil {
 			return err
 		}
@@ -199,7 +199,7 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 
 		for _, dependencyVuln := range dependencyVulns {
 			var key string
-			if dependencyVuln.State == models.DependencyVulnStateOpen {
+			if dependencyVuln.State == models.VulnStateOpen {
 				openDependencyVulns++
 				key = "open"
 
@@ -313,7 +313,7 @@ func (s *service) GetAssetRiskDistribution(assetID uuid.UUID, assetName string) 
 }
 
 func (s *service) GetComponentRisk(assetID uuid.UUID) (map[string]float64, error) {
-	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenDependencyVulnsByAssetID(nil, assetID)
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetID(nil, assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -365,10 +365,10 @@ func (s *service) GetDependencyVulnAggregationStateAndChangeSince(assetID uuid.U
 
 	results := utils.Concurrently(
 		func() (any, error) {
-			return s.dependencyVulnRepository.GetAllDependencyVulnsByAssetID(nil, assetID)
+			return s.dependencyVulnRepository.GetAllVulnsByAssetID(nil, assetID)
 		},
 		func() (any, error) {
-			return s.statisticsRepository.TimeTravelDependencyVulnState(assetID, calculateChangeTo)
+			return s.statisticsRepository.TimeTravelVulnState(assetID, calculateChangeTo)
 		},
 	)
 
@@ -392,7 +392,7 @@ func calculateDependencyVulnAggregationState(dependencyVulns []models.Dependency
 	state := DependencyVulnAggregationState{}
 
 	for _, dependencyVuln := range dependencyVulns {
-		if dependencyVuln.State == models.DependencyVulnStateOpen {
+		if dependencyVuln.State == models.VulnStateOpen {
 			state.Open++
 		} else {
 			state.Fixed++

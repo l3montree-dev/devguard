@@ -16,10 +16,7 @@
 package scan
 
 import (
-	"encoding/json"
-	"fmt"
 	"log/slog"
-	"os"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -43,6 +40,7 @@ type componentRepository interface {
 
 type assetService interface {
 	HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVulnerability, err error)
+	HandleFirstPartyVulnResult(asset models.Asset, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error)
 	UpdateSBOM(asset models.Asset, scanner string, version string, sbom normalize.SBOM) error
 }
 
@@ -85,6 +83,12 @@ type ScanResponse struct {
 	AmountOpened    int                                `json:"amountOpened"`
 	AmountClosed    int                                `json:"amountClosed"`
 	DependencyVulns []DependencyVuln.DependencyVulnDTO `json:"dependencyVulns"`
+}
+
+type FirstPartyScanResponse struct {
+	AmountOpened    int                                `json:"amountOpened"`
+	AmountClosed    int                                `json:"amountClosed"`
+	FirstPartyVulns []DependencyVuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
 }
 
 func (s *httpController) DependencyVulnScan(c core.Context) error {
@@ -174,8 +178,8 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
 	}
 
-	/* 	assetObj := core.GetAsset(c)
-	   	userID := core.GetSession(c).GetUserID() */
+	assetObj := core.GetAsset(c)
+	userID := core.GetSession(c).GetUserID()
 
 	scanner := c.Request().Header.Get("X-Scanner")
 	if scanner == "" {
@@ -186,63 +190,43 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	}
 
 	//check if risk management is enabled
-	/* 	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
-	   	doRiskManagement := riskManagementEnabled != "false"
-	   	if doRiskManagement {
-	   		//TODO
-	   	} */
+	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
+	doRiskManagement := riskManagementEnabled != "false"
+	if doRiskManagement {
+		//TODO
+	}
 
-	fmt.Println(sarifScan)
+	//fmt.Println(sarifScan)
 
 	// handle the scan result
-	/* 	amountOpened, amountClose, newState, err := HandleSarifResult(sarifScan, scanner) */
-
-	//save the scan result to json file
-	file, err := os.Create("sarif_scan.json")
+	amountOpened, amountClose, newState, err := s.assetService.HandleFirstPartyVulnResult(assetObj, sarifScan, scanner, userID, doRiskManagement)
 	if err != nil {
-		slog.Error("could not create temp file", "err", err)
-
-		return c.JSON(500, map[string]string{"error": "could not create temp file"})
+		slog.Error("could not handle scan result", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
 	}
 
-	// write the scan result to the file
-	if err := json.NewEncoder(file).Encode(sarifScan); err != nil {
-		slog.Error("could not write scan result to file", "err", err)
-		return c.JSON(500, map[string]string{"error": "could not write scan result to file"})
-	}
-	return c.JSON(200, map[string]string{"message": "sarif scan received"})
-
-}
-
-func HandleSarifResult(sarifScan models.SarifResult, scanner string) (int, int, []models.FirstPartyVulnerability, error) {
-
-	sarifDependencyVulns := []models.FirstPartyVulnerability{}
-
-	for _, run := range sarifScan.Runs {
-		for _, result := range run.Results {
-
-			snippet := result.Locations[0].PhysicalLocation.Region.Snippet.Text
-			snippetMax := 20
-			if snippetMax < len(snippet)/2 {
-				snippetMax = len(snippet) / 2
-			}
-			snippet = snippet[:snippetMax] + "***"
-
-			sarifDependencyVuln := models.FirstPartyVulnerability{
-				Vulnerability: models.Vulnerability{
-					Message: &result.Message.Text,
-				},
-				RuleID:      result.RuleId,
-				Uri:         result.Locations[0].PhysicalLocation.ArtifactLocation.Uri,
-				StartLine:   result.Locations[0].PhysicalLocation.Region.StartLine,
-				StartColumn: result.Locations[0].PhysicalLocation.Region.StartColumn,
-				EndLine:     result.Locations[0].PhysicalLocation.Region.EndLine,
-				EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
-				Snippet:     snippet,
-			}
-			sarifDependencyVulns = append(sarifDependencyVulns, sarifDependencyVuln)
-		}
+	if doRiskManagement {
+		//TODO recalculate risk history
 	}
 
-	return 0, 0, sarifDependencyVulns, nil
+	return c.JSON(200, FirstPartyScanResponse{
+		AmountOpened:    amountOpened,
+		AmountClosed:    amountClose,
+		FirstPartyVulns: utils.Map(newState, DependencyVuln.FirstPartyVulnToDto),
+	})
+
+	/* 	//save the scan result to json file
+	   	file, err := os.Create("sarif_scan.json")
+	   	if err != nil {
+	   		slog.Error("could not create temp file", "err", err)
+
+	   		return c.JSON(500, map[string]string{"error": "could not create temp file"})
+	   	}
+
+	   	// write the scan result to the file
+	   	if err := json.NewEncoder(file).Encode(sarifScan); err != nil {
+	   		slog.Error("could not write scan result to file", "err", err)
+	   		return c.JSON(500, map[string]string{"error": "could not write scan result to file"})
+	   	} */
+
 }

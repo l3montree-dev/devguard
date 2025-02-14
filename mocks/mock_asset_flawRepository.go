@@ -23,12 +23,12 @@ func (_m *AssetDependencyVulnRepository) EXPECT() *AssetDependencyVulnRepository
 	return &AssetDependencyVulnRepository_Expecter{mock: &_m.Mock}
 }
 
-// GetAllDependencyVulnsByAssetID provides a mock function with given fields: tx, assetID
-func (_m *AssetDependencyVulnRepository) GetAllDependencyVulnsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error) {
+// GetAllVulnsByAssetID provides a mock function with given fields: tx, assetID
+func (_m *AssetDependencyVulnRepository) GetAllVulnsByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error) {
 	ret := _m.Called(tx, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAllDependencyVulnsByAssetID")
+		panic("no return value specified for GetAllVulnsByAssetID")
 	}
 
 	var r0 []models.DependencyVulnerability
@@ -53,31 +53,31 @@ func (_m *AssetDependencyVulnRepository) GetAllDependencyVulnsByAssetID(tx *gorm
 	return r0, r1
 }
 
-// AssetDependencyVulnRepository_GetAllDependencyVulnsByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllDependencyVulnsByAssetID'
-type AssetDependencyVulnRepository_GetAllDependencyVulnsByAssetID_Call struct {
+// AssetDependencyVulnRepository_GetAllVulnsByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllVulnsByAssetID'
+type AssetDependencyVulnRepository_GetAllVulnsByAssetID_Call struct {
 	*mock.Call
 }
 
-// GetAllDependencyVulnsByAssetID is a helper method to define mock.On call
+// GetAllVulnsByAssetID is a helper method to define mock.On call
 //   - tx *gorm.DB
 //   - assetID uuid.UUID
-func (_e *AssetDependencyVulnRepository_Expecter) GetAllDependencyVulnsByAssetID(tx interface{}, assetID interface{}) *AssetDependencyVulnRepository_GetAllDependencyVulnsByAssetID_Call {
-	return &AssetDependencyVulnRepository_GetAllDependencyVulnsByAssetID_Call{Call: _e.mock.On("GetAllDependencyVulnsByAssetID", tx, assetID)}
+func (_e *AssetDependencyVulnRepository_Expecter) GetAllVulnsByAssetID(tx interface{}, assetID interface{}) *AssetDependencyVulnRepository_GetAllVulnsByAssetID_Call {
+	return &AssetDependencyVulnRepository_GetAllVulnsByAssetID_Call{Call: _e.mock.On("GetAllVulnsByAssetID", tx, assetID)}
 }
 
-func (_c *AssetDependencyVulnRepository_GetAllDependencyVulnsByAssetID_Call) Run(run func(tx *gorm.DB, assetID uuid.UUID)) *AssetDependencyVulnRepository_GetAllDependencyVulnsByAssetID_Call {
+func (_c *AssetDependencyVulnRepository_GetAllVulnsByAssetID_Call) Run(run func(tx *gorm.DB, assetID uuid.UUID)) *AssetDependencyVulnRepository_GetAllVulnsByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(*gorm.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
 
-func (_c *AssetDependencyVulnRepository_GetAllDependencyVulnsByAssetID_Call) Return(_a0 []models.DependencyVulnerability, _a1 error) *AssetDependencyVulnRepository_GetAllDependencyVulnsByAssetID_Call {
+func (_c *AssetDependencyVulnRepository_GetAllVulnsByAssetID_Call) Return(_a0 []models.DependencyVulnerability, _a1 error) *AssetDependencyVulnRepository_GetAllVulnsByAssetID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *AssetDependencyVulnRepository_GetAllDependencyVulnsByAssetID_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.DependencyVulnerability, error)) *AssetDependencyVulnRepository_GetAllDependencyVulnsByAssetID_Call {
+func (_c *AssetDependencyVulnRepository_GetAllVulnsByAssetID_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.DependencyVulnerability, error)) *AssetDependencyVulnRepository_GetAllVulnsByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -26,7 +26,7 @@ import (
 type integrationController struct {
 }
 
-func createNewDependencyVulnEventBasedOnComment(dependencyVulnId, userId, comment string) models.DependencyVulnEvent {
+func createNewDependencyVulnEventBasedOnComment(dependencyVulnId, userId, comment string) models.VulnEvent {
 	if strings.HasPrefix(comment, "/accept") {
 		// create a new dependencyVuln accept event
 		return models.NewAcceptedEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))

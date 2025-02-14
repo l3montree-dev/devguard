@@ -21,7 +21,7 @@ func NewStatisticsRepository(db core.DB) *statisticsRepository {
 }
 
 // returns all dependencyVulns for the asset including the events, which were created before the given time
-func (r *statisticsRepository) TimeTravelDependencyVulnState(assetID uuid.UUID, time time.Time) ([]models.DependencyVulnerability, error) {
+func (r *statisticsRepository) TimeTravelVulnState(assetID uuid.UUID, time time.Time) ([]models.DependencyVulnerability, error) {
 	dependencyVulns := []models.DependencyVulnerability{}
 
 	err := r.db.Model(&models.DependencyVulnerability{}).Preload("Events", func(db core.DB) core.DB {
@@ -114,13 +114,13 @@ func (r *statisticsRepository) GetAssetRiskDistribution(assetID uuid.UUID, asset
 	}, nil
 }
 
-var fixedEvents = []models.DependencyVulnEventType{
+var fixedEvents = []models.VulnEventType{
 	models.EventTypeAccepted,
 	models.EventTypeFixed,
 	models.EventTypeFalsePositive,
 }
 
-var openEvents = []models.DependencyVulnEventType{
+var openEvents = []models.VulnEventType{
 	models.EventTypeDetected,
 	models.EventTypeReopened,
 }

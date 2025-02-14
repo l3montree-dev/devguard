@@ -22,22 +22,22 @@ func (_m *DependencyVulnDependencyVulnService) EXPECT() *DependencyVulnDependenc
 }
 
 // UpdateDependencyVulnState provides a mock function with given fields: tx, userID, _a2, statusType, justification
-func (_m *DependencyVulnDependencyVulnService) UpdateDependencyVulnState(tx *gorm.DB, userID string, _a2 *models.DependencyVulnerability, statusType string, justification string) (models.DependencyVulnEvent, error) {
+func (_m *DependencyVulnDependencyVulnService) UpdateDependencyVulnState(tx *gorm.DB, userID string, _a2 *models.DependencyVulnerability, statusType string, justification string) (models.VulnEvent, error) {
 	ret := _m.Called(tx, userID, _a2, statusType, justification)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateDependencyVulnState")
 	}
 
-	var r0 models.DependencyVulnEvent
+	var r0 models.VulnEvent
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.DependencyVulnerability, string, string) (models.DependencyVulnEvent, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.DependencyVulnerability, string, string) (models.VulnEvent, error)); ok {
 		return rf(tx, userID, _a2, statusType, justification)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.DependencyVulnerability, string, string) models.DependencyVulnEvent); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.DependencyVulnerability, string, string) models.VulnEvent); ok {
 		r0 = rf(tx, userID, _a2, statusType, justification)
 	} else {
-		r0 = ret.Get(0).(models.DependencyVulnEvent)
+		r0 = ret.Get(0).(models.VulnEvent)
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, string, *models.DependencyVulnerability, string, string) error); ok {
@@ -71,12 +71,12 @@ func (_c *DependencyVulnDependencyVulnService_UpdateDependencyVulnState_Call) Ru
 	return _c
 }
 
-func (_c *DependencyVulnDependencyVulnService_UpdateDependencyVulnState_Call) Return(_a0 models.DependencyVulnEvent, _a1 error) *DependencyVulnDependencyVulnService_UpdateDependencyVulnState_Call {
+func (_c *DependencyVulnDependencyVulnService_UpdateDependencyVulnState_Call) Return(_a0 models.VulnEvent, _a1 error) *DependencyVulnDependencyVulnService_UpdateDependencyVulnState_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *DependencyVulnDependencyVulnService_UpdateDependencyVulnState_Call) RunAndReturn(run func(*gorm.DB, string, *models.DependencyVulnerability, string, string) (models.DependencyVulnEvent, error)) *DependencyVulnDependencyVulnService_UpdateDependencyVulnState_Call {
+func (_c *DependencyVulnDependencyVulnService_UpdateDependencyVulnState_Call) RunAndReturn(run func(*gorm.DB, string, *models.DependencyVulnerability, string, string) (models.VulnEvent, error)) *DependencyVulnDependencyVulnService_UpdateDependencyVulnState_Call {
 	_c.Call.Return(run)
 	return _c
 }

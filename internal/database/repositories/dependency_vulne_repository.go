@@ -23,6 +23,14 @@ func NewDependencyVulnerability(db core.DB) *DependencyVulnerability {
 	}
 }
 
+func (r *DependencyVulnerability) ListByScanner(assetID uuid.UUID, scannerID string) ([]models.DependencyVulnerability, error) {
+	var vulns []models.DependencyVulnerability = []models.DependencyVulnerability{}
+	if err := r.Repository.GetDB(r.db).Preload("CVE").Where("asset_id = ? AND scanner_id = ?", assetID, scannerID).Find(&vulns).Error; err != nil {
+		return nil, err
+	}
+	return vulns, nil
+}
+
 func (r *DependencyVulnerability) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.DependencyVulnerability], map[string]int, error) {
 	var count int64
 	var dependencyVulns []models.DependencyVulnerability = []models.DependencyVulnerability{}

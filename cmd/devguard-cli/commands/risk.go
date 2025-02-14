@@ -35,10 +35,10 @@ func newCalculateCmd() *cobra.Command {
 			}
 
 			dependencyVulnRepository := repositories.NewDependencyVulnerability(database)
-			dependencyVulnEventRepository := repositories.NewDependencyVulnEventRepository(database)
+			vulnEventRepository := repositories.NewVulnEventRepository(database)
 			cveRepository := repositories.NewCVERepository(database)
 			assetRepository := repositories.NewAssetRepository(database)
-			dependencyVulnService := DependencyVuln.NewService(dependencyVulnRepository, dependencyVulnEventRepository, assetRepository, cveRepository)
+			dependencyVulnService := DependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository)
 			statisticsRepository := repositories.NewStatisticsRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
 			projectRepository := repositories.NewProjectRepository(database)

@@ -40,7 +40,7 @@ type projectService interface {
 }
 
 type dependencyVulnService interface {
-	UpdateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVulnerability, statusType string, justification string) (models.DependencyVulnEvent, error)
+	UpdateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVulnerability, statusType string, justification string) (models.VulnEvent, error)
 }
 
 type dependencyVulnHttpController struct {
@@ -270,7 +270,7 @@ func (c dependencyVulnHttpController) CreateEvent(ctx core.Context) error {
 		if err != nil {
 			return err
 		}
-		err = thirdPartyIntegration.HandleEvent(core.DependencyVulnEvent{
+		err = thirdPartyIntegration.HandleEvent(core.VulnEvent{
 			Ctx:   ctx,
 			Event: ev,
 		})
@@ -311,8 +311,8 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVulnerability) detaile
 			TicketURL:             dependencyVuln.TicketURL,
 			RiskRecalculatedAt:    dependencyVuln.RiskRecalculatedAt,
 		},
-		Events: utils.Map(dependencyVuln.Events, func(ev models.DependencyVulnEvent) DependencyVulnEventDTO {
-			return DependencyVulnEventDTO{
+		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) VulnEventDTO {
+			return VulnEventDTO{
 				ID:                ev.ID,
 				Type:              ev.Type,
 				DependencyVulnID:  ev.DependencyVulnID,

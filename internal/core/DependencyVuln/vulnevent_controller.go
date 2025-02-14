@@ -6,35 +6,35 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// we are using multiple definitions of the dependencyVulnEventRepository interface in the same package
+// we are using multiple definitions of the vulnEventRepository interface in the same package
 // therefore prefixing the interface name with ctr
 type ctrDependencyVulnEventRepository interface {
-	Create(tx core.DB, dependencyVulnEvent *models.DependencyVulnEvent) error
+	Create(tx core.DB, vulnEvent *models.VulnEvent) error
 }
 
 type DependencyVulnEventHttpController struct {
-	dependencyVulnEventRepository ctrDependencyVulnEventRepository
+	vulnEventRepository ctrDependencyVulnEventRepository
 }
 
-func NewEventHttpController(dependencyVulnEventRepository ctrDependencyVulnEventRepository) *DependencyVulnEventHttpController {
+func NewEventHttpController(vulnEventRepository ctrDependencyVulnEventRepository) *DependencyVulnEventHttpController {
 	return &DependencyVulnEventHttpController{
-		dependencyVulnEventRepository: dependencyVulnEventRepository,
+		vulnEventRepository: vulnEventRepository,
 	}
 }
 
 func (c DependencyVulnEventHttpController) Create(ctx core.Context) error {
-	dto := DependencyVulnEventDTO{}
+	dto := VulnEventDTO{}
 	err := ctx.Bind(&dto)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
 	}
 
-	dependencyVulnEvent := dto.ToModel()
+	vulnEvent := dto.ToModel()
 
-	err = c.dependencyVulnEventRepository.Create(nil, &dependencyVulnEvent)
+	err = c.vulnEventRepository.Create(nil, &vulnEvent)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not create dependencyVuln event").WithInternal(err)
 	}
 
-	return ctx.JSON(200, dependencyVulnEvent)
+	return ctx.JSON(200, vulnEvent)
 }

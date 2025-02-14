@@ -13,9 +13,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/DependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -44,7 +47,7 @@ func NewSecretScanningCommand() *cobra.Command {
 func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		core.InitLogger()
-		token, assetName, apiUrl, failOnRisk, webUI := parseConfig(cmd)
+		token, assetName, apiUrl, _, webUI := parseConfig(cmd)
 		if token == "" {
 			slog.Error("token seems to be empty. If you provide the token via an environment variable like --token=$DEVGUARD_TOKEN, check, if the environment variable is set or if there are any spelling mistakes", "token", token)
 			return fmt.Errorf("token seems to be empty")
@@ -102,14 +105,14 @@ func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string)
 
 		// read and parse the body - it should be an array of dependencyVulns
 		// print the dependencyVulns to the console
-		var scanResponse scan.ScanResponse
+		var scanResponse scan.FirstPartyScanResponse
 
 		err = json.NewDecoder(resp.Body).Decode(&scanResponse)
 		if err != nil {
 			return errors.Wrap(err, "could not parse response")
 		}
 
-		printScaResults(scanResponse, failOnRisk, assetName, webUI, doRiskManagement)
+		printFirstPartyScanResults(scanResponse, assetName, webUI, doRiskManagement)
 		return nil
 	}
 }
@@ -134,7 +137,7 @@ func secretScan(path string) (*os.File, error) {
 
 	/* 	scannerCmd = exec.Command("gitleaks", "dir", "-v", path, "--report-format", "sarif", "--report-path", fileName) */
 
-	scannerCmd = exec.Command("gitleaks", "git", "--report-path", fileName, "--report-format", "sarif")
+	scannerCmd = exec.Command("gitleaks", "dir", path, "--report-path", fileName, "--report-format", "sarif")
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
@@ -155,4 +158,32 @@ func secretScan(path string) (*os.File, error) {
 	}
 
 	return file, nil
+}
+
+func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName, webUI string, doRiskManagement bool) {
+
+	slog.Info("First party scan results", "FirstPartyVulnAmount", len(scanResponse.FirstPartyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
+
+	if len(scanResponse.FirstPartyVulns) == 0 {
+		return
+	}
+
+	tw := table.NewWriter()
+	tw.AppendHeader(table.Row{"RuleID", "Uri", "Status", "URL"})
+	tw.AppendRows(utils.Map(
+		scanResponse.FirstPartyVulns,
+		func(v DependencyVuln.FirstPartyVulnDTO) table.Row {
+			clickableLink := ""
+			if doRiskManagement {
+				clickableLink = fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, v.ID)
+			} else {
+				clickableLink = "Risk management is disabled"
+			}
+
+			return table.Row{v.RuleID, v.Uri, v.State, clickableLink}
+		},
+	))
+
+	fmt.Println(tw.Render())
+
 }

@@ -60,7 +60,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 	})
 
 	t.Run("it should do nothing, if the asset is NOT connected to a github repository", func(t *testing.T) {
-		// since we are not asserting anything on dependencyVulnRepository nor dependencyVulnEventRepository nor github client, we can be sure
+		// since we are not asserting anything on dependencyVulnRepository nor vulnEventRepository nor github client, we can be sure
 		// that no methods were called and actually nothing happened
 		githubIntegration := githubIntegration{}
 
@@ -122,7 +122,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("it should return error if could not save the dependencyVuln and the dependencyVulnEvent", func(t *testing.T) {
+	t.Run("it should return error if could not save the dependencyVuln and the vulnEvent", func(t *testing.T) {
 
 		req := httptest.NewRequest("POST", "/webhook", bytes.NewBufferString(`{"comment": "test"}`))
 		e := echo.New()
@@ -186,7 +186,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("it should save the justification in the dependencyVulnEvent after creating a github ticket. Ref: https://github.com/l3montree-dev/devguard/issues/173", func(t *testing.T) {
+	t.Run("it should save the justification in the vulnEvent after creating a github ticket. Ref: https://github.com/l3montree-dev/devguard/issues/173", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/webhook", bytes.NewBufferString(`{"comment": "that is a justification"}`))
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
@@ -210,7 +210,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		dependencyVulnRepository.On("Read", "1").Return(expectDependencyVuln, nil)
 		dependencyVulnService := mocks.NewIntegrationsDependencyVulnService(t)
 
-		expectedEvent := models.DependencyVulnEvent{
+		expectedEvent := models.VulnEvent{
 			Type:   models.EventTypeMitigate,
 			UserID: "1",
 

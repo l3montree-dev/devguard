@@ -319,19 +319,22 @@ func Start(db core.DB) {
 	statisticsRepository := repositories.NewStatisticsRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
-	dependencyVulnEventRepository := repositories.NewDependencyVulnEventRepository(db)
+	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	projectScopedRBAC := projectAccessControlFactory(projectRepository)
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnerability(db)
+	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
 	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 
-	dependencyVulnService := DependencyVuln.NewService(dependencyVulnRepository, dependencyVulnEventRepository, assetRepository, cveRepository)
+	dependencyVulnService := DependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository)
 	projectService := project.NewService(projectRepository)
 	dependencyVulnController := DependencyVuln.NewHttpController(dependencyVulnRepository, dependencyVulnService, projectService)
 
-	assetService := asset.NewService(assetRepository, componentRepository, dependencyVulnRepository, dependencyVulnService)
+	firstPartyService := DependencyVuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
+
+	assetService := asset.NewService(assetRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyService)
 
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 	invitationRepository := repositories.NewInvitationRepository(db)
