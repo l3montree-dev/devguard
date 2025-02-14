@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -35,6 +37,14 @@ func NewPATRepository(db core.DB) *gormPatRepository {
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.PAT](db),
 	}
+}
+
+func (g *gormPatRepository) MarkAsLastUsedNow(fingerprint string) error {
+	return g.db.Model(&models.PAT{}).Where("fingerprint = ?", fingerprint).Update("last_used_at", time.Now()).Error
+}
+
+func (g *gormPatRepository) DeleteByFingerprint(fingerprint string) error {
+	return g.db.Where("fingerprint = ?", fingerprint).Delete(&models.PAT{}).Error
 }
 
 func (g *gormPatRepository) ReadByToken(token string) (models.PAT, error) {

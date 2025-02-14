@@ -15,6 +15,7 @@ func UpdateVulnDB(db core.DB) error {
 		return nil
 	}
 
+	slog.Info("updating vulndb")
 	cveRepository := repositories.NewCVERepository(db)
 	cweRepository := repositories.NewCWERepository(db)
 	exploitsRepository := repositories.NewExploitRepository(db)

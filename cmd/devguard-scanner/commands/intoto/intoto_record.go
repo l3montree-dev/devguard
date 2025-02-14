@@ -75,15 +75,15 @@ func parseGitIgnore(path string) ([]string, error) {
 }
 
 func parseCommand(cmd *cobra.Command) (
-	step string, supplyChainId string, key toto.Key, materials, products, ignore []string, err error) {
+	step string, supplyChainId string, key toto.Key, generateSlsaProvenance bool, materials, products, ignore []string, err error) {
 	token, err := getTokenFromCommandOrKeyring(cmd)
 	if err != nil {
-		return "", "", toto.Key{}, nil, nil, nil, err
+		return "", "", toto.Key{}, false, nil, nil, nil, err
 	}
 
 	step, err = cmd.Flags().GetString("step")
 	if err != nil {
-		return "", "", toto.Key{}, nil, nil, nil, err
+		return "", "", toto.Key{}, false, nil, nil, nil, err
 	}
 
 	materials, _ = cmd.Flags().GetStringArray("materials")
@@ -92,7 +92,7 @@ func parseCommand(cmd *cobra.Command) (
 
 	ignore, err = cmd.Flags().GetStringArray("ignore")
 	if err != nil {
-		return "", "", toto.Key{}, nil, nil, nil, err
+		return "", "", toto.Key{}, false, nil, nil, nil, err
 	}
 
 	pathsFromGitIgnore, err := parseGitIgnore(".gitignore")
@@ -106,27 +106,32 @@ func parseCommand(cmd *cobra.Command) (
 
 	key, err = tokenToInTotoKey(token)
 	if err != nil {
-		return "", "", toto.Key{}, nil, nil, nil, err
+		return "", "", toto.Key{}, false, nil, nil, nil, err
 	}
 
 	supplyChainId, err = cmd.Flags().GetString("supplyChainId")
 	if err != nil {
-		return "", "", toto.Key{}, nil, nil, nil, err
+		return "", "", toto.Key{}, false, nil, nil, nil, err
 	}
 
 	if supplyChainId == "" {
 		// get the commit hash
 		supplyChainId, err = getCommitHash()
 		if err != nil {
-			return "", "", toto.Key{}, nil, nil, nil, errors.Wrap(err, "failed to get commit hash. Please provide the --supplyChainId flag")
+			return "", "", toto.Key{}, false, nil, nil, nil, errors.Wrap(err, "failed to get commit hash. Please provide the --supplyChainId flag")
 		}
 	}
 
-	return step, supplyChainId, key, materials, products, ignore, nil
+	generateSlsaProvenance, err = cmd.Flags().GetBool("generateSlsaProvenance")
+	if err != nil {
+		generateSlsaProvenance = true
+	}
+
+	return step, supplyChainId, key, generateSlsaProvenance, materials, products, ignore, nil
 }
 
 func stopInTotoRecording(cmd *cobra.Command, args []string) error {
-	step, supplyChainId, key, _, products, ignore, err := parseCommand(cmd)
+	step, supplyChainId, key, generateProvenance, _, products, ignore, err := parseCommand(cmd)
 	if err != nil {
 		return err
 	}
@@ -155,6 +160,29 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if generateProvenance {
+		mb := m.(*toto.Envelope)
+		link, ok := mb.GetPayload().(toto.Link)
+		if !ok {
+			return errors.New("failed to cast metadata to link")
+		}
+
+		provenanceEnvelope, err := generateSlsaProvenance(link)
+		if err != nil {
+			return err
+		}
+
+		if err := provenanceEnvelope.Sign(key); err != nil {
+			return err
+		}
+
+		if err := provenanceEnvelope.Dump(fmt.Sprintf("%s.provenance.json", step)); err != nil {
+			return err
+		}
+
+		slog.Info("successfully generated provenance", "step", step)
+	}
+
 	output, err := cmd.Flags().GetString("output")
 	if err != nil || output == "" {
 		output = fmt.Sprintf("%s.%s.link", step, key.KeyID[:8])
@@ -175,7 +203,7 @@ func stopInTotoRecording(cmd *cobra.Command, args []string) error {
 }
 
 func startInTotoRecording(cmd *cobra.Command, args []string) error {
-	step, _, key, materials, _, ignore, err := parseCommand(cmd)
+	step, _, key, _, materials, _, ignore, err := parseCommand(cmd)
 
 	if err != nil {
 		return err

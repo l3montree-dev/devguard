@@ -32,8 +32,7 @@ type inviteRequest struct {
 }
 
 type changeRoleRequest struct {
-	UserID string `json:"userId" validate:"required"`
-	Role   string `json:"role" validate:"required"`
+	Role string `json:"role" validate:"required,oneof=member admin"`
 }
 
 type createRequest struct {
@@ -196,7 +195,7 @@ func fromModel(org models.Org) OrgDTO {
 	}
 }
 
-type orgDetails struct {
+type orgDetailsDTO struct {
 	OrgDTO
 	Members []core.User `json:"members"`
 }

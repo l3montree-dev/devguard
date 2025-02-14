@@ -83,6 +83,8 @@ func TestSignRequest(t *testing.T) {
 
 		patMock := new(mocks.PatRepository)
 		patMock.On("GetByFingerprint", mock.Anything).Return(pat, nil)
+		patMock.On("MarkAsLastUsedNow", mock.Anything).Return(nil)
+
 		patService := NewPatService(patMock)
 
 		privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"
@@ -112,6 +114,7 @@ func TestSignRequest(t *testing.T) {
 
 		patMock := new(mocks.PatRepository)
 		patMock.On("GetByFingerprint", mock.Anything).Return(pat, nil)
+		patMock.On("MarkAsLastUsedNow", mock.Anything).Return(nil)
 		patService := NewPatService(patMock)
 
 		privKey := "1a73970f31816d996ab514c4ffea04b6dee0eadc107267d0c911fd817a7b5167"

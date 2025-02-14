@@ -16,6 +16,10 @@ func NewService(projectRepository projectRepository) *service {
 	}
 }
 
+func (s *service) ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error) {
+	return s.projectRepository.GetByOrgID(organizationID)
+}
+
 func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) {
 	// get all projects the user has at least read access to
 	rbac := core.GetRBAC(c)

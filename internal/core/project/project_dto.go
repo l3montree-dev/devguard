@@ -18,6 +18,7 @@ package project
 import (
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -45,13 +46,11 @@ func (p *CreateRequest) ToModel() models.Project {
 }
 
 type changeRoleRequest struct {
-	UserId string `json:"userId" validate:"required"`
-	Role   string `json:"role" validate:"required"`
+	Role string `json:"role" validate:"required,oneof=member admin"`
 }
 
 type inviteToProjectRequest struct {
-	UserId string `json:"userId" validate:"required"`
-	Role   string `json:"role" validate:"required"`
+	Ids []string `json:"ids" validate:"required"`
 }
 
 type patchRequest struct {
@@ -98,4 +97,43 @@ func (p *patchRequest) applyToModel(project *models.Project) bool {
 	}
 
 	return updated
+}
+
+type ProjectDTO struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Slug        string    `json:"slug"`
+	Description string    `json:"description"`
+	IsPublic    bool      `json:"isPublic"`
+	Type        string    `json:"type"`
+
+	ParentID *uuid.UUID `json:"parentId"`
+
+	RepositoryID   *string `json:"repositoryId"`
+	RepositoryName *string `json:"repositoryName"`
+
+	Assets []models.Asset `json:"assets"`
+}
+
+type projectDetailsDTO struct {
+	ProjectDTO
+	Members []core.User `json:"members"`
+}
+
+func fromModel(project models.Project) ProjectDTO {
+	return ProjectDTO{
+		ID:          project.ID,
+		Name:        project.Name,
+		Slug:        project.Slug,
+		Description: project.Description,
+		IsPublic:    project.IsPublic,
+		Type:        string(project.Type),
+
+		ParentID: project.ParentID,
+
+		RepositoryID:   project.RepositoryID,
+		RepositoryName: project.RepositoryName,
+
+		Assets: project.Assets,
+	}
 }

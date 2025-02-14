@@ -1,77 +1,59 @@
-name: Create and publish the custom postgresql Docker image
+name: DevGuard PostgreSQL Workflow
 
 on:
   push:
     tags:
     - '*'
 
-# Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
-env:
-  IMAGE_TAG: ghcr.io/${{ github.repository }}-postgresql:unstable
-
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
   # Docker image build job
   build-image:
-    runs-on: ubuntu-latest
-    outputs:
-      image_path: ${{ steps.build_output.outputs.image_path }}
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set IMAGE_TAG if tagged
-      # Setting the image tag if the push is a tag push
-      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}-postgresql:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-    - name: Build Docker image with Kaniko
-      # Building the Docker image using Kaniko
-      id: build_image
-      uses: docker://gcr.io/kaniko-project/executor:v1.23.0
-      with:
-        args: --destination=${{ env.IMAGE_TAG }} --context=/github/workspace --dockerfile=/github/workspace/Dockerfile.postgresql --no-push --tarPath /github/workspace/image.tar
-    - name: Upload artifact
-      # Uploading the built Docker image as an artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: docker-image
-        path: image.tar
+    uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
+    with:
+      image-suffix: "-postgresql"
+      artifact-suffix: "-postgresql"
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
+      api-url: https://api.main.devguard.org
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}  
+      build-args: "--context=. --dockerfile=Dockerfile.postgresql"
 
   # Image scanning job to detect vulnerabilities in the built Docker image
-  image-scanning:
-    needs: build-image
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/download-artifact@v4
-      with:
-        name: docker-image
-        path: .
-    - name: Run Trivy vulnerability scanner in tarball mode
-      # Running Trivy to scan the Docker image for vulnerabilities
-      uses: aquasecurity/trivy-action@master
-      with:
-        input: /github/workspace/image.tar
-        severity: "CRITICAL,HIGH"
-        format: "sarif"
-        output: "trivy-results.sarif"
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
-      with:
-        sarif_file: "trivy-results.sarif"
-        category: "image-scanning"
+  container-scanning:
+    uses: l3montree-dev/devguard-action/.github/workflows/container-scanning.yml@main
+    needs: 
+    - build-image
+    with:
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
+      api-url: https://api.main.devguard.org
+      artifact-suffix: "-postgresql"
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
-  # Publish job to push the Docker image to a registry
-  publish:
-    needs: [build-image, image-scanning]
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/download-artifact@v4
-      with:
-        name: docker-image
-        path: .
-    - uses: imjasonh/setup-crane@v0.1
-    - name: Set IMAGE_TAG if tagged
-      # Setting the image tag if the push is a tag push
-      run: echo "IMAGE_TAG=ghcr.io/${{ github.repository }}-postgresql:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-    - name: Push Docker image to GitHub image Registry
-      # Pushing the Docker image to GitHub Container Registry
-      run: crane push image.tar ${{ env.IMAGE_TAG }}
-
+  deploy:
+    needs: 
+    - build-image
+    - container-scanning
+    uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
+    with:
+      artifact-suffix: "-postgresql"
+      image-suffix: "-postgresql"
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
+      api-url: https://api.main.devguard.org
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}     
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+  
+  sign:
+    needs: 
+    - build-image
+    - container-scanning
+    uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@main
+    with:
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
+      api-url: https://api.main.devguard.org
+      artifact-suffix: "-postgresql"
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')

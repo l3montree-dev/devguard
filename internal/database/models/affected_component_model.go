@@ -146,7 +146,7 @@ func AffectedComponentFromOSV(osv obj.OSV) []AffectedComponent {
 		}
 		purl, err := packageurl.FromString(affected.Package.Purl)
 		if err != nil {
-			slog.Error("could not parse purl", "purl", affected.Package.Purl, "err", err)
+			slog.Debug("could not parse purl", "purl", affected.Package.Purl, "err", err)
 			continue
 		}
 		qualifiersStr := purl.Qualifiers.String()

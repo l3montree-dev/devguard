@@ -148,7 +148,7 @@ func NewInTotoRunCommand() *cobra.Command {
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			step, supplyChainId, key, materials, products, ignore, err := parseCommand(cmd)
+			step, supplyChainId, key, generateProvenance, materials, products, ignore, err := parseCommand(cmd)
 			if err != nil {
 				return errors.Wrap(err, "failed to parse command")
 			}
@@ -160,6 +160,35 @@ func NewInTotoRunCommand() *cobra.Command {
 			metadata, err := toto.InTotoRun(step, ".", materials, products, []string{}, key, []string{"sha256"}, ignore, []string{}, true, true, true)
 			if err != nil {
 				return err
+			}
+
+			mb, ok := metadata.(*toto.Envelope)
+			if !ok {
+				return errors.New("failed to cast metadata to link")
+			}
+
+			link, ok := mb.GetPayload().(toto.Link)
+			if !ok {
+				return errors.New("failed to cast metadata to link")
+			}
+
+			if generateProvenance {
+				provenanceEnvelope, err := generateSlsaProvenance(link)
+				if err != nil {
+					return errors.Wrap(err, "failed to generate slsa provenance")
+				}
+
+				err = provenanceEnvelope.Sign(key)
+				if err != nil {
+					return errors.Wrap(err, "failed to sign envelope")
+				}
+
+				err = provenanceEnvelope.Dump(fmt.Sprintf("%s.provenance.json", step))
+				if err != nil {
+					return errors.Wrap(err, "failed to dump envelope")
+				}
+
+				slog.Info("successfully generated provenance", "step", step)
 			}
 
 			err = metadata.Sign(key)

@@ -433,6 +433,7 @@ func Start(db core.DB) {
 	patRouter.POST("/", patController.Create)
 	patRouter.GET("/", patController.List)
 	patRouter.DELETE("/:tokenId/", patController.Delete)
+	patRouter.POST("/revoke-by-private-key/", patController.RevokeByPrivateKey)
 
 	cveRouter := apiV1Router.Group("/vulndb")
 	cveRouter.GET("/", vulndbController.ListPaged)
@@ -444,19 +445,20 @@ func Start(db core.DB) {
 	orgRouter.GET("/", orgController.List)
 
 	tenantRouter := orgRouter.Group("/:tenant", multiTenantMiddleware(casbinRBACProvider, orgRepository))
-	tenantRouter.DELETE("/", orgController.Delete, accessControlMiddleware("organization", accesscontrol.ActionDelete))
-	tenantRouter.GET("/", orgController.Read, accessControlMiddleware("organization", accesscontrol.ActionRead))
+	tenantRouter.DELETE("/", orgController.Delete, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
+	tenantRouter.GET("/", orgController.Read, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
 
-	tenantRouter.PATCH("/", orgController.Update, accessControlMiddleware("organization", accesscontrol.ActionUpdate))
+	tenantRouter.PATCH("/", orgController.Update, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
 	tenantRouter.GET("/metrics/", orgController.Metrics)
 	tenantRouter.GET("/content-tree/", orgController.ContentTree)
 	tenantRouter.GET("/flaws/", flawController.ListByOrgPaged)
 
 	tenantRouter.GET("/members/", orgController.Members)
-	tenantRouter.POST("/members/", orgController.InviteMember, accessControlMiddleware("organization", accesscontrol.ActionUpdate))
-	tenantRouter.DELETE("/members/:userId/", orgController.RemoveMember, accessControlMiddleware("organization", accesscontrol.ActionDelete))
-	tenantRouter.PUT("/members/:userId/", orgController.ChangeRole, accessControlMiddleware("organization", accesscontrol.ActionUpdate))
+	tenantRouter.POST("/members/", orgController.InviteMember, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
+	tenantRouter.DELETE("/members/:userId/", orgController.RemoveMember, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
+
+	tenantRouter.PUT("/members/:userId/", orgController.ChangeRole, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
 	tenantRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 
@@ -469,8 +471,8 @@ func Start(db core.DB) {
 	tenantRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetOrgFlawAggregationStateAndChange)
 	tenantRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution)
 
-	tenantRouter.GET("/projects/", projectController.List, accessControlMiddleware("organization", accesscontrol.ActionRead))
-	tenantRouter.POST("/projects/", projectController.Create, accessControlMiddleware("organization", accesscontrol.ActionUpdate))
+	tenantRouter.GET("/projects/", projectController.List, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
+	tenantRouter.POST("/projects/", projectController.Create, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
 	projectRouter := tenantRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)
@@ -489,13 +491,14 @@ func Start(db core.DB) {
 	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime)
 
 	projectRouter.GET("/members/", projectController.Members)
-	projectRouter.POST("/members/", projectController.InviteMember)
-	projectRouter.DELETE("/members/:userId/", projectController.RemoveMember)
-	projectRouter.PUT("/members/:userId/", projectController.ChangeRole)
+	projectRouter.POST("/members/", projectController.InviteMembers, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
+	projectRouter.DELETE("/members/:userId/", projectController.RemoveMember, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
 
-	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC("asset", accesscontrol.ActionRead), assetMiddleware(assetRepository))
+	projectRouter.PUT("/members/:userId/", projectController.ChangeRole, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
+
+	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
-	assetRouter.DELETE("/", assetController.Delete, projectScopedRBAC("asset", accesscontrol.ActionDelete))
+	assetRouter.DELETE("/", assetController.Delete, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
 
 	assetRouter.GET("/asset-versions/", assetVersionController.GetAssetVersionsByAssetID)
 
@@ -522,13 +525,13 @@ func Start(db core.DB) {
 
 	assetVersionRouter.GET("/versions/", assetVersionController.Versions)
 
-	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
-	assetRouter.PATCH("/", assetController.Update, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
+	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	assetRouter.PATCH("/", assetController.Update, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
-	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
+	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
-	assetVersionRouter.POST("/in-toto/", intotoController.Create, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
-	assetVersionRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
+	assetRouter.POST("/in-toto/", intotoController.Create, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 
 	assetVersionRouter.GET("/in-toto/:supplyChainId/", intotoController.Read)
 
@@ -538,8 +541,8 @@ func Start(db core.DB) {
 	flawRouter.GET("/", flawController.ListPaged)
 	flawRouter.GET("/:flawId/", flawController.Read)
 
-	flawRouter.POST("/:flawId/", flawController.CreateEvent, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
-	flawRouter.POST("/:flawId/mitigate/", flawController.Mitigate, projectScopedRBAC("asset", accesscontrol.ActionUpdate))
+	flawRouter.POST("/:flawId/", flawController.CreateEvent, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	flawRouter.POST("/:flawId/mitigate/", flawController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

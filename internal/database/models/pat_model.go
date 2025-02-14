@@ -10,12 +10,13 @@ import (
 )
 
 type PAT struct {
-	CreatedAt   time.Time `json:"createdAt"`
-	UserID      uuid.UUID `json:"userId"`
-	PubKey      string    `json:"pubKey"`
-	Description string    `json:"description" gorm:"type:text"`
-	ID          uuid.UUID `json:"id" gorm:"type:uuid;default:gen_random_uuid()"`
-	Fingerprint string    `json:"fingerprint"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UserID      uuid.UUID  `json:"userId"`
+	PubKey      string     `json:"pubKey"`
+	Description string     `json:"description" gorm:"type:text"`
+	ID          uuid.UUID  `json:"id" gorm:"type:uuid;default:gen_random_uuid()"`
+	Fingerprint string     `json:"fingerprint"`
+	LastUsedAt  *time.Time `json:"lastUsedAt" gorm:"default:null"`
 
 	DeletedAt gorm.DeletedAt `json:"deletedAt"`
 }
