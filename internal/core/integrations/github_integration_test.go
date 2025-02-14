@@ -18,7 +18,7 @@ import (
 )
 
 func TestGithubIntegrationHandleEvent(t *testing.T) {
-	t.Run("it should not be possible to call handle event with a context without flawId parameter", func(t *testing.T) {
+	t.Run("it should not be possible to call handle event with a context without dependencyVulnId parameter", func(t *testing.T) {
 
 		githubIntegration := githubIntegration{}
 
@@ -36,12 +36,12 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("it should return an error, if the flaw could not be found", func(t *testing.T) {
-		flawRepository := mocks.NewIntegrationsFlawRepository(t)
-		flawRepository.On("Read", "1").Return(models.DependencyVulnerability{}, fmt.Errorf("flaw not found"))
+	t.Run("it should return an error, if the dependencyVuln could not be found", func(t *testing.T) {
+		dependencyVulnRepository := mocks.NewIntegrationsDependencyVulnRepository(t)
+		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVulnerability{}, fmt.Errorf("dependencyVuln not found"))
 
 		githubIntegration := githubIntegration{
-			flawRepository: flawRepository,
+			dependencyVulnRepository: dependencyVulnRepository,
 		}
 
 		req := httptest.NewRequest("POST", "/webhook", nil)
@@ -50,7 +50,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:123"),
 		})
-		ctx.SetParamNames("flawId")
+		ctx.SetParamNames("dependencyVulnId")
 		ctx.SetParamValues("1")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -60,7 +60,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 	})
 
 	t.Run("it should do nothing, if the asset is NOT connected to a github repository", func(t *testing.T) {
-		// since we are not asserting anything on flawRepository nor flawEventRepository nor github client, we can be sure
+		// since we are not asserting anything on dependencyVulnRepository nor dependencyVulnEventRepository nor github client, we can be sure
 		// that no methods were called and actually nothing happened
 		githubIntegration := githubIntegration{}
 
@@ -69,7 +69,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 		core.SetAsset(ctx, models.Asset{})
 		core.SetProject(ctx, models.Project{})
-		ctx.SetParamNames("flawId")
+		ctx.SetParamNames("dependencyVulnId")
 		ctx.SetParamValues("1")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -80,8 +80,8 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 	t.Run("it should return an error if the owner or repo could not be extracted from the repositoryId", func(t *testing.T) {
 
-		flawRepository := mocks.NewIntegrationsFlawRepository(t)
-		flawRepository.On("Read", "1").Return(models.DependencyVulnerability{
+		dependencyVulnRepository := mocks.NewIntegrationsDependencyVulnRepository(t)
+		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVulnerability{
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
@@ -93,7 +93,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}, nil)
 
 		githubIntegration := githubIntegration{
-			flawRepository: flawRepository,
+			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory: func(repoId string) (githubClientFacade, error) {
 				return mocks.NewIntegrationsGithubClientFacade(t), nil
 			},
@@ -112,7 +112,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAssetSlug(ctx, "test")
 		core.SetProject(ctx, models.Project{})
 
-		ctx.SetParamNames("flawId")
+		ctx.SetParamNames("dependencyVulnId")
 		ctx.SetParamValues("1")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -122,15 +122,15 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("it should return error if could not save the flaw and the flawEvent", func(t *testing.T) {
+	t.Run("it should return error if could not save the dependencyVuln and the dependencyVulnEvent", func(t *testing.T) {
 
 		req := httptest.NewRequest("POST", "/webhook", bytes.NewBufferString(`{"comment": "test"}`))
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		flawService := mocks.NewIntegrationsFlawService(t)
-		flawRepository := mocks.NewIntegrationsFlawRepository(t)
-		flawRepository.On("Read", "1").Return(models.DependencyVulnerability{
+		dependencyVulnService := mocks.NewIntegrationsDependencyVulnService(t)
+		dependencyVulnRepository := mocks.NewIntegrationsDependencyVulnRepository(t)
+		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVulnerability{
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
@@ -140,14 +140,14 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			ComponentDepth:        utils.Ptr(1),
 			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}, nil)
-		flawService.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save flaw"))
+		dependencyVulnService.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
 
 		githubClientFactory := func(repoId string) (githubClientFacade, error) {
 			facade := mocks.NewIntegrationsGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "severity:"+"high", &github.Label{
-				Description: github.String("Severity of the flaw"),
+				Description: github.String("Severity of the dependencyVuln"),
 				Color:       github.String("FFA500"),
 			}).Return(nil, nil, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "devguard", &github.Label{
@@ -164,10 +164,10 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		authSession.On("GetUserID").Return("1")
 
 		githubIntegration := githubIntegration{
-			flawRepository:      flawRepository,
-			githubClientFactory: githubClientFactory,
-			frontendUrl:         "http://localhost:3000",
-			flawService:         flawService,
+			dependencyVulnRepository: dependencyVulnRepository,
+			githubClientFactory:      githubClientFactory,
+			frontendUrl:              "http://localhost:3000",
+			dependencyVulnService:    dependencyVulnService,
 		}
 
 		core.SetAsset(ctx, models.Asset{
@@ -177,7 +177,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetProjectSlug(ctx, "test")
 		core.SetAssetSlug(ctx, "test")
 		core.SetSession(ctx, authSession)
-		ctx.SetParamNames("flawId")
+		ctx.SetParamNames("dependencyVulnId")
 		ctx.SetParamValues("1")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -186,12 +186,12 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("it should save the justification in the flawEvent after creating a github ticket. Ref: https://github.com/l3montree-dev/devguard/issues/173", func(t *testing.T) {
+	t.Run("it should save the justification in the dependencyVulnEvent after creating a github ticket. Ref: https://github.com/l3montree-dev/devguard/issues/173", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/webhook", bytes.NewBufferString(`{"comment": "that is a justification"}`))
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		expectFlaw := models.DependencyVulnerability{
+		expectDependencyVuln := models.DependencyVulnerability{
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
@@ -206,11 +206,11 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}
 
-		flawRepository := mocks.NewIntegrationsFlawRepository(t)
-		flawRepository.On("Read", "1").Return(expectFlaw, nil)
-		flawService := mocks.NewIntegrationsFlawService(t)
+		dependencyVulnRepository := mocks.NewIntegrationsDependencyVulnRepository(t)
+		dependencyVulnRepository.On("Read", "1").Return(expectDependencyVuln, nil)
+		dependencyVulnService := mocks.NewIntegrationsDependencyVulnService(t)
 
-		expectedEvent := models.FlawEvent{
+		expectedEvent := models.DependencyVulnEvent{
 			Type:   models.EventTypeMitigate,
 			UserID: "1",
 
@@ -220,14 +220,14 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}
 		expectedEvent.GetArbitraryJsonData()
 
-		flawService.On("ApplyAndSave", mock.Anything, &expectFlaw, &expectedEvent).Return(nil)
+		dependencyVulnService.On("ApplyAndSave", mock.Anything, &expectDependencyVuln, &expectedEvent).Return(nil)
 
 		githubClientFactory := func(repoId string) (githubClientFacade, error) {
 			facade := mocks.NewIntegrationsGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "severity:"+"high", &github.Label{
-				Description: github.String("Severity of the flaw"),
+				Description: github.String("Severity of the dependencyVuln"),
 				Color:       github.String("FFA500"),
 			}).Return(nil, nil, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "devguard", &github.Label{
@@ -241,10 +241,10 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		authSession.On("GetUserID").Return("1")
 
 		githubIntegration := githubIntegration{
-			flawRepository:      flawRepository,
-			githubClientFactory: githubClientFactory,
-			frontendUrl:         "http://localhost:3000",
-			flawService:         flawService,
+			dependencyVulnRepository: dependencyVulnRepository,
+			githubClientFactory:      githubClientFactory,
+			frontendUrl:              "http://localhost:3000",
+			dependencyVulnService:    dependencyVulnService,
 		}
 
 		core.SetAsset(ctx, models.Asset{
@@ -254,7 +254,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetProjectSlug(ctx, "test")
 		core.SetAssetSlug(ctx, "test")
 		core.SetSession(ctx, authSession)
-		ctx.SetParamNames("flawId")
+		ctx.SetParamNames("dependencyVulnId")
 		ctx.SetParamValues("1")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -262,7 +262,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		})
 		assert.NoError(t, err)
 
-		flawService.AssertExpectations(t)
+		dependencyVulnService.AssertExpectations(t)
 	})
 
 }

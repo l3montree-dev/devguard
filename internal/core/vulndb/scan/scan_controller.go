@@ -82,9 +82,9 @@ func NewHttpController(db core.DB, cveRepository cveRepository, componentReposit
 }
 
 type ScanResponse struct {
-	AmountOpened int                      `json:"amountOpened"`
-	AmountClosed int                      `json:"amountClosed"`
-	Flaws        []DependencyVuln.FlawDTO `json:"flaws"`
+	AmountOpened    int                                `json:"amountOpened"`
+	AmountClosed    int                                `json:"amountClosed"`
+	DependencyVulns []DependencyVuln.DependencyVulnDTO `json:"dependencyVulns"`
 }
 
 func (s *httpController) DependencyVulnScan(c core.Context) error {
@@ -163,9 +163,9 @@ func (s *httpController) DependencyVulnScan(c core.Context) error {
 	}
 
 	return c.JSON(200, ScanResponse{
-		AmountOpened: amountOpened,
-		AmountClosed: amountClose,
-		Flaws:        utils.Map(newState, DependencyVuln.FlawToDto)})
+		AmountOpened:    amountOpened,
+		AmountClosed:    amountClose,
+		DependencyVulns: utils.Map(newState, DependencyVuln.DependencyVulnToDto)})
 }
 
 func (s *httpController) FirstPartyVulnScan(c core.Context) error {
@@ -216,7 +216,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 
 func HandleSarifResult(sarifScan models.SarifResult, scanner string) (int, int, []models.FirstPartyVulnerability, error) {
 
-	sarifFlaws := []models.FirstPartyVulnerability{}
+	sarifDependencyVulns := []models.FirstPartyVulnerability{}
 
 	for _, run := range sarifScan.Runs {
 		for _, result := range run.Results {
@@ -228,7 +228,7 @@ func HandleSarifResult(sarifScan models.SarifResult, scanner string) (int, int, 
 			}
 			snippet = snippet[:snippetMax] + "***"
 
-			sarifFlaw := models.FirstPartyVulnerability{
+			sarifDependencyVuln := models.FirstPartyVulnerability{
 				Vulnerability: models.Vulnerability{
 					Message: &result.Message.Text,
 				},
@@ -240,9 +240,9 @@ func HandleSarifResult(sarifScan models.SarifResult, scanner string) (int, int, 
 				EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
 				Snippet:     snippet,
 			}
-			sarifFlaws = append(sarifFlaws, sarifFlaw)
+			sarifDependencyVulns = append(sarifDependencyVulns, sarifDependencyVuln)
 		}
 	}
 
-	return 0, 0, sarifFlaws, nil
+	return 0, 0, sarifDependencyVulns, nil
 }

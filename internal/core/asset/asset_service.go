@@ -37,14 +37,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-type flawRepository interface {
+type dependencyVulnRepository interface {
 	Transaction(txFunc func(core.DB) error) error
 	ListByScanner(assetID uuid.UUID, scannerID string) ([]models.DependencyVulnerability, error)
 
-	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
-	SaveBatch(db core.DB, flaws []models.DependencyVulnerability) error
+	GetAllDependencyVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
+	SaveBatch(db core.DB, dependencyVulns []models.DependencyVulnerability) error
 
-	GetFlawsByPurl(tx core.DB, purl []string) ([]models.DependencyVulnerability, error)
+	GetDependencyVulnsByPurl(tx core.DB, purl []string) ([]models.DependencyVulnerability, error)
 }
 
 type componentRepository interface {
@@ -59,36 +59,36 @@ type assetRepository interface {
 	Transaction(txFunc func(core.DB) error) error
 }
 
-type flawService interface {
-	UserFixedFlaws(tx core.DB, userID string, flaws []models.DependencyVulnerability, doRiskManagement bool) error
-	UserDetectedFlaws(tx core.DB, userID string, flaws []models.DependencyVulnerability, asset models.Asset, doRiskManagement bool) error
-	UpdateFlawState(tx core.DB, userID string, flaw *models.DependencyVulnerability, statusType string, justification string) (models.FlawEvent, error)
+type dependencyVulnService interface {
+	UserFixedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVulnerability, doRiskManagement bool) error
+	UserDetectedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVulnerability, asset models.Asset, doRiskManagement bool) error
+	UpdateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVulnerability, statusType string, justification string) (models.DependencyVulnEvent, error)
 
-	RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.DependencyVulnerability, justification string, asset models.Asset) error
+	RecalculateRawRiskAssessment(tx core.DB, userID string, dependencyVulns []models.DependencyVulnerability, justification string, asset models.Asset) error
 }
 
 type service struct {
-	flawRepository      flawRepository
-	componentRepository componentRepository
-	flawService         flawService
-	assetRepository     assetRepository
-	httpClient          *http.Client
+	dependencyVulnRepository dependencyVulnRepository
+	componentRepository      componentRepository
+	dependencyVulnService    dependencyVulnService
+	assetRepository          assetRepository
+	httpClient               *http.Client
 }
 
-func NewService(assetRepository assetRepository, componentRepository componentRepository, flawRepository flawRepository, flawService flawService) *service {
+func NewService(assetRepository assetRepository, componentRepository componentRepository, dependencyVulnRepository dependencyVulnRepository, dependencyVulnService dependencyVulnService) *service {
 	return &service{
-		assetRepository:     assetRepository,
-		componentRepository: componentRepository,
-		flawRepository:      flawRepository,
-		flawService:         flawService,
-		httpClient:          &http.Client{},
+		assetRepository:          assetRepository,
+		componentRepository:      componentRepository,
+		dependencyVulnRepository: dependencyVulnRepository,
+		dependencyVulnService:    dependencyVulnService,
+		httpClient:               &http.Client{},
 	}
 }
 
 func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVulnerability, err error) {
 
-	// create flaws out of those vulnerabilities
-	flaws := []models.DependencyVulnerability{}
+	// create dependencyVulns out of those vulnerabilities
+	dependencyVulns := []models.DependencyVulnerability{}
 
 	// load all asset components again and build a dependency tree
 	assetComponents, err := s.componentRepository.LoadComponents(nil, asset, scanner, version)
@@ -109,7 +109,7 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 	for _, vuln := range vulns {
 		v := vuln
 
-		flaw := models.DependencyVulnerability{
+		dependencyVuln := models.DependencyVulnerability{
 			Vulnerability: models.Vulnerability{
 				ScannerID: scannerID,
 				AssetID:   asset.GetID(),
@@ -121,16 +121,16 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 			CVE:                   &v.CVE,
 		}
 
-		flaws = append(flaws, flaw)
+		dependencyVulns = append(dependencyVulns, dependencyVuln)
 	}
 
-	flaws = utils.UniqBy(flaws, func(f models.DependencyVulnerability) string {
+	dependencyVulns = utils.UniqBy(dependencyVulns, func(f models.DependencyVulnerability) string {
 		return f.CalculateHash()
 	})
 
 	// let the asset service handle the new scan result - we do not need
-	// any return value from that process - even if it fails, we should return the current flaws
-	amountOpened, amountClosed, amountExisting, err := s.handleScanResult(userID, scannerID, asset, flaws, doRiskManagement)
+	// any return value from that process - even if it fails, we should return the current dependencyVulns
+	amountOpened, amountClosed, amountExisting, err := s.handleScanResult(userID, scannerID, asset, dependencyVulns, doRiskManagement)
 	if err != nil {
 		return 0, 0, []models.DependencyVulnerability{}, err
 	}
@@ -160,64 +160,64 @@ func (s *service) HandleScanResult(asset models.Asset, vulns []models.VulnInPack
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
-func (s *service) handleScanResult(userID string, scannerID string, asset models.Asset, flaws []models.DependencyVulnerability, doRiskManagement bool) (int, int, []models.DependencyVulnerability, error) {
-	// get all existing flaws from the database - this is the old state
-	existingFlaws, err := s.flawRepository.ListByScanner(asset.GetID(), scannerID)
+func (s *service) handleScanResult(userID string, scannerID string, asset models.Asset, dependencyVulns []models.DependencyVulnerability, doRiskManagement bool) (int, int, []models.DependencyVulnerability, error) {
+	// get all existing dependencyVulns from the database - this is the old state
+	existingDependencyVulns, err := s.dependencyVulnRepository.ListByScanner(asset.GetID(), scannerID)
 	if err != nil {
-		slog.Error("could not get existing flaws", "err", err)
+		slog.Error("could not get existing dependencyVulns", "err", err)
 		return 0, 0, []models.DependencyVulnerability{}, err
 	}
-	// remove all fixed flaws from the existing flaws
-	existingFlaws = utils.Filter(existingFlaws, func(flaw models.DependencyVulnerability) bool {
-		return flaw.State != models.FlawStateFixed
+	// remove all fixed dependencyVulns from the existing dependencyVulns
+	existingDependencyVulns = utils.Filter(existingDependencyVulns, func(dependencyVuln models.DependencyVulnerability) bool {
+		return dependencyVuln.State != models.DependencyVulnStateFixed
 	})
 
-	comparison := utils.CompareSlices(existingFlaws, flaws, func(flaw models.DependencyVulnerability) string {
-		return flaw.CalculateHash()
+	comparison := utils.CompareSlices(existingDependencyVulns, dependencyVulns, func(dependencyVuln models.DependencyVulnerability) string {
+		return dependencyVuln.CalculateHash()
 	})
 
-	fixedFlaws := comparison.OnlyInA
-	newFlaws := comparison.OnlyInB
+	fixedDependencyVulns := comparison.OnlyInA
+	newDependencyVulns := comparison.OnlyInB
 
 	if doRiskManagement {
 		// get a transaction
-		if err := s.flawRepository.Transaction(func(tx core.DB) error {
-			if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, asset, true); err != nil {
+		if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
+			if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, newDependencyVulns, asset, true); err != nil {
 				// this will cancel the transaction
 				return err
 			}
-			return s.flawService.UserFixedFlaws(tx, userID, utils.Filter(
-				fixedFlaws,
-				func(flaw models.DependencyVulnerability) bool {
-					return flaw.State == models.FlawStateOpen
+			return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, utils.Filter(
+				fixedDependencyVulns,
+				func(dependencyVuln models.DependencyVulnerability) bool {
+					return dependencyVuln.State == models.DependencyVulnStateOpen
 				},
 			), true)
 		}); err != nil {
-			slog.Error("could not save flaws", "err", err)
+			slog.Error("could not save dependencyVulns", "err", err)
 			return 0, 0, []models.DependencyVulnerability{}, err
 		}
 	} else {
-		if err := s.flawService.UserDetectedFlaws(nil, userID, newFlaws, asset, false); err != nil {
-			slog.Error("could not save flaws", "err", err)
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(nil, userID, newDependencyVulns, asset, false); err != nil {
+			slog.Error("could not save dependencyVulns", "err", err)
 			return 0, 0, []models.DependencyVulnerability{}, err
 		}
 
-		if err := s.flawService.UserFixedFlaws(nil, userID, utils.Filter(
-			fixedFlaws,
-			func(flaw models.DependencyVulnerability) bool {
-				return flaw.State == models.FlawStateOpen
+		if err := s.dependencyVulnService.UserFixedDependencyVulns(nil, userID, utils.Filter(
+			fixedDependencyVulns,
+			func(dependencyVuln models.DependencyVulnerability) bool {
+				return dependencyVuln.State == models.DependencyVulnStateOpen
 			},
 		), false); err != nil {
-			slog.Error("could not save flaws", "err", err)
+			slog.Error("could not save dependencyVulns", "err", err)
 			return 0, 0, []models.DependencyVulnerability{}, err
 		}
 	}
 
 	// the amount we actually fixed, is the amount that was open before
-	fixedFlaws = utils.Filter(fixedFlaws, func(flaw models.DependencyVulnerability) bool {
-		return flaw.State == models.FlawStateOpen
+	fixedDependencyVulns = utils.Filter(fixedDependencyVulns, func(dependencyVuln models.DependencyVulnerability) bool {
+		return dependencyVuln.State == models.DependencyVulnStateOpen
 	})
-	return len(newFlaws), len(fixedFlaws), append(newFlaws, comparison.InBoth...), nil
+	return len(newDependencyVulns), len(fixedDependencyVulns), append(newDependencyVulns, comparison.InBoth...), nil
 }
 
 type DepsDevResponse struct {
@@ -359,21 +359,21 @@ func (s *service) UpdateSBOM(asset models.Asset, scannerID string, currentVersio
 }
 
 func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error {
-	err := s.flawRepository.Transaction(func(tx core.DB) error {
+	err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 
 		err := s.assetRepository.Save(tx, &asset)
 		if err != nil {
 			slog.Info("error saving asset", "err", err)
 			return fmt.Errorf("could not save asset: %v", err)
 		}
-		// get the flaws
-		flaws, err := s.flawRepository.GetAllFlawsByAssetID(tx, asset.GetID())
+		// get the dependencyVulns
+		dependencyVulns, err := s.dependencyVulnRepository.GetAllDependencyVulnsByAssetID(tx, asset.GetID())
 		if err != nil {
-			slog.Info("error getting flaws", "err", err)
-			return fmt.Errorf("could not get flaws: %v", err)
+			slog.Info("error getting dependencyVulns", "err", err)
+			return fmt.Errorf("could not get dependencyVulns: %v", err)
 		}
 
-		err = s.flawService.RecalculateRawRiskAssessment(tx, responsible, flaws, justification, asset)
+		err = s.dependencyVulnService.RecalculateRawRiskAssessment(tx, responsible, dependencyVulns, justification, asset)
 		if err != nil {
 			slog.Info("error updating raw risk assessment", "err", err)
 			return fmt.Errorf("could not update raw risk assessment: %v", err)
@@ -481,7 +481,7 @@ func (s *service) BuildSBOM(asset models.Asset, version string, organizationName
 	return &bom
 }
 
-func (s *service) BuildVeX(asset models.Asset, version string, organizationName string, components []models.ComponentDependency, flaws []models.DependencyVulnerability) *cdx.BOM {
+func (s *service) BuildVeX(asset models.Asset, version string, organizationName string, components []models.ComponentDependency, dependencyVulns []models.DependencyVulnerability) *cdx.BOM {
 	if version == models.NoVersion {
 		version = "latest"
 	}
@@ -503,37 +503,37 @@ func (s *service) BuildVeX(asset models.Asset, version string, organizationName 
 		},
 	}
 	vulnerabilities := make([]cdx.Vulnerability, 0)
-	for _, flaw := range flaws {
+	for _, dependencyVuln := range dependencyVulns {
 		// check if cve
-		cve := flaw.CVE
+		cve := dependencyVuln.CVE
 		if cve != nil {
 			vuln := cdx.Vulnerability{
 				ID: cve.CVE,
 				Source: &cdx.Source{
 					Name: "NVD",
-					URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", *flaw.CVEID),
+					URL:  fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", *dependencyVuln.CVEID),
 				},
 				Affects: &[]cdx.Affects{{
-					Ref: *flaw.ComponentPurl,
+					Ref: *dependencyVuln.ComponentPurl,
 				}},
 				Analysis: &cdx.VulnerabilityAnalysis{
-					State: flawStateToImpactAnalysisState(flaw.State),
+					State: dependencyVulnStateToImpactAnalysisState(dependencyVuln.State),
 				},
 			}
 
-			response := flawStateToResponseStatus(flaw.State)
+			response := dependencyVulnStateToResponseStatus(dependencyVuln.State)
 			if response != "" {
 				vuln.Analysis.Response = &[]cdx.ImpactAnalysisResponse{response}
 			}
 
-			justification := getJustification(flaw)
+			justification := getJustification(dependencyVuln)
 			if justification != nil {
 				vuln.Analysis.Detail = *justification
 			}
 
 			cvss := math.Round(float64(cve.CVSS)*100) / 100
 
-			risk := risk.RawRisk(*cve, core.GetEnvironmentalFromAsset(asset), *flaw.ComponentDepth)
+			risk := risk.RawRisk(*cve, core.GetEnvironmentalFromAsset(asset), *dependencyVuln.ComponentDepth)
 
 			vuln.Ratings = &[]cdx.VulnerabilityRating{
 				{
@@ -581,47 +581,47 @@ func vectorToCVSSScoringMethod(vector string) cdx.ScoringMethod {
 	return cdx.ScoringMethodCVSSv4
 }
 
-func flawStateToImpactAnalysisState(state models.FlawState) cdx.ImpactAnalysisState {
+func dependencyVulnStateToImpactAnalysisState(state models.DependencyVulnState) cdx.ImpactAnalysisState {
 	switch state {
-	case models.FlawStateOpen:
+	case models.DependencyVulnStateOpen:
 		return cdx.IASInTriage
-	case models.FlawStateFixed:
+	case models.DependencyVulnStateFixed:
 		return cdx.IASResolved
-	case models.FlawStateAccepted:
+	case models.DependencyVulnStateAccepted:
 		return cdx.IASExploitable
-	case models.FlawStateFalsePositive:
+	case models.DependencyVulnStateFalsePositive:
 		return cdx.IASFalsePositive
-	case models.FlawStateMarkedForTransfer:
+	case models.DependencyVulnStateMarkedForTransfer:
 		return cdx.IASInTriage
 	default:
 		return cdx.IASInTriage
 	}
 }
 
-func getJustification(flaw models.DependencyVulnerability) *string {
+func getJustification(dependencyVuln models.DependencyVulnerability) *string {
 	// check if we have any event
-	if len(flaw.Events) > 0 {
+	if len(dependencyVuln.Events) > 0 {
 		// look for the last event which has a justification
-		for i := len(flaw.Events) - 1; i >= 0; i-- {
-			if flaw.Events[i].Justification != nil {
-				return flaw.Events[i].Justification
+		for i := len(dependencyVuln.Events) - 1; i >= 0; i-- {
+			if dependencyVuln.Events[i].Justification != nil {
+				return dependencyVuln.Events[i].Justification
 			}
 		}
 	}
 	return nil
 }
 
-func flawStateToResponseStatus(state models.FlawState) cdx.ImpactAnalysisResponse {
+func dependencyVulnStateToResponseStatus(state models.DependencyVulnState) cdx.ImpactAnalysisResponse {
 	switch state {
-	case models.FlawStateOpen:
+	case models.DependencyVulnStateOpen:
 		return ""
-	case models.FlawStateFixed:
+	case models.DependencyVulnStateFixed:
 		return cdx.IARUpdate
-	case models.FlawStateAccepted:
+	case models.DependencyVulnStateAccepted:
 		return cdx.IARWillNotFix
-	case models.FlawStateFalsePositive:
+	case models.DependencyVulnStateFalsePositive:
 		return cdx.IARWillNotFix
-	case models.FlawStateMarkedForTransfer:
+	case models.DependencyVulnStateMarkedForTransfer:
 		return ""
 	default:
 		return ""

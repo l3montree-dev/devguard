@@ -19,9 +19,9 @@ type assetRepository interface {
 }
 
 type statisticsRepository interface {
-	TimeTravelFlawState(assetID uuid.UUID, time time.Time) ([]models.DependencyVulnerability, error)
+	TimeTravelDependencyVulnState(assetID uuid.UUID, time time.Time) ([]models.DependencyVulnerability, error)
 	GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
-	GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error)
+	GetDependencyVulnCountByScannerId(assetID uuid.UUID) (map[string]int, error)
 	AverageFixingTime(assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 }
 
@@ -34,9 +34,9 @@ type assetRiskHistoryRepository interface {
 	UpdateRiskAggregation(assetRisk *models.AssetRiskHistory) error
 }
 
-type flawRepository interface {
-	GetAllOpenFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
-	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
+type dependencyVulnRepository interface {
+	GetAllOpenDependencyVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
+	GetAllDependencyVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
 }
 
 type projectRepository interface {
@@ -54,18 +54,18 @@ type service struct {
 	statisticsRepository         statisticsRepository
 	componentRepository          componentRepository
 	assetRiskHistoryRepository   assetRiskHistoryRepository
-	flawRepository               flawRepository
+	dependencyVulnRepository     dependencyVulnRepository
 	assetRepository              assetRepository
 	projectRepository            projectRepository
 	projectRiskHistoryRepository projectRiskHistoryRepository
 }
 
-func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, flawRepository flawRepository, assetRepository assetRepository, projectRepository projectRepository, projectRiskHistoryRepository projectRiskHistoryRepository) *service {
+func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, dependencyVulnRepository dependencyVulnRepository, assetRepository assetRepository, projectRepository projectRepository, projectRiskHistoryRepository projectRiskHistoryRepository) *service {
 	return &service{
 		statisticsRepository:         statisticsRepository,
 		componentRepository:          componentRepository,
 		assetRiskHistoryRepository:   assetRiskHistoryRepository,
-		flawRepository:               flawRepository,
+		dependencyVulnRepository:     dependencyVulnRepository,
 		assetRepository:              assetRepository,
 		projectRepository:            projectRepository,
 		projectRiskHistoryRepository: projectRiskHistoryRepository,
@@ -99,13 +99,13 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 
 		var projectRiskHistory models.ProjectRiskHistory = models.ProjectRiskHistory{}
 
-		openFlaws, fixedFlaws := 0, 0
+		openDependencyVulns, fixedDependencyVulns := 0, 0
 
 		for _, assetHistory := range assetsHistory {
-			if assetHistory.OpenFlaws > 0 {
-				openFlaws += assetHistory.OpenFlaws
-			} else if assetHistory.FixedFlaws > 0 {
-				fixedFlaws += assetHistory.FixedFlaws
+			if assetHistory.OpenDependencyVulns > 0 {
+				openDependencyVulns += assetHistory.OpenDependencyVulns
+			} else if assetHistory.FixedDependencyVulns > 0 {
+				fixedDependencyVulns += assetHistory.FixedDependencyVulns
 			}
 
 			if riskAggregationOpen.Min > assetHistory.MinOpenRisk {
@@ -139,12 +139,12 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 			fixedRisk.Min = 0.0
 		}
 
-		if openFlaws != 0 {
-			openRisk.Avg = openRisk.Sum / float64(openFlaws)
+		if openDependencyVulns != 0 {
+			openRisk.Avg = openRisk.Sum / float64(openDependencyVulns)
 		}
 
-		if fixedFlaws != 0 {
-			fixedRisk.Avg = fixedRisk.Sum / float64(fixedFlaws)
+		if fixedDependencyVulns != 0 {
+			fixedRisk.Avg = fixedRisk.Sum / float64(fixedDependencyVulns)
 		}
 
 		projectRiskHistory = models.ProjectRiskHistory{
@@ -161,8 +161,8 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 			MaxClosedRisk: fixedRisk.Max,
 			MinClosedRisk: fixedRisk.Min,
 
-			OpenFlaws:  openFlaws,
-			FixedFlaws: fixedFlaws,
+			OpenDependencyVulns:  openDependencyVulns,
+			FixedDependencyVulns: fixedDependencyVulns,
 		}
 		err = s.projectRiskHistoryRepository.UpdateRiskAggregation(&projectRiskHistory)
 		if err != nil {
@@ -180,7 +180,7 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		flaws, err := s.statisticsRepository.TimeTravelFlawState(assetID, time)
+		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(assetID, time)
 		if err != nil {
 			return err
 		}
@@ -195,26 +195,26 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 			"fixed": {Min: -1.0, Max: 0.0, Sum: 0.0, Avg: 0.0},
 		}
 
-		openFlaws, fixedFlaws := 0, 0
+		openDependencyVulns, fixedDependencyVulns := 0, 0
 
-		for _, flaw := range flaws {
+		for _, dependencyVuln := range dependencyVulns {
 			var key string
-			if flaw.State == models.FlawStateOpen {
-				openFlaws++
+			if dependencyVuln.State == models.DependencyVulnStateOpen {
+				openDependencyVulns++
 				key = "open"
 
 			} else {
-				fixedFlaws++
+				fixedDependencyVulns++
 				key = "fixed"
 			}
 
 			riskAggregation := risks[key]
 
 			if riskAggregation.Min == -1.0 {
-				riskAggregation.Min = utils.OrDefault(flaw.RawRiskAssessment, -1)
+				riskAggregation.Min = utils.OrDefault(dependencyVuln.RawRiskAssessment, -1)
 			}
 
-			risk := utils.OrDefault(flaw.RawRiskAssessment, 0)
+			risk := utils.OrDefault(dependencyVuln.RawRiskAssessment, 0)
 
 			if riskAggregation.Min <= risk {
 				riskAggregation.Min = risk
@@ -238,12 +238,12 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 			fixedRisk.Min = 0.0
 		}
 
-		if openFlaws != 0 {
-			openRisk.Avg = openRisk.Sum / float64(openFlaws)
+		if openDependencyVulns != 0 {
+			openRisk.Avg = openRisk.Sum / float64(openDependencyVulns)
 		}
 
-		if fixedFlaws != 0 {
-			fixedRisk.Avg = fixedRisk.Sum / float64(fixedFlaws)
+		if fixedDependencyVulns != 0 {
+			fixedRisk.Avg = fixedRisk.Sum / float64(fixedDependencyVulns)
 		}
 
 		result := models.AssetRiskHistory{
@@ -260,8 +260,8 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 			MaxClosedRisk: fixedRisk.Max,
 			MinClosedRisk: fixedRisk.Min,
 
-			OpenFlaws:  openFlaws,
-			FixedFlaws: fixedFlaws,
+			OpenDependencyVulns:  openDependencyVulns,
+			FixedDependencyVulns: fixedDependencyVulns,
 		}
 
 		err = s.assetRiskHistoryRepository.UpdateRiskAggregation(&result)
@@ -313,14 +313,14 @@ func (s *service) GetAssetRiskDistribution(assetID uuid.UUID, assetName string) 
 }
 
 func (s *service) GetComponentRisk(assetID uuid.UUID) (map[string]float64, error) {
-	flaws, err := s.flawRepository.GetAllOpenFlawsByAssetID(nil, assetID)
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenDependencyVulnsByAssetID(nil, assetID)
 	if err != nil {
 		return nil, err
 	}
 
 	totalRiskPerComponent := make(map[string]float64)
 
-	for _, f := range flaws {
+	for _, f := range dependencyVulns {
 		damagedPkg := f.ComponentPurl
 		parts := strings.Split(*damagedPkg, ":")
 		damagedPkg = &parts[1]
@@ -330,8 +330,8 @@ func (s *service) GetComponentRisk(assetID uuid.UUID) (map[string]float64, error
 	return totalRiskPerComponent, nil
 }
 
-func (s *service) GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
-	return s.statisticsRepository.GetFlawCountByScannerId(assetID)
+func (s *service) GetDependencyVulnCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
+	return s.statisticsRepository.GetDependencyVulnCountByScannerId(assetID)
 }
 
 func (s *service) GetDependencyCountPerscanner(assetID uuid.UUID) (map[string]int, error) {
@@ -357,42 +357,42 @@ func (s *service) GetAverageFixingTime(assetID uuid.UUID, severity string) (time
 	return s.statisticsRepository.AverageFixingTime(assetID, riskIntervalStart, riskIntervalEnd)
 }
 
-func (s *service) GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error) {
+func (s *service) GetDependencyVulnAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (DependencyVulnAggregationStateAndChange, error) {
 	// check if calculateChangeTo is in the future
 	if calculateChangeTo.After(time.Now()) {
-		return FlawAggregationStateAndChange{}, fmt.Errorf("Cannot calculate change to the future")
+		return DependencyVulnAggregationStateAndChange{}, fmt.Errorf("Cannot calculate change to the future")
 	}
 
 	results := utils.Concurrently(
 		func() (any, error) {
-			return s.flawRepository.GetAllFlawsByAssetID(nil, assetID)
+			return s.dependencyVulnRepository.GetAllDependencyVulnsByAssetID(nil, assetID)
 		},
 		func() (any, error) {
-			return s.statisticsRepository.TimeTravelFlawState(assetID, calculateChangeTo)
+			return s.statisticsRepository.TimeTravelDependencyVulnState(assetID, calculateChangeTo)
 		},
 	)
 
 	if results.HasErrors() {
-		return FlawAggregationStateAndChange{}, results.Error()
+		return DependencyVulnAggregationStateAndChange{}, results.Error()
 	}
 
 	now := results.GetValue(0).([]models.DependencyVulnerability)
 	was := results.GetValue(1).([]models.DependencyVulnerability)
 
-	nowState := calculateFlawAggregationState(now)
-	wasState := calculateFlawAggregationState(was)
+	nowState := calculateDependencyVulnAggregationState(now)
+	wasState := calculateDependencyVulnAggregationState(was)
 
-	return FlawAggregationStateAndChange{
+	return DependencyVulnAggregationStateAndChange{
 		Now: nowState,
 		Was: wasState,
 	}, nil
 }
 
-func calculateFlawAggregationState(flaws []models.DependencyVulnerability) FlawAggregationState {
-	state := FlawAggregationState{}
+func calculateDependencyVulnAggregationState(dependencyVulns []models.DependencyVulnerability) DependencyVulnAggregationState {
+	state := DependencyVulnAggregationState{}
 
-	for _, flaw := range flaws {
-		if flaw.State == models.FlawStateOpen {
+	for _, dependencyVuln := range dependencyVulns {
+		if dependencyVuln.State == models.DependencyVulnStateOpen {
 			state.Open++
 		} else {
 			state.Fixed++

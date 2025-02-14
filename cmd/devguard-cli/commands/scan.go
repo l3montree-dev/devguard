@@ -37,11 +37,11 @@ func newSbomCommand() *cobra.Command {
 				return
 			}
 			assetRepository := repositories.NewAssetRepository(database)
-			flawRepository := repositories.NewDependencyVulnerability(database)
+			dependencyVulnRepository := repositories.NewDependencyVulnerability(database)
 			componentRepository := repositories.NewComponentRepository(database)
-			assetService := asset.NewService(assetRepository, componentRepository, flawRepository, DependencyVuln.NewService(
-				flawRepository,
-				repositories.NewFlawEventRepository(database),
+			assetService := asset.NewService(assetRepository, componentRepository, dependencyVulnRepository, DependencyVuln.NewService(
+				dependencyVulnRepository,
+				repositories.NewDependencyVulnEventRepository(database),
 				assetRepository,
 				repositories.NewCVERepository(database),
 			))
@@ -85,7 +85,7 @@ func newSbomCommand() *cobra.Command {
 						continue
 					}
 
-					amountOpened, amountClosed, flaws, err := assetService.HandleScanResult(
+					amountOpened, amountClosed, dependencyVulns, err := assetService.HandleScanResult(
 						asset,
 						vulns,
 						scanner,
@@ -100,7 +100,7 @@ func newSbomCommand() *cobra.Command {
 						continue
 					}
 
-					slog.Info("scan result", "asset", asset.Name, "totalAmount", len(flaws), "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
+					slog.Info("scan result", "asset", asset.Name, "totalAmount", len(dependencyVulns), "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
 
 				}
 			}

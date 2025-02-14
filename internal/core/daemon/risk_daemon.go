@@ -7,12 +7,12 @@ import (
 )
 
 func RecalculateRisk(db database.DB) error {
-	flawService := DependencyVuln.NewService(
+	dependencyVulnService := DependencyVuln.NewService(
 		repositories.NewDependencyVulnerability(db),
-		repositories.NewFlawEventRepository(db),
+		repositories.NewDependencyVulnEventRepository(db),
 		repositories.NewAssetRepository(db),
 		repositories.NewCVERepository(db),
 	)
 
-	return flawService.RecalculateAllRawRiskAssessments()
+	return dependencyVulnService.RecalculateAllRawRiskAssessments()
 }

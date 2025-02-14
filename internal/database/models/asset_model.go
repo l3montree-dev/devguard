@@ -26,9 +26,9 @@ type Asset struct {
 	Name string `json:"name" gorm:"type:text"`
 	Slug string `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
 
-	ProjectID   uuid.UUID                 `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`
-	Description string                    `json:"description" gorm:"type:text"`
-	Flaws       []DependencyVulnerability `json:"flaws" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
+	ProjectID       uuid.UUID                 `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`
+	Description     string                    `json:"description" gorm:"type:text"`
+	DependencyVulns []DependencyVulnerability `json:"dependencyVulns" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
 
 	Type AssetType `json:"type" gorm:"type:text;not null;"`
 

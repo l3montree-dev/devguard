@@ -315,23 +315,23 @@ func (_c *StatisticsStatisticsService_GetDependencyCountPerscanner_Call) RunAndR
 	return _c
 }
 
-// GetFlawAggregationStateAndChangeSince provides a mock function with given fields: assetID, calculateChangeTo
-func (_m *StatisticsStatisticsService) GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (statistics.FlawAggregationStateAndChange, error) {
+// GetDependencyVulnAggregationStateAndChangeSince provides a mock function with given fields: assetID, calculateChangeTo
+func (_m *StatisticsStatisticsService) GetDependencyVulnAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (statistics.DependencyVulnAggregationStateAndChange, error) {
 	ret := _m.Called(assetID, calculateChangeTo)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetFlawAggregationStateAndChangeSince")
+		panic("no return value specified for GetDependencyVulnAggregationStateAndChangeSince")
 	}
 
-	var r0 statistics.FlawAggregationStateAndChange
+	var r0 statistics.DependencyVulnAggregationStateAndChange
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) (statistics.FlawAggregationStateAndChange, error)); ok {
+	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) (statistics.DependencyVulnAggregationStateAndChange, error)); ok {
 		return rf(assetID, calculateChangeTo)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) statistics.FlawAggregationStateAndChange); ok {
+	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) statistics.DependencyVulnAggregationStateAndChange); ok {
 		r0 = rf(assetID, calculateChangeTo)
 	} else {
-		r0 = ret.Get(0).(statistics.FlawAggregationStateAndChange)
+		r0 = ret.Get(0).(statistics.DependencyVulnAggregationStateAndChange)
 	}
 
 	if rf, ok := ret.Get(1).(func(uuid.UUID, time.Time) error); ok {
@@ -343,41 +343,41 @@ func (_m *StatisticsStatisticsService) GetFlawAggregationStateAndChangeSince(ass
 	return r0, r1
 }
 
-// StatisticsStatisticsService_GetFlawAggregationStateAndChangeSince_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFlawAggregationStateAndChangeSince'
-type StatisticsStatisticsService_GetFlawAggregationStateAndChangeSince_Call struct {
+// StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyVulnAggregationStateAndChangeSince'
+type StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call struct {
 	*mock.Call
 }
 
-// GetFlawAggregationStateAndChangeSince is a helper method to define mock.On call
+// GetDependencyVulnAggregationStateAndChangeSince is a helper method to define mock.On call
 //   - assetID uuid.UUID
 //   - calculateChangeTo time.Time
-func (_e *StatisticsStatisticsService_Expecter) GetFlawAggregationStateAndChangeSince(assetID interface{}, calculateChangeTo interface{}) *StatisticsStatisticsService_GetFlawAggregationStateAndChangeSince_Call {
-	return &StatisticsStatisticsService_GetFlawAggregationStateAndChangeSince_Call{Call: _e.mock.On("GetFlawAggregationStateAndChangeSince", assetID, calculateChangeTo)}
+func (_e *StatisticsStatisticsService_Expecter) GetDependencyVulnAggregationStateAndChangeSince(assetID interface{}, calculateChangeTo interface{}) *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
+	return &StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call{Call: _e.mock.On("GetDependencyVulnAggregationStateAndChangeSince", assetID, calculateChangeTo)}
 }
 
-func (_c *StatisticsStatisticsService_GetFlawAggregationStateAndChangeSince_Call) Run(run func(assetID uuid.UUID, calculateChangeTo time.Time)) *StatisticsStatisticsService_GetFlawAggregationStateAndChangeSince_Call {
+func (_c *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call) Run(run func(assetID uuid.UUID, calculateChangeTo time.Time)) *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(uuid.UUID), args[1].(time.Time))
 	})
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetFlawAggregationStateAndChangeSince_Call) Return(_a0 statistics.FlawAggregationStateAndChange, _a1 error) *StatisticsStatisticsService_GetFlawAggregationStateAndChangeSince_Call {
+func (_c *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call) Return(_a0 statistics.DependencyVulnAggregationStateAndChange, _a1 error) *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetFlawAggregationStateAndChangeSince_Call) RunAndReturn(run func(uuid.UUID, time.Time) (statistics.FlawAggregationStateAndChange, error)) *StatisticsStatisticsService_GetFlawAggregationStateAndChangeSince_Call {
+func (_c *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call) RunAndReturn(run func(uuid.UUID, time.Time) (statistics.DependencyVulnAggregationStateAndChange, error)) *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetFlawCountByScannerId provides a mock function with given fields: assetID
-func (_m *StatisticsStatisticsService) GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
+// GetDependencyVulnCountByScannerId provides a mock function with given fields: assetID
+func (_m *StatisticsStatisticsService) GetDependencyVulnCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
 	ret := _m.Called(assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetFlawCountByScannerId")
+		panic("no return value specified for GetDependencyVulnCountByScannerId")
 	}
 
 	var r0 map[string]int
@@ -402,30 +402,30 @@ func (_m *StatisticsStatisticsService) GetFlawCountByScannerId(assetID uuid.UUID
 	return r0, r1
 }
 
-// StatisticsStatisticsService_GetFlawCountByScannerId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFlawCountByScannerId'
-type StatisticsStatisticsService_GetFlawCountByScannerId_Call struct {
+// StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyVulnCountByScannerId'
+type StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call struct {
 	*mock.Call
 }
 
-// GetFlawCountByScannerId is a helper method to define mock.On call
+// GetDependencyVulnCountByScannerId is a helper method to define mock.On call
 //   - assetID uuid.UUID
-func (_e *StatisticsStatisticsService_Expecter) GetFlawCountByScannerId(assetID interface{}) *StatisticsStatisticsService_GetFlawCountByScannerId_Call {
-	return &StatisticsStatisticsService_GetFlawCountByScannerId_Call{Call: _e.mock.On("GetFlawCountByScannerId", assetID)}
+func (_e *StatisticsStatisticsService_Expecter) GetDependencyVulnCountByScannerId(assetID interface{}) *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call {
+	return &StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call{Call: _e.mock.On("GetDependencyVulnCountByScannerId", assetID)}
 }
 
-func (_c *StatisticsStatisticsService_GetFlawCountByScannerId_Call) Run(run func(assetID uuid.UUID)) *StatisticsStatisticsService_GetFlawCountByScannerId_Call {
+func (_c *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call) Run(run func(assetID uuid.UUID)) *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetFlawCountByScannerId_Call) Return(_a0 map[string]int, _a1 error) *StatisticsStatisticsService_GetFlawCountByScannerId_Call {
+func (_c *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call) Return(_a0 map[string]int, _a1 error) *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetFlawCountByScannerId_Call) RunAndReturn(run func(uuid.UUID) (map[string]int, error)) *StatisticsStatisticsService_GetFlawCountByScannerId_Call {
+func (_c *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call) RunAndReturn(run func(uuid.UUID) (map[string]int, error)) *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call {
 	_c.Call.Return(run)
 	return _c
 }

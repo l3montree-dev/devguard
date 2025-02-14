@@ -26,28 +26,28 @@ import (
 type integrationController struct {
 }
 
-func createNewFlawEventBasedOnComment(flawId, userId, comment string) models.FlawEvent {
+func createNewDependencyVulnEventBasedOnComment(dependencyVulnId, userId, comment string) models.DependencyVulnEvent {
 	if strings.HasPrefix(comment, "/accept") {
-		// create a new flaw accept event
-		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
+		// create a new dependencyVuln accept event
+		return models.NewAcceptedEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
 	} else if strings.HasPrefix(comment, "/false-positive") {
-		// create a new flaw false positive event
-		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
+		// create a new dependencyVuln false positive event
+		return models.NewFalsePositiveEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
 	} else if strings.HasPrefix(comment, "/reopen") {
-		// create a new flaw reopen event
-		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
+		// create a new dependencyVuln reopen event
+		return models.NewReopenedEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
 	} else if strings.HasPrefix(comment, "/a") {
-		// create a new flaw accept event
-		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
+		// create a new dependencyVuln accept event
+		return models.NewAcceptedEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
 	} else if strings.HasPrefix(comment, "/fp") {
-		// create a new flaw false positive event
-		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
+		// create a new dependencyVuln false positive event
+		return models.NewFalsePositiveEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
 	} else if strings.HasPrefix(comment, "/r") {
-		// create a new flaw reopen event
-		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
+		// create a new dependencyVuln reopen event
+		return models.NewReopenedEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
 	} else {
 		// create a new comment event
-		return models.NewCommentEvent(flawId, userId, comment)
+		return models.NewCommentEvent(dependencyVulnId, userId, comment)
 	}
 }
 

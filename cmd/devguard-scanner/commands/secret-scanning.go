@@ -100,8 +100,8 @@ func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string)
 			return fmt.Errorf("could not scan file!!!: %s", resp.Status)
 		}
 
-		// read and parse the body - it should be an array of flaws
-		// print the flaws to the console
+		// read and parse the body - it should be an array of dependencyVulns
+		// print the dependencyVulns to the console
 		var scanResponse scan.ScanResponse
 
 		err = json.NewDecoder(resp.Body).Decode(&scanResponse)

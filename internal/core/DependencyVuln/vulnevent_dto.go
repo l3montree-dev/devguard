@@ -7,11 +7,11 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-type FlawEventDTO struct {
-	ID     uuid.UUID            `json:"id"`
-	Type   models.FlawEventType `json:"type"`
-	FlawID string               `json:"flawId"`
-	UserID string               `json:"userId"`
+type DependencyVulnEventDTO struct {
+	ID               uuid.UUID                      `json:"id"`
+	Type             models.DependencyVulnEventType `json:"type"`
+	DependencyVulnID string                         `json:"dependencyVulnId"`
+	UserID           string                         `json:"userId"`
 
 	Justification *string `json:"justification"`
 
@@ -20,14 +20,14 @@ type FlawEventDTO struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-func (dto FlawEventDTO) ToModel() models.FlawEvent {
-	flawId := dto.FlawID
+func (dto DependencyVulnEventDTO) ToModel() models.DependencyVulnEvent {
+	dependencyVulnId := dto.DependencyVulnID
 	userId := dto.UserID
 
-	return models.FlawEvent{
-		Type:          dto.Type,
-		FlawID:        flawId,
-		UserID:        userId,
-		Justification: dto.Justification,
+	return models.DependencyVulnEvent{
+		Type:             dto.Type,
+		DependencyVulnID: dependencyVulnId,
+		UserID:           userId,
+		Justification:    dto.Justification,
 	}
 }

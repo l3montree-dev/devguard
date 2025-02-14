@@ -15,13 +15,13 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type flawsByPackage struct {
-	PackageName string    `json:"packageName"`
-	AvgRisk     float64   `json:"avgRisk"`
-	MaxRisk     float64   `json:"maxRisk"`
-	FlawCount   int       `json:"flawCount"`
-	TotalRisk   float64   `json:"totalRisk"`
-	Flaws       []FlawDTO `json:"flaws"`
+type dependencyVulnsByPackage struct {
+	PackageName         string              `json:"packageName"`
+	AvgRisk             float64             `json:"avgRisk"`
+	MaxRisk             float64             `json:"maxRisk"`
+	DependencyVulnCount int                 `json:"dependencyVulnCount"`
+	TotalRisk           float64             `json:"totalRisk"`
+	DependencyVulns     []DependencyVulnDTO `json:"dependencyVulns"`
 }
 
 type repository interface {
@@ -30,46 +30,46 @@ type repository interface {
 	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.DependencyVulnerability, error)
 	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.DependencyVulnerability], map[string]int, error)
 
-	GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)
-	GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)
-	GetFlawsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)
+	GetDependencyVulnsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)
+	GetDependencyVulnsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)
+	GetDependencyVulnsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVulnerability], error)
 }
 
 type projectService interface {
 	ListAllowedProjects(c core.Context) ([]models.Project, error)
 }
 
-type flawService interface {
-	UpdateFlawState(tx core.DB, userID string, flaw *models.DependencyVulnerability, statusType string, justification string) (models.FlawEvent, error)
+type dependencyVulnService interface {
+	UpdateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVulnerability, statusType string, justification string) (models.DependencyVulnEvent, error)
 }
 
-type flawHttpController struct {
-	flawRepository repository
-	flawService    flawService
-	projectService projectService
+type dependencyVulnHttpController struct {
+	dependencyVulnRepository repository
+	dependencyVulnService    dependencyVulnService
+	projectService           projectService
 }
 
-type FlawStatus struct {
+type DependencyVulnStatus struct {
 	StatusType    string `json:"status"`
 	Justification string `json:"justification"`
 }
 
-func NewHttpController(flawRepository repository, flawService flawService, projectService projectService) *flawHttpController {
-	return &flawHttpController{
-		flawRepository: flawRepository,
-		flawService:    flawService,
-		projectService: projectService,
+func NewHttpController(dependencyVulnRepository repository, dependencyVulnService dependencyVulnService, projectService projectService) *dependencyVulnHttpController {
+	return &dependencyVulnHttpController{
+		dependencyVulnRepository: dependencyVulnRepository,
+		dependencyVulnService:    dependencyVulnService,
+		projectService:           projectService,
 	}
 }
 
-func (c flawHttpController) ListByOrgPaged(ctx core.Context) error {
+func (c dependencyVulnHttpController) ListByOrgPaged(ctx core.Context) error {
 
 	userAllowedProjectIds, err := c.projectService.ListAllowedProjects(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
 
-	pagedResp, err := c.flawRepository.GetFlawsByOrgIdPaged(
+	pagedResp, err := c.dependencyVulnRepository.GetDependencyVulnsByOrgIdPaged(
 		nil,
 
 		utils.Map(userAllowedProjectIds, func(p models.Project) string {
@@ -81,18 +81,18 @@ func (c flawHttpController) ListByOrgPaged(ctx core.Context) error {
 		core.GetSortQuery(ctx),
 	)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
+		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(flaw models.DependencyVulnerability) any {
-		return convertToDetailedDTO(flaw)
+	return ctx.JSON(200, pagedResp.Map(func(dependencyVuln models.DependencyVulnerability) any {
+		return convertToDetailedDTO(dependencyVuln)
 	}))
 }
 
-func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
+func (c dependencyVulnHttpController) ListByProjectPaged(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
-	pagedResp, err := c.flawRepository.GetFlawsByProjectIdPaged(
+	pagedResp, err := c.dependencyVulnRepository.GetDependencyVulnsByProjectIdPaged(
 		nil,
 		project.ID,
 
@@ -102,31 +102,31 @@ func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
 		core.GetSortQuery(ctx),
 	)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
+		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(flaw models.DependencyVulnerability) any {
-		return convertToDetailedDTO(flaw)
+	return ctx.JSON(200, pagedResp.Map(func(dependencyVuln models.DependencyVulnerability) any {
+		return convertToDetailedDTO(dependencyVuln)
 	}))
 }
 
-func (c flawHttpController) ListPaged(ctx core.Context) error {
+func (c dependencyVulnHttpController) ListPaged(ctx core.Context) error {
 	// get the asset
 	asset := core.GetAsset(ctx)
 
 	// check if we should list flat - this means not grouped by package
 	if ctx.QueryParam("flat") == "true" {
-		flaws, err := c.flawRepository.GetFlawsByAssetIdPagedAndFlat(nil, asset.GetID(), core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
+		dependencyVulns, err := c.dependencyVulnRepository.GetDependencyVulnsByAssetIdPagedAndFlat(nil, asset.GetID(), core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
 		if err != nil {
-			return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
+			return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 		}
 
-		return ctx.JSON(200, flaws.Map(func(flaw models.DependencyVulnerability) any {
-			return convertToDetailedDTO(flaw)
+		return ctx.JSON(200, dependencyVulns.Map(func(dependencyVuln models.DependencyVulnerability) any {
+			return convertToDetailedDTO(dependencyVuln)
 		}))
 	}
 
-	pagedResp, packageNameIndexMap, err := c.flawRepository.GetByAssetIdPaged(
+	pagedResp, packageNameIndexMap, err := c.dependencyVulnRepository.GetByAssetIdPaged(
 		nil,
 		core.GetPageInfo(ctx),
 		ctx.QueryParam("search"),
@@ -136,71 +136,71 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	)
 
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
+		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 	}
 
-	res := map[string]flawsByPackage{}
-	for _, flaw := range pagedResp.Data {
+	res := map[string]dependencyVulnsByPackage{}
+	for _, dependencyVuln := range pagedResp.Data {
 		// get the package name
-		if _, ok := res[*flaw.ComponentPurl]; !ok {
-			res[*flaw.ComponentPurl] = flawsByPackage{
-				PackageName: *flaw.ComponentPurl,
+		if _, ok := res[*dependencyVuln.ComponentPurl]; !ok {
+			res[*dependencyVuln.ComponentPurl] = dependencyVulnsByPackage{
+				PackageName: *dependencyVuln.ComponentPurl,
 			}
 		}
-		flawsByPackage := res[*flaw.ComponentPurl]
-		// append the flaw to the package
-		flawsByPackage.Flaws = append(res[*flaw.ComponentPurl].Flaws, FlawDTO{
-			ID:                    flaw.ID,
-			ScannerID:             flaw.ScannerID,
-			Message:               flaw.Message,
-			AssetID:               flaw.AssetID.String(),
-			State:                 flaw.State,
-			CVE:                   flaw.CVE,
-			CVEID:                 flaw.CVEID,
-			ComponentPurl:         flaw.ComponentPurl,
-			ComponentDepth:        flaw.ComponentDepth,
-			ComponentFixedVersion: flaw.ComponentFixedVersion,
-			Effort:                flaw.Effort,
-			RiskAssessment:        flaw.RiskAssessment,
-			RawRiskAssessment:     flaw.RawRiskAssessment,
-			Priority:              flaw.Priority,
-			LastDetected:          flaw.LastDetected,
-			CreatedAt:             flaw.CreatedAt,
+		dependencyVulnsByPackage := res[*dependencyVuln.ComponentPurl]
+		// append the dependencyVuln to the package
+		dependencyVulnsByPackage.DependencyVulns = append(res[*dependencyVuln.ComponentPurl].DependencyVulns, DependencyVulnDTO{
+			ID:                    dependencyVuln.ID,
+			ScannerID:             dependencyVuln.ScannerID,
+			Message:               dependencyVuln.Message,
+			AssetID:               dependencyVuln.AssetID.String(),
+			State:                 dependencyVuln.State,
+			CVE:                   dependencyVuln.CVE,
+			CVEID:                 dependencyVuln.CVEID,
+			ComponentPurl:         dependencyVuln.ComponentPurl,
+			ComponentDepth:        dependencyVuln.ComponentDepth,
+			ComponentFixedVersion: dependencyVuln.ComponentFixedVersion,
+			Effort:                dependencyVuln.Effort,
+			RiskAssessment:        dependencyVuln.RiskAssessment,
+			RawRiskAssessment:     dependencyVuln.RawRiskAssessment,
+			Priority:              dependencyVuln.Priority,
+			LastDetected:          dependencyVuln.LastDetected,
+			CreatedAt:             dependencyVuln.CreatedAt,
 		})
-		res[*flaw.ComponentPurl] = flawsByPackage
+		res[*dependencyVuln.ComponentPurl] = dependencyVulnsByPackage
 	}
 
-	values := make([]flawsByPackage, 0, len(res))
+	values := make([]dependencyVulnsByPackage, 0, len(res))
 	for _, v := range res {
 		// calculate the max and average risk
 		maxRisk := 0.
 		totalRisk := 0.
 
-		for _, f := range v.Flaws {
+		for _, f := range v.DependencyVulns {
 			totalRisk += utils.OrDefault(f.RawRiskAssessment, 0)
 			if utils.OrDefault(f.RawRiskAssessment, 0) > maxRisk {
 				maxRisk = *f.RawRiskAssessment
 			}
 		}
-		v.AvgRisk = totalRisk / float64(len(v.Flaws))
+		v.AvgRisk = totalRisk / float64(len(v.DependencyVulns))
 		v.MaxRisk = maxRisk
 		v.TotalRisk = totalRisk
-		v.FlawCount = len(v.Flaws)
+		v.DependencyVulnCount = len(v.DependencyVulns)
 		values = append(values, v)
 	}
 
 	// sort the value based on the index map
-	slices.SortFunc(values, func(a, b flawsByPackage) int {
+	slices.SortFunc(values, func(a, b dependencyVulnsByPackage) int {
 		return packageNameIndexMap[a.PackageName] - packageNameIndexMap[b.PackageName]
 	})
 
 	return ctx.JSON(200, core.NewPaged(core.GetPageInfo(ctx), pagedResp.Total, values))
 }
 
-func (c flawHttpController) Mitigate(ctx core.Context) error {
-	flawId, err := core.GetFlawID(ctx)
+func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
+	dependencyVulnId, err := core.GetDependencyVulnID(ctx)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid flaw id")
+		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
 
 	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
@@ -208,51 +208,51 @@ func (c flawHttpController) Mitigate(ctx core.Context) error {
 	if err = thirdPartyIntegrations.HandleEvent(core.ManualMitigateEvent{
 		Ctx: ctx,
 	}); err != nil {
-		return echo.NewHTTPError(500, "could not mitigate flaw").WithInternal(err)
+		return echo.NewHTTPError(500, "could not mitigate dependencyVuln").WithInternal(err)
 	}
 
-	// fetch the flaw again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the flaw.
-	flaw, err := c.flawRepository.Read(flawId)
+	// fetch the dependencyVuln again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the dependencyVuln.
+	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnId)
 	if err != nil {
-		return echo.NewHTTPError(404, "could not find flaw")
+		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 
-	return ctx.JSON(200, convertToDetailedDTO(flaw))
+	return ctx.JSON(200, convertToDetailedDTO(dependencyVuln))
 }
 
-func (c flawHttpController) Read(ctx core.Context) error {
-	flawId, err := core.GetFlawID(ctx)
+func (c dependencyVulnHttpController) Read(ctx core.Context) error {
+	dependencyVulnId, err := core.GetDependencyVulnID(ctx)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid flaw id")
+		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
 	asset := core.GetAsset(ctx)
 
-	flaw, err := c.flawRepository.Read(flawId)
+	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnId)
 	if err != nil {
-		return echo.NewHTTPError(404, "could not find flaw")
+		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 
-	risk, vector := risk.RiskCalculation(*flaw.CVE, core.GetEnvironmentalFromAsset(asset))
-	flaw.CVE.Risk = risk
-	flaw.CVE.Vector = vector
+	risk, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
+	dependencyVuln.CVE.Risk = risk
+	dependencyVuln.CVE.Vector = vector
 
-	return ctx.JSON(200, convertToDetailedDTO(flaw))
+	return ctx.JSON(200, convertToDetailedDTO(dependencyVuln))
 }
 
-func (c flawHttpController) CreateEvent(ctx core.Context) error {
+func (c dependencyVulnHttpController) CreateEvent(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	flawId, err := core.GetFlawID(ctx)
+	dependencyVulnId, err := core.GetDependencyVulnID(ctx)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid flaw id")
+		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
 
-	flaw, err := c.flawRepository.Read(flawId)
+	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnId)
 	if err != nil {
-		return echo.NewHTTPError(404, "could not find flaw")
+		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
 	userID := core.GetSession(ctx).GetUserID()
 
-	var status FlawStatus
+	var status DependencyVulnStatus
 	err = json.NewDecoder(ctx.Request().Body).Decode(&status)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
@@ -265,12 +265,12 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 	}
 	justification := status.Justification
 
-	err = c.flawRepository.Transaction(func(tx core.DB) error {
-		ev, err := c.flawService.UpdateFlawState(tx, userID, &flaw, statusType, justification)
+	err = c.dependencyVulnRepository.Transaction(func(tx core.DB) error {
+		ev, err := c.dependencyVulnService.UpdateDependencyVulnState(tx, userID, &dependencyVuln, statusType, justification)
 		if err != nil {
 			return err
 		}
-		err = thirdPartyIntegration.HandleEvent(core.FlawEvent{
+		err = thirdPartyIntegration.HandleEvent(core.DependencyVulnEvent{
 			Ctx:   ctx,
 			Event: ev,
 		})
@@ -282,40 +282,40 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 		return nil
 	})
 	if err != nil {
-		return echo.NewHTTPError(500, "could not create flaw event").WithInternal(err)
+		return echo.NewHTTPError(500, "could not create dependencyVuln event").WithInternal(err)
 	}
 
-	return ctx.JSON(200, convertToDetailedDTO(flaw))
+	return ctx.JSON(200, convertToDetailedDTO(dependencyVuln))
 }
 
-func convertToDetailedDTO(flaw models.DependencyVulnerability) detailedFlawDTO {
-	return detailedFlawDTO{
-		FlawDTO: FlawDTO{
-			ID:                    flaw.ID,
-			Message:               flaw.Message,
-			AssetID:               flaw.AssetID.String(),
-			State:                 flaw.State,
-			CVE:                   flaw.CVE,
-			CVEID:                 flaw.CVEID,
-			ComponentPurl:         flaw.ComponentPurl,
-			ComponentDepth:        flaw.ComponentDepth,
-			ComponentFixedVersion: flaw.ComponentFixedVersion,
-			Effort:                flaw.Effort,
-			RiskAssessment:        flaw.RiskAssessment,
-			RawRiskAssessment:     flaw.RawRiskAssessment,
-			Priority:              flaw.Priority,
-			LastDetected:          flaw.LastDetected,
-			CreatedAt:             flaw.CreatedAt,
-			ScannerID:             flaw.ScannerID,
-			TicketID:              flaw.TicketID,
-			TicketURL:             flaw.TicketURL,
-			RiskRecalculatedAt:    flaw.RiskRecalculatedAt,
+func convertToDetailedDTO(dependencyVuln models.DependencyVulnerability) detailedDependencyVulnDTO {
+	return detailedDependencyVulnDTO{
+		DependencyVulnDTO: DependencyVulnDTO{
+			ID:                    dependencyVuln.ID,
+			Message:               dependencyVuln.Message,
+			AssetID:               dependencyVuln.AssetID.String(),
+			State:                 dependencyVuln.State,
+			CVE:                   dependencyVuln.CVE,
+			CVEID:                 dependencyVuln.CVEID,
+			ComponentPurl:         dependencyVuln.ComponentPurl,
+			ComponentDepth:        dependencyVuln.ComponentDepth,
+			ComponentFixedVersion: dependencyVuln.ComponentFixedVersion,
+			Effort:                dependencyVuln.Effort,
+			RiskAssessment:        dependencyVuln.RiskAssessment,
+			RawRiskAssessment:     dependencyVuln.RawRiskAssessment,
+			Priority:              dependencyVuln.Priority,
+			LastDetected:          dependencyVuln.LastDetected,
+			CreatedAt:             dependencyVuln.CreatedAt,
+			ScannerID:             dependencyVuln.ScannerID,
+			TicketID:              dependencyVuln.TicketID,
+			TicketURL:             dependencyVuln.TicketURL,
+			RiskRecalculatedAt:    dependencyVuln.RiskRecalculatedAt,
 		},
-		Events: utils.Map(flaw.Events, func(ev models.FlawEvent) FlawEventDTO {
-			return FlawEventDTO{
+		Events: utils.Map(dependencyVuln.Events, func(ev models.DependencyVulnEvent) DependencyVulnEventDTO {
+			return DependencyVulnEventDTO{
 				ID:                ev.ID,
 				Type:              ev.Type,
-				FlawID:            ev.FlawID,
+				DependencyVulnID:  ev.DependencyVulnID,
 				UserID:            ev.UserID,
 				Justification:     ev.Justification,
 				ArbitraryJsonData: ev.GetArbitraryJsonData(),
