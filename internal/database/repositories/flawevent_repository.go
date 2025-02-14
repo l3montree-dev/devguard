@@ -8,15 +8,15 @@ import (
 
 type eventRepository struct {
 	db core.DB
-	Repository[uuid.UUID, models.VulnEvent, core.DB]
+	Repository[uuid.UUID, models.FlawEvent, core.DB]
 }
 
-func NewVulnEventRepository(db core.DB) *eventRepository {
-	if err := db.AutoMigrate(&models.VulnEvent{}); err != nil {
+func NewFlawEventRepository(db core.DB) *eventRepository {
+	if err := db.AutoMigrate(&models.FlawEvent{}); err != nil {
 		panic(err)
 	}
 	return &eventRepository{
 		db:         db,
-		Repository: newGormRepository[uuid.UUID, models.VulnEvent](db),
+		Repository: newGormRepository[uuid.UUID, models.FlawEvent](db),
 	}
 }

@@ -26,28 +26,28 @@ import (
 type integrationController struct {
 }
 
-func createNewVulnEventBasedOnComment(vulnId, userId, comment string) models.VulnEvent {
+func createNewFlawEventBasedOnComment(flawId, userId, comment string) models.FlawEvent {
 	if strings.HasPrefix(comment, "/accept") {
-		// create a new vuln accept event
-		return models.NewAcceptedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
+		// create a new flaw accept event
+		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
 	} else if strings.HasPrefix(comment, "/false-positive") {
-		// create a new vuln false positive event
-		return models.NewFalsePositiveEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
+		// create a new flaw false positive event
+		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
 	} else if strings.HasPrefix(comment, "/reopen") {
-		// create a new vuln reopen event
-		return models.NewReopenedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
+		// create a new flaw reopen event
+		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
 	} else if strings.HasPrefix(comment, "/a") {
-		// create a new vuln accept event
-		return models.NewAcceptedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
+		// create a new flaw accept event
+		return models.NewAcceptedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
 	} else if strings.HasPrefix(comment, "/fp") {
-		// create a new vuln false positive event
-		return models.NewFalsePositiveEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
+		// create a new flaw false positive event
+		return models.NewFalsePositiveEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
 	} else if strings.HasPrefix(comment, "/r") {
-		// create a new vuln reopen event
-		return models.NewReopenedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
+		// create a new flaw reopen event
+		return models.NewReopenedEvent(flawId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
 	} else {
 		// create a new comment event
-		return models.NewCommentEvent(vulnId, userId, comment)
+		return models.NewCommentEvent(flawId, userId, comment)
 	}
 }
 

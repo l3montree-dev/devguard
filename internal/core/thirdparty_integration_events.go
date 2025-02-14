@@ -6,7 +6,7 @@ type ManualMitigateEvent struct {
 	Ctx Context
 }
 
-type VulnEvent struct {
+type FlawEvent struct {
 	Ctx   Context
-	Event models.VulnEvent
+	Event models.FlawEvent
 }

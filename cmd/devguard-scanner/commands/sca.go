@@ -290,21 +290,21 @@ git push origin v1.0.1
 
 // can be reused for container scanning as well.
 func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webUI string, doRiskManagement bool) {
-	slog.Info("Scan completed successfully", "vulnAmount", len(scanResponse.Vulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
+	slog.Info("Scan completed successfully", "flawAmount", len(scanResponse.Flaws), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
-	if len(scanResponse.Vulns) == 0 {
+	if len(scanResponse.Flaws) == 0 {
 		return
 	}
 
-	// order the vulns by their risk
-	slices.SortFunc(scanResponse.Vulns, func(a, b DependencyVuln.VulnDTO) int {
+	// order the flaws by their risk
+	slices.SortFunc(scanResponse.Flaws, func(a, b DependencyVuln.FlawDTO) int {
 		return int(*(a.RawRiskAssessment)*100) - int(*b.RawRiskAssessment*100)
 	})
 
-	// get the max risk of open!!! vulns
-	openRisks := utils.Map(utils.Filter(scanResponse.Vulns, func(f DependencyVuln.VulnDTO) bool {
+	// get the max risk of open!!! flaws
+	openRisks := utils.Map(utils.Filter(scanResponse.Flaws, func(f DependencyVuln.FlawDTO) bool {
 		return f.State == "open"
-	}), func(f DependencyVuln.VulnDTO) float64 {
+	}), func(f DependencyVuln.FlawDTO) float64 {
 		return *f.RawRiskAssessment
 	})
 
@@ -318,11 +318,11 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	tw := table.NewWriter()
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status", "URL"})
 	tw.AppendRows(utils.Map(
-		scanResponse.Vulns,
-		func(f DependencyVuln.VulnDTO) table.Row {
+		scanResponse.Flaws,
+		func(f DependencyVuln.FlawDTO) table.Row {
 			clickableLink := ""
 			if doRiskManagement {
-				clickableLink = fmt.Sprintf("%s/%s/vulns/%s", webUI, assetName, f.ID)
+				clickableLink = fmt.Sprintf("%s/%s/flaws/%s", webUI, assetName, f.ID)
 			} else {
 				clickableLink = "Risk Management is disabled"
 			}
@@ -435,7 +435,7 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 
 		slog.Info("starting scan", "version", version, "asset", assetName)
 		// read the sbom file and post it to the scan endpoint
-		// get the vulns and print them to the console
+		// get the flaws and print them to the console
 		file, err := generateSBOM(path)
 		defer os.Remove(file.Name())
 
@@ -477,8 +477,8 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 			return fmt.Errorf("could not scan file: %s", resp.Status)
 		}
 
-		// read and parse the body - it should be an array of vulns
-		// print the vulns to the console
+		// read and parse the body - it should be an array of flaws
+		// print the flaws to the console
 		var scanResponse scan.ScanResponse
 
 		err = json.NewDecoder(resp.Body).Decode(&scanResponse)

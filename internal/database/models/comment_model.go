@@ -6,7 +6,7 @@ import (
 
 type Comment struct {
 	Model
-	VulnID  uuid.UUID `json:"vulnId"`
+	FlawID  uuid.UUID `json:"flawId"`
 	UserID  uuid.UUID `json:"userId"`
 	Comment string    `json:"comment"`
 }

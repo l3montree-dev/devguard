@@ -43,7 +43,7 @@ type assetComponentsLoader interface {
 type assetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 	BuildSBOM(asset models.Asset, version, orgName string, components []models.ComponentDependency) *cdx.BOM
-	BuildVeX(asset models.Asset, version, orgName string, components []models.ComponentDependency, vulns []models.DependencyVulnerability) *cdx.BOM
+	BuildVeX(asset models.Asset, version, orgName string, components []models.ComponentDependency, flaws []models.DependencyVulnerability) *cdx.BOM
 }
 
 type supplyChainRepository interface {
@@ -54,17 +54,17 @@ type httpController struct {
 	assetRepository       repository
 	assetComponentsLoader assetComponentsLoader
 
-	vulnRepository        vulnRepository
+	flawRepository        flawRepository
 	assetService          assetService
 	supplyChainRepository supplyChainRepository
 }
 
-func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, vulnRepository vulnRepository, assetService assetService, supplyChainRepository supplyChainRepository) *httpController {
+func NewHttpController(repository repository, assetComponentsLoader assetComponentsLoader, flawRepository flawRepository, assetService assetService, supplyChainRepository supplyChainRepository) *httpController {
 	return &httpController{
 		assetRepository:       repository,
 		assetComponentsLoader: assetComponentsLoader,
 
-		vulnRepository:        vulnRepository,
+		flawRepository:        flawRepository,
 		assetService:          assetService,
 		supplyChainRepository: supplyChainRepository,
 	}
@@ -139,17 +139,17 @@ func (a *httpController) AffectedComponents(c core.Context) error {
 	}
 
 	asset := core.GetAsset(c)
-	_, vulns, err := a.getComponentsAndVulns(asset, scanner, version)
+	_, flaws, err := a.getComponentsAndFlaws(asset, scanner, version)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, utils.Map(vulns, func(m models.DependencyVulnerability) DependencyVuln.VulnDTO {
-		return DependencyVuln.VulnToDto(m)
+	return c.JSON(200, utils.Map(flaws, func(m models.DependencyVulnerability) DependencyVuln.FlawDTO {
+		return DependencyVuln.FlawToDto(m)
 	}))
 }
 
-func (a *httpController) getComponentsAndVulns(asset models.Asset, scanner, version string) ([]models.ComponentDependency, []models.DependencyVulnerability, error) {
+func (a *httpController) getComponentsAndFlaws(asset models.Asset, scanner, version string) ([]models.ComponentDependency, []models.DependencyVulnerability, error) {
 	components, err := a.assetComponentsLoader.LoadComponents(nil, asset, scanner, version)
 	if err != nil {
 		return nil, nil, err
@@ -159,18 +159,18 @@ func (a *httpController) getComponentsAndVulns(asset models.Asset, scanner, vers
 		return c.DependencyPurl
 	})
 
-	vulns, err := a.vulnRepository.GetVulnsByPurl(nil, purls)
+	flaws, err := a.flawRepository.GetFlawsByPurl(nil, purls)
 	if err != nil {
 		return nil, nil, err
 	}
-	return components, vulns, nil
+	return components, flaws, nil
 }
 
 func (a *httpController) Metrics(c core.Context) error {
 	asset := core.GetAsset(c)
 	scannerIds := []string{}
 	// get the latest events of this asset per scan type
-	err := a.assetRepository.GetDB(nil).Table("vulns").Select("DISTINCT scanner_id").Where("asset_id  = ?", asset.ID).Pluck("scanner_id", &scannerIds).Error
+	err := a.assetRepository.GetDB(nil).Table("flaws").Select("DISTINCT scanner_id").Where("asset_id  = ?", asset.ID).Pluck("scanner_id", &scannerIds).Error
 
 	if err != nil {
 		return err
@@ -374,13 +374,13 @@ func (a *httpController) buildVeX(c core.Context) (*cdx.BOM, error) {
 		return nil, err
 	}
 
-	// get all associated vulns
-	components, vulns, err := a.getComponentsAndVulns(asset, scanner, version)
+	// get all associated flaws
+	components, flaws, err := a.getComponentsAndFlaws(asset, scanner, version)
 	if err != nil {
 		return nil, err
 	}
 
-	return a.assetService.BuildVeX(asset, version, org.Name, components, vulns), nil
+	return a.assetService.BuildVeX(asset, version, org.Name, components, flaws), nil
 }
 
 func (c *httpController) Update(ctx core.Context) error {

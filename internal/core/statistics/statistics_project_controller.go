@@ -202,28 +202,28 @@ func (c *httpController) GetProjectRiskHistory(ctx core.Context) error {
 	return ctx.JSON(200, utils.MergeUnrelated(childResults, results))
 }
 
-func (c *httpController) GetProjectVulnAggregationStateAndChange(ctx core.Context) error {
+func (c *httpController) GetProjectFlawAggregationStateAndChange(ctx core.Context) error {
 	project := core.GetProject(ctx)
 	compareTo := ctx.QueryParam("compareTo")
 
-	results, err := c.getProjectVulnAggregationStateAndChange(project.ID, compareTo)
+	results, err := c.getProjectFlawAggregationStateAndChange(project.ID, compareTo)
 	if err != nil {
-		slog.Error("Error getting vuln aggregation state", "error", err)
+		slog.Error("Error getting flaw aggregation state", "error", err)
 		return ctx.JSON(500, nil)
 	}
 	// aggregate the results
-	result := aggregateVulnAggregationStateAndChange(results)
+	result := aggregateFlawAggregationStateAndChange(results)
 
 	return ctx.JSON(200, result)
 }
 
-func (c *httpController) getProjectVulnAggregationStateAndChange(projectID uuid.UUID, compareTo string) ([]VulnAggregationStateAndChange, error) {
+func (c *httpController) getProjectFlawAggregationStateAndChange(projectID uuid.UUID, compareTo string) ([]FlawAggregationStateAndChange, error) {
 	projectIDs, err := c.getChildrenProjectIDs(projectID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch child projects")
 	}
 
-	errgroup := utils.ErrGroup[VulnAggregationStateAndChange](10)
+	errgroup := utils.ErrGroup[FlawAggregationStateAndChange](10)
 	// get all assets
 	assets, err := c.assetRepository.GetByProjectIDs(projectIDs)
 	if err != nil {
@@ -231,8 +231,8 @@ func (c *httpController) getProjectVulnAggregationStateAndChange(projectID uuid.
 	}
 
 	for _, asset := range assets {
-		errgroup.Go(func() (VulnAggregationStateAndChange, error) {
-			return c.getVulnAggregationStateAndChange(compareTo, asset)
+		errgroup.Go(func() (FlawAggregationStateAndChange, error) {
+			return c.getFlawAggregationStateAndChange(compareTo, asset)
 		})
 	}
 	return errgroup.WaitAndCollect()

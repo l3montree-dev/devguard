@@ -28,7 +28,7 @@ type Asset struct {
 
 	ProjectID   uuid.UUID                 `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`
 	Description string                    `json:"description" gorm:"type:text"`
-	Vulns       []DependencyVulnerability `json:"vulns" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
+	Flaws       []DependencyVulnerability `json:"flaws" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
 
 	Type AssetType `json:"type" gorm:"type:text;not null;"`
 

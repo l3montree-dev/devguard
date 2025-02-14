@@ -32,8 +32,8 @@ type AssetRiskHistory struct {
 	MaxClosedRisk float64 `json:"maxClosedRisk"`
 	MinClosedRisk float64 `json:"minClosedRisk"`
 
-	OpenVulns  int `json:"openVulns"`
-	FixedVulns int `json:"fixedVulns"`
+	OpenFlaws  int `json:"openFlaws"`
+	FixedFlaws int `json:"fixedFlaws"`
 }
 
 func (m AssetRiskHistory) TableName() string {
@@ -55,8 +55,8 @@ type ProjectRiskHistory struct {
 	MaxClosedRisk float64 `json:"maxClosedRisk"`
 	MinClosedRisk float64 `json:"minClosedRisk"`
 
-	OpenVulns  int `json:"openVulns"`
-	FixedVulns int `json:"fixedVulns"`
+	OpenFlaws  int `json:"openFlaws"`
+	FixedFlaws int `json:"fixedFlaws"`
 }
 
 func (m ProjectRiskHistory) TableName() string {

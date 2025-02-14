@@ -33,91 +33,91 @@ type assetRepository interface {
 	GetAllAssetsFromDB() ([]models.Asset, error)
 }
 
-type vulnRepository interface {
-	SaveBatch(db core.DB, vulns []models.DependencyVulnerability) error
-	Save(db core.DB, vulns *models.DependencyVulnerability) error
+type flawRepository interface {
+	SaveBatch(db core.DB, flaws []models.DependencyVulnerability) error
+	Save(db core.DB, flaws *models.DependencyVulnerability) error
 	Transaction(txFunc func(core.DB) error) error
 	Begin() core.DB
-	GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
+	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVulnerability, error)
 }
 
-type vulnEventRepository interface {
-	SaveBatch(db core.DB, events []models.VulnEvent) error
-	Save(db core.DB, event *models.VulnEvent) error
+type flawEventRepository interface {
+	SaveBatch(db core.DB, events []models.FlawEvent) error
+	Save(db core.DB, event *models.FlawEvent) error
 }
 type cveRepository interface {
 	FindCVE(tx database.DB, cveId string) (models.CVE, error)
 	FindCVEs(tx database.DB, cveIds []string) ([]models.CVE, error)
 }
 type service struct {
-	vulnRepository      vulnRepository
-	vulnEventRepository vulnEventRepository
+	flawRepository      flawRepository
+	flawEventRepository flawEventRepository
 
 	assetRepository assetRepository
 	cveRepository   cveRepository
 }
 
-func NewService(vulnRepository vulnRepository, vulnEventRepository vulnEventRepository, assetRepository assetRepository, cveRepository cveRepository) *service {
+func NewService(flawRepository flawRepository, flawEventRepository flawEventRepository, assetRepository assetRepository, cveRepository cveRepository) *service {
 	return &service{
-		vulnRepository:      vulnRepository,
-		vulnEventRepository: vulnEventRepository,
+		flawRepository:      flawRepository,
+		flawEventRepository: flawEventRepository,
 		assetRepository:     assetRepository,
 		cveRepository:       cveRepository,
 	}
 }
 
-func (s *service) UserFixedVulns(tx core.DB, userID string, vulns []models.DependencyVulnerability, doRiskManagement bool) error {
-	if len(vulns) == 0 {
+func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.DependencyVulnerability, doRiskManagement bool) error {
+	if len(flaws) == 0 {
 		return nil
 	}
-	// create a new vulnevent for each fixed vuln
-	events := make([]models.VulnEvent, len(vulns))
-	for i, vuln := range vulns {
-		ev := models.NewFixedEvent(vuln.CalculateHash(), userID)
-		// apply the event on the vuln
-		ev.Apply(&vulns[i])
+	// create a new flawevent for each fixed flaw
+	events := make([]models.FlawEvent, len(flaws))
+	for i, flaw := range flaws {
+		ev := models.NewFixedEvent(flaw.CalculateHash(), userID)
+		// apply the event on the flaw
+		ev.Apply(&flaws[i])
 		events[i] = ev
 	}
 
 	if doRiskManagement {
-		err := s.vulnRepository.SaveBatch(tx, vulns)
+		err := s.flawRepository.SaveBatch(tx, flaws)
 		if err != nil {
 			return err
 		}
-		return s.vulnEventRepository.SaveBatch(tx, events)
+		return s.flawEventRepository.SaveBatch(tx, events)
 	}
 
 	return nil
 }
 
-func (s *service) UserDetectedVulns(tx core.DB, userID string, vulns []models.DependencyVulnerability, asset models.Asset, doRiskManagement bool) error {
-	if len(vulns) == 0 {
+func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.DependencyVulnerability, asset models.Asset, doRiskManagement bool) error {
+	if len(flaws) == 0 {
 		return nil
 	}
 
-	// create a new vulnevent for each detected vuln
-	events := make([]models.VulnEvent, len(vulns))
+	// create a new flawevent for each detected flaw
+	events := make([]models.FlawEvent, len(flaws))
 	e := core.Environmental{
 		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
 		IntegrityRequirements:       string(asset.IntegrityRequirement),
 		AvailabilityRequirements:    string(asset.AvailabilityRequirement),
 	}
 
-	for i, vuln := range vulns {
-		riskReport := risk.RawRisk(*vuln.CVE, e, *vuln.ComponentDepth)
-		ev := models.NewDetectedEvent(vuln.CalculateHash(), userID, riskReport)
-		// apply the event on the vuln
-		ev.Apply(&vulns[i])
+	for i, flaw := range flaws {
+		riskReport := risk.RawRisk(*flaw.CVE, e, *flaw.ComponentDepth)
+		ev := models.NewDetectedEvent(flaw.CalculateHash(), userID, riskReport)
+		// apply the event on the flaw
+		ev.Apply(&flaws[i])
 		events[i] = ev
 	}
 
 	if doRiskManagement {
 		// run the updates in the transaction to keep a valid state
-		err := s.vulnRepository.SaveBatch(tx, vulns)
+		err := s.flawRepository.SaveBatch(tx, flaws)
 		if err != nil {
 			return err
 		}
-		return s.vulnEventRepository.SaveBatch(tx, events)
+		return s.flawEventRepository.SaveBatch(tx, events)
 	}
 
 	return nil
@@ -135,19 +135,19 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 		return fmt.Errorf("could not get all assets: %v", err)
 	}
 
-	err = s.vulnRepository.Transaction(func(tx core.DB) error {
+	err = s.flawRepository.Transaction(func(tx core.DB) error {
 		for _, asset := range assets {
-			// get all vulns of the asset
-			vulns, err := s.vulnRepository.GetAllVulnsByAssetID(tx, asset.ID)
-			if len(vulns) == 0 {
+			// get all flaws of the asset
+			flaws, err := s.flawRepository.GetAllFlawsByAssetID(tx, asset.ID)
+			if len(flaws) == 0 {
 				continue
 			}
 
 			if err != nil {
-				return fmt.Errorf("could not get all vulns by asset id: %v", err)
+				return fmt.Errorf("could not get all flaws by asset id: %v", err)
 			}
 
-			err = s.RecalculateRawRiskAssessment(tx, userID, vulns, justification, asset)
+			err = s.RecalculateRawRiskAssessment(tx, userID, flaws, justification, asset)
 			if err != nil {
 				return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 			}
@@ -163,8 +163,8 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 
 }
 
-func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, vulns []models.DependencyVulnerability, justification string, asset models.Asset) error {
-	if len(vulns) == 0 {
+func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.DependencyVulnerability, justification string, asset models.Asset) error {
+	if len(flaws) == 0 {
 		return nil
 	}
 
@@ -174,12 +174,12 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, vulns 
 		AvailabilityRequirements:    string(asset.AvailabilityRequirement),
 	}
 
-	// create a new vulnevent for each updated vuln
+	// create a new flawevent for each updated flaw
 
-	events := make([]models.VulnEvent, 0)
+	events := make([]models.FlawEvent, 0)
 
-	// get all cveIds of the vulns
-	cveIds := utils.Filter(utils.Map(vulns, func(f models.DependencyVulnerability) string {
+	// get all cveIds of the flaws
+	cveIds := utils.Filter(utils.Map(flaws, func(f models.DependencyVulnerability) string {
 		return utils.SafeDereference(f.CVEID)
 	}), func(s string) bool {
 		return s != ""
@@ -195,11 +195,11 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, vulns 
 		cveMap[cve.CVE] = cve
 	}
 
-	for i, vuln := range vulns {
-		if vuln.CVEID == nil {
+	for i, flaw := range flaws {
+		if flaw.CVEID == nil {
 			continue
 		}
-		cveID := *vuln.CVEID
+		cveID := *flaw.CVEID
 		cve, ok := cveMap[cveID]
 		if !ok {
 			slog.Info("could not find cve", "cve", cveID)
@@ -211,30 +211,30 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, vulns 
 			continue
 		}
 
-		oldRiskAssessment := vuln.RawRiskAssessment
-		newRiskAssessment := risk.RawRisk(cve, env, *vuln.ComponentDepth)
+		oldRiskAssessment := flaw.RawRiskAssessment
+		newRiskAssessment := risk.RawRisk(cve, env, *flaw.ComponentDepth)
 
 		if *oldRiskAssessment != newRiskAssessment.Risk {
-			ev := models.NewRawRiskAssessmentUpdatedEvent(vuln.CalculateHash(), userID, justification, newRiskAssessment)
-			// apply the event on the vuln
-			ev.Apply(&vulns[i])
+			ev := models.NewRawRiskAssessmentUpdatedEvent(flaw.CalculateHash(), userID, justification, newRiskAssessment)
+			// apply the event on the flaw
+			ev.Apply(&flaws[i])
 			events = append(events, ev)
 
 			slog.Info("recalculated raw risk assessment", "cve", cve.CVE)
 		} else {
 			// only update the last calculated time
-			vulns[i].RiskRecalculatedAt = time.Now()
+			flaws[i].RiskRecalculatedAt = time.Now()
 		}
 	}
 
-	// saving the vulns and the events HAS to be done in the same transaction
+	// saving the flaws and the events HAS to be done in the same transaction
 	// it is crucial to maintain a consistent audit log of events
 	if tx == nil {
-		err := s.vulnRepository.Transaction(func(tx core.DB) error {
-			if err := s.vulnRepository.SaveBatch(tx, vulns); err != nil {
-				return fmt.Errorf("could not save vulns: %v", err)
+		err := s.flawRepository.Transaction(func(tx core.DB) error {
+			if err := s.flawRepository.SaveBatch(tx, flaws); err != nil {
+				return fmt.Errorf("could not save flaws: %v", err)
 			}
-			if err := s.vulnEventRepository.SaveBatch(tx, events); err != nil {
+			if err := s.flawEventRepository.SaveBatch(tx, events); err != nil {
 				return fmt.Errorf("could not save events: %v", err)
 			}
 			return nil
@@ -245,73 +245,73 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, vulns 
 		return nil
 	}
 
-	err = s.vulnRepository.SaveBatch(tx, vulns)
+	err = s.flawRepository.SaveBatch(tx, flaws)
 	if err != nil {
-		return fmt.Errorf("could not save vulns: %v", err)
+		return fmt.Errorf("could not save flaws: %v", err)
 	}
 
-	err = s.vulnEventRepository.SaveBatch(tx, events)
+	err = s.flawEventRepository.SaveBatch(tx, events)
 	if err != nil {
 		return fmt.Errorf("could not save events: %v", err)
 	}
 	return nil
 }
 
-func (s *service) UpdateVulnState(tx core.DB, userID string, vuln *models.DependencyVulnerability, statusType string, justification string) (models.VulnEvent, error) {
+func (s *service) UpdateFlawState(tx core.DB, userID string, flaw *models.DependencyVulnerability, statusType string, justification string) (models.FlawEvent, error) {
 	if tx == nil {
-		var ev models.VulnEvent
+		var ev models.FlawEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
-		err = s.vulnRepository.Transaction(func(d core.DB) error {
-			ev, err = s.updateVulnState(d, userID, vuln, statusType, justification)
+		err = s.flawRepository.Transaction(func(d core.DB) error {
+			ev, err = s.updateFlawState(d, userID, flaw, statusType, justification)
 			return err
 		})
 		return ev, err
 	}
-	return s.updateVulnState(tx, userID, vuln, statusType, justification)
+	return s.updateFlawState(tx, userID, flaw, statusType, justification)
 }
 
-func (s *service) updateVulnState(tx core.DB, userID string, vuln *models.DependencyVulnerability, statusType string, justification string) (models.VulnEvent, error) {
-	var ev models.VulnEvent
-	switch models.VulnEventType(statusType) {
+func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.DependencyVulnerability, statusType string, justification string) (models.FlawEvent, error) {
+	var ev models.FlawEvent
+	switch models.FlawEventType(statusType) {
 	case models.EventTypeAccepted:
-		ev = models.NewAcceptedEvent(vuln.CalculateHash(), userID, justification)
+		ev = models.NewAcceptedEvent(flaw.CalculateHash(), userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(vuln.CalculateHash(), userID, justification)
+		ev = models.NewFalsePositiveEvent(flaw.CalculateHash(), userID, justification)
 	case models.EventTypeReopened:
-		ev = models.NewReopenedEvent(vuln.CalculateHash(), userID, justification)
+		ev = models.NewReopenedEvent(flaw.CalculateHash(), userID, justification)
 	case models.EventTypeComment:
-		ev = models.NewCommentEvent(vuln.CalculateHash(), userID, justification)
+		ev = models.NewCommentEvent(flaw.CalculateHash(), userID, justification)
 	}
 
-	return s.applyAndSave(tx, vuln, &ev)
+	return s.applyAndSave(tx, flaw, &ev)
 }
 
-func (s *service) ApplyAndSave(tx core.DB, vuln *models.DependencyVulnerability, vulnEvent *models.VulnEvent) error {
+func (s *service) ApplyAndSave(tx core.DB, flaw *models.DependencyVulnerability, flawEvent *models.FlawEvent) error {
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
-		return s.vulnRepository.Transaction(func(d core.DB) error {
-			_, err := s.applyAndSave(d, vuln, vulnEvent)
+		return s.flawRepository.Transaction(func(d core.DB) error {
+			_, err := s.applyAndSave(d, flaw, flawEvent)
 			return err
 		})
 	}
 
-	_, err := s.applyAndSave(tx, vuln, vulnEvent)
+	_, err := s.applyAndSave(tx, flaw, flawEvent)
 	return err
 }
 
-func (s *service) applyAndSave(tx core.DB, vuln *models.DependencyVulnerability, ev *models.VulnEvent) (models.VulnEvent, error) {
-	// apply the event on the vuln
-	ev.Apply(vuln)
+func (s *service) applyAndSave(tx core.DB, flaw *models.DependencyVulnerability, ev *models.FlawEvent) (models.FlawEvent, error) {
+	// apply the event on the flaw
+	ev.Apply(flaw)
 
 	// run the updates in the transaction to keep a valid state
-	err := s.vulnRepository.Save(tx, vuln)
+	err := s.flawRepository.Save(tx, flaw)
 	if err != nil {
-		return models.VulnEvent{}, err
+		return models.FlawEvent{}, err
 	}
-	if err := s.vulnEventRepository.Save(tx, ev); err != nil {
-		return models.VulnEvent{}, err
+	if err := s.flawEventRepository.Save(tx, ev); err != nil {
+		return models.FlawEvent{}, err
 	}
-	vuln.Events = append(vuln.Events, *ev)
+	flaw.Events = append(flaw.Events, *ev)
 	return *ev, nil
 }

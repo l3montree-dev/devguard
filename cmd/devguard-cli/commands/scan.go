@@ -37,11 +37,11 @@ func newSbomCommand() *cobra.Command {
 				return
 			}
 			assetRepository := repositories.NewAssetRepository(database)
-			vulnRepository := repositories.NewDependencyVulnerability(database)
+			flawRepository := repositories.NewDependencyVulnerability(database)
 			componentRepository := repositories.NewComponentRepository(database)
-			assetService := asset.NewService(assetRepository, componentRepository, vulnRepository, DependencyVuln.NewService(
-				vulnRepository,
-				repositories.NewVulnEventRepository(database),
+			assetService := asset.NewService(assetRepository, componentRepository, flawRepository, DependencyVuln.NewService(
+				flawRepository,
+				repositories.NewFlawEventRepository(database),
 				assetRepository,
 				repositories.NewCVERepository(database),
 			))
@@ -79,15 +79,15 @@ func newSbomCommand() *cobra.Command {
 
 					normalizedSBOM := normalize.FromCdxBom(sbom, false)
 
-					vulnsInPackage, err := sbomScanner.Scan(normalizedSBOM)
+					vulns, err := sbomScanner.Scan(normalizedSBOM)
 					if err != nil {
 						slog.Error("could not scan sbom", "err", err)
 						continue
 					}
 
-					amountOpened, amountClosed, vulns, err := assetService.HandleScanResult(
+					amountOpened, amountClosed, flaws, err := assetService.HandleScanResult(
 						asset,
-						vulnsInPackage,
+						vulns,
 						scanner,
 						"latest",
 						scanner,
@@ -100,7 +100,7 @@ func newSbomCommand() *cobra.Command {
 						continue
 					}
 
-					slog.Info("scan result", "asset", asset.Name, "totalAmount", len(vulns), "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
+					slog.Info("scan result", "asset", asset.Name, "totalAmount", len(flaws), "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
 
 				}
 			}

@@ -25,9 +25,9 @@ func NewFirstPartyVulnerabilityRepository(db core.DB) *FirstPartyVulnerabilityRe
 // TODO: change it
 func (r *FirstPartyVulnerabilityRepository) GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.FirstPartyVulnerability], map[string]int, error) {
 	var count int64
-	var vulns []models.FirstPartyVulnerability = []models.FirstPartyVulnerability{}
+	var flaws []models.FirstPartyVulnerability = []models.FirstPartyVulnerability{}
 
-	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVulnerability{}).Where("vulns.asset_id = ?", assetId)
+	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVulnerability{}).Where("flaws.asset_id = ?", assetId)
 
 	// apply filters
 	for _, f := range filter {
@@ -35,16 +35,16 @@ func (r *FirstPartyVulnerabilityRepository) GetByAssetIdPaged(tx core.DB, pageIn
 	}
 
 	if search != "" && len(search) > 2 {
-		q = q.Where("(\"CVE\".description ILIKE ?  OR vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("(\"CVE\".description ILIKE ?  OR flaws.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
-	err := q.Distinct("vulns.component_purl").Count(&count).Error
+	err := q.Distinct("flaws.component_purl").Count(&count).Error
 	if err != nil {
 		return core.Paged[models.FirstPartyVulnerability]{}, map[string]int{}, err
 	}
 
-	// get all vulns of the asset
-	q = r.Repository.GetDB(tx).Model(&models.DependencyVulnerability{}).Joins("CVE").Where("vulns.asset_id = ?", assetId)
+	// get all flaws of the asset
+	q = r.Repository.GetDB(tx).Model(&models.DependencyVulnerability{}).Joins("CVE").Where("flaws.asset_id = ?", assetId)
 
 	// apply filters
 	for _, f := range filter {
@@ -52,12 +52,12 @@ func (r *FirstPartyVulnerabilityRepository) GetByAssetIdPaged(tx core.DB, pageIn
 	}
 
 	if search != "" && len(search) > 2 {
-		q = q.Where("(\"CVE\".description ILIKE ?  OR vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("(\"CVE\".description ILIKE ?  OR flaws.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	packageNameQuery := r.GetDB(tx).Table("components").
-		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, COUNT(f.id) as vuln_count, components.purl as package_name").
-		Joins("INNER JOIN vulns f ON components.purl = f.component_purl").
+		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, COUNT(f.id) as flaw_count, components.purl as package_name").
+		Joins("INNER JOIN flaws f ON components.purl = f.component_purl").
 		Where("f.asset_id = ?", assetId.String()).
 		Group("components.purl").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
 
@@ -79,22 +79,22 @@ func (r *FirstPartyVulnerabilityRepository) GetByAssetIdPaged(tx core.DB, pageIn
 		return r.PackageName
 	})
 
-	err = q.Where("vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Find(&vulns).Error
+	err = q.Where("flaws.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Find(&flaws).Error
 
 	if err != nil {
 		return core.Paged[models.FirstPartyVulnerability]{}, map[string]int{}, err
 	}
-	// order the vulns based on the package name ordering
+	// order the flaws based on the package name ordering
 	packageNameIndexMap := make(map[string]int)
 	for i, name := range packageNames {
 		packageNameIndexMap[name] = i
 	}
 
-	return core.NewPaged(pageInfo, count, vulns), packageNameIndexMap, nil
+	return core.NewPaged(pageInfo, count, flaws), packageNameIndexMap, nil
 }
 
-func (r *FirstPartyVulnerabilityRepository) GetVulnsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
-	return r.GetVulnsPaged(tx, []string{assetId.String()}, pageInfo, search, filter, sort)
+func (r *FirstPartyVulnerabilityRepository) GetFlawsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+	return r.GetFlawsPaged(tx, []string{assetId.String()}, pageInfo, search, filter, sort)
 }
 
 func (r FirstPartyVulnerabilityRepository) Read(id string) (models.FirstPartyVulnerability, error) {
@@ -105,17 +105,17 @@ func (r FirstPartyVulnerabilityRepository) Read(id string) (models.FirstPartyVul
 }
 
 // TODO: change it
-func (r *FirstPartyVulnerabilityRepository) GetVulnsPaged(tx core.DB, assetIdInSubQuery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
-	var vulns []models.FirstPartyVulnerability = []models.FirstPartyVulnerability{}
+func (r *FirstPartyVulnerabilityRepository) GetFlawsPaged(tx core.DB, assetIdInSubQuery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+	var flaws []models.FirstPartyVulnerability = []models.FirstPartyVulnerability{}
 
-	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVulnerability{}).Where("vulns.asset_id IN (?)", assetIdInSubQuery)
+	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVulnerability{}).Where("flaws.asset_id IN (?)", assetIdInSubQuery)
 
 	// apply filters
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value())
 	}
 	if search != "" && len(search) > 2 {
-		q = q.Where("(\"CVE\".description ILIKE ?  OR vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("(\"CVE\".description ILIKE ?  OR flaws.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	// apply sorting
@@ -124,7 +124,7 @@ func (r *FirstPartyVulnerabilityRepository) GetVulnsPaged(tx core.DB, assetIdInS
 			q = q.Order(s.SQL())
 		}
 	} else {
-		q = q.Order("vulns.cve_id DESC")
+		q = q.Order("flaws.cve_id DESC")
 	}
 
 	var count int64
@@ -134,24 +134,24 @@ func (r *FirstPartyVulnerabilityRepository) GetVulnsPaged(tx core.DB, assetIdInS
 		return core.Paged[models.FirstPartyVulnerability]{}, err
 	}
 
-	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&vulns).Error
+	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&flaws).Error
 
 	if err != nil {
 		return core.Paged[models.FirstPartyVulnerability]{}, err
 	}
 
-	return core.NewPaged(pageInfo, count, vulns), nil
+	return core.NewPaged(pageInfo, count, flaws), nil
 }
 
-func (r *FirstPartyVulnerabilityRepository) GetVulnsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+func (r *FirstPartyVulnerabilityRepository) GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
 	subQuery := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("id").Where("project_id = ?", projectID)
 
-	return r.GetVulnsPaged(tx, subQuery, pageInfo, search, filter, sort)
+	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
 }
 
-func (r *FirstPartyVulnerabilityRepository) GetVulnsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+func (r *FirstPartyVulnerabilityRepository) GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
 
 	subQuery := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
 
-	return r.GetVulnsPaged(tx, subQuery, pageInfo, search, filter, sort)
+	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
 }

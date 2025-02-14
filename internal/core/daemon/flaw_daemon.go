@@ -12,27 +12,27 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-func getFixedVersion(purlComparer *scan.PurlComparer, vuln models.DependencyVulnerability) (*string, error) {
+func getFixedVersion(purlComparer *scan.PurlComparer, flaw models.DependencyVulnerability) (*string, error) {
 	// we only need to update the fixed version
 	// update the fixed version
-	affected, err := purlComparer.GetAffectedComponents(*vuln.ComponentPurl, "")
+	affected, err := purlComparer.GetAffectedComponents(*flaw.ComponentPurl, "")
 	if err != nil {
 		return nil, err
 	}
-	// check if there is a fix for the vuln
+	// check if there is a fix for the flaw
 	for _, c := range affected {
 		// check if this affected component comes from the same cve
 		if !utils.Contains(utils.Map(c.CVE, func(c models.CVE) string {
 			return c.CVE
-		}), *vuln.CVEID) {
+		}), *flaw.CVEID) {
 			continue
 		}
 
 		if c.SemverFixed != nil {
-			slog.Info("found fixed version", "purl", *vuln.ComponentPurl, "fixedVersion", *c.SemverFixed, "vulnId", vuln.ID)
+			slog.Info("found fixed version", "purl", *flaw.ComponentPurl, "fixedVersion", *c.SemverFixed, "flawId", flaw.ID)
 			return c.SemverFixed, nil
 		} else if c.VersionFixed != nil && *c.VersionFixed != "" {
-			slog.Info("found fixed version", "purl", *vuln.ComponentPurl, "fixedVersion", *c.VersionFixed, "vulnId", vuln.ID)
+			slog.Info("found fixed version", "purl", *flaw.ComponentPurl, "fixedVersion", *c.VersionFixed, "flawId", flaw.ID)
 			return c.VersionFixed, nil
 		}
 	}
@@ -41,14 +41,14 @@ func getFixedVersion(purlComparer *scan.PurlComparer, vuln models.DependencyVuln
 }
 
 func UpdateComponentProperties(db database.DB) error {
-	// we need to update component depth and fixedVersion for each vuln.
+	// we need to update component depth and fixedVersion for each flaw.
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.
 
 	assetRepository := repositories.NewAssetRepository(db)
 	purlComparer := scan.NewPurlComparer(db)
 	componentRepository := repositories.NewComponentRepository(db)
-	vulnRepository := repositories.NewDependencyVulnerability(db)
+	flawRepository := repositories.NewDependencyVulnerability(db)
 
 	allAssets, err := assetRepository.GetAllAssetsFromDB()
 	if err != nil {
@@ -64,16 +64,16 @@ func UpdateComponentProperties(db database.DB) error {
 			defer func() {
 				slog.Info("updated asset", "asset", a.ID, "duration", time.Since(now))
 			}()
-			// get all vulns of that asset
-			vulns, err := vulnRepository.GetByAssetId(nil, a.ID)
+			// get all flaws of that asset
+			flaws, err := flawRepository.GetByAssetId(nil, a.ID)
 			if err != nil {
-				slog.Warn("could not get vulns", "asset", a.ID, "err", err)
+				slog.Warn("could not get flaws", "asset", a.ID, "err", err)
 				return nil, err
 			}
 
 			// group by scanner id
 			groups := make(map[string][]models.DependencyVulnerability)
-			for _, f := range vulns {
+			for _, f := range flaws {
 				if _, ok := groups[f.ScannerID]; !ok {
 					groups[f.ScannerID] = []models.DependencyVulnerability{}
 				}
@@ -81,9 +81,9 @@ func UpdateComponentProperties(db database.DB) error {
 				groups[f.ScannerID] = append(groups[f.ScannerID], f)
 			}
 
-			// group the vulns by scanner id
+			// group the flaws by scanner id
 			// build up the dependency tree for the asset
-			for scannerID, vulns := range groups {
+			for scannerID, flaws := range groups {
 				components, err := componentRepository.LoadComponents(nil, a, scannerID, "")
 				if err != nil {
 					slog.Warn("could not load components", "asset", a.ID, "scanner", scannerID, "err", err)
@@ -92,28 +92,28 @@ func UpdateComponentProperties(db database.DB) error {
 
 				depthMap := asset.GetComponentDepth(components)
 
-				for _, vuln := range vulns {
-					depth := depthMap[*vuln.ComponentPurl]
-					if vuln.ComponentFixedVersion != nil && vuln.ComponentDepth != nil && depth == *vuln.ComponentDepth {
+				for _, flaw := range flaws {
+					depth := depthMap[*flaw.ComponentPurl]
+					if flaw.ComponentFixedVersion != nil && flaw.ComponentDepth != nil && depth == *flaw.ComponentDepth {
 						continue // nothing todo here - the component has a depth which is the same and it already has a fix version
 					}
 
 					doUpdate := false
 
-					if vuln.ComponentFixedVersion == nil {
-						fixedVersion, err := getFixedVersion(purlComparer, vuln)
+					if flaw.ComponentFixedVersion == nil {
+						fixedVersion, err := getFixedVersion(purlComparer, flaw)
 						slog.Info("got fixed version", "fixedVersion", fixedVersion)
 						if err != nil {
 							slog.Warn("could not get fixed version", "err", err)
 						}
 						if fixedVersion != nil {
-							vuln.ComponentFixedVersion = fixedVersion
+							flaw.ComponentFixedVersion = fixedVersion
 							doUpdate = true
 						}
 					}
 
-					if vuln.ComponentDepth == nil || depth != *vuln.ComponentDepth {
-						vuln.ComponentDepth = utils.Ptr(depth)
+					if flaw.ComponentDepth == nil || depth != *flaw.ComponentDepth {
+						flaw.ComponentDepth = utils.Ptr(depth)
 						doUpdate = true
 					}
 
@@ -121,9 +121,9 @@ func UpdateComponentProperties(db database.DB) error {
 						continue
 					}
 
-					// save the vuln
-					if err := vulnRepository.Save(nil, &vuln); err != nil {
-						slog.Warn("could not save vuln", "vuln", vuln.ID, "err", err)
+					// save the flaw
+					if err := flawRepository.Save(nil, &flaw); err != nil {
+						slog.Warn("could not save flaw", "flaw", flaw.ID, "err", err)
 					}
 				}
 

@@ -9,22 +9,22 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-type VulnState string
+type FlawState string
 
 const (
-	VulnStateOpen              VulnState = "open"
-	VulnStateFixed             VulnState = "fixed"         // we did not find the vuln anymore in the last scan!
-	VulnStateAccepted          VulnState = "accepted"      // like ignore
-	VulnStateFalsePositive     VulnState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
-	VulnStateMarkedForTransfer VulnState = "markedForTransfer"
+	FlawStateOpen              FlawState = "open"
+	FlawStateFixed             FlawState = "fixed"         // we did not find the flaw anymore in the last scan!
+	FlawStateAccepted          FlawState = "accepted"      // like ignore
+	FlawStateFalsePositive     FlawState = "falsePositive" // we can use that for crowdsource vulnerability management. 27 People marked this as false positive and they have the same dependency tree - propably you are not either
+	FlawStateMarkedForTransfer FlawState = "markedForTransfer"
 )
 
 type DependencyVulnerability struct {
 	Vulnerability
 
-	Comments []Comment `gorm:"foreignKey:VulnID;constraint:OnDelete:CASCADE;" json:"comments"`
+	Comments []Comment `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
 
-	State VulnState `json:"state" gorm:"default:'open';not null;type:text;"`
+	State FlawState `json:"state" gorm:"default:'open';not null;type:text;"`
 
 	CVE   *CVE    `json:"cve"`
 	CVEID *string `json:"cveId" gorm:"null;type:text;default:null;"`
@@ -44,16 +44,16 @@ type DependencyVulnerability struct {
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt" gorm:"default:now();"`
 }
 
-type VulnRisk struct {
-	VulnID            string
+type FlawRisk struct {
+	FlawID            string
 	CreatedAt         time.Time
 	ArbitraryJsonData string
 	Risk              float64
-	Type              VulnEventType
+	Type              FlawEventType
 }
 
 func (m DependencyVulnerability) TableName() string {
-	return "vulns"
+	return "flaws"
 }
 
 func (m *DependencyVulnerability) CalculateHash() string {
@@ -61,7 +61,7 @@ func (m *DependencyVulnerability) CalculateHash() string {
 	return hash
 }
 
-// hook to calculate the hash before creating the vuln
+// hook to calculate the hash before creating the flaw
 func (f *DependencyVulnerability) BeforeSave(tx *gorm.DB) (err error) {
 	hash := f.CalculateHash()
 	f.ID = hash
