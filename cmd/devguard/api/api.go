@@ -319,21 +319,21 @@ func Start(db core.DB) {
 	statisticsRepository := repositories.NewStatisticsRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
-	flawEventRepository := repositories.NewFlawEventRepository(db)
+	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	projectScopedRBAC := projectAccessControlFactory(projectRepository)
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
-	flawRepository := repositories.NewDependencyVulnerability(db)
+	vulnRepository := repositories.NewDependencyVulnerability(db)
 	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 
-	flawService := DependencyVuln.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
+	vulnService := DependencyVuln.NewService(vulnRepository, vulnEventRepository, assetRepository, cveRepository)
 	projectService := project.NewService(projectRepository)
-	flawController := DependencyVuln.NewHttpController(flawRepository, flawService, projectService)
+	vulnController := DependencyVuln.NewHttpController(vulnRepository, vulnService, projectService)
 
-	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
+	assetService := asset.NewService(assetRepository, componentRepository, vulnRepository, vulnService)
 
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, flawRepository, assetRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
+	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, vulnRepository, assetRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 	invitationRepository := repositories.NewInvitationRepository(db)
 
 	intotoService := intoto.NewInTotoService(casbinRBACProvider, intotoLinkRepository, projectRepository, patRepository, supplyChainRepository)
@@ -341,7 +341,7 @@ func Start(db core.DB) {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
-	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService, supplyChainRepository)
+	assetController := asset.NewHttpController(assetRepository, componentRepository, vulnRepository, assetService, supplyChainRepository)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetService, statisticsService)
 
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
@@ -413,7 +413,7 @@ func Start(db core.DB) {
 
 	tenantRouter.GET("/metrics/", orgController.Metrics)
 	tenantRouter.GET("/content-tree/", orgController.ContentTree)
-	tenantRouter.GET("/flaws/", flawController.ListByOrgPaged)
+	tenantRouter.GET("/vulns/", vulnController.ListByOrgPaged)
 
 	tenantRouter.GET("/members/", orgController.Members)
 	tenantRouter.POST("/members/", orgController.InviteMember, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
@@ -429,7 +429,7 @@ func Start(db core.DB) {
 		ListRepositories)
 	tenantRouter.GET("/stats/risk-history/", statisticsController.GetOrgRiskHistory)
 	tenantRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageOrgFixingTime)
-	tenantRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetOrgFlawAggregationStateAndChange)
+	tenantRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetOrgVulnAggregationStateAndChange)
 	tenantRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution)
 
 	tenantRouter.GET("/projects/", projectController.List, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
@@ -437,7 +437,7 @@ func Start(db core.DB) {
 
 	projectRouter := tenantRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)
-	projectRouter.GET("/flaws/", flawController.ListByProjectPaged)
+	projectRouter.GET("/vulns/", vulnController.ListByProjectPaged)
 
 	projectRouter.PATCH("/", projectController.Update, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
 	projectRouter.DELETE("/", projectController.Delete, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
@@ -448,7 +448,7 @@ func Start(db core.DB) {
 
 	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution)
 	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory)
-	projectRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetProjectFlawAggregationStateAndChange)
+	projectRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetProjectVulnAggregationStateAndChange)
 	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime)
 
 	projectRouter.GET("/members/", projectController.Members)
@@ -472,9 +472,9 @@ func Start(db core.DB) {
 	assetRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetRiskDistribution)
 	assetRouter.GET("/stats/risk-history/", statisticsController.GetAssetRiskHistory)
-	assetRouter.GET("/stats/flaw-count-by-scanner/", statisticsController.GetFlawCountByScannerId)
+	assetRouter.GET("/stats/vuln-count-by-scanner/", statisticsController.GetVulnCountByScannerId)
 	assetRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanner)
-	assetRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetFlawAggregationStateAndChange)
+	assetRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetVulnAggregationStateAndChange)
 	assetRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetFixingTime)
 
 	assetRouter.GET("/versions/", assetController.Versions)
@@ -491,12 +491,12 @@ func Start(db core.DB) {
 
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
-	flawRouter := assetRouter.Group("/flaws")
-	flawRouter.GET("/", flawController.ListPaged)
-	flawRouter.GET("/:flawId/", flawController.Read)
+	vulnRouter := assetRouter.Group("/vulns")
+	vulnRouter.GET("/", vulnController.ListPaged)
+	vulnRouter.GET("/:vulnId/", vulnController.Read)
 
-	flawRouter.POST("/:flawId/", flawController.CreateEvent, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
-	flawRouter.POST("/:flawId/mitigate/", flawController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	vulnRouter.POST("/:vulnId/", vulnController.CreateEvent, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	vulnRouter.POST("/:vulnId/mitigate/", vulnController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

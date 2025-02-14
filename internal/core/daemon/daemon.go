@@ -79,8 +79,8 @@ func Start(db database.DB) {
 			slog.Info("vulndb updated", "duration", time.Since(start))
 		}
 
-		// after we have a fresh vulndb we can update the flaws.
-		// we save data inside the flaws table: ComponentDepth and ComponentFixedVersion
+		// after we have a fresh vulndb we can update the vulns.
+		// we save data inside the vulns table: ComponentDepth and ComponentFixedVersion
 		// those need to be updated before recalculating the risk
 		if shouldMirror(configService, "vulndb.componentProperties") {
 			start = time.Now()

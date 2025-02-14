@@ -21,12 +21,12 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-type FlawDTO struct {
+type VulnDTO struct {
 	ID                    string           `json:"id"`
 	ScannerID             string           `json:"scanner"`
 	Message               *string          `json:"message"`
 	AssetID               string           `json:"assetId"`
-	State                 models.FlawState `json:"state"`
+	State                 models.VulnState `json:"state"`
 	CVE                   *models.CVE      `json:"cve"`
 	CVEID                 *string          `json:"cveId"`
 	ComponentPurl         *string          `json:"componentPurl"`
@@ -44,14 +44,14 @@ type FlawDTO struct {
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
 
-type detailedFlawDTO struct {
-	FlawDTO
-	Events []FlawEventDTO `json:"events"`
+type detailedVulnDTO struct {
+	VulnDTO
+	Events []VulnEventDTO `json:"events"`
 }
 
-func FlawToDto(f models.DependencyVulnerability) FlawDTO {
+func VulnToDto(f models.DependencyVulnerability) VulnDTO {
 
-	return FlawDTO{
+	return VulnDTO{
 		ID:                    f.ID,
 		ScannerID:             f.ScannerID,
 		Message:               f.Message,

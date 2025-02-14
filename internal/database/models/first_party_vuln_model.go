@@ -12,12 +12,12 @@ type Vulnerability struct {
 
 	Message *string `json:"message"`
 
-	// the scanner which was used to detect this flaw
+	// the scanner which was used to detect this vuln
 	ScannerID string `json:"scanner" gorm:"not null;"`
 
-	Events  []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
+	Events  []VulnEvent `gorm:"foreignKey:VulnID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 	AssetID uuid.UUID   `json:"assetId" gorm:"not null;type:uuid;"`
-	State   FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
+	State   VulnState   `json:"state" gorm:"default:'open';not null;type:text;"`
 
 	LastDetected time.Time `json:"lastDetected" gorm:"default:now();not null;"`
 

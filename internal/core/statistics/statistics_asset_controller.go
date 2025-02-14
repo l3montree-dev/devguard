@@ -16,9 +16,9 @@ type statisticsService interface {
 	GetComponentRisk(assetID uuid.UUID) (map[string]float64, error)
 	GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetRiskHistory(assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
-	GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error)
+	GetVulnAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (VulnAggregationStateAndChange, error)
 
-	GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error)
+	GetVulnCountByScannerId(assetID uuid.UUID) (map[string]int, error)
 	GetDependencyCountPerscanner(assetID uuid.UUID) (map[string]int, error)
 	GetAverageFixingTime(assetID uuid.UUID, severity string) (time.Duration, error)
 	UpdateAssetRiskAggregation(assetID uuid.UUID, start time.Time, end time.Time, updateProject bool) error
@@ -68,9 +68,9 @@ func (c *httpController) GetDependencyCountPerScanner(ctx core.Context) error {
 	return ctx.JSON(200, results)
 }
 
-func (c *httpController) GetFlawCountByScannerId(ctx core.Context) error {
+func (c *httpController) GetVulnCountByScannerId(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
-	results, err := c.statisticsService.GetFlawCountByScannerId(asset.ID)
+	results, err := c.statisticsService.GetVulnCountByScannerId(asset.ID)
 
 	if err != nil {
 		return err
@@ -200,23 +200,23 @@ func (c *httpController) getAssetRiskHistory(start, end string, asset models.Ass
 	return c.statisticsService.GetAssetRiskHistory(asset.ID, beginTime, endTime)
 }
 
-func (c *httpController) GetFlawAggregationStateAndChange(ctx core.Context) error {
+func (c *httpController) GetVulnAggregationStateAndChange(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	// extract the time from the query parameter
 	compareTo := ctx.QueryParam("compareTo")
-	results, err := c.getFlawAggregationStateAndChange(compareTo, asset)
+	results, err := c.getVulnAggregationStateAndChange(compareTo, asset)
 
 	if err != nil {
-		slog.Error("Error getting flaw aggregation state", "error", err)
+		slog.Error("Error getting vuln aggregation state", "error", err)
 		return ctx.JSON(500, nil)
 	}
 
 	return ctx.JSON(200, results)
 }
 
-func aggregateFlawAggregationStateAndChange(results []FlawAggregationStateAndChange) FlawAggregationStateAndChange {
+func aggregateVulnAggregationStateAndChange(results []VulnAggregationStateAndChange) VulnAggregationStateAndChange {
 	// aggregate the results
-	result := FlawAggregationStateAndChange{}
+	result := VulnAggregationStateAndChange{}
 	for _, r := range results {
 		result.Now.Fixed += r.Now.Fixed
 		result.Now.Open += r.Now.Open
@@ -228,12 +228,12 @@ func aggregateFlawAggregationStateAndChange(results []FlawAggregationStateAndCha
 	return result
 }
 
-func (c *httpController) getFlawAggregationStateAndChange(compareTo string, asset models.Asset) (FlawAggregationStateAndChange, error) {
+func (c *httpController) getVulnAggregationStateAndChange(compareTo string, asset models.Asset) (VulnAggregationStateAndChange, error) {
 	// parse the date
 	calculateChangeTo, err := time.Parse(time.DateOnly, compareTo)
 	if err != nil {
-		return FlawAggregationStateAndChange{}, errors.Wrap(err, "error parsing date")
+		return VulnAggregationStateAndChange{}, errors.Wrap(err, "error parsing date")
 	}
 
-	return c.statisticsService.GetFlawAggregationStateAndChangeSince(asset.ID, calculateChangeTo)
+	return c.statisticsService.GetVulnAggregationStateAndChangeSince(asset.ID, calculateChangeTo)
 }

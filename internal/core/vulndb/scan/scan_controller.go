@@ -84,7 +84,7 @@ func NewHttpController(db core.DB, cveRepository cveRepository, componentReposit
 type ScanResponse struct {
 	AmountOpened int                      `json:"amountOpened"`
 	AmountClosed int                      `json:"amountClosed"`
-	Flaws        []DependencyVuln.FlawDTO `json:"flaws"`
+	Vulns        []DependencyVuln.VulnDTO `json:"vulns"`
 }
 
 func (s *httpController) DependencyVulnScan(c core.Context) error {
@@ -165,7 +165,7 @@ func (s *httpController) DependencyVulnScan(c core.Context) error {
 	return c.JSON(200, ScanResponse{
 		AmountOpened: amountOpened,
 		AmountClosed: amountClose,
-		Flaws:        utils.Map(newState, DependencyVuln.FlawToDto)})
+		Vulns:        utils.Map(newState, DependencyVuln.VulnToDto)})
 }
 
 func (s *httpController) FirstPartyVulnScan(c core.Context) error {
@@ -216,7 +216,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 
 func HandleSarifResult(sarifScan models.SarifResult, scanner string) (int, int, []models.FirstPartyVulnerability, error) {
 
-	sarifFlaws := []models.FirstPartyVulnerability{}
+	firstPartyVulnerabilities := []models.FirstPartyVulnerability{}
 
 	for _, run := range sarifScan.Runs {
 		for _, result := range run.Results {
@@ -228,7 +228,7 @@ func HandleSarifResult(sarifScan models.SarifResult, scanner string) (int, int, 
 			}
 			snippet = snippet[:snippetMax] + "***"
 
-			sarifFlaw := models.FirstPartyVulnerability{
+			firstPartyVulnerability := models.FirstPartyVulnerability{
 				Vulnerability: models.Vulnerability{
 					Message: &result.Message.Text,
 				},
@@ -240,9 +240,12 @@ func HandleSarifResult(sarifScan models.SarifResult, scanner string) (int, int, 
 				EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
 				Snippet:     snippet,
 			}
-			sarifFlaws = append(sarifFlaws, sarifFlaw)
+
+			firstPartyVulnerability.ScannerID = scanner
+
+			firstPartyVulnerabilities = append(firstPartyVulnerabilities, firstPartyVulnerability)
 		}
 	}
 
-	return 0, 0, sarifFlaws, nil
+	return 0, 0, firstPartyVulnerabilities, nil
 }

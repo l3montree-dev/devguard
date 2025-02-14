@@ -34,17 +34,17 @@ func newCalculateCmd() *cobra.Command {
 				return
 			}
 
-			flawRepository := repositories.NewDependencyVulnerability(database)
-			flawEventRepository := repositories.NewFlawEventRepository(database)
+			vulnRepository := repositories.NewDependencyVulnerability(database)
+			vulnEventRepository := repositories.NewVulnEventRepository(database)
 			cveRepository := repositories.NewCVERepository(database)
 			assetRepository := repositories.NewAssetRepository(database)
-			flawService := DependencyVuln.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
+			vulnService := DependencyVuln.NewService(vulnRepository, vulnEventRepository, assetRepository, cveRepository)
 			statisticsRepository := repositories.NewStatisticsRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
 			projectRepository := repositories.NewProjectRepository(database)
 			projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(database)
 
-			statisticService := statistics.NewService(statisticsRepository, componentRepository, repositories.NewAssetRiskHistoryRepository(database), flawRepository, assetRepository, projectRepository, projectRiskHistoryRepository)
+			statisticService := statistics.NewService(statisticsRepository, componentRepository, repositories.NewAssetRiskHistoryRepository(database), vulnRepository, assetRepository, projectRepository, projectRiskHistoryRepository)
 
 			shouldCalculateHistory, err := cmd.Flags().GetBool("history")
 			if err != nil {
@@ -52,7 +52,7 @@ func newCalculateCmd() *cobra.Command {
 				return
 			}
 
-			if err := flawService.RecalculateAllRawRiskAssessments(); err != nil {
+			if err := vulnService.RecalculateAllRawRiskAssessments(); err != nil {
 				slog.Error("could not recalculate risk assessments", "err", err)
 				return
 			}

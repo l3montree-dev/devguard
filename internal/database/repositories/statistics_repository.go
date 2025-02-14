@@ -20,35 +20,35 @@ func NewStatisticsRepository(db core.DB) *statisticsRepository {
 	}
 }
 
-// returns all flaws for the asset including the events, which were created before the given time
-func (r *statisticsRepository) TimeTravelFlawState(assetID uuid.UUID, time time.Time) ([]models.DependencyVulnerability, error) {
-	flaws := []models.DependencyVulnerability{}
+// returns all vulns for the asset including the events, which were created before the given time
+func (r *statisticsRepository) TimeTravelVulnState(assetID uuid.UUID, time time.Time) ([]models.DependencyVulnerability, error) {
+	vulns := []models.DependencyVulnerability{}
 
 	err := r.db.Model(&models.DependencyVulnerability{}).Preload("Events", func(db core.DB) core.DB {
 		return db.Where("created_at <= ?", time).Order("created_at ASC")
 	}).
 		Where("asset_id = ?", assetID).Where("created_at <= ?", time).
-		Find(&flaws).Error
+		Find(&vulns).Error
 
 	if err != nil {
 		return nil, err
 	}
 
-	// now remove all events of the flaws, which were created after the given time
-	for _, flaw := range flaws {
-		// get the last event of the flaw based on the created_at timestamp.
-		tmpFlaw := flaw
+	// now remove all events of the vulns, which were created after the given time
+	for _, vuln := range vulns {
+		// get the last event of the vuln based on the created_at timestamp.
+		tmpVuln := vuln
 
-		events := flaw.Events
+		events := vuln.Events
 		// iterate through all events and apply them
 		for _, event := range events {
-			event.Apply(&tmpFlaw)
+			event.Apply(&tmpVuln)
 		}
 	}
-	return flaws, nil
+	return vulns, nil
 }
 
-func (r *statisticsRepository) GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
+func (r *statisticsRepository) GetVulnCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
 	var results []struct {
 		ScannerID string `gorm:"column:scanner_id"`
 		Count     int    `gorm:"column:count"`
@@ -89,7 +89,7 @@ func (r *statisticsRepository) GetAssetRiskDistribution(assetID uuid.UUID, asset
 				ELSE 'unknown'
             END AS severity,
             COUNT(*) as count
-        FROM flaws
+        FROM vulns
         WHERE asset_id = ? AND state = 'open'
         GROUP BY severity
     `, assetID).Scan(&results).Error
@@ -114,13 +114,13 @@ func (r *statisticsRepository) GetAssetRiskDistribution(assetID uuid.UUID, asset
 	}, nil
 }
 
-var fixedEvents = []models.FlawEventType{
+var fixedEvents = []models.VulnEventType{
 	models.EventTypeAccepted,
 	models.EventTypeFixed,
 	models.EventTypeFalsePositive,
 }
 
-var openEvents = []models.FlawEventType{
+var openEvents = []models.VulnEventType{
 	models.EventTypeDetected,
 	models.EventTypeReopened,
 }
@@ -132,19 +132,19 @@ func (r *statisticsRepository) AverageFixingTime(assetID uuid.UUID, riskInterval
 	err := r.db.Raw(`
 WITH events AS (
     SELECT
-        flaws.id,
-        flaws.component_purl,
+        vulns.id,
+        vulns.component_purl,
         fe.type,
         fe.created_at,
-        LAG(fe.type) OVER (PARTITION BY flaws.id ORDER BY fe.created_at) AS prev_type,
-        LAG(fe.created_at) OVER (PARTITION BY flaws.id ORDER BY fe.created_at) AS prev_created_at,
-        LEAD(fe.type) OVER (PARTITION BY flaws.id ORDER BY fe.created_at) AS next_type
+        LAG(fe.type) OVER (PARTITION BY vulns.id ORDER BY fe.created_at) AS prev_type,
+        LAG(fe.created_at) OVER (PARTITION BY vulns.id ORDER BY fe.created_at) AS prev_created_at,
+        LEAD(fe.type) OVER (PARTITION BY vulns.id ORDER BY fe.created_at) AS next_type
     FROM
-        flaws
+        vulns
     JOIN
-        flaw_events fe ON flaws.id = fe.flaw_id
+        vuln_events fe ON vulns.id = fe.vuln_id
     WHERE
-        fe.type IN ? AND flaws.asset_id = ? AND flaws.raw_risk_assessment >= ? AND flaws.raw_risk_assessment <= ?
+        fe.type IN ? AND vulns.asset_id = ? AND vulns.raw_risk_assessment >= ? AND vulns.raw_risk_assessment <= ?
 ),
 intervals AS (
    SELECT
