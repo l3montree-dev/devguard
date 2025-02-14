@@ -18,7 +18,7 @@ import (
 )
 
 func TestGithubIntegrationHandleEvent(t *testing.T) {
-	t.Run("it should not be possible to call handle event with a context without dependencyVulnId parameter", func(t *testing.T) {
+	t.Run("it should not be possible to call handle event with a context without vulnId parameter", func(t *testing.T) {
 
 		githubIntegration := githubIntegration{}
 
@@ -50,7 +50,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:123"),
 		})
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("vulnId")
 		ctx.SetParamValues("1")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -69,7 +69,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 		core.SetAsset(ctx, models.Asset{})
 		core.SetProject(ctx, models.Project{})
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("vulnId")
 		ctx.SetParamValues("1")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -112,7 +112,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAssetSlug(ctx, "test")
 		core.SetProject(ctx, models.Project{})
 
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("vulnId")
 		ctx.SetParamValues("1")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -177,7 +177,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetProjectSlug(ctx, "test")
 		core.SetAssetSlug(ctx, "test")
 		core.SetSession(ctx, authSession)
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("vulnId")
 		ctx.SetParamValues("1")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -254,7 +254,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetProjectSlug(ctx, "test")
 		core.SetAssetSlug(ctx, "test")
 		core.SetSession(ctx, authSession)
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("vulnId")
 		ctx.SetParamValues("1")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{

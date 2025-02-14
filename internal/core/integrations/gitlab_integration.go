@@ -718,7 +718,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		dependencyVulnId, err := core.GetDependencyVulnID(event.Ctx)
+		dependencyVulnId, err := core.GetVulnID(event.Ctx)
 		if err != nil {
 			return err
 		}

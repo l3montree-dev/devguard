@@ -333,6 +333,7 @@ func Start(db core.DB) {
 	dependencyVulnController := DependencyVuln.NewHttpController(dependencyVulnRepository, dependencyVulnService, projectService)
 
 	firstPartyService := DependencyVuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
+	firstPartyController := DependencyVuln.NewFirstPartyVulnController(firstPartyVulnRepository, *firstPartyService, projectService)
 
 	assetService := asset.NewService(assetRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyService)
 
@@ -496,10 +497,17 @@ func Start(db core.DB) {
 
 	dependencyVulnRouter := assetRouter.Group("/dependencyVulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
-	dependencyVulnRouter.GET("/:dependencyVulnId/", dependencyVulnController.Read)
+	dependencyVulnRouter.GET("/:vulnId/", dependencyVulnController.Read)
 
-	dependencyVulnRouter.POST("/:dependencyVulnId/", dependencyVulnController.CreateEvent, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
-	dependencyVulnRouter.POST("/:dependencyVulnId/mitigate/", dependencyVulnController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	dependencyVulnRouter.POST("/:vulnId/", dependencyVulnController.CreateEvent, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	dependencyVulnRouter.POST("/:vulnId/mitigate/", dependencyVulnController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+
+	firstPartyVulnRouter := assetRouter.Group("/firstPartyVulns")
+	firstPartyVulnRouter.GET("/", firstPartyController.ListPaged)
+	firstPartyVulnRouter.GET("/:vulnId/", firstPartyController.Read)
+
+	firstPartyVulnRouter.POST("/:vulnId/", firstPartyController.CreateEvent, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	firstPartyVulnRouter.POST("/:vulnId/mitigate/", firstPartyController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

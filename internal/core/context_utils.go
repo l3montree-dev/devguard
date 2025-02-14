@@ -46,12 +46,12 @@ func GetAuthAdminClient(c Context) *client.APIClient {
 	return c.Get("authAdminClient").(*client.APIClient)
 }
 
-func GetDependencyVulnID(c Context) (string, error) {
-	dependencyVulnID := c.Param("dependencyVulnId")
-	if dependencyVulnID == "" {
-		return "", fmt.Errorf("could not get dependencyVuln id")
+func GetVulnID(c Context) (string, error) {
+	vulnId := c.Param("vulnId")
+	if vulnId == "" {
+		return "", fmt.Errorf("could not get vulnId")
 	}
-	return dependencyVulnID, nil
+	return vulnId, nil
 }
 
 func GetRBAC(c Context) accesscontrol.AccessControl {

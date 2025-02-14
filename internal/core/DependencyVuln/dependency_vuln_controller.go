@@ -198,7 +198,7 @@ func (c dependencyVulnHttpController) ListPaged(ctx core.Context) error {
 }
 
 func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
-	dependencyVulnId, err := core.GetDependencyVulnID(ctx)
+	dependencyVulnId, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
@@ -221,7 +221,7 @@ func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
 }
 
 func (c dependencyVulnHttpController) Read(ctx core.Context) error {
-	dependencyVulnId, err := core.GetDependencyVulnID(ctx)
+	dependencyVulnId, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
@@ -241,7 +241,7 @@ func (c dependencyVulnHttpController) Read(ctx core.Context) error {
 
 func (c dependencyVulnHttpController) CreateEvent(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	dependencyVulnId, err := core.GetDependencyVulnID(ctx)
+	dependencyVulnId, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}

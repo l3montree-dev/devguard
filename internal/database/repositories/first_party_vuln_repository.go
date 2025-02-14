@@ -101,7 +101,7 @@ func (r *FirstPartyVulnerabilityRepository) GetByAssetIdPaged(tx core.DB, pageIn
 	return core.NewPaged(pageInfo, count, dependencyVulns), packageNameIndexMap, nil
 }
 
-func (r *FirstPartyVulnerabilityRepository) GetDependencyVulnsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+func (r *FirstPartyVulnerabilityRepository) GetFirstPartyVulnsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
 	return r.GetDependencyVulnsPaged(tx, []string{assetId.String()}, pageInfo, search, filter, sort)
 }
 
@@ -151,13 +151,13 @@ func (r *FirstPartyVulnerabilityRepository) GetDependencyVulnsPaged(tx core.DB, 
 	return core.NewPaged(pageInfo, count, dependencyVulns), nil
 }
 
-func (r *FirstPartyVulnerabilityRepository) GetDependencyVulnsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+func (r *FirstPartyVulnerabilityRepository) GetFirstPartyVulnsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
 	subQuery := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("id").Where("project_id = ?", projectID)
 
 	return r.GetDependencyVulnsPaged(tx, subQuery, pageInfo, search, filter, sort)
 }
 
-func (r *FirstPartyVulnerabilityRepository) GetDependencyVulnsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+func (r *FirstPartyVulnerabilityRepository) GetFirstPartyVulnsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
 
 	subQuery := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
 

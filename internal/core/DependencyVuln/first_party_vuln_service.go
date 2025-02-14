@@ -3,16 +3,25 @@ package DependencyVuln
 import (
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/obj"
 )
 
 type firstPartyVulnRepository interface {
+	repositories.Repository[string, models.FirstPartyVulnerability, core.DB]
 	SaveBatch(tx core.DB, vulns []models.FirstPartyVulnerability) error
 	Save(tx core.DB, vuln *models.FirstPartyVulnerability) error
 	Transaction(txFunc func(core.DB) error) error
 	Begin() core.DB
+	GetFirstPartyVulnsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)
+	GetFirstPartyVulnsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)
+	GetFirstPartyVulnsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)
+
+	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.FirstPartyVulnerability, error)
+	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.FirstPartyVulnerability], map[string]int, error)
 }
 
 type firstPartyVulnService struct {
