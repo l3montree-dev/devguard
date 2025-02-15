@@ -30,12 +30,12 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 	for _, assetVersion := range assetVersions {
 		group.Go(func() (models.AssetRiskDistribution, error) {
 			// get the corresponding asset
-			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetId)
+			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetID)
 			if err != nil {
 				return models.AssetRiskDistribution{}, errors.Wrap(err, "could not fetch asset by id")
 			}
 
-			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetId, asset.Name)
+			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetID, asset.Name)
 		})
 	}
 
@@ -89,12 +89,12 @@ func (c *httpController) getProjectRiskDistribution(projectID uuid.UUID) ([]mode
 	for _, assetVersion := range assetVersions {
 		group.Go(func() (models.AssetRiskDistribution, error) {
 			// get the corresponding asset
-			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetId)
+			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetID)
 			if err != nil {
 				return models.AssetRiskDistribution{}, errors.Wrap(err, "could not fetch asset by id")
 			}
 
-			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetId, asset.Name)
+			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetID, asset.Name)
 		})
 	}
 
@@ -145,7 +145,7 @@ func (c *httpController) getProjectAverageFixingTime(projectID uuid.UUID, severi
 	errgroup := utils.ErrGroup[time.Duration](10)
 	for _, assetVersion := range assetVersions {
 		errgroup.Go(func() (time.Duration, error) {
-			return c.statisticsService.GetAverageFixingTime(assetVersion.Name, assetVersion.AssetId, severity)
+			return c.statisticsService.GetAverageFixingTime(assetVersion.Name, assetVersion.AssetID, severity)
 		})
 	}
 
@@ -166,7 +166,7 @@ func (c *httpController) getAssetVersionsRiskHistory(projectID uuid.UUID, start 
 			if err != nil {
 				return AssetRiskHistory{}, err
 			}
-			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetId)
+			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetID)
 			if err != nil {
 				return AssetRiskHistory{}, err
 			}

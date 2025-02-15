@@ -33,8 +33,6 @@ type Asset struct {
 
 	Type AssetType `json:"type" gorm:"type:text;not null;"`
 
-	AssetVersions []AssetVersion `json:"assetVersions" gorm:"foreignKey:AssetId;constraint:OnDelete:CASCADE;"`
-
 	Importance            int  `json:"importance" gorm:"default:1;"`
 	ReachableFromInternet bool `json:"reachableFromInternet" gorm:"default:false;"`
 

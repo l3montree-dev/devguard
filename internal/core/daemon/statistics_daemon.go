@@ -33,8 +33,8 @@ func UpdateStatistics(db database.DB) error {
 	for _, version := range assetVersions {
 		a := version
 		t := time.Now()
-		slog.Info("recalculating risk history for asset", "assetVersionName", version.Name, "assetID", version.AssetId)
-		if err := statisticsService.UpdateAssetRiskAggregation(version.Name, a.AssetId, utils.OrDefault(version.LastHistoryUpdate, version.CreatedAt), t, true); err != nil {
+		slog.Info("recalculating risk history for asset", "assetVersionName", version.Name, "assetID", version.AssetID)
+		if err := statisticsService.UpdateAssetRiskAggregation(version.Name, a.AssetID, utils.OrDefault(version.LastHistoryUpdate, version.CreatedAt), t, true); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 			continue
 		}
@@ -46,7 +46,7 @@ func UpdateStatistics(db database.DB) error {
 			slog.Error("could not save asset", "err", err)
 			continue
 		}
-		slog.Info("finished calculation of risk history for asset", "assetVersionName", a.Name, "assetID", a.AssetId, "duration", time.Since(t))
+		slog.Info("finished calculation of risk history for asset", "assetVersionName", a.Name, "assetID", a.AssetID, "duration", time.Since(t))
 	}
 
 	return nil

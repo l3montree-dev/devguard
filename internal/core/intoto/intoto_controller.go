@@ -149,12 +149,13 @@ func (a *httpController) Create(c core.Context) error {
 	assetVersion := core.GetAssetVersion(c)
 
 	link := models.InTotoLink{
-		AssetVersionID: assetVersion.AssetId,
-		SupplyChainID:  strings.TrimSpace(req.SupplyChainID),
-		Step:           strings.TrimSpace(req.Step),
-		Payload:        req.Payload,
-		PatID:          pat.ID,
-		Filename:       req.Filename,
+		AssetVersionName: assetVersion.Name,
+		AssetID:          assetVersion.AssetID,
+		SupplyChainID:    strings.TrimSpace(req.SupplyChainID),
+		Step:             strings.TrimSpace(req.Step),
+		Payload:          req.Payload,
+		PatID:            pat.ID,
+		Filename:         req.Filename,
 	}
 
 	valid = a.linkRepository.Save(nil, &link)

@@ -50,7 +50,7 @@ func NewHttpController(statisticsService statisticsService, assetRepository asse
 
 func (c *httpController) GetComponentRisk(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetComponentRisk(assetVersion.Name, assetVersion.AssetId)
+	results, err := c.statisticsService.GetComponentRisk(assetVersion.Name, assetVersion.AssetID)
 
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (c *httpController) GetComponentRisk(ctx core.Context) error {
 
 func (c *httpController) GetDependencyCountPerScanner(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetDependencyCountPerscanner(assetVersion.Name, assetVersion.AssetId)
+	results, err := c.statisticsService.GetDependencyCountPerscanner(assetVersion.Name, assetVersion.AssetID)
 
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func (c *httpController) GetDependencyCountPerScanner(ctx core.Context) error {
 
 func (c *httpController) GetFlawCountByScannerId(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetFlawCountByScannerId(assetVersion.Name, assetVersion.AssetId)
+	results, err := c.statisticsService.GetFlawCountByScannerId(assetVersion.Name, assetVersion.AssetID)
 
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (c *httpController) GetFlawCountByScannerId(ctx core.Context) error {
 func (c *httpController) GetAssetVersionRiskDistribution(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 	assetName := core.GetAsset(ctx).Name
-	results, err := c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetId, assetName)
+	results, err := c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetID, assetName)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (c *httpController) GetAverageAssetVersionFixingTime(ctx core.Context) erro
 		})
 	}
 
-	duration, err := c.statisticsService.GetAverageFixingTime(assetVersion.Name, assetVersion.AssetId, severity)
+	duration, err := c.statisticsService.GetAverageFixingTime(assetVersion.Name, assetVersion.AssetID, severity)
 	if err != nil {
 		return ctx.JSON(500, nil)
 	}
@@ -203,7 +203,7 @@ func (c *httpController) getAssetVersionRiskHistory(start, end string, assetVers
 		return nil, errors.Wrap(err, "error parsing end date")
 	}
 
-	return c.statisticsService.GetAssetVersionRiskHistory(assetVersion.Name, assetVersion.AssetId, beginTime, endTime)
+	return c.statisticsService.GetAssetVersionRiskHistory(assetVersion.Name, assetVersion.AssetID, beginTime, endTime)
 }
 
 func (c *httpController) GetFlawAggregationStateAndChange(ctx core.Context) error {
@@ -241,5 +241,5 @@ func (c *httpController) getFlawAggregationStateAndChange(compareTo string, asse
 		return FlawAggregationStateAndChange{}, errors.Wrap(err, "error parsing date")
 	}
 
-	return c.statisticsService.GetFlawAggregationStateAndChangeSince(assetVersion.Name, assetVersion.AssetId, calculateChangeTo)
+	return c.statisticsService.GetFlawAggregationStateAndChangeSince(assetVersion.Name, assetVersion.AssetID, calculateChangeTo)
 }

@@ -142,7 +142,7 @@ func (a *assetVersionController) AffectedComponents(c core.Context) error {
 }
 
 func (a *assetVersionController) getComponentsAndFlaws(assetVersion models.AssetVersion, scanner, version string) ([]models.ComponentDependency, []models.Flaw, error) {
-	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, assetVersion.Name, assetVersion.AssetId, scanner, version)
+	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner, version)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -177,7 +177,7 @@ func (a *assetVersionController) DependencyGraph(c core.Context) error {
 		return echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, app.Name, app.AssetId, scanner, version)
+	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, app.Name, app.AssetID, scanner, version)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,7 @@ func (a *assetVersionController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 		return nil, echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, assetVersion.Name, assetVersion.AssetId, scanner, version)
+	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner, version)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +293,7 @@ func (a *assetVersionController) Metrics(c core.Context) error {
 	assetVersion := core.GetAssetVersion(c)
 	scannerIds := []string{}
 	// get the latest events of this asset per scan type
-	err := a.assetVersionRepository.GetDB(nil).Table("flaws").Select("DISTINCT scanner_id").Where("asset_version_name  = ? AND asset_version_asset_id = ?", assetVersion.Name, assetVersion.AssetId).Pluck("scanner_id", &scannerIds).Error
+	err := a.assetVersionRepository.GetDB(nil).Table("flaws").Select("DISTINCT scanner_id").Where("asset_version_name  = ? AND asset_version_asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_id", &scannerIds).Error
 
 	if err != nil {
 		return err
@@ -313,7 +313,7 @@ func (a *assetVersionController) Metrics(c core.Context) error {
 	}
 
 	// check if in-toto is enabled
-	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(assetVersion.Name, assetVersion.AssetId)
+	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		return err
 	}

@@ -127,7 +127,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 
 	// check if we should list flat - this means not grouped by package
 	if ctx.QueryParam("flat") == "true" {
-		flaws, err := c.flawRepository.GetFlawsByAssetVersionPagedAndFlat(nil, assetVersion.Name, assetVersion.AssetId, core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
+		flaws, err := c.flawRepository.GetFlawsByAssetVersionPagedAndFlat(nil, assetVersion.Name, assetVersion.AssetID, core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
 		if err != nil {
 			return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 		}
@@ -140,7 +140,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	pagedResp, packageNameIndexMap, err := c.flawRepository.GetByAssetVersionPaged(
 		nil,
 		assetVersion.Name,
-		assetVersion.AssetId,
+		assetVersion.AssetID,
 		core.GetPageInfo(ctx),
 		ctx.QueryParam("search"),
 		core.GetFilterQuery(ctx),

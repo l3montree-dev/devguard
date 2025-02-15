@@ -227,7 +227,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
-		asset, err := g.assetRepository.Read(assetVersion.AssetId)
+		asset, err := g.assetRepository.Read(assetVersion.AssetID)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err

@@ -26,9 +26,9 @@ type Flaw struct {
 	// the scanner which was used to detect this flaw
 	ScannerID string `json:"scanner" gorm:"not null;"`
 
-	AssetVersionName string    `json:"assetVersionName" gorm:"not null;"`
-	AssetID          uuid.UUID `json:"flawAssetId" gorm:"not null;"`
-	AssetVersion     AssetVersion
+	AssetVersionName string       `json:"assetVersionName" gorm:"not null;"`
+	AssetID          uuid.UUID    `json:"flawAssetId" gorm:"not null;"`
+	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
 	Message  *string     `json:"message"`
 	Comments []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`

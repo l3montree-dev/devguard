@@ -241,7 +241,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
-		asset, err := githubIntegration.assetRepository.Read(assetVersion.AssetId)
+		asset, err := githubIntegration.assetRepository.Read(assetVersion.AssetID)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
 			return err

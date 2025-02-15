@@ -61,7 +61,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion models.Asset
 	flaws := []models.Flaw{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetId, scanner, version)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner, version)
 	if err != nil {
 		return 0, 0, []models.Flaw{}, errors.Wrap(err, "could not load asset components")
 	}
@@ -131,7 +131,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion models.Asset
 
 func (s *service) handleScanResult(userID string, scannerID string, assetVersion models.AssetVersion, flaws []models.Flaw, doRiskManagement bool, asset models.Asset) (int, int, []models.Flaw, error) {
 	// get all existing flaws from the database - this is the old state
-	existingFlaws, err := s.flawRepository.ListByScanner(assetVersion.Name, assetVersion.AssetId, scannerID)
+	existingFlaws, err := s.flawRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		slog.Error("could not get existing flaws", "err", err)
 		return 0, 0, []models.Flaw{}, err
@@ -245,7 +245,7 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 
 func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, currentVersion string, sbom normalize.SBOM) error {
 	// load the asset components
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetId, scannerID, currentVersion)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID, currentVersion)
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
 	}
@@ -329,7 +329,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 		return err
 	}
 
-	return s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetId, currentVersion, assetComponents, dependencies)
+	return s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, currentVersion, assetComponents, dependencies)
 }
 
 func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {

@@ -71,7 +71,7 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 			assetVersionType = "tag"
 		}
 
-		if err = a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetId: assetID, Slug: assetVersionName, Type: assetVersionType, DefaultBranch: defaultBranch}).Error; err != nil {
+		if err = a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetID: assetID, Slug: assetVersionName, Type: assetVersionType, DefaultBranch: defaultBranch}).Error; err != nil {
 			return models.AssetVersion{}, err
 		}
 		return a.FindOrCreate(assetVersionName, assetID, tag, defaultBranchName)

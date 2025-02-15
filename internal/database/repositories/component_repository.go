@@ -80,13 +80,13 @@ func (c *componentRepository) LoadComponents(tx database.DB, assetVersionName st
 
 func (c *componentRepository) LoadAllLatestComponentFromAssetVersion(tx database.DB, assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, error) {
 	var component []models.ComponentDependency
-	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_version_asset_id AND scanner_id = ? AND semver_end is NULL", assetVersion.Name, assetVersion.AssetId).Find(&component).Error
+	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_version_asset_id AND scanner_id = ? AND semver_end is NULL", assetVersion.Name, assetVersion.AssetID).Find(&component).Error
 	return component, err
 }
 
 func (c *componentRepository) GetVersions(tx database.DB, assetVersion models.AssetVersion) ([]string, error) {
 	var versions []string
-	err := c.GetDB(tx).Model(&models.ComponentDependency{}).Where("asset_version_name = ? AND asset_version_asset_id = ?", assetVersion.Name, assetVersion.AssetId).Distinct("semver_start").Pluck("semver_start", &versions).Error
+	err := c.GetDB(tx).Model(&models.ComponentDependency{}).Where("asset_version_name = ? AND asset_version_asset_id = ?", assetVersion.Name, assetVersion.AssetID).Distinct("semver_start").Pluck("semver_start", &versions).Error
 	return versions, err
 }
 
