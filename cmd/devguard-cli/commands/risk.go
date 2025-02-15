@@ -60,16 +60,16 @@ func newCalculateCmd() *cobra.Command {
 
 			if shouldCalculateHistory {
 				slog.Info("recalculating risk history")
-				// fetch all assets
-				assets, err := assetRepository.GetAllAssetsFromDB()
+				// fetch all assetVersions
+				assetVersions, err := assetVersionRepository.GetAllAssetsVersionFromDB(nil)
 				if err != nil {
 					slog.Error("could not fetch assets", "err", err)
 					return
 				}
 
-				for _, asset := range assets {
-					slog.Info("recalculating risk history for asset", "asset", asset.ID)
-					if err := statisticService.UpdateAssetRiskAggregation(asset.ID, asset.CreatedAt, time.Now(), true); err != nil {
+				for _, version := range assetVersions {
+					slog.Info("recalculating risk history for asset", "assetVersionName", version.Name, "assetID", version.AssetId)
+					if err := statisticService.UpdateAssetRiskAggregation(version.Name, version.AssetId, version.CreatedAt, time.Now(), true); err != nil {
 						slog.Error("could not recalculate risk history", "err", err)
 						return
 					}

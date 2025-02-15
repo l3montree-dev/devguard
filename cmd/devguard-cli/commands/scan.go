@@ -4,9 +4,9 @@ import (
 	"log/slog"
 	"time"
 
-	assetversion "github.com/l3montree-dev/devguard/internal/assetVersion"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
+	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
@@ -53,7 +53,7 @@ func newSbomCommand() *cobra.Command {
 				return
 			}
 			for _, assetVersion := range assetVersions {
-				components, err := componentRepository.LoadAllLatestComponentFromAssetVersion(nil, assetVersion)
+				components, err := componentRepository.LoadAllLatestComponentFromAssetVersion(nil, assetVersion, "")
 
 				// group the components by scanner
 				scannerComponents := make(map[string][]models.ComponentDependency)
@@ -65,7 +65,6 @@ func newSbomCommand() *cobra.Command {
 				}
 
 				for scanner, scannerComponents := range scannerComponents {
-
 					now := time.Now()
 					// build the sbom of the asset
 
@@ -86,7 +85,7 @@ func newSbomCommand() *cobra.Command {
 
 					amountOpened, amountClosed, flaws, err := assetVersionService.HandleScanResult(
 						// TODO: add the correct asset
-						models.AssetNew{},
+						models.Asset{},
 						assetVersion,
 						vulns,
 						scanner,

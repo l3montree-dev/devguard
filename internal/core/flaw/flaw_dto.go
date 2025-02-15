@@ -25,7 +25,8 @@ type FlawDTO struct {
 	ID                    string           `json:"id"`
 	ScannerID             string           `json:"scanner"`
 	Message               *string          `json:"message"`
-	AssetVersionID        string           `json:"assetVersionId"`
+	AssetVersionName      string           `json:"assetVersionId"`
+	AssetID               string           `json:"assetId"`
 	State                 models.FlawState `json:"state"`
 	CVE                   *models.CVE      `json:"cve"`
 	CVEID                 *string          `json:"cveId"`
@@ -55,7 +56,8 @@ func FlawToDto(f models.Flaw) FlawDTO {
 		ID:                    f.ID,
 		ScannerID:             f.ScannerID,
 		Message:               f.Message,
-		AssetVersionID:        f.AssetVersionID.String(),
+		AssetVersionName:      f.AssetVersionName,
+		AssetID:               f.AssetID.String(),
 		State:                 f.State,
 		CVE:                   f.CVE,
 		CVEID:                 f.CVEID,

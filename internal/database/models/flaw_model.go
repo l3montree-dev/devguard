@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -25,14 +26,14 @@ type Flaw struct {
 	// the scanner which was used to detect this flaw
 	ScannerID string `json:"scanner" gorm:"not null;"`
 
-	//TODO: add not null constraint
-	AssetID string `json:"flawAssetId" gorm:"not null;"`
+	AssetVersionName string    `json:"assetVersionName" gorm:"not null;"`
+	AssetID          uuid.UUID `json:"flawAssetId" gorm:"not null;"`
+	AssetVersion     AssetVersion
 
-	Message          *string     `json:"message"`
-	Comments         []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
-	Events           []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
-	AssetVersionName string      `json:"assetVersionName" gorm:"not null;"`
-	State            FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
+	Message  *string     `json:"message"`
+	Comments []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
+	Events   []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
+	State    FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
 
 	CVE   *CVE    `json:"cve"`
 	CVEID *string `json:"cveId" gorm:"null;type:text;default:null;"`
@@ -71,14 +72,14 @@ func (m Flaw) TableName() string {
 	return "flaws"
 }
 
-func (m *Flaw) CalculateHash(id string) string {
-	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, id))
+func (m *Flaw) CalculateHash() string {
+	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, m.AssetVersionName, m.AssetID))
 	return hash
 }
 
 // hook to calculate the hash before creating the flaw
 func (f *Flaw) BeforeSave(tx *gorm.DB) (err error) {
-	hash := f.CalculateHash(string(f.AssetVersionName + f.AssetID))
+	hash := f.CalculateHash()
 	f.ID = hash
 	return nil
 }

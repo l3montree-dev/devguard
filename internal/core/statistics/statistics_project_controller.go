@@ -29,7 +29,13 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 	group := utils.ErrGroup[models.AssetRiskDistribution](10)
 	for _, assetVersion := range assetVersions {
 		group.Go(func() (models.AssetRiskDistribution, error) {
-			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetId)
+			// get the corresponding asset
+			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetId)
+			if err != nil {
+				return models.AssetRiskDistribution{}, errors.Wrap(err, "could not fetch asset by id")
+			}
+
+			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetId, asset.Name)
 		})
 	}
 
@@ -82,7 +88,13 @@ func (c *httpController) getProjectRiskDistribution(projectID uuid.UUID) ([]mode
 	group := utils.ErrGroup[models.AssetRiskDistribution](10)
 	for _, assetVersion := range assetVersions {
 		group.Go(func() (models.AssetRiskDistribution, error) {
-			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.ID, assetVersion.Name)
+			// get the corresponding asset
+			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetId)
+			if err != nil {
+				return models.AssetRiskDistribution{}, errors.Wrap(err, "could not fetch asset by id")
+			}
+
+			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetId, asset.Name)
 		})
 	}
 
@@ -133,7 +145,7 @@ func (c *httpController) getProjectAverageFixingTime(projectID uuid.UUID, severi
 	errgroup := utils.ErrGroup[time.Duration](10)
 	for _, assetVersion := range assetVersions {
 		errgroup.Go(func() (time.Duration, error) {
-			return c.statisticsService.GetAverageFixingTime(assetVersion.ID, severity)
+			return c.statisticsService.GetAverageFixingTime(assetVersion.Name, assetVersion.AssetId, severity)
 		})
 	}
 

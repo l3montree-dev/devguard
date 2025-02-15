@@ -29,8 +29,8 @@ func sanitizeRequirementLevel(level string) models.RequirementLevel {
 	}
 }
 
-func (a *createRequest) toModel(projectID uuid.UUID) models.AssetNew {
-	return models.AssetNew{
+func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
+	return models.Asset{
 		Name:        a.Name,
 		Slug:        slug.Make(a.Name),
 		ProjectID:   projectID,
@@ -64,7 +64,7 @@ type patchRequest struct {
 }
 
 func (a *patchRequest) applyToModel(
-	asset *models.AssetNew,
+	asset *models.Asset,
 ) bool {
 	updated := false
 	if a.Name != nil {

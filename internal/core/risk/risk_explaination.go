@@ -112,7 +112,7 @@ const (
 )
 
 // cvssBE generates a message based on the asset and CVSS object.
-func cvssBE(asset models.AssetNew, cvssObj map[string]string) string {
+func cvssBE(asset models.Asset, cvssObj map[string]string) string {
 	elements := []string{}
 
 	if asset.AvailabilityRequirement == RequirementsLevelHigh && cvssObj["A"] == "H" {
@@ -267,7 +267,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) s
 }
 
 // provide the vector and risk metrics obtained from the risk calculation
-func Explain(flaw models.Flaw, asset models.AssetNew, vector string, riskMetrics obj.RiskMetrics) Explanation {
+func Explain(flaw models.Flaw, asset models.Asset, vector string, riskMetrics obj.RiskMetrics) Explanation {
 	cvss := parseCvssVector(vector)
 
 	shortMsg, longMsg := exploitMessage(flaw, cvss)

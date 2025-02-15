@@ -24,23 +24,23 @@ import (
 
 type assetRepository struct {
 	db database.DB
-	Repository[uuid.UUID, models.AssetNew, core.DB]
+	Repository[uuid.UUID, models.Asset, core.DB]
 }
 
 func NewAssetRepository(db core.DB) *assetRepository {
-	err := db.AutoMigrate(&models.AssetNew{})
+	err := db.AutoMigrate(&models.Asset{})
 	if err != nil {
 		panic(err)
 	}
 
 	return &assetRepository{
 		db:         db,
-		Repository: newGormRepository[uuid.UUID, models.AssetNew](db),
+		Repository: newGormRepository[uuid.UUID, models.Asset](db),
 	}
 }
 
-func (a *assetRepository) FindByName(name string) (models.AssetNew, error) {
-	var app models.AssetNew
+func (a *assetRepository) FindByName(name string) (models.Asset, error) {
+	var app models.Asset
 	err := a.db.Where("name = ?", name).First(&app).Error
 	if err != nil {
 		return app, err
@@ -48,10 +48,10 @@ func (a *assetRepository) FindByName(name string) (models.AssetNew, error) {
 	return app, nil
 }
 
-func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.AssetNew, error) {
+func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, error) {
 	app, err := a.FindByName(name)
 	if err != nil {
-		app = models.AssetNew{Name: name}
+		app = models.Asset{Name: name}
 		err = a.Create(tx, &app)
 		if err != nil {
 			return app, err
@@ -60,17 +60,17 @@ func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.AssetNew
 	return app, nil
 }
 
-func (a *assetRepository) GetByAssetID(assetID uuid.UUID) (models.AssetNew, error) {
-	var app models.AssetNew
+func (a *assetRepository) GetByAssetID(assetID uuid.UUID) (models.Asset, error) {
+	var app models.Asset
 	err := a.db.Where("id = ?", assetID).First(&app).Error
 	if err != nil {
-		return models.AssetNew{}, err
+		return models.Asset{}, err
 	}
 	return app, nil
 }
 
-func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.AssetNew, error) {
-	var apps []models.AssetNew
+func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, error) {
+	var apps []models.Asset
 	err := a.db.Where("project_id = ?", projectID).Find(&apps).Error
 	if err != nil {
 		return nil, err
@@ -78,8 +78,8 @@ func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.AssetNew
 	return apps, nil
 }
 
-func (a *assetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetNew, error) {
-	var apps []models.AssetNew
+func (a *assetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asset, error) {
+	var apps []models.Asset
 	err := a.db.Where("project_id IN (?)", projectIDs).Find(&apps).Error
 	if err != nil {
 		return nil, err
@@ -87,14 +87,14 @@ func (a *assetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asse
 	return apps, nil
 }
 
-func (g *assetRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.AssetNew, error) {
-	var t models.AssetNew
+func (g *assetRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error) {
+	var t models.Asset
 	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
 	return t, err
 }
 
-func (g *assetRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.AssetNew, error) {
-	var asset models.AssetNew
+func (g *assetRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error) {
+	var asset models.Asset
 	err := g.db.Unscoped().Where("slug = ? AND project_id = ?", slug, projectID).First(&asset).Error
 	return asset, err
 }
@@ -107,18 +107,18 @@ func (g *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uu
 	return app.ID, nil
 }
 
-func (g *assetRepository) Update(tx core.DB, asset *models.AssetNew) error {
+func (g *assetRepository) Update(tx core.DB, asset *models.Asset) error {
 	return g.db.Save(asset).Error
 }
 
-func (g *assetRepository) GetAllAssetsFromDB() ([]models.AssetNew, error) {
-	var assets []models.AssetNew
+func (g *assetRepository) GetAllAssetsFromDB() ([]models.Asset, error) {
+	var assets []models.Asset
 	err := g.db.Find(&assets).Error
 	return assets, err
 }
 
-func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (models.AssetNew, error) {
-	var asset models.AssetNew
+func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (models.Asset, error) {
+	var asset models.Asset
 	err := g.db.Model(&models.AssetVersion{}).
 		Select("assets.*").
 		Joins("JOIN assets ON assets.id = asset_versions.asset_id").

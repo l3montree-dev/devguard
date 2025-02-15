@@ -21,7 +21,7 @@ const (
 	RequirementLevelHigh   RequirementLevel = "high"
 )
 
-type AssetNew struct {
+type Asset struct {
 	Model
 	Name string `json:"name" gorm:"type:text"`
 	Slug string `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
@@ -57,6 +57,6 @@ type AssetNew struct {
 	SigningPubKey *string `json:"signingPubKey" gorm:"type:text;"`
 }
 
-func (m AssetNew) TableName() string {
+func (m Asset) TableName() string {
 	return "assets"
 }

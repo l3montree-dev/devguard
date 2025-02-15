@@ -15,7 +15,7 @@ type FlawAggregationStateAndChange struct {
 }
 
 type AssetRiskHistory struct {
-	Asset       models.AssetNew           `json:"asset"`
+	Asset       models.Asset              `json:"asset"`
 	RiskHistory []models.AssetRiskHistory `json:"riskHistory"`
 }
 

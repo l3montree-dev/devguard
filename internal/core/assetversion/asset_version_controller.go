@@ -17,17 +17,17 @@ import (
 
 type assetVersionComponentsLoader interface {
 	GetVersions(tx core.DB, assetVersion models.AssetVersion) ([]string, error)
-	LoadComponents(tx core.DB, assetVersion models.AssetVersion, scanner, version string) ([]models.ComponentDependency, error)
+	LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner, version string) ([]models.ComponentDependency, error)
 }
 type assetVersionService interface {
 	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) *cdx.BOM
-	BuildVeX(asset models.AssetNew, assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency, flaws []models.Flaw) *cdx.BOM
+	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency, flaws []models.Flaw) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 }
 
 type flawRepository interface {
 	Transaction(txFunc func(core.DB) error) error
-	ListByScanner(assetID uuid.UUID, scannerID string) ([]models.Flaw, error)
+	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Flaw, error)
 
 	SaveBatch(db core.DB, flaws []models.Flaw) error
 
@@ -36,18 +36,18 @@ type flawRepository interface {
 
 type componentRepository interface {
 	SaveBatch(tx core.DB, components []models.Component) error
-	LoadComponents(tx core.DB, assetVersion models.AssetVersion, scanner, version string) ([]models.ComponentDependency, error)
+	LoadComponents(tx database.DB, assetVersionName string, assetID uuid.UUID, scannerID, version string) ([]models.ComponentDependency, error)
 	FindByPurl(tx core.DB, purl string) (models.Component, error)
-	HandleStateDiff(tx database.DB, assetVersionID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error
+	HandleStateDiff(tx database.DB, assetVersionName string, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error
 }
 
 type supplyChainRepository interface {
-	PercentageOfVerifiedSupplyChains(assetVersionID uuid.UUID) (float64, error)
+	PercentageOfVerifiedSupplyChains(assetVersionName string, assetID uuid.UUID) (float64, error)
 }
 
 type flawService interface {
-	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.AssetNew, doRiskManagement bool) error
-	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.AssetNew, doRiskManagement bool) error
+	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
+	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
 	UpdateFlawState(tx core.DB, assetID uuid.UUID, userID string, flaw *models.Flaw, statusType string, justification string, assetVersionName string) (models.FlawEvent, error)
 }
 
@@ -142,7 +142,7 @@ func (a *assetVersionController) AffectedComponents(c core.Context) error {
 }
 
 func (a *assetVersionController) getComponentsAndFlaws(assetVersion models.AssetVersion, scanner, version string) ([]models.ComponentDependency, []models.Flaw, error) {
-	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, assetVersion, scanner, version)
+	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, assetVersion.Name, assetVersion.AssetId, scanner, version)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -177,7 +177,7 @@ func (a *assetVersionController) DependencyGraph(c core.Context) error {
 		return echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, app, scanner, version)
+	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, app.Name, app.AssetId, scanner, version)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,7 @@ func (a *assetVersionController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 		return nil, echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, assetVersion, scanner, version)
+	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, assetVersion.Name, assetVersion.AssetId, scanner, version)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +293,7 @@ func (a *assetVersionController) Metrics(c core.Context) error {
 	assetVersion := core.GetAssetVersion(c)
 	scannerIds := []string{}
 	// get the latest events of this asset per scan type
-	err := a.assetVersionRepository.GetDB(nil).Table("flaws").Select("DISTINCT scanner_id").Where("asset_version_id  = ?", assetVersion.ID).Pluck("scanner_id", &scannerIds).Error
+	err := a.assetVersionRepository.GetDB(nil).Table("flaws").Select("DISTINCT scanner_id").Where("asset_version_name  = ? AND asset_version_asset_id = ?", assetVersion.Name, assetVersion.AssetId).Pluck("scanner_id", &scannerIds).Error
 
 	if err != nil {
 		return err
@@ -313,7 +313,7 @@ func (a *assetVersionController) Metrics(c core.Context) error {
 	}
 
 	// check if in-toto is enabled
-	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(assetVersion.ID)
+	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(assetVersion.Name, assetVersion.AssetId)
 	if err != nil {
 		return err
 	}

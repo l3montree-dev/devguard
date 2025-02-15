@@ -29,7 +29,7 @@ import (
 )
 
 type assetRepository interface {
-	GetAllAssetsFromDB() ([]models.AssetNew, error)
+	GetAllAssetsFromDB() ([]models.Asset, error)
 }
 
 type flawRepository interface {
@@ -37,9 +37,9 @@ type flawRepository interface {
 	Save(db core.DB, flaws *models.Flaw) error
 	Transaction(txFunc func(core.DB) error) error
 	Begin() core.DB
-	GetFlawsByAssetVersionId(tx core.DB, assetVersionID uuid.UUID) ([]models.Flaw, error)
 
-	GetFlawEventsByFlawAssetID(tx core.DB, flawAssetID string) ([]models.FlawEvent, error)
+	GetFlawsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.Flaw, error)
+	GetFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 }
 
 type flawEventRepository interface {
@@ -67,19 +67,16 @@ func NewService(flawRepository flawRepository, flawEventRepository flawEventRepo
 	}
 }
 
-func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.AssetNew, doRiskManagement bool) error {
+func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
 	if len(flaws) == 0 {
 		return nil
 	}
-
-	assetId := asset.ID.String()
-	assetVersionId := assetVersion.ID.String()
 
 	// create a new flawevent for each fixed flaw
 	events := make([]models.FlawEvent, len(flaws))
 
 	for i, flaw := range flaws {
-		ev := models.NewFixedEvent(flaw.CalculateHash(assetId), flaw.CalculateHash(assetVersionId), userID, assetVersion.Name)
+		ev := models.NewFixedEvent(flaw.CalculateHash(), userID)
 		// apply the event on the flaw
 		ev.Apply(&flaws[i])
 		events[i] = ev
@@ -96,11 +93,7 @@ func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw,
 	return nil
 }
 
-func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.AssetNew, doRiskManagement bool) error {
-
-	assetId := asset.ID.String()
-	assetVersionId := assetVersion.ID.String()
-
+func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -115,7 +108,7 @@ func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Fl
 
 	for i, flaw := range flaws {
 		riskReport := risk.RawRisk(*flaw.CVE, e, *flaw.ComponentDepth)
-		ev := models.NewDetectedEvent(flaw.CalculateHash(assetId), flaw.CalculateHash(assetVersionId), userID, assetVersion.Name, riskReport)
+		ev := models.NewDetectedEvent(flaw.CalculateHash(), userID, riskReport)
 		// apply the event on the flaw
 		ev.Apply(&flaws[i])
 		events[i] = ev
@@ -148,7 +141,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	err = s.flawRepository.Transaction(func(tx core.DB) error {
 		for _, asset := range assets {
 			// get all flaws of the asset
-			flaws, err := s.flawRepository.GetFlawsByAssetVersionId(tx, asset.ID)
+			flaws, err := s.flawRepository.GetFlawsByAssetID(tx, asset.ID)
 			if len(flaws) == 0 {
 				continue
 			}
@@ -173,7 +166,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 
 }
 
-func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.AssetNew) error {
+func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error {
 
 	if len(flaws) == 0 {
 		return nil
@@ -226,7 +219,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 		newRiskAssessment := risk.RawRisk(cve, env, *flaw.ComponentDepth)
 
 		if *oldRiskAssessment != newRiskAssessment.Risk {
-			ev := models.NewRawRiskAssessmentUpdatedEvent(flaw.CalculateHash(asset.ID.String()), userID, justification, newRiskAssessment)
+			ev := models.NewRawRiskAssessmentUpdatedEvent(flaw.CalculateHash(), userID, justification, newRiskAssessment)
 			// apply the event on the flaw
 			ev.Apply(&flaws[i])
 			events = append(events, ev)
@@ -284,18 +277,16 @@ func (s *service) UpdateFlawState(tx core.DB, assetID uuid.UUID, userID string, 
 }
 
 func (s *service) updateFlawState(tx core.DB, assetID uuid.UUID, userID string, flaw *models.Flaw, statusType string, justification string, assetVersionName string) (models.FlawEvent, error) {
-	assetVersionID := flaw.AssetVersionID.String()
-	assetIDStr := assetID.String()
 	var ev models.FlawEvent
 	switch models.FlawEventType(statusType) {
 	case models.EventTypeAccepted:
-		ev = models.NewAcceptedEvent(flaw.CalculateHash(assetIDStr), flaw.CalculateHash(assetVersionID), userID, justification, assetVersionName)
+		ev = models.NewAcceptedEvent(flaw.CalculateHash(), userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(flaw.CalculateHash(assetIDStr), flaw.CalculateHash(assetVersionID), userID, justification, assetVersionName)
+		ev = models.NewFalsePositiveEvent(flaw.CalculateHash(), userID, justification)
 	case models.EventTypeReopened:
-		ev = models.NewReopenedEvent(flaw.CalculateHash(assetIDStr), flaw.CalculateHash(assetVersionID), userID, justification, assetVersionName)
+		ev = models.NewReopenedEvent(flaw.CalculateHash(), userID, justification)
 	case models.EventTypeComment:
-		ev = models.NewCommentEvent(flaw.CalculateHash(assetIDStr), flaw.CalculateHash(assetVersionID), userID, justification, assetVersionName)
+		ev = models.NewCommentEvent(flaw.CalculateHash(), userID, justification)
 	}
 
 	return s.applyAndSave(tx, flaw, &ev)
@@ -328,8 +319,4 @@ func (s *service) applyAndSave(tx core.DB, flaw *models.Flaw, ev *models.FlawEve
 	}
 	flaw.Events = append(flaw.Events, *ev)
 	return *ev, nil
-}
-
-func (s *service) GetFlawEventsByFlawAssetID(tx core.DB, flawAssetID string) ([]models.FlawEvent, error) {
-	return s.flawRepository.GetFlawEventsByFlawAssetID(tx, flawAssetID)
 }

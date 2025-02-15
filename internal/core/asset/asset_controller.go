@@ -18,18 +18,18 @@ import (
 
 // we use this in multiple files in the asset package itself
 type repository interface {
-	repositories.Repository[uuid.UUID, models.AssetNew, core.DB]
-	FindByName(name string) (models.AssetNew, error)
-	FindOrCreate(tx core.DB, name string) (models.AssetNew, error)
-	GetByProjectID(projectID uuid.UUID) ([]models.AssetNew, error)
-	ReadBySlug(projectID uuid.UUID, slug string) (models.AssetNew, error)
+	repositories.Repository[uuid.UUID, models.Asset, core.DB]
+	FindByName(name string) (models.Asset, error)
+	FindOrCreate(tx core.DB, name string) (models.Asset, error)
+	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
+	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
-	Update(tx core.DB, asset *models.AssetNew) error
-	ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.AssetNew, error)
+	Update(tx core.DB, asset *models.Asset) error
+	ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error)
 }
 
 type assetService interface {
-	UpdateAssetRequirements(asset models.AssetNew, responsible string, justification string) error
+	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 }
 
 type httpController struct {

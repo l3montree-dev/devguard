@@ -44,7 +44,7 @@ type projectRepository interface {
 }
 
 type assetRepository interface {
-	GetByProjectID(projectID uuid.UUID) ([]models.AssetNew, error)
+	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 }
 
 type projectService interface {

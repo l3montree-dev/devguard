@@ -27,40 +27,26 @@ func NewFlawRepository(db core.DB) *flawRepository {
 func (r *flawRepository) GetFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error) {
 	var flaws []models.Flaw = []models.Flaw{}
 
-	var assetVersionIds []uuid.UUID = []uuid.UUID{}
-
-	if err := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Where("asset_id = ?", assetID).Pluck("id", &assetVersionIds).Error; err != nil {
+	if err := r.Repository.GetDB(tx).Model(&models.Flaw{}).Where("asset_id = ?", assetID).Find(&flaws).Error; err != nil {
 		return nil, err
-	}
-
-	if len(assetVersionIds) == 0 {
-		return flaws, nil
-	}
-
-	for _, assetVersionId := range assetVersionIds {
-		var assetFlaws []models.Flaw = []models.Flaw{}
-		if err := r.Repository.GetDB(tx).Where("asset_version_id = ?", assetVersionId).Find(&assetFlaws).Error; err != nil {
-			return nil, err
-		}
-		flaws = append(flaws, assetFlaws...)
 	}
 
 	return flaws, nil
 
 }
 
-func (r *flawRepository) GetFlawsByAssetVersionId(tx *gorm.DB, assetVersionId uuid.UUID) ([]models.Flaw, error) {
+func (r *flawRepository) GetFlawsByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.Flaw, error) {
 
 	var flaws []models.Flaw = []models.Flaw{}
-	if err := r.Repository.GetDB(tx).Where("asset_version_id = ?", assetVersionId).Find(&flaws).Error; err != nil {
+	if err := r.Repository.GetDB(tx).Where("asset_version_name = ? AND asset_version_asset_id = ?", assetVersionName, assetID).Find(&flaws).Error; err != nil {
 		return nil, err
 	}
 	return flaws, nil
 }
 
-func (r *flawRepository) ListByScanner(assetVersionID uuid.UUID, scannerID string) ([]models.Flaw, error) {
+func (r *flawRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Flaw, error) {
 	var flaws []models.Flaw = []models.Flaw{}
-	if err := r.Repository.GetDB(r.db).Preload("CVE").Where("asset_version_id = ? AND scanner_id = ?", assetVersionID, scannerID).Find(&flaws).Error; err != nil {
+	if err := r.Repository.GetDB(r.db).Preload("CVE").Where("asset_version_name = ? AND asset_version_asset_id = ? AND scanner_id = ?", assetVersionName, assetID, scannerID).Find(&flaws).Error; err != nil {
 		return nil, err
 	}
 	return flaws, nil
@@ -74,11 +60,11 @@ type riskStats struct {
 	PackageName string  `json:"package_name"`
 }
 
-func (r *flawRepository) GetByAssetVersionIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetVersionId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error) {
+func (r *flawRepository) GetByAssetVersionPaged(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], map[string]int, error) {
 	var count int64
 	var flaws []models.Flaw = []models.Flaw{}
 
-	q := r.Repository.GetDB(tx).Model(&models.Flaw{}).Joins("CVE").Where("flaws.asset_version_id = ?", assetVersionId)
+	q := r.Repository.GetDB(tx).Model(&models.Flaw{}).Joins("CVE").Where("flaws.asset_version_name = ?", assetVersionName).Where("flaws.asset_version_asset_id = ?", assetID)
 
 	// apply filters
 	for _, f := range filter {
@@ -94,7 +80,7 @@ func (r *flawRepository) GetByAssetVersionIdPaged(tx core.DB, pageInfo core.Page
 	}
 
 	// get all flaws of the asset
-	q = r.Repository.GetDB(tx).Model(&models.Flaw{}).Joins("CVE").Where("flaws.asset_version_id = ?", assetVersionId)
+	q = r.Repository.GetDB(tx).Model(&models.Flaw{}).Joins("CVE").Where("flaws.asset_version_name = ?", assetVersionName).Where("flaws.asset_version_asset_id = ?", assetID)
 
 	// apply filters
 	for _, f := range filter {
@@ -108,7 +94,8 @@ func (r *flawRepository) GetByAssetVersionIdPaged(tx core.DB, pageInfo core.Page
 	packageNameQuery := r.GetDB(tx).Table("components").
 		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, COUNT(f.id) as flaw_count, components.purl as package_name").
 		Joins("INNER JOIN flaws f ON components.purl = f.component_purl").
-		Where("f.asset_version_id = ?", assetVersionId.String()).
+		Where("f.asset_version_name = ?", assetVersionName).
+		Where("f.asset_version_asset_id = ?", assetID).
 		Group("components.purl").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
 
 	// apply sorting
@@ -143,13 +130,13 @@ func (r *flawRepository) GetByAssetVersionIdPaged(tx core.DB, pageInfo core.Page
 	return core.NewPaged(pageInfo, count, flaws), packageNameIndexMap, nil
 }
 
-func (r *flawRepository) GetFlawsByAssetVersionIdPagedAndFlat(tx core.DB, assetVersionId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
-	return r.GetFlawsPaged(tx, []string{assetVersionId.String()}, pageInfo, search, filter, sort)
+func (r *flawRepository) GetFlawsByAssetVersionPagedAndFlat(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+	return r.GetFlawsPaged(tx, []string{assetVersionName}, []string{assetID.String()}, pageInfo, search, filter, sort)
 }
 
-func (r *flawRepository) GetAllOpenFlawsByAssetVersionID(tx core.DB, assetVersionID uuid.UUID) ([]models.Flaw, error) {
+func (r *flawRepository) GetAllOpenFlawsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.Flaw, error) {
 	var flaws []models.Flaw = []models.Flaw{}
-	if err := r.Repository.GetDB(tx).Where("asset_version_id = ? AND state = ?", assetVersionID, models.FlawStateOpen).Find(&flaws).Error; err != nil {
+	if err := r.Repository.GetDB(tx).Where("asset_version_name = ? AND asset_version_asset_id = ? AND state = ?", assetVersionName, assetID, models.FlawStateOpen).Find(&flaws).Error; err != nil {
 		return nil, err
 	}
 	return flaws, nil
@@ -164,30 +151,24 @@ func (g flawRepository) Read(id string) (models.Flaw, error) {
 	return t, err
 }
 
-func (g flawRepository) ReadFlawWithAssetEvents(id string) (models.Flaw, error) {
+func (g flawRepository) ReadFlawWithAssetEvents(id string) (models.Flaw, []models.FlawEvent, error) {
 	var t models.Flaw
 	err := g.db.Preload("CVE.Weaknesses").Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", id).Error
 
 	if err != nil {
-		return models.Flaw{}, err
+		return models.Flaw{}, []models.FlawEvent{}, err
 	}
 
-	flawEvents, err := g.GetFlawEventsByFlawAssetID(g.db, t.AssetID)
+	var flawEvents []models.FlawEvent
+	// get the asset id - and read flaws with the same cve id and asset id
+	err = g.db.Model(&models.FlawEvent{}).Where("flaw_id IN ?", g.db.Model(models.Flaw{}).Where(
+		"asset_version_asset_id = ? AND cve_id = ?", t.AssetID, t.CVEID,
+	)).Order("created_at ASC").Find(&t.Events).Error
 	if err != nil {
-		return models.Flaw{}, err
+		return models.Flaw{}, flawEvents, err
 	}
 
-	t.Events = flawEvents
-
-	return t, err
-}
-
-func (g flawRepository) GetFlawEventsByFlawAssetID(tx core.DB, flawAssetID string) ([]models.FlawEvent, error) {
-	var flawEvents []models.FlawEvent = []models.FlawEvent{}
-	if err := g.Repository.GetDB(tx).Where("flaw_asset_id = ?", flawAssetID).Find(&flawEvents).Order("created_at ASC").Error; err != nil {
-		return nil, err
-	}
-	return flawEvents, nil
+	return t, flawEvents, err
 }
 
 func (r *flawRepository) GetFlawsByPurl(tx core.DB, purl []string) ([]models.Flaw, error) {
@@ -219,10 +200,10 @@ func (r *flawRepository) GetOrgFromFlawID(tx core.DB, flawID string) (models.Org
 	}
 	return org, nil
 }
-func (r *flawRepository) GetFlawsPaged(tx core.DB, assetVersionIdInSubQuery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
+func (r *flawRepository) GetFlawsPaged(tx core.DB, assetVersionNamesSubquery any, assetVersionAssetIdSubquery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
 	var flaws []models.Flaw = []models.Flaw{}
 
-	q := r.Repository.GetDB(tx).Model(&models.Flaw{}).Preload("Events").Joins("CVE").Where("flaws.asset_version_id IN (?)", assetVersionIdInSubQuery)
+	q := r.Repository.GetDB(tx).Model(&models.Flaw{}).Preload("Events").Joins("CVE").Where("flaws.asset_version_name IN (?) AND flaws.asset_version_asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIdSubquery)
 
 	// apply filters
 	for _, f := range filter {
@@ -259,20 +240,20 @@ func (r *flawRepository) GetFlawsPaged(tx core.DB, assetVersionIdInSubQuery any,
 
 func (r *flawRepository) GetDefaultFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
 
-	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.AssetNew{}).Select("assets.id").Where("project_id = ?", projectID)
+	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("project_id = ?", projectID)
 
-	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("id").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
+	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
 
-	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
+	return r.GetFlawsPaged(tx, subQuery, subQueryAssetIDs, pageInfo, search, filter, sort)
 }
 
 func (r *flawRepository) GetDefaultFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error) {
 
-	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.AssetNew{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
+	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
 
-	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("id").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
+	subQuery1 := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
 
-	return r.GetFlawsPaged(tx, subQuery, pageInfo, search, filter, sort)
+	return r.GetFlawsPaged(tx, subQuery1, subQueryAssetIDs, pageInfo, search, filter, sort)
 }
 
 func (r *flawRepository) GetFlawAssetIDByFlawID(tx core.DB, flawID string) (string, error) {

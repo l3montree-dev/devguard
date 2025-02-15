@@ -24,10 +24,10 @@ func NewAssetRiskHistoryRepository(db core.DB) *assetRiskHistoryRepository {
 	}
 }
 
-func (r *assetRiskHistoryRepository) GetRiskHistory(assetVersionId uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error) {
+func (r *assetRiskHistoryRepository) GetRiskHistory(assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error) {
 	var assetRisk []models.AssetRiskHistory = []models.AssetRiskHistory{}
 	// get all assetRisk of the asset
-	if err := r.Repository.GetDB(r.db).Where("asset_version_id = ?", assetVersionId).Where(
+	if err := r.Repository.GetDB(r.db).Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Where(
 		"day >= ? AND day <= ?", start, end,
 	).Order("day ASC").Find(&assetRisk).Error; err != nil {
 		return nil, err

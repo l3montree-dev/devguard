@@ -75,11 +75,11 @@ type externalUserRepository interface {
 }
 
 type assetRepository interface {
-	Read(id uuid.UUID) (models.AssetNew, error)
+	Read(id uuid.UUID) (models.Asset, error)
 }
 
 type assetVersionRepository interface {
-	Read(id uuid.UUID) (models.AssetVersion, error)
+	Read(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
 }
 
 type flawService interface {
@@ -235,12 +235,12 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		}
 
 		// get the asset
-		assetVersion, err := githubIntegration.assetVersionRepository.Read(flaw.AssetVersionID)
+		assetVersion, err := githubIntegration.assetVersionRepository.Read(flaw.AssetVersionName, flaw.AssetID)
 		if err != nil {
 			slog.Error("could not read asset version", "err", err)
 			return err
 		}
-		assetVersionName := assetVersion.Name
+
 		asset, err := githubIntegration.assetRepository.Read(assetVersion.AssetId)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
@@ -278,7 +278,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		}()
 
 		// create a new event based on the comment
-		flawEvent := createNewFlawEventBasedOnComment(flaw.FlawAssetID, flaw.ID, fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment, assetVersionName)
+		flawEvent := createNewFlawEventBasedOnComment(flaw.ID, fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment)
 
 		flawEvent.Apply(&flaw)
 		// save the flaw and the event in a transaction
@@ -482,8 +482,6 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		projectSlug, _ := core.GetProjectSlug(event.Ctx)
 		assetSlug, _ := core.GetAssetSlug(event.Ctx)
 
-		assetVersionSlug, _ := core.GetAssetVersionSlug(event.Ctx)
-
 		// read the justification from the body
 		var justification map[string]string
 		err = json.NewDecoder(event.Ctx.Request().Body).Decode(&justification)
@@ -530,7 +528,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		session := core.GetSession(event.Ctx)
 		userID := session.GetUserID()
 		// create an event
-		flawEvent := models.NewMitigateEvent(flaw.ID, userID, justification["comment"], assetVersionSlug, map[string]any{
+		flawEvent := models.NewMitigateEvent(flaw.ID, userID, justification["comment"], map[string]any{
 			"ticketId":  *flaw.TicketID,
 			"ticketUrl": createdIssue.GetHTMLURL(),
 		})

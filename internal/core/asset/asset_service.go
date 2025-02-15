@@ -26,10 +26,10 @@ import (
 )
 
 type assetRepository interface {
-	Save(tx core.DB, asset *models.AssetNew) error
+	Save(tx core.DB, asset *models.Asset) error
 	Transaction(txFunc func(core.DB) error) error
 
-	GetByAssetID(assetID uuid.UUID) (models.AssetNew, error)
+	GetByAssetID(assetID uuid.UUID) (models.Asset, error)
 }
 
 type flawRepository interface {
@@ -38,7 +38,7 @@ type flawRepository interface {
 }
 
 type flawService interface {
-	RecalculateRawRiskAssessment(tx core.DB, responsible string, flaws []models.Flaw, justification string, asset models.AssetNew) error
+	RecalculateRawRiskAssessment(tx core.DB, responsible string, flaws []models.Flaw, justification string, asset models.Asset) error
 }
 
 type service struct {
@@ -57,11 +57,11 @@ func NewService(assetRepository assetRepository, flawRepository flawRepository, 
 	}
 }
 
-func (s *service) GetByAssetID(assetID uuid.UUID) (models.AssetNew, error) {
+func (s *service) GetByAssetID(assetID uuid.UUID) (models.Asset, error) {
 	return s.assetRepository.GetByAssetID(assetID)
 }
 
-func (s *service) UpdateAssetRequirements(asset models.AssetNew, responsible string, justification string) error {
+func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error {
 	err := s.flawRepository.Transaction(func(tx core.DB) error {
 
 		err := s.assetRepository.Save(tx, &asset)

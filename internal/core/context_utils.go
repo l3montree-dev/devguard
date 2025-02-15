@@ -138,11 +138,11 @@ func GetAssetVersionSlug(c Context) (string, error) {
 	return assetVersionSlug, nil
 }
 
-func GetAsset(c Context) models.AssetNew {
-	return c.Get("asset").(models.AssetNew)
+func GetAsset(c Context) models.Asset {
+	return c.Get("asset").(models.Asset)
 }
 
-func SetAsset(c Context, asset models.AssetNew) {
+func SetAsset(c Context, asset models.Asset) {
 	c.Set("asset", asset)
 }
 

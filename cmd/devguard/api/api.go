@@ -23,10 +23,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
-	assetversion "github.com/l3montree-dev/devguard/internal/assetVersion"
+
 	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
+	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
@@ -43,7 +44,7 @@ import (
 )
 
 type assetRepository interface {
-	ReadBySlug(projectID uuid.UUID, slug string) (models.AssetNew, error)
+	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 }
 
 type assetVersionRepository interface {

@@ -48,7 +48,7 @@ func (r *statisticsRepository) TimeTravelFlawState(assetVersionName string, asse
 	return flaws, nil
 }
 
-func (r *statisticsRepository) GetFlawCountByScannerId(assetVersionID uuid.UUID) (map[string]int, error) {
+func (r *statisticsRepository) GetFlawCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
 	var results []struct {
 		ScannerID string `gorm:"column:scanner_id"`
 		Count     int    `gorm:"column:count"`
@@ -57,7 +57,8 @@ func (r *statisticsRepository) GetFlawCountByScannerId(assetVersionID uuid.UUID)
 	err := r.db.Model(&models.Flaw{}).
 		Select("scanner_id , COUNT(*) as count").
 		Group("scanner_id").
-		Where("asset_version_id = ?", assetVersionID).
+		Where("asset_version_name = ?", assetVersionName).
+		Where("asset_id = ?", assetID).
 		Find(&results).Error
 
 	if err != nil {
@@ -126,7 +127,7 @@ var openEvents = []models.FlawEventType{
 	models.EventTypeReopened,
 }
 
-func (r *statisticsRepository) AverageFixingTime(assetVersionID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
+func (r *statisticsRepository) AverageFixingTime(assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error) {
 	var results []struct {
 		AvgFixingTime string `gorm:"column:avg"`
 	}
@@ -145,7 +146,7 @@ WITH events AS (
     JOIN
         flaw_events fe ON flaws.id = fe.flaw_id
     WHERE
-        fe.type IN ? AND flaws.asset_version_id = ? AND flaws.raw_risk_assessment >= ? AND flaws.raw_risk_assessment <= ?
+        fe.type IN ? AND flaws.asset_version_name = ? AND flaws.asset_id = ? AND flaws.raw_risk_assessment >= ? AND flaws.raw_risk_assessment <= ?
 ),
 intervals AS (
    SELECT
@@ -166,7 +167,7 @@ intervals AS (
 SELECT
    EXTRACT(EPOCH FROM AVG(fixing_time)) AS avg
 FROM
-    intervals`, append(fixedEvents, openEvents...), assetVersionID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
+    intervals`, append(fixedEvents, openEvents...), assetVersionName, assetID, riskIntervalStart, riskIntervalEnd, openEvents).Find(&results).Error
 	if err != nil {
 		return 0, err
 	}

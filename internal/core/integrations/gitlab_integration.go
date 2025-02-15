@@ -221,12 +221,12 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}
 
 		// get the asset
-		assetVersion, err := g.assetVersionRepository.Read(flaw.AssetVersionID)
+		assetVersion, err := g.assetVersionRepository.Read(flaw.AssetVersionName, flaw.AssetID)
 		if err != nil {
 			slog.Error("could not read asset version", "err", err)
 			return err
 		}
-		assetVersionName := assetVersion.Name
+
 		asset, err := g.assetRepository.Read(assetVersion.AssetId)
 		if err != nil {
 			slog.Error("could not read asset", "err", err)
@@ -260,7 +260,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}()
 
 		// create a new event based on the comment
-		flawEvent := createNewFlawEventBasedOnComment(flaw.FlawAssetID, flaw.ID, fmt.Sprintf("gitlab:%d", event.User.ID), comment, assetVersionName)
+		flawEvent := createNewFlawEventBasedOnComment(flaw.ID, fmt.Sprintf("gitlab:%d", event.User.ID), comment)
 
 		flawEvent.Apply(&flaw)
 		// save the flaw and the event in a transaction
@@ -752,7 +752,6 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		orgSlug, _ := core.GetOrgSlug(event.Ctx)
 		projectSlug, _ := core.GetProjectSlug(event.Ctx)
 		assetSlug, _ := core.GetAssetSlug(event.Ctx)
-		assetVersionSlug, _ := core.GetAssetVersionSlug(event.Ctx)
 
 		// read the justification from the body
 		var justification map[string]string
@@ -783,7 +782,6 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		flawEvent := models.NewMitigateEvent(
 			flaw.ID,
 			userId,
-			assetVersionSlug,
 			justification["comment"],
 			map[string]any{
 				"ticketId":  *flaw.TicketID,

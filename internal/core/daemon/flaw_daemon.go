@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"time"
 
-	assetversion "github.com/l3montree-dev/devguard/internal/assetVersion"
+	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -45,12 +45,12 @@ func UpdateComponentProperties(db database.DB) error {
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.
 
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
+	assetRepository := repositories.NewAssetRepository(db)
 	purlComparer := scan.NewPurlComparer(db)
 	componentRepository := repositories.NewComponentRepository(db)
 	flawRepository := repositories.NewFlawRepository(db)
 
-	allAssets, err := assetVersionRepository.GetAllAssetsVersionFromDB(db)
+	allAssets, err := assetRepository.GetAllAssetsFromDB()
 	if err != nil {
 		return err
 	}
@@ -65,68 +65,73 @@ func UpdateComponentProperties(db database.DB) error {
 				slog.Info("updated asset", "asset", a.ID, "duration", time.Since(now))
 			}()
 			// get all flaws of that asset
-			flaws, err := flawRepository.GetFlawsByAssetVersionId(nil, a.ID)
+			flaws, err := flawRepository.GetFlawsByAssetID(nil, a.ID)
 			if err != nil {
 				slog.Warn("could not get flaws", "asset", a.ID, "err", err)
 				return nil, err
 			}
 
 			// group by scanner id
-			groups := make(map[string][]models.Flaw)
+			groups := make(map[string]map[string][]models.Flaw)
 			for _, f := range flaws {
 				if _, ok := groups[f.ScannerID]; !ok {
-					groups[f.ScannerID] = []models.Flaw{}
+					groups[f.ScannerID] = make(map[string][]models.Flaw)
 				}
 
-				groups[f.ScannerID] = append(groups[f.ScannerID], f)
+				if _, ok := groups[f.ScannerID][f.AssetVersionName]; !ok {
+					groups[f.ScannerID][f.AssetVersionName] = make([]models.Flaw, 0)
+				}
+
+				groups[f.ScannerID][f.AssetVersionName] = append(groups[f.ScannerID][f.AssetVersionName], f)
 			}
 
 			// group the flaws by scanner id
 			// build up the dependency tree for the asset
-			for scannerID, flaws := range groups {
-				components, err := componentRepository.LoadComponents(nil, a, scannerID, "")
-				if err != nil {
-					slog.Warn("could not load components", "asset", a.ID, "scanner", scannerID, "err", err)
-					continue
-				}
-
-				depthMap := assetversion.GetComponentDepth(components)
-
-				for _, flaw := range flaws {
-					depth := depthMap[*flaw.ComponentPurl]
-					if flaw.ComponentFixedVersion != nil && flaw.ComponentDepth != nil && depth == *flaw.ComponentDepth {
-						continue // nothing todo here - the component has a depth which is the same and it already has a fix version
-					}
-
-					doUpdate := false
-
-					if flaw.ComponentFixedVersion == nil {
-						fixedVersion, err := getFixedVersion(purlComparer, flaw)
-						slog.Info("got fixed version", "fixedVersion", fixedVersion)
-						if err != nil {
-							slog.Warn("could not get fixed version", "err", err)
-						}
-						if fixedVersion != nil {
-							flaw.ComponentFixedVersion = fixedVersion
-							doUpdate = true
-						}
-					}
-
-					if flaw.ComponentDepth == nil || depth != *flaw.ComponentDepth {
-						flaw.ComponentDepth = utils.Ptr(depth)
-						doUpdate = true
-					}
-
-					if !doUpdate {
+			for scannerID, assetVersionFlawMapping := range groups {
+				for assetVersionName, flaws := range assetVersionFlawMapping {
+					components, err := componentRepository.LoadComponents(nil, assetVersionName, a.ID, scannerID, "")
+					if err != nil {
+						slog.Warn("could not load components", "asset", a.ID, "scanner", scannerID, "err", err)
 						continue
 					}
 
-					// save the flaw
-					if err := flawRepository.Save(nil, &flaw); err != nil {
-						slog.Warn("could not save flaw", "flaw", flaw.ID, "err", err)
+					depthMap := assetversion.GetComponentDepth(components)
+
+					for _, flaw := range flaws {
+						depth := depthMap[*flaw.ComponentPurl]
+						if flaw.ComponentFixedVersion != nil && flaw.ComponentDepth != nil && depth == *flaw.ComponentDepth {
+							continue // nothing todo here - the component has a depth which is the same and it already has a fix version
+						}
+
+						doUpdate := false
+
+						if flaw.ComponentFixedVersion == nil {
+							fixedVersion, err := getFixedVersion(purlComparer, flaw)
+							slog.Info("got fixed version", "fixedVersion", fixedVersion)
+							if err != nil {
+								slog.Warn("could not get fixed version", "err", err)
+							}
+							if fixedVersion != nil {
+								flaw.ComponentFixedVersion = fixedVersion
+								doUpdate = true
+							}
+						}
+
+						if flaw.ComponentDepth == nil || depth != *flaw.ComponentDepth {
+							flaw.ComponentDepth = utils.Ptr(depth)
+							doUpdate = true
+						}
+
+						if !doUpdate {
+							continue
+						}
+
+						// save the flaw
+						if err := flawRepository.Save(nil, &flaw); err != nil {
+							slog.Warn("could not save flaw", "flaw", flaw.ID, "err", err)
+						}
 					}
 				}
-
 			}
 			return nil, nil
 		})

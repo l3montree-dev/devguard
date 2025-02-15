@@ -14,7 +14,7 @@ import (
 
 type statisticsService interface {
 	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error)
-	GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID) (models.AssetRiskDistribution, error)
+	GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
 	GetFlawAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error)
 
@@ -83,7 +83,8 @@ func (c *httpController) GetFlawCountByScannerId(ctx core.Context) error {
 
 func (c *httpController) GetAssetVersionRiskDistribution(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetId)
+	assetName := core.GetAsset(ctx).Name
+	results, err := c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetId, assetName)
 	if err != nil {
 		return err
 	}
@@ -134,6 +135,9 @@ func aggregateRiskDistribution(results []models.AssetRiskDistribution, id uuid.U
 		highCount += r.High
 		criticalCount += r.Critical
 	}
+
+	assetID := results[0].AssetID
+	assetVersionName := results[0].AssetVersionName
 
 	return models.AssetRiskDistribution{
 		AssetID:          assetID,
@@ -199,7 +203,7 @@ func (c *httpController) getAssetVersionRiskHistory(start, end string, assetVers
 		return nil, errors.Wrap(err, "error parsing end date")
 	}
 
-	return c.statisticsService.GetAssetVersionRiskHistory(assetVersion.ID, beginTime, endTime)
+	return c.statisticsService.GetAssetVersionRiskHistory(assetVersion.Name, assetVersion.AssetId, beginTime, endTime)
 }
 
 func (c *httpController) GetFlawAggregationStateAndChange(ctx core.Context) error {
@@ -237,5 +241,5 @@ func (c *httpController) getFlawAggregationStateAndChange(compareTo string, asse
 		return FlawAggregationStateAndChange{}, errors.Wrap(err, "error parsing date")
 	}
 
-	return c.statisticsService.GetFlawAggregationStateAndChangeSince(assetVersion.ID, calculateChangeTo)
+	return c.statisticsService.GetFlawAggregationStateAndChangeSince(assetVersion.Name, assetVersion.AssetId, calculateChangeTo)
 }
