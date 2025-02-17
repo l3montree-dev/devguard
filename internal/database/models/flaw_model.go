@@ -49,9 +49,8 @@ type Flaw struct {
 	Priority *int `json:"priority" gorm:"default:null;"`
 
 	LastDetected time.Time `json:"lastDetected" gorm:"default:now();not null;"`
-
-	TicketID  *string `json:"ticketId" gorm:"default:null;"` // might be set by integrations
-	TicketURL *string `json:"ticketUrl" gorm:"default:null;"`
+	TicketID     *string   `json:"ticketId" gorm:"default:null;"` // might be set by integrations
+	TicketURL    *string   `json:"ticketUrl" gorm:"default:null;"`
 
 	CreatedAt time.Time    `json:"createdAt"`
 	UpdatedAt time.Time    `json:"updatedAt"`

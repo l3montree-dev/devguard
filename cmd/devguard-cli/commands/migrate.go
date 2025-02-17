@@ -47,7 +47,7 @@ func newFlawHashMigration() *cobra.Command {
 				newHash := flaw.CalculateHash()
 
 				// update the hash in the database
-				err = flawRepository.GetDB(nil).Model(&models.Flaw{}).Where("id = ?", oldHash).Update("id", newHash).Error
+				err = flawRepository.GetDB(nil).Model(&models.Flaw{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error
 				if err != nil {
 					slog.Error("could not update flaw hash", "err", err)
 					return
