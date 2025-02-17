@@ -523,7 +523,7 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		req.Header.Set("X-Risk-Management", strconv.FormatBool(doRiskManagement))
 		req.Header.Set("X-Asset-Name", assetName)
 		req.Header.Set("X-Asset-Version", version)
-		req.Header.Set("X-Asset-Version-New", assetVersion)
+		req.Header.Set("X-Asset-Ref", assetVersion)
 		req.Header.Set("X-Asset-Default-Branch", defaultBranch)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanner)
 

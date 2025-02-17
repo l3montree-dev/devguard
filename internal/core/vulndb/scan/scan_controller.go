@@ -111,7 +111,7 @@ func (s *httpController) Scan(c core.Context) error {
 	tag := c.Request().Header.Get("X-Tag")
 
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
-	assetVersionName := c.Request().Header.Get("X-Asset-Version-New")
+	assetVersionName := c.Request().Header.Get("X-Asset-Ref")
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
 	if err != nil {
