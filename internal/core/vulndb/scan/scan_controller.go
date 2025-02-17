@@ -189,17 +189,10 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		})
 	}
 
-	//check if risk management is enabled
-	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
-	doRiskManagement := riskManagementEnabled != "false"
-	if doRiskManagement {
-		//TODO
-	}
-
 	//fmt.Println(sarifScan)
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetService.HandleFirstPartyVulnResult(assetObj, sarifScan, scanner, userID, doRiskManagement)
+	amountOpened, amountClose, newState, err := s.assetService.HandleFirstPartyVulnResult(assetObj, sarifScan, scanner, userID, true)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
@@ -223,6 +216,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	   	if err := json.NewEncoder(file).Encode(sarifScan); err != nil {
 	   		slog.Error("could not write scan result to file", "err", err)
 	   		return c.JSON(500, map[string]string{"error": "could not write scan result to file"})
-	   	} */
+	   	}
+	*/
 
 }

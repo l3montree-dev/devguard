@@ -49,6 +49,7 @@ func init() {
 		commands.NewSignCommand(),
 		commands.NewLoginCommand(),
 		commands.NewSecretScanningCommand(),
+		commands.NewSastCommand(),
 		intotocmd.NewInTotoCommand(),
 	)
 }

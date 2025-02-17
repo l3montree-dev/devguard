@@ -111,12 +111,17 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, sarifScan model
 		for _, result := range run.Results {
 
 			snippet := result.Locations[0].PhysicalLocation.Region.Snippet.Text
-			snippetMax := 20
-			if snippetMax < len(snippet)/2 {
-				snippetMax = len(snippet) / 2
+			if scannerID == "secret-scanning" {
+				fmt.Println("True")
+				snippetMax := 20
+				if snippetMax < len(snippet)/2 {
+					snippetMax = len(snippet) / 2
+				}
+				snippet = snippet[:snippetMax] + "***"
 			}
-			snippet = snippet[:snippetMax] + "***"
 
+			fmt.Println("Snippet: ", snippet)
+			fmt.Println("Scanner ID: ", scannerID)
 			firstPartyVulnerability := models.FirstPartyVulnerability{
 				Vulnerability: models.Vulnerability{
 					Message: &result.Message.Text,
@@ -199,7 +204,6 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		// get a transaction
 		if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
 			if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, newVulns, true); err != nil {
-				fmt.Println("could not save vulns", err)
 				// this will cancel the transaction
 				return err
 			}

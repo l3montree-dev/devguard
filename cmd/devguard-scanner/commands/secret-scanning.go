@@ -120,10 +120,42 @@ func scanPath(scanner, path string) (*os.File, error) {
 	switch scanner {
 	case "secret-scanning":
 		return secretScan(path)
+	case "sast":
+		return sastScan(path)
 	default:
 		return nil, fmt.Errorf("unknown scanner: %s", scanner)
 	}
 
+}
+
+func sastScan(path string) (*os.File, error) {
+	fileName := uuid.New().String() + ".sarif"
+
+	var scannerCmd *exec.Cmd
+
+	slog.Info("Starting sast scanning", "path", path)
+
+	scannerCmd = exec.Command("semgrep", "scan", path, "--sarif", "--sarif-output", fileName, "-v")
+
+	stderr := &bytes.Buffer{}
+	scannerCmd.Stderr = stderr
+
+	err := scannerCmd.Run()
+	if err != nil {
+		exitErr, ok := err.(*exec.ExitError)
+		if ok && exitErr.ExitCode() == 1 {
+			slog.Warn("Vulnerabilities found, but continuing excution.")
+		} else {
+			return nil, errors.Wrapf(err, "could not run scanner: %s", stderr.String())
+		}
+	}
+
+	file, err := os.Open(fileName)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not open file")
+	}
+
+	return file, nil
 }
 
 func secretScan(path string) (*os.File, error) {
@@ -171,14 +203,16 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 	case "secret-scanning":
 		printSecretScanResults(scanResponse.FirstPartyVulns, webUI, assetName)
 		return
+	case "sast":
+		printSastScanResults(scanResponse.FirstPartyVulns, webUI, assetName)
+		return
 	default:
 		slog.Warn("unknown scanner", "scanner", scanner)
 		return
 	}
 
 }
-
-func printSecretScanResults(firstPartyVulns []DependencyVuln.FirstPartyVulnDTO, webUI string, assetName string) {
+func printSastScanResults(firstPartyVulns []DependencyVuln.FirstPartyVulnDTO, webUI string, assetName string) {
 
 	tw := table.NewWriter()
 	for _, vuln := range firstPartyVulns {
@@ -187,6 +221,34 @@ func printSecretScanResults(firstPartyVulns []DependencyVuln.FirstPartyVulnDTO, 
 			{"RuleID:", vuln.RuleID},
 			{"File:", vuln.Uri},
 			{"Line:", vuln.StartLine},
+			{"Snippet:", vuln.Snippet},
+			{"Message:", *vuln.Message},
+			{"Link:", fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID)},
+		}
+
+		tw.AppendRows(raw)
+
+		tw.AppendSeparator()
+
+	}
+
+	tw.Style().Options.DrawBorder = false
+	tw.Style().Options.SeparateColumns = false
+
+	fmt.Println(tw.Render())
+
+}
+
+func printSecretScanResults(firstPartyVulns []DependencyVuln.FirstPartyVulnDTO, webUI string, assetName string) {
+
+	tw := table.NewWriter()
+	for _, vuln := range firstPartyVulns {
+		fmt.Println(vuln.Snippet)
+		raw := []table.Row{
+			{"RuleID:", vuln.RuleID},
+			{"File:", vuln.Uri},
+			{"Line:", vuln.StartLine},
+			{"Snippet:", vuln.Snippet},
 			{"Message:", *vuln.Message},
 			{"Commit:", vuln.Commit},
 			{"Author:", vuln.Author},
