@@ -29,9 +29,9 @@ const (
 
 type VulnEvent struct {
 	Model
-	Type             VulnEventType `json:"type" gorm:"type:text"`
-	DependencyVulnID string        `json:"dependencyVulnId"`
-	UserID           string        `json:"userId"`
+	Type   VulnEventType `json:"type" gorm:"type:text"`
+	VulnID string        `json:"vulnId"`
+	UserID string        `json:"userId"`
 
 	Justification *string `json:"justification" gorm:"type:text;"`
 
@@ -59,12 +59,12 @@ func (e *VulnEvent) SetArbitraryJsonData(data map[string]any) {
 	// parse the additional data
 	dataBytes, err := json.Marshal(e.arbitraryJsonData)
 	if err != nil {
-		slog.Error("could not marshal additional data", "err", err, "dependencyVulnId", e.ID)
+		slog.Error("could not marshal additional data", "err", err, "vulnID", e.ID)
 	}
 	e.ArbitraryJsonData = string(dataBytes)
 }
 func (m VulnEvent) TableName() string {
-	return "dependencyVuln_events"
+	return "vuln_events"
 }
 
 func (e VulnEvent) Apply(dependencyVuln *DependencyVulnerability) {
@@ -77,7 +77,7 @@ func (e VulnEvent) Apply(dependencyVuln *DependencyVulnerability) {
 		dependencyVuln.State = VulnStateOpen
 		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
 		if !ok {
-			slog.Error("could not parse risk assessment", "dependencyVulnId", e.DependencyVulnID)
+			slog.Error("could not parse risk assessment", "dependencyVulnId", e.VulnID)
 			return
 		}
 		dependencyVuln.RawRiskAssessment = &f
@@ -90,7 +90,7 @@ func (e VulnEvent) Apply(dependencyVuln *DependencyVulnerability) {
 	case EventTypeRawRiskAssessmentUpdated:
 		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
 		if !ok {
-			slog.Error("could not parse risk assessment", "dependencyVulnId", e.DependencyVulnID)
+			slog.Error("could not parse risk assessment", "dependencyVulnId", e.VulnID)
 			return
 		}
 		dependencyVuln.RawRiskAssessment = &f
@@ -116,55 +116,55 @@ func (e VulnEvent) ApplyFirstPartyVulnEvent(firstPartyVuln *FirstPartyVulnerabil
 	}
 }
 
-func NewAcceptedEvent(dependencyVulnID, userID, justification string) VulnEvent {
+func NewAcceptedEvent(vulnID, userID, justification string) VulnEvent {
 	return VulnEvent{
-		Type:             EventTypeAccepted,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+		Type:          EventTypeAccepted,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 }
 
-func NewReopenedEvent(dependencyVulnID, userID, justification string) VulnEvent {
+func NewReopenedEvent(vulnID, userID, justification string) VulnEvent {
 	return VulnEvent{
-		Type:             EventTypeReopened,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+		Type:          EventTypeReopened,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 }
 
-func NewCommentEvent(dependencyVulnID, userID, justification string) VulnEvent {
+func NewCommentEvent(vulnID, userID, justification string) VulnEvent {
 	return VulnEvent{
-		Type:             EventTypeComment,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+		Type:          EventTypeComment,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 }
 
-func NewFalsePositiveEvent(dependencyVulnID, userID, justification string) VulnEvent {
+func NewFalsePositiveEvent(vulnID, userID, justification string) VulnEvent {
 	return VulnEvent{
-		Type:             EventTypeFalsePositive,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+		Type:          EventTypeFalsePositive,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 }
 
-func NewFixedEvent(dependencyVulnID string, userID string) VulnEvent {
+func NewFixedEvent(vulnID string, userID string) VulnEvent {
 	return VulnEvent{
-		Type:             EventTypeFixed,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
+		Type:   EventTypeFixed,
+		VulnID: vulnID,
+		UserID: userID,
 	}
 }
 
-func NewDetectedEvent(dependencyVulnID string, userID string, riskCalculationReport obj.RiskCalculationReport) VulnEvent {
+func NewDetectedEvent(vulnID string, userID string, riskCalculationReport obj.RiskCalculationReport) VulnEvent {
 	ev := VulnEvent{
-		Type:             EventTypeDetected,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
+		Type:   EventTypeDetected,
+		VulnID: vulnID,
+		UserID: userID,
 	}
 
 	ev.SetArbitraryJsonData(riskCalculationReport.Map())
@@ -174,10 +174,10 @@ func NewDetectedEvent(dependencyVulnID string, userID string, riskCalculationRep
 
 func NewMitigateEvent(dependencyVulnID string, userID string, justification string, arbitraryData map[string]any) VulnEvent {
 	ev := VulnEvent{
-		Type:             EventTypeMitigate,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+		Type:          EventTypeMitigate,
+		VulnID:        dependencyVulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 	ev.SetArbitraryJsonData(arbitraryData)
 	return ev
@@ -185,10 +185,10 @@ func NewMitigateEvent(dependencyVulnID string, userID string, justification stri
 
 func NewRawRiskAssessmentUpdatedEvent(dependencyVulnID string, userID string, justification string, report obj.RiskCalculationReport) VulnEvent {
 	event := VulnEvent{
-		Type:             EventTypeRawRiskAssessmentUpdated,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+		Type:          EventTypeRawRiskAssessmentUpdated,
+		VulnID:        dependencyVulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 	event.SetArbitraryJsonData(report.Map())
 	return event
