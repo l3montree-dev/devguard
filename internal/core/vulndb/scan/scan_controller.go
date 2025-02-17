@@ -16,7 +16,6 @@
 package scan
 
 import (
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -112,6 +111,10 @@ func (s *httpController) Scan(c core.Context) error {
 
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
 	assetVersionName := c.Request().Header.Get("X-Asset-Ref")
+	if assetVersionName == "" {
+		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
+		assetVersionName = "main"
+	}
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
 	if err != nil {
@@ -148,8 +151,6 @@ func (s *httpController) Scan(c core.Context) error {
 		}
 
 	}
-
-	fmt.Println("normalizedBom", normalizedBom)
 
 	// scan the bom we just retrieved.
 	vulns, err := s.sbomScanner.Scan(normalizedBom)

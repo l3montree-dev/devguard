@@ -14,7 +14,7 @@ import (
 type assetVersionRepository interface {
 	GetAllAssetsVersionFromDB(tx core.DB) ([]models.AssetVersion, error)
 	Save(tx core.DB, asset *models.AssetVersion) error
-	GetDefaultAssetVersionByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
+	GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
 }
 

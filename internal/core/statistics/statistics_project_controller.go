@@ -21,7 +21,7 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 	}
 
 	// get the risk distribution for this project
-	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionByProjectID(project.ID)
+	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectID(project.ID)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch assets by project id")
 	}
@@ -41,7 +41,7 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 
 	projectResults, err := group.WaitAndCollect()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not fetch risk distribution")
 	}
 
 	for _, childProject := range childProjects {
@@ -154,7 +154,7 @@ func (c *httpController) getProjectAverageFixingTime(projectID uuid.UUID, severi
 
 func (c *httpController) getAssetVersionsRiskHistory(projectID uuid.UUID, start string, end string) ([]AssetRiskHistory, error) {
 	// fetch all assets
-	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionByProjectID(projectID)
+	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectID(projectID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch assets by project id")
 	}
