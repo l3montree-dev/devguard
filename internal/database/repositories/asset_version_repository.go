@@ -87,7 +87,7 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 	return app, nil
 }
 
-func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {
+func (a *assetVersionRepository) GetDefaultAssetVersionByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
 	err := a.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").Where("default_branch = true").
 		Joins("JOIN projects ON projects.id = assets.project_id").

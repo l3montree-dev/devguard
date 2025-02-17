@@ -349,9 +349,6 @@ func (p *Controller) Delete(c core.Context) error {
 func (p *Controller) Read(c core.Context) error {
 	// just get the project from the context
 	project := core.GetProject(c)
-
-	fmt.Println("hier !!!!!")
-
 	// lets fetch the assets related to this project
 	assets, err := p.assetRepository.GetByProjectID(project.ID)
 	if err != nil {

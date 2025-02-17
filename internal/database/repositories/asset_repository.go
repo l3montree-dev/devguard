@@ -89,7 +89,7 @@ func (a *assetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asse
 
 func (g *assetRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error) {
 	var t models.Asset
-	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
+	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).Preload("AssetVersions").First(&t).Error
 	return t, err
 }
 
