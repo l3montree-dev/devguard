@@ -228,7 +228,7 @@ func printSastScanResults(firstPartyVulns []DependencyVuln.FirstPartyVulnDTO, we
 
 		tw.AppendRows(raw)
 
-		tw.AppendSeparator()
+		//tw.AppendSeparator()
 
 	}
 
@@ -259,7 +259,7 @@ func printSecretScanResults(firstPartyVulns []DependencyVuln.FirstPartyVulnDTO, 
 
 		tw.AppendRows(raw)
 
-		tw.AppendSeparator()
+		//tw.AppendSeparator()
 
 	}
 	tw.Style().Options.DrawBorder = false

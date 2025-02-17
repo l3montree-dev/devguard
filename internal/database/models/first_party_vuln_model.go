@@ -18,7 +18,7 @@ type Vulnerability struct {
 	// the scanner which was used to detect this dependencyVuln
 	ScannerID string `json:"scanner" gorm:"not null;"`
 
-	Events  []VulnEvent `gorm:"foreignKey:DependencyVulnID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
+	Events  []VulnEvent `gorm:"foreignKey:VulnID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
 	AssetID uuid.UUID   `json:"assetId" gorm:"not null;type:uuid;"`
 	State   VulnState   `json:"state" gorm:"default:'open';not null;type:text;"`
 
