@@ -205,10 +205,6 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
 	}
 
-	if doRiskManagement {
-		//TODO recalculate risk history
-	}
-
 	return c.JSON(200, FirstPartyScanResponse{
 		AmountOpened:    amountOpened,
 		AmountClosed:    amountClose,

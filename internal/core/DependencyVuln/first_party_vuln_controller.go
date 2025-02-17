@@ -215,6 +215,10 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVulnerab
 			CreatedAt:   firstPartyVuln.CreatedAt,
 			TicketID:    firstPartyVuln.TicketID,
 			TicketURL:   firstPartyVuln.TicketURL,
+			Commit:      firstPartyVuln.Commit,
+			Email:       firstPartyVuln.Email,
+			Author:      firstPartyVuln.Author,
+			Date:        firstPartyVuln.Date,
 		},
 		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) VulnEventDTO {
 			return VulnEventDTO{

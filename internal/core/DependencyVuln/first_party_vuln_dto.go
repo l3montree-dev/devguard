@@ -22,6 +22,10 @@ type FirstPartyVulnDTO struct {
 	CreatedAt   time.Time        `json:"createdAt"`
 	TicketID    *string          `json:"ticketId"`
 	TicketURL   *string          `json:"ticketUrl"`
+	Commit      string           `json:"commit"`
+	Email       string           `json:"email"`
+	Author      string           `json:"author"`
+	Date        string           `json:"date"`
 }
 
 type detailedFirstPartyVulnDTO struct {
@@ -47,5 +51,9 @@ func FirstPartyVulnToDto(f models.FirstPartyVulnerability) FirstPartyVulnDTO {
 		CreatedAt:   f.CreatedAt,
 		TicketID:    f.TicketID,
 		TicketURL:   f.TicketURL,
+		Commit:      f.Commit,
+		Email:       f.Email,
+		Author:      f.Author,
+		Date:        f.Date,
 	}
 }

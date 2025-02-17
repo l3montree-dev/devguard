@@ -128,6 +128,10 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, sarifScan model
 				EndLine:     result.Locations[0].PhysicalLocation.Region.EndLine,
 				EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
 				Snippet:     snippet,
+				Commit:      result.PartialFingerprints.CommitSha,
+				Email:       result.PartialFingerprints.Email,
+				Author:      result.PartialFingerprints.Author,
+				Date:        result.PartialFingerprints.Date,
 			}
 
 			firstPartyVulnerability.ScannerID = scannerID

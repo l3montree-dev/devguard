@@ -41,6 +41,10 @@ type FirstPartyVulnerability struct {
 	EndLine     int    `json:"endLine"`
 	EndColumn   int    `json:"endColumn"`
 	Snippet     string `json:"snippet"`
+	Commit      string `json:"commit"`
+	Email       string `json:"email"`
+	Author      string `json:"author"`
+	Date        string `json:"date"`
 }
 
 func (f FirstPartyVulnerability) TableName() string {

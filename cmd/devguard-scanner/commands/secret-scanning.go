@@ -18,7 +18,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/DependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -112,7 +111,7 @@ func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string)
 			return errors.Wrap(err, "could not parse response")
 		}
 
-		printFirstPartyScanResults(scanResponse, assetName, webUI, doRiskManagement)
+		printFirstPartyScanResults(scanResponse, assetName, webUI, scanner)
 		return nil
 	}
 }
@@ -137,7 +136,7 @@ func secretScan(path string) (*os.File, error) {
 
 	/* 	scannerCmd = exec.Command("gitleaks", "dir", "-v", path, "--report-format", "sarif", "--report-path", fileName) */
 
-	scannerCmd = exec.Command("gitleaks", "dir", path, "--report-path", fileName, "--report-format", "sarif")
+	scannerCmd = exec.Command("gitleaks", "git", "-v", path, "--report-path", fileName, "--report-format", "sarif")
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
@@ -160,7 +159,7 @@ func secretScan(path string) (*os.File, error) {
 	return file, nil
 }
 
-func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName, webUI string, doRiskManagement bool) {
+func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scanner string) {
 
 	slog.Info("First party scan results", "FirstPartyVulnAmount", len(scanResponse.FirstPartyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
@@ -168,21 +167,41 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 		return
 	}
 
-	tw := table.NewWriter()
-	tw.AppendHeader(table.Row{"RuleID", "Uri", "Status", "URL"})
-	tw.AppendRows(utils.Map(
-		scanResponse.FirstPartyVulns,
-		func(v DependencyVuln.FirstPartyVulnDTO) table.Row {
-			clickableLink := ""
-			if doRiskManagement {
-				clickableLink = fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, v.ID)
-			} else {
-				clickableLink = "Risk management is disabled"
-			}
+	switch scanner {
+	case "secret-scanning":
+		printSecretScanResults(scanResponse.FirstPartyVulns, webUI, assetName)
+		return
+	default:
+		slog.Warn("unknown scanner", "scanner", scanner)
+		return
+	}
 
-			return table.Row{v.RuleID, v.Uri, v.State, clickableLink}
-		},
-	))
+}
+
+func printSecretScanResults(firstPartyVulns []DependencyVuln.FirstPartyVulnDTO, webUI string, assetName string) {
+
+	tw := table.NewWriter()
+	for _, vuln := range firstPartyVulns {
+
+		raw := []table.Row{
+			{"RuleID:", vuln.RuleID},
+			{"File:", vuln.Uri},
+			{"Line:", vuln.StartLine},
+			{"Message:", *vuln.Message},
+			{"Commit:", vuln.Commit},
+			{"Author:", vuln.Author},
+			{"Email:", vuln.Email},
+			{"Date:", vuln.Date},
+			{"Link:", fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID)},
+		}
+
+		tw.AppendRows(raw)
+
+		tw.AppendSeparator()
+
+	}
+	tw.Style().Options.DrawBorder = false
+	tw.Style().Options.SeparateColumns = false
 
 	fmt.Println(tw.Render())
 

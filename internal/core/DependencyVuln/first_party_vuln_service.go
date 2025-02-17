@@ -1,8 +1,6 @@
 package DependencyVuln
 
 import (
-	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -41,14 +39,10 @@ func NewFirstPartyVulnService(firstPartyVulnRepository firstPartyVulnRepository,
 
 func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error {
 
-	fmt.Println("Hallo!!!!!!!")
-
 	if len(firstPartyVulns) == 0 {
-		fmt.Println("Keine FirstPartyVulns!!!!!!!")
 		return nil
 	}
 
-	fmt.Println("FirstPartyVulns!!!!!!!")
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, vuln := range firstPartyVulns {
 		ev := models.NewFixedEvent(vuln.CalculateHash(), userID)
@@ -56,19 +50,15 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx core.DB, userID stri
 		ev.ApplyFirstPartyVulnEvent(&firstPartyVulns[i])
 		events[i] = ev
 	}
-	fmt.Println("Events!!!!!!!")
 
 	if doRiskManagement {
 		err := s.firstPartyVulnRepository.SaveBatch(tx, firstPartyVulns)
 		if err != nil {
-			fmt.Println("Error!!!!!!!")
 			return err
 		}
-		fmt.Println("SaveBatch!!!!!!!")
 		return s.vulnEventRepository.SaveBatch(tx, events)
 
 	}
-	fmt.Println("Ende!!!!!!!")
 	return nil
 }
 
