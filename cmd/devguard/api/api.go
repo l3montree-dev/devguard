@@ -501,10 +501,10 @@ func Start(db core.DB) {
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.DELETE("/", assetController.Delete, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
 
-	assetRouter.GET("/asset-versions/", assetVersionController.GetAssetVersionsByAssetID)
+	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 
 	//TODO: add the projectScopedRBAC middleware to the following routes
-	assetVersionRouter := assetRouter.Group("/asset-version/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
+	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
 	assetVersionRouter.GET("/", assetVersionController.Read)
 

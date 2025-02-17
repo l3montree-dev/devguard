@@ -27,7 +27,7 @@ func (r *statisticsRepository) TimeTravelFlawState(assetVersionName string, asse
 	err := r.db.Model(&models.Flaw{}).Preload("Events", func(db core.DB) core.DB {
 		return db.Where("created_at <= ?", time).Order("created_at ASC")
 	}).
-		Where("asset_version_id = ?", assetVersionName).Where("asset_id = ?", assetID).Where("created_at <= ?", time).
+		Where("asset_version_name = ?", assetVersionName).Where("asset_id = ?", assetID).Where("created_at <= ?", time).
 		Find(&flaws).Error
 
 	if err != nil {

@@ -167,7 +167,6 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 }
 
 func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws []models.Flaw, justification string, asset models.Asset) error {
-
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -268,15 +267,15 @@ func (s *service) UpdateFlawState(tx core.DB, assetID uuid.UUID, userID string, 
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.flawRepository.Transaction(func(d core.DB) error {
-			ev, err = s.updateFlawState(tx, assetID, userID, flaw, statusType, justification, assetVersionName)
+			ev, err = s.updateFlawState(tx, userID, flaw, statusType, justification)
 			return err
 		})
 		return ev, err
 	}
-	return s.updateFlawState(tx, assetID, userID, flaw, statusType, justification, assetVersionName)
+	return s.updateFlawState(tx, userID, flaw, statusType, justification)
 }
 
-func (s *service) updateFlawState(tx core.DB, assetID uuid.UUID, userID string, flaw *models.Flaw, statusType string, justification string, assetVersionName string) (models.FlawEvent, error) {
+func (s *service) updateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error) {
 	var ev models.FlawEvent
 	switch models.FlawEventType(statusType) {
 	case models.EventTypeAccepted:
