@@ -537,7 +537,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		ev := event.Event
 
 		asset := core.GetAsset(event.Ctx)
-		dependencyVuln, err := g.dependencyVulnRepository.Read(ev.DependencyVulnID)
+		dependencyVuln, err := g.dependencyVulnRepository.Read(ev.VulnID)
 
 		if err != nil {
 			return err

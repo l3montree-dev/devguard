@@ -315,7 +315,7 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVulnerability) detaile
 			return VulnEventDTO{
 				ID:                ev.ID,
 				Type:              ev.Type,
-				DependencyVulnID:  ev.DependencyVulnID,
+				VulnID:            ev.VulnID,
 				UserID:            ev.UserID,
 				Justification:     ev.Justification,
 				ArbitraryJsonData: ev.GetArbitraryJsonData(),
