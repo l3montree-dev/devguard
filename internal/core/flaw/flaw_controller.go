@@ -2,6 +2,7 @@ package flaw
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 
@@ -27,12 +28,13 @@ type flawsByPackage struct {
 type repository interface {
 	repositories.Repository[string, models.Flaw, core.DB]
 
-	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.Flaw, error)
-	GetByAssetIdPaged(tx core.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.Flaw], map[string]int, error)
+	GetFlawsByAssetVersion(tx core.DB, assetVersionName string, assetVersionID uuid.UUID) ([]models.Flaw, error)
+	GetByAssetVersionPaged(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], map[string]int, error)
+	GetDefaultFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
+	GetDefaultFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
+	GetFlawsByAssetVersionPagedAndFlat(tx core.DB, assetVersionName string, assetVersionID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
 
-	GetFlawsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
-	GetFlawsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
-	GetFlawsByAssetIdPagedAndFlat(tx core.DB, assetId uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.Flaw], error)
+	ReadFlawWithAssetEvents(id string) (models.Flaw, []models.FlawEvent, error)
 }
 
 type projectService interface {
@@ -40,7 +42,7 @@ type projectService interface {
 }
 
 type flawService interface {
-	UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error)
+	UpdateFlawState(tx core.DB, assetID uuid.UUID, userID string, flaw *models.Flaw, statusType string, justification string, assetVersionName string) (models.FlawEvent, error)
 }
 
 type flawHttpController struct {
@@ -69,7 +71,7 @@ func (c flawHttpController) ListByOrgPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
 
-	pagedResp, err := c.flawRepository.GetFlawsByOrgIdPaged(
+	pagedResp, err := c.flawRepository.GetDefaultFlawsByOrgIdPaged(
 		nil,
 
 		utils.Map(userAllowedProjectIds, func(p models.Project) string {
@@ -92,7 +94,9 @@ func (c flawHttpController) ListByOrgPaged(ctx core.Context) error {
 func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
-	pagedResp, err := c.flawRepository.GetFlawsByProjectIdPaged(
+	fmt.Println("Start.........")
+
+	pagedResp, err := c.flawRepository.GetDefaultFlawsByProjectIdPaged(
 		nil,
 		project.ID,
 
@@ -101,9 +105,14 @@ func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
 		core.GetFilterQuery(ctx),
 		core.GetSortQuery(ctx),
 	)
+
+	fmt.Println("End.........")
+
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 	}
+
+	fmt.Println("End2222222222")
 
 	return ctx.JSON(200, pagedResp.Map(func(flaw models.Flaw) any {
 		return convertToDetailedDTO(flaw)
@@ -112,11 +121,11 @@ func (c flawHttpController) ListByProjectPaged(ctx core.Context) error {
 
 func (c flawHttpController) ListPaged(ctx core.Context) error {
 	// get the asset
-	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
 
 	// check if we should list flat - this means not grouped by package
 	if ctx.QueryParam("flat") == "true" {
-		flaws, err := c.flawRepository.GetFlawsByAssetIdPagedAndFlat(nil, asset.GetID(), core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
+		flaws, err := c.flawRepository.GetFlawsByAssetVersionPagedAndFlat(nil, assetVersion.Name, assetVersion.AssetID, core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
 		if err != nil {
 			return echo.NewHTTPError(500, "could not get flaws").WithInternal(err)
 		}
@@ -126,13 +135,14 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 		}))
 	}
 
-	pagedResp, packageNameIndexMap, err := c.flawRepository.GetByAssetIdPaged(
+	pagedResp, packageNameIndexMap, err := c.flawRepository.GetByAssetVersionPaged(
 		nil,
+		assetVersion.Name,
+		assetVersion.AssetID,
 		core.GetPageInfo(ctx),
 		ctx.QueryParam("search"),
 		core.GetFilterQuery(ctx),
 		core.GetSortQuery(ctx),
-		asset.GetID(),
 	)
 
 	if err != nil {
@@ -153,6 +163,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 			ID:                    flaw.ID,
 			ScannerID:             flaw.ScannerID,
 			Message:               flaw.Message,
+			AssetVersionName:      flaw.AssetVersionName,
 			AssetID:               flaw.AssetID.String(),
 			State:                 flaw.State,
 			CVE:                   flaw.CVE,
@@ -221,16 +232,21 @@ func (c flawHttpController) Mitigate(ctx core.Context) error {
 }
 
 func (c flawHttpController) Read(ctx core.Context) error {
+
 	flawId, err := core.GetFlawID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid flaw id")
 	}
 	asset := core.GetAsset(ctx)
 
-	flaw, err := c.flawRepository.Read(flawId)
+	flaw, flawEvents, err := c.flawRepository.ReadFlawWithAssetEvents(flawId)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find flaw")
 	}
+
+	flaw.Events = utils.Filter(flawEvents, func(ev models.FlawEvent) bool {
+		return ev.FlawID == flaw.ID || ev.Type != models.EventTypeDetected
+	})
 
 	risk, vector := risk.RiskCalculation(*flaw.CVE, core.GetEnvironmentalFromAsset(asset))
 	flaw.CVE.Risk = risk
@@ -240,6 +256,8 @@ func (c flawHttpController) Read(ctx core.Context) error {
 }
 
 func (c flawHttpController) CreateEvent(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	flawId, err := core.GetFlawID(ctx)
 	if err != nil {
@@ -266,7 +284,7 @@ func (c flawHttpController) CreateEvent(ctx core.Context) error {
 	justification := status.Justification
 
 	err = c.flawRepository.Transaction(func(tx core.DB) error {
-		ev, err := c.flawService.UpdateFlawState(tx, userID, &flaw, statusType, justification)
+		ev, err := c.flawService.UpdateFlawState(tx, asset.ID, userID, &flaw, statusType, justification, assetVersion.Name)
 		if err != nil {
 			return err
 		}
@@ -293,6 +311,7 @@ func convertToDetailedDTO(flaw models.Flaw) detailedFlawDTO {
 		FlawDTO: FlawDTO{
 			ID:                    flaw.ID,
 			Message:               flaw.Message,
+			AssetVersionName:      flaw.AssetVersionName,
 			AssetID:               flaw.AssetID.String(),
 			State:                 flaw.State,
 			CVE:                   flaw.CVE,

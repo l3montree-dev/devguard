@@ -24,10 +24,10 @@ func NewAssetRiskHistoryRepository(db core.DB) *assetRiskHistoryRepository {
 	}
 }
 
-func (r *assetRiskHistoryRepository) GetRiskHistory(assetId uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error) {
+func (r *assetRiskHistoryRepository) GetRiskHistory(assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error) {
 	var assetRisk []models.AssetRiskHistory = []models.AssetRiskHistory{}
 	// get all assetRisk of the asset
-	if err := r.Repository.GetDB(r.db).Where("asset_id = ?", assetId).Where(
+	if err := r.Repository.GetDB(r.db).Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Where(
 		"day >= ? AND day <= ?", start, end,
 	).Order("day ASC").Find(&assetRisk).Error; err != nil {
 		return nil, err
@@ -58,9 +58,22 @@ func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectId uuid.UUID
 	`, projectId)
 
 	// get all assetRisk of the project
-	if err := r.Repository.GetDB(r.db).Where("asset_id IN (?)", r.Repository.GetDB(r.db).Table("assets").Select("id::uuid").Where("project_id IN (?)", projectAndChildProjectsQuery)).Where(
-		"day = ?", day,
-	).Order("day ASC").Find(&assetRisk).Error; err != nil {
+	db := r.Repository.GetDB(r.db)
+
+	subQueryAssets := db.Table("assets").
+		Select("id::uuid").
+		Where("project_id IN (?)", projectAndChildProjectsQuery)
+
+	subQueryAssetVersions := db.Table("asset_versions").
+		Select("id::uuid").
+		Where("asset_id IN (?)", subQueryAssets)
+
+	if err := db.
+		Where("asset_version_id IN (?)", subQueryAssetVersions).
+		Where("day = ?", day).
+		Order("day ASC").
+		Find(&assetRisk).
+		Error; err != nil {
 		return nil, err
 	}
 

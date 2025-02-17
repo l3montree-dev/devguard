@@ -6,6 +6,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
+	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
@@ -37,24 +38,22 @@ func newSbomCommand() *cobra.Command {
 				return
 			}
 			assetRepository := repositories.NewAssetRepository(database)
+			assetVersionRepository := repositories.NewAssetVersionRepository(database)
 			flawRepository := repositories.NewFlawRepository(database)
+			flawService := flaw.NewService(flawRepository, repositories.NewFlawEventRepository(database), assetRepository, repositories.NewCVERepository(database))
 			componentRepository := repositories.NewComponentRepository(database)
-			assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flaw.NewService(
-				flawRepository,
-				repositories.NewFlawEventRepository(database),
-				assetRepository,
-				repositories.NewCVERepository(database),
-			))
+			assetService := asset.NewService(assetRepository, flawRepository, flawService)
+			assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, flawRepository, flawService, assetService)
 
 			sbomScanner := scan.NewSBOMScanner(scan.NewCPEComparer(database), scan.NewPurlComparer(database), repositories.NewCVERepository(database))
 
-			assets, err := assetRepository.GetAllAssetsFromDB()
+			assetVersions, err := assetVersionRepository.GetAllAssetsVersionFromDB(database)
 			if err != nil {
 				slog.Error("could not get assets", "err", err)
 				return
 			}
-			for _, asset := range assets {
-				components, err := componentRepository.LoadAllLatestComponentFromAsset(nil, asset)
+			for _, assetVersion := range assetVersions {
+				components, err := componentRepository.LoadAllLatestComponentFromAssetVersion(nil, assetVersion, "")
 
 				// group the components by scanner
 				scannerComponents := make(map[string][]models.ComponentDependency)
@@ -66,7 +65,6 @@ func newSbomCommand() *cobra.Command {
 				}
 
 				for scanner, scannerComponents := range scannerComponents {
-
 					now := time.Now()
 					// build the sbom of the asset
 
@@ -75,7 +73,7 @@ func newSbomCommand() *cobra.Command {
 						continue
 					}
 
-					sbom := assetService.BuildSBOM(asset, "latest", "", scannerComponents)
+					sbom := assetVersionService.BuildSBOM(assetVersion, "latest", "", scannerComponents)
 
 					normalizedSBOM := normalize.FromCdxBom(sbom, false)
 
@@ -85,8 +83,10 @@ func newSbomCommand() *cobra.Command {
 						continue
 					}
 
-					amountOpened, amountClosed, flaws, err := assetService.HandleScanResult(
-						asset,
+					amountOpened, amountClosed, flaws, err := assetVersionService.HandleScanResult(
+						// TODO: add the correct asset
+						models.Asset{},
+						assetVersion,
 						vulns,
 						scanner,
 						"latest",
@@ -100,7 +100,7 @@ func newSbomCommand() *cobra.Command {
 						continue
 					}
 
-					slog.Info("scan result", "asset", asset.Name, "totalAmount", len(flaws), "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
+					slog.Info("scan result", "asset", assetVersion.Name, "totalAmount", len(flaws), "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
 
 				}
 			}

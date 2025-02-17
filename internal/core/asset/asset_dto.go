@@ -10,6 +10,8 @@ type createRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 
+	CentralFlawManagement bool `json:"centralFlawManagement"`
+
 	Importance            int  `json:"importance"`
 	ReachableFromInternet bool `json:"reachableFromInternet"`
 
@@ -34,6 +36,8 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 		ProjectID:   projectID,
 		Description: a.Description,
 
+		CentralFlawManagement: a.CentralFlawManagement,
+
 		Importance:            a.Importance,
 		ReachableFromInternet: a.ReachableFromInternet,
 
@@ -46,6 +50,8 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 type patchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
+
+	CentralFlawManagement *bool `json:"centralFlawManagement"`
 
 	ReachableFromInternet *bool `json:"reachableFromInternet"`
 
@@ -72,6 +78,11 @@ func (a *patchRequest) applyToModel(
 		asset.Description = *a.Description
 	}
 
+	if a.CentralFlawManagement != nil {
+		updated = true
+		asset.CentralFlawManagement = *a.CentralFlawManagement
+	}
+
 	if a.ReachableFromInternet != nil {
 		updated = true
 		asset.ReachableFromInternet = *a.ReachableFromInternet
@@ -96,11 +107,4 @@ func (a *patchRequest) applyToModel(
 	}
 
 	return updated
-}
-
-type assetMetrics struct {
-	EnabledContainerScanning       bool    `json:"enabledContainerScanning"`
-	EnabledImageSigning            bool    `json:"enabledImageSigning"`
-	VerifiedSupplyChainsPercentage float64 `json:"verifiedSupplyChainsPercentage"`
-	EnabledSCA                     bool    `json:"enabledSCA"`
 }

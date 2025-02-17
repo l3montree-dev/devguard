@@ -145,6 +145,45 @@ func isValidPath(path string) (bool, error) {
 	return true, nil
 }
 
+func getCurrentBranchName(path string) (string, error) {
+
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	cmd.Dir = getDirFromPath(path)
+	err := cmd.Run()
+	if err != nil {
+		slog.Error("could not run git rev-parse --abbrev-ref HEAD", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
+		return "", err
+	}
+
+	return strings.TrimSpace(out.String()), nil
+
+}
+
+func getDefaultBranchName(path string) (string, error) {
+	cmd := exec.Command("git", "symbolic-ref", "refs/remotes/origin/HEAD")
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	cmd.Dir = getDirFromPath(path)
+	err := cmd.Run()
+	if err != nil {
+		slog.Error("could not determine default branch", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
+		return "", err
+	}
+
+	parts := strings.Split(strings.TrimSpace(out.String()), "/")
+	if len(parts) == 0 {
+		return "", fmt.Errorf("unexpected format for default branch output")
+	}
+
+	return parts[len(parts)-1], nil
+}
+
 func getCurrentVersion(path string) (string, int, error) {
 	// mark the path as safe git directory
 	slog.Debug("marking path as safe", "path", getDirFromPath(path))
@@ -384,6 +423,7 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("fail-on-risk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")
+
 }
 
 func getDirFromPath(path string) string {
@@ -434,6 +474,23 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		}
 
 		slog.Info("starting scan", "version", version, "asset", assetName)
+
+		branch, err := getCurrentBranchName(path)
+		if err != nil {
+			return errors.Wrap(err, "could not get branch name")
+		}
+
+		defaultBranch, err := getDefaultBranchName(path)
+		if err != nil {
+			return errors.Wrap(err, "could not get default branch name")
+		}
+
+		assetVersion := branch
+
+		if commitAfterTag == 0 {
+			assetVersion = version
+		}
+
 		// read the sbom file and post it to the scan endpoint
 		// get the flaws and print them to the console
 		file, err := generateSBOM(path)
@@ -466,6 +523,8 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		req.Header.Set("X-Risk-Management", strconv.FormatBool(doRiskManagement))
 		req.Header.Set("X-Asset-Name", assetName)
 		req.Header.Set("X-Asset-Version", version)
+		req.Header.Set("X-Asset-Version-New", assetVersion)
+		req.Header.Set("X-Asset-Default-Branch", defaultBranch)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanner)
 
 		resp, err := http.DefaultClient.Do(req)

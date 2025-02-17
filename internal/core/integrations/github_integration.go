@@ -78,6 +78,10 @@ type assetRepository interface {
 	Read(id uuid.UUID) (models.Asset, error)
 }
 
+type assetVersionRepository interface {
+	Read(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
+}
+
 type flawService interface {
 	ApplyAndSave(tx core.DB, flaw *models.Flaw, flawEvent *models.FlawEvent) error
 }
@@ -95,11 +99,12 @@ type githubIntegration struct {
 	githubAppInstallationRepository githubAppInstallationRepository
 	externalUserRepository          externalUserRepository
 
-	flawRepository      flawRepository
-	flawEventRepository flawEventRepository
-	frontendUrl         string
-	assetRepository     assetRepository
-	flawService         flawService
+	flawRepository         flawRepository
+	flawEventRepository    flawEventRepository
+	frontendUrl            string
+	assetRepository        assetRepository
+	assetVersionRepository assetVersionRepository
+	flawService            flawService
 
 	githubClientFactory func(repoId string) (githubClientFacade, error)
 }
@@ -127,8 +132,9 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 		flawEventRepository: flawEventRepository,
 		flawService:         flaw.NewService(flawRepository, flawEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
 
-		frontendUrl:     frontendUrl,
-		assetRepository: repositories.NewAssetRepository(db),
+		frontendUrl:            frontendUrl,
+		assetRepository:        repositories.NewAssetRepository(db),
+		assetVersionRepository: repositories.NewAssetVersionRepository(db),
 
 		githubClientFactory: func(repoId string) (githubClientFacade, error) {
 			return NewGithubClient(installationIdFromRepositoryID(repoId))
@@ -199,6 +205,7 @@ func (githubIntegration *githubIntegration) GetUsers(org models.Org) []core.User
 }
 
 func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) error {
+
 	req := ctx.Request()
 	payload, err := github.ValidatePayload(req, []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))
 	if err != nil {
@@ -225,6 +232,19 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		if err != nil {
 			slog.Debug("could not find flaw by ticket id", "err", err, "ticketId", issueId)
 			return nil
+		}
+
+		// get the asset
+		assetVersion, err := githubIntegration.assetVersionRepository.Read(flaw.AssetVersionName, flaw.AssetID)
+		if err != nil {
+			slog.Error("could not read asset version", "err", err)
+			return err
+		}
+
+		asset, err := githubIntegration.assetRepository.Read(assetVersion.AssetID)
+		if err != nil {
+			slog.Error("could not read asset", "err", err)
+			return err
 		}
 
 		// the issue is a devguard issue.
@@ -278,12 +298,6 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
-		// get the asset
-		asset, err := githubIntegration.assetRepository.Read(flaw.AssetID)
-		if err != nil {
-			slog.Error("could not read asset", "err", err)
-			return err
-		}
 		// make sure to update the github issue accordingly
 		client, err := githubIntegration.githubClientFactory(utils.SafeDereference(asset.RepositoryID))
 		if err != nil {

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -26,10 +26,13 @@ type Flaw struct {
 	// the scanner which was used to detect this flaw
 	ScannerID string `json:"scanner" gorm:"not null;"`
 
+	AssetVersionName string       `json:"assetVersionName" gorm:"not null;"`
+	AssetID          uuid.UUID    `json:"flawAssetId" gorm:"not null;"`
+	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
+
 	Message  *string     `json:"message"`
 	Comments []Comment   `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE;" json:"comments"`
 	Events   []FlawEvent `gorm:"foreignKey:FlawID;constraint:OnDelete:CASCADE,OnUpdate:CASCADE;" json:"events"`
-	AssetID  uuid.UUID   `json:"assetId" gorm:"not null;type:uuid;"`
 	State    FlawState   `json:"state" gorm:"default:'open';not null;type:text;"`
 
 	CVE   *CVE    `json:"cve"`
@@ -46,9 +49,8 @@ type Flaw struct {
 	Priority *int `json:"priority" gorm:"default:null;"`
 
 	LastDetected time.Time `json:"lastDetected" gorm:"default:now();not null;"`
-
-	TicketID  *string `json:"ticketId" gorm:"default:null;"` // might be set by integrations
-	TicketURL *string `json:"ticketUrl" gorm:"default:null;"`
+	TicketID     *string   `json:"ticketId" gorm:"default:null;"` // might be set by integrations
+	TicketURL    *string   `json:"ticketUrl" gorm:"default:null;"`
 
 	CreatedAt time.Time    `json:"createdAt"`
 	UpdatedAt time.Time    `json:"updatedAt"`
@@ -70,7 +72,7 @@ func (m Flaw) TableName() string {
 }
 
 func (m *Flaw) CalculateHash() string {
-	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, m.AssetID.String()))
+	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, m.AssetVersionName, m.AssetID))
 	return hash
 }
 

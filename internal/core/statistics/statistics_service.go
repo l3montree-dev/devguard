@@ -11,32 +11,36 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
+type assetVersionRepository interface {
+	GetAllAssetsVersionFromDB(tx core.DB) ([]models.AssetVersion, error)
+	Save(tx core.DB, asset *models.AssetVersion) error
+	GetDefaultAssetVersionByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
+	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
+}
+
 type assetRepository interface {
-	GetAllAssetsFromDB() ([]models.Asset, error)
-	Save(tx core.DB, asset *models.Asset) error
-	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
-	GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asset, error)
+	GetByAssetID(assetID uuid.UUID) (models.Asset, error)
 }
 
 type statisticsRepository interface {
-	TimeTravelFlawState(assetID uuid.UUID, time time.Time) ([]models.Flaw, error)
-	GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
-	GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error)
-	AverageFixingTime(assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
+	TimeTravelFlawState(assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.Flaw, error)
+	GetAssetRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
+	GetFlawCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
+	AverageFixingTime(assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 }
 
 type componentRepository interface {
-	GetDependencyCountPerscanner(assetID uuid.UUID) (map[string]int, error)
+	GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 }
 type assetRiskHistoryRepository interface {
-	GetRiskHistory(assetId uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error)
+	GetRiskHistory(assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error)
 	GetRiskHistoryByProject(projectId uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error)
 	UpdateRiskAggregation(assetRisk *models.AssetRiskHistory) error
 }
 
 type flawRepository interface {
-	GetAllOpenFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
-	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
+	GetAllOpenFlawsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.Flaw, error)
+	GetFlawsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.Flaw, error)
 }
 
 type projectRepository interface {
@@ -55,21 +59,25 @@ type service struct {
 	componentRepository          componentRepository
 	assetRiskHistoryRepository   assetRiskHistoryRepository
 	flawRepository               flawRepository
-	assetRepository              assetRepository
+	assetVersionRepository       assetVersionRepository
 	projectRepository            projectRepository
 	projectRiskHistoryRepository projectRiskHistoryRepository
 }
 
-func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, flawRepository flawRepository, assetRepository assetRepository, projectRepository projectRepository, projectRiskHistoryRepository projectRiskHistoryRepository) *service {
+func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, flawRepository flawRepository, assetVersionRepository assetVersionRepository, projectRepository projectRepository, projectRiskHistoryRepository projectRiskHistoryRepository) *service {
 	return &service{
 		statisticsRepository:         statisticsRepository,
 		componentRepository:          componentRepository,
 		assetRiskHistoryRepository:   assetRiskHistoryRepository,
 		flawRepository:               flawRepository,
-		assetRepository:              assetRepository,
+		assetVersionRepository:       assetVersionRepository,
 		projectRepository:            projectRepository,
 		projectRiskHistoryRepository: projectRiskHistoryRepository,
 	}
+}
+
+func (s *service) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
+	return s.assetRiskHistoryRepository.GetRiskHistory(assetVersionName, assetID, start, end)
 }
 
 func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end time.Time) error {
@@ -173,14 +181,14 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 	return nil
 }
 
-func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
+func (s *service) UpdateAssetRiskAggregation(assetVersionName string, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
 	// set begin to last second of date
 	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
 	// set end to last second of date
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		flaws, err := s.statisticsRepository.TimeTravelFlawState(assetID, time)
+		flaws, err := s.statisticsRepository.TimeTravelFlawState(assetVersionName, assetID, time)
 		if err != nil {
 			return err
 		}
@@ -247,8 +255,9 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 		}
 
 		result := models.AssetRiskHistory{
-			AssetID: assetID,
-			Day:     time,
+			AssetVersionName: assetVersionName,
+			AssetID:          assetID,
+			Day:              time,
 
 			SumOpenRisk: openRisk.Sum,
 			AvgOpenRisk: openRisk.Avg,
@@ -300,20 +309,17 @@ func (s *service) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time,
 
 }
 
-func (s *service) GetAssetRiskHistory(assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
-	return s.assetRiskHistoryRepository.GetRiskHistory(assetID, start, end)
+func (s *service) GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
+	return s.statisticsRepository.GetAssetRiskDistribution(assetVersionName, assetID, assetName)
 }
 
 func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error) {
 	return s.projectRiskHistoryRepository.GetRiskHistory(projectID, start, end)
 }
 
-func (s *service) GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
-	return s.statisticsRepository.GetAssetRiskDistribution(assetID, assetName)
-}
+func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error) {
 
-func (s *service) GetComponentRisk(assetID uuid.UUID) (map[string]float64, error) {
-	flaws, err := s.flawRepository.GetAllOpenFlawsByAssetID(nil, assetID)
+	flaws, err := s.flawRepository.GetAllOpenFlawsByAssetVersion(nil, assetVersionName, assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -330,15 +336,15 @@ func (s *service) GetComponentRisk(assetID uuid.UUID) (map[string]float64, error
 	return totalRiskPerComponent, nil
 }
 
-func (s *service) GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
-	return s.statisticsRepository.GetFlawCountByScannerId(assetID)
+func (s *service) GetFlawCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+	return s.statisticsRepository.GetFlawCountByScannerId(assetVersionName, assetID)
 }
 
-func (s *service) GetDependencyCountPerscanner(assetID uuid.UUID) (map[string]int, error) {
-	return s.componentRepository.GetDependencyCountPerscanner(assetID)
+func (s *service) GetDependencyCountPerscanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+	return s.componentRepository.GetDependencyCountPerScanner(assetVersionName, assetID)
 }
 
-func (s *service) GetAverageFixingTime(assetID uuid.UUID, severity string) (time.Duration, error) {
+func (s *service) GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
 	var riskIntervalStart, riskIntervalEnd float64
 	if severity == "critical" {
 		riskIntervalStart = 9
@@ -354,10 +360,10 @@ func (s *service) GetAverageFixingTime(assetID uuid.UUID, severity string) (time
 		riskIntervalEnd = 4
 	}
 
-	return s.statisticsRepository.AverageFixingTime(assetID, riskIntervalStart, riskIntervalEnd)
+	return s.statisticsRepository.AverageFixingTime(assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)
 }
 
-func (s *service) GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error) {
+func (s *service) GetFlawAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error) {
 	// check if calculateChangeTo is in the future
 	if calculateChangeTo.After(time.Now()) {
 		return FlawAggregationStateAndChange{}, fmt.Errorf("Cannot calculate change to the future")
@@ -365,10 +371,10 @@ func (s *service) GetFlawAggregationStateAndChangeSince(assetID uuid.UUID, calcu
 
 	results := utils.Concurrently(
 		func() (any, error) {
-			return s.flawRepository.GetAllFlawsByAssetID(nil, assetID)
+			return s.flawRepository.GetFlawsByAssetVersion(nil, assetVersionName, assetID)
 		},
 		func() (any, error) {
-			return s.statisticsRepository.TimeTravelFlawState(assetID, calculateChangeTo)
+			return s.statisticsRepository.TimeTravelFlawState(assetVersionName, assetID, calculateChangeTo)
 		},
 	)
 

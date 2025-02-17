@@ -38,13 +38,14 @@ func newCalculateCmd() *cobra.Command {
 			flawEventRepository := repositories.NewFlawEventRepository(database)
 			cveRepository := repositories.NewCVERepository(database)
 			assetRepository := repositories.NewAssetRepository(database)
+			assetVersionRepository := repositories.NewAssetVersionRepository(database)
 			flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
 			statisticsRepository := repositories.NewStatisticsRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
 			projectRepository := repositories.NewProjectRepository(database)
 			projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(database)
 
-			statisticService := statistics.NewService(statisticsRepository, componentRepository, repositories.NewAssetRiskHistoryRepository(database), flawRepository, assetRepository, projectRepository, projectRiskHistoryRepository)
+			statisticService := statistics.NewService(statisticsRepository, componentRepository, repositories.NewAssetRiskHistoryRepository(database), flawRepository, assetVersionRepository, projectRepository, projectRiskHistoryRepository)
 
 			shouldCalculateHistory, err := cmd.Flags().GetBool("history")
 			if err != nil {
@@ -59,16 +60,16 @@ func newCalculateCmd() *cobra.Command {
 
 			if shouldCalculateHistory {
 				slog.Info("recalculating risk history")
-				// fetch all assets
-				assets, err := assetRepository.GetAllAssetsFromDB()
+				// fetch all assetVersions
+				assetVersions, err := assetVersionRepository.GetAllAssetsVersionFromDB(nil)
 				if err != nil {
 					slog.Error("could not fetch assets", "err", err)
 					return
 				}
 
-				for _, asset := range assets {
-					slog.Info("recalculating risk history for asset", "asset", asset.ID)
-					if err := statisticService.UpdateAssetRiskAggregation(asset.ID, asset.CreatedAt, time.Now(), true); err != nil {
+				for _, version := range assetVersions {
+					slog.Info("recalculating risk history for asset", "assetVersionName", version.Name, "assetID", version.AssetID)
+					if err := statisticService.UpdateAssetRiskAggregation(version.Name, version.AssetID, version.CreatedAt, time.Now(), true); err != nil {
 						slog.Error("could not recalculate risk history", "err", err)
 						return
 					}

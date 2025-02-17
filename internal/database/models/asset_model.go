@@ -26,11 +26,14 @@ type Asset struct {
 	Name string `json:"name" gorm:"type:text"`
 	Slug string `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
 
+	CentralFlawManagement bool `json:"centralFlawManagement" gorm:"default:false;"`
+
 	ProjectID   uuid.UUID `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`
 	Description string    `json:"description" gorm:"type:text"`
-	Flaws       []Flaw    `json:"flaws" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
 
 	Type AssetType `json:"type" gorm:"type:text;not null;"`
+
+	AssetVersions []AssetVersion `json:"refs" gorm:"foreignKey:AssetID;references:ID;"`
 
 	Importance            int  `json:"importance" gorm:"default:1;"`
 	ReachableFromInternet bool `json:"reachableFromInternet" gorm:"default:false;"`
@@ -38,9 +41,6 @@ type Asset struct {
 	ConfidentialityRequirement RequirementLevel `json:"confidentialityRequirement" gorm:"default:'high';not null;type:text;"`
 	IntegrityRequirement       RequirementLevel `json:"integrityRequirement" gorm:"default:'high';not null;type:text;"`
 	AvailabilityRequirement    RequirementLevel `json:"availabilityRequirement" gorm:"default:'high';not null;type:text;"`
-
-	Components   []ComponentDependency `json:"components" gorm:"hasMany;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	SupplyChains []SupplyChain         `json:"supplyChains" gorm:"foreignKey:AssetID;constraint:OnDelete:CASCADE;"`
 
 	RepositoryID   *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
 	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
@@ -59,14 +59,4 @@ type Asset struct {
 
 func (m Asset) TableName() string {
 	return "assets"
-}
-
-func (m Asset) GetCurrentAssetComponents() []ComponentDependency {
-	AssetComponents := make([]ComponentDependency, 0)
-	for _, assetComponent := range m.Components {
-		if assetComponent.AssetSemverEnd == nil {
-			AssetComponents = append(AssetComponents, assetComponent)
-		}
-	}
-	return AssetComponents
 }

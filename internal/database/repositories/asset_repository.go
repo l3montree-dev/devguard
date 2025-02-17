@@ -60,6 +60,15 @@ func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, e
 	return app, nil
 }
 
+func (a *assetRepository) GetByAssetID(assetID uuid.UUID) (models.Asset, error) {
+	var app models.Asset
+	err := a.db.Where("id = ?", assetID).First(&app).Error
+	if err != nil {
+		return models.Asset{}, err
+	}
+	return app, nil
+}
+
 func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
 	err := a.db.Where("project_id = ?", projectID).Find(&apps).Error
@@ -80,7 +89,7 @@ func (a *assetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asse
 
 func (g *assetRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error) {
 	var t models.Asset
-	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).First(&t).Error
+	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).Preload("AssetVersions").First(&t).Error
 	return t, err
 }
 
@@ -106,4 +115,14 @@ func (g *assetRepository) GetAllAssetsFromDB() ([]models.Asset, error) {
 	var assets []models.Asset
 	err := g.db.Find(&assets).Error
 	return assets, err
+}
+
+func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (models.Asset, error) {
+	var asset models.Asset
+	err := g.db.Model(&models.AssetVersion{}).
+		Select("assets.*").
+		Joins("JOIN assets ON assets.id = asset_versions.asset_id").
+		Where("asset_versions.id = ?", assetVersionID).
+		First(&asset).Error
+	return asset, err
 }

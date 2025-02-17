@@ -23,9 +23,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
+
 	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
+	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/flaw"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
@@ -43,6 +45,10 @@ import (
 
 type assetRepository interface {
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
+}
+
+type assetVersionRepository interface {
+	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
 }
 
 type orgRepository interface {
@@ -87,6 +93,7 @@ func assetMiddleware(repository assetRepository) func(next echo.HandlerFunc) ech
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		// get the project
 		return func(c echo.Context) error {
+
 			project := core.GetProject(c)
 
 			assetSlug, err := core.GetAssetSlug(c)
@@ -100,7 +107,36 @@ func assetMiddleware(repository assetRepository) func(next echo.HandlerFunc) ech
 				return echo.NewHTTPError(404, "could not find asset").WithInternal(err)
 			}
 
-			c.Set("asset", asset)
+			core.SetAsset(c, asset)
+
+			return next(c)
+		}
+	}
+}
+
+func assetVersionMiddleware(repository assetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+
+			asset := core.GetAsset(c)
+
+			assetVersionSlug, err := core.GetAssetVersionSlug(c)
+			if err != nil {
+				return echo.NewHTTPError(400, "invalid asset version slug")
+			}
+
+			assetVersion, err := repository.ReadBySlug(asset.GetID(), assetVersionSlug)
+
+			if err != nil {
+				if assetVersionSlug == "default" {
+					core.SetAssetVersion(c, models.AssetVersion{})
+
+					return next(c)
+				}
+				return echo.NewHTTPError(404, "could not find asset version")
+			}
+
+			core.SetAssetVersion(c, assetVersion)
 
 			return next(c)
 		}
@@ -235,6 +271,7 @@ func assetNameMiddleware() core.MiddlewareFunc {
 func multiTenantMiddleware(rbacProvider accesscontrol.RBACProvider, organizationRepo orgRepository) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c core.Context) (err error) {
+
 			// get the tenant from the provided context
 			tenant := core.GetParam(c, "tenant")
 			if tenant == "" {
@@ -316,6 +353,7 @@ func Start(db core.DB) {
 	patRepository := repositories.NewPATRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
 	assetRiskAggregationRepository := repositories.NewAssetRiskHistoryRepository(db)
+	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	statisticsRepository := repositories.NewStatisticsRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
@@ -331,9 +369,10 @@ func Start(db core.DB) {
 	projectService := project.NewService(projectRepository)
 	flawController := flaw.NewHttpController(flawRepository, flawService, projectService)
 
-	assetService := asset.NewService(assetRepository, componentRepository, flawRepository, flawService)
+	assetService := asset.NewService(assetRepository, flawRepository, flawService)
 
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, flawRepository, assetRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, flawRepository, flawService, assetRepository)
+	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, flawRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 	invitationRepository := repositories.NewInvitationRepository(db)
 
 	intotoService := intoto.NewInTotoService(casbinRBACProvider, intotoLinkRepository, projectRepository, patRepository, supplyChainRepository)
@@ -341,12 +380,14 @@ func Start(db core.DB) {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
-	assetController := asset.NewHttpController(assetRepository, componentRepository, flawRepository, assetService, supplyChainRepository)
-	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetService, statisticsService)
+	assetController := asset.NewHttpController(assetRepository, assetService)
+	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService)
+
+	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, flawRepository, componentRepository, flawService, supplyChainRepository, componentRepository)
 
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
 
-	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, projectService)
+	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
 
 	patService := pat.NewPatService(patRepository)
 
@@ -442,7 +483,7 @@ func Start(db core.DB) {
 	projectRouter.DELETE("/", projectController.Delete, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
 
 	projectRouter.POST("/assets/", assetController.Create, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
-	projectRouter.POST("/assets/", assetController.Create, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
+
 	projectRouter.GET("/assets/", assetController.List)
 
 	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution)
@@ -460,23 +501,30 @@ func Start(db core.DB) {
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.DELETE("/", assetController.Delete, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
 
-	assetRouter.GET("/metrics/", assetController.Metrics)
-	assetRouter.GET("/dependency-graph/", assetController.DependencyGraph)
-	assetRouter.GET("/affected-components/", assetController.AffectedComponents)
-	assetRouter.GET("/sbom.json/", assetController.SBOMJSON)
-	assetRouter.GET("/sbom.xml/", assetController.SBOMXML)
-	assetRouter.GET("/vex.json/", assetController.VEXJSON)
-	assetRouter.GET("/vex.xml/", assetController.VEXXML)
+	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 
-	assetRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
-	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetRiskDistribution)
-	assetRouter.GET("/stats/risk-history/", statisticsController.GetAssetRiskHistory)
-	assetRouter.GET("/stats/flaw-count-by-scanner/", statisticsController.GetFlawCountByScannerId)
-	assetRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanner)
-	assetRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetFlawAggregationStateAndChange)
-	assetRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetFixingTime)
+	//TODO: add the projectScopedRBAC middleware to the following routes
+	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
-	assetRouter.GET("/versions/", assetController.Versions)
+	assetVersionRouter.GET("/", assetVersionController.Read)
+
+	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
+	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
+	assetVersionRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
+	assetVersionRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
+	assetVersionRouter.GET("/sbom.xml/", assetVersionController.SBOMXML)
+	assetVersionRouter.GET("/vex.json/", assetVersionController.VEXJSON)
+	assetVersionRouter.GET("/vex.xml/", assetVersionController.VEXXML)
+
+	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
+	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
+	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetAssetVersionRiskHistory)
+	assetVersionRouter.GET("/stats/flaw-count-by-scanner/", statisticsController.GetFlawCountByScannerId)
+	assetVersionRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanner)
+	assetVersionRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetFlawAggregationStateAndChange)
+	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetVersionFixingTime)
+
+	assetVersionRouter.GET("/versions/", assetVersionController.Versions)
 
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	assetRouter.PATCH("/", assetController.Update, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
@@ -486,11 +534,11 @@ func Start(db core.DB) {
 	assetRouter.POST("/in-toto/", intotoController.Create, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 
-	assetRouter.GET("/in-toto/:supplyChainId/", intotoController.Read)
+	assetVersionRouter.GET("/in-toto/:supplyChainId/", intotoController.Read)
 
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
-	flawRouter := assetRouter.Group("/flaws")
+	flawRouter := assetVersionRouter.Group("/flaws")
 	flawRouter.GET("/", flawController.ListPaged)
 	flawRouter.GET("/:flawId/", flawController.Read)
 

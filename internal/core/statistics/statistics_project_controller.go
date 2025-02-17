@@ -21,15 +21,21 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 	}
 
 	// get the risk distribution for this project
-	assets, err := c.assetRepository.GetByProjectID(project.ID)
+	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionByProjectID(project.ID)
 	if err != nil {
 		return errors.Wrap(err, "could not fetch assets by project id")
 	}
 
 	group := utils.ErrGroup[models.AssetRiskDistribution](10)
-	for _, asset := range assets {
+	for _, assetVersion := range assetVersions {
 		group.Go(func() (models.AssetRiskDistribution, error) {
-			return c.statisticsService.GetAssetRiskDistribution(asset.ID, asset.Name)
+			// get the corresponding asset
+			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetID)
+			if err != nil {
+				return models.AssetRiskDistribution{}, errors.Wrap(err, "could not fetch asset by id")
+			}
+
+			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetID, asset.Name)
 		})
 	}
 
@@ -74,15 +80,21 @@ func (c *httpController) getProjectRiskDistribution(projectID uuid.UUID) ([]mode
 		return nil, errors.Wrap(err, "could not fetch child projects")
 	}
 
-	assets, err := c.assetRepository.GetByProjectIDs(projectIds)
+	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectIDs(projectIds)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch assets by project id")
 	}
 
 	group := utils.ErrGroup[models.AssetRiskDistribution](10)
-	for _, asset := range assets {
+	for _, assetVersion := range assetVersions {
 		group.Go(func() (models.AssetRiskDistribution, error) {
-			return c.statisticsService.GetAssetRiskDistribution(asset.ID, asset.Name)
+			// get the corresponding asset
+			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetID)
+			if err != nil {
+				return models.AssetRiskDistribution{}, errors.Wrap(err, "could not fetch asset by id")
+			}
+
+			return c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetID, asset.Name)
 		})
 	}
 
@@ -124,36 +136,41 @@ func (c *httpController) getProjectAverageFixingTime(projectID uuid.UUID, severi
 	}
 
 	// fetch all assets
-	assets, err := c.assetRepository.GetByProjectIDs(projectIDs)
+	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectIDs(projectIDs)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch assets by project id")
 	}
 
 	// get all assets and iterate over them
 	errgroup := utils.ErrGroup[time.Duration](10)
-	for _, asset := range assets {
+	for _, assetVersion := range assetVersions {
 		errgroup.Go(func() (time.Duration, error) {
-			return c.statisticsService.GetAverageFixingTime(asset.ID, severity)
+			return c.statisticsService.GetAverageFixingTime(assetVersion.Name, assetVersion.AssetID, severity)
 		})
 	}
 
 	return errgroup.WaitAndCollect()
 }
 
-func (c *httpController) getAssetsRiskHistory(projectID uuid.UUID, start string, end string) ([]AssetRiskHistory, error) {
+func (c *httpController) getAssetVersionsRiskHistory(projectID uuid.UUID, start string, end string) ([]AssetRiskHistory, error) {
 	// fetch all assets
-	assets, err := c.assetRepository.GetByProjectID(projectID)
+	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionByProjectID(projectID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch assets by project id")
 	}
 
 	errgroup := utils.ErrGroup[AssetRiskHistory](10)
-	for _, asset := range assets {
+	for _, assetVersion := range assetVersions {
 		errgroup.Go(func() (AssetRiskHistory, error) {
-			results, err := c.getAssetRiskHistory(start, end, asset)
+			results, err := c.getAssetVersionRiskHistory(start, end, assetVersion)
 			if err != nil {
 				return AssetRiskHistory{}, err
 			}
+			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetID)
+			if err != nil {
+				return AssetRiskHistory{}, err
+			}
+
 			return AssetRiskHistory{
 				RiskHistory: results,
 				Asset:       asset,
@@ -171,7 +188,7 @@ func (c *httpController) GetProjectRiskHistory(ctx core.Context) error {
 	start := ctx.QueryParam("start")
 	end := ctx.QueryParam("end")
 
-	results, err := c.getAssetsRiskHistory(project.ID, start, end)
+	results, err := c.getAssetVersionsRiskHistory(project.ID, start, end)
 	if err != nil {
 		return ctx.JSON(500, nil)
 	}
@@ -225,7 +242,7 @@ func (c *httpController) getProjectFlawAggregationStateAndChange(projectID uuid.
 
 	errgroup := utils.ErrGroup[FlawAggregationStateAndChange](10)
 	// get all assets
-	assets, err := c.assetRepository.GetByProjectIDs(projectIDs)
+	assets, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectIDs(projectIDs)
 	if err != nil {
 		return nil, err
 	}

@@ -99,6 +99,7 @@ func (e FlawEvent) Apply(flaw *Flaw) {
 }
 
 func NewAcceptedEvent(flawID, userID, justification string) FlawEvent {
+
 	return FlawEvent{
 		Type:          EventTypeAccepted,
 		FlawID:        flawID,

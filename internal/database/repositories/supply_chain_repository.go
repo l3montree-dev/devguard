@@ -49,7 +49,7 @@ func (g *supplyChainRepository) Save(tx core.DB, model *models.SupplyChain) erro
 	}).Save(model).Error
 }
 
-func (g *supplyChainRepository) PercentageOfVerifiedSupplyChains(assetID uuid.UUID) (float64, error) {
+func (g *supplyChainRepository) PercentageOfVerifiedSupplyChains(assetVersionName string, assetID uuid.UUID) (float64, error) {
 	var count int64
 
 	err := g.db.Model(&models.SupplyChain{}).

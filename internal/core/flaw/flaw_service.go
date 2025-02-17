@@ -29,7 +29,6 @@ import (
 )
 
 type assetRepository interface {
-	Update(tx core.DB, asset *models.Asset) error
 	GetAllAssetsFromDB() ([]models.Asset, error)
 }
 
@@ -38,7 +37,9 @@ type flawRepository interface {
 	Save(db core.DB, flaws *models.Flaw) error
 	Transaction(txFunc func(core.DB) error) error
 	Begin() core.DB
-	GetAllFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
+
+	GetFlawsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.Flaw, error)
+	GetFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
 }
 
 type flawEventRepository interface {
@@ -66,12 +67,14 @@ func NewService(flawRepository flawRepository, flawEventRepository flawEventRepo
 	}
 }
 
-func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, doRiskManagement bool) error {
+func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
 	if len(flaws) == 0 {
 		return nil
 	}
+
 	// create a new flawevent for each fixed flaw
 	events := make([]models.FlawEvent, len(flaws))
+
 	for i, flaw := range flaws {
 		ev := models.NewFixedEvent(flaw.CalculateHash(), userID)
 		// apply the event on the flaw
@@ -90,7 +93,7 @@ func (s *service) UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw,
 	return nil
 }
 
-func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, asset models.Asset, doRiskManagement bool) error {
+func (s *service) UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
 	if len(flaws) == 0 {
 		return nil
 	}
@@ -138,7 +141,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	err = s.flawRepository.Transaction(func(tx core.DB) error {
 		for _, asset := range assets {
 			// get all flaws of the asset
-			flaws, err := s.flawRepository.GetAllFlawsByAssetID(tx, asset.ID)
+			flaws, err := s.flawRepository.GetFlawsByAssetID(tx, asset.ID)
 			if len(flaws) == 0 {
 				continue
 			}
@@ -257,13 +260,14 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, flaws 
 	return nil
 }
 
-func (s *service) UpdateFlawState(tx core.DB, userID string, flaw *models.Flaw, statusType string, justification string) (models.FlawEvent, error) {
+func (s *service) UpdateFlawState(tx core.DB, assetID uuid.UUID, userID string, flaw *models.Flaw, statusType string, justification string, assetVersionName string) (models.FlawEvent, error) {
 	if tx == nil {
+
 		var ev models.FlawEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.flawRepository.Transaction(func(d core.DB) error {
-			ev, err = s.updateFlawState(d, userID, flaw, statusType, justification)
+			ev, err = s.updateFlawState(tx, userID, flaw, statusType, justification)
 			return err
 		})
 		return ev, err
