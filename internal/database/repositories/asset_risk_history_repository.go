@@ -64,12 +64,8 @@ func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectId uuid.UUID
 		Select("id::uuid").
 		Where("project_id IN (?)", projectAndChildProjectsQuery)
 
-	subQueryAssetVersions := db.Table("asset_versions").
-		Select("id::uuid").
-		Where("asset_id IN (?)", subQueryAssets)
-
 	if err := db.
-		Where("asset_version_id IN (?)", subQueryAssetVersions).
+		Where("asset_id IN (?)", subQueryAssets).
 		Where("day = ?", day).
 		Order("day ASC").
 		Find(&assetRisk).

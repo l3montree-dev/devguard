@@ -9,9 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 
 	"github.com/pkg/errors"
 )
@@ -42,6 +43,7 @@ func SetGitVersionHeader(path string, req *http.Request) error {
 		return err
 	}
 
+	fmt.Println("Git Version Info: ", gitVersionInfo)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Asset-Version", gitVersionInfo.Version)
 	req.Header.Set("X-Asset-Ref", gitVersionInfo.BranchOrTag)
@@ -60,13 +62,16 @@ func GetAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 		return GitVersionInfo{}, err
 	}
 
-	if commitAfterTag != 0 {
-		version = version + "-" + strconv.Itoa(commitAfterTag)
-	}
-
 	branchOrTag, err := getCurrentBranchName(path)
 	if err != nil {
 		return GitVersionInfo{}, errors.Wrap(err, "could not get branch name")
+	}
+
+	if commitAfterTag != 0 {
+		version = version + "-" + strconv.Itoa(commitAfterTag)
+	} else {
+		// we are on a clean tag - use the tag as ref name
+		branchOrTag = version
 	}
 
 	defaultBranch, err := getDefaultBranchName(path)
@@ -74,14 +79,8 @@ func GetAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 		return GitVersionInfo{}, errors.Wrap(err, "could not get default branch name")
 	}
 
-	assetVersion := branchOrTag
-
-	if commitAfterTag == 0 {
-		assetVersion = version
-	}
-
 	return GitVersionInfo{
-		Version:       assetVersion,
+		Version:       version,
 		BranchOrTag:   branchOrTag,
 		DefaultBranch: defaultBranch,
 	}, nil
@@ -142,7 +141,7 @@ func getCurrentVersion(path string) (string, int, error) {
 	out.Reset()
 	errOut.Reset()
 
-	cmd = exec.Command("git", "tag", "--sort=-v:refname")
+	cmd = exec.Command("git", "tag")
 
 	cmd.Stdout = &out
 	cmd.Stderr = &errOut
@@ -156,39 +155,44 @@ func getCurrentVersion(path string) (string, int, error) {
 	// Filter using regex
 	tagList := out.String()
 	tags := strings.Split(tagList, "\n")
-	semverRegex := regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$`)
-	var latestTag string
-	for _, tag := range tags {
-		if semverRegex.MatchString(tag) {
-			latestTag = tag
-			break
-		}
+	// remove all tags which are not a valid semver
+	tags = Filter(tags, func(tag string) bool {
+		return normalize.ValidSemverRegex.MatchString(tag)
+	})
+
+	// Sort the tags
+	normalize.SemverSort(tags)
+	if len(tags) == 0 {
+		return "", 0, fmt.Errorf("no semver tags found")
 	}
 
-	// Check and print the latest semver tag
-	if latestTag == "" {
-		return "", 0, fmt.Errorf("no semver tag found")
-	} else {
-		cmd = exec.Command("git", "rev-list", "--count", latestTag+"..HEAD") // nolint:all:Latest Tag is already checked against a semver regex.
-		var commitOut bytes.Buffer
-		errOut = bytes.Buffer{}
-		cmd.Stdout = &commitOut
-		cmd.Stderr = &errOut
-		cmd.Dir = getDirFromPath(path)
-		err = cmd.Run()
-		if err != nil {
-			slog.Error(
-				"could not run git rev-list --count", "err", err, "path", getDirFromPath(path), "msg", errOut.String(),
-			)
-			log.Fatal(err)
-		}
-
-		commitCount := strings.TrimSpace(commitOut.String())
-		commitCountInt, err := strconv.Atoi(commitCount)
-		if err != nil {
-			return "", 0, err
-		}
-
-		return latestTag, commitCountInt, nil
+	// reverse the tags
+	for i := 0; i < len(tags)/2; i++ {
+		opp := len(tags) - i - 1
+		tags[i], tags[opp] = tags[opp], tags[i]
 	}
+	latestTag := tags[0]
+
+	cmd = exec.Command("git", "rev-list", "--count", latestTag+"..HEAD") // nolint:all:Latest Tag is already checked against a semver regex.
+	var commitOut bytes.Buffer
+	errOut = bytes.Buffer{}
+	cmd.Stdout = &commitOut
+	cmd.Stderr = &errOut
+	cmd.Dir = getDirFromPath(path)
+	err = cmd.Run()
+	if err != nil {
+		slog.Error(
+			"could not run git rev-list --count", "err", err, "path", getDirFromPath(path), "msg", errOut.String(),
+		)
+		log.Fatal(err)
+	}
+
+	commitCount := strings.TrimSpace(commitOut.String())
+	commitCountInt, err := strconv.Atoi(commitCount)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return latestTag, commitCountInt, nil
+
 }
