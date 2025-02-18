@@ -122,12 +122,14 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string
 	}
 
 	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto", apiUrl, assetName), bytes.NewBuffer(bodyjson))
-
-	req.Header.Set("Content-Type", "application/json")
-	utils.SetGitVersionHeader(".", req)
-
 	if err != nil {
 		return errors.Wrap(err, "failed to create request")
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	err = utils.SetGitVersionHeader(".", req)
+	if err != nil {
+		return errors.Wrap(err, "failed to set git version header")
 	}
 
 	// send the request
