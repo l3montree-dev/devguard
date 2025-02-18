@@ -35,7 +35,7 @@ type InTotoLink struct {
 	PAT              PAT          `json:"pat" gorm:"foreignKey:PatID;constraint:OnDelete:CASCADE;"`
 	AssetVersion     AssetVersion `gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 	AssetVersionName string       `json:"assetVersionName" gorm:"column:asset_version_name;primaryKey"`
-	AssetID          uuid.UUID    `json:"assetId" gorm:"column:asset_id;"`
+	AssetID          uuid.UUID    `json:"assetId" gorm:"column:asset_id;primaryKey"`
 
 	PatID uuid.UUID `json:"patId" gorm:"column:pat_id;"`
 

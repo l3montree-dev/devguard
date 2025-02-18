@@ -145,12 +145,18 @@ func (a *httpController) Create(c core.Context) error {
 	if err := metadata.VerifySignature(pubKey); err != nil {
 		return echo.NewHTTPError(401, "could not verify signature").WithInternal(err)
 	}
+	// read the asset version name from the header
+	assetVersionName := c.Request().Header.Get("X-Asset-Ref")
+	if assetVersionName == "" {
+		slog.Warn("could not get asset version name - assuming main")
+		assetVersionName = "main"
+	}
 
-	assetVersion := core.GetAssetVersion(c)
+	asset := core.GetAsset(c)
 
 	link := models.InTotoLink{
-		AssetVersionName: assetVersion.Name,
-		AssetID:          assetVersion.AssetID,
+		AssetVersionName: assetVersionName,
+		AssetID:          asset.ID,
 		SupplyChainID:    strings.TrimSpace(req.SupplyChainID),
 		Step:             strings.TrimSpace(req.Step),
 		Payload:          req.Payload,
@@ -172,7 +178,8 @@ func (a *httpController) Create(c core.Context) error {
 				SupplyChainID:           strings.TrimSpace(req.SupplyChainID),
 				SupplyChainOutputDigest: req.SupplyChainOutputDigest,
 				Verified:                verified,
-				AssetVersion:            assetVersion,
+				AssetVersionName:        assetVersionName,
+				AssetID:                 asset.ID,
 			}
 
 			// save the digest
