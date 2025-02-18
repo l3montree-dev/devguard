@@ -51,14 +51,15 @@ type ComponentDependency struct {
 	// the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
 	// we use edges, which provide the information, that a component is used by another component in one asset
-	AssetSemverStart string    `json:"semverStart" gorm:"column:semver_start;type:semver"`
-	AssetSemverEnd   *string   `json:"semverEnd" gorm:"column:semver_end;type:semver"`
-	Component        Component `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl"`
-	ComponentPurl    *string   `json:"componentPurl" gorm:"column:component_purl;"` // will be nil, for direct dependencies
-	Dependency       Component `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl"`
-	DependencyPurl   string    `json:"dependencyPurl" gorm:"column:dependency_purl;"`
-	AssetID          uuid.UUID `json:"assetVersionId"`
-	AssetVersionName string    `json:"assetVersionName"`
+	AssetSemverStart string       `json:"semverStart" gorm:"column:semver_start;type:semver"`
+	AssetSemverEnd   *string      `json:"semverEnd" gorm:"column:semver_end;type:semver"`
+	Component        Component    `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl"`
+	ComponentPurl    *string      `json:"componentPurl" gorm:"column:component_purl;"` // will be nil, for direct dependencies
+	Dependency       Component    `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl"`
+	DependencyPurl   string       `json:"dependencyPurl" gorm:"column:dependency_purl;"`
+	AssetID          uuid.UUID    `json:"assetVersionId"`
+	AssetVersionName string       `json:"assetVersionName"`
+	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetID,AssetVersionName;references:AssetID,Name;constraint:OnDelete:CASCADE;"`
 
 	ScannerID string `json:"scannerId" gorm:"column:scanner_id"` // the id of the scanner
 
