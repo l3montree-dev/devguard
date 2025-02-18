@@ -156,7 +156,9 @@ func getCurrentVersion(path string) (string, int, error) {
 	tagList := out.String()
 	tags := strings.Split(tagList, "\n")
 	// remove all tags which are not a valid semver
-	tags = Filter(tags, func(tag string) bool {
+	tags = Filter(Map(tags, func(el string) string {
+		return strings.TrimPrefix(el, "v")
+	}), func(tag string) bool {
 		return normalize.ValidSemverRegex.MatchString(tag)
 	})
 
