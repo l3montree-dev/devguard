@@ -22,7 +22,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -38,7 +38,7 @@ type componentRepository interface {
 }
 
 type assetVersionService interface {
-	HandleScanResult(asset models.Asset, assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
+	HandleScanResult(asset models.Asset, assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error)
 	UpdateSBOM(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM) error
 }
 
@@ -84,9 +84,9 @@ func NewHttpController(db core.DB, cveRepository cveRepository, componentReposit
 }
 
 type ScanResponse struct {
-	AmountOpened int            `json:"amountOpened"`
-	AmountClosed int            `json:"amountClosed"`
-	Flaws        []flaw.FlawDTO `json:"flaws"`
+	AmountOpened    int                                `json:"amountOpened"`
+	AmountClosed    int                                `json:"amountClosed"`
+	DependencyVulns []dependencyVuln.DependencyVulnDTO `json:"dependencyVulns"`
 }
 
 func (s *httpController) Scan(c core.Context) error {
@@ -181,7 +181,7 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	return c.JSON(200, ScanResponse{
-		AmountOpened: amountOpened,
-		AmountClosed: amountClose,
-		Flaws:        utils.Map(newState, flaw.FlawToDto)})
+		AmountOpened:    amountOpened,
+		AmountClosed:    amountClose,
+		DependencyVulns: utils.Map(newState, dependencyVuln.DependencyVulnToDto)})
 }

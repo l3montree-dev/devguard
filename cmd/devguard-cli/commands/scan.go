@@ -7,7 +7,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -39,11 +39,11 @@ func newSbomCommand() *cobra.Command {
 			}
 			assetRepository := repositories.NewAssetRepository(database)
 			assetVersionRepository := repositories.NewAssetVersionRepository(database)
-			flawRepository := repositories.NewFlawRepository(database)
-			flawService := flaw.NewService(flawRepository, repositories.NewFlawEventRepository(database), assetRepository, repositories.NewCVERepository(database))
+			dependencyVulnRepository := repositories.NewDependencyVulnRepository(database)
+			dependencyVulnService := dependencyVuln.NewService(dependencyVulnRepository, repositories.NewVulnEventRepository(database), assetRepository, repositories.NewCVERepository(database))
 			componentRepository := repositories.NewComponentRepository(database)
-			assetService := asset.NewService(assetRepository, flawRepository, flawService)
-			assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, flawRepository, flawService, assetService)
+			assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
+			assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, dependencyVulnService, assetService)
 
 			sbomScanner := scan.NewSBOMScanner(scan.NewCPEComparer(database), scan.NewPurlComparer(database), repositories.NewCVERepository(database))
 
@@ -83,7 +83,7 @@ func newSbomCommand() *cobra.Command {
 						continue
 					}
 
-					amountOpened, amountClosed, flaws, err := assetVersionService.HandleScanResult(
+					amountOpened, amountClosed, dependencyVulns, err := assetVersionService.HandleScanResult(
 						// TODO: add the correct asset
 						models.Asset{},
 						assetVersion,
@@ -100,7 +100,7 @@ func newSbomCommand() *cobra.Command {
 						continue
 					}
 
-					slog.Info("scan result", "asset", assetVersion.Name, "totalAmount", len(flaws), "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
+					slog.Info("scan result", "asset", assetVersion.Name, "totalAmount", len(dependencyVulns), "amountOpened", amountOpened, "amountClosed", amountClosed, "duration", time.Since(now))
 
 				}
 			}

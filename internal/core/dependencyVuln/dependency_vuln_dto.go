@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package flaw
+package dependencyVuln
 
 import (
 	"time"
@@ -21,38 +21,38 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-type FlawDTO struct {
-	ID                    string           `json:"id"`
-	ScannerID             string           `json:"scanner"`
-	Message               *string          `json:"message"`
-	AssetVersionName      string           `json:"assetVersionId"`
-	AssetID               string           `json:"assetId"`
-	State                 models.FlawState `json:"state"`
-	CVE                   *models.CVE      `json:"cve"`
-	CVEID                 *string          `json:"cveId"`
-	ComponentPurl         *string          `json:"componentPurl"`
-	ComponentDepth        *int             `json:"componentDepth"`
-	ComponentFixedVersion *string          `json:"componentFixedVersion"`
-	Effort                *int             `json:"effort"`
-	RiskAssessment        *int             `json:"riskAssessment"`
-	RawRiskAssessment     *float64         `json:"rawRiskAssessment"`
-	Priority              *int             `json:"priority"`
-	LastDetected          time.Time        `json:"lastDetected"`
-	CreatedAt             time.Time        `json:"createdAt"`
-	TicketID              *string          `json:"ticketId"`
-	TicketURL             *string          `json:"ticketUrl"`
+type DependencyVulnDTO struct {
+	ID                    string                     `json:"id"`
+	ScannerID             string                     `json:"scanner"`
+	Message               *string                    `json:"message"`
+	AssetVersionName      string                     `json:"assetVersionId"`
+	AssetID               string                     `json:"assetId"`
+	State                 models.DependencyVulnState `json:"state"`
+	CVE                   *models.CVE                `json:"cve"`
+	CVEID                 *string                    `json:"cveId"`
+	ComponentPurl         *string                    `json:"componentPurl"`
+	ComponentDepth        *int                       `json:"componentDepth"`
+	ComponentFixedVersion *string                    `json:"componentFixedVersion"`
+	Effort                *int                       `json:"effort"`
+	RiskAssessment        *int                       `json:"riskAssessment"`
+	RawRiskAssessment     *float64                   `json:"rawRiskAssessment"`
+	Priority              *int                       `json:"priority"`
+	LastDetected          time.Time                  `json:"lastDetected"`
+	CreatedAt             time.Time                  `json:"createdAt"`
+	TicketID              *string                    `json:"ticketId"`
+	TicketURL             *string                    `json:"ticketUrl"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
 
-type detailedFlawDTO struct {
-	FlawDTO
-	Events []FlawEventDTO `json:"events"`
+type detailedDependencyVulnDTO struct {
+	DependencyVulnDTO
+	Events []VulnEventDTO `json:"events"`
 }
 
-func FlawToDto(f models.Flaw) FlawDTO {
+func DependencyVulnToDto(f models.DependencyVuln) DependencyVulnDTO {
 
-	return FlawDTO{
+	return DependencyVulnDTO{
 		ID:                    f.ID,
 		ScannerID:             f.ScannerID,
 		Message:               f.Message,
