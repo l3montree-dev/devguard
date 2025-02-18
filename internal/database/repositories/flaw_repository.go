@@ -161,9 +161,9 @@ func (g flawRepository) ReadFlawWithAssetEvents(id string) (models.Flaw, []model
 
 	var flawEvents []models.FlawEvent
 	// get the asset id - and read flaws with the same cve id and asset id
-	err = g.db.Model(&models.FlawEvent{}).Where("flaw_id IN ?", g.db.Model(models.Flaw{}).Where(
+	err = g.db.Model(&models.FlawEvent{}).Where("flaw_id IN (?)", g.db.Model(models.Flaw{}).Select("id").Where(
 		"asset_id = ? AND cve_id = ?", t.AssetID, t.CVEID,
-	)).Order("created_at ASC").Find(&t.Events).Error
+	)).Order("created_at ASC").Find(&flawEvents).Error
 	if err != nil {
 		return models.Flaw{}, flawEvents, err
 	}
