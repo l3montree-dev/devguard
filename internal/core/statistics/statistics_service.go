@@ -177,19 +177,18 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 		if err != nil {
 			return fmt.Errorf("could not update project risk aggregation: %w", err)
 		}
-
 	}
 	return nil
 }
 
-func (s *service) UpdateAssetRiskAggregation(assetVersionName string, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
+func (s *service) UpdateAssetRiskAggregation(assetVersion models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
 	// set begin to last second of date
 	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
 	// set end to last second of date
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		flaws, err := s.statisticsRepository.TimeTravelFlawState(assetVersionName, assetID, time)
+		flaws, err := s.statisticsRepository.TimeTravelFlawState(assetVersion.Name, assetID, time)
 		if err != nil {
 			return err
 		}
@@ -256,7 +255,7 @@ func (s *service) UpdateAssetRiskAggregation(assetVersionName string, assetID uu
 		}
 
 		result := models.AssetRiskHistory{
-			AssetVersionName: assetVersionName,
+			AssetVersionName: assetVersion.Name,
 			AssetID:          assetID,
 			Day:              time,
 
@@ -278,7 +277,14 @@ func (s *service) UpdateAssetRiskAggregation(assetVersionName string, assetID uu
 		if err != nil {
 			return err
 		}
-		slog.Info("Updated asset risk aggregation", "assetVersionName", assetVersionName, "assetID", assetID, "day", time)
+		slog.Info("updated risk aggregation", "assetVersionName", assetVersion.Name, "assetID", assetID, "day", time)
+	}
+
+	// save the last history update timestamp
+	assetVersion.LastHistoryUpdate = &end
+	err := s.assetVersionRepository.Save(nil, &assetVersion)
+	if err != nil {
+		return fmt.Errorf("could not save asset version: %w", err)
 	}
 
 	// we ALWAYS need to propagate the risk aggregation to the project. The only exception is in the statistics daemon. There

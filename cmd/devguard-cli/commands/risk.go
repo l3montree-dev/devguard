@@ -69,7 +69,7 @@ func newCalculateCmd() *cobra.Command {
 
 				for _, version := range assetVersions {
 					slog.Info("recalculating risk history for asset", "assetVersionName", version.Name, "assetID", version.AssetID)
-					if err := statisticService.UpdateAssetRiskAggregation(version.Name, version.AssetID, version.CreatedAt, time.Now(), true); err != nil {
+					if err := statisticService.UpdateAssetRiskAggregation(version, version.AssetID, version.CreatedAt, time.Now(), true); err != nil {
 						slog.Error("could not recalculate risk history", "err", err)
 						return
 					}

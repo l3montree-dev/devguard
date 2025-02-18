@@ -49,10 +49,11 @@ type assetRepository interface {
 
 type assetVersionRepository interface {
 	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranch string) (models.AssetVersion, error)
+	Save(tx core.DB, assetVersion *models.AssetVersion) error
 }
 
 type statisticsService interface {
-	UpdateAssetRiskAggregation(assetVersionName string, assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error
+	UpdateAssetRiskAggregation(assetVersion models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error
 }
 
 type httpController struct {
@@ -175,9 +176,14 @@ func (s *httpController) Scan(c core.Context) error {
 
 	if doRiskManagement {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := s.statisticsService.UpdateAssetRiskAggregation(assetVersion.Name, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
+		if err := s.statisticsService.UpdateAssetRiskAggregation(assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 			return c.JSON(500, map[string]string{"error": "could not recalculate risk history"})
+		}
+
+		// save the asset
+		if err := s.assetVersionRepository.Save(nil, &assetVersion); err != nil {
+			slog.Error("could not save asset", "err", err)
 		}
 	}
 
