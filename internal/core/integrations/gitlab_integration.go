@@ -71,7 +71,7 @@ type gitlabIntegration struct {
 	externalUserRepository      externalUserRepository
 
 	dependencyVulnRepository dependencyVulnRepository
-	VulnEventRepository      VulnEventRepository
+	vulnEventRepository      vulnEventRepository
 	frontendUrl              string
 	assetRepository          assetRepository
 	assetVersionRepository   assetVersionRepository
@@ -107,7 +107,7 @@ func messageWasCreatedByDevguard(message string) bool {
 func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	VulnEventRepository := repositories.NewVulnEventRepository(db)
+	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	externalUserRepository := repositories.NewExternalUserRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
@@ -117,8 +117,8 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
 
 		dependencyVulnRepository: dependencyVulnRepository,
-		dependencyVulnService:    dependencyVuln.NewService(dependencyVulnRepository, VulnEventRepository, assetRepository, cveRepository),
-		VulnEventRepository:      VulnEventRepository,
+		dependencyVulnService:    dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository),
+		vulnEventRepository:      vulnEventRepository,
 		assetRepository:          assetRepository,
 		assetVersionRepository:   assetVersionRepository,
 		externalUserRepository:   externalUserRepository,
@@ -269,7 +269,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			if err != nil {
 				return err
 			}
-			err = g.VulnEventRepository.Save(tx, &VulnEvent)
+			err = g.vulnEventRepository.Save(tx, &VulnEvent)
 			if err != nil {
 				return err
 			}
@@ -728,7 +728,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		dependencyVulnId, err := core.GetDependencyVulnID(event.Ctx)
+		dependencyVulnId, err := core.GetVulnID(event.Ctx)
 		if err != nil {
 			return err
 		}

@@ -64,7 +64,7 @@ type dependencyVulnRepository interface {
 	GetOrgFromDependencyVulnID(tx core.DB, dependencyVulnID string) (models.Org, error)
 }
 
-type VulnEventRepository interface {
+type vulnEventRepository interface {
 	Save(db core.DB, event *models.VulnEvent) error
 }
 
@@ -100,7 +100,7 @@ type githubIntegration struct {
 	externalUserRepository          externalUserRepository
 
 	dependencyVulnRepository dependencyVulnRepository
-	VulnEventRepository      VulnEventRepository
+	vulnEventRepository      vulnEventRepository
 	frontendUrl              string
 	assetRepository          assetRepository
 	assetVersionRepository   assetVersionRepository
@@ -117,7 +117,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
 
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	VulnEventRepository := repositories.NewVulnEventRepository(db)
+	vulnEventRepository := repositories.NewVulnEventRepository(db)
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -129,8 +129,8 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 		externalUserRepository:          repositories.NewExternalUserRepository(db),
 
 		dependencyVulnRepository: dependencyVulnRepository,
-		VulnEventRepository:      VulnEventRepository,
-		dependencyVulnService:    dependencyVuln.NewService(dependencyVulnRepository, VulnEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
+		vulnEventRepository:      vulnEventRepository,
+		dependencyVulnService:    dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
 
 		frontendUrl:            frontendUrl,
 		assetRepository:        repositories.NewAssetRepository(db),
@@ -287,7 +287,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			if err != nil {
 				return err
 			}
-			err = githubIntegration.VulnEventRepository.Save(tx, &VulnEvent)
+			err = githubIntegration.vulnEventRepository.Save(tx, &VulnEvent)
 			if err != nil {
 				return err
 			}
@@ -459,7 +459,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return nil
 		}
 
-		dependencyVulnId, err := core.GetDependencyVulnID(event.Ctx)
+		dependencyVulnId, err := core.GetVulnID(event.Ctx)
 		if err != nil {
 			return err
 		}

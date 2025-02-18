@@ -42,7 +42,7 @@ type dependencyVulnRepository interface {
 	GetDependencyVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 }
 
-type VulnEventRepository interface {
+type vulnEventRepository interface {
 	SaveBatch(db core.DB, events []models.VulnEvent) error
 	Save(db core.DB, event *models.VulnEvent) error
 }
@@ -52,16 +52,16 @@ type cveRepository interface {
 }
 type service struct {
 	dependencyVulnRepository dependencyVulnRepository
-	VulnEventRepository      VulnEventRepository
+	vulnEventRepository      vulnEventRepository
 
 	assetRepository assetRepository
 	cveRepository   cveRepository
 }
 
-func NewService(dependencyVulnRepository dependencyVulnRepository, VulnEventRepository VulnEventRepository, assetRepository assetRepository, cveRepository cveRepository) *service {
+func NewService(dependencyVulnRepository dependencyVulnRepository, vulnEventRepository vulnEventRepository, assetRepository assetRepository, cveRepository cveRepository) *service {
 	return &service{
 		dependencyVulnRepository: dependencyVulnRepository,
-		VulnEventRepository:      VulnEventRepository,
+		vulnEventRepository:      vulnEventRepository,
 		assetRepository:          assetRepository,
 		cveRepository:            cveRepository,
 	}
@@ -87,7 +87,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 		if err != nil {
 			return err
 		}
-		return s.VulnEventRepository.SaveBatch(tx, events)
+		return s.vulnEventRepository.SaveBatch(tx, events)
 	}
 
 	return nil
@@ -120,7 +120,7 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, userID string, depende
 		if err != nil {
 			return err
 		}
-		return s.VulnEventRepository.SaveBatch(tx, events)
+		return s.vulnEventRepository.SaveBatch(tx, events)
 	}
 
 	return nil
@@ -237,7 +237,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 			if err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns); err != nil {
 				return fmt.Errorf("could not save dependencyVulns: %v", err)
 			}
-			if err := s.VulnEventRepository.SaveBatch(tx, events); err != nil {
+			if err := s.vulnEventRepository.SaveBatch(tx, events); err != nil {
 				return fmt.Errorf("could not save events: %v", err)
 			}
 			return nil
@@ -253,7 +253,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		return fmt.Errorf("could not save dependencyVulns: %v", err)
 	}
 
-	err = s.VulnEventRepository.SaveBatch(tx, events)
+	err = s.vulnEventRepository.SaveBatch(tx, events)
 	if err != nil {
 		return fmt.Errorf("could not save events: %v", err)
 	}
@@ -313,7 +313,7 @@ func (s *service) applyAndSave(tx core.DB, dependencyVuln *models.DependencyVuln
 	if err != nil {
 		return models.VulnEvent{}, err
 	}
-	if err := s.VulnEventRepository.Save(tx, ev); err != nil {
+	if err := s.vulnEventRepository.Save(tx, ev); err != nil {
 		return models.VulnEvent{}, err
 	}
 	dependencyVuln.Events = append(dependencyVuln.Events, *ev)

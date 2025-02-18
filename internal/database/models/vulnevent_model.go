@@ -29,9 +29,9 @@ const (
 
 type VulnEvent struct {
 	Model
-	Type             VulnEventType `json:"type" gorm:"type:text"`
-	DependencyVulnID string        `json:"dependencyVulnId"`
-	UserID           string        `json:"userId"`
+	Type   VulnEventType `json:"type" gorm:"type:text"`
+	VulnID string        `json:"vulnId"`
+	UserID string        `json:"userId"`
 
 	Justification *string `json:"justification" gorm:"type:text;"`
 
@@ -70,27 +70,27 @@ func (m VulnEvent) TableName() string {
 func (e VulnEvent) Apply(dependencyVuln *DependencyVuln) {
 	switch e.Type {
 	case EventTypeFixed:
-		dependencyVuln.State = DependencyVulnStateFixed
+		dependencyVuln.State = VulnStateFixed
 	case EventTypeReopened:
-		dependencyVuln.State = DependencyVulnStateOpen
+		dependencyVuln.State = VulnStateOpen
 	case EventTypeDetected:
-		dependencyVuln.State = DependencyVulnStateOpen
+		dependencyVuln.State = VulnStateOpen
 		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
 		if !ok {
-			slog.Error("could not parse risk assessment", "dependencyVulnId", e.DependencyVulnID)
+			slog.Error("could not parse risk assessment", "dependencyVulnId", e.VulnID)
 			return
 		}
 		dependencyVuln.RawRiskAssessment = &f
 	case EventTypeAccepted:
-		dependencyVuln.State = DependencyVulnStateAccepted
+		dependencyVuln.State = VulnStateAccepted
 	case EventTypeFalsePositive:
-		dependencyVuln.State = DependencyVulnStateFalsePositive
+		dependencyVuln.State = VulnStateFalsePositive
 	case EventTypeMarkedForTransfer:
-		dependencyVuln.State = DependencyVulnStateMarkedForTransfer
+		dependencyVuln.State = VulnStateMarkedForTransfer
 	case EventTypeRawRiskAssessmentUpdated:
 		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
 		if !ok {
-			slog.Error("could not parse risk assessment", "dependencyVulnId", e.DependencyVulnID)
+			slog.Error("could not parse risk assessment", "dependencyVulnId", e.VulnID)
 			return
 		}
 		dependencyVuln.RawRiskAssessment = &f
@@ -98,56 +98,74 @@ func (e VulnEvent) Apply(dependencyVuln *DependencyVuln) {
 	}
 }
 
-func NewAcceptedEvent(dependencyVulnID, userID, justification string) VulnEvent {
-
-	return VulnEvent{
-		Type:             EventTypeAccepted,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+func (e VulnEvent) ApplyFirstPartyVulnEvent(firstPartyVuln *FirstPartyVulnerability) {
+	switch e.Type {
+	case EventTypeFixed:
+		firstPartyVuln.State = VulnStateFixed
+	case EventTypeReopened:
+		firstPartyVuln.State = VulnStateOpen
+	case EventTypeDetected:
+		firstPartyVuln.State = VulnStateOpen
+	case EventTypeAccepted:
+		firstPartyVuln.State = VulnStateAccepted
+	case EventTypeFalsePositive:
+		firstPartyVuln.State = VulnStateFalsePositive
+	case EventTypeMarkedForTransfer:
+		firstPartyVuln.State = VulnStateMarkedForTransfer
+	case EventTypeRawRiskAssessmentUpdated:
 	}
 }
 
-func NewReopenedEvent(dependencyVulnID, userID, justification string) VulnEvent {
+func NewAcceptedEvent(vulnID, userID, justification string) VulnEvent {
+
 	return VulnEvent{
-		Type:             EventTypeReopened,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+		Type:          EventTypeAccepted,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 }
 
-func NewCommentEvent(dependencyVulnID, userID, justification string) VulnEvent {
+func NewReopenedEvent(vulnID, userID, justification string) VulnEvent {
 	return VulnEvent{
-		Type:             EventTypeComment,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+		Type:          EventTypeReopened,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 }
 
-func NewFalsePositiveEvent(dependencyVulnID, userID, justification string) VulnEvent {
+func NewCommentEvent(vulnID, userID, justification string) VulnEvent {
 	return VulnEvent{
-		Type:             EventTypeFalsePositive,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+		Type:          EventTypeComment,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 }
 
-func NewFixedEvent(dependencyVulnID string, userID string) VulnEvent {
+func NewFalsePositiveEvent(vulnID, userID, justification string) VulnEvent {
 	return VulnEvent{
-		Type:             EventTypeFixed,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
+		Type:          EventTypeFalsePositive,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 }
 
-func NewDetectedEvent(dependencyVulnID string, userID string, riskCalculationReport obj.RiskCalculationReport) VulnEvent {
+func NewFixedEvent(vulnID string, userID string) VulnEvent {
+	return VulnEvent{
+		Type:   EventTypeFixed,
+		VulnID: vulnID,
+		UserID: userID,
+	}
+}
+
+func NewDetectedEvent(vulnID string, userID string, riskCalculationReport obj.RiskCalculationReport) VulnEvent {
 	ev := VulnEvent{
-		Type:             EventTypeDetected,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
+		Type:   EventTypeDetected,
+		VulnID: vulnID,
+		UserID: userID,
 	}
 
 	ev.SetArbitraryJsonData(riskCalculationReport.Map())
@@ -155,23 +173,23 @@ func NewDetectedEvent(dependencyVulnID string, userID string, riskCalculationRep
 	return ev
 }
 
-func NewMitigateEvent(dependencyVulnID string, userID string, justification string, arbitraryData map[string]any) VulnEvent {
+func NewMitigateEvent(vulnID string, userID string, justification string, arbitraryData map[string]any) VulnEvent {
 	ev := VulnEvent{
-		Type:             EventTypeMitigate,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+		Type:          EventTypeMitigate,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 	ev.SetArbitraryJsonData(arbitraryData)
 	return ev
 }
 
-func NewRawRiskAssessmentUpdatedEvent(dependencyVulnID string, userID string, justification string, report obj.RiskCalculationReport) VulnEvent {
+func NewRawRiskAssessmentUpdatedEvent(vulnID string, userID string, justification string, report obj.RiskCalculationReport) VulnEvent {
 	event := VulnEvent{
-		Type:             EventTypeRawRiskAssessmentUpdated,
-		DependencyVulnID: dependencyVulnID,
-		UserID:           userID,
-		Justification:    &justification,
+		Type:          EventTypeRawRiskAssessmentUpdated,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
 	}
 	event.SetArbitraryJsonData(report.Map())
 	return event

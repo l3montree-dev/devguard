@@ -46,7 +46,7 @@ func GetAuthAdminClient(c Context) *client.APIClient {
 	return c.Get("authAdminClient").(*client.APIClient)
 }
 
-func GetDependencyVulnID(c Context) (string, error) {
+func GetVulnID(c Context) (string, error) {
 	dependencyVulnID := c.Param("dependencyVulnId")
 	if dependencyVulnID == "" {
 		return "", fmt.Errorf("could not get dependencyVuln id")

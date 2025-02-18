@@ -48,6 +48,8 @@ func init() {
 		commands.NewInspectCommand(),
 		commands.NewSignCommand(),
 		commands.NewLoginCommand(),
+		commands.NewSecretScanningCommand(),
+		commands.NewSastCommand(),
 		intotocmd.NewInTotoCommand(),
 	)
 }

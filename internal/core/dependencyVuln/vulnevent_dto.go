@@ -8,10 +8,10 @@ import (
 )
 
 type VulnEventDTO struct {
-	ID               uuid.UUID            `json:"id"`
-	Type             models.VulnEventType `json:"type"`
-	DependencyVulnID string               `json:"dependencyVulnId"`
-	UserID           string               `json:"userId"`
+	ID     uuid.UUID            `json:"id"`
+	Type   models.VulnEventType `json:"type"`
+	VulnID string               `json:"vulnId"`
+	UserID string               `json:"userId"`
 
 	Justification *string `json:"justification"`
 
@@ -23,13 +23,13 @@ type VulnEventDTO struct {
 }
 
 func (dto VulnEventDTO) ToModel() models.VulnEvent {
-	dependencyVulnId := dto.DependencyVulnID
+	vulnId := dto.VulnID
 	userId := dto.UserID
 
 	return models.VulnEvent{
-		Type:             dto.Type,
-		DependencyVulnID: dependencyVulnId,
-		UserID:           userId,
-		Justification:    dto.Justification,
+		Type:          dto.Type,
+		VulnID:        vulnId,
+		UserID:        userId,
+		Justification: dto.Justification,
 	}
 }

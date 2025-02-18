@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/labstack/echo"
 )
 
 type cveRepository interface {
@@ -40,6 +41,8 @@ type componentRepository interface {
 type assetVersionService interface {
 	HandleScanResult(asset models.Asset, assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error)
 	UpdateSBOM(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM) error
+
+	HandleFirstPartyVulnResult(asset models.Asset, assetVersion models.AssetVersion, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error)
 }
 
 type assetRepository interface {
@@ -89,7 +92,13 @@ type ScanResponse struct {
 	DependencyVulns []dependencyVuln.DependencyVulnDTO `json:"dependencyVulns"`
 }
 
-func (s *httpController) Scan(c core.Context) error {
+type FirstPartyScanResponse struct {
+	AmountOpened    int                                `json:"amountOpened"`
+	AmountClosed    int                                `json:"amountClosed"`
+	FirstPartyVulns []dependencyVuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
+}
+
+func (s *httpController) DependencyVulnScan(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
 	if err := decoder.Decode(bom); err != nil {
@@ -184,4 +193,68 @@ func (s *httpController) Scan(c core.Context) error {
 		AmountOpened:    amountOpened,
 		AmountClosed:    amountClose,
 		DependencyVulns: utils.Map(newState, dependencyVuln.DependencyVulnToDto)})
+}
+
+func (s *httpController) FirstPartyVulnScan(c core.Context) error {
+	var sarifScan models.SarifResult
+	if err := c.Bind(&sarifScan); err != nil {
+		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
+	}
+
+	asset := core.GetAsset(c)
+	userID := core.GetSession(c).GetUserID()
+
+	// get the X-Asset-Version header
+
+	tag := c.Request().Header.Get("X-Tag")
+
+	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
+	assetVersionName := c.Request().Header.Get("X-Asset-Ref")
+	if assetVersionName == "" {
+		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
+		assetVersionName = "main"
+	}
+
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
+	if err != nil {
+		slog.Error("could not find or create asset version", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
+	}
+
+	scanner := c.Request().Header.Get("X-Scanner")
+	if scanner == "" {
+		slog.Error("no X-Scanner header found")
+		return c.JSON(400, map[string]string{
+			"error": "no X-Scanner header found",
+		})
+	}
+
+	// handle the scan result
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, assetVersion, sarifScan, scanner, userID, true)
+	if err != nil {
+		slog.Error("could not handle scan result", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
+	}
+
+	return c.JSON(200, FirstPartyScanResponse{
+		AmountOpened:    amountOpened,
+		AmountClosed:    amountClose,
+		FirstPartyVulns: utils.Map(newState, dependencyVuln.FirstPartyVulnToDto),
+	})
+
+	/* 	//save the scan result to json file
+	   	file, err := os.Create("sarif_scan.json")
+	   	if err != nil {
+	   		slog.Error("could not create temp file", "err", err)
+
+	   		return c.JSON(500, map[string]string{"error": "could not create temp file"})
+	   	}
+
+	   	// write the scan result to the file
+	   	if err := json.NewEncoder(file).Encode(sarifScan); err != nil {
+	   		slog.Error("could not write scan result to file", "err", err)
+	   		return c.JSON(500, map[string]string{"error": "could not write scan result to file"})
+	   	}
+	*/
+
 }

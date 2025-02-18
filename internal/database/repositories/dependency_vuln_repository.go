@@ -11,7 +11,7 @@ import (
 
 type dependencyVulnRepository struct {
 	db core.DB
-	Repository[string, models.DependencyVuln, core.DB]
+	VulnerabilityRepository[models.DependencyVuln]
 }
 
 func NewDependencyVulnRepository(db core.DB) *dependencyVulnRepository {
@@ -19,8 +19,8 @@ func NewDependencyVulnRepository(db core.DB) *dependencyVulnRepository {
 		panic(err)
 	}
 	return &dependencyVulnRepository{
-		db:         db,
-		Repository: newGormRepository[string, models.DependencyVuln](db),
+		db:                      db,
+		VulnerabilityRepository: *NewVulnerabilityRepository[models.DependencyVuln](db),
 	}
 }
 
@@ -136,7 +136,7 @@ func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersionPagedAndFlat(
 
 func (r *dependencyVulnRepository) GetAllOpenDependencyVulnsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
-	if err := r.Repository.GetDB(tx).Where("asset_version_name = ? AND asset_id = ? AND state = ?", assetVersionName, assetID, models.DependencyVulnStateOpen).Find(&dependencyVulns).Error; err != nil {
+	if err := r.Repository.GetDB(tx).Where("asset_version_name = ? AND asset_id = ? AND state = ?", assetVersionName, assetID, models.VulnStateOpen).Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil
