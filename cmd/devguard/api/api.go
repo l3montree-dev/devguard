@@ -357,7 +357,7 @@ func Start(db core.DB) {
 	statisticsRepository := repositories.NewStatisticsRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
-	VulnEventRepository := repositories.NewVulnEventRepository(db)
+	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	projectScopedRBAC := projectAccessControlFactory(projectRepository)
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
@@ -365,7 +365,7 @@ func Start(db core.DB) {
 	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 
-	dependencyVulnService := dependencyVuln.NewService(dependencyVulnRepository, VulnEventRepository, assetRepository, cveRepository)
+	dependencyVulnService := dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository)
 	projectService := project.NewService(projectRepository)
 	dependencyVulnController := dependencyVuln.NewHttpController(dependencyVulnRepository, dependencyVulnService, projectService)
 
