@@ -114,6 +114,7 @@ func (s *httpController) Scan(c core.Context) error {
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
+		defaultBranch = "main"
 	}
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
@@ -183,5 +184,6 @@ func (s *httpController) Scan(c core.Context) error {
 	return c.JSON(200, ScanResponse{
 		AmountOpened: amountOpened,
 		AmountClosed: amountClose,
-		Flaws:        utils.Map(newState, flaw.FlawToDto)})
+		Flaws:        utils.Map(newState, flaw.FlawToDto),
+	})
 }
