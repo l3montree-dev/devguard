@@ -337,6 +337,7 @@ func convertToDetailedDTO(flaw models.Flaw) detailedFlawDTO {
 				FlawID:            ev.FlawID,
 				UserID:            ev.UserID,
 				Justification:     ev.Justification,
+				AssetVersion:      flaw.AssetVersionName,
 				ArbitraryJsonData: ev.GetArbitraryJsonData(),
 				CreatedAt:         ev.CreatedAt,
 			}
