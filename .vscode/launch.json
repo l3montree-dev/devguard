@@ -9,6 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
+            "cwd": "${workspaceRoot}",
             "program": "${workspaceRoot}/cmd/devguard/main.go",
             "args": [],
         },

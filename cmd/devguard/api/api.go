@@ -339,6 +339,10 @@ func health(c echo.Context) error {
 	return c.String(200, "ok")
 }
 
+func manualSbomScan() {
+
+}
+
 func Start(db core.DB) {
 
 	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_PUBLIC"))
@@ -445,6 +449,7 @@ func Start(db core.DB) {
 	orgRouter.POST("/", orgController.Create)
 	orgRouter.GET("/", orgController.List)
 
+	//Api functions for interacting with an organization  ->  .../organizations/<organization-name>/...
 	tenantRouter := orgRouter.Group("/:tenant", multiTenantMiddleware(casbinRBACProvider, orgRepository))
 	tenantRouter.DELETE("/", orgController.Delete, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
 	tenantRouter.GET("/", orgController.Read, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
@@ -475,6 +480,7 @@ func Start(db core.DB) {
 	tenantRouter.GET("/projects/", projectController.List, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
 	tenantRouter.POST("/projects/", projectController.Create, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
+	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := tenantRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)
 	projectRouter.GET("/flaws/", flawController.ListByProjectPaged)
@@ -497,11 +503,15 @@ func Start(db core.DB) {
 
 	projectRouter.PUT("/members/:userId/", projectController.ChangeRole, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
 
+	//Api functions for interacting with an asset inside a project  ->  .../projects/<project-name>/assets/<asset-name>/...
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.DELETE("/", assetController.Delete, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
 
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
+
+	//Api to scan manually using an uploaded SBOM provided by the user
+	assetRouter.POST("/sbom-manual-scan/", assetController.ManualSbomScan)
 
 	//TODO: add the projectScopedRBAC middleware to the following routes
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))

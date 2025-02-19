@@ -6,5 +6,6 @@
     "go.lintTool": "golangci-lint",
     "cSpell.words": [
         "ghinstallation"
-    ]
+    ],
+    "makefile.configureOnOpen": false
 }
