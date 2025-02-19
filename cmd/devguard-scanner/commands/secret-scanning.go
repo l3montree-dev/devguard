@@ -18,6 +18,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -86,6 +87,13 @@ func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string)
 		err = pat.SignRequest(token, req)
 		if err != nil {
 			return errors.Wrap(err, "could not sign request")
+		}
+
+		err = utils.SetGitVersionHeader(path, req)
+
+		if err != nil {
+			printGitHelp(err)
+			return errors.Wrap(err, "could not get version info")
 		}
 
 		req.Header.Set("Content-Type", "application/json")

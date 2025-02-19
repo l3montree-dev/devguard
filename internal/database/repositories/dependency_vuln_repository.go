@@ -137,7 +137,7 @@ func (g dependencyVulnRepository) ReadDependencyVulnWithAssetEvents(id string) (
 		return models.DependencyVuln{}, vulnEvents, err
 	}
 
-	return t, VulnEvents, err
+	return t, vulnEvents, err
 }
 
 func (r *dependencyVulnRepository) GetDependencyVulnsByPurl(tx core.DB, purl []string) ([]models.DependencyVuln, error) {
