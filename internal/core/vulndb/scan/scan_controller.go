@@ -26,7 +26,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
-	"github.com/labstack/echo"
 )
 
 type cveRepository interface {
@@ -198,7 +197,7 @@ func (s *httpController) DependencyVulnScan(c core.Context) error {
 func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	var sarifScan models.SarifResult
 	if err := c.Bind(&sarifScan); err != nil {
-		return echo.NewHTTPError(400, "could not bind request").WithInternal(err)
+		return err
 	}
 
 	asset := core.GetAsset(c)

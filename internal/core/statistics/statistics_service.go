@@ -39,7 +39,7 @@ type assetRiskHistoryRepository interface {
 }
 
 type dependencyVulnRepository interface {
-	GetAllOpenDependencyVulnsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsByAssetVersionNameAndAssetId(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 }
 
@@ -207,7 +207,7 @@ func (s *service) UpdateAssetRiskAggregation(assetVersionName string, assetID uu
 
 		for _, dependencyVuln := range dependencyVulns {
 			var key string
-			if dependencyVuln.State == models.DependencyVulnStateOpen {
+			if dependencyVuln.State == models.VulnStateOpen {
 				openDependencyVulns++
 				key = "open"
 
@@ -319,7 +319,7 @@ func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, en
 
 func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error) {
 
-	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenDependencyVulnsByAssetVersion(nil, assetVersionName, assetID)
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetId(nil, assetVersionName, assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -398,7 +398,7 @@ func calculateDependencyVulnAggregationState(dependencyVulns []models.Dependency
 	state := DependencyVulnAggregationState{}
 
 	for _, dependencyVuln := range dependencyVulns {
-		if dependencyVuln.State == models.DependencyVulnStateOpen {
+		if dependencyVuln.State == models.VulnStateOpen {
 			state.Open++
 		} else {
 			state.Fixed++

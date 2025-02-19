@@ -10,6 +10,16 @@ import (
 	"gorm.io/gorm"
 )
 
+type Vuln interface {
+	SetState(state VulnState)
+	SetRawRiskAssessment(risk float64)
+	SetRiskRecalculatedAt(time.Time)
+	GetRawRiskAssessment() float64
+	GetAssetVersionName() string
+	GetAssetID() uuid.UUID
+	GetID() string
+}
+
 type Vulnerability struct {
 	ID string `json:"id" gorm:"primaryKey;not null;"`
 
@@ -50,6 +60,49 @@ type FirstPartyVulnerability struct {
 	Author      string `json:"author"`
 	Date        string `json:"date"`
 }
+
+func (d *Vulnerability) SetState(state VulnState) {
+	d.State = state
+}
+
+func (d *Vulnerability) SetRawRiskAssessment(risk float64) {
+	// do nothing
+}
+
+func (d *DependencyVuln) SetRawRiskAssessment(risk float64) {
+	d.RawRiskAssessment = &risk
+}
+
+func (d *Vulnerability) GetRawRiskAssessment() float64 {
+	return 0
+}
+
+func (d *DependencyVuln) GetRawRiskAssessment() float64 {
+	return *d.RawRiskAssessment
+}
+
+func (d *Vulnerability) GetAssetVersionName() string {
+	return d.AssetVersionName
+}
+
+func (d *Vulnerability) GetAssetID() uuid.UUID {
+	return d.AssetID
+}
+
+func (d *Vulnerability) GetID() string {
+	return d.ID
+}
+
+func (d *Vulnerability) SetRiskRecalculatedAt(t time.Time) {
+
+}
+
+func (d *DependencyVuln) SetRiskRecalculatedAt(t time.Time) {
+	d.RiskRecalculatedAt = t
+}
+
+var _ Vuln = &FirstPartyVulnerability{}
+var _ Vuln = &DependencyVuln{}
 
 func (f FirstPartyVulnerability) TableName() string {
 	return "first_party_vulnerabilities"

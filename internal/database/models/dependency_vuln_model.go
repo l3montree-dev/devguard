@@ -22,8 +22,6 @@ const (
 type DependencyVuln struct {
 	Vulnerability
 
-	Comments []Comment `gorm:"foreignKey:DependencyVulnID;constraint:OnDelete:CASCADE;" json:"comments"`
-
 	CVE   *CVE    `json:"cve"`
 	CVEID *string `json:"cveId" gorm:"null;type:text;default:null;"`
 

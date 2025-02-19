@@ -321,12 +321,12 @@ func (_c *DependencyVulnRepository_GetByAssetId_Call) RunAndReturn(run func(*gor
 	return _c
 }
 
-// GetByAssetIdPaged provides a mock function with given fields: tx, pageInfo, search, filter, sort, assetId
-func (_m *DependencyVulnRepository) GetByAssetIdPaged(tx *gorm.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.DependencyVuln], map[string]int, error) {
+// GetByAssetVersionPaged provides a mock function with given fields: tx, pageInfo, search, filter, sort, assetId
+func (_m *DependencyVulnRepository) GetByAssetVersionPaged(tx *gorm.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID) (core.Paged[models.DependencyVuln], map[string]int, error) {
 	ret := _m.Called(tx, pageInfo, search, filter, sort, assetId)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetByAssetIdPaged")
+		panic("no return value specified for GetByAssetVersionPaged")
 	}
 
 	var r0 core.Paged[models.DependencyVuln]
@@ -358,20 +358,20 @@ func (_m *DependencyVulnRepository) GetByAssetIdPaged(tx *gorm.DB, pageInfo core
 	return r0, r1, r2
 }
 
-// DependencyVulnRepository_GetByAssetIdPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetIdPaged'
+// DependencyVulnRepository_GetByAssetIdPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetVersionPaged'
 type DependencyVulnRepository_GetByAssetIdPaged_Call struct {
 	*mock.Call
 }
 
-// GetByAssetIdPaged is a helper method to define mock.On call
+// GetByAssetVersionPaged is a helper method to define mock.On call
 //   - tx *gorm.DB
 //   - pageInfo core.PageInfo
 //   - search string
 //   - filter []core.FilterQuery
 //   - sort []core.SortQuery
 //   - assetId uuid.UUID
-func (_e *DependencyVulnRepository_Expecter) GetByAssetIdPaged(tx interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}, assetId interface{}) *DependencyVulnRepository_GetByAssetIdPaged_Call {
-	return &DependencyVulnRepository_GetByAssetIdPaged_Call{Call: _e.mock.On("GetByAssetIdPaged", tx, pageInfo, search, filter, sort, assetId)}
+func (_e *DependencyVulnRepository_Expecter) GetByAssetVersionPaged(tx interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}, assetId interface{}) *DependencyVulnRepository_GetByAssetIdPaged_Call {
+	return &DependencyVulnRepository_GetByAssetIdPaged_Call{Call: _e.mock.On("GetByAssetVersionPaged", tx, pageInfo, search, filter, sort, assetId)}
 }
 
 func (_c *DependencyVulnRepository_GetByAssetIdPaged_Call) Run(run func(tx *gorm.DB, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery, assetId uuid.UUID)) *DependencyVulnRepository_GetByAssetIdPaged_Call {

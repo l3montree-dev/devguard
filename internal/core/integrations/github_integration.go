@@ -58,10 +58,13 @@ type githubAppInstallationRepository interface {
 
 type dependencyVulnRepository interface {
 	Read(id string) (models.DependencyVuln, error)
-	Save(db core.DB, dependencyVuln *models.DependencyVuln) error
+}
+
+type aggregatedVulnRepository interface {
+	FindByTicketID(tx core.DB, ticketID string) (models.Vuln, error)
+	Save(db core.DB, dependencyVuln *models.Vuln) error
 	Transaction(fn func(tx core.DB) error) error
-	FindByTicketID(tx core.DB, ticketID string) (models.DependencyVuln, error)
-	GetOrgFromDependencyVulnID(tx core.DB, dependencyVulnID string) (models.Org, error)
+	GetOrgFromVulnID(tx core.DB, vulnID string) (models.Org, error)
 }
 
 type vulnEventRepository interface {
@@ -101,10 +104,13 @@ type githubIntegration struct {
 
 	dependencyVulnRepository dependencyVulnRepository
 	vulnEventRepository      vulnEventRepository
-	frontendUrl              string
-	assetRepository          assetRepository
-	assetVersionRepository   assetVersionRepository
-	dependencyVulnService    dependencyVulnService
+
+	aggregatedVulnRepository aggregatedVulnRepository
+
+	frontendUrl            string
+	assetRepository        assetRepository
+	assetVersionRepository assetVersionRepository
+	dependencyVulnService  dependencyVulnService
 
 	githubClientFactory func(repoId string) (githubClientFacade, error)
 }
@@ -228,14 +234,14 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return nil
 		}
 		// look for a dependencyVuln with such a github ticket id
-		dependencyVuln, err := githubIntegration.dependencyVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d", issueId))
+		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d", issueId))
 		if err != nil {
 			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
 			return nil
 		}
 
 		// get the asset
-		assetVersion, err := githubIntegration.assetVersionRepository.Read(dependencyVuln.AssetVersionName, dependencyVuln.AssetID)
+		assetVersion, err := githubIntegration.assetVersionRepository.Read(vuln.GetAssetVersionName(), vuln.GetAssetID())
 		if err != nil {
 			slog.Error("could not read asset version", "err", err)
 			return err
@@ -254,7 +260,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
-			org, err := githubIntegration.dependencyVulnRepository.GetOrgFromDependencyVulnID(nil, dependencyVuln.ID)
+			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVulnID(nil, vuln.GetID())
 			if err != nil {
 				slog.Error("could not get org from dependencyVuln id", "err", err)
 				return
@@ -278,12 +284,12 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		}()
 
 		// create a new event based on the comment
-		VulnEvent := createNewVulnEventBasedOnComment(dependencyVuln.ID, fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment)
+		VulnEvent := createNewVulnEventBasedOnComment(vuln.GetID(), fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment)
 
-		VulnEvent.Apply(&dependencyVuln)
+		VulnEvent.Apply(vuln)
 		// save the dependencyVuln and the event in a transaction
-		err = githubIntegration.dependencyVulnRepository.Transaction(func(tx core.DB) error {
-			err := githubIntegration.dependencyVulnRepository.Save(tx, &dependencyVuln)
+		err = githubIntegration.aggregatedVulnRepository.Transaction(func(tx core.DB) error {
+			err := githubIntegration.aggregatedVulnRepository.Save(tx, &vuln)
 			if err != nil {
 				return err
 			}
@@ -315,19 +321,19 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		case models.EventTypeAccepted:
 			_, _, err = client.EditIssue(context.Background(), owner, repo, issueId, &github.IssueRequest{
 				State:  github.String("closed"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:accepted"},
+				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:accepted"},
 			})
 			return err
 		case models.EventTypeFalsePositive:
 			_, _, err = client.EditIssue(context.Background(), owner, repo, issueId, &github.IssueRequest{
 				State:  github.String("closed"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:false-positive"},
+				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:false-positive"},
 			})
 			return err
 		case models.EventTypeReopened:
 			_, _, err = client.EditIssue(context.Background(), owner, repo, issueId, &github.IssueRequest{
 				State:  github.String("open"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:open"},
+				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:open"},
 			})
 			return err
 		}
@@ -551,7 +557,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		ev := event.Event
 
 		asset := core.GetAsset(event.Ctx)
-		dependencyVuln, err := g.dependencyVulnRepository.Read(ev.DependencyVulnID)
+		dependencyVuln, err := g.dependencyVulnRepository.Read(ev.VulnID)
 
 		if err != nil {
 			return err

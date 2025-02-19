@@ -67,34 +67,35 @@ func (m VulnEvent) TableName() string {
 	return "dependencyVuln_events"
 }
 
-func (e VulnEvent) Apply(dependencyVuln *DependencyVuln) {
+func (e VulnEvent) Apply(vuln Vuln) {
 	switch e.Type {
 	case EventTypeFixed:
-		dependencyVuln.State = VulnStateFixed
+		vuln.SetState(VulnStateFixed)
+		// vuln.State = VulnStateFixed
 	case EventTypeReopened:
-		dependencyVuln.State = VulnStateOpen
+		vuln.SetState(VulnStateOpen)
 	case EventTypeDetected:
-		dependencyVuln.State = VulnStateOpen
+		vuln.SetState(VulnStateOpen)
 		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
 		if !ok {
 			slog.Error("could not parse risk assessment", "dependencyVulnId", e.VulnID)
 			return
 		}
-		dependencyVuln.RawRiskAssessment = &f
+		vuln.SetRawRiskAssessment(f)
 	case EventTypeAccepted:
-		dependencyVuln.State = VulnStateAccepted
+		vuln.SetState(VulnStateAccepted)
 	case EventTypeFalsePositive:
-		dependencyVuln.State = VulnStateFalsePositive
+		vuln.SetState(VulnStateFalsePositive)
 	case EventTypeMarkedForTransfer:
-		dependencyVuln.State = VulnStateMarkedForTransfer
+		vuln.SetState(VulnStateMarkedForTransfer)
 	case EventTypeRawRiskAssessmentUpdated:
 		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
 		if !ok {
 			slog.Error("could not parse risk assessment", "dependencyVulnId", e.VulnID)
 			return
 		}
-		dependencyVuln.RawRiskAssessment = &f
-		dependencyVuln.RiskRecalculatedAt = time.Now()
+		vuln.SetRawRiskAssessment(f)
+		vuln.SetRiskRecalculatedAt(time.Now())
 	}
 }
 

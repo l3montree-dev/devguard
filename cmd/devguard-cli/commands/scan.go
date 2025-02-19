@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
@@ -40,10 +39,13 @@ func newSbomCommand() *cobra.Command {
 			assetRepository := repositories.NewAssetRepository(database)
 			assetVersionRepository := repositories.NewAssetVersionRepository(database)
 			dependencyVulnRepository := repositories.NewDependencyVulnRepository(database)
+			firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(database)
+			vulnEventRepository := repositories.NewVulnEventRepository(database)
+			firstPartyVulnService := dependencyVuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
 			dependencyVulnService := dependencyVuln.NewService(dependencyVulnRepository, repositories.NewVulnEventRepository(database), assetRepository, repositories.NewCVERepository(database))
 			componentRepository := repositories.NewComponentRepository(database)
-			assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
-			assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, dependencyVulnService, assetService)
+
+			assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository)
 
 			sbomScanner := scan.NewSBOMScanner(scan.NewCPEComparer(database), scan.NewPurlComparer(database), repositories.NewCVERepository(database))
 

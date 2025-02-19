@@ -39,7 +39,7 @@ type dependencyVulnRepository interface {
 	Begin() core.DB
 
 	GetDependencyVulnsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	GetDependencyVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 }
 
 type vulnEventRepository interface {
@@ -141,7 +141,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	err = s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 		for _, asset := range assets {
 			// get all dependencyVulns of the asset
-			dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetID(tx, asset.ID)
+			dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(tx, asset.ID)
 			if len(dependencyVulns) == 0 {
 				continue
 			}

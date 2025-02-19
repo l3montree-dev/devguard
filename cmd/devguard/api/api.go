@@ -362,16 +362,18 @@ func Start(db core.DB) {
 	orgRepository := repositories.NewOrgRepository(db)
 	cveRepository := repositories.NewCVERepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
+	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
 	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 
 	dependencyVulnService := dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository)
+	firstPartyVulnService := dependencyVuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
 	projectService := project.NewService(projectRepository)
 	dependencyVulnController := dependencyVuln.NewHttpController(dependencyVulnRepository, dependencyVulnService, projectService)
 
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, dependencyVulnService, assetRepository)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 	invitationRepository := repositories.NewInvitationRepository(db)
 

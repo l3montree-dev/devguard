@@ -33,7 +33,7 @@ type assetRepository interface {
 }
 
 type dependencyVulnRepository interface {
-	GetDependencyVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	Transaction(txFunc func(core.DB) error) error
 }
 
@@ -70,7 +70,7 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 			return fmt.Errorf("could not save asset: %v", err)
 		}
 		// get the dependencyVulns
-		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetID(tx, asset.GetID())
+		dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(tx, asset.GetID())
 		if err != nil {
 			slog.Info("error getting dependencyVulns", "err", err)
 			return fmt.Errorf("could not get dependencyVulns: %v", err)

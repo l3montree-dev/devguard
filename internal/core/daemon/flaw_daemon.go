@@ -65,7 +65,7 @@ func UpdateComponentProperties(db database.DB) error {
 				slog.Info("updated asset", "asset", a.ID, "duration", time.Since(now))
 			}()
 			// get all dependencyVulns of that asset
-			dependencyVulns, err := dependencyVulnRepository.GetDependencyVulnsByAssetID(nil, a.ID)
+			dependencyVulns, err := dependencyVulnRepository.GetAllVulnsByAssetID(nil, a.ID)
 			if err != nil {
 				slog.Warn("could not get dependencyVulns", "asset", a.ID, "err", err)
 				return nil, err

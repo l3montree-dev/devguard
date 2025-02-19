@@ -70,6 +70,8 @@ type gitlabIntegration struct {
 	gitlabIntegrationRepository gitlabIntegrationRepository
 	externalUserRepository      externalUserRepository
 
+	aggregatedVulnRepository aggregatedVulnRepository
+
 	dependencyVulnRepository dependencyVulnRepository
 	vulnEventRepository      vulnEventRepository
 	frontendUrl              string
@@ -208,7 +210,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		// 	return nil
 		// }
 		// look for a dependencyVuln with such a github ticket id
-		dependencyVuln, err := g.dependencyVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueId))
+		vuln, err := g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueId))
 		if err != nil {
 			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
 			return nil
@@ -221,7 +223,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}
 
 		// get the asset
-		assetVersion, err := g.assetVersionRepository.Read(dependencyVuln.AssetVersionName, dependencyVuln.AssetID)
+		assetVersion, err := g.assetVersionRepository.Read(vuln.GetAssetVersionName(), vuln.GetAssetID())
 		if err != nil {
 			slog.Error("could not read asset version", "err", err)
 			return err
@@ -236,7 +238,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
-			org, err := g.dependencyVulnRepository.GetOrgFromDependencyVulnID(nil, dependencyVuln.ID)
+			org, err := g.aggregatedVulnRepository.GetOrgFromVulnID(nil, vuln.GetID())
 			if err != nil {
 				slog.Error("could not get org from dependencyVuln id", "err", err)
 				return
@@ -260,12 +262,12 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}()
 
 		// create a new event based on the comment
-		VulnEvent := createNewVulnEventBasedOnComment(dependencyVuln.ID, fmt.Sprintf("gitlab:%d", event.User.ID), comment)
+		VulnEvent := createNewVulnEventBasedOnComment(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), comment)
 
-		VulnEvent.Apply(&dependencyVuln)
+		VulnEvent.Apply(vuln)
 		// save the dependencyVuln and the event in a transaction
-		err = g.dependencyVulnRepository.Transaction(func(tx core.DB) error {
-			err := g.dependencyVulnRepository.Save(tx, &dependencyVuln)
+		err = g.aggregatedVulnRepository.Transaction(func(tx core.DB) error {
+			err := g.aggregatedVulnRepository.Save(tx, &vuln)
 			if err != nil {
 				return err
 			}
@@ -306,7 +308,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
+				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:accepted",
 			}
 
@@ -319,7 +321,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
+				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:false-positive",
 			}
 
@@ -332,7 +334,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
+				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:open",
 			}
 
@@ -793,7 +795,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		ev := event.Event
 
 		asset := core.GetAsset(event.Ctx)
-		dependencyVuln, err := g.dependencyVulnRepository.Read(ev.DependencyVulnID)
+		dependencyVuln, err := g.dependencyVulnRepository.Read(ev.VulnID)
 
 		if err != nil {
 			return err

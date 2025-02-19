@@ -36,7 +36,7 @@ func (c firstPartyVulnController) ListByOrgPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
 
-	pagedResp, err := c.firstPartyVulnRepository.GetFirstPartyVulnsByOrgIdPaged(
+	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByOrgIdPaged(
 		nil,
 
 		utils.Map(userAllowedProjectIds, func(p models.Project) string {
@@ -59,7 +59,7 @@ func (c firstPartyVulnController) ListByOrgPaged(ctx core.Context) error {
 func (c firstPartyVulnController) ListByProjectPaged(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
-	pagedResp, err := c.firstPartyVulnRepository.GetFirstPartyVulnsByProjectIdPaged(
+	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByProjectIdPaged(
 		nil,
 		project.ID,
 
@@ -164,11 +164,11 @@ func (c firstPartyVulnController) CreateEvent(ctx core.Context) error {
 
 func (c firstPartyVulnController) ListPaged(ctx core.Context) error {
 	// get the asset
-	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
 
 	// check if we should list flat - this means not grouped by package
 	if ctx.QueryParam("flat") == "true" {
-		firstPartyVulns, err := c.firstPartyVulnRepository.GetFirstPartyVulnsByAssetIdPagedAndFlat(nil, asset.GetID(), core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
+		firstPartyVulns, err := c.firstPartyVulnRepository.GetFirstPartyVulnsByAssetIdPagedAndFlat(nil, assetVersion.Name, assetVersion.AssetID, core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
 		if err != nil {
 			return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 		}
@@ -178,13 +178,14 @@ func (c firstPartyVulnController) ListPaged(ctx core.Context) error {
 		}))
 	}
 
-	pagedResp, _, err := c.firstPartyVulnRepository.GetByAssetIdPaged(
+	pagedResp, _, err := c.firstPartyVulnRepository.GetByAssetVersionPaged(
 		nil,
+		assetVersion.Name,
+		assetVersion.AssetID,
 		core.GetPageInfo(ctx),
 		ctx.QueryParam("search"),
 		core.GetFilterQuery(ctx),
 		core.GetSortQuery(ctx),
-		asset.GetID(),
 	)
 
 	if err != nil {
