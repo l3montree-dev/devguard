@@ -306,10 +306,6 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 	fixedDependencyVulns := comparison.OnlyInA
 	newDependencyVulns := comparison.OnlyInB
 
-	fmt.Println("dependencyVulns", dependencyVulns)
-	fmt.Println("fixedDependencyVulns", fixedDependencyVulns)
-	fmt.Println("newDependencyVulns", newDependencyVulns)
-
 	if doRiskManagement {
 		// get a transaction
 		if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {

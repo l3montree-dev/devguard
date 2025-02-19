@@ -28,7 +28,7 @@ type inTotoLinkRepository struct {
 }
 
 func NewInTotoLinkRepository(db core.DB) *inTotoLinkRepository {
-	if err := db.Debug().AutoMigrate(&models.InTotoLink{}); err != nil {
+	if err := db.AutoMigrate(&models.InTotoLink{}); err != nil {
 		panic(err)
 	}
 

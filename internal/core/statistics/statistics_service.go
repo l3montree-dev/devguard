@@ -2,6 +2,7 @@ package statistics
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -176,19 +177,18 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 		if err != nil {
 			return fmt.Errorf("could not update project risk aggregation: %w", err)
 		}
-
 	}
 	return nil
 }
 
-func (s *service) UpdateAssetRiskAggregation(assetVersionName string, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
+func (s *service) UpdateAssetRiskAggregation(assetVersion models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
 	// set begin to last second of date
 	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
 	// set end to last second of date
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 
 	for time := begin; time.Before(end) || time.Equal(end); time = time.AddDate(0, 0, 1) {
-		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(assetVersionName, assetID, time)
+		dependencyVulns, err := s.statisticsRepository.TimeTravelDependencyVulnState(assetVersion.Name, assetID, time)
 		if err != nil {
 			return err
 		}
@@ -255,7 +255,7 @@ func (s *service) UpdateAssetRiskAggregation(assetVersionName string, assetID uu
 		}
 
 		result := models.AssetRiskHistory{
-			AssetVersionName: assetVersionName,
+			AssetVersionName: assetVersion.Name,
 			AssetID:          assetID,
 			Day:              time,
 
@@ -277,33 +277,40 @@ func (s *service) UpdateAssetRiskAggregation(assetVersionName string, assetID uu
 		if err != nil {
 			return err
 		}
+		slog.Info("updated risk aggregation", "assetVersionName", assetVersion.Name, "assetID", assetID, "day", time)
+	}
 
-		// we ALWAYS need to propagate the risk aggregation to the project. The only exception is in the statistics daemon. There
-		// we update all assets and afterwards do a one time project update. This is just optimization.
-		if propagateToProject {
-			currentProject, err := s.projectRepository.GetProjectByAssetID(assetID)
+	// save the last history update timestamp
+	assetVersion.LastHistoryUpdate = &end
+	err := s.assetVersionRepository.Save(nil, &assetVersion)
+	if err != nil {
+		return fmt.Errorf("could not save asset version: %w", err)
+	}
 
+	// we ALWAYS need to propagate the risk aggregation to the project. The only exception is in the statistics daemon. There
+	// we update all assets and afterwards do a one time project update. This is just optimization.
+	if propagateToProject {
+		currentProject, err := s.projectRepository.GetProjectByAssetID(assetID)
+
+		if err != nil {
+			return fmt.Errorf("could not get project id by asset id: %w", err)
+		}
+		for {
+			// update all projects - parent projects as well.
+			err = s.updateProjectRiskAggregation(currentProject.ID, begin, end)
 			if err != nil {
-				return fmt.Errorf("could not get project id by asset id: %w", err)
+				return fmt.Errorf("could not update project risk aggregation: %w", err)
 			}
-			for {
-				// update all projects - parent projects as well.
-				err = s.updateProjectRiskAggregation(currentProject.ID, begin, end)
-				if err != nil {
-					return fmt.Errorf("could not update project risk aggregation: %w", err)
-				}
 
-				if currentProject.ParentID != nil {
-					currentProject, err = s.projectRepository.Read(*currentProject.ParentID)
-					if err != nil {
-						return fmt.Errorf("could not get parent project: %w", err)
-					}
-				} else {
-					break
+			if currentProject.ParentID != nil {
+				currentProject, err = s.projectRepository.Read(*currentProject.ParentID)
+				if err != nil {
+					return fmt.Errorf("could not get parent project: %w", err)
 				}
+			} else {
+				break
 			}
 		}
-
 	}
 	return nil
 

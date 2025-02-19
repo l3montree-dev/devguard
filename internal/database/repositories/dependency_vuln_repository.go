@@ -128,13 +128,13 @@ func (g dependencyVulnRepository) ReadDependencyVulnWithAssetEvents(id string) (
 		return models.DependencyVuln{}, []models.VulnEvent{}, err
 	}
 
-	var VulnEvents []models.VulnEvent
+	var vulnEvents []models.VulnEvent
 	// get the asset id - and read dependencyVulns with the same cve id and asset id
-	err = g.db.Model(&models.VulnEvent{}).Where("dependencyVuln_id IN ?", g.db.Model(models.DependencyVuln{}).Where(
+	err = g.db.Model(&models.VulnEvent{}).Where("dependencyVuln_id IN ?", g.db.Model(models.DependencyVuln{}).Select("id").Where(
 		"asset_id = ? AND cve_id = ?", t.AssetID, t.CVEID,
-	)).Order("created_at ASC").Find(&t.Events).Error
+	)).Order("created_at ASC").Find(&vulnEvents).Error
 	if err != nil {
-		return models.DependencyVuln{}, VulnEvents, err
+		return models.DependencyVuln{}, vulnEvents, err
 	}
 
 	return t, VulnEvents, err

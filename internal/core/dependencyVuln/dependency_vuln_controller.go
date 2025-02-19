@@ -337,6 +337,7 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 				VulnID:            ev.VulnID,
 				UserID:            ev.UserID,
 				Justification:     ev.Justification,
+				AssetVersion:      dependencyVuln.AssetVersionName,
 				ArbitraryJsonData: ev.GetArbitraryJsonData(),
 				CreatedAt:         ev.CreatedAt,
 			}

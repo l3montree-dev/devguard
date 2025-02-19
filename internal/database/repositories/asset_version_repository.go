@@ -41,7 +41,7 @@ func NewAssetVersionRepository(db core.DB) *assetVersionRepository {
 
 func (a *assetVersionRepository) Read(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
 	var asset models.AssetVersion
-	err := a.db.First(&asset, "asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Error
+	err := a.db.First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
 	return asset, err
 }
 
