@@ -184,8 +184,8 @@ func (c *httpController) Update(ctx core.Context) error {
 
 func (s *httpController) ManualSbomScan(c core.Context) error {
 
-	var max_size int = 16 * 1024 * 1024 //Max Upload Size 16mb
-	err := c.Request().ParseMultipartForm(int64(max_size))
+	var maxSize int = 16 * 1024 * 1024 //Max Upload Size 16mb
+	err := c.Request().ParseMultipartForm(int64(maxSize))
 
 	if err != nil {
 		fmt.Printf("Submitted Data too large")

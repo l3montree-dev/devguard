@@ -16,6 +16,7 @@
 package scan
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -192,4 +193,138 @@ func (s *httpController) Scan(c core.Context) error {
 		AmountClosed: amountClose,
 		Flaws:        utils.Map(newState, flaw.FlawToDto),
 	})
+}
+
+func (s *httpController) ManualSbomScan(c core.Context) error {
+
+	var maxSize int = 16 * 1024 * 1024 //Max Upload Size 16mb
+	err := c.Request().ParseMultipartForm(int64(maxSize))
+	if err != nil {
+		fmt.Printf("Error when parsing data")
+		return err
+	}
+	file, _, err := c.Request().FormFile("file")
+	if err != nil {
+		fmt.Printf("Error when forming file")
+		return err
+	}
+
+	bom := new(cdx.BOM)
+	decoder := cdx.NewBOMDecoder(file, cdx.BOMFileFormatJSON)
+	if err := decoder.Decode(bom); err != nil {
+		return err
+	}
+	normalizedBom := normalize.FromCdxBom(bom, true)
+
+	asset := core.GetAsset(c)
+
+	userID := core.GetSession(c).GetUserID()
+
+	// get the X-Asset-Version header
+	version := c.Request().Header.Get("X-Asset-Version")
+	if version == "" {
+		version = models.NoVersion
+	}
+
+	tag := c.Request().Header.Get("X-Tag")
+
+	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
+	assetVersionName := c.Request().Header.Get("X-Asset-Ref")
+	if assetVersionName == "" {
+		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
+		assetVersionName = "main"
+		defaultBranch = "main"
+	}
+
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
+	if err != nil {
+		slog.Error("could not find or create asset version", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
+	}
+
+	/*scanner := c.Request().Header.Get("X-Scanner")
+	if scanner == "" {
+		slog.Error("no X-Scanner header found")
+		return c.JSON(400, map[string]string{
+			"error": "no X-Scanner header found",
+		})
+	}*/
+
+	if version != models.NoVersion {
+		var err error
+		version, err = normalize.SemverFix(version)
+		// check if valid semver
+		if err != nil {
+			slog.Error("invalid semver version", "version", version)
+			return c.JSON(400, map[string]string{"error": "invalid semver version"})
+		}
+	}
+	//check if risk management is enabled
+	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
+	doRiskManagement := riskManagementEnabled != "false"
+
+	/*if doRiskManagement {
+		// update the sbom in the database in parallel
+		if err := s.assetVersionService.UpdateSBOM(assetVersion, scanner, version, normalizedBom); err != nil {
+			slog.Error("could not update sbom", "err", err)
+			return c.JSON(500, map[string]string{"error": "could not update sbom"})
+		}
+
+	}*/
+
+	// scan the bom we just retrieved.
+	vulns, err := s.sbomScanner.Scan(normalizedBom)
+
+	if err != nil {
+		slog.Error("could not scan file", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not scan file"})
+	}
+
+	/*scannerID := c.Request().Header.Get("X-Scanner")
+	if scannerID == "" {
+		return c.JSON(400, map[string]string{"error": "no scanner id provided"})
+	}*/
+
+	// handle the scan result
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, assetVersion, vulns, "", version, "", userID, doRiskManagement)
+	if err != nil {
+		slog.Error("could not handle scan result", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
+	}
+
+	if doRiskManagement {
+		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+		if err := s.statisticsService.UpdateAssetRiskAggregation(assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
+			slog.Error("could not recalculate risk history", "err", err)
+			return c.JSON(500, map[string]string{"error": "could not recalculate risk history"})
+		}
+
+		// save the asset
+		if err := s.assetVersionRepository.Save(nil, &assetVersion); err != nil {
+			slog.Error("could not save asset", "err", err)
+		}
+	}
+
+	/*var buf bytes.Buffer //Buffer to store sbom
+	if err != nil {
+		fmt.Printf("Exploding while form file ")
+		return err
+	}
+
+	_, err = io.Copy(&buf, file) //Copy the data of the file to the buffer
+	if err != nil {
+		fmt.Printf("Error when copying data to buffer")
+		return err
+	}
+	sbom := buf.String() //Interpret buf as String
+
+	fmt.Println(sbom)*/
+
+	file.Close() //Close file to prevent memory leak
+	return c.JSON(200, ScanResponse{
+		AmountOpened: amountOpened,
+		AmountClosed: amountClose,
+		Flaws:        utils.Map(newState, flaw.FlawToDto),
+	})
+
 }
