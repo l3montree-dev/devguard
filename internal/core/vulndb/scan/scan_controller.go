@@ -242,13 +242,13 @@ func (s *httpController) ManualSbomScan(c core.Context) error {
 		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
 	}
 
-	/*scanner := c.Request().Header.Get("X-Scanner")
+	scanner := c.Request().Header.Get("X-Scanner")
 	if scanner == "" {
 		slog.Error("no X-Scanner header found")
 		return c.JSON(400, map[string]string{
 			"error": "no X-Scanner header found",
 		})
-	}*/
+	}
 
 	if version != models.NoVersion {
 		var err error
@@ -263,14 +263,14 @@ func (s *httpController) ManualSbomScan(c core.Context) error {
 	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
 	doRiskManagement := riskManagementEnabled != "false"
 
-	/*if doRiskManagement {
+	if doRiskManagement {
 		// update the sbom in the database in parallel
 		if err := s.assetVersionService.UpdateSBOM(assetVersion, scanner, version, normalizedBom); err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return c.JSON(500, map[string]string{"error": "could not update sbom"})
 		}
 
-	}*/
+	}
 
 	// scan the bom we just retrieved.
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
@@ -280,10 +280,10 @@ func (s *httpController) ManualSbomScan(c core.Context) error {
 		return c.JSON(500, map[string]string{"error": "could not scan file"})
 	}
 
-	/*scannerID := c.Request().Header.Get("X-Scanner")
+	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
 		return c.JSON(400, map[string]string{"error": "no scanner id provided"})
-	}*/
+	}
 
 	// handle the scan result
 	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, assetVersion, vulns, "", version, "", userID, doRiskManagement)
