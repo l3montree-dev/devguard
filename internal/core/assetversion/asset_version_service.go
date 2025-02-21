@@ -55,7 +55,7 @@ func (s *service) GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVe
 	return s.assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(nil, assetID)
 }
 
-func (s *service) HandleScanResult(asset models.Asset, assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
+func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error) {
 
 	// create flaws out of those vulnerabilities
 	flaws := []models.Flaw{}
@@ -104,32 +104,32 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion models.Asset
 		return 0, 0, []models.Flaw{}, err
 	}
 
+	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
+
+	fmt.Println("scanner", scanner)
+
+	fmt.Println(devguardScanner + "sca")
+
 	switch scanner {
-	case "sast":
+	case devguardScanner + "sast":
 		assetVersion.LastSastScan = utils.Ptr(time.Now())
-	case "dast":
+	case devguardScanner + "dast":
 		assetVersion.LastDastScan = utils.Ptr(time.Now())
-	case "sca":
+	case devguardScanner + "sca":
+		fmt.Println("es wurde ausgeführt!!!!!!!!!!!!")
 		assetVersion.LastScaScan = utils.Ptr(time.Now())
-	case "container-scanning":
+	case devguardScanner + "container-scanning":
 		assetVersion.LastContainerScan = utils.Ptr(time.Now())
-	case "secret-scanning":
+	case devguardScanner + "secret-scanning":
 		assetVersion.LastSecretScan = utils.Ptr(time.Now())
-	case "iac":
+	case devguardScanner + "iac":
 		assetVersion.LastIacScan = utils.Ptr(time.Now())
 	}
 
-	if doRiskManagement {
-		err = s.assetVersionRepository.Save(nil, &assetVersion)
-		if err != nil {
-			// swallow but log
-			slog.Error("could not save asset", "err", err)
-		}
-	}
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
-func (s *service) handleScanResult(userID string, scannerID string, assetVersion models.AssetVersion, flaws []models.Flaw, doRiskManagement bool, asset models.Asset) (int, int, []models.Flaw, error) {
+func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, flaws []models.Flaw, doRiskManagement bool, asset models.Asset) (int, int, []models.Flaw, error) {
 	// get all existing flaws from the database - this is the old state
 	existingFlaws, err := s.flawRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
@@ -151,7 +151,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 	if doRiskManagement {
 		// get a transaction
 		if err := s.flawRepository.Transaction(func(tx core.DB) error {
-			if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, assetVersion, asset, true); err != nil {
+			if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, *assetVersion, asset, true); err != nil {
 
 				// this will cancel the transaction
 				return err
@@ -161,13 +161,13 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 				func(flaw models.Flaw) bool {
 					return flaw.State == models.FlawStateOpen
 				},
-			), assetVersion, asset, true)
+			), *assetVersion, asset, true)
 		}); err != nil {
 			slog.Error("could not save flaws", "err", err)
 			return 0, 0, []models.Flaw{}, err
 		}
 	} else {
-		if err := s.flawService.UserDetectedFlaws(nil, userID, newFlaws, assetVersion, asset, false); err != nil {
+		if err := s.flawService.UserDetectedFlaws(nil, userID, newFlaws, *assetVersion, asset, false); err != nil {
 			slog.Error("could not save flaws", "err", err)
 			return 0, 0, []models.Flaw{}, err
 		}
@@ -177,7 +177,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 			func(flaw models.Flaw) bool {
 				return flaw.State == models.FlawStateOpen
 			},
-		), assetVersion, asset, false); err != nil {
+		), *assetVersion, asset, false); err != nil {
 			slog.Error("could not save flaws", "err", err)
 			return 0, 0, []models.Flaw{}, err
 		}
