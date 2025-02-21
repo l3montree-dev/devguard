@@ -106,17 +106,12 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
 
-	fmt.Println("scanner", scanner)
-
-	fmt.Println(devguardScanner + "sca")
-
 	switch scanner {
 	case devguardScanner + "sast":
 		assetVersion.LastSastScan = utils.Ptr(time.Now())
 	case devguardScanner + "dast":
 		assetVersion.LastDastScan = utils.Ptr(time.Now())
 	case devguardScanner + "sca":
-		fmt.Println("es wurde ausgeführt!!!!!!!!!!!!")
 		assetVersion.LastScaScan = utils.Ptr(time.Now())
 	case devguardScanner + "container-scanning":
 		assetVersion.LastContainerScan = utils.Ptr(time.Now())
