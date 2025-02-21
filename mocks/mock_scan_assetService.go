@@ -22,7 +22,7 @@ func (_m *ScanAssetService) EXPECT() *ScanAssetService_Expecter {
 }
 
 // HandleScanResult provides a mock function with given fields: asset, vulns, scanner, version, scannerID, userID, doRiskManagement
-func (_m *ScanAssetService) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (int, int, []models.Flaw, error) {
+func (_m *ScanAssetService) HandleScanResult(asset models.Asset, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (int, int, []models.DependencyVuln, error) {
 	ret := _m.Called(asset, vulns, scanner, version, scannerID, userID, doRiskManagement)
 
 	if len(ret) == 0 {
@@ -31,9 +31,9 @@ func (_m *ScanAssetService) HandleScanResult(asset models.Asset, vulns []models.
 
 	var r0 int
 	var r1 int
-	var r2 []models.Flaw
+	var r2 []models.DependencyVuln
 	var r3 error
-	if rf, ok := ret.Get(0).(func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) (int, int, []models.Flaw, error)); ok {
+	if rf, ok := ret.Get(0).(func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) (int, int, []models.DependencyVuln, error)); ok {
 		return rf(asset, vulns, scanner, version, scannerID, userID, doRiskManagement)
 	}
 	if rf, ok := ret.Get(0).(func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) int); ok {
@@ -48,11 +48,11 @@ func (_m *ScanAssetService) HandleScanResult(asset models.Asset, vulns []models.
 		r1 = ret.Get(1).(int)
 	}
 
-	if rf, ok := ret.Get(2).(func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) []models.Flaw); ok {
+	if rf, ok := ret.Get(2).(func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) []models.DependencyVuln); ok {
 		r2 = rf(asset, vulns, scanner, version, scannerID, userID, doRiskManagement)
 	} else {
 		if ret.Get(2) != nil {
-			r2 = ret.Get(2).([]models.Flaw)
+			r2 = ret.Get(2).([]models.DependencyVuln)
 		}
 	}
 
@@ -89,12 +89,12 @@ func (_c *ScanAssetService_HandleScanResult_Call) Run(run func(asset models.Asse
 	return _c
 }
 
-func (_c *ScanAssetService_HandleScanResult_Call) Return(amountOpened int, amountClose int, newState []models.Flaw, err error) *ScanAssetService_HandleScanResult_Call {
+func (_c *ScanAssetService_HandleScanResult_Call) Return(amountOpened int, amountClose int, newState []models.DependencyVuln, err error) *ScanAssetService_HandleScanResult_Call {
 	_c.Call.Return(amountOpened, amountClose, newState, err)
 	return _c
 }
 
-func (_c *ScanAssetService_HandleScanResult_Call) RunAndReturn(run func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) (int, int, []models.Flaw, error)) *ScanAssetService_HandleScanResult_Call {
+func (_c *ScanAssetService_HandleScanResult_Call) RunAndReturn(run func(models.Asset, []models.VulnInPackage, string, string, string, string, bool) (int, int, []models.DependencyVuln, error)) *ScanAssetService_HandleScanResult_Call {
 	_c.Call.Return(run)
 	return _c
 }

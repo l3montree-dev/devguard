@@ -29,7 +29,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "devguard-scanner",
 	Short: "Vulnerability management for devs.",
-	Long:  `Devguard-Scanner is a tool to identify vulnerabilities and flaws in a software. It communicates the result to a devguard instance.`,
+	Long:  `Devguard-Scanner is a tool to identify vulnerabilities and dependencyVulns in a software. It communicates the result to a devguard instance.`,
 }
 
 func Execute() {
@@ -48,6 +48,8 @@ func init() {
 		commands.NewInspectCommand(),
 		commands.NewSignCommand(),
 		commands.NewLoginCommand(),
+		commands.NewSecretScanningCommand(),
+		commands.NewSastCommand(),
 		intotocmd.NewInTotoCommand(),
 	)
 }

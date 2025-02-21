@@ -34,7 +34,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -219,21 +219,21 @@ git push origin v1.0.1
 
 // can be reused for container scanning as well.
 func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webUI string, doRiskManagement bool) {
-	slog.Info("Scan completed successfully", "flawAmount", len(scanResponse.Flaws), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
+	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
-	if len(scanResponse.Flaws) == 0 {
+	if len(scanResponse.DependencyVulns) == 0 {
 		return
 	}
 
-	// order the flaws by their risk
-	slices.SortFunc(scanResponse.Flaws, func(a, b flaw.FlawDTO) int {
+	// order the dependencyVulns by their risk
+	slices.SortFunc(scanResponse.DependencyVulns, func(a, b dependencyVuln.DependencyVulnDTO) int {
 		return int(*(a.RawRiskAssessment)*100) - int(*b.RawRiskAssessment*100)
 	})
 
-	// get the max risk of open!!! flaws
-	openRisks := utils.Map(utils.Filter(scanResponse.Flaws, func(f flaw.FlawDTO) bool {
+	// get the max risk of open!!! dependencyVulns
+	openRisks := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f dependencyVuln.DependencyVulnDTO) bool {
 		return f.State == "open"
-	}), func(f flaw.FlawDTO) float64 {
+	}), func(f dependencyVuln.DependencyVulnDTO) float64 {
 		return *f.RawRiskAssessment
 	})
 
@@ -247,11 +247,11 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	tw := table.NewWriter()
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status", "URL"})
 	tw.AppendRows(utils.Map(
-		scanResponse.Flaws,
-		func(f flaw.FlawDTO) table.Row {
+		scanResponse.DependencyVulns,
+		func(f dependencyVuln.DependencyVulnDTO) table.Row {
 			clickableLink := ""
 			if doRiskManagement {
-				clickableLink = fmt.Sprintf("%s/%s/flaws/%s", webUI, assetName, f.ID)
+				clickableLink = fmt.Sprintf("%s/%s/dependencyVulns/%s", webUI, assetName, f.ID)
 			} else {
 				clickableLink = "Risk Management is disabled"
 			}
@@ -351,7 +351,7 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		}
 
 		// read the sbom file and post it to the scan endpoint
-		// get the flaws and print them to the console
+		// get the dependencyVulns and print them to the console
 		file, err := generateSBOM(path)
 		defer os.Remove(file.Name())
 
@@ -399,8 +399,8 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 			return fmt.Errorf("could not scan file: %s", resp.Status)
 		}
 
-		// read and parse the body - it should be an array of flaws
-		// print the flaws to the console
+		// read and parse the body - it should be an array of dependencyVulns
+		// print the dependencyVulns to the console
 		var scanResponse scan.ScanResponse
 
 		err = json.NewDecoder(resp.Body).Decode(&scanResponse)

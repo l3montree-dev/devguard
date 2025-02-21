@@ -10,7 +10,7 @@ type createRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 
-	CentralFlawManagement bool `json:"centralFlawManagement"`
+	CentralDependencyVulnManagement bool `json:"centralDependencyVulnManagement"`
 
 	Importance            int  `json:"importance"`
 	ReachableFromInternet bool `json:"reachableFromInternet"`
@@ -36,7 +36,7 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 		ProjectID:   projectID,
 		Description: a.Description,
 
-		CentralFlawManagement: a.CentralFlawManagement,
+		CentralDependencyVulnManagement: a.CentralDependencyVulnManagement,
 
 		Importance:            a.Importance,
 		ReachableFromInternet: a.ReachableFromInternet,
@@ -51,7 +51,7 @@ type patchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 
-	CentralFlawManagement *bool `json:"centralFlawManagement"`
+	CentralDependencyVulnManagement *bool `json:"centralDependencyVulnManagement"`
 
 	ReachableFromInternet *bool `json:"reachableFromInternet"`
 
@@ -78,9 +78,9 @@ func (a *patchRequest) applyToModel(
 		asset.Description = *a.Description
 	}
 
-	if a.CentralFlawManagement != nil {
+	if a.CentralDependencyVulnManagement != nil {
 		updated = true
-		asset.CentralFlawManagement = *a.CentralFlawManagement
+		asset.CentralDependencyVulnManagement = *a.CentralDependencyVulnManagement
 	}
 
 	if a.ReachableFromInternet != nil {
