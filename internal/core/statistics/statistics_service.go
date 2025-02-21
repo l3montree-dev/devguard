@@ -181,7 +181,7 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 	return nil
 }
 
-func (s *service) UpdateAssetRiskAggregation(assetVersion models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
+func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
 	// set begin to last second of date
 	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
 	// set end to last second of date
@@ -282,10 +282,6 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion models.AssetVersion, a
 
 	// save the last history update timestamp
 	assetVersion.LastHistoryUpdate = &end
-	err := s.assetVersionRepository.Save(nil, &assetVersion)
-	if err != nil {
-		return fmt.Errorf("could not save asset version: %w", err)
-	}
 
 	// we ALWAYS need to propagate the risk aggregation to the project. The only exception is in the statistics daemon. There
 	// we update all assets and afterwards do a one time project update. This is just optimization.

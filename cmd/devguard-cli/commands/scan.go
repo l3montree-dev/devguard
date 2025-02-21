@@ -86,7 +86,7 @@ func newSbomCommand() *cobra.Command {
 					amountOpened, amountClosed, flaws, err := assetVersionService.HandleScanResult(
 						// TODO: add the correct asset
 						models.Asset{},
-						assetVersion,
+						&assetVersion,
 						vulns,
 						scanner,
 						"latest",

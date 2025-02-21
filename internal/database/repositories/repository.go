@@ -64,7 +64,7 @@ func newGormRepository[ID comparable, T Tabler](db *gorm.DB) Repository[ID, T, *
 }
 
 func (g *GormRepository[ID, T]) Save(tx *gorm.DB, t *T) error {
-	return g.GetDB(tx).Save(t).Error
+	return g.GetDB(tx).Debug().Save(t).Error
 }
 
 func (g *GormRepository[ID, T]) SaveBatch(tx *gorm.DB, ts []T) error {

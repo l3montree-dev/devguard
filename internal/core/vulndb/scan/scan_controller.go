@@ -38,7 +38,7 @@ type componentRepository interface {
 }
 
 type assetVersionService interface {
-	HandleScanResult(asset models.Asset, assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
+	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
 	UpdateSBOM(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM) error
 }
 
@@ -53,7 +53,7 @@ type assetVersionRepository interface {
 }
 
 type statisticsService interface {
-	UpdateAssetRiskAggregation(assetVersion models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error
+	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error
 }
 
 type httpController struct {
@@ -168,7 +168,7 @@ func (s *httpController) Scan(c core.Context) error {
 	}
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, assetVersion, vulns, scannerID, version, scannerID, userID, doRiskManagement)
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, version, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
@@ -176,7 +176,7 @@ func (s *httpController) Scan(c core.Context) error {
 
 	if doRiskManagement {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := s.statisticsService.UpdateAssetRiskAggregation(assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
+		if err := s.statisticsService.UpdateAssetRiskAggregation(&assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
 			return c.JSON(500, map[string]string{"error": "could not recalculate risk history"})
 		}
