@@ -43,7 +43,7 @@ func UpdateStatistics(db database.DB) error {
 		err := assetVersionRepository.Save(db, &version)
 		if err != nil {
 			slog.Error("could not save asset", "err", err)
-			//TODO: check if we should continue here or return an error
+			// continue with the next asset - just log the error
 			continue
 		}
 

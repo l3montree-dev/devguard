@@ -81,7 +81,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 
 		flaw := models.Flaw{
 			AssetVersionName:      assetVersion.Name,
-			AssetID:               asset.ID,
+			AssetID:               assetVersion.AssetID,
 			CVEID:                 utils.Ptr(v.CVEID),
 			ScannerID:             scannerID,
 			ComponentPurl:         utils.Ptr(v.Purl),
@@ -158,21 +158,6 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 				},
 			), *assetVersion, asset, true)
 		}); err != nil {
-			slog.Error("could not save flaws", "err", err)
-			return 0, 0, []models.Flaw{}, err
-		}
-	} else {
-		if err := s.flawService.UserDetectedFlaws(nil, userID, newFlaws, *assetVersion, asset, false); err != nil {
-			slog.Error("could not save flaws", "err", err)
-			return 0, 0, []models.Flaw{}, err
-		}
-
-		if err := s.flawService.UserFixedFlaws(nil, userID, utils.Filter(
-			fixedFlaws,
-			func(flaw models.Flaw) bool {
-				return flaw.State == models.FlawStateOpen
-			},
-		), *assetVersion, asset, false); err != nil {
 			slog.Error("could not save flaws", "err", err)
 			return 0, 0, []models.Flaw{}, err
 		}

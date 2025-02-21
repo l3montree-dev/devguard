@@ -170,7 +170,27 @@ func getCurrentVersion(path string) (string, int, error) {
 	// Sort the tags
 	normalize.SemverSort(tags)
 	if len(tags) == 0 {
-		return "", 0, fmt.Errorf("no semver tags found")
+		// no semver tags found
+		cmd = exec.Command("git", "rev-list", "--count", "HEAD")
+		var commitOut bytes.Buffer
+		errOut = bytes.Buffer{}
+		cmd.Stdout = &commitOut
+		cmd.Stderr = &errOut
+		cmd.Dir = getDirFromPath(path)
+		err = cmd.Run()
+		if err != nil {
+			slog.Error(
+				"could not run git rev-list --count", "err", err, "path", getDirFromPath(path), "msg", errOut.String(),
+			)
+			log.Fatal(err)
+		}
+
+		commitCounts := strings.TrimSpace(commitOut.String())
+		commitCountsInt, err := strconv.Atoi(commitCounts)
+		if err != nil {
+			return "", 0, err
+		}
+		return "0.0.0", commitCountsInt, nil
 	}
 
 	// reverse the tags
