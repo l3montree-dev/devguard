@@ -353,11 +353,10 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		// read the sbom file and post it to the scan endpoint
 		// get the flaws and print them to the console
 		file, err := generateSBOM(path)
-		defer os.Remove(file.Name())
-
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
+		defer os.Remove(file.Name())
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()

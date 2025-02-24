@@ -1,6 +1,7 @@
 package assetversion
 
 import (
+	"fmt"
 	"net/url"
 	"slices"
 
@@ -84,6 +85,17 @@ func NewAssetVersionController(
 func (a *assetVersionController) Read(c core.Context) error {
 	assetVersion := core.GetAssetVersion(c)
 	return c.JSON(200, assetVersion)
+}
+
+// Function to delete provided asset version
+func (a *assetVersionController) Delete(c core.Context) error {
+	assetVersion := core.GetAssetVersion(c)
+	err := a.assetVersionRepository.Delete(assetVersion.Name)
+	if err != nil {
+		fmt.Printf("error when trying to delete")
+		return err
+	}
+	return c.JSON(200, "deleted asset version successfully")
 }
 
 func (a *assetVersionController) GetAssetVersionsByAssetID(c core.Context) error {

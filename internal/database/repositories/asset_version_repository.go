@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
@@ -43,6 +45,21 @@ func (a *assetVersionRepository) Read(assetVersionName string, assetID uuid.UUID
 	var asset models.AssetVersion
 	err := a.db.First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
 	return asset, err
+}
+
+func (a *assetVersionRepository) Delete(name string) error {
+	app, err := a.FindByName(name)
+	if err != nil {
+		fmt.Printf("Error when finding asset in db")
+		return err
+	}
+	err = a.db.Delete(&app).Error
+	if err != nil {
+		fmt.Printf("Error when deleting asset in db")
+		return err
+	}
+	return err
+
 }
 
 func (a *assetVersionRepository) FindByName(name string) (models.AssetVersion, error) {
