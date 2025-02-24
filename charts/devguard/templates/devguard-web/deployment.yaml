@@ -43,6 +43,8 @@ spec:
             value: http://kratos:4433
           - name: DEVGUARD_API_URL
             value: http://devguard-api-service:8080
+          - name: DEVGUARD_API_URL_PUBLIC_INTERNET
+            value: {{ .Values.web.devguardApiUrlPublicInternet }}
           ports:
             - name: http
               containerPort: 3000

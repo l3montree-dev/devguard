@@ -49,10 +49,10 @@ api:
     className: ""
     annotations: {}
     hosts:
-    - host: example.com
-      paths:
-      - path: /
-        pathType: Prefix
+      - host: example.com
+        paths:
+          - path: /
+            pathType: Prefix
 
   intoto:
     existingPrivateKeySecretName: ec-private-key
@@ -63,7 +63,9 @@ api:
     existingWebhookSecretSecretName: github-app-webhook-secret
     # needs to contain key "privateKey"
     existingPrivateKeySecretName: github-app-private-key
+
 web:
+  devguardApiUrlPublicInternet: ""
   image:
     repository: ghcr.io/l3montree-dev/devguard-web
     pullPolicy: IfNotPresent
@@ -97,7 +99,7 @@ web:
     className: ""
     annotations: {}
     hosts:
-    - host: app.example.com
-      paths:
-      - path: /
-        pathType: Prefix
+      - host: app.example.com
+        paths:
+          - path: /
+            pathType: Prefix
