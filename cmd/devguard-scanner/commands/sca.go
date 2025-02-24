@@ -234,7 +234,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	openRisks := utils.Map(utils.Filter(scanResponse.Flaws, func(f flaw.FlawDTO) bool {
 		return f.State == "open"
 	}), func(f flaw.FlawDTO) float64 {
-		return *f.RawRiskAssessment
+		return utils.OrDefault(f.RawRiskAssessment, 0)
 	})
 
 	maxRisk := 0.
@@ -263,7 +263,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 				slog.Error("could not parse purl", "err", err)
 			}
 
-			return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), *f.CVEID, *f.RawRiskAssessment, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
+			return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(f.CVEID), utils.OrDefault(f.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
 		},
 	))
 
