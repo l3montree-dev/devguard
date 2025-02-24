@@ -1,10 +1,8 @@
 package asset
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -180,42 +178,4 @@ func (c *httpController) Update(ctx core.Context) error {
 	}
 
 	return ctx.JSON(200, asset)
-}
-
-func (s *httpController) ManualSbomScan(c core.Context) error {
-
-	var maxSize int = 16 * 1024 * 1024 //Max Upload Size 16mb
-	err := c.Request().ParseMultipartForm(int64(maxSize))
-
-	if err != nil {
-		fmt.Printf("Submitted Data too large")
-		return err
-	}
-	var buf bytes.Buffer
-	file, _, err := c.Request().FormFile("file")
-
-	if err != nil {
-		fmt.Printf("Exploding while form file ")
-		return err
-	}
-
-	_, err = io.Copy(&buf, file) //Copy the data of the file to the buffer
-	if err != nil {
-		fmt.Printf("Error when copying data to buffer")
-		return err
-	}
-	sbom := buf.String() //Interpret buf as String
-
-	fmt.Println(sbom)
-
-	/*normalizedSBOM := normalize.FromCdxBom(sbom, false)
-	vulns, err := s.sbomScanner.Scan(normalizedSBOM)
-	if err != nil {
-		slog.Error("could not scan file", "err", err)
-		return c.JSON(500, map[string]string{"error": "could not scan file"})
-	}*/
-
-	file.Close() //Close file to prevent memory leak
-
-	return c.JSON(200, "Sucessfully parsed file")
 }
