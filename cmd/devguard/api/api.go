@@ -339,10 +339,6 @@ func health(c echo.Context) error {
 	return c.String(200, "ok")
 }
 
-func manualSbomScan() {
-
-}
-
 func Start(db core.DB) {
 
 	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_PUBLIC"))
