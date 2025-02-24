@@ -227,7 +227,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 
 	// order the flaws by their risk
 	slices.SortFunc(scanResponse.Flaws, func(a, b flaw.FlawDTO) int {
-		return int(*(a.RawRiskAssessment)*100) - int(*b.RawRiskAssessment*100)
+		return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
 	})
 
 	// get the max risk of open!!! flaws
