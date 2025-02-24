@@ -8,6 +8,7 @@
             "name": "Run Program",
             "type": "go",
             "request": "launch",
+            "cwd": "${workspaceRoot}",
             "mode": "auto",
             "cwd": "${workspaceRoot}",
             "program": "${workspaceRoot}/cmd/devguard/main.go",
