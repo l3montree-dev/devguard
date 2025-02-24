@@ -87,6 +87,11 @@ func GetAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 }
 
 func getCurrentBranchName(path string) (string, error) {
+	// check if a CI variable is set - this provides a more stable way to get the branch name
+	if os.Getenv("CI_COMMIT_REF_NAME") != "" {
+		return os.Getenv("CI_COMMIT_REF_NAME"), nil
+	}
+
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	var out bytes.Buffer
 	var errOut bytes.Buffer
