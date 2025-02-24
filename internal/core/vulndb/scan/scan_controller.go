@@ -200,12 +200,12 @@ func (s *httpController) ManualSbomScan(c core.Context) error {
 	var maxSize int = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(int64(maxSize))
 	if err != nil {
-		fmt.Printf("Error when parsing data")
+		fmt.Printf("error when parsing data")
 		return err
 	}
 	file, _, err := c.Request().FormFile("file")
 	if err != nil {
-		fmt.Printf("Error when forming file")
+		fmt.Printf("error when forming file")
 		return err
 	}
 
@@ -304,21 +304,6 @@ func (s *httpController) ManualSbomScan(c core.Context) error {
 			slog.Error("could not save asset", "err", err)
 		}
 	}
-
-	/*var buf bytes.Buffer //Buffer to store sbom
-	if err != nil {
-		fmt.Printf("Exploding while form file ")
-		return err
-	}
-
-	_, err = io.Copy(&buf, file) //Copy the data of the file to the buffer
-	if err != nil {
-		fmt.Printf("Error when copying data to buffer")
-		return err
-	}
-	sbom := buf.String() //Interpret buf as String
-
-	fmt.Println(sbom)*/
 
 	file.Close() //Close file to prevent memory leak
 	return c.JSON(200, ScanResponse{
