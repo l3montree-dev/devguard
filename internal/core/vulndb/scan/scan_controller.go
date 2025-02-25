@@ -208,6 +208,7 @@ func (s *httpController) ManualSbomScan(c core.Context) error {
 		fmt.Printf("error when forming file")
 		return err
 	}
+	defer file.Close() //Close file to prevent memory leak
 
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(file, cdx.BOMFileFormatJSON)
@@ -305,7 +306,7 @@ func (s *httpController) ManualSbomScan(c core.Context) error {
 		}
 	}
 
-	file.Close() //Close file to prevent memory leak
+	
 	return c.JSON(200, ScanResponse{
 		AmountOpened: amountOpened,
 		AmountClosed: amountClose,
