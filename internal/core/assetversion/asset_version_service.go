@@ -23,7 +23,7 @@ import (
 
 type assetVersionRepository interface {
 	GetDB(core.DB) core.DB
-	Delete(name string) error
+	Delete(tx core.DB, assetVersion *models.AssetVersion) error
 	Save(tx core.DB, assetVersion *models.AssetVersion) error
 	GetAllAssetsVersionFromDBByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 }

@@ -90,7 +90,7 @@ func (a *assetVersionController) Read(c core.Context) error {
 // Function to delete provided asset version
 func (a *assetVersionController) Delete(c core.Context) error {
 	assetVersion := core.GetAssetVersion(c)
-	err := a.assetVersionRepository.Delete(assetVersion.Name)
+	err := a.assetVersionRepository.Delete(nil, &assetVersion)
 	if err != nil {
 		slog.Error("error when trying to call delete function in assetVersionRepository", "err", err)
 		return err

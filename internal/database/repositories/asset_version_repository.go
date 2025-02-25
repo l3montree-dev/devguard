@@ -47,13 +47,9 @@ func (a *assetVersionRepository) Read(assetVersionName string, assetID uuid.UUID
 	return asset, err
 }
 
-func (a *assetVersionRepository) Delete(name string) error {
-	app, err := a.FindByName(name)
-	if err != nil {
-		slog.Error("error when finding asset in database", "err", err)
-		return err
-	}
-	err = a.db.Delete(&app).Error
+func (a *assetVersionRepository) Delete(tx core.DB, assetVersion *models.AssetVersion) error {
+
+	err := a.db.Delete(&assetVersion).Error
 	if err != nil {
 		slog.Error("error when deleting asset in database", "err", err)
 		return err
