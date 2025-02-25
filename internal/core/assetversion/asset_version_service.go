@@ -143,24 +143,22 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 	fixedFlaws := comparison.OnlyInA
 	newFlaws := comparison.OnlyInB
 
-	if doRiskManagement {
-		// get a transaction
-		if err := s.flawRepository.Transaction(func(tx core.DB) error {
-			if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, *assetVersion, asset, true); err != nil {
+	// get a transaction
+	if err := s.flawRepository.Transaction(func(tx core.DB) error {
+		if err := s.flawService.UserDetectedFlaws(tx, userID, newFlaws, *assetVersion, asset, doRiskManagement); err != nil {
 
-				// this will cancel the transaction
-				return err
-			}
-			return s.flawService.UserFixedFlaws(tx, userID, utils.Filter(
-				fixedFlaws,
-				func(flaw models.Flaw) bool {
-					return flaw.State == models.FlawStateOpen
-				},
-			), *assetVersion, asset, true)
-		}); err != nil {
-			slog.Error("could not save flaws", "err", err)
-			return 0, 0, []models.Flaw{}, err
+			// this will cancel the transaction
+			return err
 		}
+		return s.flawService.UserFixedFlaws(tx, userID, utils.Filter(
+			fixedFlaws,
+			func(flaw models.Flaw) bool {
+				return flaw.State == models.FlawStateOpen
+			},
+		), *assetVersion, asset, doRiskManagement)
+	}); err != nil {
+		slog.Error("could not save flaws", "err", err)
+		return 0, 0, []models.Flaw{}, err
 	}
 
 	// the amount we actually fixed, is the amount that was open before
