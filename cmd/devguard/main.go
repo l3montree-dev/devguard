@@ -16,6 +16,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
@@ -36,7 +38,7 @@ import (
 // @host		localhost:8080
 // @BasePath	/api/v1
 func main() {
-	// os.Setenv("TZ", "UTC")
+	os.Setenv("TZ", "UTC")
 	core.LoadConfig() // nolint: errcheck
 	core.InitLogger()
 
