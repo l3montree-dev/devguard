@@ -1,7 +1,6 @@
 package assetversion
 
 import (
-	"fmt"
 	"net/url"
 	"slices"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/exp/slog"
 )
 
 type assetVersionComponentsLoader interface {
@@ -92,7 +92,7 @@ func (a *assetVersionController) Delete(c core.Context) error {
 	assetVersion := core.GetAssetVersion(c)
 	err := a.assetVersionRepository.Delete(assetVersion.Name)
 	if err != nil {
-		fmt.Printf("error when trying to delete")
+		slog.Error("error when trying to call delete function in assetVersionRepository", "err", err)
 		return err
 	}
 	return c.JSON(200, "deleted asset version successfully")

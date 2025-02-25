@@ -16,7 +16,7 @@
 package repositories
 
 import (
-	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -50,12 +50,12 @@ func (a *assetVersionRepository) Read(assetVersionName string, assetID uuid.UUID
 func (a *assetVersionRepository) Delete(name string) error {
 	app, err := a.FindByName(name)
 	if err != nil {
-		fmt.Printf("Error when finding asset in db")
+		slog.Error("error when finding asset in database", "err", err)
 		return err
 	}
 	err = a.db.Delete(&app).Error
 	if err != nil {
-		fmt.Printf("Error when deleting asset in db")
+		slog.Error("error when deleting asset in database", "err", err)
 		return err
 	}
 	return err
