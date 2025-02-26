@@ -3,6 +3,7 @@ package integrations
 import (
 	"context"
 	"encoding/json"
+	"os"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -512,8 +513,14 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 		return fmt.Errorf("could not list project hooks: %w", err)
 	}
 
+	chosenURL := os.Getenv("INSTANCE_DOMAIN")
+	if chosenURL == "" {
+		slog.Error("No URL specified in .env file")
+		return nil
+	}
+
 	for _, hook := range hooks {
-		if hook.URL == "https://api.main.devguard.org/api/v1/webhook/" {
+		if hook.URL == chosenURL {
 			// the hook already exists
 			return nil
 		}
@@ -524,14 +531,9 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 		return fmt.Errorf("could not create new token: %w", err)
 	}
 
-	projectOptions := &gitlab.AddProjectHookOptions{
-		IssuesEvents:             gitlab.Ptr(true),
-		ConfidentialIssuesEvents: gitlab.Ptr(true),
-		NoteEvents:               gitlab.Ptr(true),
-		ConfidentialNoteEvents:   gitlab.Ptr(true),
-		EnableSSLVerification:    gitlab.Ptr(true),
-		URL:                      gitlab.Ptr("https://api.main.devguard.org/api/v1/webhook/"),
-		Token:                    gitlab.Ptr(token.String()),
+	projectOptions, err := createProjectHook(hooks)
+	if err != nil {
+		return err
 	}
 
 	projectHook, _, err := client.AddProjectHook(ctx.Request().Context(), projectId, projectOptions)
@@ -554,6 +556,39 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 
 	return nil
 
+}
+
+func createProjectHook(hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
+	projectOptions := &gitlab.AddProjectHookOptions{} //Intialize empty struct to return on error
+
+	chosenURL := os.Getenv("INSTANCE_DOMAIN") //Get the URL from the .env file
+	if chosenURL == "" {
+		slog.Error("no URL specified in .env file")
+		return projectOptions, nil
+	}
+
+	for _, hook := range hooks { //Check if the Hook already exists
+		if hook.URL == chosenURL {
+
+			return projectOptions, nil
+		}
+	}
+
+	token, err := createToken()
+	if err != nil {
+		slog.Error("could not create new token")
+		return projectOptions, err
+	}
+
+	projectOptions.IssuesEvents = gitlab.Ptr(true)
+	projectOptions.ConfidentialIssuesEvents = gitlab.Ptr(true)
+	projectOptions.NoteEvents = gitlab.Ptr(true)
+	projectOptions.ConfidentialNoteEvents = gitlab.Ptr(true)
+	projectOptions.EnableSSLVerification = gitlab.Ptr(true)
+	projectOptions.URL = gitlab.Ptr(chosenURL)
+	projectOptions.Token = gitlab.Ptr(token.String())
+
+	return projectOptions, nil
 }
 
 func (g *gitlabIntegration) deleteProjectHook(ctx core.Context, integrationUUID uuid.UUID, projectId int, hookId int) error {
