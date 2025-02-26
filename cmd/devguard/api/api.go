@@ -507,7 +507,7 @@ func Start(db core.DB) {
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 
 	//Api to scan manually using an uploaded SBOM provided by the user
-	assetRouter.POST("/sbom-manual-scan/", scanController.ManualSbomScan)
+	assetRouter.POST("/sbom-file/", scanController.ScanSbomFile)
 
 	//TODO: add the projectScopedRBAC middleware to the following routes
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))

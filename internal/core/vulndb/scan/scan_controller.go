@@ -206,7 +206,7 @@ func (s *httpController) Scan(c core.Context) error {
 
 }
 
-func (s *httpController) ManualSbomScan(c core.Context) error {
+func (s *httpController) ScanSbomFile(c core.Context) error {
 
 	var maxSize int = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(int64(maxSize))
