@@ -202,7 +202,7 @@ func (s *httpController) Scan(c core.Context) error {
 
 	err := ScanHelpFunction(c, normalize.FromCdxBom(bom, true), s)
 
-	return c.JSON(200, err)
+	return err
 
 }
 
@@ -229,6 +229,6 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 
 	err = ScanHelpFunction(c, normalize.FromCdxBom(bom, true), s)
 
-	return c.JSON(200, err)
+	return err
 
 }
