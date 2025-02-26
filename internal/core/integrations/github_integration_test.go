@@ -4,16 +4,18 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 func TestCreateProjectHook(t *testing.T) {
 	t.Run("", func(t *testing.T) {
-		var hooks []*gitlab.ProjectHook
-		results, err := integrations.CreateProjectHook(hooks)
+		token, _ := uuid.NewUUID()
+		hooks := make([]*gitlab.ProjectHook, 0)
+		results, err := integrations.CreateProjectHook(token, hooks)
 		if err != nil {
-			t.Error("Error occured when crwating project hook : %w", err)
+			t.Error("Error occured when creating project hook : %w", err)
 		}
 		fmt.Printf("This is the URL: %s ", *results.URL)
 	})

@@ -531,7 +531,7 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 		return fmt.Errorf("could not create new token: %w", err)
 	}
 
-	projectOptions, err := CreateProjectHook(hooks)
+	projectOptions, err := CreateProjectHook(token, hooks)
 	if err != nil {
 		return err
 	}
@@ -558,7 +558,7 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 
 }
 
-func CreateProjectHook(hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
+func CreateProjectHook(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
 	projectOptions := &gitlab.AddProjectHookOptions{} //Intialize empty struct to return on error
 
 	chosenURL := os.Getenv("INSTANCE_DOMAIN") //Get the URL from the .env file
@@ -574,12 +574,7 @@ func CreateProjectHook(hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptio
 		}
 	}
 
-	token, err := createToken()
-	if err != nil {
-		slog.Error("could not create new token")
-		return projectOptions, err
-	}
-
+	//Assign values to the empty struct
 	projectOptions.IssuesEvents = gitlab.Ptr(true)
 	projectOptions.ConfidentialIssuesEvents = gitlab.Ptr(true)
 	projectOptions.NoteEvents = gitlab.Ptr(true)
