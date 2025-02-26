@@ -1,4 +1,4 @@
-package flaw
+package dependencyVuln
 
 import (
 	"time"
@@ -7,10 +7,10 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-type FlawEventDTO struct {
+type VulnEventDTO struct {
 	ID     uuid.UUID            `json:"id"`
-	Type   models.FlawEventType `json:"type"`
-	FlawID string               `json:"flawId"`
+	Type   models.VulnEventType `json:"type"`
+	VulnID string               `json:"vulnId"`
 	UserID string               `json:"userId"`
 
 	Justification *string `json:"justification"`
@@ -22,13 +22,13 @@ type FlawEventDTO struct {
 	AssetVersion string `json:"assetVersion"`
 }
 
-func (dto FlawEventDTO) ToModel() models.FlawEvent {
-	flawId := dto.FlawID
+func (dto VulnEventDTO) ToModel() models.VulnEvent {
+	vulnId := dto.VulnID
 	userId := dto.UserID
 
-	return models.FlawEvent{
+	return models.VulnEvent{
 		Type:          dto.Type,
-		FlawID:        flawId,
+		VulnID:        vulnId,
 		UserID:        userId,
 		Justification: dto.Justification,
 	}

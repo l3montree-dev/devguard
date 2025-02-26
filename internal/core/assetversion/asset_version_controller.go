@@ -7,7 +7,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -22,17 +22,17 @@ type assetVersionComponentsLoader interface {
 }
 type assetVersionService interface {
 	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) *cdx.BOM
-	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency, flaws []models.Flaw) *cdx.BOM
+	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 }
 
-type flawRepository interface {
+type dependencyVulnRepository interface {
 	Transaction(txFunc func(core.DB) error) error
-	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Flaw, error)
+	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 
-	SaveBatch(db core.DB, flaws []models.Flaw) error
+	SaveBatch(db core.DB, dependencyVulns []models.DependencyVuln) error
 
-	GetFlawsByPurl(tx core.DB, purl []string) ([]models.Flaw, error)
+	GetDependencyVulnsByPurl(tx core.DB, purl []string) ([]models.DependencyVuln, error)
 }
 
 type componentRepository interface {
@@ -46,18 +46,18 @@ type supplyChainRepository interface {
 	PercentageOfVerifiedSupplyChains(assetVersionName string, assetID uuid.UUID) (float64, error)
 }
 
-type flawService interface {
-	UserFixedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
-	UserDetectedFlaws(tx core.DB, userID string, flaws []models.Flaw, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
-	UpdateFlawState(tx core.DB, assetID uuid.UUID, userID string, flaw *models.Flaw, statusType string, justification string, assetVersionName string) (models.FlawEvent, error)
+type dependencyVulnService interface {
+	UserFixedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
+	UserDetectedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
+	UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, assetVersionName string) (models.VulnEvent, error)
 }
 
 type assetVersionController struct {
 	assetVersionRepository       assetVersionRepository
 	assetVersionService          assetVersionService
-	flawRepository               flawRepository
+	dependencyVulnRepository     dependencyVulnRepository
 	componentRepository          componentRepository
-	flawService                  flawService
+	dependencyVulnService        dependencyVulnService
 	supplyChainRepository        supplyChainRepository
 	assetVersionComponentsLoader assetVersionComponentsLoader
 }
@@ -65,18 +65,18 @@ type assetVersionController struct {
 func NewAssetVersionController(
 	assetVersionRepository assetVersionRepository,
 	assetVersionService assetVersionService,
-	flawRepository flawRepository,
+	dependencyVulnRepository dependencyVulnRepository,
 	componentRepository componentRepository,
-	flawService flawService,
+	dependencyVulnService dependencyVulnService,
 	supplyChainRepository supplyChainRepository,
 	assetVersionComponentsLoader assetVersionComponentsLoader,
 ) *assetVersionController {
 	return &assetVersionController{
 		assetVersionRepository:       assetVersionRepository,
 		assetVersionService:          assetVersionService,
-		flawRepository:               flawRepository,
+		dependencyVulnRepository:     dependencyVulnRepository,
 		componentRepository:          componentRepository,
-		flawService:                  flawService,
+		dependencyVulnService:        dependencyVulnService,
 		supplyChainRepository:        supplyChainRepository,
 		assetVersionComponentsLoader: assetVersionComponentsLoader,
 	}
@@ -143,17 +143,17 @@ func (a *assetVersionController) AffectedComponents(c core.Context) error {
 	}
 
 	assetVersion := core.GetAssetVersion(c)
-	_, flaws, err := a.getComponentsAndFlaws(assetVersion, scanner, version)
+	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scanner, version)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, utils.Map(flaws, func(m models.Flaw) flaw.FlawDTO {
-		return flaw.FlawToDto(m)
+	return c.JSON(200, utils.Map(dependencyVulns, func(m models.DependencyVuln) dependencyVuln.DependencyVulnDTO {
+		return dependencyVuln.DependencyVulnToDto(m)
 	}))
 }
 
-func (a *assetVersionController) getComponentsAndFlaws(assetVersion models.AssetVersion, scanner, version string) ([]models.ComponentDependency, []models.Flaw, error) {
+func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, scanner, version string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
 	components, err := a.assetVersionComponentsLoader.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner, version)
 	if err != nil {
 		return nil, nil, err
@@ -163,11 +163,11 @@ func (a *assetVersionController) getComponentsAndFlaws(assetVersion models.Asset
 		return c.DependencyPurl
 	})
 
-	flaws, err := a.flawRepository.GetFlawsByPurl(nil, purls)
+	dependencyVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByPurl(nil, purls)
 	if err != nil {
 		return nil, nil, err
 	}
-	return components, flaws, nil
+	return components, dependencyVulns, nil
 }
 
 func (a *assetVersionController) DependencyGraph(c core.Context) error {
@@ -292,20 +292,20 @@ func (a *assetVersionController) buildVeX(c core.Context) (*cdx.BOM, error) {
 		return nil, err
 	}
 
-	// get all associated flaws
-	components, flaws, err := a.getComponentsAndFlaws(assetVersion, scanner, version)
+	// get all associated dependencyVulns
+	components, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scanner, version)
 	if err != nil {
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildVeX(asset, assetVersion, version, org.Name, components, flaws), nil
+	return a.assetVersionService.BuildVeX(asset, assetVersion, version, org.Name, components, dependencyVulns), nil
 }
 
 func (a *assetVersionController) Metrics(c core.Context) error {
 	assetVersion := core.GetAssetVersion(c)
 	scannerIds := []string{}
 	// get the latest events of this asset per scan type
-	err := a.assetVersionRepository.GetDB(nil).Table("flaws").Select("DISTINCT scanner_id").Where("asset_version_name  = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_id", &scannerIds).Error
+	err := a.assetVersionRepository.GetDB(nil).Table("dependency_vulns").Select("DISTINCT scanner_id").Where("asset_version_name  = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_id", &scannerIds).Error
 
 	if err != nil {
 		return err
