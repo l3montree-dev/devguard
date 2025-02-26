@@ -62,7 +62,7 @@ type dependencyVulnRepository interface {
 
 type aggregatedVulnRepository interface {
 	FindByTicketID(tx core.DB, ticketID string) (models.Vuln, error)
-	Save(db core.DB, dependencyVuln *models.Vuln) error
+	Save(db core.DB, vuln *models.Vuln) error
 	Transaction(fn func(tx core.DB) error) error
 	GetOrgFromVulnID(tx core.DB, vulnID string) (models.Org, error)
 }
@@ -86,7 +86,7 @@ type assetVersionRepository interface {
 }
 
 type dependencyVulnService interface {
-	ApplyAndSave(tx core.DB, dependencyVuln *models.DependencyVuln, VulnEvent *models.VulnEvent) error
+	ApplyAndSave(tx core.DB, vuln *models.DependencyVuln, VulnEvent *models.VulnEvent) error
 }
 
 // wrapper around the github package - which provides only the methods
@@ -233,10 +233,10 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		if event.Comment.User.GetType() == "Bot" {
 			return nil
 		}
-		// look for a dependencyVuln with such a github ticket id
+		// look for a vuln with such a github ticket id
 		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d", issueId))
 		if err != nil {
-			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
+			slog.Debug("could not find vuln by ticket id", "err", err, "ticketId", issueId)
 			return nil
 		}
 
@@ -262,7 +262,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		go func() {
 			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVulnID(nil, vuln.GetID())
 			if err != nil {
-				slog.Error("could not get org from dependencyVuln id", "err", err)
+				slog.Error("could not get org from vuln id", "err", err)
 				return
 			}
 			// save the user in the database
@@ -287,7 +287,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		VulnEvent := createNewVulnEventBasedOnComment(vuln.GetID(), fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment)
 
 		VulnEvent.Apply(vuln)
-		// save the dependencyVuln and the event in a transaction
+		// save the vuln and the event in a transaction
 		err = githubIntegration.aggregatedVulnRepository.Transaction(func(tx core.DB) error {
 			err := githubIntegration.aggregatedVulnRepository.Save(tx, &vuln)
 			if err != nil {
@@ -300,7 +300,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return nil
 		})
 		if err != nil {
-			slog.Error("could not save dependencyVuln and event", "err", err)
+			slog.Error("could not save the vulnerability and the event", "err", err)
 			return err
 		}
 
@@ -465,12 +465,12 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return nil
 		}
 
-		dependencyVulnId, err := core.GetVulnID(event.Ctx)
+		vulnId, err := core.GetVulnID(event.Ctx)
 		if err != nil {
 			return err
 		}
 
-		dependencyVuln, err := g.dependencyVulnRepository.Read(dependencyVulnId)
+		dependencyVuln, err := g.dependencyVulnRepository.Read(vulnId)
 		if err != nil {
 			return err
 		}

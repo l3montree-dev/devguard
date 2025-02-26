@@ -293,7 +293,7 @@ func (a *assetVersionController) Metrics(c core.Context) error {
 	assetVersion := core.GetAssetVersion(c)
 	scannerIds := []string{}
 	// get the latest events of this asset per scan type
-	err := a.assetVersionRepository.GetDB(nil).Table("dependencyVulns").Select("DISTINCT scanner_id").Where("asset_version_name  = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_id", &scannerIds).Error
+	err := a.assetVersionRepository.GetDB(nil).Table("dependency_vulns").Select("DISTINCT scanner_id").Where("asset_version_name  = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_id", &scannerIds).Error
 
 	if err != nil {
 		return err

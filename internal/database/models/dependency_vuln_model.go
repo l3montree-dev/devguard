@@ -40,6 +40,20 @@ type DependencyVuln struct {
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt" gorm:"default:now();"`
 }
 
+var _ Vuln = &DependencyVuln{}
+
+func (d *DependencyVuln) SetRawRiskAssessment(risk float64) {
+	d.RawRiskAssessment = &risk
+}
+
+func (d *DependencyVuln) GetRawRiskAssessment() float64 {
+	return *d.RawRiskAssessment
+}
+
+func (d *DependencyVuln) SetRiskRecalculatedAt(t time.Time) {
+	d.RiskRecalculatedAt = t
+}
+
 type DependencyVulnRisk struct {
 	DependencyVulnID  string
 	CreatedAt         time.Time

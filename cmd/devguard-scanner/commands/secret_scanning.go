@@ -26,8 +26,8 @@ import (
 func NewSecretScanningCommand() *cobra.Command {
 	secretScanningCommand := &cobra.Command{
 		Use:   "secret-scanning",
-		Short: "Start a secret scanning",
-		Long:  "This command will scan an application for secrets and return a list of secrets found in the application.",
+		Short: "Scan your application to see if any secrets have been unintentionally leaked into the source code",
+		Long:  "Scan your application to see if any secrets have been unintentionally leaked into the source code",
 
 		Run: func(cmd *cobra.Command, args []string) {
 			err := sarifCommandFactory("secret-scanning")(cmd, args)
@@ -37,8 +37,6 @@ func NewSecretScanningCommand() *cobra.Command {
 			}
 		},
 	}
-
-	secretScanningCommand.Flags().Bool("riskManagement", true, "Enable risk management (stores the detected vulnerabilities in devguard)")
 
 	addScanFlags(secretScanningCommand)
 	return secretScanningCommand
@@ -67,7 +65,7 @@ func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string)
 			return errors.Wrap(err, "invalid path")
 		}
 
-		file, err := scanPath(scanner, path)
+		file, err := executeCodeScan(scanner, path)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
@@ -124,7 +122,7 @@ func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string)
 	}
 }
 
-func scanPath(scanner, path string) (*os.File, error) {
+func executeCodeScan(scanner, path string) (*os.File, error) {
 	switch scanner {
 	case "secret-scanning":
 		return secretScan(path)
@@ -152,7 +150,7 @@ func sastScan(path string) (*os.File, error) {
 	if err != nil {
 		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.ExitCode() == 1 {
-			slog.Warn("Vulnerabilities found, but continuing excution.")
+			slog.Warn("Vulnerabilities found, but continuing execution.")
 		} else {
 			return nil, errors.Wrapf(err, "could not run scanner: %s", stderr.String())
 		}
@@ -168,20 +166,21 @@ func sastScan(path string) (*os.File, error) {
 
 func secretScan(path string) (*os.File, error) {
 
-	fileName := uuid.New().String() + ".sarif"
+	file, err := os.CreateTemp("", "*.sarif")
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create temp file")
+	}
 
 	var scannerCmd *exec.Cmd
 
 	slog.Info("Starting secret scanning", "path", path)
 
-	/* 	scannerCmd = exec.Command("gitleaks", "dir", "-v", path, "--report-format", "sarif", "--report-path", fileName) */
-
-	scannerCmd = exec.Command("gitleaks", "git", "-v", path, "--report-path", fileName, "--report-format", "sarif")
+	scannerCmd = exec.Command("gitleaks", "git", "-v", path, "--report-path", file.Name(), "--report-format", "sarif")
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 
-	err := scannerCmd.Run()
+	err = scannerCmd.Run()
 	if err != nil {
 		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.ExitCode() == 1 {
@@ -189,11 +188,6 @@ func secretScan(path string) (*os.File, error) {
 		} else {
 			return nil, errors.Wrapf(err, "could not run scanner: %s", stderr.String())
 		}
-	}
-
-	file, err := os.Open(fileName)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not open file")
 	}
 
 	return file, nil

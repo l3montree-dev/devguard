@@ -165,9 +165,6 @@ func (c *httpController) Update(ctx core.Context) error {
 		}
 	}
 
-	if patchRequest.CentralDependencyVulnManagement != nil && *patchRequest.CentralDependencyVulnManagement != asset.CentralDependencyVulnManagement {
-		asset.CentralDependencyVulnManagement = *patchRequest.CentralDependencyVulnManagement
-	}
 	updated := patchRequest.applyToModel(&asset)
 
 	if updated {

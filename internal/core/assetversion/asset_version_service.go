@@ -73,7 +73,7 @@ func (s *service) GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVe
 	return s.assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(nil, assetID)
 }
 
-func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion models.AssetVersion, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error) {
+func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error) {
 
 	firstPartyVulnerabilities := []models.FirstPartyVulnerability{}
 
@@ -81,7 +81,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion mo
 		for _, result := range run.Results {
 
 			snippet := result.Locations[0].PhysicalLocation.Region.Snippet.Text
-			if scannerID == "secret-scanning" {
+			if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/secret-scanning" {
 				snippetMax := 20
 				if snippetMax < len(snippet)/2 {
 					snippetMax = len(snippet) / 2
@@ -94,6 +94,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion mo
 					AssetVersionName: assetVersion.Name,
 					AssetID:          asset.ID,
 					Message:          &result.Message.Text,
+					ScannerID:        scannerID,
 				},
 				RuleID:      result.RuleId,
 				Uri:         result.Locations[0].PhysicalLocation.ArtifactLocation.Uri,
@@ -108,9 +109,6 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion mo
 				Date:        result.PartialFingerprints.Date,
 			}
 
-			firstPartyVulnerability.ScannerID = scannerID
-			firstPartyVulnerability.AssetID = asset.GetID()
-
 			firstPartyVulnerabilities = append(firstPartyVulnerabilities, firstPartyVulnerability)
 		}
 	}
@@ -124,32 +122,22 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion mo
 		return 0, 0, []models.FirstPartyVulnerability{}, err
 	}
 
+	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
 	switch scannerID {
-	case "sast":
+	case devguardScanner + "sast":
 		assetVersion.LastSastScan = utils.Ptr(time.Now())
-	case "dast":
+	case devguardScanner + "dast":
 		assetVersion.LastDastScan = utils.Ptr(time.Now())
-	case "sca":
-		assetVersion.LastScaScan = utils.Ptr(time.Now())
-	case "container-scanning":
-		assetVersion.LastContainerScan = utils.Ptr(time.Now())
-	case "secret-scanning":
+	case devguardScanner + "secret-scanning":
 		assetVersion.LastSecretScan = utils.Ptr(time.Now())
-	case "iac":
+	case devguardScanner + "iac":
 		assetVersion.LastIacScan = utils.Ptr(time.Now())
 	}
 
-	if doRiskManagement {
-		err = s.assetVersionRepository.Save(nil, &assetVersion)
-		if err != nil {
-			// swallow but log
-			slog.Error("could not save asset", "err", err)
-		}
-	}
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
-func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion models.AssetVersion, vulns []models.FirstPartyVulnerability, doRiskManagement bool, asset models.Asset) (int, int, []models.FirstPartyVulnerability, error) {
+func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVulnerability, doRiskManagement bool, asset models.Asset) (int, int, []models.FirstPartyVulnerability, error) {
 	// get all existing vulns from the database - this is the old state
 	existingVulns, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
@@ -169,38 +157,21 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	fixedVulns := comparison.OnlyInA
 	newVulns := comparison.OnlyInB
 
-	if doRiskManagement {
-		// get a transaction
-		if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
-			if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, newVulns, true); err != nil {
-				// this will cancel the transaction
-				return err
-			}
-			return s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, utils.Filter(
-				fixedVulns,
-				func(vuln models.FirstPartyVulnerability) bool {
-					return vuln.State == models.VulnStateOpen
-				},
-			), true)
-		}); err != nil {
-			slog.Error("could not save vulns", "err", err)
-			return 0, 0, []models.FirstPartyVulnerability{}, err
+	// get a transaction
+	if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
+		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, newVulns, true); err != nil {
+			// this will cancel the transaction
+			return err
 		}
-	} else {
-		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(nil, userID, newVulns, false); err != nil {
-			slog.Error("could not save vulns", "err", err)
-			return 0, 0, []models.FirstPartyVulnerability{}, err
-		}
-
-		if err := s.firstPartyVulnService.UserFixedFirstPartyVulns(nil, userID, utils.Filter(
+		return s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, utils.Filter(
 			fixedVulns,
 			func(vuln models.FirstPartyVulnerability) bool {
 				return vuln.State == models.VulnStateOpen
 			},
-		), false); err != nil {
-			slog.Error("could not save vulns", "err", err)
-			return 0, 0, []models.FirstPartyVulnerability{}, err
-		}
+		), true)
+	}); err != nil {
+		slog.Error("could not save vulns", "err", err)
+		return 0, 0, []models.FirstPartyVulnerability{}, err
 	}
 
 	// the amount we actually fixed, is the amount that was open before
@@ -263,18 +234,10 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion models.Asset
 	}
 
 	switch scanner {
-	case "sast":
-		assetVersion.LastSastScan = utils.Ptr(time.Now())
-	case "dast":
-		assetVersion.LastDastScan = utils.Ptr(time.Now())
 	case "sca":
 		assetVersion.LastScaScan = utils.Ptr(time.Now())
 	case "container-scanning":
 		assetVersion.LastContainerScan = utils.Ptr(time.Now())
-	case "secret-scanning":
-		assetVersion.LastSecretScan = utils.Ptr(time.Now())
-	case "iac":
-		assetVersion.LastIacScan = utils.Ptr(time.Now())
 	}
 
 	if doRiskManagement {

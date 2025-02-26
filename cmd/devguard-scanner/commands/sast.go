@@ -9,8 +9,8 @@ import (
 func NewSastCommand() *cobra.Command {
 	sastCommand := &cobra.Command{
 		Use:   "sast",
-		Short: "Start a static application security testing",
-		Long:  "This command will scan an application for vulnerabilities and return a list of vulnerabilities found in the application.",
+		Short: "Launch a static application security test.",
+		Long:  "Launch a static application security test. A SAST test runs predefined rules against your source code",
 
 		Run: func(cmd *cobra.Command, args []string) {
 			err := sarifCommandFactory("sast")(cmd, args)
@@ -20,8 +20,6 @@ func NewSastCommand() *cobra.Command {
 			}
 		},
 	}
-
-	sastCommand.Flags().Bool("riskManagement", true, "Enable risk management (stores the detected vulnerabilities in devguard)")
 
 	addScanFlags(sastCommand)
 	return sastCommand

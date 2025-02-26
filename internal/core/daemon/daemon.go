@@ -80,7 +80,7 @@ func Start(db database.DB) {
 		}
 
 		// after we have a fresh vulndb we can update the dependencyVulns.
-		// we save data inside the dependencyVulns table: ComponentDepth and ComponentFixedVersion
+		// we save data inside the dependency_vulns table: ComponentDepth and ComponentFixedVersion
 		// those need to be updated before recalculating the risk
 		if shouldMirror(configService, "vulndb.componentProperties") {
 			start = time.Now()

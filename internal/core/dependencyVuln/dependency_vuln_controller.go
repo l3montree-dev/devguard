@@ -2,7 +2,6 @@ package dependencyVuln
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"slices"
 
@@ -94,8 +93,6 @@ func (c dependencyVulnHttpController) ListByOrgPaged(ctx core.Context) error {
 func (c dependencyVulnHttpController) ListByProjectPaged(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
-	fmt.Println("Start.........")
-
 	pagedResp, err := c.dependencyVulnRepository.GetDefaultDependencyVulnsByProjectIdPaged(
 		nil,
 		project.ID,
@@ -106,13 +103,9 @@ func (c dependencyVulnHttpController) ListByProjectPaged(ctx core.Context) error
 		core.GetSortQuery(ctx),
 	)
 
-	fmt.Println("End.........")
-
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 	}
-
-	fmt.Println("End2222222222")
 
 	return ctx.JSON(200, pagedResp.Map(func(dependencyVuln models.DependencyVuln) any {
 		return convertToDetailedDTO(dependencyVuln)

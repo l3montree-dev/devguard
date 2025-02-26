@@ -72,6 +72,7 @@ type gitlabIntegration struct {
 
 	aggregatedVulnRepository aggregatedVulnRepository
 
+	//TODO: remove this
 	dependencyVulnRepository dependencyVulnRepository
 	vulnEventRepository      vulnEventRepository
 	frontendUrl              string
@@ -86,10 +87,10 @@ var _ core.ThirdPartyIntegration = &gitlabIntegration{}
 
 func messageWasCreatedByDevguard(message string) bool {
 	var messages = map[string]string{
-		"accept":         "accepted the dependencyVuln",
-		"false-positive": "marked the dependencyVuln as false positive",
-		"reopen":         "reopened the dependencyVuln",
-		"comment":        "commented on the dependencyVuln",
+		"accept":         "accepted the vulnerability",
+		"false-positive": "marked the vulnerability as false positive",
+		"reopen":         "reopened the vulnerability",
+		"comment":        "commented on the vulnerability",
 	}
 
 	if !strings.Contains(message, "----") {

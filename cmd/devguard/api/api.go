@@ -430,6 +430,7 @@ func Start(db core.DB) {
 	sessionRouter.GET("/whoami/", whoami)
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation)
 
+	//TODO: change "/scan/" to "/sbom-scan/"
 	sessionRouter.POST("/scan/", scanController.DependencyVulnScan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
 	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
@@ -544,10 +545,10 @@ func Start(db core.DB) {
 
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
-	dependencyVulnRouter.GET("/:dependency-vulnId/", dependencyVulnController.Read)
+	dependencyVulnRouter.GET("/:dependencyVulnId/", dependencyVulnController.Read)
 
 	dependencyVulnRouter.POST("/:dependency-vulnId/", dependencyVulnController.CreateEvent, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
-	dependencyVulnRouter.POST("/:dependency-vulnId/mitigate/", dependencyVulnController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	dependencyVulnRouter.POST("/:dependencyVulnId/mitigate/", dependencyVulnController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

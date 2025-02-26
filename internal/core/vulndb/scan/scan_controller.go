@@ -41,7 +41,7 @@ type assetVersionService interface {
 	HandleScanResult(asset models.Asset, assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error)
 	UpdateSBOM(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM) error
 
-	HandleFirstPartyVulnResult(asset models.Asset, assetVersion models.AssetVersion, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error)
+	HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error)
 }
 
 type assetRepository interface {
@@ -235,11 +235,22 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		})
 	}
 
+	//check if risk management is enabled
+	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
+	doRiskManagement := riskManagementEnabled != "false"
+
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, assetVersion, sarifScan, scanner, userID, true)
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, &assetVersion, sarifScan, scanner, userID, true)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
+	}
+
+	if doRiskManagement {
+		err := s.assetVersionRepository.Save(nil, &assetVersion)
+		if err != nil {
+			slog.Error("could not save asset", "err", err)
+		}
 	}
 
 	return c.JSON(200, FirstPartyScanResponse{
