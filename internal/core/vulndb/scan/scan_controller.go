@@ -91,7 +91,9 @@ type ScanResponse struct {
 	Flaws        []flaw.FlawDTO `json:"flaws"`
 }
 
-func Scan(c core.Context, bom normalize.SBOM, s *httpController) error {
+func Scan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, error) {
+	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
+
 	normalizedBom := bom
 	asset := core.GetAsset(c)
 
@@ -116,15 +118,13 @@ func Scan(c core.Context, bom normalize.SBOM, s *httpController) error {
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
-		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
+		return scanResults, err
 	}
 
 	scanner := c.Request().Header.Get("X-Scanner")
 	if scanner == "" {
 		slog.Error("no X-Scanner header found")
-		return c.JSON(400, map[string]string{
-			"error": "no X-Scanner header found",
-		})
+		return scanResults, err
 	}
 
 	if version != models.NoVersion {
@@ -133,7 +133,7 @@ func Scan(c core.Context, bom normalize.SBOM, s *httpController) error {
 		// check if valid semver
 		if err != nil {
 			slog.Error("invalid semver version", "version", version)
-			return c.JSON(400, map[string]string{"error": "invalid semver version"})
+			return scanResults, err
 		}
 	}
 	//check if risk management is enabled
@@ -144,7 +144,7 @@ func Scan(c core.Context, bom normalize.SBOM, s *httpController) error {
 		// update the sbom in the database in parallel
 		if err := s.assetVersionService.UpdateSBOM(assetVersion, scanner, version, normalizedBom); err != nil {
 			slog.Error("could not update sbom", "err", err)
-			return c.JSON(500, map[string]string{"error": "could not update sbom"})
+			return scanResults, err
 		}
 
 	}
@@ -154,39 +154,41 @@ func Scan(c core.Context, bom normalize.SBOM, s *httpController) error {
 
 	if err != nil {
 		slog.Error("could not scan file", "err", err)
-		return c.JSON(500, map[string]string{"error": "could not scan file"})
+		return scanResults, err
 	}
 
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
-		return c.JSON(400, map[string]string{"error": "no scanner id provided"})
+		slog.Error("no scanner id provided")
+		return scanResults, err
 	}
 
 	// handle the scan result
 	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, version, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
-		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
+		return scanResults, err
 	}
 
 	if doRiskManagement {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
 		if err := s.statisticsService.UpdateAssetRiskAggregation(&assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
 			slog.Error("could not recalculate risk history", "err", err)
-			return c.JSON(500, map[string]string{"error": "could not recalculate risk history"})
+			return scanResults, err
 		}
 
 		// save the asset
 		if err := s.assetVersionRepository.Save(nil, &assetVersion); err != nil {
 			slog.Error("could not save asset", "err", err)
+			return scanResults, err
 		}
 	}
 
-	return c.JSON(200, ScanResponse{
-		AmountOpened: amountOpened,
-		AmountClosed: amountClose,
-		Flaws:        utils.Map(newState, flaw.FlawToDto),
-	})
+	scanResults.AmountOpened = amountOpened //Fill in the results
+	scanResults.AmountClosed = amountClose
+	scanResults.Flaws = utils.Map(newState, flaw.FlawToDto)
+
+	return scanResults, nil
 
 }
 
@@ -200,9 +202,11 @@ func (s *httpController) ScanFromProject(c core.Context) error {
 		return err
 	}
 
-	err := Scan(c, normalize.FromCdxBom(bom, true), s)
-
-	return err
+	scanResults, err := Scan(c, normalize.FromCdxBom(bom, true), s)
+	if err != nil {
+		return err
+	}
+	return c.JSON(200, scanResults)
 
 }
 
@@ -227,8 +231,10 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 		return err
 	}
 
-	err = Scan(c, normalize.FromCdxBom(bom, true), s)
-
-	return err
+	scanResults, err := Scan(c, normalize.FromCdxBom(bom, true), s)
+	if err != nil {
+		return err
+	}
+	return c.JSON(200, scanResults)
 
 }
