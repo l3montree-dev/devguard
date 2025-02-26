@@ -531,7 +531,7 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 		return fmt.Errorf("could not create new token: %w", err)
 	}
 
-	projectOptions, err := createProjectHook(hooks)
+	projectOptions, err := CreateProjectHook(hooks)
 	if err != nil {
 		return err
 	}
@@ -558,7 +558,7 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 
 }
 
-func createProjectHook(hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
+func CreateProjectHook(hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
 	projectOptions := &gitlab.AddProjectHookOptions{} //Intialize empty struct to return on error
 
 	chosenURL := os.Getenv("INSTANCE_DOMAIN") //Get the URL from the .env file
