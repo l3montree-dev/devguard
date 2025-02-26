@@ -1,24 +1,25 @@
-package integrations
+package integrations_test
 
-/*
 import (
-	"bytes"
-	"context"
 	"fmt"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/google/go-github/v62/github"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
-	"github.com/l3montree-dev/devguard/mocks"
-	"github.com/labstack/echo/v4"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
-func TestGithubIntegrationHandleEvent(t *testing.T) {
+func TestCreateProjectHook(t *testing.T) {
+	t.Run("", func(t *testing.T) {
+		var hooks []*gitlab.ProjectHook
+		results, err := integrations.CreateProjectHook(hooks)
+		if err != nil {
+			t.Error("Error occured when crwating project hook : %w", err)
+		}
+		fmt.Printf("This is the URL: %s ", *results.URL)
+	})
+}
+
+/*func TestGithubIntegrationHandleEvent(t *testing.T) {
 	t.Run("it should not be possible to call handle event with a context without flawId parameter", func(t *testing.T) {
 
 		githubIntegration := githubIntegration{}
