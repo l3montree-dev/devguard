@@ -63,7 +63,7 @@ type DependencyVulnRisk struct {
 }
 
 func (m DependencyVuln) TableName() string {
-	return "dependencyVulns"
+	return "dependency_vulns"
 }
 
 func (m *DependencyVuln) CalculateHash() string {

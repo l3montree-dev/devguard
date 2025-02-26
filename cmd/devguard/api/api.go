@@ -458,7 +458,9 @@ func Start(db core.DB) {
 
 	tenantRouter.GET("/metrics/", orgController.Metrics)
 	tenantRouter.GET("/content-tree/", orgController.ContentTree)
-	tenantRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
+	//TODO: change it
+	//tenantRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
+	tenantRouter.GET("/flaws/", dependencyVulnController.ListByOrgPaged)
 
 	tenantRouter.GET("/members/", orgController.Members)
 	tenantRouter.POST("/members/", orgController.InviteMember, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
@@ -474,7 +476,9 @@ func Start(db core.DB) {
 		ListRepositories)
 	tenantRouter.GET("/stats/risk-history/", statisticsController.GetOrgRiskHistory)
 	tenantRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageOrgFixingTime)
-	tenantRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
+	//TODO: change it
+	//tenantRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
+	tenantRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
 	tenantRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution)
 
 	tenantRouter.GET("/projects/", projectController.List, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
@@ -482,7 +486,9 @@ func Start(db core.DB) {
 
 	projectRouter := tenantRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)
-	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
+	//TODO: change it
+	//projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
+	projectRouter.GET("/flaws/", dependencyVulnController.ListByProjectPaged)
 
 	projectRouter.PATCH("/", projectController.Update, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
 	projectRouter.DELETE("/", projectController.Delete, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
@@ -493,7 +499,9 @@ func Start(db core.DB) {
 
 	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution)
 	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory)
-	projectRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
+	//TODO: change it
+	//projectRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
+	projectRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
 	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime)
 
 	projectRouter.GET("/members/", projectController.Members)
@@ -525,9 +533,14 @@ func Start(db core.DB) {
 	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
 	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetAssetVersionRiskHistory)
-	assetVersionRouter.GET("/stats/dependency-vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerId)
+	//TODO: change it
+	//assetVersionRouter.GET("/stats/dependency-vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerId)
+	assetVersionRouter.GET("/stats/flaw-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerId)
 	assetVersionRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanner)
-	assetVersionRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
+
+	//TODO: change it
+	//assetVersionRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
+	assetVersionRouter.GET("/stats/dependency-flaw-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
 	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetVersionFixingTime)
 
 	assetVersionRouter.GET("/versions/", assetVersionController.Versions)
@@ -544,7 +557,9 @@ func Start(db core.DB) {
 
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
-	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
+	//TODO: change it
+	//dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
+	dependencyVulnRouter := assetVersionRouter.Group("/flaws")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnId/", dependencyVulnController.Read)
 

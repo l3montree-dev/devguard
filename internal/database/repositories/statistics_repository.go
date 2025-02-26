@@ -90,7 +90,7 @@ func (r *statisticsRepository) GetAssetRiskDistribution(assetVersionName string,
 				ELSE 'unknown'
             END AS severity,
             COUNT(*) as count
-        FROM dependencyVulns
+        FROM dependency_vulns
         WHERE asset_version_name = ? AND asset_id = ? AND state = 'open'
         GROUP BY severity
     `, assetVersionName, assetID).Scan(&results).Error
@@ -134,19 +134,19 @@ func (r *statisticsRepository) AverageFixingTime(assetVersionName string, assetI
 	err := r.db.Raw(`
 WITH events AS (
     SELECT
-        dependencyVulns.id,
-        dependencyVulns.component_purl,
+        dependency_vulns.id,
+        dependency_vulns.component_purl,
         fe.type,
         fe.created_at,
-        LAG(fe.type) OVER (PARTITION BY dependencyVulns.id ORDER BY fe.created_at) AS prev_type,
-        LAG(fe.created_at) OVER (PARTITION BY dependencyVulns.id ORDER BY fe.created_at) AS prev_created_at,
-        LEAD(fe.type) OVER (PARTITION BY dependencyVulns.id ORDER BY fe.created_at) AS next_type
+        LAG(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_type,
+        LAG(fe.created_at) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS prev_created_at,
+        LEAD(fe.type) OVER (PARTITION BY dependency_vulns.id ORDER BY fe.created_at) AS next_type
     FROM
-        dependencyVulns
+        dependency_vulns
     JOIN
-        dependencyVuln_events fe ON dependencyVulns.id = fe.dependencyVuln_id
+        vuln_events fe ON dependency_vulns.id = fe.dependencyVuln_id
     WHERE
-        fe.type IN ? AND dependencyVulns.asset_version_name = ? AND dependencyVulns.asset_id = ? AND dependencyVulns.raw_risk_assessment >= ? AND dependencyVulns.raw_risk_assessment <= ?
+        fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment <= ?
 ),
 intervals AS (
    SELECT

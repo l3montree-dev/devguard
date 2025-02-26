@@ -64,7 +64,7 @@ func (e *VulnEvent) SetArbitraryJsonData(data map[string]any) {
 	e.ArbitraryJsonData = string(dataBytes)
 }
 func (m VulnEvent) TableName() string {
-	return "dependencyVuln_events"
+	return "vuln_events"
 }
 
 func (e VulnEvent) Apply(vuln Vuln) {

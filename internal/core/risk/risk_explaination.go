@@ -252,7 +252,8 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) s
 	str.WriteString(fmt.Sprintf("### CVSS-B: `%.1f`\n", e.BaseScore))
 	str.WriteString(fmt.Sprintf("%s\n", e.cvssMessage))
 	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/dependencyVulns/%s)", baseUrl, orgSlug, projectSlug, assetSlug, e.dependencyVulnId))
+	//TODO: change it
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, e.dependencyVulnId))
 	str.WriteString("\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180

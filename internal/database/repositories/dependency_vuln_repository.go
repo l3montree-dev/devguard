@@ -53,24 +53,24 @@ func (r *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, assetVersi
 	var count int64
 	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
 
-	q := r.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Joins("CVE").Where("dependencyVulns.asset_version_name = ?", assetVersionName).Where("dependencyVulns.asset_id = ?", assetID)
+	q := r.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Joins("CVE").Where("dependency_vulns.asset_version_name = ?", assetVersionName).Where("dependency_vulns.asset_id = ?", assetID)
 
 	// apply filters
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value())
 	}
 	if search != "" && len(search) > 2 {
-		q = q.Where("(\"CVE\".description ILIKE ?  OR dependencyVulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
-	err := q.Distinct("dependencyVulns.component_purl").Count(&count).Error
+	err := q.Distinct("dependency_vulns.component_purl").Count(&count).Error
 	if err != nil {
 		return core.Paged[models.DependencyVuln]{}, map[string]int{}, err
 	}
 
 	packageNameQuery := r.GetDB(tx).Table("components").
 		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, COUNT(f.id) as dependencyVuln_count, components.purl as package_name").
-		Joins("INNER JOIN dependencyVulns f ON components.purl = f.component_purl").
+		Joins("INNER JOIN dependency_vulns f ON components.purl = f.component_purl").
 		Where("f.asset_version_name = ?", assetVersionName).
 		Where("f.asset_id = ?", assetID).
 		Group("components.purl").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
@@ -93,7 +93,7 @@ func (r *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, assetVersi
 		return r.PackageName
 	})
 
-	err = q.Where("dependencyVulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Find(&dependencyVulns).Error
+	err = q.Where("dependency_vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Find(&dependencyVulns).Error
 
 	if err != nil {
 		return core.Paged[models.DependencyVuln]{}, map[string]int{}, err
@@ -157,14 +157,14 @@ func (r *dependencyVulnRepository) GetDependencyVulnsByPurl(tx core.DB, purl []s
 func (r *dependencyVulnRepository) GetDependencyVulnsPaged(tx core.DB, assetVersionNamesSubquery any, assetVersionAssetIdSubquery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], error) {
 	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
 
-	q := r.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Preload("Events").Joins("CVE").Where("dependencyVulns.asset_version_name IN (?) AND dependencyVulns.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIdSubquery)
+	q := r.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Preload("Events").Joins("CVE").Where("dependency_vulns.asset_version_name IN (?) AND dependency_vulns.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIdSubquery)
 
 	// apply filters
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value())
 	}
 	if search != "" && len(search) > 2 {
-		q = q.Where("(\"CVE\".description ILIKE ?  OR dependencyVulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	// apply sorting
@@ -173,7 +173,7 @@ func (r *dependencyVulnRepository) GetDependencyVulnsPaged(tx core.DB, assetVers
 			q = q.Order(s.SQL())
 		}
 	} else {
-		q = q.Order("dependencyVulns.cve_id DESC")
+		q = q.Order("dependency_vulns.cve_id DESC")
 	}
 
 	var count int64
@@ -221,7 +221,7 @@ func (r *dependencyVulnRepository) GetDependencyVulnAssetIDByDependencyVulnID(tx
 
 func (r *dependencyVulnRepository) GetOrgFromVulnID(tx core.DB, dependencyVulnID string) (models.Org, error) {
 	var org models.Org
-	if err := r.GetDB(tx).Raw("SELECT organizations.* from organizations left join projects p on organizations.id = p.organization_id left join assets a on p.id = a.project_id left join dependencyVulns f on a.id = f.asset_id where f.id = ?", dependencyVulnID).First(&org).Error; err != nil {
+	if err := r.GetDB(tx).Raw("SELECT organizations.* from organizations left join projects p on organizations.id = p.organization_id left join assets a on p.id = a.project_id left join dependency_vulns f on a.id = f.asset_id where f.id = ?", dependencyVulnID).First(&org).Error; err != nil {
 		return models.Org{}, err
 	}
 	return org, nil
