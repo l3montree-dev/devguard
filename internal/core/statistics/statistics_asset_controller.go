@@ -21,7 +21,7 @@ type statisticsService interface {
 	GetDependencyVulnCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetDependencyCountPerscanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
-	UpdateAssetRiskAggregation(assetVersion models.AssetVersion, assetID uuid.UUID, start time.Time, end time.Time, updateProject bool) error
+	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, start time.Time, end time.Time, updateProject bool) error
 
 	GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)
 }

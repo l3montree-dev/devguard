@@ -225,16 +225,16 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 		return
 	}
 
-	// order the dependencyVulns by their risk
+	// order the flaws by their risk
 	slices.SortFunc(scanResponse.DependencyVulns, func(a, b dependencyVuln.DependencyVulnDTO) int {
-		return int(*(a.RawRiskAssessment)*100) - int(*b.RawRiskAssessment*100)
+		return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
 	})
 
 	// get the max risk of open!!! dependencyVulns
 	openRisks := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f dependencyVuln.DependencyVulnDTO) bool {
 		return f.State == "open"
 	}), func(f dependencyVuln.DependencyVulnDTO) float64 {
-		return *f.RawRiskAssessment
+		return utils.OrDefault(f.RawRiskAssessment, 0)
 	})
 
 	maxRisk := 0.
@@ -263,7 +263,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 				slog.Error("could not parse purl", "err", err)
 			}
 
-			return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), *f.CVEID, *f.RawRiskAssessment, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
+			return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(f.CVEID), utils.OrDefault(f.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
 		},
 	))
 
@@ -355,11 +355,10 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		// read the sbom file and post it to the scan endpoint
 		// get the dependencyVulns and print them to the console
 		file, err := generateSBOM(path)
-		defer os.Remove(file.Name())
-
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
+		defer os.Remove(file.Name())
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()

@@ -17,6 +17,7 @@ package org
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
@@ -79,6 +80,9 @@ func (o *httpController) Create(c core.Context) error {
 
 	err := o.organizationRepository.Create(nil, &org)
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value") { //Check the returned error of Create Function
+			return echo.NewHTTPError(409, "Organization with that name already exists").WithInternal(err) //Error Code 409: conflict in current state of the resource
+		}
 		return echo.NewHTTPError(500, "could not create organization").WithInternal(err)
 	}
 

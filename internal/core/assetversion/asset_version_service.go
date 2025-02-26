@@ -23,6 +23,7 @@ import (
 
 type assetVersionRepository interface {
 	GetDB(core.DB) core.DB
+	Delete(tx core.DB, assetVersion *models.AssetVersion) error
 	Save(tx core.DB, assetVersion *models.AssetVersion) error
 	GetAllAssetsVersionFromDBByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 }
@@ -182,7 +183,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
 
-func (s *service) HandleScanResult(asset models.Asset, assetVersion models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
@@ -233,24 +234,20 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion models.Asset
 		return 0, 0, []models.DependencyVuln{}, err
 	}
 
+	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
+
 	switch scanner {
-	case "sca":
+
+	case devguardScanner + "sca":
 		assetVersion.LastScaScan = utils.Ptr(time.Now())
-	case "container-scanning":
+	case devguardScanner + "container-scanning":
 		assetVersion.LastContainerScan = utils.Ptr(time.Now())
 	}
 
-	if doRiskManagement {
-		err = s.assetVersionRepository.Save(nil, &assetVersion)
-		if err != nil {
-			// swallow but log
-			slog.Error("could not save asset", "err", err)
-		}
-	}
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
-func (s *service) handleScanResult(userID string, scannerID string, assetVersion models.AssetVersion, dependencyVulns []models.DependencyVuln, doRiskManagement bool, asset models.Asset) (int, int, []models.DependencyVuln, error) {
+func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, doRiskManagement bool, asset models.Asset) (int, int, []models.DependencyVuln, error) {
 	// get all existing dependencyVulns from the database - this is the old state
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
@@ -269,39 +266,22 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 	fixedDependencyVulns := comparison.OnlyInA
 	newDependencyVulns := comparison.OnlyInB
 
-	if doRiskManagement {
-		// get a transaction
-		if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
-			if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, newDependencyVulns, assetVersion, asset, true); err != nil {
+	// get a transaction
+	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, newDependencyVulns, *assetVersion, asset, true); err != nil {
 
-				// this will cancel the transaction
-				return err
-			}
-			return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, utils.Filter(
-				fixedDependencyVulns,
-				func(dependencyVuln models.DependencyVuln) bool {
-					return dependencyVuln.State == models.VulnStateOpen
-				},
-			), assetVersion, asset, true)
-		}); err != nil {
-			slog.Error("could not save dependencyVulns", "err", err)
-			return 0, 0, []models.DependencyVuln{}, err
+			// this will cancel the transaction
+			return err
 		}
-	} else {
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(nil, userID, newDependencyVulns, assetVersion, asset, false); err != nil {
-			slog.Error("could not save dependencyVulns", "err", err)
-			return 0, 0, []models.DependencyVuln{}, err
-		}
-
-		if err := s.dependencyVulnService.UserFixedDependencyVulns(nil, userID, utils.Filter(
+		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, utils.Filter(
 			fixedDependencyVulns,
 			func(dependencyVuln models.DependencyVuln) bool {
 				return dependencyVuln.State == models.VulnStateOpen
 			},
-		), assetVersion, asset, false); err != nil {
-			slog.Error("could not save dependencyVulns", "err", err)
-			return 0, 0, []models.DependencyVuln{}, err
-		}
+		), *assetVersion, asset, true)
+	}); err != nil {
+		slog.Error("could not save dependencyVulns", "err", err)
+		return 0, 0, []models.DependencyVuln{}, err
 	}
 
 	// the amount we actually fixed, is the amount that was open before
