@@ -91,7 +91,7 @@ type ScanResponse struct {
 	Flaws        []flaw.FlawDTO `json:"flaws"`
 }
 
-func ScanHelpFunction(c core.Context, bom normalize.SBOM, s *httpController) error {
+func Scan(c core.Context, bom normalize.SBOM, s *httpController) error {
 	normalizedBom := bom
 	asset := core.GetAsset(c)
 
@@ -190,7 +190,7 @@ func ScanHelpFunction(c core.Context, bom normalize.SBOM, s *httpController) err
 
 }
 
-func (s *httpController) Scan(c core.Context) error {
+func (s *httpController) ScanFromProject(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
 	if err := decoder.Decode(bom); err != nil {
@@ -200,7 +200,7 @@ func (s *httpController) Scan(c core.Context) error {
 		return err
 	}
 
-	err := ScanHelpFunction(c, normalize.FromCdxBom(bom, true), s)
+	err := Scan(c, normalize.FromCdxBom(bom, true), s)
 
 	return err
 
@@ -208,8 +208,8 @@ func (s *httpController) Scan(c core.Context) error {
 
 func (s *httpController) ScanSbomFile(c core.Context) error {
 
-	var maxSize int = 16 * 1024 * 1024 //Max Upload Size 16mb
-	err := c.Request().ParseMultipartForm(int64(maxSize))
+	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
+	err := c.Request().ParseMultipartForm(maxSize)
 	if err != nil {
 		fmt.Printf("error when parsing data")
 		return err
@@ -227,7 +227,7 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 		return err
 	}
 
-	err = ScanHelpFunction(c, normalize.FromCdxBom(bom, true), s)
+	err = Scan(c, normalize.FromCdxBom(bom, true), s)
 
 	return err
 
