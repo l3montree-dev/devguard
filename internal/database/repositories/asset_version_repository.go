@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -84,6 +85,7 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 		}
 
 		if err = a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetID: assetID, Slug: assetVersionName, Type: assetVersionType, DefaultBranch: defaultBranch}).Error; err != nil {
+			fmt.Printf("This is the received error: %s", err)
 			return models.AssetVersion{}, err
 		}
 		return a.FindOrCreate(assetVersionName, assetID, tag, defaultBranchName)
