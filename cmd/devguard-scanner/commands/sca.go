@@ -422,7 +422,7 @@ func NewSCACommand() *cobra.Command {
 			err := scaCommandFactory("sca")(cmd, args)
 			if err != nil {
 				slog.Error("software composition analysis failed", "err", err)
-				return
+				panic(err.Error())
 			}
 		},
 	}
