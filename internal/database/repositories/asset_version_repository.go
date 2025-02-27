@@ -16,8 +16,8 @@
 package repositories
 
 import (
-	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -68,7 +68,7 @@ func (a *assetVersionRepository) FindByName(name string) (models.AssetVersion, e
 }
 
 func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error) {
-	fmt.Printf("We start the function")
+
 	var defaultBranch bool
 	if defaultBranchName == assetVersionName {
 		defaultBranch = true
@@ -85,8 +85,12 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 		}
 
 		if err = a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetID: assetID, Slug: assetVersionName, Type: assetVersionType, DefaultBranch: defaultBranch}).Error; err != nil {
-			fmt.Printf("This is the received error: %s", err)
+			if strings.Contains(err.Error(), "duplicate key value violates") { //Check if the error is due to duplicate keys
+				a.db.Unscoped().Model(&app).Where("name", assetVersionName).Update("deleted_at", nil) //Update deleted at to NULL
+				return app, nil
+			}
 			return models.AssetVersion{}, err
+
 		}
 		return a.FindOrCreate(assetVersionName, assetID, tag, defaultBranchName)
 	}
