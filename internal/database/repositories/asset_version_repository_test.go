@@ -25,6 +25,7 @@ import (
 
 func TestFindOrCreate(t *testing.T) {
 	t.Run("Returned message", func(t *testing.T) {
+
 		a := repositories.NewAssetVersionRepository(nil)
 		assetVersionName := "test"
 		b := []byte("497598d2-b90a-4031-b3db-90216de0e17f")

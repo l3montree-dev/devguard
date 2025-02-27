@@ -68,7 +68,7 @@ func (a *assetVersionRepository) FindByName(name string) (models.AssetVersion, e
 }
 
 func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error) {
-
+	fmt.Printf("We start the function")
 	var defaultBranch bool
 	if defaultBranchName == assetVersionName {
 		defaultBranch = true
