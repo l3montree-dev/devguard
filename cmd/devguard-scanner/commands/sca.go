@@ -199,21 +199,21 @@ Semantic Versioning (SemVer) uses a version number format: MAJOR.MINOR.PATCH
 
 2. How to do it:
 - Initial tag:
-git tag -a v1.0.0 -m "Initial release"
-git push origin v1.0.0
+git tag -a 1.0.0 -m "Initial release"
+git push origin 1.0.0
 
 - New versions:
 - Breaking changes:
-git tag -a v2.0.0 -m "Breaking changes"
-git push origin v2.0.0
+git tag -a 2.0.0 -m "Breaking changes"
+git push origin 2.0.0
 
 - New features:
-git tag -a v1.1.0 -m "New features"
-git push origin v1.1.0
+git tag -a 1.1.0 -m "New features"
+git push origin 1.1.0
 
 - Bug fixes:
-git tag -a v1.0.1 -m "Bug fixes"
-git push origin v1.0.1
+git tag -a 1.0.1 -m "Bug fixes"
+git push origin 1.0.1
 `)
 }
 
