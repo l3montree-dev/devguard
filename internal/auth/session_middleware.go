@@ -18,6 +18,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"net/url"
 
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
@@ -38,10 +39,16 @@ func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
 
 func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSessionCookie string) (string, error) {
 	// check if we have a session
-	session, _, err := oryApiClient.FrontendAPI.ToSession(ctx).Cookie(oryKratosSessionCookie).Execute()
+	unescaped, err := url.QueryUnescape(oryKratosSessionCookie)
 	if err != nil {
 		return "", err
 	}
+
+	session, _, err := oryApiClient.FrontendAPI.ToSession(ctx).Cookie(unescaped).Execute()
+	if err != nil {
+		return "", err
+	}
+
 	return session.Identity.Id, nil
 }
 

@@ -173,7 +173,7 @@ func (c *httpController) Update(ctx core.Context) error {
 	if updated {
 		err = c.assetRepository.Update(nil, &asset)
 		if err != nil {
-			return fmt.Errorf("Error updating asset: %v", err)
+			return fmt.Errorf("error updating asset: %v", err)
 		}
 	}
 
