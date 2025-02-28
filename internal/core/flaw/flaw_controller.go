@@ -150,6 +150,7 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 	}
 
 	res := map[string]flawsByPackage{}
+	foundCVES := []string{}
 	for _, flaw := range pagedResp.Data {
 		// get the package name
 		if _, ok := res[*flaw.ComponentPurl]; !ok {
@@ -158,27 +159,30 @@ func (c flawHttpController) ListPaged(ctx core.Context) error {
 			}
 		}
 		flawsByPackage := res[*flaw.ComponentPurl]
-		// append the flaw to the package
-		flawsByPackage.Flaws = append(res[*flaw.ComponentPurl].Flaws, FlawDTO{
-			ID:                    flaw.ID,
-			ScannerID:             flaw.ScannerID,
-			Message:               flaw.Message,
-			AssetVersionName:      flaw.AssetVersionName,
-			AssetID:               flaw.AssetID.String(),
-			State:                 flaw.State,
-			CVE:                   flaw.CVE,
-			CVEID:                 flaw.CVEID,
-			ComponentPurl:         flaw.ComponentPurl,
-			ComponentDepth:        flaw.ComponentDepth,
-			ComponentFixedVersion: flaw.ComponentFixedVersion,
-			Effort:                flaw.Effort,
-			RiskAssessment:        flaw.RiskAssessment,
-			RawRiskAssessment:     flaw.RawRiskAssessment,
-			Priority:              flaw.Priority,
-			LastDetected:          flaw.LastDetected,
-			CreatedAt:             flaw.CreatedAt,
-		})
-		res[*flaw.ComponentPurl] = flawsByPackage
+		// append the flaw to the package if the flaw isn't already present
+		if !slices.Contains(foundCVES, *flaw.CVEID) {
+			foundCVES = slices.Insert(foundCVES, len(foundCVES), *flaw.CVEID)
+			flawsByPackage.Flaws = append(res[*flaw.ComponentPurl].Flaws, FlawDTO{
+				ID:                    flaw.ID,
+				ScannerID:             flaw.ScannerID,
+				Message:               flaw.Message,
+				AssetVersionName:      flaw.AssetVersionName,
+				AssetID:               flaw.AssetID.String(),
+				State:                 flaw.State,
+				CVE:                   flaw.CVE,
+				CVEID:                 flaw.CVEID,
+				ComponentPurl:         flaw.ComponentPurl,
+				ComponentDepth:        flaw.ComponentDepth,
+				ComponentFixedVersion: flaw.ComponentFixedVersion,
+				Effort:                flaw.Effort,
+				RiskAssessment:        flaw.RiskAssessment,
+				RawRiskAssessment:     flaw.RawRiskAssessment,
+				Priority:              flaw.Priority,
+				LastDetected:          flaw.LastDetected,
+				CreatedAt:             flaw.CreatedAt,
+			})
+			res[*flaw.ComponentPurl] = flawsByPackage
+		}
 	}
 
 	values := make([]flawsByPackage, 0, len(res))
