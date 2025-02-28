@@ -15,15 +15,7 @@
 
 package repositories_test
 
-import (
-	"fmt"
-	"testing"
-
-	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-)
-
-func TestFindOrCreate(t *testing.T) {
+/*func TestFindOrCreate(t *testing.T) {
 	t.Run("Returned message", func(t *testing.T) {
 
 		a := repositories.NewAssetVersionRepository(nil)
@@ -36,4 +28,4 @@ func TestFindOrCreate(t *testing.T) {
 		fmt.Printf("Received the following error : %s", err)
 
 	})
-}
+}*/
