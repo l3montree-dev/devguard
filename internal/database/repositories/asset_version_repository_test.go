@@ -17,6 +17,7 @@ package repositories_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -26,18 +27,25 @@ import (
 
 func TestFindOrCreate(t *testing.T) {
 	t.Run("Returned message", func(t *testing.T) {
-		core.LoadConfig() // nolint: errcheck
+		os.Setenv("POSTGRES_USER", "devguard")
+		os.Setenv("POSTGRES_PASSWORD", "devguard")
+		os.Setenv("POSTGRES_DB", "devguard")
+		os.Setenv("POSTGRES_HOST", "localhost")
+		os.Setenv("POSTGRES_PORT", "5432")
+		core.LoadConfig()
 		core.InitLogger()
 		db, err := core.DatabaseFactory()
 		if err != nil {
-			fmt.Printf("Error when database factory")
+			fmt.Printf("Error when calling database factory!\n")
+			panic(err.Error())
 		}
 
-		fmt.Printf("Reached this Code----------------------------------")
 		a := repositories.NewAssetVersionRepository(db)
-		assetVersionName := "test"
-		b := []byte("497598d2-b90a-4031-b3db-90216de0e17f")
-		assetID, _ := uuid.FromBytes(b)
+		assetVersionName := "main"
+		assetID, err := uuid.Parse("497598d2-b90a-4031-b3db-90216de0e17f")
+		if err != nil {
+			fmt.Printf("Error when formatting UUID")
+		}
 		tag := ""
 		defaultBranchName := "main"
 

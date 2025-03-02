@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -77,6 +78,7 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 	var app models.AssetVersion
 	err := a.db.Where("name = ? AND asset_id = ?", assetVersionName, assetID).First(&app).Error
 	if err != nil {
+
 		var assetVersionType models.AssetVersionType
 		if tag == "" {
 			assetVersionType = "branch"
@@ -85,7 +87,9 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 		}
 
 		if err = a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetID: assetID, Slug: assetVersionName, Type: assetVersionType, DefaultBranch: defaultBranch}).Error; err != nil {
+
 			if strings.Contains(err.Error(), "duplicate key value violates") { //Check if the error is due to duplicate keys
+				fmt.Printf("We have an error -------------------------------------------------")
 				a.db.Unscoped().Model(&app).Where("name", assetVersionName).Update("deleted_at", nil) //Update deleted at to NULL
 				return app, nil
 			}
