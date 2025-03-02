@@ -26,31 +26,33 @@ import (
 )
 
 func TestFindOrCreate(t *testing.T) {
-	t.Run("Returned message", func(t *testing.T) {
-		os.Setenv("POSTGRES_USER", "devguard")
+	t.Run("Successful Test", func(t *testing.T) {
+		os.Setenv("POSTGRES_USER", "devguard") //Set .env variables manually cant read them otherwise
 		os.Setenv("POSTGRES_PASSWORD", "devguard")
 		os.Setenv("POSTGRES_DB", "devguard")
 		os.Setenv("POSTGRES_HOST", "localhost")
 		os.Setenv("POSTGRES_PORT", "5432")
-		core.LoadConfig()
-		core.InitLogger()
-		db, err := core.DatabaseFactory()
+
+		db, err := core.DatabaseFactory() //Build Database
 		if err != nil {
 			fmt.Printf("Error when calling database factory!\n")
 			panic(err.Error())
 		}
 
-		a := repositories.NewAssetVersionRepository(db)
-		assetVersionName := "main"
-		assetID, err := uuid.Parse("497598d2-b90a-4031-b3db-90216de0e17f")
+		a := repositories.NewAssetVersionRepository(db) //Build repository
+
+		assetVersionName := "test"                                         //Set Parameters for the function
+		assetID, err := uuid.Parse("497598d2-b90a-4031-b3db-90216de0e17f") //ID of the corresponding asset
 		if err != nil {
 			fmt.Printf("Error when formatting UUID")
 		}
 		tag := ""
 		defaultBranchName := "main"
 
-		_, err = a.FindOrCreate(assetVersionName, assetID, tag, defaultBranchName)
-		fmt.Printf("Received the following error : %s", err)
+		_, err = a.FindOrCreate(assetVersionName, assetID, tag, defaultBranchName) //Call function and process return values
+		if err != nil {
+			fmt.Printf("Received the following error : %s", err)
+		}
 
 	})
 }
