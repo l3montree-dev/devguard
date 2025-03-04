@@ -164,12 +164,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 			// this will cancel the transaction
 			return err
 		}
-		return s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, utils.Filter(
-			fixedVulns,
-			func(vuln models.FirstPartyVulnerability) bool {
-				return vuln.State == models.VulnStateOpen
-			},
-		), true)
+		return s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, fixedVulns, true)
 	}); err != nil {
 		slog.Error("could not save vulns", "err", err)
 		return 0, 0, []models.FirstPartyVulnerability{}, err
@@ -273,12 +268,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 			// this will cancel the transaction
 			return err
 		}
-		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, utils.Filter(
-			fixedDependencyVulns,
-			func(dependencyVuln models.DependencyVuln) bool {
-				return dependencyVuln.State == models.VulnStateOpen
-			},
-		), *assetVersion, asset, true)
+		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedDependencyVulns, *assetVersion, asset, true)
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)
 		return 0, 0, []models.DependencyVuln{}, err

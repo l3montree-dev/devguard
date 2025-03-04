@@ -26,28 +26,28 @@ import (
 type integrationController struct {
 }
 
-func createNewVulnEventBasedOnComment(dependencyVulnId, userId, comment string) models.VulnEvent {
+func createNewVulnEventBasedOnComment(vulnId, userId, comment string) models.VulnEvent {
 	if strings.HasPrefix(comment, "/accept") {
 		// create a new dependencyVuln accept event
-		return models.NewAcceptedEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
+		return models.NewAcceptedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
 	} else if strings.HasPrefix(comment, "/false-positive") {
 		// create a new dependencyVuln false positive event
-		return models.NewFalsePositiveEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
+		return models.NewFalsePositiveEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")))
 	} else if strings.HasPrefix(comment, "/reopen") {
 		// create a new dependencyVuln reopen event
-		return models.NewReopenedEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
+		return models.NewReopenedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
 	} else if strings.HasPrefix(comment, "/a") {
 		// create a new dependencyVuln accept event
-		return models.NewAcceptedEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
+		return models.NewAcceptedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
 	} else if strings.HasPrefix(comment, "/fp") {
 		// create a new dependencyVuln false positive event
-		return models.NewFalsePositiveEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
+		return models.NewFalsePositiveEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")))
 	} else if strings.HasPrefix(comment, "/r") {
 		// create a new dependencyVuln reopen event
-		return models.NewReopenedEvent(dependencyVulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
+		return models.NewReopenedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
 	} else {
 		// create a new comment event
-		return models.NewCommentEvent(dependencyVulnId, userId, comment)
+		return models.NewCommentEvent(vulnId, userId, comment)
 	}
 }
 
