@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package flaw
+package dependencyVuln
 
 import (
 	"time"
@@ -21,13 +21,13 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-type FlawDTO struct {
+type DependencyVulnDTO struct {
 	ID                    string           `json:"id"`
 	ScannerID             string           `json:"scanner"`
 	Message               *string          `json:"message"`
 	AssetVersionName      string           `json:"assetVersionId"`
 	AssetID               string           `json:"assetId"`
-	State                 models.FlawState `json:"state"`
+	State                 models.VulnState `json:"state"`
 	CVE                   *models.CVE      `json:"cve"`
 	CVEID                 *string          `json:"cveId"`
 	ComponentPurl         *string          `json:"componentPurl"`
@@ -45,14 +45,14 @@ type FlawDTO struct {
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
 
-type detailedFlawDTO struct {
-	FlawDTO
-	Events []FlawEventDTO `json:"events"`
+type detailedDependencyVulnDTO struct {
+	DependencyVulnDTO
+	Events []VulnEventDTO `json:"events"`
 }
 
-func FlawToDto(f models.Flaw) FlawDTO {
+func DependencyVulnToDto(f models.DependencyVuln) DependencyVulnDTO {
 
-	return FlawDTO{
+	return DependencyVulnDTO{
 		ID:                    f.ID,
 		ScannerID:             f.ScannerID,
 		Message:               f.Message,

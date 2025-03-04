@@ -17,7 +17,7 @@ func UpdateStatistics(db database.DB) error {
 		repositories.NewStatisticsRepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewAssetRiskHistoryRepository(db),
-		repositories.NewFlawRepository(db),
+		repositories.NewDependencyVulnRepository(db),
 		repositories.NewAssetVersionRepository(db),
 		repositories.NewProjectRepository(db),
 		repositories.NewProjectRiskHistoryRepository(db),

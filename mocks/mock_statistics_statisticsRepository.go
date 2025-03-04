@@ -139,12 +139,12 @@ func (_c *StatisticsStatisticsRepository_GetAssetRiskDistribution_Call) RunAndRe
 	return _c
 }
 
-// GetFlawCountByScannerId provides a mock function with given fields: assetID
-func (_m *StatisticsStatisticsRepository) GetFlawCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
+// GetDependencyVulnCountByScannerId provides a mock function with given fields: assetID
+func (_m *StatisticsStatisticsRepository) GetDependencyVulnCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
 	ret := _m.Called(assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetFlawCountByScannerId")
+		panic("no return value specified for GetDependencyVulnCountByScannerId")
 	}
 
 	var r0 map[string]int
@@ -169,52 +169,52 @@ func (_m *StatisticsStatisticsRepository) GetFlawCountByScannerId(assetID uuid.U
 	return r0, r1
 }
 
-// StatisticsStatisticsRepository_GetFlawCountByScannerId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFlawCountByScannerId'
-type StatisticsStatisticsRepository_GetFlawCountByScannerId_Call struct {
+// StatisticsStatisticsRepository_GetDependencyVulnCountByScannerId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyVulnCountByScannerId'
+type StatisticsStatisticsRepository_GetDependencyVulnCountByScannerId_Call struct {
 	*mock.Call
 }
 
-// GetFlawCountByScannerId is a helper method to define mock.On call
+// GetDependencyVulnCountByScannerId is a helper method to define mock.On call
 //   - assetID uuid.UUID
-func (_e *StatisticsStatisticsRepository_Expecter) GetFlawCountByScannerId(assetID interface{}) *StatisticsStatisticsRepository_GetFlawCountByScannerId_Call {
-	return &StatisticsStatisticsRepository_GetFlawCountByScannerId_Call{Call: _e.mock.On("GetFlawCountByScannerId", assetID)}
+func (_e *StatisticsStatisticsRepository_Expecter) GetDependencyVulnCountByScannerId(assetID interface{}) *StatisticsStatisticsRepository_GetDependencyVulnCountByScannerId_Call {
+	return &StatisticsStatisticsRepository_GetDependencyVulnCountByScannerId_Call{Call: _e.mock.On("GetDependencyVulnCountByScannerId", assetID)}
 }
 
-func (_c *StatisticsStatisticsRepository_GetFlawCountByScannerId_Call) Run(run func(assetID uuid.UUID)) *StatisticsStatisticsRepository_GetFlawCountByScannerId_Call {
+func (_c *StatisticsStatisticsRepository_GetDependencyVulnCountByScannerId_Call) Run(run func(assetID uuid.UUID)) *StatisticsStatisticsRepository_GetDependencyVulnCountByScannerId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
 
-func (_c *StatisticsStatisticsRepository_GetFlawCountByScannerId_Call) Return(_a0 map[string]int, _a1 error) *StatisticsStatisticsRepository_GetFlawCountByScannerId_Call {
+func (_c *StatisticsStatisticsRepository_GetDependencyVulnCountByScannerId_Call) Return(_a0 map[string]int, _a1 error) *StatisticsStatisticsRepository_GetDependencyVulnCountByScannerId_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *StatisticsStatisticsRepository_GetFlawCountByScannerId_Call) RunAndReturn(run func(uuid.UUID) (map[string]int, error)) *StatisticsStatisticsRepository_GetFlawCountByScannerId_Call {
+func (_c *StatisticsStatisticsRepository_GetDependencyVulnCountByScannerId_Call) RunAndReturn(run func(uuid.UUID) (map[string]int, error)) *StatisticsStatisticsRepository_GetDependencyVulnCountByScannerId_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// TimeTravelFlawState provides a mock function with given fields: assetID, _a1
-func (_m *StatisticsStatisticsRepository) TimeTravelFlawState(assetID uuid.UUID, _a1 time.Time) ([]models.Flaw, error) {
+// TimeTravelDependencyVulnState provides a mock function with given fields: assetID, _a1
+func (_m *StatisticsStatisticsRepository) TimeTravelDependencyVulnState(assetID uuid.UUID, _a1 time.Time) ([]models.DependencyVuln, error) {
 	ret := _m.Called(assetID, _a1)
 
 	if len(ret) == 0 {
-		panic("no return value specified for TimeTravelFlawState")
+		panic("no return value specified for TimeTravelDependencyVulnState")
 	}
 
-	var r0 []models.Flaw
+	var r0 []models.DependencyVuln
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) ([]models.Flaw, error)); ok {
+	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) ([]models.DependencyVuln, error)); ok {
 		return rf(assetID, _a1)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) []models.Flaw); ok {
+	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) []models.DependencyVuln); ok {
 		r0 = rf(assetID, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.Flaw)
+			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
 
@@ -227,31 +227,31 @@ func (_m *StatisticsStatisticsRepository) TimeTravelFlawState(assetID uuid.UUID,
 	return r0, r1
 }
 
-// StatisticsStatisticsRepository_TimeTravelFlawState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TimeTravelFlawState'
-type StatisticsStatisticsRepository_TimeTravelFlawState_Call struct {
+// StatisticsStatisticsRepository_TimeTravelDependencyVulnState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TimeTravelDependencyVulnState'
+type StatisticsStatisticsRepository_TimeTravelDependencyVulnState_Call struct {
 	*mock.Call
 }
 
-// TimeTravelFlawState is a helper method to define mock.On call
+// TimeTravelDependencyVulnState is a helper method to define mock.On call
 //   - assetID uuid.UUID
 //   - _a1 time.Time
-func (_e *StatisticsStatisticsRepository_Expecter) TimeTravelFlawState(assetID interface{}, _a1 interface{}) *StatisticsStatisticsRepository_TimeTravelFlawState_Call {
-	return &StatisticsStatisticsRepository_TimeTravelFlawState_Call{Call: _e.mock.On("TimeTravelFlawState", assetID, _a1)}
+func (_e *StatisticsStatisticsRepository_Expecter) TimeTravelDependencyVulnState(assetID interface{}, _a1 interface{}) *StatisticsStatisticsRepository_TimeTravelDependencyVulnState_Call {
+	return &StatisticsStatisticsRepository_TimeTravelDependencyVulnState_Call{Call: _e.mock.On("TimeTravelDependencyVulnState", assetID, _a1)}
 }
 
-func (_c *StatisticsStatisticsRepository_TimeTravelFlawState_Call) Run(run func(assetID uuid.UUID, _a1 time.Time)) *StatisticsStatisticsRepository_TimeTravelFlawState_Call {
+func (_c *StatisticsStatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(assetID uuid.UUID, _a1 time.Time)) *StatisticsStatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(uuid.UUID), args[1].(time.Time))
 	})
 	return _c
 }
 
-func (_c *StatisticsStatisticsRepository_TimeTravelFlawState_Call) Return(_a0 []models.Flaw, _a1 error) *StatisticsStatisticsRepository_TimeTravelFlawState_Call {
+func (_c *StatisticsStatisticsRepository_TimeTravelDependencyVulnState_Call) Return(_a0 []models.DependencyVuln, _a1 error) *StatisticsStatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *StatisticsStatisticsRepository_TimeTravelFlawState_Call) RunAndReturn(run func(uuid.UUID, time.Time) ([]models.Flaw, error)) *StatisticsStatisticsRepository_TimeTravelFlawState_Call {
+func (_c *StatisticsStatisticsRepository_TimeTravelDependencyVulnState_Call) RunAndReturn(run func(uuid.UUID, time.Time) ([]models.DependencyVuln, error)) *StatisticsStatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -34,7 +34,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -219,21 +219,21 @@ git push origin 1.0.1
 
 // can be reused for container scanning as well.
 func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webUI string, doRiskManagement bool) {
-	slog.Info("Scan completed successfully", "flawAmount", len(scanResponse.Flaws), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
+	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
-	if len(scanResponse.Flaws) == 0 {
+	if len(scanResponse.DependencyVulns) == 0 {
 		return
 	}
 
 	// order the flaws by their risk
-	slices.SortFunc(scanResponse.Flaws, func(a, b flaw.FlawDTO) int {
+	slices.SortFunc(scanResponse.DependencyVulns, func(a, b dependencyVuln.DependencyVulnDTO) int {
 		return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
 	})
 
-	// get the max risk of open!!! flaws
-	openRisks := utils.Map(utils.Filter(scanResponse.Flaws, func(f flaw.FlawDTO) bool {
+	// get the max risk of open!!! dependencyVulns
+	openRisks := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f dependencyVuln.DependencyVulnDTO) bool {
 		return f.State == "open"
-	}), func(f flaw.FlawDTO) float64 {
+	}), func(f dependencyVuln.DependencyVulnDTO) float64 {
 		return utils.OrDefault(f.RawRiskAssessment, 0)
 	})
 
@@ -247,10 +247,11 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	tw := table.NewWriter()
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status", "URL"})
 	tw.AppendRows(utils.Map(
-		scanResponse.Flaws,
-		func(f flaw.FlawDTO) table.Row {
+		scanResponse.DependencyVulns,
+		func(f dependencyVuln.DependencyVulnDTO) table.Row {
 			clickableLink := ""
 			if doRiskManagement {
+				//TODO: change flaws
 				clickableLink = fmt.Sprintf("%s/%s/flaws/%s", webUI, assetName, f.ID)
 			} else {
 				clickableLink = "Risk Management is disabled"
@@ -310,6 +311,8 @@ func addScanFlags(cmd *cobra.Command) {
 		return
 	}
 
+	cmd.Flags().Bool("riskManagement", true, "Enable risk management (stores the detected vulnerabilities in devguard)")
+
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("fail-on-risk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")
@@ -351,7 +354,7 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		}
 
 		// read the sbom file and post it to the scan endpoint
-		// get the flaws and print them to the console
+		// get the dependencyVulns and print them to the console
 		file, err := generateSBOM(path)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
@@ -398,8 +401,8 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 			return fmt.Errorf("could not scan file: %s", resp.Status)
 		}
 
-		// read and parse the body - it should be an array of flaws
-		// print the flaws to the console
+		// read and parse the body - it should be an array of dependencyVulns
+		// print the dependencyVulns to the console
 		var scanResponse scan.ScanResponse
 
 		err = json.NewDecoder(resp.Body).Decode(&scanResponse)
@@ -426,8 +429,6 @@ func NewSCACommand() *cobra.Command {
 			}
 		},
 	}
-
-	scaCommand.Flags().Bool("riskManagement", true, "Enable risk management (stores the detected vulnerabilities in devguard)")
 
 	addScanFlags(scaCommand)
 	return scaCommand
