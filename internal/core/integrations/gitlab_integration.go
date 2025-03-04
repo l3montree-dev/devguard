@@ -995,6 +995,10 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return err
 	}
+	if data.Token == "" {
+		slog.Error("token must not be empty")
+		return ctx.JSON(400, "token must not be empty")
+	}
 	// check if valid url - maybe the user forgot to add the protocol
 	if !strings.HasPrefix(data.Url, "http://") && !strings.HasPrefix(data.Url, "https://") {
 		data.Url = "https://" + data.Url
