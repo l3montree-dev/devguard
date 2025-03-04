@@ -16,12 +16,14 @@ import (
 )
 
 type dependencyVulnsByPackage struct {
-	PackageName         string              `json:"packageName"`
-	AvgRisk             float64             `json:"avgRisk"`
-	MaxRisk             float64             `json:"maxRisk"`
-	DependencyVulnCount int                 `json:"dependencyVulnCount"`
-	TotalRisk           float64             `json:"totalRisk"`
-	DependencyVulns     []DependencyVulnDTO `json:"dependencyVulns"`
+	PackageName string  `json:"packageName"`
+	AvgRisk     float64 `json:"avgRisk"`
+	MaxRisk     float64 `json:"maxRisk"`
+	//TODO: change the name to DependencyVulnCount
+	DependencyVulnCount int     `json:"flawCount"`
+	TotalRisk           float64 `json:"totalRisk"`
+	//TODO: change the name to DependencyVulns
+	DependencyVulns []DependencyVulnDTO `json:"flaws"`
 }
 
 type repository interface {

@@ -546,7 +546,7 @@ func Start(db core.DB) {
 
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
-	assetVersionRouter.GET("/stats/dependency-flaw-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
+	assetVersionRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
 	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetVersionFixingTime)
 
 	assetVersionRouter.GET("/versions/", assetVersionController.Versions)
@@ -569,7 +569,7 @@ func Start(db core.DB) {
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnId/", dependencyVulnController.Read)
 
-	dependencyVulnRouter.POST("/:dependency-vulnId/", dependencyVulnController.CreateEvent, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	dependencyVulnRouter.POST("/:dependencyVulnId/", dependencyVulnController.CreateEvent, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	dependencyVulnRouter.POST("/:dependencyVulnId/mitigate/", dependencyVulnController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	routes := server.Routes()
