@@ -256,21 +256,6 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		FirstPartyVulns: utils.Map(newState, dependencyVuln.FirstPartyVulnToDto),
 	})
 
-	/* 	//save the scan result to json file
-	   	file, err := os.Create("sarif_scan.json")
-	   	if err != nil {
-	   		slog.Error("could not create temp file", "err", err)
-
-	   		return c.JSON(500, map[string]string{"error": "could not create temp file"})
-	   	}
-
-	   	// write the scan result to the file
-	   	if err := json.NewEncoder(file).Encode(sarifScan); err != nil {
-	   		slog.Error("could not write scan result to file", "err", err)
-	   		return c.JSON(500, map[string]string{"error": "could not write scan result to file"})
-	   	}
-	*/
-
 }
 
 func (s *httpController) ScanDependencyVulnFromProject(c core.Context) error {

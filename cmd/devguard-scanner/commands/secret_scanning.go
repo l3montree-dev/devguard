@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
@@ -33,7 +32,7 @@ func NewSecretScanningCommand() *cobra.Command {
 			err := sarifCommandFactory("secret-scanning")(cmd, args)
 			if err != nil {
 				slog.Error("secret scanning failed", "err", err)
-				return
+				panic(err.Error())
 			}
 		},
 	}
@@ -97,7 +96,7 @@ func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Risk-Management", strconv.FormatBool(doRiskManagement))
 		req.Header.Set("X-Asset-Name", assetName)
-		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanner)
+		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scanner)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -105,7 +104,7 @@ func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string)
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("could not scan file!!!: %s", resp.Status)
+			return fmt.Errorf("could not scan file: %s", resp.Status)
 		}
 
 		// read and parse the body - it should be an array of dependencyVulns
@@ -135,18 +134,21 @@ func executeCodeScan(scanner, path string) (*os.File, error) {
 }
 
 func sastScan(path string) (*os.File, error) {
-	fileName := uuid.New().String() + ".sarif"
+	file, err := os.CreateTemp("", "*.sarif")
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create temp file")
+	}
 
 	var scannerCmd *exec.Cmd
 
 	slog.Info("Starting sast scanning", "path", path)
 
-	scannerCmd = exec.Command("semgrep", "scan", path, "--sarif", "--sarif-output", fileName, "-v")
+	scannerCmd = exec.Command("semgrep", "scan", path, "--sarif", "--sarif-output", file.Name(), "-v") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 
-	err := scannerCmd.Run()
+	err = scannerCmd.Run()
 	if err != nil {
 		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.ExitCode() == 1 {
@@ -154,11 +156,6 @@ func sastScan(path string) (*os.File, error) {
 		} else {
 			return nil, errors.Wrapf(err, "could not run scanner: %s", stderr.String())
 		}
-	}
-
-	file, err := os.Open(fileName)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not open file")
 	}
 
 	return file, nil
@@ -195,7 +192,7 @@ func secretScan(path string) (*os.File, error) {
 
 func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scanner string) {
 
-	slog.Info("First party scan results", "FirstPartyVulnAmount", len(scanResponse.FirstPartyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
+	slog.Info("First party scan results", "firstPartyVulnAmount", len(scanResponse.FirstPartyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.FirstPartyVulns) == 0 {
 		return

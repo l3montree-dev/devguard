@@ -251,7 +251,8 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 		func(f dependencyVuln.DependencyVulnDTO) table.Row {
 			clickableLink := ""
 			if doRiskManagement {
-				clickableLink = fmt.Sprintf("%s/%s/dependencyVulns/%s", webUI, assetName, f.ID)
+				//TODO: change flaws
+				clickableLink = fmt.Sprintf("%s/%s/flaws/%s", webUI, assetName, f.ID)
 			} else {
 				clickableLink = "Risk Management is disabled"
 			}

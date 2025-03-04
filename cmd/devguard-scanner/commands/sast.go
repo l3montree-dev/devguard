@@ -16,7 +16,7 @@ func NewSastCommand() *cobra.Command {
 			err := sarifCommandFactory("sast")(cmd, args)
 			if err != nil {
 				slog.Error("sast failed", "err", err)
-				return
+				panic(err.Error())
 			}
 		},
 	}
