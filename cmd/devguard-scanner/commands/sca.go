@@ -188,6 +188,14 @@ func parseConfig(cmd *cobra.Command) (string, string, string, string, string) {
 	return token, assetName, apiUrl, failOnRisk, webUI
 }
 
+func flawToPrint(pURL packageurl.PackageURL, f flaw.FlawDTO, clickableLink string) table.Row {
+	if pURL.Namespace == "" {
+		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(f.CVEID), utils.OrDefault(f.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
+	} else {
+		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(f.CVEID), utils.OrDefault(f.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
+	}
+}
+
 func printGitHelp(err error) {
 	// do a detailed explaination on how to version the software using git tags
 	slog.Error("could not get semver version", "err", err)
@@ -262,11 +270,8 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 			if err != nil {
 				slog.Error("could not parse purl", "err", err)
 			}
-			if pURL.Namespace == "" {
-				return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(f.CVEID), utils.OrDefault(f.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
-			} else {
-				return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(f.CVEID), utils.OrDefault(f.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
-			}
+
+			return flawToPrint(pURL, f, clickableLink)
 		},
 	))
 
