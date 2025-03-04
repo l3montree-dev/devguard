@@ -276,9 +276,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 func (s *httpController) ScanDependencyVulnFromProject(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
-	if err := decoder.Decode(bom); err != nil {
-		return err
-	}
+	defer c.Request().Body.Close()
 	if err := decoder.Decode(bom); err != nil {
 		return err
 	}
