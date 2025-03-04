@@ -562,10 +562,6 @@ func CreateProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gi
 	projectOptions := &gitlab.AddProjectHookOptions{} //Intialize empty struct to return on error
 
 	chosenURL := os.Getenv("INSTANCE_DOMAIN") //Get the URL from the .env file
-	if chosenURL == "" {
-		slog.Error("no URL specified in .env file")
-		return projectOptions, nil
-	}
 
 	for _, hook := range hooks { //Check if the Hook already exists
 		if hook.URL == chosenURL {
@@ -580,7 +576,13 @@ func CreateProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gi
 	projectOptions.NoteEvents = gitlab.Ptr(true)
 	projectOptions.ConfidentialNoteEvents = gitlab.Ptr(true)
 	projectOptions.EnableSSLVerification = gitlab.Ptr(true)
-	projectOptions.URL = gitlab.Ptr(chosenURL)
+	if chosenURL == "" { //If no URL is provided in the enviroment variables default to main URL
+		slog.Error("no URL specified in .env file defaulting to main")
+		defaultURL := "https://api.main.devguard.org"
+		projectOptions.URL = &defaultURL
+	} else {
+		projectOptions.URL = gitlab.Ptr(chosenURL)
+	}
 	projectOptions.Token = gitlab.Ptr(token.String())
 
 	return projectOptions, nil
