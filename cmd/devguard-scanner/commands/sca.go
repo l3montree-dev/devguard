@@ -188,6 +188,15 @@ func parseConfig(cmd *cobra.Command) (string, string, string, string, string) {
 	return token, assetName, apiUrl, failOnRisk, webUI
 }
 
+// Function to dynamically change the format of the table row depending on the input parameters
+func flawToTableRow(pURL packageurl.PackageURL, f flaw.FlawDTO, clickableLink string) table.Row {
+	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
+		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(f.CVEID), utils.OrDefault(f.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
+	} else {
+		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(f.CVEID), utils.OrDefault(f.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
+	}
+}
+
 func printGitHelp(err error) {
 	// do a detailed explaination on how to version the software using git tags
 	slog.Error("could not get semver version", "err", err)
@@ -264,7 +273,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 				slog.Error("could not parse purl", "err", err)
 			}
 
-			return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(f.CVEID), utils.OrDefault(f.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
+			return flawToTableRow(pURL, f, clickableLink)
 		},
 	))
 
