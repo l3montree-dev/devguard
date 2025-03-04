@@ -1,26 +1,5 @@
 package integrations_test
 
-import (
-	"fmt"
-	"testing"
-
-	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
-	gitlab "gitlab.com/gitlab-org/api/client-go"
-)
-
-func TestCreateProjectHook(t *testing.T) {
-	t.Run("", func(t *testing.T) {
-		token, _ := uuid.NewUUID()
-		hooks := make([]*gitlab.ProjectHook, 0)
-		results, err := integrations.CreateProjectHook(token, hooks)
-		if err != nil {
-			t.Error("Error occured when creating project hook : %w", err)
-		}
-		fmt.Printf("This is the URL: %s ", *results.URL)
-	})
-}
-
 /*func TestGithubIntegrationHandleEvent(t *testing.T) {
 	t.Run("it should not be possible to call handle event with a context without flawId parameter", func(t *testing.T) {
 
