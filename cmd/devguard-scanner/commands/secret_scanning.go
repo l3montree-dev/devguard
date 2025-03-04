@@ -175,7 +175,7 @@ func secretScan(path string) (*os.File, error) {
 
 	slog.Info("Starting secret scanning", "path", path)
 
-	scannerCmd = exec.Command("gitleaks", "git", "-v", path, "--report-path", file.Name(), "--report-format", "sarif")
+	scannerCmd = exec.Command("gitleaks", "git", "-v", path, "--report-path", file.Name(), "--report-format", "sarif") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
