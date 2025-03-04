@@ -195,6 +195,7 @@ func Scan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, 
 func (s *httpController) ScanFromProject(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
+	defer c.Request().Body.Close()
 	if err := decoder.Decode(bom); err != nil {
 		return err
 	}
