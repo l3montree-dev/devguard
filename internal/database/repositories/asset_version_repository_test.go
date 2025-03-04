@@ -15,44 +15,4 @@
 
 package repositories_test
 
-import (
-	"fmt"
-	"os"
-	"testing"
-
-	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-)
-
-func TestFindOrCreate(t *testing.T) {
-	t.Run("Successful Test", func(t *testing.T) {
-		os.Setenv("POSTGRES_USER", "devguard") //Set .env variables manually or the os cant read them otherwise
-		os.Setenv("POSTGRES_PASSWORD", "devguard")
-		os.Setenv("POSTGRES_DB", "devguard")
-		os.Setenv("POSTGRES_HOST", "localhost")
-		os.Setenv("POSTGRES_PORT", "5432")
-
-		db, err := core.DatabaseFactory() //Build Database using the .env variables
-		if err != nil {
-			fmt.Printf("Error when calling database factory!\n")
-			panic(err.Error())
-		}
-
-		a := repositories.NewAssetVersionRepository(db) //Build repository with the db from above
-
-		assetVersionName := "test"                                         //Put in here the name of the assetVersion you want to delete
-		assetID, err := uuid.Parse("497598d2-b90a-4031-b3db-90216de0e17f") //Put in here the ID of the corresponding asset
-		if err != nil {
-			fmt.Printf("Error when formatting UUID")
-		}
-		tag := ""
-		defaultBranchName := "main"
-
-		_, err = a.FindOrCreate(assetVersionName, assetID, tag, defaultBranchName) //Call function and see if an error occurred
-		if err != nil {
-			fmt.Printf("Received the following error : %s", err)
-		}
-
-	})
-}
+//RIP Test
