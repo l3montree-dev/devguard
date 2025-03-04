@@ -14,11 +14,68 @@
 package commands
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
 
+func TestFlawToPrint(t *testing.T) {
+	t.Run("Should have 2 slashes", func(t *testing.T) {
+		pURL := packageurl.PackageURL{}
+		pURL.Type = "npm"
+		pURL.Namespace = "Example Namespace"
+		pURL.Name = "next"
+
+		cveid := "Example CVEID"
+		rawRiskAssessment := 42424.42
+		componentFixedVersion := "Example Version"
+
+		f := flaw.FlawDTO{}
+		f.CVEID = &cveid
+		f.RawRiskAssessment = &rawRiskAssessment
+		f.ComponentFixedVersion = &componentFixedVersion
+		f.State = models.FlawState("Example State")
+
+		clickableLink := "Example Link"
+
+		output := flawToString(pURL, f, clickableLink)
+		firstValue := fmt.Sprintln(output[0])
+		count := strings.Count(firstValue, "/")
+		assert.Equal(t, 2, count, "should be equal")
+
+	})
+	t.Run("Should have just 1 slash", func(t *testing.T) {
+		pURL := packageurl.PackageURL{}
+		pURL.Type = "npm"
+		pURL.Namespace = ""
+		pURL.Name = "next"
+
+		cveid := "Example CVEID"
+		rawRiskAssessment := 42424.42
+		componentFixedVersion := "Example Version"
+
+		f := flaw.FlawDTO{}
+		f.CVEID = &cveid
+		f.RawRiskAssessment = &rawRiskAssessment
+		f.ComponentFixedVersion = &componentFixedVersion
+		f.State = models.FlawState("Example State")
+
+		clickableLink := "Example Link"
+
+		output := flawToString(pURL, f, clickableLink)
+		firstValue := fmt.Sprintln(output[0])
+		count := strings.Count(firstValue, "/")
+		fmt.Printf("The string: %s \n with count : %d", firstValue, count)
+		assert.Equal(t, 1, count, "should be equal")
+
+	})
+
+}
 func TestSanitizeApiUrl(t *testing.T) {
 	tests := []struct {
 		input    string
