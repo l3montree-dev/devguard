@@ -15,7 +15,11 @@
 
 package utils
 
-import "encoding/csv"
+import (
+	"encoding/csv"
+	"log/slog"
+	"runtime/debug"
+)
 
 func Ptr[T any](t T) *T {
 	return &t
@@ -98,4 +102,14 @@ func ReadCsv(reader *csv.Reader, fn func(row []string) error) (int, error) {
 	}
 
 	return count, nil
+}
+
+func PrintBuildInformation() {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.revision" {
+				slog.Info("Build information", "revision", setting.Value)
+			}
+		}
+	}
 }

@@ -45,7 +45,7 @@ type riskStats struct {
 	TotalRisk           float64 `json:"total_risk"`
 	AvgRisk             float64 `json:"avg_risk"`
 	MaxRisk             float64 `json:"max_risk"`
-	DependencyVulnCount int64   `json:"dependencyVuln_count"`
+	DependencyVulnCount int64   `json:"dependency_vuln_count"`
 	PackageName         string  `json:"package_name"`
 }
 
@@ -57,19 +57,19 @@ func (r *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, assetVersi
 
 	// apply filters
 	for _, f := range filter {
-		q = q.Where(f.SQL(), f.Value())
+		q.Where(f.SQL(), f.Value())
 	}
 	if search != "" && len(search) > 2 {
-		q = q.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
-	err := q.Distinct("dependency_vulns.component_purl").Count(&count).Error
+	err := q.Session(&gorm.Session{}).Distinct("dependency_vulns.component_purl").Count(&count).Error
 	if err != nil {
 		return core.Paged[models.DependencyVuln]{}, map[string]int{}, err
 	}
 
 	packageNameQuery := r.GetDB(tx).Table("components").
-		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, COUNT(f.id) as dependencyVuln_count, components.purl as package_name").
+		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, COUNT(f.id) as dependency_vuln_count, components.purl as package_name").
 		Joins("INNER JOIN dependency_vulns f ON components.purl = f.component_purl").
 		Where("f.asset_version_name = ?", assetVersionName).
 		Where("f.asset_id = ?", assetID).

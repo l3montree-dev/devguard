@@ -21,6 +21,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands"
 	intotocmd "github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
+	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/phsym/console-slog"
 	"github.com/spf13/cobra"
@@ -57,6 +58,8 @@ func init() {
 func main() {
 
 	logger := slog.New(console.NewHandler(os.Stderr, &console.HandlerOptions{Level: slog.LevelDebug}))
+
+	utils.PrintBuildInformation()
 
 	// optional: set global logger
 	slog.SetDefault(logger)
