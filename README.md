@@ -297,7 +297,6 @@ go run ./cmd/devguard-scanner/main.go sca \
   --assetName="<ASSET NAME>" \
   --apiUrl="http://localhost:8080" \
   --token="<TOKEN>"
-  --path="
 ```
 
 
