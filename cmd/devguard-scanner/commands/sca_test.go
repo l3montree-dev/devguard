@@ -43,7 +43,7 @@ func TestFlawToPrint(t *testing.T) {
 
 		clickableLink := "Example Link"
 
-		output := flawToString(pURL, f, clickableLink)
+		output := flawToTableRow(pURL, f, clickableLink)
 		firstValue := fmt.Sprintln(output[0])
 		count := strings.Count(firstValue, "/")
 		assert.Equal(t, 2, count, "should be equal")
@@ -67,7 +67,7 @@ func TestFlawToPrint(t *testing.T) {
 
 		clickableLink := "Example Link"
 
-		output := flawToString(pURL, f, clickableLink)
+		output := flawToTableRow(pURL, f, clickableLink)
 		firstValue := fmt.Sprintln(output[0])
 		count := strings.Count(firstValue, "/")
 		fmt.Printf("The string: %s \n with count : %d", firstValue, count)
