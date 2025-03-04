@@ -1,7 +1,6 @@
 package integrations
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -91,18 +90,16 @@ func TestCreateProjectHook(t *testing.T) {
 func TestTestAndSave(t *testing.T) {
 	t.Run("should return error if no token is provided", func(t *testing.T) {
 		e := echo.New()
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("token=234"))
+		req := httptest.NewRequest(http.MethodGet, "/", strings.NewReader(`{"url":"localhost:8080/","token":"","name":"GoodName"}`))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
 		g := gitlabIntegration{}
 
-		fmt.Printf(".---------------------------------------Checkpoint----------------------------------------.")
-
 		err := g.TestAndSave(c)
-		if err != nil {
-			t.Fail()
-		}
+
+		assert.Nil(t, err)
+		assert.Equal(t, http.StatusBadRequest, rec.Result().StatusCode)
 	})
 }

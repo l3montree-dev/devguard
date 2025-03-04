@@ -1004,6 +1004,7 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 	// check if valid url - maybe the user forgot to add the protocol
 	if !strings.HasPrefix(data.Url, "http://") && !strings.HasPrefix(data.Url, "https://") {
 		data.Url = "https://" + data.Url
+
 	}
 
 	git, err := gitlab.NewClient(data.Token, gitlab.WithBaseURL(data.Url))
