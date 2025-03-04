@@ -198,9 +198,6 @@ func (s *httpController) ScanFromProject(c core.Context) error {
 	if err := decoder.Decode(bom); err != nil {
 		return err
 	}
-	if err := decoder.Decode(bom); err != nil {
-		return err
-	}
 
 	scanResults, err := Scan(c, normalize.FromCdxBom(bom, true), s)
 	if err != nil {
