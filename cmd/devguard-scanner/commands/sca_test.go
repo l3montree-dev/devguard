@@ -25,7 +25,7 @@ import (
 )
 
 func TestFlawToPrint(t *testing.T) {
-	t.Run("Should have 2 slashes", func(t *testing.T) {
+	t.Run("Should print normally with 2 strings when providing a namespace", func(t *testing.T) {
 		pURL := packageurl.PackageURL{}
 		pURL.Type = "npm"
 		pURL.Namespace = "Example Namespace"
@@ -49,7 +49,7 @@ func TestFlawToPrint(t *testing.T) {
 		assert.Equal(t, 2, count, "should be equal")
 
 	})
-	t.Run("Should have just 1 slash", func(t *testing.T) {
+	t.Run("Test with empty namespace should result in only 1 slash instead of a double slash", func(t *testing.T) {
 		pURL := packageurl.PackageURL{}
 		pURL.Type = "npm"
 		pURL.Namespace = ""
@@ -70,7 +70,7 @@ func TestFlawToPrint(t *testing.T) {
 		output := flawToTableRow(pURL, f, clickableLink)
 		firstValue := fmt.Sprintln(output[0])
 		count := strings.Count(firstValue, "/")
-		fmt.Printf("The string: %s \n with count : %d", firstValue, count)
+
 		assert.Equal(t, 1, count, "should be equal")
 
 	})
