@@ -45,8 +45,9 @@ type Asset struct {
 	RepositoryID   *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
 	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
 
-	LastHistoryUpdate *time.Time
-	ScoreThreshold    float32
+	LastHistoryUpdate            *time.Time
+	CVSSAutomaticTicketThreshold float64 `json:"cvssAutomaticTicketThreshold" gorm:"type:double"`
+	RiskAutomaticTicketThreshold float64 `json:"riskAutomaticTicketThreshold" gorm:"type:double"`
 
 	LastSecretScan    *time.Time `json:"lastSecretScan"`
 	LastSastScan      *time.Time `json:"lastSastScan"`

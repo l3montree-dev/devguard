@@ -7,8 +7,10 @@ import (
 )
 
 type createRequest struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description"`
+	Name                         string  `json:"name" validate:"required"`
+	Description                  string  `json:"description"`
+	CVSSAutomaticTicketThreshold float64 `json:"cvssAutomaticTicketThreshold"`
+	RiskAutomaticTicketThreshold float64 `json:"riskAutomaticTicketThreshold"`
 
 	CentralDependencyVulnManagement bool `json:"centralDependencyVulnManagement"`
 
@@ -38,8 +40,10 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 
 		CentralDependencyVulnManagement: a.CentralDependencyVulnManagement,
 
-		Importance:            a.Importance,
-		ReachableFromInternet: a.ReachableFromInternet,
+		Importance:                   a.Importance,
+		ReachableFromInternet:        a.ReachableFromInternet,
+		RiskAutomaticTicketThreshold: a.RiskAutomaticTicketThreshold,
+		CVSSAutomaticTicketThreshold: a.CVSSAutomaticTicketThreshold,
 
 		ConfidentialityRequirement: sanitizeRequirementLevel(a.ConfidentialityRequirement),
 		IntegrityRequirement:       sanitizeRequirementLevel(a.IntegrityRequirement),
