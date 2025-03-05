@@ -25,12 +25,12 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error("error when trying to generate token")
 			return
 		}
-		results, err := CreateProjectHookOptions(token, hooks)
+		results, err := createProjectHookOptions(token, hooks)
 		if err != nil {
 			slog.Error(err.Error())
 			return
 		}
-		assert.Equal(t, "https://api.main.devguard.org", *results.URL)
+		assert.Equal(t, "https://api.main.devguard.org/api/v1/webhook/", *results.URL)
 
 	})
 	t.Run("Returned ProjectHookOption Struct should have the URL set to stage devguard", func(t *testing.T) {
@@ -43,12 +43,12 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error("error when trying to generate token")
 			return
 		}
-		results, err := CreateProjectHookOptions(token, hooks)
+		results, err := createProjectHookOptions(token, hooks)
 		if err != nil {
 			slog.Error(err.Error())
 			return
 		}
-		assert.Equal(t, "https://api.stage.devguard.org", *results.URL)
+		assert.Equal(t, "https://api.stage.devguard.org/api/v1/webhook/", *results.URL)
 
 	})
 	t.Run("function should default to main if the ENV Variable is empty", func(t *testing.T) {
@@ -61,12 +61,12 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error("error when trying to generate token")
 			return
 		}
-		results, err := CreateProjectHookOptions(token, hooks)
+		results, err := createProjectHookOptions(token, hooks)
 		if err != nil {
 			slog.Error(err.Error())
 			return
 		}
-		assert.Equal(t, "https://api.main.devguard.org", *results.URL)
+		assert.Equal(t, "https://api.main.devguard.org/api/v1/webhook/", *results.URL)
 
 	})
 	t.Run("function should default to main if no ENV Variable is provided", func(t *testing.T) {
@@ -77,12 +77,12 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error("error when trying to generate token")
 			return
 		}
-		results, err := CreateProjectHookOptions(token, hooks)
+		results, err := createProjectHookOptions(token, hooks)
 		if err != nil {
 			slog.Error(err.Error())
 			return
 		}
-		assert.Equal(t, "https://api.main.devguard.org", *results.URL)
+		assert.Equal(t, "https://api.main.devguard.org/api/v1/webhook/", *results.URL)
 
 	})
 }

@@ -513,27 +513,14 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 		return fmt.Errorf("could not list project hooks: %w", err)
 	}
 
-	chosenURL := os.Getenv("INSTANCE_DOMAIN")
-	if chosenURL == "" {
-		slog.Error("No URL specified in .env file")
-		return nil
-	}
-
-	for _, hook := range hooks {
-		if hook.URL == chosenURL {
-			// the hook already exists
-			return nil
-		}
-	}
-
 	token, err := createToken()
 	if err != nil {
 		return fmt.Errorf("could not create new token: %w", err)
 	}
 
-	projectOptions, err := CreateProjectHookOptions(token, hooks)
-	if err != nil {
-		return err
+	projectOptions, err := createProjectHookOptions(token, hooks)
+	if err != nil { //Swallow error: If an error gets returned it means the hook already exists which means we don't have to do anything further and can return without errors
+		return nil
 	}
 
 	projectHook, _, err := client.AddProjectHook(ctx.Request().Context(), projectId, projectOptions)
@@ -558,15 +545,15 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 
 }
 
-func CreateProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
+func createProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
 	projectOptions := &gitlab.AddProjectHookOptions{} //Intialize empty struct to return on error
 
-	chosenURL := os.Getenv("INSTANCE_DOMAIN") //Get the URL from the .env file
+	instanceDomain := os.Getenv("INSTANCE_DOMAIN") //Get the URL from the .env file
 
-	for _, hook := range hooks { //Check if the Hook already exists
-		if hook.URL == chosenURL {
-
-			return projectOptions, nil
+	for _, hook := range hooks {
+		if strings.HasPrefix(hook.URL, instanceDomain) {
+			slog.Error("hook already exists")
+			return projectOptions, fmt.Errorf("hook already exists")
 		}
 	}
 
@@ -576,12 +563,13 @@ func CreateProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gi
 	projectOptions.NoteEvents = gitlab.Ptr(true)
 	projectOptions.ConfidentialNoteEvents = gitlab.Ptr(true)
 	projectOptions.EnableSSLVerification = gitlab.Ptr(true)
-	if chosenURL == "" { //If no URL is provided in the enviroment variables default to main URL
+	if instanceDomain == "" { //If no URL is provided in the enviroment variables default to main URL
 		slog.Error("no URL specified in .env file defaulting to main")
-		defaultURL := "https://api.main.devguard.org"
+		defaultURL := "https://api.main.devguard.org/api/v1/webhook/"
 		projectOptions.URL = &defaultURL
 	} else {
-		projectOptions.URL = gitlab.Ptr(chosenURL)
+		constructedURL := instanceDomain + "/api/v1/webhook/"
+		projectOptions.URL = &constructedURL
 	}
 	projectOptions.Token = gitlab.Ptr(token.String())
 
