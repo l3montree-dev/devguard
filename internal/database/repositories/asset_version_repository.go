@@ -68,7 +68,7 @@ func (a *assetVersionRepository) FindByName(name string) (models.AssetVersion, e
 	return app, nil
 }
 
-func (a *assetVersionRepository) FindByAssetVersionNameAndAssetID(name string, assetID uuid.UUID) (models.AssetVersion, error) {
+func (a *assetVersionRepository) findByAssetVersionNameAndAssetID(name string, assetID uuid.UUID) (models.AssetVersion, error) {
 	var app models.AssetVersion
 	err := a.db.Where("name = ? AND asset_id = ?", name, assetID).First(&app).Error
 	if err != nil {
@@ -77,10 +77,10 @@ func (a *assetVersionRepository) FindByAssetVersionNameAndAssetID(name string, a
 	return app, nil
 }
 
-func (a *assetVersionRepository) Create(assetVersionName string, assetID uuid.UUID, assetVersionType models.AssetVersionType, defaultBranch bool) (models.AssetVersion, error) {
+func (a *assetVersionRepository) assetVersionFactory(assetVersionName string, assetID uuid.UUID, assetVersionType models.AssetVersionType, defaultBranch bool) models.AssetVersion {
 	app := models.AssetVersion{Name: assetVersionName, AssetID: assetID, Slug: slug.Make(assetVersionName), Type: assetVersionType, DefaultBranch: defaultBranch}
-	err := a.db.Create(&app).Error
-	return app, err
+
+	return app
 }
 
 func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error) {
@@ -91,7 +91,7 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 	}
 
 	var app models.AssetVersion
-	app, err := a.FindByAssetVersionNameAndAssetID(assetVersionName, assetID)
+	app, err := a.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
 	if err != nil {
 		var assetVersionType models.AssetVersionType
 		if tag == "" {
@@ -100,7 +100,9 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 			assetVersionType = "tag"
 		}
 
-		app, err = a.Create(assetVersionName, assetID, assetVersionType, defaultBranch)
+		app = a.assetVersionFactory(assetVersionName, assetID, assetVersionType, defaultBranch)
+
+		err := a.db.Create(&app).Error
 		if err != nil {
 
 			if strings.Contains(err.Error(), "duplicate key value violates") { //Check if the error is due to duplicate keys
