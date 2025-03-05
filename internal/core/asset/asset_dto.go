@@ -7,8 +7,9 @@ import (
 )
 
 type createRequest struct {
-	Name                         string  `json:"name" validate:"required"`
-	Description                  string  `json:"description"`
+	Name        string `json:"name" validate:"required"`
+	Description string `json:"description"`
+
 	CVSSAutomaticTicketThreshold float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold float64 `json:"riskAutomaticTicketThreshold"`
 
@@ -38,12 +39,13 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 		ProjectID:   projectID,
 		Description: a.Description,
 
-		CentralDependencyVulnManagement: a.CentralDependencyVulnManagement,
-
-		Importance:                   a.Importance,
-		ReachableFromInternet:        a.ReachableFromInternet,
 		RiskAutomaticTicketThreshold: a.RiskAutomaticTicketThreshold,
 		CVSSAutomaticTicketThreshold: a.CVSSAutomaticTicketThreshold,
+
+		CentralDependencyVulnManagement: a.CentralDependencyVulnManagement,
+
+		Importance:            a.Importance,
+		ReachableFromInternet: a.ReachableFromInternet,
 
 		ConfidentialityRequirement: sanitizeRequirementLevel(a.ConfidentialityRequirement),
 		IntegrityRequirement:       sanitizeRequirementLevel(a.IntegrityRequirement),
@@ -54,6 +56,9 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 type patchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
+
+	CVSSAutomaticTicketThreshold float64 `json:"cvssAutomaticTicketThreshold"`
+	RiskAutomaticTicketThreshold float64 `json:"riskAutomaticTicketThreshold"`
 
 	CentralDependencyVulnManagement *bool `json:"centralDependencyVulnManagement"`
 
