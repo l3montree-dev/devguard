@@ -154,6 +154,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 			if err != nil {
 				return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 			}
+			//createIssuesForVulns(dependencyVulns, asset)
 
 		}
 		return nil
@@ -318,4 +319,61 @@ func (s *service) applyAndSave(tx core.DB, dependencyVuln *models.DependencyVuln
 	}
 	dependencyVuln.Events = append(dependencyVuln.Events, *ev)
 	return *ev, nil
+}
+
+func createIssuesForVulns(db core.DB, asset models.Asset, vulnList []models.DependencyVuln) error {
+	//gitlabIntegration := integrations.NewGitLabIntegration(db)
+	//githubIntegration := integrations.NewGithubIntegration(db)
+
+	riskThreshold := asset.RiskAutomaticTicketThreshold
+	cvssThreshold := asset.CVSSAutomaticTicketThreshold
+
+	if riskThreshold == nil && cvssThreshold == nil {
+		fmt.Printf("Both null")
+		return nil
+	}
+	if riskThreshold != nil && cvssThreshold != nil {
+		fmt.Printf("Both")
+		for _, vulnerability := range vulnList {
+			if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold || vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
+				/*err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
+					Ctx: c,
+				})
+				if err != nil {
+					return err
+				}*/
+			}
+
+		}
+	} else {
+		if riskThreshold != nil {
+			fmt.Printf("Only risk")
+			for _, vulnerability := range vulnList {
+				fmt.Printf("\n%f > %f\n ", *vulnerability.RawRiskAssessment, *asset.RiskAutomaticTicketThreshold)
+				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
+					/*err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
+						Ctx: c,
+					})
+					if err != nil {
+						return err
+					}*/
+				}
+			}
+		} else if cvssThreshold != nil {
+			fmt.Printf("Only cvss")
+			for _, vulnerability := range vulnList {
+				fmt.Printf("\n%f > %f\n ", vulnerability.CVE.CVSS, float32(*asset.CVSSAutomaticTicketThreshold))
+				if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
+					/*err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
+						Ctx: c,
+					})
+					if err != nil {
+						return err
+					}*/
+				}
+			}
+		}
+
+	}
+	return nil
 }

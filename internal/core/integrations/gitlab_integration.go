@@ -762,6 +762,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		if err != nil {
 			return err
 		}
+		// ab hier
 
 		labels := []string{
 			"devguard",

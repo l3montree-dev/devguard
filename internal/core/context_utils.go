@@ -162,7 +162,7 @@ func GetProject(c Context) models.Project {
 	return c.Get("project").(models.Project)
 }
 
-func recursiveGetProjectRepositoryID(project models.Project) (string, error) {
+func RecursiveGetProjectRepositoryID(project models.Project) (string, error) {
 	if project.RepositoryID != nil {
 		return *project.RepositoryID, nil
 	}
@@ -171,7 +171,7 @@ func recursiveGetProjectRepositoryID(project models.Project) (string, error) {
 		return "", fmt.Errorf("could not get repository id")
 	}
 
-	return recursiveGetProjectRepositoryID(*project.Parent)
+	return RecursiveGetProjectRepositoryID(*project.Parent)
 }
 
 func GetRepositoryID(c Context) (string, error) {
@@ -183,7 +183,7 @@ func GetRepositoryID(c Context) (string, error) {
 
 	// get the project
 	project := GetProject(c)
-	return recursiveGetProjectRepositoryID(project)
+	return RecursiveGetProjectRepositoryID(project)
 }
 
 type PageInfo struct {
