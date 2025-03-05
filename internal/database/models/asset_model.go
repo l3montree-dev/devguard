@@ -46,8 +46,8 @@ type Asset struct {
 	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
 
 	LastHistoryUpdate            *time.Time
-	CVSSAutomaticTicketThreshold float64 `json:"cvssAutomaticTicketThreshold" gorm:"type:float;default:null"`
-	RiskAutomaticTicketThreshold float64 `json:"riskAutomaticTicketThreshold" gorm:"type:float;default:null"`
+	CVSSAutomaticTicketThreshold float64 `json:"cvssAutomaticTicketThreshold" gorm:"type:decimal(4,2);default:null"`
+	RiskAutomaticTicketThreshold float64 `json:"riskAutomaticTicketThreshold" gorm:"type:decimal(4,2);default:null"`
 
 	LastSecretScan    *time.Time `json:"lastSecretScan"`
 	LastSastScan      *time.Time `json:"lastSastScan"`
