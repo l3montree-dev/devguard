@@ -46,6 +46,7 @@ type Asset struct {
 	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
 
 	LastHistoryUpdate *time.Time
+	ScoreThreshold    float32
 
 	LastSecretScan    *time.Time `json:"lastSecretScan"`
 	LastSastScan      *time.Time `json:"lastSastScan"`
