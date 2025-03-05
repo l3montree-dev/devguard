@@ -178,7 +178,10 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	createIssuesForVulns(newState, c)
+	err = createIssuesForVulns(newState, c)
+	if err != nil {
+		return scanResults, err
+	}
 
 	if doRiskManagement {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
@@ -333,6 +336,7 @@ func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) erro
 		if riskThreshold != nil {
 			fmt.Printf("Only risk")
 			for _, vulnerability := range vulnList {
+				fmt.Printf("\n%f > %f\n ", *vulnerability.RawRiskAssessment, *asset.RiskAutomaticTicketThreshold)
 				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
 					err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
 						Ctx: c,
@@ -343,8 +347,9 @@ func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) erro
 				}
 			}
 		} else if cvssThreshold != nil {
-			fmt.Printf("Only cvsss")
+			fmt.Printf("Only cvss")
 			for _, vulnerability := range vulnList {
+				fmt.Printf("\n%f > %f\n ", vulnerability.CVE.CVSS, float32(*asset.CVSSAutomaticTicketThreshold))
 				if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
 					err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
 						Ctx: c,
