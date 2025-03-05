@@ -10,8 +10,8 @@ type createRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 
-	CVSSAutomaticTicketThreshold float64 `json:"cvssAutomaticTicketThreshold"`
-	RiskAutomaticTicketThreshold float64 `json:"riskAutomaticTicketThreshold"`
+	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
+	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
 
 	CentralDependencyVulnManagement bool `json:"centralDependencyVulnManagement"`
 

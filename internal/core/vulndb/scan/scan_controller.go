@@ -178,6 +178,8 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
+	createIssuesForVulns(newState, c)
+
 	if doRiskManagement {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
 		if err := s.statisticsService.UpdateAssetRiskAggregation(&assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
@@ -301,4 +303,59 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 	}
 	return c.JSON(200, scanResults)
 
+}
+
+func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) error {
+	asset := core.GetAsset(c)
+	thirdPartyIntegration := core.GetThirdPartyIntegration(c)
+
+	riskThreshold := asset.RiskAutomaticTicketThreshold
+	cvssThreshold := asset.CVSSAutomaticTicketThreshold
+
+	if riskThreshold == nil && cvssThreshold == nil {
+		fmt.Printf("Both null")
+		return nil
+	}
+	if riskThreshold != nil && cvssThreshold != nil {
+		fmt.Printf("Both")
+		for _, vulnerability := range vulnList {
+			if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold || vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
+				err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
+					Ctx: c,
+				})
+				if err != nil {
+					return err
+				}
+			}
+
+		}
+	} else {
+		if riskThreshold != nil {
+			fmt.Printf("Only risk")
+			for _, vulnerability := range vulnList {
+				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
+					err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
+						Ctx: c,
+					})
+					if err != nil {
+						return err
+					}
+				}
+			}
+		} else if cvssThreshold != nil {
+			fmt.Printf("Only cvsss")
+			for _, vulnerability := range vulnList {
+				if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
+					err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
+						Ctx: c,
+					})
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+
+	}
+	return nil
 }
