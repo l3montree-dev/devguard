@@ -308,6 +308,7 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 
 }
 
+// function to check whether the provided vulnerabilities in a given asset exceeds their respective thresholds and create a ticket for it if they do so
 func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) error {
 	asset := core.GetAsset(c)
 	thirdPartyIntegration := core.GetThirdPartyIntegration(c)
@@ -315,10 +316,13 @@ func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) erro
 	riskThreshold := asset.RiskAutomaticTicketThreshold
 	cvssThreshold := asset.CVSSAutomaticTicketThreshold
 
+	//Check if no automatic Issues are wanted by the user
 	if riskThreshold == nil && cvssThreshold == nil {
 		fmt.Printf("Both null")
 		return nil
 	}
+
+	//Determine whether to scan for both risk and cvss or just 1 of them
 	if riskThreshold != nil && cvssThreshold != nil {
 		fmt.Printf("Both")
 		for _, vulnerability := range vulnList {

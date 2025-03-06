@@ -324,10 +324,12 @@ func (s *service) applyAndSave(tx core.DB, dependencyVuln *models.DependencyVuln
 	return *ev, nil
 }
 
+// function to check whether the provided vulnerabilities in a given asset exceeds their respective thresholds and create a ticket for it if they do so
 func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyIntegration, asset models.Asset, vulnList []models.DependencyVuln) error {
 	riskThreshold := asset.RiskAutomaticTicketThreshold
 	cvssThreshold := asset.CVSSAutomaticTicketThreshold
 
+	//Check if no automatic Issues are wanted by the user
 	if riskThreshold == nil && cvssThreshold == nil {
 		fmt.Printf("Both null")
 		return nil
@@ -349,6 +351,8 @@ func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyInteg
 	if err != nil {
 		return err
 	}
+
+	//Determine whether to scan for both risk and cvss or just 1 of them
 	if riskThreshold != nil && cvssThreshold != nil {
 		fmt.Printf("Both")
 		for _, vulnerability := range vulnList {
@@ -391,6 +395,7 @@ func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyInteg
 	return nil
 }
 
+// function to remove duplicate code from the different cases of the createIssuesForVulns function
 func setUpIssueCreation(thirdPartyIntegration core.ThirdPartyIntegration, cveName string, asset models.Asset, repoId string, orgSlug string, projectSlug string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
