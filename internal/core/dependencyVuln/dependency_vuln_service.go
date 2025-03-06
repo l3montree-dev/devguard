@@ -16,15 +16,19 @@
 package dependencyVuln
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/core"
+
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -126,7 +130,7 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, userID string, depende
 	return nil
 }
 
-func (s *service) RecalculateAllRawRiskAssessments() error {
+func (s *service) RecalculateAllRawRiskAssessments(thirdPartyIntegrations core.ThirdPartyIntegration) error {
 	now := time.Now()
 	slog.Info("recalculating all raw risk assessments", "time", now)
 
@@ -154,7 +158,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 			if err != nil {
 				return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 			}
-			//createIssuesForVulns(dependencyVulns, asset)
+			createIssuesForVulns(tx, thirdPartyIntegrations, asset, dependencyVulns)
 
 		}
 		return nil
@@ -321,10 +325,7 @@ func (s *service) applyAndSave(tx core.DB, dependencyVuln *models.DependencyVuln
 	return *ev, nil
 }
 
-func createIssuesForVulns(db core.DB, asset models.Asset, vulnList []models.DependencyVuln) error {
-	//gitlabIntegration := integrations.NewGitLabIntegration(db)
-	//githubIntegration := integrations.NewGithubIntegration(db)
-
+func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyIntegration, asset models.Asset, vulnList []models.DependencyVuln) error {
 	riskThreshold := asset.RiskAutomaticTicketThreshold
 	cvssThreshold := asset.CVSSAutomaticTicketThreshold
 
@@ -332,16 +333,27 @@ func createIssuesForVulns(db core.DB, asset models.Asset, vulnList []models.Depe
 		fmt.Printf("Both null")
 		return nil
 	}
+
+	projectRepository := repositories.NewProjectRepository(db)
+
+	project, err := projectRepository.Read(asset.ProjectID)
+	orgSlug := slug.Make("org name")
+	if err != nil {
+		return err
+	}
+
+	repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
+	if err != nil {
+		return err
+	}
 	if riskThreshold != nil && cvssThreshold != nil {
 		fmt.Printf("Both")
 		for _, vulnerability := range vulnList {
 			if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold || vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
-				/*err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
-					Ctx: c,
-				})
+				err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, orgSlug, project.Slug)
 				if err != nil {
 					return err
-				}*/
+				}
 			}
 
 		}
@@ -351,12 +363,11 @@ func createIssuesForVulns(db core.DB, asset models.Asset, vulnList []models.Depe
 			for _, vulnerability := range vulnList {
 				fmt.Printf("\n%f > %f\n ", *vulnerability.RawRiskAssessment, *asset.RiskAutomaticTicketThreshold)
 				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
-					/*err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
-						Ctx: c,
-					})
+					err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, orgSlug, project.Slug)
 					if err != nil {
 						return err
-					}*/
+					}
+
 				}
 			}
 		} else if cvssThreshold != nil {
@@ -364,16 +375,28 @@ func createIssuesForVulns(db core.DB, asset models.Asset, vulnList []models.Depe
 			for _, vulnerability := range vulnList {
 				fmt.Printf("\n%f > %f\n ", vulnerability.CVE.CVSS, float32(*asset.CVSSAutomaticTicketThreshold))
 				if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
-					/*err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
-						Ctx: c,
-					})
+					err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, orgSlug, project.Slug)
 					if err != nil {
 						return err
-					}*/
+					}
+
 				}
 			}
 		}
 
 	}
+	return nil
+}
+
+func setUpIssueCreation(thirdPartyIntegration core.ThirdPartyIntegration, cveName string, asset models.Asset, repoId string, orgSlug string, projectSlug string) error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := thirdPartyIntegration.CreateIssue(ctx, asset, repoId, cveName, projectSlug, orgSlug)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

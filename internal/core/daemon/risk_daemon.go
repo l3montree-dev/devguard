@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 )
@@ -14,5 +15,9 @@ func RecalculateRisk(db database.DB) error {
 		repositories.NewCVERepository(db),
 	)
 
-	return dependencyVulnService.RecalculateAllRawRiskAssessments()
+	gitlabIntegration := integrations.NewGitLabIntegration(db)
+	githubIntegration := integrations.NewGithubIntegration(db)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration)
+
+	return dependencyVulnService.RecalculateAllRawRiskAssessments(thirdPartyIntegration)
 }

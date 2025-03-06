@@ -659,3 +659,8 @@ func (g *githubIntegration) HandleEvent(event any) error {
 	}
 	return nil
 }
+
+func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
+	// TODO: Implement
+	return nil
+}

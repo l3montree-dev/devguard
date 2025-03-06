@@ -1,4 +1,4 @@
-package integrations
+package integrations_test
 
 /*
 import (

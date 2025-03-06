@@ -174,16 +174,20 @@ func RecursiveGetProjectRepositoryID(project models.Project) (string, error) {
 	return RecursiveGetProjectRepositoryID(*project.Parent)
 }
 
-func GetRepositoryID(c Context) (string, error) {
-	// get the asset
-	asset := GetAsset(c)
+func GetRepositoryIdFromAssetAndProject(project models.Project, asset models.Asset) (string, error) {
 	if asset.RepositoryID != nil {
 		return *asset.RepositoryID, nil
 	}
 
+	return RecursiveGetProjectRepositoryID(project)
+}
+
+func GetRepositoryID(c Context) (string, error) {
+	// get the asset
+	asset := GetAsset(c)
 	// get the project
 	project := GetProject(c)
-	return RecursiveGetProjectRepositoryID(project)
+	return GetRepositoryIdFromAssetAndProject(project, asset)
 }
 
 type PageInfo struct {
