@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/core"
 
 	"github.com/l3montree-dev/devguard/internal/core/risk"
@@ -335,9 +334,13 @@ func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyInteg
 	}
 
 	projectRepository := repositories.NewProjectRepository(db)
+	organizationRepository := repositories.NewOrgRepository(db)
 
 	project, err := projectRepository.Read(asset.ProjectID)
-	orgSlug := slug.Make("org name")
+	if err != nil {
+		return err
+	}
+	org, err := organizationRepository.Read(project.OrganizationID)
 	if err != nil {
 		return err
 	}
@@ -350,7 +353,7 @@ func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyInteg
 		fmt.Printf("Both")
 		for _, vulnerability := range vulnList {
 			if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold || vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
-				err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, orgSlug, project.Slug)
+				err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, org.Slug, project.Slug)
 				if err != nil {
 					return err
 				}
@@ -363,7 +366,7 @@ func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyInteg
 			for _, vulnerability := range vulnList {
 				fmt.Printf("\n%f > %f\n ", *vulnerability.RawRiskAssessment, *asset.RiskAutomaticTicketThreshold)
 				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
-					err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, orgSlug, project.Slug)
+					err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, org.Slug, project.Slug)
 					if err != nil {
 						return err
 					}
@@ -375,7 +378,7 @@ func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyInteg
 			for _, vulnerability := range vulnList {
 				fmt.Printf("\n%f > %f\n ", vulnerability.CVE.CVSS, float32(*asset.CVSSAutomaticTicketThreshold))
 				if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
-					err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, orgSlug, project.Slug)
+					err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, org.Slug, project.Slug)
 					if err != nil {
 						return err
 					}
