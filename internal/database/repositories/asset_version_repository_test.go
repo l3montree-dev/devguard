@@ -9,20 +9,25 @@ import (
 )
 
 func TestAssetVersionFactory(t *testing.T) {
-	repo := &assetVersionRepository{}
 
-	assetVersionName := "Test Asset Version"
-	assetID := uuid.New()
-	assetVersionType := models.AssetVersionType("branch")
-	defaultBranch := true
+	t.Run("should slugify the asset name and store it in the slug property", func(t *testing.T) {
 
-	expectedSlug := "test-asset-version"
+		repo := &assetVersionRepository{}
 
-	assetVersion := repo.assetVersionFactory(assetVersionName, assetID, assetVersionType, defaultBranch)
+		assetVersionName := "Test Asset Version"
+		assetID := uuid.New()
+		assetVersionType := models.AssetVersionType("branch")
+		defaultBranch := true
 
-	assert.Equal(t, assetVersionName, assetVersion.Name)
-	assert.Equal(t, assetID, assetVersion.AssetID)
-	assert.Equal(t, expectedSlug, assetVersion.Slug)
-	assert.Equal(t, assetVersionType, assetVersion.Type)
-	assert.Equal(t, defaultBranch, assetVersion.DefaultBranch)
+		expectedSlug := "test-asset-version"
+
+		assetVersion := repo.assetVersionFactory(assetVersionName, assetID, assetVersionType, defaultBranch)
+
+		assert.Equal(t, assetVersionName, assetVersion.Name)
+		assert.Equal(t, assetID, assetVersion.AssetID)
+		assert.Equal(t, expectedSlug, assetVersion.Slug)
+		assert.Equal(t, assetVersionType, assetVersion.Type)
+		assert.Equal(t, defaultBranch, assetVersion.DefaultBranch)
+
+	})
 }
