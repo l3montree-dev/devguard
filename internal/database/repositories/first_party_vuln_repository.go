@@ -71,7 +71,7 @@ func (r firstPartyVulnerabilityRepository) Read(id string) (models.FirstPartyVul
 	return t, err
 }
 
-func (g firstPartyVulnerabilityRepository) ReadDependencyVulnWithAssetEvents(id string) (models.FirstPartyVulnerability, []models.VulnEvent, error) {
+func (g firstPartyVulnerabilityRepository) ReadDependencyVulnWithAssetVersionEvents(id string) (models.FirstPartyVulnerability, []models.VulnEvent, error) {
 	var t models.FirstPartyVulnerability
 	err := g.db.First(&t, "id = ?", id).Error
 
