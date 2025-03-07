@@ -1,25 +1,10 @@
-package integrations_test
+package integrations
 
 /*
-import (
-	"bytes"
-	"context"
-	"fmt"
-	"net/http/httptest"
-	"testing"
-
-	"github.com/google/go-github/v62/github"
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
-	"github.com/l3montree-dev/devguard/mocks"
-	"github.com/labstack/echo/v4"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-)
-
 func TestGithubIntegrationHandleEvent(t *testing.T) {
 	t.Run("it should not be possible to call handle event with a context without dependencyVulnId parameter", func(t *testing.T) {
+patrick justkdhpw
+a
 
 		githubIntegration := githubIntegration{}
 
@@ -165,10 +150,10 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		authSession.On("GetUserID").Return("1")
 
 		githubIntegration := githubIntegration{
-			dependencyVulnRepository:      dependencyVulnRepository,
-			githubClientFactory: githubClientFactory,
-			frontendUrl:         "http://localhost:3000",
-			dependencyVulnService:         dependencyVulnService,
+			dependencyVulnRepository: dependencyVulnRepository,
+			githubClientFactory:      githubClientFactory,
+			frontendUrl:              "http://localhost:3000",
+			dependencyVulnService:    dependencyVulnService,
 		}
 
 		core.SetAsset(ctx, models.Asset{
@@ -242,10 +227,10 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		authSession.On("GetUserID").Return("1")
 
 		githubIntegration := githubIntegration{
-			dependencyVulnRepository:      dependencyVulnRepository,
-			githubClientFactory: githubClientFactory,
-			frontendUrl:         "http://localhost:3000",
-			dependencyVulnService:         dependencyVulnService,
+			dependencyVulnRepository: dependencyVulnRepository,
+			githubClientFactory:      githubClientFactory,
+			frontendUrl:              "http://localhost:3000",
+			dependencyVulnService:    dependencyVulnService,
 		}
 
 		core.SetAsset(ctx, models.Asset{

@@ -157,7 +157,10 @@ func (s *service) RecalculateAllRawRiskAssessments(thirdPartyIntegrations core.T
 			if err != nil {
 				return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 			}
-			createIssuesForVulns(tx, thirdPartyIntegrations, asset, dependencyVulns)
+			err = createIssuesForVulns(tx, thirdPartyIntegrations, asset, dependencyVulns)
+			if err != nil {
+				return err
+			}
 
 		}
 		return nil
