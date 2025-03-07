@@ -189,11 +189,11 @@ func parseConfig(cmd *cobra.Command) (string, string, string, string, string) {
 }
 
 // Function to dynamically change the format of the table row depending on the input parameters
-func flawToTableRow(pURL packageurl.PackageURL, f flaw.FlawDTO, clickableLink string) table.Row {
+func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dependencyVuln.DependencyVulnDTO, clickableLink string) table.Row {
 	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
-		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(f.CVEID), utils.OrDefault(f.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
+		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, clickableLink}
 	} else {
-		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(f.CVEID), utils.OrDefault(f.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(f.ComponentFixedVersion), f.State, clickableLink}
+		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, clickableLink}
 	}
 }
 
@@ -257,23 +257,23 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status", "URL"})
 	tw.AppendRows(utils.Map(
 		scanResponse.DependencyVulns,
-		func(f dependencyVuln.DependencyVulnDTO) table.Row {
+		func(v dependencyVuln.DependencyVulnDTO) table.Row {
 			clickableLink := ""
 			if doRiskManagement {
 				//TODO: change flaws
-				clickableLink = fmt.Sprintf("%s/%s/flaws/%s", webUI, assetName, f.ID)
+				clickableLink = fmt.Sprintf("%s/%s/flaws/%s", webUI, assetName, v.ID)
 			} else {
 				clickableLink = "Risk Management is disabled"
 			}
 
 			// extract package name and version from purl
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
-			pURL, err := packageurl.FromString(*f.ComponentPurl)
+			pURL, err := packageurl.FromString(*v.ComponentPurl)
 			if err != nil {
 				slog.Error("could not parse purl", "err", err)
 			}
 
-			return flawToTableRow(pURL, f, clickableLink)
+			return dependencyVulnToTableRow(pURL, v, clickableLink)
 		},
 	))
 
