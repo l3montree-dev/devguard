@@ -101,22 +101,14 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 			assetVersionType = "tag"
 		}
 
-<<<<<<< HEAD
-		if err = a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetID: assetID, Slug: assetVersionName, Type: assetVersionType, DefaultBranch: defaultBranch}).Error; err != nil {
-			//Check if the given assetVersion already exists if thats the case don't want to add a new entry to the db but instead update the existing one
-			if strings.Contains(err.Error(), "duplicate key value violates") {
-=======
 		app = a.assetVersionFactory(assetVersionName, assetID, assetVersionType, defaultBranch)
-
 		err := a.db.Create(&app).Error
-		if err != nil {
->>>>>>> bedcb087e1d08114ca0221e23e639fa7b8bb0bf9
-
-				a.db.Unscoped().Model(&app).Where("name", assetVersionName).Update("deleted_at", nil) //Update 'deleted_at' to NULL to revert the previous soft delete
-				return app, nil
-			}
+		//Check if the given assetVersion already exists if thats the case don't want to add a new entry to the db but instead update the existing one
+		if err != nil && strings.Contains(err.Error(), "duplicate key value violates") {
+			a.db.Unscoped().Model(&app).Where("name", assetVersionName).Update("deleted_at", nil) //Update 'deleted_at' to NULL to revert the previous soft delete
+			return app, nil
+		} else if err != nil {
 			return models.AssetVersion{}, err
-
 		}
 		return app, nil
 	}
