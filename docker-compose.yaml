@@ -5,9 +5,9 @@ services:
   postgresql:
     image: ghcr.io/l3montree-dev/devguard-postgresql:v0.4.16
     # If you want to build the image locally, uncomment the following lines
-    build:
-     context: .
-     dockerfile: Dockerfile.postgres
+    # build:
+    # context: .
+    # dockerfile: Dockerfile.postgres
     env_file: .env
     ports:
     - "5432:5432"
