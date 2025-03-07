@@ -310,6 +310,7 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 
 // function to check whether the provided vulnerabilities in a given asset exceeds their respective thresholds and create a ticket for it if they do so
 func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) error {
+	fmt.Printf("Running Issue in scan controller\n")
 	asset := core.GetAsset(c)
 	thirdPartyIntegration := core.GetThirdPartyIntegration(c)
 
@@ -327,11 +328,14 @@ func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) erro
 		fmt.Printf("Both")
 		for _, vulnerability := range vulnList {
 			if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold || vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
-				err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
-					Ctx: c,
-				})
-				if err != nil {
-					return err
+				if vulnerability.TicketID == nil {
+					c.Set("dependencyVulnId", vulnerability.ID)
+					err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
+						Ctx: c,
+					})
+					if err != nil {
+						return err
+					}
 				}
 			}
 
@@ -342,11 +346,14 @@ func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) erro
 			for _, vulnerability := range vulnList {
 				fmt.Printf("\n%f > %f\n ", *vulnerability.RawRiskAssessment, *asset.RiskAutomaticTicketThreshold)
 				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
-					err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
-						Ctx: c,
-					})
-					if err != nil {
-						return err
+					if vulnerability.TicketID == nil {
+						c.Set("dependencyVulnId", vulnerability.ID)
+						err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
+							Ctx: c,
+						})
+						if err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -355,11 +362,14 @@ func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) erro
 			for _, vulnerability := range vulnList {
 				fmt.Printf("\n%f > %f\n ", vulnerability.CVE.CVSS, float32(*asset.CVSSAutomaticTicketThreshold))
 				if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
-					err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
-						Ctx: c,
-					})
-					if err != nil {
-						return err
+					if vulnerability.TicketID == nil {
+						c.Set("dependencyVulnId", vulnerability.ID)
+						err := thirdPartyIntegration.HandleEvent(core.ManualMitigateEvent{
+							Ctx: c,
+						})
+						if err != nil {
+							return err
+						}
 					}
 				}
 			}

@@ -3,8 +3,8 @@ package integrations
 /*
 func TestGithubIntegrationHandleEvent(t *testing.T) {
 	t.Run("it should not be possible to call handle event with a context without dependencyVulnId parameter", func(t *testing.T) {
-patrick justkdhpw
-a
+
+
 
 		githubIntegration := githubIntegration{}
 

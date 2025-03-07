@@ -986,8 +986,6 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	assetSlug := asset.Slug
 
-	// ab hier
-
 	labels := []string{
 		"devguard",
 		"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),

@@ -157,7 +157,8 @@ func (s *service) RecalculateAllRawRiskAssessments(thirdPartyIntegrations core.T
 			if err != nil {
 				return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 			}
-			err = createIssuesForVulns(tx, thirdPartyIntegrations, asset, dependencyVulns)
+
+			err = CreateIssuesForUpdatedVulns(tx, thirdPartyIntegrations, asset, dependencyVulns)
 			if err != nil {
 				return err
 			}
@@ -328,7 +329,8 @@ func (s *service) applyAndSave(tx core.DB, dependencyVuln *models.DependencyVuln
 }
 
 // function to check whether the provided vulnerabilities in a given asset exceeds their respective thresholds and create a ticket for it if they do so
-func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyIntegration, asset models.Asset, vulnList []models.DependencyVuln) error {
+func CreateIssuesForUpdatedVulns(db core.DB, thirdPartyIntegration core.ThirdPartyIntegration, asset models.Asset, vulnList []models.DependencyVuln) error {
+	fmt.Printf("Running Issue in dependency vuln controller\n")
 	riskThreshold := asset.RiskAutomaticTicketThreshold
 	cvssThreshold := asset.CVSSAutomaticTicketThreshold
 
@@ -360,7 +362,7 @@ func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyInteg
 		fmt.Printf("Both")
 		for _, vulnerability := range vulnList {
 			if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold || vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
-				err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, org.Slug, project.Slug)
+				err := createIssue(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, org.Slug, project.Slug)
 				if err != nil {
 					return err
 				}
@@ -373,7 +375,7 @@ func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyInteg
 			for _, vulnerability := range vulnList {
 				fmt.Printf("\n%f > %f\n ", *vulnerability.RawRiskAssessment, *asset.RiskAutomaticTicketThreshold)
 				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
-					err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, org.Slug, project.Slug)
+					err := createIssue(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, org.Slug, project.Slug)
 					if err != nil {
 						return err
 					}
@@ -385,7 +387,7 @@ func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyInteg
 			for _, vulnerability := range vulnList {
 				fmt.Printf("\n%f > %f\n ", vulnerability.CVE.CVSS, float32(*asset.CVSSAutomaticTicketThreshold))
 				if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
-					err := setUpIssueCreation(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, org.Slug, project.Slug)
+					err := createIssue(thirdPartyIntegration, vulnerability.CVE.CVE, asset, repoID, org.Slug, project.Slug)
 					if err != nil {
 						return err
 					}
@@ -399,7 +401,7 @@ func createIssuesForVulns(db core.DB, thirdPartyIntegration core.ThirdPartyInteg
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
-func setUpIssueCreation(thirdPartyIntegration core.ThirdPartyIntegration, cveName string, asset models.Asset, repoId string, orgSlug string, projectSlug string) error {
+func createIssue(thirdPartyIntegration core.ThirdPartyIntegration, cveName string, asset models.Asset, repoId string, orgSlug string, projectSlug string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
