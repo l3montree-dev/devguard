@@ -39,6 +39,13 @@ type VulnEvent struct {
 	arbitraryJsonData map[string]any
 }
 
+type VulnEventDetail struct {
+	VulnEvent
+
+	AssetVersionName string `json:"assetVersionName"`
+	Slug             string `json:"assetVersionSlug"`
+}
+
 func (e *VulnEvent) GetArbitraryJsonData() map[string]any {
 	// parse the additional data
 	if e.ArbitraryJsonData == "" {
