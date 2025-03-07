@@ -21,6 +21,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands"
 	intotocmd "github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
+	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/phsym/console-slog"
 	"github.com/spf13/cobra"
@@ -29,7 +30,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "devguard-scanner",
 	Short: "Vulnerability management for devs.",
-	Long:  `Devguard-Scanner is a tool to identify vulnerabilities and flaws in a software. It communicates the result to a devguard instance.`,
+	Long:  `Devguard-Scanner is a tool to identify vulnerabilities in a software. It communicates the result to a devguard instance.`,
 }
 
 func Execute() {
@@ -48,6 +49,8 @@ func init() {
 		commands.NewInspectCommand(),
 		commands.NewSignCommand(),
 		commands.NewLoginCommand(),
+		commands.NewSecretScanningCommand(),
+		commands.NewSastCommand(),
 		intotocmd.NewInTotoCommand(),
 	)
 }
@@ -55,6 +58,8 @@ func init() {
 func main() {
 
 	logger := slog.New(console.NewHandler(os.Stderr, &console.HandlerOptions{Level: slog.LevelDebug}))
+
+	utils.PrintBuildInformation()
 
 	// optional: set global logger
 	slog.SetDefault(logger)

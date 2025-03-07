@@ -17,8 +17,10 @@ package repositories
 
 import (
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -66,6 +68,21 @@ func (a *assetVersionRepository) FindByName(name string) (models.AssetVersion, e
 	return app, nil
 }
 
+func (a *assetVersionRepository) findByAssetVersionNameAndAssetID(name string, assetID uuid.UUID) (models.AssetVersion, error) {
+	var app models.AssetVersion
+	err := a.db.Where("name = ? AND asset_id = ?", name, assetID).First(&app).Error
+	if err != nil {
+		return app, err
+	}
+	return app, nil
+}
+
+func (a *assetVersionRepository) assetVersionFactory(assetVersionName string, assetID uuid.UUID, assetVersionType models.AssetVersionType, defaultBranch bool) models.AssetVersion {
+	app := models.AssetVersion{Name: assetVersionName, AssetID: assetID, Slug: slug.Make(assetVersionName), Type: assetVersionType, DefaultBranch: defaultBranch}
+
+	return app
+}
+
 func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error) {
 
 	var defaultBranch bool
@@ -74,7 +91,7 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 	}
 
 	var app models.AssetVersion
-	err := a.db.Where("name = ? AND asset_id = ?", assetVersionName, assetID).First(&app).Error
+	app, err := a.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
 	if err != nil {
 		var assetVersionType models.AssetVersionType
 		if tag == "" {
@@ -83,10 +100,19 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 			assetVersionType = "tag"
 		}
 
-		if err = a.db.Create(&models.AssetVersion{Name: assetVersionName, AssetID: assetID, Slug: assetVersionName, Type: assetVersionType, DefaultBranch: defaultBranch}).Error; err != nil {
+		app = a.assetVersionFactory(assetVersionName, assetID, assetVersionType, defaultBranch)
+
+		err := a.db.Create(&app).Error
+		if err != nil {
+
+			if strings.Contains(err.Error(), "duplicate key value violates") { //Check if the error is due to duplicate keys
+				a.db.Unscoped().Model(&app).Where("name", assetVersionName).Update("deleted_at", nil) //Update deleted at to NULL
+				return app, nil
+			}
 			return models.AssetVersion{}, err
+
 		}
-		return a.FindOrCreate(assetVersionName, assetID, tag, defaultBranchName)
+		return app, nil
 	}
 	if app.DefaultBranch != defaultBranch {
 		app.DefaultBranch = defaultBranch

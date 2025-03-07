@@ -165,15 +165,12 @@ func (c *httpController) Update(ctx core.Context) error {
 		}
 	}
 
-	if patchRequest.CentralFlawManagement != nil && *patchRequest.CentralFlawManagement != asset.CentralFlawManagement {
-		asset.CentralFlawManagement = *patchRequest.CentralFlawManagement
-	}
 	updated := patchRequest.applyToModel(&asset)
 
 	if updated {
 		err = c.assetRepository.Update(nil, &asset)
 		if err != nil {
-			return fmt.Errorf("Error updating asset: %v", err)
+			return fmt.Errorf("error updating asset: %v", err)
 		}
 	}
 

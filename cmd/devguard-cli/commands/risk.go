@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/spf13/cobra"
@@ -34,18 +34,18 @@ func newCalculateCmd() *cobra.Command {
 				return
 			}
 
-			flawRepository := repositories.NewFlawRepository(database)
-			flawEventRepository := repositories.NewFlawEventRepository(database)
+			dependencyVulnRepository := repositories.NewDependencyVulnRepository(database)
+			vulnEventRepository := repositories.NewVulnEventRepository(database)
 			cveRepository := repositories.NewCVERepository(database)
 			assetRepository := repositories.NewAssetRepository(database)
 			assetVersionRepository := repositories.NewAssetVersionRepository(database)
-			flawService := flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository)
+			dependencyVulnService := dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository)
 			statisticsRepository := repositories.NewStatisticsRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
 			projectRepository := repositories.NewProjectRepository(database)
 			projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(database)
 
-			statisticService := statistics.NewService(statisticsRepository, componentRepository, repositories.NewAssetRiskHistoryRepository(database), flawRepository, assetVersionRepository, projectRepository, projectRiskHistoryRepository)
+			statisticService := statistics.NewService(statisticsRepository, componentRepository, repositories.NewAssetRiskHistoryRepository(database), dependencyVulnRepository, assetVersionRepository, projectRepository, projectRiskHistoryRepository)
 
 			shouldCalculateHistory, err := cmd.Flags().GetBool("history")
 			if err != nil {
@@ -53,7 +53,7 @@ func newCalculateCmd() *cobra.Command {
 				return
 			}
 
-			if err := flawService.RecalculateAllRawRiskAssessments(); err != nil {
+			if err := dependencyVulnService.RecalculateAllRawRiskAssessments(); err != nil {
 				slog.Error("could not recalculate risk assessments", "err", err)
 				return
 			}

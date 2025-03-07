@@ -122,7 +122,7 @@ func (c *httpController) getProjectRiskHistory(start, end string, project models
 	return c.statisticsService.GetProjectRiskHistory(project.ID, beginTime, endTime)
 }
 
-func (c *httpController) GetOrgFlawAggregationStateAndChange(ctx core.Context) error {
+func (c *httpController) GetOrgDependencyVulnAggregationStateAndChange(ctx core.Context) error {
 	compareTo := ctx.QueryParam("compareTo")
 
 	projects, err := c.projectService.ListAllowedProjects(ctx)
@@ -130,9 +130,9 @@ func (c *httpController) GetOrgFlawAggregationStateAndChange(ctx core.Context) e
 		return err
 	}
 
-	results := make([]FlawAggregationStateAndChange, 0)
+	results := make([]DependencyVulnAggregationStateAndChange, 0)
 	for _, project := range projects {
-		projectResults, err := c.getProjectFlawAggregationStateAndChange(project.ID, compareTo)
+		projectResults, err := c.getProjectDependencyVulnAggregationStateAndChange(project.ID, compareTo)
 		if err != nil {
 			return err
 		}
@@ -140,7 +140,7 @@ func (c *httpController) GetOrgFlawAggregationStateAndChange(ctx core.Context) e
 	}
 
 	// aggregate the results
-	result := aggregateFlawAggregationStateAndChange(results)
+	result := aggregateDependencyVulnAggregationStateAndChange(results)
 	return ctx.JSON(200, result)
 
 }
