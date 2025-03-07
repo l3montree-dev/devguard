@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
@@ -222,8 +223,8 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVulnerab
 			Author:      firstPartyVuln.Author,
 			Date:        firstPartyVuln.Date,
 		},
-		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) VulnEventDTO {
-			return VulnEventDTO{
+		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {
+			return events.VulnEventDTO{
 				ID:                ev.ID,
 				Type:              ev.Type,
 				VulnID:            ev.VulnID,

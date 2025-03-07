@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
 	"github.com/l3montree-dev/devguard/internal/core/org"
@@ -371,6 +372,8 @@ func Start(db core.DB) {
 	projectService := project.NewService(projectRepository)
 	dependencyVulnController := dependencyVuln.NewHttpController(dependencyVulnRepository, dependencyVulnService, projectService)
 
+	vulnEventController := events.NewVulnEventController(vulnEventRepository)
+
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
 
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository)
@@ -571,6 +574,8 @@ func Start(db core.DB) {
 
 	dependencyVulnRouter.POST("/:dependencyVulnId/", dependencyVulnController.CreateEvent, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	dependencyVulnRouter.POST("/:dependencyVulnId/mitigate/", dependencyVulnController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+
+	dependencyVulnRouter.GET("/:dependencyVulnId/events/", vulnEventController.ReadAssetEventsByVulnID)
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

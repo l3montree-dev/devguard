@@ -120,7 +120,7 @@ func (g dependencyVulnRepository) Read(id string) (models.DependencyVuln, error)
 	return t, err
 }
 
-func (g dependencyVulnRepository) ReadDependencyVulnWithAssetEvents(id string) (models.DependencyVuln, []models.VulnEvent, error) {
+func (g dependencyVulnRepository) ReadDependencyVulnWithAssetVersionEvents(id string) (models.DependencyVuln, []models.VulnEvent, error) {
 	var t models.DependencyVuln
 	err := g.db.Preload("CVE.Weaknesses").Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", id).Error
 
@@ -129,10 +129,7 @@ func (g dependencyVulnRepository) ReadDependencyVulnWithAssetEvents(id string) (
 	}
 
 	var vulnEvents []models.VulnEvent
-	// get the asset id - and read dependencyVulns with the same cve id and asset id
-	err = g.db.Model(&models.VulnEvent{}).Where("vuln_id IN (?)", g.db.Model(models.DependencyVuln{}).Select("id").Where(
-		"asset_id = ? AND cve_id = ?", t.AssetID, t.CVEID,
-	)).Order("created_at ASC").Find(&vulnEvents).Error
+	err = g.db.Model(&models.VulnEvent{}).Where("vuln_id = ?", id).Order("created_at ASC").Find(&vulnEvents).Error
 	if err != nil {
 		return models.DependencyVuln{}, vulnEvents, err
 	}

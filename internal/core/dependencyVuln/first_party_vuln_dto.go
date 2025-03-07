@@ -3,6 +3,7 @@ package dependencyVuln
 import (
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -30,7 +31,7 @@ type FirstPartyVulnDTO struct {
 
 type detailedFirstPartyVulnDTO struct {
 	FirstPartyVulnDTO
-	Events []VulnEventDTO `json:"events"`
+	Events []events.VulnEventDTO `json:"events"`
 }
 
 func FirstPartyVulnToDto(f models.FirstPartyVulnerability) FirstPartyVulnDTO {

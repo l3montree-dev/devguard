@@ -1,4 +1,4 @@
-package dependencyVuln
+package events
 
 import (
 	"time"
@@ -19,7 +19,8 @@ type VulnEventDTO struct {
 
 	CreatedAt time.Time `json:"createdAt"`
 
-	AssetVersion string `json:"assetVersion"`
+	AssetVersionName string `json:"assetVersionName"`
+	AssetVersionSlug string `json:"assetVersionSlug"`
 }
 
 func (dto VulnEventDTO) ToModel() models.VulnEvent {
