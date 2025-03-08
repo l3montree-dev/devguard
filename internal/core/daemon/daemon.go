@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -55,7 +55,7 @@ func markMirrored(configService config.Service, key string) error {
 	})
 }
 
-func Start(db database.DB) {
+func Start(db core.DB) {
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 
@@ -79,8 +79,8 @@ func Start(db database.DB) {
 			slog.Info("vulndb updated", "duration", time.Since(start))
 		}
 
-		// after we have a fresh vulndb we can update the flaws.
-		// we save data inside the flaws table: ComponentDepth and ComponentFixedVersion
+		// after we have a fresh vulndb we can update the dependencyVulns.
+		// we save data inside the dependency_vulns table: ComponentDepth and ComponentFixedVersion
 		// those need to be updated before recalculating the risk
 		if shouldMirror(configService, "vulndb.componentProperties") {
 			start = time.Now()

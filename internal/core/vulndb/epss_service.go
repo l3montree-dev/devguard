@@ -10,27 +10,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 )
 
-type cveRepository interface {
-	repositories.Repository[string, models.CVE, database.DB]
-	FindByID(id string) (models.CVE, error)
-	GetLastModDate() (time.Time, error)
-	SaveBatchCPEMatch(tx database.DB, matches []models.CPEMatch) error
-}
-
 type epssService struct {
 	nvdService    NVDService
-	cveRepository cveRepository
+	cveRepository core.CveRepository
 	httpClient    *http.Client
 }
 
-func NewEPSSService(nvdService NVDService, cveRepository cveRepository) epssService {
+func NewEPSSService(nvdService NVDService, cveRepository core.CveRepository) epssService {
 	return epssService{
 		nvdService:    nvdService,
 		cveRepository: cveRepository,

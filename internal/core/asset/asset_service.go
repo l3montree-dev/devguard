@@ -25,58 +25,42 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-type assetRepository interface {
-	Save(tx core.DB, asset *models.Asset) error
-	Transaction(txFunc func(core.DB) error) error
-
-	GetByAssetID(assetID uuid.UUID) (models.Asset, error)
-}
-
-type flawRepository interface {
-	GetFlawsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.Flaw, error)
-	Transaction(txFunc func(core.DB) error) error
-}
-
-type flawService interface {
-	RecalculateRawRiskAssessment(tx core.DB, responsible string, flaws []models.Flaw, justification string, asset models.Asset) error
-}
-
 type service struct {
-	assetRepository assetRepository
-	flawRepository  flawRepository
-	flawService     flawService
-	httpClient      *http.Client
+	assetRepository          core.AssetRepository
+	dependencyVulnRepository core.DependencyVulnRepository
+	dependencyVulnService    core.DependencyVulnService
+	httpClient               *http.Client
 }
 
-func NewService(assetRepository assetRepository, flawRepository flawRepository, flawService flawService) *service {
+func NewService(assetRepository core.AssetRepository, dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService) *service {
 	return &service{
-		assetRepository: assetRepository,
-		flawRepository:  flawRepository,
-		flawService:     flawService,
-		httpClient:      &http.Client{},
+		assetRepository:          assetRepository,
+		dependencyVulnRepository: dependencyVulnRepository,
+		dependencyVulnService:    dependencyVulnService,
+		httpClient:               &http.Client{},
 	}
 }
 
 func (s *service) GetByAssetID(assetID uuid.UUID) (models.Asset, error) {
-	return s.assetRepository.GetByAssetID(assetID)
+	return s.assetRepository.Read(assetID)
 }
 
 func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error {
-	err := s.flawRepository.Transaction(func(tx core.DB) error {
+	err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 
 		err := s.assetRepository.Save(tx, &asset)
 		if err != nil {
 			slog.Info("error saving asset", "err", err)
 			return fmt.Errorf("could not save asset: %v", err)
 		}
-		// get the flaws
-		flaws, err := s.flawRepository.GetFlawsByAssetID(tx, asset.GetID())
+		// get the dependencyVulns
+		dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(tx, asset.GetID())
 		if err != nil {
-			slog.Info("error getting flaws", "err", err)
-			return fmt.Errorf("could not get flaws: %v", err)
+			slog.Info("error getting dependencyVulns", "err", err)
+			return fmt.Errorf("could not get dependencyVulns: %v", err)
 		}
 
-		err = s.flawService.RecalculateRawRiskAssessment(tx, responsible, flaws, justification, asset)
+		err = s.dependencyVulnService.RecalculateRawRiskAssessment(tx, responsible, dependencyVulns, justification, asset)
 		if err != nil {
 			slog.Info("error updating raw risk assessment", "err", err)
 			return fmt.Errorf("could not update raw risk assessment: %v", err)

@@ -16,9 +16,9 @@ type statisticsService interface {
 	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error)
 	GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
-	GetFlawAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (FlawAggregationStateAndChange, error)
+	GetDependencyVulnAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (DependencyVulnAggregationStateAndChange, error)
 
-	GetFlawCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
+	GetDependencyVulnCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetDependencyCountPerscanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
 	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, start time.Time, end time.Time, updateProject bool) error
@@ -26,20 +26,14 @@ type statisticsService interface {
 	GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)
 }
 
-type projectService interface {
-	ListAllowedProjects(c core.Context) ([]models.Project, error)
-	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
-	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
-}
-
 type httpController struct {
 	statisticsService      statisticsService
-	assetVersionRepository assetVersionRepository
-	assetRepository        assetRepository
-	projectService         projectService
+	assetVersionRepository core.AssetVersionRepository
+	assetRepository        core.AssetRepository
+	projectService         core.ProjectService
 }
 
-func NewHttpController(statisticsService statisticsService, assetRepository assetRepository, assetVersionRepository assetVersionRepository, projectService projectService) *httpController {
+func NewHttpController(statisticsService statisticsService, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, projectService core.ProjectService) *httpController {
 	return &httpController{
 		statisticsService:      statisticsService,
 		assetVersionRepository: assetVersionRepository,
@@ -70,9 +64,9 @@ func (c *httpController) GetDependencyCountPerScanner(ctx core.Context) error {
 	return ctx.JSON(200, results)
 }
 
-func (c *httpController) GetFlawCountByScannerId(ctx core.Context) error {
+func (c *httpController) GetDependencyVulnCountByScannerId(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetFlawCountByScannerId(assetVersion.Name, assetVersion.AssetID)
+	results, err := c.statisticsService.GetDependencyVulnCountByScannerId(assetVersion.Name, assetVersion.AssetID)
 
 	if err != nil {
 		return err
@@ -206,23 +200,23 @@ func (c *httpController) getAssetVersionRiskHistory(start, end string, assetVers
 	return c.statisticsService.GetAssetVersionRiskHistory(assetVersion.Name, assetVersion.AssetID, beginTime, endTime)
 }
 
-func (c *httpController) GetFlawAggregationStateAndChange(ctx core.Context) error {
+func (c *httpController) GetDependencyVulnAggregationStateAndChange(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 	// extract the time from the query parameter
 	compareTo := ctx.QueryParam("compareTo")
-	results, err := c.getFlawAggregationStateAndChange(compareTo, assetVersion)
+	results, err := c.getDependencyVulnAggregationStateAndChange(compareTo, assetVersion)
 
 	if err != nil {
-		slog.Error("Error getting flaw aggregation state", "error", err)
+		slog.Error("Error getting dependencyVuln aggregation state", "error", err)
 		return ctx.JSON(500, nil)
 	}
 
 	return ctx.JSON(200, results)
 }
 
-func aggregateFlawAggregationStateAndChange(results []FlawAggregationStateAndChange) FlawAggregationStateAndChange {
+func aggregateDependencyVulnAggregationStateAndChange(results []DependencyVulnAggregationStateAndChange) DependencyVulnAggregationStateAndChange {
 	// aggregate the results
-	result := FlawAggregationStateAndChange{}
+	result := DependencyVulnAggregationStateAndChange{}
 	for _, r := range results {
 		result.Now.Fixed += r.Now.Fixed
 		result.Now.Open += r.Now.Open
@@ -234,12 +228,12 @@ func aggregateFlawAggregationStateAndChange(results []FlawAggregationStateAndCha
 	return result
 }
 
-func (c *httpController) getFlawAggregationStateAndChange(compareTo string, assetVersion models.AssetVersion) (FlawAggregationStateAndChange, error) {
+func (c *httpController) getDependencyVulnAggregationStateAndChange(compareTo string, assetVersion models.AssetVersion) (DependencyVulnAggregationStateAndChange, error) {
 	// parse the date
 	calculateChangeTo, err := time.Parse(time.DateOnly, compareTo)
 	if err != nil {
-		return FlawAggregationStateAndChange{}, errors.Wrap(err, "error parsing date")
+		return DependencyVulnAggregationStateAndChange{}, errors.Wrap(err, "error parsing date")
 	}
 
-	return c.statisticsService.GetFlawAggregationStateAndChangeSince(assetVersion.Name, assetVersion.AssetID, calculateChangeTo)
+	return c.statisticsService.GetDependencyVulnAggregationStateAndChangeSince(assetVersion.Name, assetVersion.AssetID, calculateChangeTo)
 }

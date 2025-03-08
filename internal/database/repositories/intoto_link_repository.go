@@ -17,6 +17,7 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"gorm.io/gorm"
@@ -24,7 +25,7 @@ import (
 
 type inTotoLinkRepository struct {
 	db core.DB
-	Repository[uuid.UUID, models.InTotoLink, core.DB]
+	common.Repository[uuid.UUID, models.InTotoLink, core.DB]
 }
 
 func NewInTotoLinkRepository(db core.DB) *inTotoLinkRepository {

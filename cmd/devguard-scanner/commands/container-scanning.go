@@ -50,8 +50,6 @@ func NewContainerScanningCommand() *cobra.Command {
 		},
 	}
 
-	containerScanningCommand.Flags().Bool("riskManagement", true, "Enable risk management (stores the detected vulnerabilities in devguard)")
-
 	addScanFlags(containerScanningCommand)
 	return containerScanningCommand
 }

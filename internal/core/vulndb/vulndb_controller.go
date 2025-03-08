@@ -3,21 +3,14 @@ package vulndb
 import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
-	"github.com/l3montree-dev/devguard/internal/database"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
 )
 
-type repository interface {
-	FindAllListPaged(tx database.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error)
-	FindCVE(tx database.DB, cveId string) (models.CVE, error)
-}
-
 type cveHttpController struct {
-	cveRepository repository
+	cveRepository core.CveRepository
 }
 
-func NewHttpController(cveRepository repository) *cveHttpController {
+func NewHttpController(cveRepository core.CveRepository) *cveHttpController {
 	return &cveHttpController{
 		cveRepository: cveRepository,
 	}

@@ -19,14 +19,14 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/obj"
 )
 
 type orgRepository struct {
 	db core.DB
-	Repository[uuid.UUID, models.Org, core.DB]
+	common.Repository[uuid.UUID, models.Org, core.DB]
 }
 
 func NewOrgRepository(db core.DB) *orgRepository {
@@ -57,8 +57,8 @@ func (g *orgRepository) Update(tx core.DB, org *models.Org) error {
 	return g.GetDB(tx).Save(org).Error
 }
 
-func (g *orgRepository) ContentTree(orgID uuid.UUID, projects []string) []obj.ContentTreeElement {
-	contentTreeMap := make(map[uuid.UUID]obj.ContentTreeElement)
+func (g *orgRepository) ContentTree(orgID uuid.UUID, projects []string) []common.ContentTreeElement {
+	contentTreeMap := make(map[uuid.UUID]common.ContentTreeElement)
 	// fetch all asset ids inside those projects
 	var res []struct {
 		AssetID     uuid.UUID `json:"asset_id"`
@@ -73,7 +73,7 @@ func (g *orgRepository) ContentTree(orgID uuid.UUID, projects []string) []obj.Co
 
 	for _, r := range res {
 		if _, ok := contentTreeMap[r.ProjectID]; !ok {
-			contentTreeMap[r.ProjectID] = obj.ContentTreeElement{
+			contentTreeMap[r.ProjectID] = common.ContentTreeElement{
 				ID:    r.ProjectID.String(),
 				Title: r.ProjectName,
 				Slug:  r.ProjectSlug,
@@ -96,13 +96,13 @@ func (g *orgRepository) ContentTree(orgID uuid.UUID, projects []string) []obj.Co
 	}
 
 	// convert map to array
-	var contentTree []obj.ContentTreeElement
+	var contentTree []common.ContentTreeElement
 	for _, v := range contentTreeMap {
 		contentTree = append(contentTree, v)
 	}
 
 	// do a sort on the id
-	slices.SortFunc(contentTree, func(i, j obj.ContentTreeElement) int {
+	slices.SortFunc(contentTree, func(i, j common.ContentTreeElement) int {
 		if i.ID < j.ID {
 			return -1
 		}

@@ -15,14 +15,14 @@ func NewMigrateCommand() *cobra.Command {
 		Short: "Migrate data",
 	}
 
-	migrate.AddCommand(newFlawHashMigration())
+	migrate.AddCommand(newDependencyVulnHashMigration())
 	return &migrate
 }
 
-func newFlawHashMigration() *cobra.Command {
-	flawHashMigration := cobra.Command{
-		Use:   "flaw-hash",
-		Short: "Will recalculate the flaw hashes for all flaws",
+func newDependencyVulnHashMigration() *cobra.Command {
+	dependencyVulnHashMigration := cobra.Command{
+		Use:   "dependency-vuln-hash",
+		Short: "Will recalculate the dependencyVuln hashes for all dependencyVulns",
 		Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			core.LoadConfig() // nolint
@@ -32,29 +32,29 @@ func newFlawHashMigration() *cobra.Command {
 				return
 			}
 
-			flawRepository := repositories.NewFlawRepository(database)
+			dependencyVulnRepository := repositories.NewDependencyVulnRepository(database)
 
-			var flaws []models.Flaw
-			err = flawRepository.GetDB(nil).Model(&models.Flaw{}).Find(&flaws).Error
+			var dependencyVulns []models.DependencyVuln
+			err = dependencyVulnRepository.GetDB(nil).Model(&models.DependencyVuln{}).Find(&dependencyVulns).Error
 
 			if err != nil {
-				slog.Error("could not fetch flaws", "err", err)
+				slog.Error("could not fetch dependencyVulns", "err", err)
 				return
 			}
 
-			for _, flaw := range flaws {
-				oldHash := flaw.ID
-				newHash := flaw.CalculateHash()
+			for _, dependencyVuln := range dependencyVulns {
+				oldHash := dependencyVuln.ID
+				newHash := dependencyVuln.CalculateHash()
 
 				// update the hash in the database
-				err = flawRepository.GetDB(nil).Model(&models.Flaw{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error
+				err = dependencyVulnRepository.GetDB(nil).Model(&models.DependencyVuln{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error
 				if err != nil {
-					slog.Error("could not update flaw hash", "err", err)
+					slog.Error("could not update dependencyVuln hash", "err", err)
 					return
 				}
 			}
 		},
 	}
 
-	return &flawHashMigration
+	return &dependencyVulnHashMigration
 }

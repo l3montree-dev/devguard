@@ -422,7 +422,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "risk": {
-                    "$ref": "#/definitions/obj.RiskMetrics"
+                    "$ref": "#/definitions/common.RiskMetrics"
                 },
                 "scope": {
                     "type": "string"
@@ -519,7 +519,7 @@ const docTemplate = `{
                 }
             }
         },
-        "obj.RiskMetrics": {
+        "common.RiskMetrics": {
             "type": "object",
             "properties": {
                 "baseScore": {
