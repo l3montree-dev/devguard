@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
@@ -30,33 +29,13 @@ import (
 	"github.com/ory/client-go"
 )
 
-type projectRepository interface {
-	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
-	ReadBySlugUnscoped(organizationId uuid.UUID, slug string) (models.Project, error)
-	Update(tx core.DB, project *models.Project) error
-	Delete(tx core.DB, projectID uuid.UUID) error
-	Create(tx core.DB, project *models.Project) error
-	List(projectIds []uuid.UUID, parentId *uuid.UUID, orgId uuid.UUID) ([]models.Project, error)
-	Activate(tx core.DB, projectID uuid.UUID) error
-	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
-	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
-	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
-}
-
-type assetRepository interface {
-	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
-}
-
-type projectService interface {
-	ListAllowedProjects(c core.Context) ([]models.Project, error)
-}
 type Controller struct {
-	projectRepository projectRepository
-	assetRepository   assetRepository
-	projectService    projectService
+	projectRepository core.ProjectRepository
+	assetRepository   core.AssetRepository
+	projectService    core.ProjectService
 }
 
-func NewHttpController(repository projectRepository, assetRepository assetRepository, projectService projectService) *Controller {
+func NewHttpController(repository core.ProjectRepository, assetRepository core.AssetRepository, projectService core.ProjectService) *Controller {
 	return &Controller{
 		projectRepository: repository,
 		assetRepository:   assetRepository,

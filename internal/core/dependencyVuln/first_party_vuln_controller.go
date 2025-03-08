@@ -13,9 +13,9 @@ import (
 )
 
 type firstPartyVulnController struct {
-	firstPartyVulnRepository firstPartyVulnRepository
-	firstPartyVulnService    firstPartyVulnService
-	projectService           projectService
+	firstPartyVulnRepository core.FirstPartyVulnRepository
+	firstPartyVulnService    core.FirstPartyVulnService
+	projectService           core.ProjectService
 }
 
 type FirstPartyVulnStatus struct {
@@ -23,7 +23,7 @@ type FirstPartyVulnStatus struct {
 	Justification string `json:"justification"`
 }
 
-func NewFirstPartyVulnController(firstPartyVulnRepository firstPartyVulnRepository, firstPartyVulnService firstPartyVulnService, projectService projectService) *firstPartyVulnController {
+func NewFirstPartyVulnController(firstPartyVulnRepository core.FirstPartyVulnRepository, firstPartyVulnService core.FirstPartyVulnService, projectService core.ProjectService) *firstPartyVulnController {
 	return &firstPartyVulnController{
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		firstPartyVulnService:    firstPartyVulnService,
@@ -142,7 +142,7 @@ func (c firstPartyVulnController) CreateEvent(ctx core.Context) error {
 	justification := status.Justification
 
 	err = c.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
-		ev, err := c.firstPartyVulnService.updateFirstPartyVulnState(tx, userID, &firstPartyVuln, statusType, justification)
+		ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(tx, userID, &firstPartyVuln, statusType, justification)
 		if err != nil {
 			return err
 		}

@@ -17,14 +17,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type assetRepository struct {
-	db database.DB
-	Repository[uuid.UUID, models.Asset, core.DB]
+	db core.DB
+	common.Repository[uuid.UUID, models.Asset, core.DB]
 }
 
 func NewAssetRepository(db core.DB) *assetRepository {

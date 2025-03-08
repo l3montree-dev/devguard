@@ -26,7 +26,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
@@ -41,11 +41,11 @@ var baseURL = url.URL{
 
 type NVDService struct {
 	httpClient    *http.Client
-	cveRepository cveRepository
+	cveRepository core.CveRepository
 	lock          *sync.Mutex
 }
 
-func NewNVDService(cveRepository cveRepository) NVDService {
+func NewNVDService(cveRepository core.CveRepository) NVDService {
 	return NVDService{
 		cveRepository: cveRepository,
 		lock:          &sync.Mutex{},
@@ -77,7 +77,7 @@ func (nvdService NVDService) ImportCVE(cveID string) (models.CVE, error) {
 	var cve models.CVE
 	var weaknesses []models.Weakness
 	var cpes []models.CPEMatch
-	err = nvdService.cveRepository.Transaction(func(tx database.DB) error {
+	err = nvdService.cveRepository.Transaction(func(tx core.DB) error {
 		cve, weaknesses, cpes = fromNVDCVE(resp.Vulnerabilities[0].Cve)
 		if err := nvdService.cveRepository.Save(tx, &cve); err != nil {
 			return err
@@ -154,7 +154,7 @@ func (nvdService NVDService) saveResponseInDB(resp nistResponse) error {
 
 	for i, cve := range cves {
 		tmp := cve
-		err := nvdService.cveRepository.Transaction(func(tx database.DB) error {
+		err := nvdService.cveRepository.Transaction(func(tx core.DB) error {
 			if err := nvdService.cveRepository.Save(tx, &tmp); err != nil {
 				slog.Warn("Could not save CVE", "err", err)
 				return err

@@ -16,6 +16,7 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"gorm.io/gorm/clause"
@@ -23,7 +24,7 @@ import (
 
 type InvitationRepository struct {
 	db core.DB
-	Repository[uuid.UUID, models.Invitation, core.DB]
+	common.Repository[uuid.UUID, models.Invitation, core.DB]
 }
 
 func NewInvitationRepository(db core.DB) *InvitationRepository {

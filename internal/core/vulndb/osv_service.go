@@ -27,23 +27,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 )
 
-type affectedCmpRepository interface {
-	SaveBatch(tx database.DB, affectedComponents []models.AffectedComponent) error
-	DeleteAll(tx database.DB, ecosystem string) error
-}
 type osvService struct {
 	httpClient            *http.Client
-	affectedCmpRepository affectedCmpRepository
+	affectedCmpRepository core.AffectedComponentRepository
 }
 
-func NewOSVService(affectedCmpRepository affectedCmpRepository) osvService {
+func NewOSVService(affectedCmpRepository core.AffectedComponentRepository) osvService {
 	return osvService{
 		httpClient:            &http.Client{},
 		affectedCmpRepository: affectedCmpRepository,
@@ -146,7 +142,7 @@ func (s osvService) ImportCVE(cveId string) ([]models.AffectedComponent, error) 
 	}
 
 	defer resp.Body.Close()
-	var osv obj.OSV
+	var osv common.OSV
 	err = json.NewDecoder(resp.Body).Decode(&osv)
 
 	if err != nil {
@@ -219,7 +215,7 @@ func (s osvService) Mirror() error {
 					continue
 				}
 
-				osv := obj.OSV{}
+				osv := common.OSV{}
 				err = json.Unmarshal(unzippedFileBytes, &osv)
 				if err != nil {
 					slog.Error("could not unmarshal osv", "err", err)

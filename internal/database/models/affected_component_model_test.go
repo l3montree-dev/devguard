@@ -21,13 +21,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/obj"
+	"github.com/l3montree-dev/devguard/internal/common"
 )
 
 func TestFromOSV(t *testing.T) {
 	t.Run("empty OSV", func(t *testing.T) {
-		osv := obj.OSV{
-			Affected: []obj.Affected{},
+		osv := common.OSV{
+			Affected: []common.Affected{},
 		}
 		affectedComponents := AffectedComponentFromOSV(osv)
 		if len(affectedComponents) != 0 {
@@ -36,13 +36,13 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package without purl", func(t *testing.T) {
-		osv := obj.OSV{
-			Affected: []obj.Affected{
+		osv := common.OSV{
+			Affected: []common.Affected{
 				{
-					Package: obj.Pkg{
+					Package: common.Pkg{
 						Purl: "",
 					},
-					Ranges: []obj.Rng{},
+					Ranges: []common.Rng{},
 				},
 			},
 		}
@@ -53,13 +53,13 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package with invalid purl", func(t *testing.T) {
-		osv := obj.OSV{
-			Affected: []obj.Affected{
+		osv := common.OSV{
+			Affected: []common.Affected{
 				{
-					Package: obj.Pkg{
+					Package: common.Pkg{
 						Purl: "invalid_purl",
 					},
-					Ranges: []obj.Rng{},
+					Ranges: []common.Rng{},
 				},
 			},
 		}
@@ -70,16 +70,16 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package with valid purl", func(t *testing.T) {
-		osv := obj.OSV{
-			Affected: []obj.Affected{
+		osv := common.OSV{
+			Affected: []common.Affected{
 				{
-					Package: obj.Pkg{
+					Package: common.Pkg{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []obj.Rng{
+					Ranges: []common.Rng{
 						{
 							Type: "SEMVER",
-							Events: []obj.SemverEvent{
+							Events: []common.SemverEvent{
 								{
 									Introduced: "0",
 								},
@@ -136,16 +136,16 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package with multiple SEMVER ranges", func(t *testing.T) {
-		osv := obj.OSV{
-			Affected: []obj.Affected{
+		osv := common.OSV{
+			Affected: []common.Affected{
 				{
-					Package: obj.Pkg{
+					Package: common.Pkg{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []obj.Rng{
+					Ranges: []common.Rng{
 						{
 							Type: "SEMVER",
-							Events: []obj.SemverEvent{
+							Events: []common.SemverEvent{
 								{
 									Introduced: "0",
 								},
@@ -189,16 +189,16 @@ func TestFromOSV(t *testing.T) {
 	})
 
 	t.Run("affected package without SEMVER ranges but with versions", func(t *testing.T) {
-		osv := obj.OSV{
-			Affected: []obj.Affected{
+		osv := common.OSV{
+			Affected: []common.Affected{
 				{
-					Package: obj.Pkg{
+					Package: common.Pkg{
 						Purl: "pkg:golang/toolchain",
 					},
-					Ranges: []obj.Rng{
+					Ranges: []common.Rng{
 						{
 							Type: "ECOSYSTEM",
-							Events: []obj.SemverEvent{
+							Events: []common.SemverEvent{
 								{
 									Introduced: "1.14.14",
 								},
@@ -227,7 +227,7 @@ func TestFromOSV(t *testing.T) {
 		f, _ := os.Open("testdata/GHSA-2v6x-frw8-7r7f.json")
 		defer f.Close()
 		bytes, _ := io.ReadAll(f)
-		osv := obj.OSV{}
+		osv := common.OSV{}
 		err := json.Unmarshal(bytes, &osv)
 		if err != nil {
 			t.Errorf("Could not unmarshal osv, got %s", err)

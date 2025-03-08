@@ -9,15 +9,14 @@ import (
 	gocvss31 "github.com/pandatix/go-cvss/31"
 	gocvss40 "github.com/pandatix/go-cvss/40"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 
 	"github.com/l3montree-dev/devguard/internal/utils"
-
-	"github.com/l3montree-dev/devguard/internal/obj"
 )
 
-func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int) obj.RiskCalculationReport {
+func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int) common.RiskCalculationReport {
 	if affectedComponentDepth == 0 {
 		affectedComponentDepth = 1
 	}
@@ -37,7 +36,7 @@ func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int)
 	// round to 2 decimal places
 	tmp = float64(int(tmp*100)) / 100
 
-	return obj.RiskCalculationReport{
+	return common.RiskCalculationReport{
 		Risk: tmp,
 
 		EPSS:      utils.OrDefault(cve.EPSS, 0),
@@ -60,8 +59,8 @@ func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int)
 	}
 }
 
-func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, string) {
-	risk := obj.RiskMetrics{
+func RiskCalculation(cve models.CVE, env core.Environmental) (common.RiskMetrics, string) {
+	risk := common.RiskMetrics{
 		BaseScore: float64(cve.CVSS),
 	}
 	/*
@@ -115,7 +114,7 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 		}
 		if err != nil {
 			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
-			return obj.RiskMetrics{}, vector
+			return common.RiskMetrics{}, vector
 		}
 		// build up the temporal score
 		// if all affected components have a fixed version, we set it to official fix
@@ -163,7 +162,7 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 		cvss, err := gocvss40.ParseVector(vector)
 		if err != nil {
 			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
-			return obj.RiskMetrics{}, vector
+			return common.RiskMetrics{}, vector
 		}
 		cvss.Set("E", "U") // nolint:errcheck
 		if len(cve.Exploits) > 0 {
@@ -208,7 +207,7 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (obj.RiskMetrics, s
 		cvss, err := gocvss20.ParseVector(vector)
 		if err != nil {
 			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
-			return obj.RiskMetrics{}, vector
+			return common.RiskMetrics{}, vector
 		}
 		// cvss.Set("RL", "ND") // nolint:errcheck
 

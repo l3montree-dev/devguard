@@ -19,15 +19,15 @@ import (
 	"math"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/obj"
 )
 
 type tableTest struct {
 	vector             string
-	metrics            obj.RiskMetrics
+	metrics            common.RiskMetrics
 	env                core.Environmental
 	exploits           []*models.Exploit
 	expectedVector     string
@@ -72,16 +72,16 @@ func TestCalculateRisk(t *testing.T) {
 			t.Errorf("Expected base score to be 5, got %f", riskMetrics.BaseScore)
 		}
 
-		if riskMetrics.WithEnvironment != obj.CannotCalculateRisk {
-			t.Errorf("Expected with environment score to be %f, got %f", obj.CannotCalculateRisk, riskMetrics.WithEnvironment)
+		if riskMetrics.WithEnvironment != common.CannotCalculateRisk {
+			t.Errorf("Expected with environment score to be %f, got %f", common.CannotCalculateRisk, riskMetrics.WithEnvironment)
 		}
 
-		if riskMetrics.WithThreatIntelligence != obj.CannotCalculateRisk {
-			t.Errorf("Expected with threat intelligence score to be %f, got %f", obj.CannotCalculateRisk, riskMetrics.WithThreatIntelligence)
+		if riskMetrics.WithThreatIntelligence != common.CannotCalculateRisk {
+			t.Errorf("Expected with threat intelligence score to be %f, got %f", common.CannotCalculateRisk, riskMetrics.WithThreatIntelligence)
 		}
 
-		if riskMetrics.WithEnvironmentAndThreatIntelligence != obj.CannotCalculateRisk {
-			t.Errorf("Expected with environment and threat intelligence score to be %f, got %f", obj.CannotCalculateRisk, riskMetrics.WithEnvironmentAndThreatIntelligence)
+		if riskMetrics.WithEnvironmentAndThreatIntelligence != common.CannotCalculateRisk {
+			t.Errorf("Expected with environment and threat intelligence score to be %f, got %f", common.CannotCalculateRisk, riskMetrics.WithEnvironmentAndThreatIntelligence)
 		}
 
 		if vector != "" {
@@ -92,7 +92,7 @@ func TestCalculateRisk(t *testing.T) {
 	table := []tableTest{
 		{
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            5.9,
 				WithEnvironment:                      5.9,
 				WithThreatIntelligence:               5.0,
@@ -104,7 +104,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            5.9,
 				WithEnvironment:                      4.0,
 				WithThreatIntelligence:               5.0,
@@ -120,7 +120,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            5.9,
 				WithEnvironment:                      4.0,
 				WithThreatIntelligence:               5.6,
@@ -141,7 +141,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            5.9,
 				WithEnvironment:                      4.0,
 				WithThreatIntelligence:               5.6,
@@ -165,7 +165,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "AV:L/AC:H/Au:M/C:C/I:C/A:C",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            5.9,
 				WithEnvironment:                      4.0,
 				WithThreatIntelligence:               5.6,
@@ -189,7 +189,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:3.0/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            2.6,
 				WithEnvironment:                      2.6,
 				WithThreatIntelligence:               2.4,
@@ -201,7 +201,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            2.6,
 				WithEnvironment:                      1.9,
 				WithThreatIntelligence:               2.4,
@@ -217,7 +217,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            2.6,
 				WithEnvironment:                      3.4,
 				WithThreatIntelligence:               2.6,
@@ -241,7 +241,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:N/I:N/A:L",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            2.6,
 				WithEnvironment:                      3.4,
 				WithThreatIntelligence:               2.6,
@@ -265,7 +265,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            7.5,
 				WithEnvironment:                      6.2,
 				WithThreatIntelligence:               4.8,
@@ -281,7 +281,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:4.0/AV:A/AC:H/AT:P/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            7.5,
 				WithEnvironment:                      6.2,
 				WithThreatIntelligence:               6.6,
@@ -298,7 +298,7 @@ func TestCalculateRisk(t *testing.T) {
 		},
 		{
 			vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
-			metrics: obj.RiskMetrics{
+			metrics: common.RiskMetrics{
 				BaseScore:                            6.1,
 				WithEnvironment:                      6.8,
 				WithThreatIntelligence:               6.0,

@@ -7,10 +7,10 @@ import (
 )
 
 type service struct {
-	projectRepository projectRepository
+	projectRepository core.ProjectRepository
 }
 
-func NewService(projectRepository projectRepository) *service {
+func NewService(projectRepository core.ProjectRepository) *service {
 	return &service{
 		projectRepository: projectRepository,
 	}

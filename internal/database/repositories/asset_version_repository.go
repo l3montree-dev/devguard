@@ -21,14 +21,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type assetVersionRepository struct {
-	db database.DB
-	Repository[uuid.UUID, models.AssetVersion, core.DB]
+	db core.DB
+	common.Repository[uuid.UUID, models.AssetVersion, core.DB]
 }
 
 func NewAssetVersionRepository(db core.DB) *assetVersionRepository {
@@ -93,6 +93,7 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 	var app models.AssetVersion
 	app, err := a.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
 	if err != nil {
+
 		var assetVersionType models.AssetVersionType
 		if tag == "" {
 			assetVersionType = "branch"
@@ -101,16 +102,13 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 		}
 
 		app = a.assetVersionFactory(assetVersionName, assetID, assetVersionType, defaultBranch)
-
 		err := a.db.Create(&app).Error
-		if err != nil {
-
-			if strings.Contains(err.Error(), "duplicate key value violates") { //Check if the error is due to duplicate keys
-				a.db.Unscoped().Model(&app).Where("name", assetVersionName).Update("deleted_at", nil) //Update deleted at to NULL
-				return app, nil
-			}
+		//Check if the given assetVersion already exists if thats the case don't want to add a new entry to the db but instead update the existing one
+		if err != nil && strings.Contains(err.Error(), "duplicate key value violates") {
+			a.db.Unscoped().Model(&app).Where("name", assetVersionName).Update("deleted_at", nil) //Update 'deleted_at' to NULL to revert the previous soft delete
+			return app, nil
+		} else if err != nil {
 			return models.AssetVersion{}, err
-
 		}
 		return app, nil
 	}
