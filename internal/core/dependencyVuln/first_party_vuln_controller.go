@@ -13,7 +13,7 @@ import (
 )
 
 type firstPartyVulnController struct {
-	firstPartyVulnRepository firstPartyVulnRepository
+	firstPartyVulnRepository core.FirstPartyVulnRepository
 	firstPartyVulnService    firstPartyVulnService
 	projectService           projectService
 }
@@ -23,7 +23,7 @@ type FirstPartyVulnStatus struct {
 	Justification string `json:"justification"`
 }
 
-func NewFirstPartyVulnController(firstPartyVulnRepository firstPartyVulnRepository, firstPartyVulnService firstPartyVulnService, projectService projectService) *firstPartyVulnController {
+func NewFirstPartyVulnController(firstPartyVulnRepository core.FirstPartyVulnRepository, firstPartyVulnService firstPartyVulnService, projectService projectService) *firstPartyVulnController {
 	return &firstPartyVulnController{
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		firstPartyVulnService:    firstPartyVulnService,

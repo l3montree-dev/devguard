@@ -1,35 +1,19 @@
 package dependencyVuln
 
 import (
-	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/obj"
 )
 
-type firstPartyVulnRepository interface {
-	repositories.Repository[string, models.FirstPartyVulnerability, core.DB]
-	SaveBatch(tx core.DB, vulns []models.FirstPartyVulnerability) error
-	Save(tx core.DB, vuln *models.FirstPartyVulnerability) error
-	Transaction(txFunc func(core.DB) error) error
-	Begin() core.DB
-	GetDefaultFirstPartyVulnsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)
-	GetDefaultFirstPartyVulnsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)
-	GetFirstPartyVulnsByAssetIdPagedAndFlat(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)
-
-	GetByAssetId(tx core.DB, assetId uuid.UUID) ([]models.FirstPartyVulnerability, error)
-	GetByAssetVersionPaged(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], map[string]int, error)
-}
-
 type firstPartyVulnService struct {
-	firstPartyVulnRepository firstPartyVulnRepository
+	firstPartyVulnRepository core.FirstPartyVulnRepository
 	vulnEventRepository      vulnEventRepository
 
-	assetRepository assetRepository
+	assetRepository core.AssetRepository
 }
 
-func NewFirstPartyVulnService(firstPartyVulnRepository firstPartyVulnRepository, vulnEventRepository vulnEventRepository, assetRepository assetRepository) *firstPartyVulnService {
+func NewFirstPartyVulnService(firstPartyVulnRepository core.FirstPartyVulnRepository, vulnEventRepository vulnEventRepository, assetRepository core.AssetRepository) *firstPartyVulnService {
 	return &firstPartyVulnService{
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
@@ -69,7 +53,7 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID s
 	// create a new dependencyVulnevent for each fixed dependencyVuln
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, firstPartyVuln := range firstPartyVulns {
-		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), userID, obj.RiskCalculationReport{})
+		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), userID, common.RiskCalculationReport{})
 		// apply the event on the dependencyVuln
 		ev.ApplyFirstPartyVulnEvent(&firstPartyVulns[i])
 		events[i] = ev

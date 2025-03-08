@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -41,11 +42,11 @@ var baseURL = url.URL{
 
 type NVDService struct {
 	httpClient    *http.Client
-	cveRepository cveRepository
+	cveRepository core.CveRepository
 	lock          *sync.Mutex
 }
 
-func NewNVDService(cveRepository cveRepository) NVDService {
+func NewNVDService(cveRepository core.CveRepository) NVDService {
 	return NVDService{
 		cveRepository: cveRepository,
 		lock:          &sync.Mutex{},

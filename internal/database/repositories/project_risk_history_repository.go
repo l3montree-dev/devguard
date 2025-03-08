@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -11,7 +12,7 @@ import (
 
 type projectRiskHistoryRepository struct {
 	db database.DB
-	Repository[uint, models.ProjectRiskHistory, core.DB]
+	common.Repository[uint, models.ProjectRiskHistory, core.DB]
 }
 
 func NewProjectRiskHistoryRepository(db core.DB) *projectRiskHistoryRepository {

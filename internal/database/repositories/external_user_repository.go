@@ -17,13 +17,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type externalUserRepository struct {
 	db core.DB
-	Repository[int, models.ExternalUser, core.DB]
+	common.Repository[int, models.ExternalUser, core.DB]
 }
 
 func NewExternalUserRepository(db core.DB) *externalUserRepository {

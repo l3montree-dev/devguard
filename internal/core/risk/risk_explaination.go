@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -198,7 +198,7 @@ func describeCVSS(cvss map[string]string) string {
 }
 
 type Explanation struct {
-	obj.RiskMetrics
+	common.RiskMetrics
 
 	exploitMessage struct {
 		Short string
@@ -268,7 +268,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) s
 }
 
 // provide the vector and risk metrics obtained from the risk calculation
-func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector string, riskMetrics obj.RiskMetrics) Explanation {
+func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector string, riskMetrics common.RiskMetrics) Explanation {
 	cvss := parseCvssVector(vector)
 
 	shortMsg, longMsg := exploitMessage(dependencyVuln, cvss)

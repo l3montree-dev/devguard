@@ -5,39 +5,22 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-
 	"github.com/l3montree-dev/devguard/internal/database"
-
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-
 	"github.com/labstack/echo/v4"
 )
-
-// we use this in multiple files in the asset package itself
-type repository interface {
-	repositories.Repository[uuid.UUID, models.Asset, core.DB]
-	FindByName(name string) (models.Asset, error)
-	FindOrCreate(tx core.DB, name string) (models.Asset, error)
-	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
-	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
-	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
-	Update(tx core.DB, asset *models.Asset) error
-	ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error)
-}
 
 type assetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 }
 
 type httpController struct {
-	assetRepository repository
+	assetRepository core.AssetRepository
 	assetService    assetService
 }
 
-func NewHttpController(repository repository, assetService assetService) *httpController {
+func NewHttpController(repository core.AssetRepository, assetService assetService) *httpController {
 	return &httpController{
 		assetRepository: repository,
 		assetService:    assetService,

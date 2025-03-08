@@ -1,12 +1,13 @@
 package repositories
 
 import (
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type configRepository struct {
-	Repository[string, models.Config, core.DB]
+	common.Repository[string, models.Config, core.DB]
 	db core.DB
 }
 

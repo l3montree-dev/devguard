@@ -18,13 +18,13 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -998,7 +998,7 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 	}
 
 	// return all projects
-	return ctx.JSON(200, obj.GitlabIntegrationDTO{
+	return ctx.JSON(200, common.GitlabIntegrationDTO{
 		ID:              integration.ID.String(),
 		Url:             integration.GitLabUrl,
 		Name:            integration.Name,
