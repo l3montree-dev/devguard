@@ -6,12 +6,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type assetRiskHistoryRepository struct {
-	db database.DB
+	db core.DB
 	common.Repository[uint, models.AssetRiskHistory, core.DB]
 }
 

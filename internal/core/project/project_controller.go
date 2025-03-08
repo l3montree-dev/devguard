@@ -29,16 +29,13 @@ import (
 	"github.com/ory/client-go"
 )
 
-type projectService interface {
-	ListAllowedProjects(c core.Context) ([]models.Project, error)
-}
 type Controller struct {
 	projectRepository core.ProjectRepository
 	assetRepository   core.AssetRepository
-	projectService    projectService
+	projectService    core.ProjectService
 }
 
-func NewHttpController(repository core.ProjectRepository, assetRepository core.AssetRepository, projectService projectService) *Controller {
+func NewHttpController(repository core.ProjectRepository, assetRepository core.AssetRepository, projectService core.ProjectService) *Controller {
 	return &Controller{
 		projectRepository: repository,
 		assetRepository:   assetRepository,

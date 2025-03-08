@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -16,7 +17,7 @@ import (
 
 type debianSecurityTracker struct {
 	httpClient            *http.Client
-	affectedCmpRepository affectedCmpRepository
+	affectedCmpRepository core.AffectedComponentRepository
 }
 
 /*
@@ -65,7 +66,7 @@ type debianCVE struct {
 // value is the cve
 type debianJsonResponse = map[string]map[string]debianCVE
 
-func NewDebianSecurityTracker(affectedCmpRepository affectedCmpRepository) debianSecurityTracker {
+func NewDebianSecurityTracker(affectedCmpRepository core.AffectedComponentRepository) debianSecurityTracker {
 	return debianSecurityTracker{
 		httpClient:            &http.Client{},
 		affectedCmpRepository: affectedCmpRepository,

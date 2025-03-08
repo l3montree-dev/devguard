@@ -396,6 +396,62 @@ func (_c *CoreProjectRepository_List_Call) RunAndReturn(run func([]uuid.UUID, *u
 	return _c
 }
 
+// Read provides a mock function with given fields: projectID
+func (_m *CoreProjectRepository) Read(projectID uuid.UUID) (models.Project, error) {
+	ret := _m.Called(projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Read")
+	}
+
+	var r0 models.Project
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uuid.UUID) (models.Project, error)); ok {
+		return rf(projectID)
+	}
+	if rf, ok := ret.Get(0).(func(uuid.UUID) models.Project); ok {
+		r0 = rf(projectID)
+	} else {
+		r0 = ret.Get(0).(models.Project)
+	}
+
+	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
+		r1 = rf(projectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreProjectRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
+type CoreProjectRepository_Read_Call struct {
+	*mock.Call
+}
+
+// Read is a helper method to define mock.On call
+//   - projectID uuid.UUID
+func (_e *CoreProjectRepository_Expecter) Read(projectID interface{}) *CoreProjectRepository_Read_Call {
+	return &CoreProjectRepository_Read_Call{Call: _e.mock.On("Read", projectID)}
+}
+
+func (_c *CoreProjectRepository_Read_Call) Run(run func(projectID uuid.UUID)) *CoreProjectRepository_Read_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *CoreProjectRepository_Read_Call) Return(_a0 models.Project, _a1 error) *CoreProjectRepository_Read_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreProjectRepository_Read_Call) RunAndReturn(run func(uuid.UUID) (models.Project, error)) *CoreProjectRepository_Read_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ReadBySlug provides a mock function with given fields: organizationID, slug
 func (_m *CoreProjectRepository) ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error) {
 	ret := _m.Called(organizationID, slug)

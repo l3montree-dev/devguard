@@ -681,6 +681,66 @@ func (_c *CoreFirstPartyVulnRepository_List_Call) RunAndReturn(run func([]string
 	return _c
 }
 
+// ListByScanner provides a mock function with given fields: assetVersionName, assetID, scannerID
+func (_m *CoreFirstPartyVulnRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVulnerability, error) {
+	ret := _m.Called(assetVersionName, assetID, scannerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByScanner")
+	}
+
+	var r0 []models.FirstPartyVulnerability
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) ([]models.FirstPartyVulnerability, error)); ok {
+		return rf(assetVersionName, assetID, scannerID)
+	}
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) []models.FirstPartyVulnerability); ok {
+		r0 = rf(assetVersionName, assetID, scannerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.FirstPartyVulnerability)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
+		r1 = rf(assetVersionName, assetID, scannerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreFirstPartyVulnRepository_ListByScanner_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListByScanner'
+type CoreFirstPartyVulnRepository_ListByScanner_Call struct {
+	*mock.Call
+}
+
+// ListByScanner is a helper method to define mock.On call
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scannerID string
+func (_e *CoreFirstPartyVulnRepository_Expecter) ListByScanner(assetVersionName interface{}, assetID interface{}, scannerID interface{}) *CoreFirstPartyVulnRepository_ListByScanner_Call {
+	return &CoreFirstPartyVulnRepository_ListByScanner_Call{Call: _e.mock.On("ListByScanner", assetVersionName, assetID, scannerID)}
+}
+
+func (_c *CoreFirstPartyVulnRepository_ListByScanner_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scannerID string)) *CoreFirstPartyVulnRepository_ListByScanner_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *CoreFirstPartyVulnRepository_ListByScanner_Call) Return(_a0 []models.FirstPartyVulnerability, _a1 error) *CoreFirstPartyVulnRepository_ListByScanner_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreFirstPartyVulnRepository_ListByScanner_Call) RunAndReturn(run func(string, uuid.UUID, string) ([]models.FirstPartyVulnerability, error)) *CoreFirstPartyVulnRepository_ListByScanner_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Read provides a mock function with given fields: id
 func (_m *CoreFirstPartyVulnRepository) Read(id string) (models.FirstPartyVulnerability, error) {
 	ret := _m.Called(id)

@@ -480,6 +480,63 @@ func (_c *CoreSupplyChainRepository_List_Call) RunAndReturn(run func([]uuid.UUID
 	return _c
 }
 
+// PercentageOfVerifiedSupplyChains provides a mock function with given fields: assetVersionName, assetID
+func (_m *CoreSupplyChainRepository) PercentageOfVerifiedSupplyChains(assetVersionName string, assetID uuid.UUID) (float64, error) {
+	ret := _m.Called(assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PercentageOfVerifiedSupplyChains")
+	}
+
+	var r0 float64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID) (float64, error)); ok {
+		return rf(assetVersionName, assetID)
+	}
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID) float64); ok {
+		r0 = rf(assetVersionName, assetID)
+	} else {
+		r0 = ret.Get(0).(float64)
+	}
+
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID) error); ok {
+		r1 = rf(assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreSupplyChainRepository_PercentageOfVerifiedSupplyChains_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PercentageOfVerifiedSupplyChains'
+type CoreSupplyChainRepository_PercentageOfVerifiedSupplyChains_Call struct {
+	*mock.Call
+}
+
+// PercentageOfVerifiedSupplyChains is a helper method to define mock.On call
+//   - assetVersionName string
+//   - assetID uuid.UUID
+func (_e *CoreSupplyChainRepository_Expecter) PercentageOfVerifiedSupplyChains(assetVersionName interface{}, assetID interface{}) *CoreSupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
+	return &CoreSupplyChainRepository_PercentageOfVerifiedSupplyChains_Call{Call: _e.mock.On("PercentageOfVerifiedSupplyChains", assetVersionName, assetID)}
+}
+
+func (_c *CoreSupplyChainRepository_PercentageOfVerifiedSupplyChains_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *CoreSupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *CoreSupplyChainRepository_PercentageOfVerifiedSupplyChains_Call) Return(_a0 float64, _a1 error) *CoreSupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreSupplyChainRepository_PercentageOfVerifiedSupplyChains_Call) RunAndReturn(run func(string, uuid.UUID) (float64, error)) *CoreSupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Read provides a mock function with given fields: id
 func (_m *CoreSupplyChainRepository) Read(id uuid.UUID) (models.SupplyChain, error) {
 	ret := _m.Called(id)

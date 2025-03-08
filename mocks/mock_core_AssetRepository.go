@@ -371,6 +371,63 @@ func (_c *CoreAssetRepository_FindOrCreate_Call) RunAndReturn(run func(*gorm.DB,
 	return _c
 }
 
+// GetAllAssetsFromDB provides a mock function with no fields
+func (_m *CoreAssetRepository) GetAllAssetsFromDB() ([]models.Asset, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllAssetsFromDB")
+	}
+
+	var r0 []models.Asset
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]models.Asset, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []models.Asset); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Asset)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreAssetRepository_GetAllAssetsFromDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllAssetsFromDB'
+type CoreAssetRepository_GetAllAssetsFromDB_Call struct {
+	*mock.Call
+}
+
+// GetAllAssetsFromDB is a helper method to define mock.On call
+func (_e *CoreAssetRepository_Expecter) GetAllAssetsFromDB() *CoreAssetRepository_GetAllAssetsFromDB_Call {
+	return &CoreAssetRepository_GetAllAssetsFromDB_Call{Call: _e.mock.On("GetAllAssetsFromDB")}
+}
+
+func (_c *CoreAssetRepository_GetAllAssetsFromDB_Call) Run(run func()) *CoreAssetRepository_GetAllAssetsFromDB_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *CoreAssetRepository_GetAllAssetsFromDB_Call) Return(_a0 []models.Asset, _a1 error) *CoreAssetRepository_GetAllAssetsFromDB_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreAssetRepository_GetAllAssetsFromDB_Call) RunAndReturn(run func() ([]models.Asset, error)) *CoreAssetRepository_GetAllAssetsFromDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAssetIDBySlug provides a mock function with given fields: projectID, slug
 func (_m *CoreAssetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
 	ret := _m.Called(projectID, slug)

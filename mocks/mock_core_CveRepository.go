@@ -3,9 +3,12 @@
 package mocks
 
 import (
-	models "github.com/l3montree-dev/devguard/internal/database/models"
-	mock "github.com/stretchr/testify/mock"
+	core "github.com/l3montree-dev/devguard/internal/core"
 	gorm "gorm.io/gorm"
+
+	mock "github.com/stretchr/testify/mock"
+
+	models "github.com/l3montree-dev/devguard/internal/database/models"
 
 	time "time"
 )
@@ -258,6 +261,65 @@ func (_c *CoreCveRepository_Delete_Call) RunAndReturn(run func(*gorm.DB, string)
 	return _c
 }
 
+// FindAllListPaged provides a mock function with given fields: tx, pageInfo, filter, sort
+func (_m *CoreCveRepository) FindAllListPaged(tx *gorm.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error) {
+	ret := _m.Called(tx, pageInfo, filter, sort)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindAllListPaged")
+	}
+
+	var r0 core.Paged[models.CVE]
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, core.PageInfo, []core.FilterQuery, []core.SortQuery) (core.Paged[models.CVE], error)); ok {
+		return rf(tx, pageInfo, filter, sort)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, core.PageInfo, []core.FilterQuery, []core.SortQuery) core.Paged[models.CVE]); ok {
+		r0 = rf(tx, pageInfo, filter, sort)
+	} else {
+		r0 = ret.Get(0).(core.Paged[models.CVE])
+	}
+
+	if rf, ok := ret.Get(1).(func(*gorm.DB, core.PageInfo, []core.FilterQuery, []core.SortQuery) error); ok {
+		r1 = rf(tx, pageInfo, filter, sort)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreCveRepository_FindAllListPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindAllListPaged'
+type CoreCveRepository_FindAllListPaged_Call struct {
+	*mock.Call
+}
+
+// FindAllListPaged is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - pageInfo core.PageInfo
+//   - filter []core.FilterQuery
+//   - sort []core.SortQuery
+func (_e *CoreCveRepository_Expecter) FindAllListPaged(tx interface{}, pageInfo interface{}, filter interface{}, sort interface{}) *CoreCveRepository_FindAllListPaged_Call {
+	return &CoreCveRepository_FindAllListPaged_Call{Call: _e.mock.On("FindAllListPaged", tx, pageInfo, filter, sort)}
+}
+
+func (_c *CoreCveRepository_FindAllListPaged_Call) Run(run func(tx *gorm.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery)) *CoreCveRepository_FindAllListPaged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(core.PageInfo), args[2].([]core.FilterQuery), args[3].([]core.SortQuery))
+	})
+	return _c
+}
+
+func (_c *CoreCveRepository_FindAllListPaged_Call) Return(_a0 core.Paged[models.CVE], _a1 error) *CoreCveRepository_FindAllListPaged_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreCveRepository_FindAllListPaged_Call) RunAndReturn(run func(*gorm.DB, core.PageInfo, []core.FilterQuery, []core.SortQuery) (core.Paged[models.CVE], error)) *CoreCveRepository_FindAllListPaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByID provides a mock function with given fields: id
 func (_m *CoreCveRepository) FindByID(id string) (models.CVE, error) {
 	ret := _m.Called(id)
@@ -310,6 +372,122 @@ func (_c *CoreCveRepository_FindByID_Call) Return(_a0 models.CVE, _a1 error) *Co
 }
 
 func (_c *CoreCveRepository_FindByID_Call) RunAndReturn(run func(string) (models.CVE, error)) *CoreCveRepository_FindByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindCVE provides a mock function with given fields: tx, id
+func (_m *CoreCveRepository) FindCVE(tx *gorm.DB, id string) (models.CVE, error) {
+	ret := _m.Called(tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindCVE")
+	}
+
+	var r0 models.CVE
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string) (models.CVE, error)); ok {
+		return rf(tx, id)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string) models.CVE); ok {
+		r0 = rf(tx, id)
+	} else {
+		r0 = ret.Get(0).(models.CVE)
+	}
+
+	if rf, ok := ret.Get(1).(func(*gorm.DB, string) error); ok {
+		r1 = rf(tx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreCveRepository_FindCVE_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindCVE'
+type CoreCveRepository_FindCVE_Call struct {
+	*mock.Call
+}
+
+// FindCVE is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - id string
+func (_e *CoreCveRepository_Expecter) FindCVE(tx interface{}, id interface{}) *CoreCveRepository_FindCVE_Call {
+	return &CoreCveRepository_FindCVE_Call{Call: _e.mock.On("FindCVE", tx, id)}
+}
+
+func (_c *CoreCveRepository_FindCVE_Call) Run(run func(tx *gorm.DB, id string)) *CoreCveRepository_FindCVE_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *CoreCveRepository_FindCVE_Call) Return(_a0 models.CVE, _a1 error) *CoreCveRepository_FindCVE_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreCveRepository_FindCVE_Call) RunAndReturn(run func(*gorm.DB, string) (models.CVE, error)) *CoreCveRepository_FindCVE_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindCVEs provides a mock function with given fields: tx, ids
+func (_m *CoreCveRepository) FindCVEs(tx *gorm.DB, ids []string) ([]models.CVE, error) {
+	ret := _m.Called(tx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindCVEs")
+	}
+
+	var r0 []models.CVE
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []string) ([]models.CVE, error)); ok {
+		return rf(tx, ids)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []string) []models.CVE); ok {
+		r0 = rf(tx, ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.CVE)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(*gorm.DB, []string) error); ok {
+		r1 = rf(tx, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreCveRepository_FindCVEs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindCVEs'
+type CoreCveRepository_FindCVEs_Call struct {
+	*mock.Call
+}
+
+// FindCVEs is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - ids []string
+func (_e *CoreCveRepository_Expecter) FindCVEs(tx interface{}, ids interface{}) *CoreCveRepository_FindCVEs_Call {
+	return &CoreCveRepository_FindCVEs_Call{Call: _e.mock.On("FindCVEs", tx, ids)}
+}
+
+func (_c *CoreCveRepository_FindCVEs_Call) Run(run func(tx *gorm.DB, ids []string)) *CoreCveRepository_FindCVEs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].([]string))
+	})
+	return _c
+}
+
+func (_c *CoreCveRepository_FindCVEs_Call) Return(_a0 []models.CVE, _a1 error) *CoreCveRepository_FindCVEs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreCveRepository_FindCVEs_Call) RunAndReturn(run func(*gorm.DB, []string) ([]models.CVE, error)) *CoreCveRepository_FindCVEs_Call {
 	_c.Call.Return(run)
 	return _c
 }

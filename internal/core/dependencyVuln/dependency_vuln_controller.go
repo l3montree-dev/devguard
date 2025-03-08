@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"slices"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
@@ -26,18 +25,10 @@ type dependencyVulnsByPackage struct {
 	DependencyVulns []DependencyVulnDTO `json:"flaws"`
 }
 
-type projectService interface {
-	ListAllowedProjects(c core.Context) ([]models.Project, error)
-}
-
-type dependencyVulnService interface {
-	UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, assetVersionName string) (models.VulnEvent, error)
-}
-
 type dependencyVulnHttpController struct {
 	dependencyVulnRepository core.DependencyVulnRepository
-	dependencyVulnService    dependencyVulnService
-	projectService           projectService
+	dependencyVulnService    core.DependencyVulnService
+	projectService           core.ProjectService
 }
 
 type DependencyVulnStatus struct {
@@ -45,7 +36,7 @@ type DependencyVulnStatus struct {
 	Justification string `json:"justification"`
 }
 
-func NewHttpController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService dependencyVulnService, projectService projectService) *dependencyVulnHttpController {
+func NewHttpController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService) *dependencyVulnHttpController {
 	return &dependencyVulnHttpController{
 		dependencyVulnRepository: dependencyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,

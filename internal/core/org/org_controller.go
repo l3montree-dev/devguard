@@ -29,18 +29,14 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type projectService interface {
-	ListAllowedProjects(c core.Context) ([]models.Project, error)
-	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
-}
 type httpController struct {
 	organizationRepository core.OrganizationRepository
 	rbacProvider           accesscontrol.RBACProvider
-	projectService         projectService
+	projectService         core.ProjectService
 	invitationRepository   core.InvitationRepository
 }
 
-func NewHttpController(repository core.OrganizationRepository, rbacProvider accesscontrol.RBACProvider, projectService projectService, invitationRepository core.InvitationRepository) *httpController {
+func NewHttpController(repository core.OrganizationRepository, rbacProvider accesscontrol.RBACProvider, projectService core.ProjectService, invitationRepository core.InvitationRepository) *httpController {
 	return &httpController{
 		organizationRepository: repository,
 		rbacProvider:           rbacProvider,

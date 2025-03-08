@@ -47,13 +47,6 @@ type gitlabClientFacade interface {
 	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
 }
 
-type gitlabIntegrationRepository interface {
-	Save(tx core.DB, model *models.GitLabIntegration) error
-	Read(id uuid.UUID) (models.GitLabIntegration, error)
-	FindByOrganizationId(orgID uuid.UUID) ([]models.GitLabIntegration, error)
-	Delete(tx core.DB, id uuid.UUID) error
-}
-
 type gitlabRepository struct {
 	*gitlab.Project
 	gitlabIntegrationId string
@@ -67,18 +60,18 @@ func (g gitlabRepository) toRepository() core.Repository {
 }
 
 type gitlabIntegration struct {
-	gitlabIntegrationRepository gitlabIntegrationRepository
-	externalUserRepository      externalUserRepository
+	gitlabIntegrationRepository core.GitlabIntegrationRepository
+	externalUserRepository      core.ExternalUserRepository
 
-	aggregatedVulnRepository aggregatedVulnRepository
+	aggregatedVulnRepository core.VulnRepository
 
 	//TODO: remove this
-	dependencyVulnRepository dependencyVulnRepository
-	vulnEventRepository      vulnEventRepository
+	dependencyVulnRepository core.DependencyVulnRepository
+	vulnEventRepository      core.VulnEventRepository
 	frontendUrl              string
-	assetRepository          assetRepository
-	assetVersionRepository   assetVersionRepository
-	dependencyVulnService    dependencyVulnService
+	assetRepository          core.AssetRepository
+	assetVersionRepository   core.AssetVersionRepository
+	dependencyVulnService    core.DependencyVulnService
 
 	gitlabClientFactory func(id uuid.UUID) (gitlabClientFacade, error)
 }

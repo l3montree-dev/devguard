@@ -32,22 +32,16 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type inTotoVerifierService interface {
-	VerifySupplyChainWithOutputDigest(supplyChainID string, digest string) (bool, error)
-	VerifySupplyChain(supplyChainID string) (bool, error)
-	VerifySupplyChainByDigestOnly(digest string) (bool, error)
-}
-
 type httpController struct {
 	linkRepository        core.InTotoLinkRepository
 	supplyChainRepository core.SupplyChainRepository
 
 	patRepository core.PersonalAccessTokenRepository
 
-	inTotoVerifierService inTotoVerifierService
+	inTotoVerifierService core.InTotoVerifierService
 }
 
-func NewHttpController(repository core.InTotoLinkRepository, supplyChainRepository core.SupplyChainRepository, patRepository core.PersonalAccessTokenRepository, inTotoVerifierService inTotoVerifierService) *httpController {
+func NewHttpController(repository core.InTotoLinkRepository, supplyChainRepository core.SupplyChainRepository, patRepository core.PersonalAccessTokenRepository, inTotoVerifierService core.InTotoVerifierService) *httpController {
 	return &httpController{
 		linkRepository:        repository,
 		supplyChainRepository: supplyChainRepository,

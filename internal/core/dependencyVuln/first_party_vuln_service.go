@@ -8,12 +8,12 @@ import (
 
 type firstPartyVulnService struct {
 	firstPartyVulnRepository core.FirstPartyVulnRepository
-	vulnEventRepository      vulnEventRepository
+	vulnEventRepository      core.VulnEventRepository
 
 	assetRepository core.AssetRepository
 }
 
-func NewFirstPartyVulnService(firstPartyVulnRepository core.FirstPartyVulnRepository, vulnEventRepository vulnEventRepository, assetRepository core.AssetRepository) *firstPartyVulnService {
+func NewFirstPartyVulnService(firstPartyVulnRepository core.FirstPartyVulnRepository, vulnEventRepository core.VulnEventRepository, assetRepository core.AssetRepository) *firstPartyVulnService {
 	return &firstPartyVulnService{
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,

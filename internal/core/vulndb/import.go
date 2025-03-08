@@ -18,7 +18,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -49,7 +48,7 @@ func NewImportService(cvesRepository core.CveRepository, cweRepository core.CweR
 	}
 }
 
-func (s importService) Import(tx database.DB, tag string) error {
+func (s importService) Import(tx core.DB, tag string) error {
 	slog.Info("Importing vulndb started")
 	begin := time.Now()
 	tmp := "./vulndb-tmp"

@@ -21,6 +21,53 @@ func (_m *CoreAffectedComponentRepository) EXPECT() *CoreAffectedComponentReposi
 	return &CoreAffectedComponentRepository_Expecter{mock: &_m.Mock}
 }
 
+// DeleteAll provides a mock function with given fields: tx, ecosystem
+func (_m *CoreAffectedComponentRepository) DeleteAll(tx *gorm.DB, ecosystem string) error {
+	ret := _m.Called(tx, ecosystem)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteAll")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string) error); ok {
+		r0 = rf(tx, ecosystem)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreAffectedComponentRepository_DeleteAll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteAll'
+type CoreAffectedComponentRepository_DeleteAll_Call struct {
+	*mock.Call
+}
+
+// DeleteAll is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - ecosystem string
+func (_e *CoreAffectedComponentRepository_Expecter) DeleteAll(tx interface{}, ecosystem interface{}) *CoreAffectedComponentRepository_DeleteAll_Call {
+	return &CoreAffectedComponentRepository_DeleteAll_Call{Call: _e.mock.On("DeleteAll", tx, ecosystem)}
+}
+
+func (_c *CoreAffectedComponentRepository_DeleteAll_Call) Run(run func(tx *gorm.DB, ecosystem string)) *CoreAffectedComponentRepository_DeleteAll_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *CoreAffectedComponentRepository_DeleteAll_Call) Return(_a0 error) *CoreAffectedComponentRepository_DeleteAll_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreAffectedComponentRepository_DeleteAll_Call) RunAndReturn(run func(*gorm.DB, string) error) *CoreAffectedComponentRepository_DeleteAll_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllAffectedComponentsID provides a mock function with no fields
 func (_m *CoreAffectedComponentRepository) GetAllAffectedComponentsID() ([]string, error) {
 	ret := _m.Called()

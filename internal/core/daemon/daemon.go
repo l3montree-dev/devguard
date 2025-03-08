@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -55,7 +55,7 @@ func markMirrored(configService config.Service, key string) error {
 	})
 }
 
-func Start(db database.DB) {
+func Start(db core.DB) {
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 

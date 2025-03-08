@@ -7,20 +7,15 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
 )
 
-type assetService interface {
-	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
-}
-
 type httpController struct {
 	assetRepository core.AssetRepository
-	assetService    assetService
+	assetService    core.AssetService
 }
 
-func NewHttpController(repository core.AssetRepository, assetService assetService) *httpController {
+func NewHttpController(repository core.AssetRepository, assetService core.AssetService) *httpController {
 	return &httpController{
 		assetRepository: repository,
 		assetService:    assetService,

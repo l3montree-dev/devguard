@@ -1,12 +1,12 @@
 package daemon
 
 import (
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 )
 
-func RecalculateRisk(db database.DB) error {
+func RecalculateRisk(db core.DB) error {
 	dependencyVulnService := dependencyVuln.NewService(
 		repositories.NewDependencyVulnRepository(db),
 		repositories.NewVulnEventRepository(db),

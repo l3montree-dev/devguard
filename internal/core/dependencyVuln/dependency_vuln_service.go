@@ -23,42 +23,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-type assetRepository interface {
-	GetAllAssetsFromDB() ([]models.Asset, error)
-}
-
-type dependencyVulnRepository interface {
-	SaveBatch(db core.DB, dependencyVulns []models.DependencyVuln) error
-	Save(db core.DB, dependencyVulns *models.DependencyVuln) error
-	Transaction(txFunc func(core.DB) error) error
-	Begin() core.DB
-
-	GetDependencyVulnsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
-}
-
-type vulnEventRepository interface {
-	SaveBatch(db core.DB, events []models.VulnEvent) error
-	Save(db core.DB, event *models.VulnEvent) error
-}
-type cveRepository interface {
-	FindCVE(tx database.DB, cveId string) (models.CVE, error)
-	FindCVEs(tx database.DB, cveIds []string) ([]models.CVE, error)
-}
 type service struct {
-	dependencyVulnRepository dependencyVulnRepository
-	vulnEventRepository      vulnEventRepository
+	dependencyVulnRepository core.DependencyVulnRepository
+	vulnEventRepository      core.VulnEventRepository
 
-	assetRepository assetRepository
-	cveRepository   cveRepository
+	assetRepository core.AssetRepository
+	cveRepository   core.CveRepository
 }
 
-func NewService(dependencyVulnRepository dependencyVulnRepository, vulnEventRepository vulnEventRepository, assetRepository assetRepository, cveRepository cveRepository) *service {
+func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetRepository core.AssetRepository, cveRepository core.CveRepository) *service {
 	return &service{
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
@@ -206,11 +183,6 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		cve, ok := cveMap[cveID]
 		if !ok {
 			slog.Info("could not find cve", "cve", cveID)
-			continue
-		}
-
-		if err != nil {
-			slog.Info("error getting cve", "err", err)
 			continue
 		}
 
