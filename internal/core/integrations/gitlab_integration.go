@@ -3,6 +3,7 @@ package integrations
 import (
 	"context"
 	"encoding/json"
+	"os"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -508,26 +509,14 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 		return fmt.Errorf("could not list project hooks: %w", err)
 	}
 
-	for _, hook := range hooks {
-		if hook.URL == "https://api.main.devguard.org/api/v1/webhook/" {
-			// the hook already exists
-			return nil
-		}
-	}
-
 	token, err := createToken()
 	if err != nil {
 		return fmt.Errorf("could not create new token: %w", err)
 	}
 
-	projectOptions := &gitlab.AddProjectHookOptions{
-		IssuesEvents:             gitlab.Ptr(true),
-		ConfidentialIssuesEvents: gitlab.Ptr(true),
-		NoteEvents:               gitlab.Ptr(true),
-		ConfidentialNoteEvents:   gitlab.Ptr(true),
-		EnableSSLVerification:    gitlab.Ptr(true),
-		URL:                      gitlab.Ptr("https://api.main.devguard.org/api/v1/webhook/"),
-		Token:                    gitlab.Ptr(token.String()),
+	projectOptions, err := createProjectHookOptions(token, hooks)
+	if err != nil { //Swallow error: If an error gets returned it means the hook already exists which means we don't have to do anything further and can return without errors
+		return nil
 	}
 
 	projectHook, _, err := client.AddProjectHook(ctx.Request().Context(), projectId, projectOptions)
@@ -550,6 +539,37 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 
 	return nil
 
+}
+
+func createProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
+	projectOptions := &gitlab.AddProjectHookOptions{} //Intialize empty struct to return on error
+
+	instanceDomain := os.Getenv("INSTANCE_DOMAIN") //Get the URL from the .env file
+
+	for _, hook := range hooks {
+		if strings.HasPrefix(hook.URL, instanceDomain) {
+			slog.Error("hook already exists")
+			return projectOptions, fmt.Errorf("hook already exists")
+		}
+	}
+
+	//Assign values to the empty struct
+	projectOptions.IssuesEvents = gitlab.Ptr(true)
+	projectOptions.ConfidentialIssuesEvents = gitlab.Ptr(true)
+	projectOptions.NoteEvents = gitlab.Ptr(true)
+	projectOptions.ConfidentialNoteEvents = gitlab.Ptr(true)
+	projectOptions.EnableSSLVerification = gitlab.Ptr(true)
+	if instanceDomain == "" { //If no URL is provided in the enviroment variables default to main URL
+		slog.Error("no URL specified in .env file defaulting to main")
+		defaultURL := "https://api.main.devguard.org/api/v1/webhook/"
+		projectOptions.URL = &defaultURL
+	} else {
+		constructedURL := instanceDomain + "/api/v1/webhook/"
+		projectOptions.URL = &constructedURL
+	}
+	projectOptions.Token = gitlab.Ptr(token.String())
+
+	return projectOptions, nil
 }
 
 func (g *gitlabIntegration) deleteProjectHook(ctx core.Context, integrationUUID uuid.UUID, projectId int, hookId int) error {
@@ -961,9 +981,14 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return err
 	}
+	if data.Token == "" {
+		slog.Error("token must not be empty")
+		return ctx.JSON(400, "token must not be empty")
+	}
 	// check if valid url - maybe the user forgot to add the protocol
 	if !strings.HasPrefix(data.Url, "http://") && !strings.HasPrefix(data.Url, "https://") {
 		data.Url = "https://" + data.Url
+
 	}
 
 	git, err := gitlab.NewClient(data.Token, gitlab.WithBaseURL(data.Url))
