@@ -21,43 +21,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-type assetVersionRepository interface {
-	GetDB(core.DB) core.DB
-	Delete(tx core.DB, assetVersion *models.AssetVersion) error
-	Save(tx core.DB, assetVersion *models.AssetVersion) error
-	GetAllAssetsVersionFromDBByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error)
-}
-
-type assetRepository interface {
-	Save(tx core.DB, asset *models.Asset) error
-	GetByAssetID(assetID uuid.UUID) (models.Asset, error)
-}
-
-type firstPartyVulnRepository interface {
-	Transaction(txFunc func(core.DB) error) error
-	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVulnerability, error)
-
-	SaveBatch(db core.DB, firstPartyVulns []models.FirstPartyVulnerability) error
-}
-
-type firstPartyVulnService interface {
-	UserFixedFirstPartyVulns(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error
-	UserDetectedFirstPartyVulns(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error
-	UpdateFirstPartyVulnState(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVulnerability, statusType string, justification string) (models.VulnEvent, error)
-}
-
 type service struct {
-	dependencyVulnRepository dependencyVulnRepository
-	firstPartyVulnRepository firstPartyVulnRepository
-	componentRepository      componentRepository
-	dependencyVulnService    dependencyVulnService
-	firstPartyVulnService    firstPartyVulnService
-	assetVersionRepository   assetVersionRepository
-	assetRepository          assetRepository
+	dependencyVulnRepository core.DependencyVulnRepository
+	firstPartyVulnRepository core.FirstPartyVulnRepository
+	componentRepository      core.ComponentRepository
+	dependencyVulnService    core.DependencyVulnService
+	firstPartyVulnService    core.FirstPartyVulnService
+	assetVersionRepository   core.AssetVersionRepository
+	assetRepository          core.AssetRepository
 	httpClient               *http.Client
 }
 
-func NewService(assetVersionRepository assetVersionRepository, componentRepository componentRepository, dependencyVulnRepository dependencyVulnRepository, firstPartyVulnRepository firstPartyVulnRepository, dependencyVulnService dependencyVulnService, firstPartyVulnService firstPartyVulnService, assetRepository assetRepository) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository) *service {
 	return &service{
 		assetVersionRepository:   assetVersionRepository,
 		componentRepository:      componentRepository,

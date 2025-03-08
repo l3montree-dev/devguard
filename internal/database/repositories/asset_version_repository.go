@@ -21,14 +21,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type assetVersionRepository struct {
-	db database.DB
-	Repository[uuid.UUID, models.AssetVersion, core.DB]
+	db core.DB
+	common.Repository[uuid.UUID, models.AssetVersion, core.DB]
 }
 
 func NewAssetVersionRepository(db core.DB) *assetVersionRepository {

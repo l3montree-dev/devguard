@@ -18,9 +18,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -35,37 +32,14 @@ var pruneTablesBeforeInsert = []string{
 	"cve_affected_component",
 }
 
-type cvesRepository interface {
-	repositories.Repository[string, models.CVE, database.DB]
-	GetAllCVEsID() ([]string, error)
-	GetAllCPEMatchesID() ([]string, error)
-	Save(tx database.DB, cve *models.CVE) error
-	SaveBatchCPEMatch(tx database.DB, matches []models.CPEMatch) error
-	SaveCveAffectedComponents(tx core.DB, cveId string, affectedComponentHashes []string) error
-}
-type cwesRepository interface {
-	GetAllCWEsID() ([]string, error)
-	SaveBatch(tx database.DB, cwes []models.CWE) error
-}
-
-type exploitsRepository interface {
-	GetAllExploitsID() ([]string, error)
-	SaveBatch(tx core.DB, exploits []models.Exploit) error
-}
-
-type affectedComponentsRepository interface {
-	GetAllAffectedComponentsID() ([]string, error)
-	Save(tx database.DB, affectedComponent *models.AffectedComponent) error
-	SaveBatch(tx core.DB, affectedPkgs []models.AffectedComponent) error
-}
 type importService struct {
-	cveRepository                cvesRepository
-	cweRepository                cwesRepository
-	exploitRepository            exploitsRepository
-	affectedComponentsRepository affectedComponentsRepository
+	cveRepository                core.CveRepository
+	cweRepository                core.CweRepository
+	exploitRepository            core.ExploitRepository
+	affectedComponentsRepository core.AffectedComponentRepository
 }
 
-func NewImportService(cvesRepository cvesRepository, cweRepository cwesRepository, exploitRepository exploitsRepository, affectedComponentsRepository affectedComponentsRepository) *importService {
+func NewImportService(cvesRepository core.CveRepository, cweRepository core.CweRepository, exploitRepository core.ExploitRepository, affectedComponentsRepository core.AffectedComponentRepository) *importService {
 	return &importService{
 		cveRepository:                cvesRepository,
 		cweRepository:                cweRepository,
@@ -74,7 +48,7 @@ func NewImportService(cvesRepository cvesRepository, cweRepository cwesRepositor
 	}
 }
 
-func (s importService) Import(tx database.DB, tag string) error {
+func (s importService) Import(tx core.DB, tag string) error {
 	slog.Info("Importing vulndb started")
 	begin := time.Now()
 	tmp := "./vulndb-tmp"

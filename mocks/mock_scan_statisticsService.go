@@ -3,6 +3,7 @@
 package mocks
 
 import (
+	models "github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
 
 	time "time"
@@ -23,17 +24,17 @@ func (_m *ScanStatisticsService) EXPECT() *ScanStatisticsService_Expecter {
 	return &ScanStatisticsService_Expecter{mock: &_m.Mock}
 }
 
-// UpdateAssetRiskAggregation provides a mock function with given fields: assetID, begin, end, updateProject
-func (_m *ScanStatisticsService) UpdateAssetRiskAggregation(assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error {
-	ret := _m.Called(assetID, begin, end, updateProject)
+// UpdateAssetRiskAggregation provides a mock function with given fields: assetVersion, assetID, begin, end, updateProject
+func (_m *ScanStatisticsService) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error {
+	ret := _m.Called(assetVersion, assetID, begin, end, updateProject)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateAssetRiskAggregation")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time, time.Time, bool) error); ok {
-		r0 = rf(assetID, begin, end, updateProject)
+	if rf, ok := ret.Get(0).(func(*models.AssetVersion, uuid.UUID, time.Time, time.Time, bool) error); ok {
+		r0 = rf(assetVersion, assetID, begin, end, updateProject)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -47,17 +48,18 @@ type ScanStatisticsService_UpdateAssetRiskAggregation_Call struct {
 }
 
 // UpdateAssetRiskAggregation is a helper method to define mock.On call
+//   - assetVersion *models.AssetVersion
 //   - assetID uuid.UUID
 //   - begin time.Time
 //   - end time.Time
 //   - updateProject bool
-func (_e *ScanStatisticsService_Expecter) UpdateAssetRiskAggregation(assetID interface{}, begin interface{}, end interface{}, updateProject interface{}) *ScanStatisticsService_UpdateAssetRiskAggregation_Call {
-	return &ScanStatisticsService_UpdateAssetRiskAggregation_Call{Call: _e.mock.On("UpdateAssetRiskAggregation", assetID, begin, end, updateProject)}
+func (_e *ScanStatisticsService_Expecter) UpdateAssetRiskAggregation(assetVersion interface{}, assetID interface{}, begin interface{}, end interface{}, updateProject interface{}) *ScanStatisticsService_UpdateAssetRiskAggregation_Call {
+	return &ScanStatisticsService_UpdateAssetRiskAggregation_Call{Call: _e.mock.On("UpdateAssetRiskAggregation", assetVersion, assetID, begin, end, updateProject)}
 }
 
-func (_c *ScanStatisticsService_UpdateAssetRiskAggregation_Call) Run(run func(assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool)) *ScanStatisticsService_UpdateAssetRiskAggregation_Call {
+func (_c *ScanStatisticsService_UpdateAssetRiskAggregation_Call) Run(run func(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool)) *ScanStatisticsService_UpdateAssetRiskAggregation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(time.Time), args[2].(time.Time), args[3].(bool))
+		run(args[0].(*models.AssetVersion), args[1].(uuid.UUID), args[2].(time.Time), args[3].(time.Time), args[4].(bool))
 	})
 	return _c
 }
@@ -67,7 +69,7 @@ func (_c *ScanStatisticsService_UpdateAssetRiskAggregation_Call) Return(_a0 erro
 	return _c
 }
 
-func (_c *ScanStatisticsService_UpdateAssetRiskAggregation_Call) RunAndReturn(run func(uuid.UUID, time.Time, time.Time, bool) error) *ScanStatisticsService_UpdateAssetRiskAggregation_Call {
+func (_c *ScanStatisticsService_UpdateAssetRiskAggregation_Call) RunAndReturn(run func(*models.AssetVersion, uuid.UUID, time.Time, time.Time, bool) error) *ScanStatisticsService_UpdateAssetRiskAggregation_Call {
 	_c.Call.Return(run)
 	return _c
 }

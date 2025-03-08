@@ -25,27 +25,27 @@ func (_m *StatisticsStatisticsService) EXPECT() *StatisticsStatisticsService_Exp
 	return &StatisticsStatisticsService_Expecter{mock: &_m.Mock}
 }
 
-// GetAssetRiskDistribution provides a mock function with given fields: assetID, assetName
-func (_m *StatisticsStatisticsService) GetAssetRiskDistribution(assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
-	ret := _m.Called(assetID, assetName)
+// GetAssetVersionRiskDistribution provides a mock function with given fields: assetVersionName, assetID, assetName
+func (_m *StatisticsStatisticsService) GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
+	ret := _m.Called(assetVersionName, assetID, assetName)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAssetRiskDistribution")
+		panic("no return value specified for GetAssetVersionRiskDistribution")
 	}
 
 	var r0 models.AssetRiskDistribution
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID, string) (models.AssetRiskDistribution, error)); ok {
-		return rf(assetID, assetName)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) (models.AssetRiskDistribution, error)); ok {
+		return rf(assetVersionName, assetID, assetName)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID, string) models.AssetRiskDistribution); ok {
-		r0 = rf(assetID, assetName)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) models.AssetRiskDistribution); ok {
+		r0 = rf(assetVersionName, assetID, assetName)
 	} else {
 		r0 = ret.Get(0).(models.AssetRiskDistribution)
 	}
 
-	if rf, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
-		r1 = rf(assetID, assetName)
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
+		r1 = rf(assetVersionName, assetID, assetName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -53,58 +53,59 @@ func (_m *StatisticsStatisticsService) GetAssetRiskDistribution(assetID uuid.UUI
 	return r0, r1
 }
 
-// StatisticsStatisticsService_GetAssetRiskDistribution_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetRiskDistribution'
-type StatisticsStatisticsService_GetAssetRiskDistribution_Call struct {
+// StatisticsStatisticsService_GetAssetVersionRiskDistribution_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetVersionRiskDistribution'
+type StatisticsStatisticsService_GetAssetVersionRiskDistribution_Call struct {
 	*mock.Call
 }
 
-// GetAssetRiskDistribution is a helper method to define mock.On call
+// GetAssetVersionRiskDistribution is a helper method to define mock.On call
+//   - assetVersionName string
 //   - assetID uuid.UUID
 //   - assetName string
-func (_e *StatisticsStatisticsService_Expecter) GetAssetRiskDistribution(assetID interface{}, assetName interface{}) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
-	return &StatisticsStatisticsService_GetAssetRiskDistribution_Call{Call: _e.mock.On("GetAssetRiskDistribution", assetID, assetName)}
+func (_e *StatisticsStatisticsService_Expecter) GetAssetVersionRiskDistribution(assetVersionName interface{}, assetID interface{}, assetName interface{}) *StatisticsStatisticsService_GetAssetVersionRiskDistribution_Call {
+	return &StatisticsStatisticsService_GetAssetVersionRiskDistribution_Call{Call: _e.mock.On("GetAssetVersionRiskDistribution", assetVersionName, assetID, assetName)}
 }
 
-func (_c *StatisticsStatisticsService_GetAssetRiskDistribution_Call) Run(run func(assetID uuid.UUID, assetName string)) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
+func (_c *StatisticsStatisticsService_GetAssetVersionRiskDistribution_Call) Run(run func(assetVersionName string, assetID uuid.UUID, assetName string)) *StatisticsStatisticsService_GetAssetVersionRiskDistribution_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(string))
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
 	})
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetAssetRiskDistribution_Call) Return(_a0 models.AssetRiskDistribution, _a1 error) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
+func (_c *StatisticsStatisticsService_GetAssetVersionRiskDistribution_Call) Return(_a0 models.AssetRiskDistribution, _a1 error) *StatisticsStatisticsService_GetAssetVersionRiskDistribution_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetAssetRiskDistribution_Call) RunAndReturn(run func(uuid.UUID, string) (models.AssetRiskDistribution, error)) *StatisticsStatisticsService_GetAssetRiskDistribution_Call {
+func (_c *StatisticsStatisticsService_GetAssetVersionRiskDistribution_Call) RunAndReturn(run func(string, uuid.UUID, string) (models.AssetRiskDistribution, error)) *StatisticsStatisticsService_GetAssetVersionRiskDistribution_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetAssetRiskHistory provides a mock function with given fields: assetID, start, end
-func (_m *StatisticsStatisticsService) GetAssetRiskHistory(assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
-	ret := _m.Called(assetID, start, end)
+// GetAssetVersionRiskHistory provides a mock function with given fields: assetVersionName, assetID, start, end
+func (_m *StatisticsStatisticsService) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
+	ret := _m.Called(assetVersionName, assetID, start, end)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetAssetRiskHistory")
+		panic("no return value specified for GetAssetVersionRiskHistory")
 	}
 
 	var r0 []models.AssetRiskHistory
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time, time.Time) ([]models.AssetRiskHistory, error)); ok {
-		return rf(assetID, start, end)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) ([]models.AssetRiskHistory, error)); ok {
+		return rf(assetVersionName, assetID, start, end)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time, time.Time) []models.AssetRiskHistory); ok {
-		r0 = rf(assetID, start, end)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) []models.AssetRiskHistory); ok {
+		r0 = rf(assetVersionName, assetID, start, end)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.AssetRiskHistory)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(uuid.UUID, time.Time, time.Time) error); ok {
-		r1 = rf(assetID, start, end)
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID, time.Time, time.Time) error); ok {
+		r1 = rf(assetVersionName, assetID, start, end)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -112,39 +113,40 @@ func (_m *StatisticsStatisticsService) GetAssetRiskHistory(assetID uuid.UUID, st
 	return r0, r1
 }
 
-// StatisticsStatisticsService_GetAssetRiskHistory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetRiskHistory'
-type StatisticsStatisticsService_GetAssetRiskHistory_Call struct {
+// StatisticsStatisticsService_GetAssetVersionRiskHistory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetVersionRiskHistory'
+type StatisticsStatisticsService_GetAssetVersionRiskHistory_Call struct {
 	*mock.Call
 }
 
-// GetAssetRiskHistory is a helper method to define mock.On call
+// GetAssetVersionRiskHistory is a helper method to define mock.On call
+//   - assetVersionName string
 //   - assetID uuid.UUID
 //   - start time.Time
 //   - end time.Time
-func (_e *StatisticsStatisticsService_Expecter) GetAssetRiskHistory(assetID interface{}, start interface{}, end interface{}) *StatisticsStatisticsService_GetAssetRiskHistory_Call {
-	return &StatisticsStatisticsService_GetAssetRiskHistory_Call{Call: _e.mock.On("GetAssetRiskHistory", assetID, start, end)}
+func (_e *StatisticsStatisticsService_Expecter) GetAssetVersionRiskHistory(assetVersionName interface{}, assetID interface{}, start interface{}, end interface{}) *StatisticsStatisticsService_GetAssetVersionRiskHistory_Call {
+	return &StatisticsStatisticsService_GetAssetVersionRiskHistory_Call{Call: _e.mock.On("GetAssetVersionRiskHistory", assetVersionName, assetID, start, end)}
 }
 
-func (_c *StatisticsStatisticsService_GetAssetRiskHistory_Call) Run(run func(assetID uuid.UUID, start time.Time, end time.Time)) *StatisticsStatisticsService_GetAssetRiskHistory_Call {
+func (_c *StatisticsStatisticsService_GetAssetVersionRiskHistory_Call) Run(run func(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time)) *StatisticsStatisticsService_GetAssetVersionRiskHistory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(time.Time), args[2].(time.Time))
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(time.Time), args[3].(time.Time))
 	})
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetAssetRiskHistory_Call) Return(_a0 []models.AssetRiskHistory, _a1 error) *StatisticsStatisticsService_GetAssetRiskHistory_Call {
+func (_c *StatisticsStatisticsService_GetAssetVersionRiskHistory_Call) Return(_a0 []models.AssetRiskHistory, _a1 error) *StatisticsStatisticsService_GetAssetVersionRiskHistory_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetAssetRiskHistory_Call) RunAndReturn(run func(uuid.UUID, time.Time, time.Time) ([]models.AssetRiskHistory, error)) *StatisticsStatisticsService_GetAssetRiskHistory_Call {
+func (_c *StatisticsStatisticsService_GetAssetVersionRiskHistory_Call) RunAndReturn(run func(string, uuid.UUID, time.Time, time.Time) ([]models.AssetRiskHistory, error)) *StatisticsStatisticsService_GetAssetVersionRiskHistory_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetAverageFixingTime provides a mock function with given fields: assetID, severity
-func (_m *StatisticsStatisticsService) GetAverageFixingTime(assetID uuid.UUID, severity string) (time.Duration, error) {
-	ret := _m.Called(assetID, severity)
+// GetAverageFixingTime provides a mock function with given fields: assetVersionName, assetID, severity
+func (_m *StatisticsStatisticsService) GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
+	ret := _m.Called(assetVersionName, assetID, severity)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAverageFixingTime")
@@ -152,17 +154,17 @@ func (_m *StatisticsStatisticsService) GetAverageFixingTime(assetID uuid.UUID, s
 
 	var r0 time.Duration
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID, string) (time.Duration, error)); ok {
-		return rf(assetID, severity)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) (time.Duration, error)); ok {
+		return rf(assetVersionName, assetID, severity)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID, string) time.Duration); ok {
-		r0 = rf(assetID, severity)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) time.Duration); ok {
+		r0 = rf(assetVersionName, assetID, severity)
 	} else {
 		r0 = ret.Get(0).(time.Duration)
 	}
 
-	if rf, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
-		r1 = rf(assetID, severity)
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
+		r1 = rf(assetVersionName, assetID, severity)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -176,15 +178,16 @@ type StatisticsStatisticsService_GetAverageFixingTime_Call struct {
 }
 
 // GetAverageFixingTime is a helper method to define mock.On call
+//   - assetVersionName string
 //   - assetID uuid.UUID
 //   - severity string
-func (_e *StatisticsStatisticsService_Expecter) GetAverageFixingTime(assetID interface{}, severity interface{}) *StatisticsStatisticsService_GetAverageFixingTime_Call {
-	return &StatisticsStatisticsService_GetAverageFixingTime_Call{Call: _e.mock.On("GetAverageFixingTime", assetID, severity)}
+func (_e *StatisticsStatisticsService_Expecter) GetAverageFixingTime(assetVersionName interface{}, assetID interface{}, severity interface{}) *StatisticsStatisticsService_GetAverageFixingTime_Call {
+	return &StatisticsStatisticsService_GetAverageFixingTime_Call{Call: _e.mock.On("GetAverageFixingTime", assetVersionName, assetID, severity)}
 }
 
-func (_c *StatisticsStatisticsService_GetAverageFixingTime_Call) Run(run func(assetID uuid.UUID, severity string)) *StatisticsStatisticsService_GetAverageFixingTime_Call {
+func (_c *StatisticsStatisticsService_GetAverageFixingTime_Call) Run(run func(assetVersionName string, assetID uuid.UUID, severity string)) *StatisticsStatisticsService_GetAverageFixingTime_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(string))
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
 	})
 	return _c
 }
@@ -194,14 +197,14 @@ func (_c *StatisticsStatisticsService_GetAverageFixingTime_Call) Return(_a0 time
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetAverageFixingTime_Call) RunAndReturn(run func(uuid.UUID, string) (time.Duration, error)) *StatisticsStatisticsService_GetAverageFixingTime_Call {
+func (_c *StatisticsStatisticsService_GetAverageFixingTime_Call) RunAndReturn(run func(string, uuid.UUID, string) (time.Duration, error)) *StatisticsStatisticsService_GetAverageFixingTime_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetComponentRisk provides a mock function with given fields: assetID
-func (_m *StatisticsStatisticsService) GetComponentRisk(assetID uuid.UUID) (map[string]float64, error) {
-	ret := _m.Called(assetID)
+// GetComponentRisk provides a mock function with given fields: assetVersionName, assetID
+func (_m *StatisticsStatisticsService) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error) {
+	ret := _m.Called(assetVersionName, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetComponentRisk")
@@ -209,19 +212,19 @@ func (_m *StatisticsStatisticsService) GetComponentRisk(assetID uuid.UUID) (map[
 
 	var r0 map[string]float64
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID) (map[string]float64, error)); ok {
-		return rf(assetID)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID) (map[string]float64, error)); ok {
+		return rf(assetVersionName, assetID)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID) map[string]float64); ok {
-		r0 = rf(assetID)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID) map[string]float64); ok {
+		r0 = rf(assetVersionName, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]float64)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = rf(assetID)
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID) error); ok {
+		r1 = rf(assetVersionName, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -235,14 +238,15 @@ type StatisticsStatisticsService_GetComponentRisk_Call struct {
 }
 
 // GetComponentRisk is a helper method to define mock.On call
+//   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *StatisticsStatisticsService_Expecter) GetComponentRisk(assetID interface{}) *StatisticsStatisticsService_GetComponentRisk_Call {
-	return &StatisticsStatisticsService_GetComponentRisk_Call{Call: _e.mock.On("GetComponentRisk", assetID)}
+func (_e *StatisticsStatisticsService_Expecter) GetComponentRisk(assetVersionName interface{}, assetID interface{}) *StatisticsStatisticsService_GetComponentRisk_Call {
+	return &StatisticsStatisticsService_GetComponentRisk_Call{Call: _e.mock.On("GetComponentRisk", assetVersionName, assetID)}
 }
 
-func (_c *StatisticsStatisticsService_GetComponentRisk_Call) Run(run func(assetID uuid.UUID)) *StatisticsStatisticsService_GetComponentRisk_Call {
+func (_c *StatisticsStatisticsService_GetComponentRisk_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *StatisticsStatisticsService_GetComponentRisk_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		run(args[0].(string), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -252,14 +256,14 @@ func (_c *StatisticsStatisticsService_GetComponentRisk_Call) Return(_a0 map[stri
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetComponentRisk_Call) RunAndReturn(run func(uuid.UUID) (map[string]float64, error)) *StatisticsStatisticsService_GetComponentRisk_Call {
+func (_c *StatisticsStatisticsService_GetComponentRisk_Call) RunAndReturn(run func(string, uuid.UUID) (map[string]float64, error)) *StatisticsStatisticsService_GetComponentRisk_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetDependencyCountPerscanner provides a mock function with given fields: assetID
-func (_m *StatisticsStatisticsService) GetDependencyCountPerscanner(assetID uuid.UUID) (map[string]int, error) {
-	ret := _m.Called(assetID)
+// GetDependencyCountPerscanner provides a mock function with given fields: assetVersionName, assetID
+func (_m *StatisticsStatisticsService) GetDependencyCountPerscanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+	ret := _m.Called(assetVersionName, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDependencyCountPerscanner")
@@ -267,19 +271,19 @@ func (_m *StatisticsStatisticsService) GetDependencyCountPerscanner(assetID uuid
 
 	var r0 map[string]int
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID) (map[string]int, error)); ok {
-		return rf(assetID)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID) (map[string]int, error)); ok {
+		return rf(assetVersionName, assetID)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID) map[string]int); ok {
-		r0 = rf(assetID)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID) map[string]int); ok {
+		r0 = rf(assetVersionName, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]int)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = rf(assetID)
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID) error); ok {
+		r1 = rf(assetVersionName, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -293,14 +297,15 @@ type StatisticsStatisticsService_GetDependencyCountPerscanner_Call struct {
 }
 
 // GetDependencyCountPerscanner is a helper method to define mock.On call
+//   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *StatisticsStatisticsService_Expecter) GetDependencyCountPerscanner(assetID interface{}) *StatisticsStatisticsService_GetDependencyCountPerscanner_Call {
-	return &StatisticsStatisticsService_GetDependencyCountPerscanner_Call{Call: _e.mock.On("GetDependencyCountPerscanner", assetID)}
+func (_e *StatisticsStatisticsService_Expecter) GetDependencyCountPerscanner(assetVersionName interface{}, assetID interface{}) *StatisticsStatisticsService_GetDependencyCountPerscanner_Call {
+	return &StatisticsStatisticsService_GetDependencyCountPerscanner_Call{Call: _e.mock.On("GetDependencyCountPerscanner", assetVersionName, assetID)}
 }
 
-func (_c *StatisticsStatisticsService_GetDependencyCountPerscanner_Call) Run(run func(assetID uuid.UUID)) *StatisticsStatisticsService_GetDependencyCountPerscanner_Call {
+func (_c *StatisticsStatisticsService_GetDependencyCountPerscanner_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *StatisticsStatisticsService_GetDependencyCountPerscanner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		run(args[0].(string), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -310,14 +315,14 @@ func (_c *StatisticsStatisticsService_GetDependencyCountPerscanner_Call) Return(
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetDependencyCountPerscanner_Call) RunAndReturn(run func(uuid.UUID) (map[string]int, error)) *StatisticsStatisticsService_GetDependencyCountPerscanner_Call {
+func (_c *StatisticsStatisticsService_GetDependencyCountPerscanner_Call) RunAndReturn(run func(string, uuid.UUID) (map[string]int, error)) *StatisticsStatisticsService_GetDependencyCountPerscanner_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetDependencyVulnAggregationStateAndChangeSince provides a mock function with given fields: assetID, calculateChangeTo
-func (_m *StatisticsStatisticsService) GetDependencyVulnAggregationStateAndChangeSince(assetID uuid.UUID, calculateChangeTo time.Time) (statistics.DependencyVulnAggregationStateAndChange, error) {
-	ret := _m.Called(assetID, calculateChangeTo)
+// GetDependencyVulnAggregationStateAndChangeSince provides a mock function with given fields: assetVersionName, assetID, calculateChangeTo
+func (_m *StatisticsStatisticsService) GetDependencyVulnAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (statistics.DependencyVulnAggregationStateAndChange, error) {
+	ret := _m.Called(assetVersionName, assetID, calculateChangeTo)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDependencyVulnAggregationStateAndChangeSince")
@@ -325,17 +330,17 @@ func (_m *StatisticsStatisticsService) GetDependencyVulnAggregationStateAndChang
 
 	var r0 statistics.DependencyVulnAggregationStateAndChange
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) (statistics.DependencyVulnAggregationStateAndChange, error)); ok {
-		return rf(assetID, calculateChangeTo)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, time.Time) (statistics.DependencyVulnAggregationStateAndChange, error)); ok {
+		return rf(assetVersionName, assetID, calculateChangeTo)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time) statistics.DependencyVulnAggregationStateAndChange); ok {
-		r0 = rf(assetID, calculateChangeTo)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, time.Time) statistics.DependencyVulnAggregationStateAndChange); ok {
+		r0 = rf(assetVersionName, assetID, calculateChangeTo)
 	} else {
 		r0 = ret.Get(0).(statistics.DependencyVulnAggregationStateAndChange)
 	}
 
-	if rf, ok := ret.Get(1).(func(uuid.UUID, time.Time) error); ok {
-		r1 = rf(assetID, calculateChangeTo)
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID, time.Time) error); ok {
+		r1 = rf(assetVersionName, assetID, calculateChangeTo)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -349,15 +354,16 @@ type StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince
 }
 
 // GetDependencyVulnAggregationStateAndChangeSince is a helper method to define mock.On call
+//   - assetVersionName string
 //   - assetID uuid.UUID
 //   - calculateChangeTo time.Time
-func (_e *StatisticsStatisticsService_Expecter) GetDependencyVulnAggregationStateAndChangeSince(assetID interface{}, calculateChangeTo interface{}) *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
-	return &StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call{Call: _e.mock.On("GetDependencyVulnAggregationStateAndChangeSince", assetID, calculateChangeTo)}
+func (_e *StatisticsStatisticsService_Expecter) GetDependencyVulnAggregationStateAndChangeSince(assetVersionName interface{}, assetID interface{}, calculateChangeTo interface{}) *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
+	return &StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call{Call: _e.mock.On("GetDependencyVulnAggregationStateAndChangeSince", assetVersionName, assetID, calculateChangeTo)}
 }
 
-func (_c *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call) Run(run func(assetID uuid.UUID, calculateChangeTo time.Time)) *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
+func (_c *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call) Run(run func(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time)) *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(time.Time))
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(time.Time))
 	})
 	return _c
 }
@@ -367,14 +373,14 @@ func (_c *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChange
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call) RunAndReturn(run func(uuid.UUID, time.Time) (statistics.DependencyVulnAggregationStateAndChange, error)) *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
+func (_c *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call) RunAndReturn(run func(string, uuid.UUID, time.Time) (statistics.DependencyVulnAggregationStateAndChange, error)) *StatisticsStatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetDependencyVulnCountByScannerId provides a mock function with given fields: assetID
-func (_m *StatisticsStatisticsService) GetDependencyVulnCountByScannerId(assetID uuid.UUID) (map[string]int, error) {
-	ret := _m.Called(assetID)
+// GetDependencyVulnCountByScannerId provides a mock function with given fields: assetVersionName, assetID
+func (_m *StatisticsStatisticsService) GetDependencyVulnCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+	ret := _m.Called(assetVersionName, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDependencyVulnCountByScannerId")
@@ -382,19 +388,19 @@ func (_m *StatisticsStatisticsService) GetDependencyVulnCountByScannerId(assetID
 
 	var r0 map[string]int
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID) (map[string]int, error)); ok {
-		return rf(assetID)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID) (map[string]int, error)); ok {
+		return rf(assetVersionName, assetID)
 	}
-	if rf, ok := ret.Get(0).(func(uuid.UUID) map[string]int); ok {
-		r0 = rf(assetID)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID) map[string]int); ok {
+		r0 = rf(assetVersionName, assetID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]int)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = rf(assetID)
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID) error); ok {
+		r1 = rf(assetVersionName, assetID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -408,14 +414,15 @@ type StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call struct {
 }
 
 // GetDependencyVulnCountByScannerId is a helper method to define mock.On call
+//   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *StatisticsStatisticsService_Expecter) GetDependencyVulnCountByScannerId(assetID interface{}) *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call {
-	return &StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call{Call: _e.mock.On("GetDependencyVulnCountByScannerId", assetID)}
+func (_e *StatisticsStatisticsService_Expecter) GetDependencyVulnCountByScannerId(assetVersionName interface{}, assetID interface{}) *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call {
+	return &StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call{Call: _e.mock.On("GetDependencyVulnCountByScannerId", assetVersionName, assetID)}
 }
 
-func (_c *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call) Run(run func(assetID uuid.UUID)) *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call {
+func (_c *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		run(args[0].(string), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -425,7 +432,7 @@ func (_c *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call) Re
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call) RunAndReturn(run func(uuid.UUID) (map[string]int, error)) *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call {
+func (_c *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call) RunAndReturn(run func(string, uuid.UUID) (map[string]int, error)) *StatisticsStatisticsService_GetDependencyVulnCountByScannerId_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -490,17 +497,17 @@ func (_c *StatisticsStatisticsService_GetProjectRiskHistory_Call) RunAndReturn(r
 	return _c
 }
 
-// UpdateAssetRiskAggregation provides a mock function with given fields: assetID, start, end, updateProject
-func (_m *StatisticsStatisticsService) UpdateAssetRiskAggregation(assetID uuid.UUID, start time.Time, end time.Time, updateProject bool) error {
-	ret := _m.Called(assetID, start, end, updateProject)
+// UpdateAssetRiskAggregation provides a mock function with given fields: assetVersion, assetID, start, end, updateProject
+func (_m *StatisticsStatisticsService) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, start time.Time, end time.Time, updateProject bool) error {
+	ret := _m.Called(assetVersion, assetID, start, end, updateProject)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateAssetRiskAggregation")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(uuid.UUID, time.Time, time.Time, bool) error); ok {
-		r0 = rf(assetID, start, end, updateProject)
+	if rf, ok := ret.Get(0).(func(*models.AssetVersion, uuid.UUID, time.Time, time.Time, bool) error); ok {
+		r0 = rf(assetVersion, assetID, start, end, updateProject)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -514,17 +521,18 @@ type StatisticsStatisticsService_UpdateAssetRiskAggregation_Call struct {
 }
 
 // UpdateAssetRiskAggregation is a helper method to define mock.On call
+//   - assetVersion *models.AssetVersion
 //   - assetID uuid.UUID
 //   - start time.Time
 //   - end time.Time
 //   - updateProject bool
-func (_e *StatisticsStatisticsService_Expecter) UpdateAssetRiskAggregation(assetID interface{}, start interface{}, end interface{}, updateProject interface{}) *StatisticsStatisticsService_UpdateAssetRiskAggregation_Call {
-	return &StatisticsStatisticsService_UpdateAssetRiskAggregation_Call{Call: _e.mock.On("UpdateAssetRiskAggregation", assetID, start, end, updateProject)}
+func (_e *StatisticsStatisticsService_Expecter) UpdateAssetRiskAggregation(assetVersion interface{}, assetID interface{}, start interface{}, end interface{}, updateProject interface{}) *StatisticsStatisticsService_UpdateAssetRiskAggregation_Call {
+	return &StatisticsStatisticsService_UpdateAssetRiskAggregation_Call{Call: _e.mock.On("UpdateAssetRiskAggregation", assetVersion, assetID, start, end, updateProject)}
 }
 
-func (_c *StatisticsStatisticsService_UpdateAssetRiskAggregation_Call) Run(run func(assetID uuid.UUID, start time.Time, end time.Time, updateProject bool)) *StatisticsStatisticsService_UpdateAssetRiskAggregation_Call {
+func (_c *StatisticsStatisticsService_UpdateAssetRiskAggregation_Call) Run(run func(assetVersion *models.AssetVersion, assetID uuid.UUID, start time.Time, end time.Time, updateProject bool)) *StatisticsStatisticsService_UpdateAssetRiskAggregation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(time.Time), args[2].(time.Time), args[3].(bool))
+		run(args[0].(*models.AssetVersion), args[1].(uuid.UUID), args[2].(time.Time), args[3].(time.Time), args[4].(bool))
 	})
 	return _c
 }
@@ -534,7 +542,7 @@ func (_c *StatisticsStatisticsService_UpdateAssetRiskAggregation_Call) Return(_a
 	return _c
 }
 
-func (_c *StatisticsStatisticsService_UpdateAssetRiskAggregation_Call) RunAndReturn(run func(uuid.UUID, time.Time, time.Time, bool) error) *StatisticsStatisticsService_UpdateAssetRiskAggregation_Call {
+func (_c *StatisticsStatisticsService_UpdateAssetRiskAggregation_Call) RunAndReturn(run func(*models.AssetVersion, uuid.UUID, time.Time, time.Time, bool) error) *StatisticsStatisticsService_UpdateAssetRiskAggregation_Call {
 	_c.Call.Return(run)
 	return _c
 }

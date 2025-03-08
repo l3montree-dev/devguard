@@ -17,34 +17,22 @@ import (
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/pkg/errors"
 )
 
-type inTotoLinkRepository interface {
-	FindBySupplyChainID(supplyChainID string) ([]models.InTotoLink, error)
-}
-
-type supplyChainRepositoryS interface {
-	FindBySupplyChainID(supplyChainID string) ([]models.SupplyChain, error)
-	FindByDigest(digest string) ([]models.SupplyChain, error)
-}
-
-type projectRepository interface {
-	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
-}
-
 type inTotoService struct {
-	inTotoLinkRepository  inTotoLinkRepository
-	projectRepository     projectRepository
-	patRepository         patRepository
-	supplyChainRepository supplyChainRepositoryS
+	inTotoLinkRepository  core.InTotoLinkRepository
+	projectRepository     core.ProjectRepository
+	patRepository         core.PersonalAccessTokenRepository
+	supplyChainRepository core.SupplyChainRepository
 
 	rbacProvider accesscontrol.RBACProvider
 }
 
-func NewInTotoService(rbacProvider accesscontrol.RBACProvider, inTotoLinkRepository inTotoLinkRepository, projectRepository projectRepository, patRepository patRepository, supplyChainRepository supplyChainRepositoryS) *inTotoService {
+func NewInTotoService(rbacProvider accesscontrol.RBACProvider, inTotoLinkRepository core.InTotoLinkRepository, projectRepository core.ProjectRepository, patRepository core.PersonalAccessTokenRepository, supplyChainRepository core.SupplyChainRepository) *inTotoService {
 	return &inTotoService{
 		rbacProvider:          rbacProvider,
 		inTotoLinkRepository:  inTotoLinkRepository,
@@ -220,7 +208,7 @@ func getAssetIdFromLinks(supplyChainLinks []models.InTotoLink) (uuid.UUID, error
 
 }
 
-func getProjectIdAndOrganizationIDFromAssetId(assetID uuid.UUID, projectRepository projectRepository) (uuid.UUID, uuid.UUID, error) {
+func getProjectIdAndOrganizationIDFromAssetId(assetID uuid.UUID, projectRepository core.ProjectRepository) (uuid.UUID, uuid.UUID, error) {
 	project, err := projectRepository.GetProjectByAssetID(assetID)
 	if err != nil {
 		return uuid.Nil, uuid.Nil, err

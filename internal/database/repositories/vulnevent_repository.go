@@ -2,13 +2,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type eventRepository struct {
 	db core.DB
-	Repository[uuid.UUID, models.VulnEvent, core.DB]
+	common.Repository[uuid.UUID, models.VulnEvent, core.DB]
 }
 
 func NewVulnEventRepository(db core.DB) *eventRepository {

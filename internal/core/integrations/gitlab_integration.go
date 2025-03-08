@@ -18,13 +18,13 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -47,13 +47,6 @@ type gitlabClientFacade interface {
 	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
 }
 
-type gitlabIntegrationRepository interface {
-	Save(tx core.DB, model *models.GitLabIntegration) error
-	Read(id uuid.UUID) (models.GitLabIntegration, error)
-	FindByOrganizationId(orgID uuid.UUID) ([]models.GitLabIntegration, error)
-	Delete(tx core.DB, id uuid.UUID) error
-}
-
 type gitlabRepository struct {
 	*gitlab.Project
 	gitlabIntegrationId string
@@ -67,18 +60,18 @@ func (g gitlabRepository) toRepository() core.Repository {
 }
 
 type gitlabIntegration struct {
-	gitlabIntegrationRepository gitlabIntegrationRepository
-	externalUserRepository      externalUserRepository
+	gitlabIntegrationRepository core.GitlabIntegrationRepository
+	externalUserRepository      core.ExternalUserRepository
 
-	aggregatedVulnRepository aggregatedVulnRepository
+	aggregatedVulnRepository core.VulnRepository
 
 	//TODO: remove this
-	dependencyVulnRepository dependencyVulnRepository
-	vulnEventRepository      vulnEventRepository
+	dependencyVulnRepository core.DependencyVulnRepository
+	vulnEventRepository      core.VulnEventRepository
 	frontendUrl              string
-	assetRepository          assetRepository
-	assetVersionRepository   assetVersionRepository
-	dependencyVulnService    dependencyVulnService
+	assetRepository          core.AssetRepository
+	assetVersionRepository   core.AssetVersionRepository
+	dependencyVulnService    core.DependencyVulnService
 
 	gitlabClientFactory func(id uuid.UUID) (gitlabClientFacade, error)
 }
@@ -998,7 +991,7 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 	}
 
 	// return all projects
-	return ctx.JSON(200, obj.GitlabIntegrationDTO{
+	return ctx.JSON(200, common.GitlabIntegrationDTO{
 		ID:              integration.ID.String(),
 		Url:             integration.GitLabUrl,
 		Name:            integration.Name,

@@ -6,15 +6,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type vulnEventRepository interface {
-	ReadAssetEventsByVulnID(vulnID string) ([]models.VulnEventDetail, error)
-}
-
 type vulnEventController struct {
-	vulnEventRepository vulnEventRepository
+	vulnEventRepository core.VulnEventRepository
 }
 
-func NewVulnEventController(vulnEventRepository vulnEventRepository) *vulnEventController {
+func NewVulnEventController(vulnEventRepository core.VulnEventRepository) *vulnEventController {
 	return &vulnEventController{
 		vulnEventRepository: vulnEventRepository,
 	}
