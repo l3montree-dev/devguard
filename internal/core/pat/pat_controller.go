@@ -18,28 +18,16 @@ package pat
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 
 	"github.com/labstack/echo/v4"
 )
 
-type repository interface {
-	repositories.Repository[uuid.UUID, models.PAT, core.DB]
-	ReadByToken(token string) (models.PAT, error)
-	ListByUserID(userId string) ([]models.PAT, error)
-	GetUserIDByToken(token string) (string, error)
-	GetByFingerprint(fingerprint string) (models.PAT, error)
-	MarkAsLastUsedNow(fingerprint string) error
-	DeleteByFingerprint(fingerprint string) error
-}
-
 type PatController struct {
-	patRepository repository
+	patRepository core.PersonalAccessTokenRepository
 	service       *PatService
 }
 
-func NewHttpController(repository repository) *PatController {
+func NewHttpController(repository core.PersonalAccessTokenRepository) *PatController {
 	return &PatController{
 		patRepository: repository,
 		service:       NewPatService(repository),

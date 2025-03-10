@@ -14,11 +14,68 @@
 package commands
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
 
+func TestFlawToPrint(t *testing.T) {
+	t.Run("Should print normally with 2 strings when providing a namespace", func(t *testing.T) {
+		pURL := packageurl.PackageURL{}
+		pURL.Type = "npm"
+		pURL.Namespace = "Example Namespace"
+		pURL.Name = "next"
+
+		cveid := "Example CVEID"
+		rawRiskAssessment := 42424.42
+		componentFixedVersion := "Example Version"
+
+		v := dependencyVuln.DependencyVulnDTO{}
+		v.CVEID = &cveid
+		v.RawRiskAssessment = &rawRiskAssessment
+		v.ComponentFixedVersion = &componentFixedVersion
+		v.State = models.VulnState("Example State")
+
+		clickableLink := "Example Link"
+
+		output := dependencyVulnToTableRow(pURL, v, clickableLink)
+		firstValue := fmt.Sprintln(output[0])
+		count := strings.Count(firstValue, "/")
+		assert.Equal(t, 2, count, "should be equal")
+
+	})
+	t.Run("Test with empty namespace should result in only 1 slash instead of a double slash", func(t *testing.T) {
+		pURL := packageurl.PackageURL{}
+		pURL.Type = "npm"
+		pURL.Namespace = ""
+		pURL.Name = "next"
+
+		cveid := "Example CVEID"
+		rawRiskAssessment := 42424.42
+		componentFixedVersion := "Example Version"
+
+		v := dependencyVuln.DependencyVulnDTO{}
+		v.CVEID = &cveid
+		v.RawRiskAssessment = &rawRiskAssessment
+		v.ComponentFixedVersion = &componentFixedVersion
+		v.State = models.VulnState("Example State")
+
+		clickableLink := "Example Link"
+
+		output := dependencyVulnToTableRow(pURL, v, clickableLink)
+		firstValue := fmt.Sprintln(output[0])
+		count := strings.Count(firstValue, "/")
+
+		assert.Equal(t, 1, count, "should be equal")
+
+	})
+
+}
 func TestSanitizeApiUrl(t *testing.T) {
 	tests := []struct {
 		input    string

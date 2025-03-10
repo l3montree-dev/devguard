@@ -17,13 +17,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type gitlabIntegrationRepository struct {
 	db core.DB
-	Repository[uuid.UUID, models.GitLabIntegration, core.DB]
+	common.Repository[uuid.UUID, models.GitLabIntegration, core.DB]
 }
 
 func NewGitLabIntegrationRepository(db core.DB) *gitlabIntegrationRepository {

@@ -4,14 +4,14 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-type FlawAggregationState struct {
+type DependencyVulnAggregationState struct {
 	Open  int `json:"open"`
 	Fixed int `json:"fixed"`
 }
 
-type FlawAggregationStateAndChange struct {
-	Now FlawAggregationState `json:"now"`
-	Was FlawAggregationState `json:"was"`
+type DependencyVulnAggregationStateAndChange struct {
+	Now DependencyVulnAggregationState `json:"now"`
+	Was DependencyVulnAggregationState `json:"was"`
 }
 
 type AssetRiskHistory struct {

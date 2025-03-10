@@ -8,12 +8,8 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 )
 
-type configRepository interface {
-	Save(tx core.DB, config *models.Config) error
-	GetDB(tx core.DB) core.DB
-}
 type Service struct {
-	repository configRepository
+	repository core.ConfigRepository
 }
 
 func NewService(db core.DB) Service {

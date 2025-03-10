@@ -17,13 +17,14 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type githubAppInstallationRepository struct {
 	db core.DB
-	Repository[int, models.GithubAppInstallation, core.DB]
+	common.Repository[int, models.GithubAppInstallation, core.DB]
 }
 
 func NewGithubAppInstallationRepository(db core.DB) *githubAppInstallationRepository {

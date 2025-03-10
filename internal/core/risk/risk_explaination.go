@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -52,17 +52,17 @@ func parseCvssVector(vector string) map[string]string {
 }
 
 // exploitMessage generates a short and long message based on the exploitability.
-func exploitMessage(flaw models.Flaw, obj map[string]string) (short string, long string) {
+func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string) (short string, long string) {
 	if obj["E"] == "POC" || obj["E"] == "P" {
 		short = "Proof of Concept"
 		long = "A proof of concept is available for this vulnerability:\n"
-		for _, exploit := range flaw.CVE.Exploits {
+		for _, exploit := range dependencyVuln.CVE.Exploits {
 			long += exploit.SourceURL + "\n"
 		}
 	} else if obj["E"] == "F" {
 		short = "Functional"
 		long = "A functional exploit is available for this vulnerability:\n"
-		for _, exploit := range flaw.CVE.Exploits {
+		for _, exploit := range dependencyVuln.CVE.Exploits {
 			long += exploit.SourceURL + "\n"
 		}
 	} else if obj["E"] == "A" {
@@ -198,7 +198,7 @@ func describeCVSS(cvss map[string]string) string {
 }
 
 type Explanation struct {
-	obj.RiskMetrics
+	common.RiskMetrics
 
 	exploitMessage struct {
 		Short string
@@ -208,7 +208,7 @@ type Explanation struct {
 	cvssBEMessage         string
 	componentDepthMessage string
 	cvssMessage           string
-	flawId                string
+	dependencyVulnId      string
 	risk                  float64
 
 	depth int
@@ -252,7 +252,8 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) s
 	str.WriteString(fmt.Sprintf("### CVSS-B: `%.1f`\n", e.BaseScore))
 	str.WriteString(fmt.Sprintf("%s\n", e.cvssMessage))
 	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, e.flawId))
+	//TODO: change it
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, e.dependencyVulnId))
 	str.WriteString("\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
@@ -267,10 +268,10 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) s
 }
 
 // provide the vector and risk metrics obtained from the risk calculation
-func Explain(flaw models.Flaw, asset models.Asset, vector string, riskMetrics obj.RiskMetrics) Explanation {
+func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector string, riskMetrics common.RiskMetrics) Explanation {
 	cvss := parseCvssVector(vector)
 
-	shortMsg, longMsg := exploitMessage(flaw, cvss)
+	shortMsg, longMsg := exploitMessage(dependencyVuln, cvss)
 
 	return Explanation{
 		exploitMessage: struct {
@@ -280,22 +281,22 @@ func Explain(flaw models.Flaw, asset models.Asset, vector string, riskMetrics ob
 			Short: shortMsg,
 			Long:  longMsg,
 		},
-		epssMessage:           epssMessage(utils.OrDefault(flaw.CVE.EPSS, 0)),
+		epssMessage:           epssMessage(utils.OrDefault(dependencyVuln.CVE.EPSS, 0)),
 		cvssBEMessage:         cvssBE(asset, cvss),
-		componentDepthMessage: componentDepthMessages(*flaw.ComponentDepth),
+		componentDepthMessage: componentDepthMessages(*dependencyVuln.ComponentDepth),
 		cvssMessage:           describeCVSS(cvss),
-		flawId:                flaw.ID,
+		dependencyVulnId:      dependencyVuln.ID,
 
-		risk:  utils.OrDefault(flaw.RawRiskAssessment, 0),
-		epss:  utils.OrDefault(flaw.CVE.EPSS, 0),
-		depth: utils.OrDefault(flaw.ComponentDepth, 0),
+		risk:  utils.OrDefault(dependencyVuln.RawRiskAssessment, 0),
+		epss:  utils.OrDefault(dependencyVuln.CVE.EPSS, 0),
+		depth: utils.OrDefault(dependencyVuln.ComponentDepth, 0),
 
 		RiskMetrics:    riskMetrics,
-		cveId:          *flaw.CVEID,
-		cveDescription: flaw.CVE.Description,
+		cveId:          *dependencyVuln.CVEID,
+		cveDescription: dependencyVuln.CVE.Description,
 
-		affectedComponentName: utils.SafeDereference(flaw.ComponentPurl),
-		scanner:               flaw.ScannerID,
-		fixedVersion:          flaw.ComponentFixedVersion,
+		affectedComponentName: utils.SafeDereference(dependencyVuln.ComponentPurl),
+		scanner:               dependencyVuln.ScannerID,
+		fixedVersion:          dependencyVuln.ComponentFixedVersion,
 	}
 }

@@ -4,20 +4,20 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-func UpdateStatistics(db database.DB) error {
+func UpdateStatistics(db core.DB) error {
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 
 	statisticsService := statistics.NewService(
 		repositories.NewStatisticsRepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewAssetRiskHistoryRepository(db),
-		repositories.NewFlawRepository(db),
+		repositories.NewDependencyVulnRepository(db),
 		repositories.NewAssetVersionRepository(db),
 		repositories.NewProjectRepository(db),
 		repositories.NewProjectRiskHistoryRepository(db),

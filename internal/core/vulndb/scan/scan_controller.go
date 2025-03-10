@@ -23,7 +23,7 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -39,8 +39,10 @@ type componentRepository interface {
 }
 
 type assetVersionService interface {
-	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.Flaw, err error)
+	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error)
 	UpdateSBOM(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM) error
+
+	HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error)
 }
 
 type assetRepository interface {
@@ -86,12 +88,18 @@ func NewHttpController(db core.DB, cveRepository cveRepository, componentReposit
 }
 
 type ScanResponse struct {
-	AmountOpened int            `json:"amountOpened"`
-	AmountClosed int            `json:"amountClosed"`
-	Flaws        []flaw.FlawDTO `json:"flaws"`
+	AmountOpened    int                                `json:"amountOpened"`
+	AmountClosed    int                                `json:"amountClosed"`
+	DependencyVulns []dependencyVuln.DependencyVulnDTO `json:"dependencyVulns"`
 }
 
-func Scan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, error) {
+type FirstPartyScanResponse struct {
+	AmountOpened    int                                `json:"amountOpened"`
+	AmountClosed    int                                `json:"amountClosed"`
+	FirstPartyVulns []dependencyVuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
+}
+
+func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 
 	normalizedBom := bom
@@ -102,6 +110,12 @@ func Scan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, 
 	// get the X-Asset-Version header
 	version := c.Request().Header.Get("X-Asset-Version")
 	if version == "" {
+		version = models.NoVersion
+	}
+
+	version, err := normalize.SemverFix(version)
+	if err != nil {
+		slog.Error("invalid semver version. Defaulting to 0.0.0", "version", version)
 		version = models.NoVersion
 	}
 
@@ -127,15 +141,6 @@ func Scan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, 
 		return scanResults, err
 	}
 
-	if version != models.NoVersion {
-		var err error
-		version, err = normalize.SemverFix(version)
-		// check if valid semver
-		if err != nil {
-			slog.Error("invalid semver version", "version", version)
-			return scanResults, err
-		}
-	}
 	//check if risk management is enabled
 	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
 	doRiskManagement := riskManagementEnabled != "false"
@@ -183,16 +188,74 @@ func Scan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, 
 			return scanResults, err
 		}
 	}
-
 	scanResults.AmountOpened = amountOpened //Fill in the results
 	scanResults.AmountClosed = amountClose
-	scanResults.Flaws = utils.Map(newState, flaw.FlawToDto)
+	scanResults.DependencyVulns = utils.Map(newState, dependencyVuln.DependencyVulnToDto)
 
 	return scanResults, nil
+}
+
+func (s *httpController) FirstPartyVulnScan(c core.Context) error {
+	var sarifScan models.SarifResult
+	if err := c.Bind(&sarifScan); err != nil {
+		return err
+	}
+
+	asset := core.GetAsset(c)
+	userID := core.GetSession(c).GetUserID()
+
+	// get the X-Asset-Version header
+
+	tag := c.Request().Header.Get("X-Tag")
+
+	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
+	assetVersionName := c.Request().Header.Get("X-Asset-Ref")
+	if assetVersionName == "" {
+		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
+		assetVersionName = "main"
+	}
+
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
+	if err != nil {
+		slog.Error("could not find or create asset version", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
+	}
+
+	scanner := c.Request().Header.Get("X-Scanner")
+	if scanner == "" {
+		slog.Error("no X-Scanner header found")
+		return c.JSON(400, map[string]string{
+			"error": "no X-Scanner header found",
+		})
+	}
+
+	//check if risk management is enabled
+	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
+	doRiskManagement := riskManagementEnabled != "false"
+
+	// handle the scan result
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, &assetVersion, sarifScan, scanner, userID, true)
+	if err != nil {
+		slog.Error("could not handle scan result", "err", err)
+		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
+	}
+
+	if doRiskManagement {
+		err := s.assetVersionRepository.Save(nil, &assetVersion)
+		if err != nil {
+			slog.Error("could not save asset", "err", err)
+		}
+	}
+
+	return c.JSON(200, FirstPartyScanResponse{
+		AmountOpened:    amountOpened,
+		AmountClosed:    amountClose,
+		FirstPartyVulns: utils.Map(newState, dependencyVuln.FirstPartyVulnToDto),
+	})
 
 }
 
-func (s *httpController) ScanFromProject(c core.Context) error {
+func (s *httpController) ScanDependencyVulnFromProject(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
 	defer c.Request().Body.Close()
@@ -200,7 +263,7 @@ func (s *httpController) ScanFromProject(c core.Context) error {
 		return err
 	}
 
-	scanResults, err := Scan(c, normalize.FromCdxBom(bom, true), s)
+	scanResults, err := DependencyVulnScan(c, normalize.FromCdxBom(bom, true), s)
 	if err != nil {
 		return err
 	}
@@ -229,7 +292,7 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 		return err
 	}
 
-	scanResults, err := Scan(c, normalize.FromCdxBom(bom, true), s)
+	scanResults, err := DependencyVulnScan(c, normalize.FromCdxBom(bom, true), s)
 	if err != nil {
 		return err
 	}

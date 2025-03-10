@@ -8,12 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/core"
 )
-
-type configService interface {
-	GetJSONConfig(key string, v any) error
-	SetJSONConfig(key string, v any) error
-}
 
 type leaderElectionConfig struct {
 	LeaderID string `json:"leaderId"`
@@ -22,12 +18,12 @@ type leaderElectionConfig struct {
 
 type databaseLeaderElector struct {
 	leaderElectorID string
-	configService   configService
+	configService   core.ConfigService
 	isLeader        atomic.Bool // this variable gets updated by a daemon goroutine. Usage of atomic is required.
 	daemonIsRunning bool
 }
 
-func NewDatabaseLeaderElector(configService configService) *databaseLeaderElector {
+func NewDatabaseLeaderElector(configService core.ConfigService) *databaseLeaderElector {
 	leaderElector := databaseLeaderElector{
 		configService: configService,
 		// generate a random ID for this leader elector

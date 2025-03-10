@@ -19,13 +19,13 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/flaw"
+	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -48,13 +48,6 @@ type gitlabClientFacade interface {
 	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
 }
 
-type gitlabIntegrationRepository interface {
-	Save(tx core.DB, model *models.GitLabIntegration) error
-	Read(id uuid.UUID) (models.GitLabIntegration, error)
-	FindByOrganizationId(orgID uuid.UUID) ([]models.GitLabIntegration, error)
-	Delete(tx core.DB, id uuid.UUID) error
-}
-
 type gitlabRepository struct {
 	*gitlab.Project
 	gitlabIntegrationId string
@@ -68,15 +61,18 @@ func (g gitlabRepository) toRepository() core.Repository {
 }
 
 type gitlabIntegration struct {
-	gitlabIntegrationRepository gitlabIntegrationRepository
-	externalUserRepository      externalUserRepository
+	gitlabIntegrationRepository core.GitlabIntegrationRepository
+	externalUserRepository      core.ExternalUserRepository
 
-	flawRepository         flawRepository
-	flawEventRepository    flawEventRepository
-	frontendUrl            string
-	assetRepository        assetRepository
-	assetVersionRepository assetVersionRepository
-	flawService            flawService
+	aggregatedVulnRepository core.VulnRepository
+
+	//TODO: remove this
+	dependencyVulnRepository core.DependencyVulnRepository
+	vulnEventRepository      core.VulnEventRepository
+	frontendUrl              string
+	assetRepository          core.AssetRepository
+	assetVersionRepository   core.AssetVersionRepository
+	dependencyVulnService    core.DependencyVulnService
 
 	gitlabClientFactory func(id uuid.UUID) (gitlabClientFacade, error)
 }
@@ -85,10 +81,10 @@ var _ core.ThirdPartyIntegration = &gitlabIntegration{}
 
 func messageWasCreatedByDevguard(message string) bool {
 	var messages = map[string]string{
-		"accept":         "accepted the flaw",
-		"false-positive": "marked the flaw as false positive",
-		"reopen":         "reopened the flaw",
-		"comment":        "commented on the flaw",
+		"accept":         "accepted the vulnerability",
+		"false-positive": "marked the vulnerability as false positive",
+		"reopen":         "reopened the vulnerability",
+		"comment":        "commented on the vulnerability",
 	}
 
 	if !strings.Contains(message, "----") {
@@ -107,8 +103,8 @@ func messageWasCreatedByDevguard(message string) bool {
 
 func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
-	flawRepository := repositories.NewFlawRepository(db)
-	flawEventRepository := repositories.NewFlawEventRepository(db)
+	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
+	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	externalUserRepository := repositories.NewExternalUserRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
@@ -117,12 +113,12 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	return &gitlabIntegration{
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
 
-		flawRepository:         flawRepository,
-		flawService:            flaw.NewService(flawRepository, flawEventRepository, assetRepository, cveRepository),
-		flawEventRepository:    flawEventRepository,
-		assetRepository:        assetRepository,
-		assetVersionRepository: assetVersionRepository,
-		externalUserRepository: externalUserRepository,
+		dependencyVulnRepository: dependencyVulnRepository,
+		dependencyVulnService:    dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository),
+		vulnEventRepository:      vulnEventRepository,
+		assetRepository:          assetRepository,
+		assetVersionRepository:   assetVersionRepository,
+		externalUserRepository:   externalUserRepository,
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -208,10 +204,10 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		// if event.Comment.User.GetType() == "Bot" {
 		// 	return nil
 		// }
-		// look for a flaw with such a github ticket id
-		flaw, err := g.flawRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueId))
+		// look for a dependencyVuln with such a github ticket id
+		vuln, err := g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueId))
 		if err != nil {
-			slog.Debug("could not find flaw by ticket id", "err", err, "ticketId", issueId)
+			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
 			return nil
 		}
 
@@ -222,7 +218,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}
 
 		// get the asset
-		assetVersion, err := g.assetVersionRepository.Read(flaw.AssetVersionName, flaw.AssetID)
+		assetVersion, err := g.assetVersionRepository.Read(vuln.GetAssetVersionName(), vuln.GetAssetID())
 		if err != nil {
 			slog.Error("could not read asset version", "err", err)
 			return err
@@ -237,9 +233,9 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
-			org, err := g.flawRepository.GetOrgFromFlawID(nil, flaw.ID)
+			org, err := g.aggregatedVulnRepository.GetOrgFromVulnID(nil, vuln.GetID())
 			if err != nil {
-				slog.Error("could not get org from flaw id", "err", err)
+				slog.Error("could not get org from dependencyVuln id", "err", err)
 				return
 			}
 			// save the user in the database
@@ -261,23 +257,23 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}()
 
 		// create a new event based on the comment
-		flawEvent := createNewFlawEventBasedOnComment(flaw.ID, fmt.Sprintf("gitlab:%d", event.User.ID), comment)
+		VulnEvent := createNewVulnEventBasedOnComment(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), comment)
 
-		flawEvent.Apply(&flaw)
-		// save the flaw and the event in a transaction
-		err = g.flawRepository.Transaction(func(tx core.DB) error {
-			err := g.flawRepository.Save(tx, &flaw)
+		VulnEvent.Apply(vuln)
+		// save the dependencyVuln and the event in a transaction
+		err = g.aggregatedVulnRepository.Transaction(func(tx core.DB) error {
+			err := g.aggregatedVulnRepository.Save(tx, &vuln)
 			if err != nil {
 				return err
 			}
-			err = g.flawEventRepository.Save(tx, &flawEvent)
+			err = g.vulnEventRepository.Save(tx, &VulnEvent)
 			if err != nil {
 				return err
 			}
 			return nil
 		})
 		if err != nil {
-			slog.Error("could not save flaw and event", "err", err)
+			slog.Error("could not save dependencyVuln and event", "err", err)
 			return err
 		}
 
@@ -302,12 +298,12 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
-		switch flawEvent.Type {
+		switch VulnEvent.Type {
 		case models.EventTypeAccepted:
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)),
+				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:accepted",
 			}
 
@@ -320,7 +316,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)),
+				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:false-positive",
 			}
 
@@ -333,7 +329,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)),
+				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:open",
 			}
 
@@ -748,12 +744,12 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		flawId, err := core.GetFlawID(event.Ctx)
+		dependencyVulnId, err := core.GetVulnID(event.Ctx)
 		if err != nil {
 			return err
 		}
 
-		flaw, err := g.flawRepository.Read(flawId)
+		dependencyVuln, err := g.dependencyVulnRepository.Read(dependencyVulnId)
 		if err != nil {
 			return err
 		}
@@ -764,9 +760,9 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		riskMetrics, vector := risk.RiskCalculation(*flaw.CVE, core.GetEnvironmentalFromAsset(asset))
+		riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
-		exp := risk.Explain(flaw, asset, vector, riskMetrics)
+		exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
 
 		// print json stringify to the console
 		orgSlug, _ := core.GetOrgSlug(event.Ctx)
@@ -782,10 +778,10 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 
 		labels := []string{
 			"devguard",
-			"severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)),
+			"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
 		}
 		issue := &gitlab.CreateIssueOptions{
-			Title:       gitlab.Ptr(fmt.Sprintf("Flaw %s", flaw.CVE.CVE)),
+			Title:       gitlab.Ptr(fmt.Sprintf("DependencyVuln %s", dependencyVuln.CVE.CVE)),
 			Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug) + "\n\n------\n\n" + justification["comment"]),
 			Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 		}
@@ -795,37 +791,37 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		flaw.TicketID = utils.Ptr(fmt.Sprintf("gitlab:%d/%d", createdIssue.ProjectID, createdIssue.IID))
-		flaw.TicketURL = utils.Ptr(createdIssue.WebURL)
+		dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("gitlab:%d/%d", createdIssue.ProjectID, createdIssue.IID))
+		dependencyVuln.TicketURL = utils.Ptr(createdIssue.WebURL)
 
 		userId := core.GetSession(event.Ctx).GetUserID()
-		flawEvent := models.NewMitigateEvent(
-			flaw.ID,
+		VulnEvent := models.NewMitigateEvent(
+			dependencyVuln.ID,
 			userId,
 			justification["comment"],
 			map[string]any{
-				"ticketId":  *flaw.TicketID,
+				"ticketId":  *dependencyVuln.TicketID,
 				"ticketUrl": createdIssue.WebURL,
 			})
 
-		return g.flawService.ApplyAndSave(nil, &flaw, &flawEvent)
-	case core.FlawEvent:
+		return g.dependencyVulnService.ApplyAndSave(nil, &dependencyVuln, &VulnEvent)
+	case core.VulnEvent:
 		ev := event.Event
 
 		asset := core.GetAsset(event.Ctx)
-		flaw, err := g.flawRepository.Read(ev.FlawID)
+		dependencyVuln, err := g.dependencyVulnRepository.Read(ev.VulnID)
 
 		if err != nil {
 			return err
 		}
 
-		if flaw.TicketID == nil {
+		if dependencyVuln.TicketID == nil {
 			// we do not have a ticket id - we do not need to do anything
 			return nil
 		}
 
 		repoId := utils.SafeDereference(asset.RepositoryID)
-		if !strings.HasPrefix(repoId, "gitlab:") || !strings.HasPrefix(*flaw.TicketID, "gitlab:") {
+		if !strings.HasPrefix(repoId, "gitlab:") || !strings.HasPrefix(*dependencyVuln.TicketID, "gitlab:") {
 			// this integration only handles gitlab repositories.
 			return nil
 		}
@@ -848,7 +844,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		gitlabTicketID := strings.TrimPrefix(*flaw.TicketID, "gitlab:")
+		gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
 		gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
 		if err != nil {
 			return err
@@ -874,16 +870,16 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 
 		switch ev.Type {
 		case models.EventTypeAccepted:
-			// if a flaw gets accepted, we close the issue and create a comment with that justification
+			// if a dependencyVuln gets accepted, we close the issue and create a comment with that justification
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" accepted the flaw", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" accepted the dependencyVuln", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
 			}
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)),
+				"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
 				"state:accepted",
 			}
 			_, _, err = client.EditIssue(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
@@ -894,7 +890,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		case models.EventTypeFalsePositive:
 
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" marked the flaw as false positive", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" marked the dependencyVuln as false positive", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -902,7 +898,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)),
+				"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
 				"state:false-positive",
 			}
 			_, _, err = client.EditIssue(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
@@ -912,7 +908,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		case models.EventTypeReopened:
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" reopened the flaw", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" reopened the dependencyVuln", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -920,7 +916,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*flaw.RawRiskAssessment)),
+				"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
 				"state:open",
 			}
 
@@ -932,7 +928,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 
 		case models.EventTypeComment:
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the flaw", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the dependencyVuln", utils.SafeDereference(ev.Justification))),
 			})
 			return err
 		}
@@ -1020,7 +1016,7 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 	}
 
 	// return all projects
-	return ctx.JSON(200, obj.GitlabIntegrationDTO{
+	return ctx.JSON(200, common.GitlabIntegrationDTO{
 		ID:              integration.ID.String(),
 		Url:             integration.GitLabUrl,
 		Name:            integration.Name,
