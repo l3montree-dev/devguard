@@ -17,6 +17,7 @@ type Vuln interface {
 	GetAssetVersionName() string
 	GetAssetID() uuid.UUID
 	GetID() string
+	TableName() string
 }
 
 type FirstPartyVulnerability struct {
