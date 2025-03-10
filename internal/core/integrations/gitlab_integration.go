@@ -64,7 +64,6 @@ type gitlabIntegration struct {
 	externalUserRepository      core.ExternalUserRepository
 
 	aggregatedVulnRepository core.VulnRepository
-
 	//TODO: remove this
 	dependencyVulnRepository core.DependencyVulnRepository
 	vulnEventRepository      core.VulnEventRepository
@@ -102,6 +101,8 @@ func messageWasCreatedByDevguard(message string) bool {
 
 func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
+
+	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	externalUserRepository := repositories.NewExternalUserRepository(db)
@@ -113,11 +114,14 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
 
 		dependencyVulnRepository: dependencyVulnRepository,
-		dependencyVulnService:    dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository),
-		vulnEventRepository:      vulnEventRepository,
-		assetRepository:          assetRepository,
-		assetVersionRepository:   assetVersionRepository,
-		externalUserRepository:   externalUserRepository,
+
+		aggregatedVulnRepository: aggregatedVulnRepository,
+
+		dependencyVulnService:  dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository),
+		vulnEventRepository:    vulnEventRepository,
+		assetRepository:        assetRepository,
+		assetVersionRepository: assetVersionRepository,
+		externalUserRepository: externalUserRepository,
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -232,7 +236,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
-			org, err := g.aggregatedVulnRepository.GetOrgFromVulnID(nil, vuln.GetID())
+			org, err := g.aggregatedVulnRepository.GetOrgFromVuln(vuln)
 			if err != nil {
 				slog.Error("could not get org from dependencyVuln id", "err", err)
 				return

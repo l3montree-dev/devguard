@@ -219,7 +219,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
-			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVulnID(nil, vuln.GetID())
+			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVuln(vuln)
 			if err != nil {
 				slog.Error("could not get org from vuln id", "err", err)
 				return
