@@ -19,12 +19,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type gormPatRepository struct {
-	Repository[uuid.UUID, models.PAT, core.DB]
+	common.Repository[uuid.UUID, models.PAT, core.DB]
 	db core.DB
 }
 

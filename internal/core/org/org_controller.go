@@ -23,40 +23,20 @@ import (
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/ory/client-go"
 
 	"github.com/labstack/echo/v4"
 )
 
-type repository interface {
-	repositories.Repository[uuid.UUID, models.Org, core.DB]
-	// ReadBySlug reads an organization by its slug
-	ReadBySlug(slug string) (models.Org, error)
-	Update(tx core.DB, organization *models.Org) error
-	ContentTree(orgID uuid.UUID, projects []string) []obj.ContentTreeElement
-}
-
-type invitationRepository interface {
-	Save(tx core.DB, invitation *models.Invitation) error
-	FindByCode(code string) (models.Invitation, error)
-	Delete(tx core.DB, id uuid.UUID) error
-}
-
-type projectService interface {
-	ListAllowedProjects(c core.Context) ([]models.Project, error)
-	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
-}
 type httpController struct {
-	organizationRepository repository
+	organizationRepository core.OrganizationRepository
 	rbacProvider           accesscontrol.RBACProvider
-	projectService         projectService
-	invitationRepository   invitationRepository
+	projectService         core.ProjectService
+	invitationRepository   core.InvitationRepository
 }
 
-func NewHttpController(repository repository, rbacProvider accesscontrol.RBACProvider, projectService projectService, invitationRepository invitationRepository) *httpController {
+func NewHttpController(repository core.OrganizationRepository, rbacProvider accesscontrol.RBACProvider, projectService core.ProjectService, invitationRepository core.InvitationRepository) *httpController {
 	return &httpController{
 		organizationRepository: repository,
 		rbacProvider:           rbacProvider,

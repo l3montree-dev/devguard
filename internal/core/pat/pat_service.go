@@ -10,14 +10,15 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/yaronf/httpsign"
 )
 
 type PatService struct {
-	patRepository repository
+	patRepository core.PersonalAccessTokenRepository
 }
 
-func NewPatService(repository repository) *PatService {
+func NewPatService(repository core.PersonalAccessTokenRepository) *PatService {
 	return &PatService{
 		patRepository: repository,
 	}

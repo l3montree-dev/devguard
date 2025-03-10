@@ -17,18 +17,19 @@ package repositories
 
 import (
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
 )
 
 type componentRepository struct {
-	Repository[string, models.Component, database.DB]
+	common.Repository[string, models.Component, core.DB]
 	db *gorm.DB
 }
 
-func NewComponentRepository(db database.DB) *componentRepository {
+func NewComponentRepository(db core.DB) *componentRepository {
 	if err := db.AutoMigrate(&models.Component{}, &models.ComponentDependency{}); err != nil {
 		panic(err)
 	}
@@ -39,7 +40,7 @@ func NewComponentRepository(db database.DB) *componentRepository {
 	}
 }
 
-func (c *componentRepository) UpdateSemverEnd(tx database.DB, ids []uuid.UUID, version *string) error {
+func (c *componentRepository) UpdateSemverEnd(tx core.DB, ids []uuid.UUID, version *string) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -47,7 +48,7 @@ func (c *componentRepository) UpdateSemverEnd(tx database.DB, ids []uuid.UUID, v
 	return c.GetDB(tx).Model(&models.ComponentDependency{}).Where("id IN ?", ids).Update("semver_end", version).Error
 }
 
-func (c *componentRepository) CreateComponents(tx database.DB, components []models.ComponentDependency) error {
+func (c *componentRepository) CreateComponents(tx core.DB, components []models.ComponentDependency) error {
 	if len(components) == 0 {
 		return nil
 	}
@@ -55,7 +56,7 @@ func (c *componentRepository) CreateComponents(tx database.DB, components []mode
 	return c.GetDB(tx).Create(&components).Error
 }
 
-func (c *componentRepository) LoadComponents(tx database.DB, assetVersionName string, assetID uuid.UUID, scannerID, version string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID, version string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 
@@ -78,25 +79,25 @@ func (c *componentRepository) LoadComponents(tx database.DB, assetVersionName st
 	return components, err
 }
 
-func (c *componentRepository) LoadAllLatestComponentFromAssetVersion(tx database.DB, assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadAllLatestComponentFromAssetVersion(tx core.DB, assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, error) {
 	var component []models.ComponentDependency
 	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id AND scanner_id = ? AND semver_end is NULL", assetVersion.Name, assetVersion.AssetID).Find(&component).Error
 	return component, err
 }
 
-func (c *componentRepository) GetVersions(tx database.DB, assetVersion models.AssetVersion) ([]string, error) {
+func (c *componentRepository) GetVersions(tx core.DB, assetVersion models.AssetVersion) ([]string, error) {
 	var versions []string
 	err := c.GetDB(tx).Model(&models.ComponentDependency{}).Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Distinct("semver_start").Pluck("semver_start", &versions).Error
 	return versions, err
 }
 
-func (c *componentRepository) FindByPurl(tx database.DB, purl string) (models.Component, error) {
+func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Component, error) {
 	var component models.Component
 	err := c.GetDB(tx).Where("purl = ?", purl).First(&component).Error
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx database.DB, assetVersionName string, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
+func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
 		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})

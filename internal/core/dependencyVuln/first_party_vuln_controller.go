@@ -6,15 +6,16 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
 type firstPartyVulnController struct {
-	firstPartyVulnRepository firstPartyVulnRepository
-	firstPartyVulnService    firstPartyVulnService
-	projectService           projectService
+	firstPartyVulnRepository core.FirstPartyVulnRepository
+	firstPartyVulnService    core.FirstPartyVulnService
+	projectService           core.ProjectService
 }
 
 type FirstPartyVulnStatus struct {
@@ -22,7 +23,7 @@ type FirstPartyVulnStatus struct {
 	Justification string `json:"justification"`
 }
 
-func NewFirstPartyVulnController(firstPartyVulnRepository firstPartyVulnRepository, firstPartyVulnService firstPartyVulnService, projectService projectService) *firstPartyVulnController {
+func NewFirstPartyVulnController(firstPartyVulnRepository core.FirstPartyVulnRepository, firstPartyVulnService core.FirstPartyVulnService, projectService core.ProjectService) *firstPartyVulnController {
 	return &firstPartyVulnController{
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		firstPartyVulnService:    firstPartyVulnService,
@@ -141,7 +142,7 @@ func (c firstPartyVulnController) CreateEvent(ctx core.Context) error {
 	justification := status.Justification
 
 	err = c.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
-		ev, err := c.firstPartyVulnService.updateFirstPartyVulnState(tx, userID, &firstPartyVuln, statusType, justification)
+		ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(tx, userID, &firstPartyVuln, statusType, justification)
 		if err != nil {
 			return err
 		}
@@ -222,8 +223,8 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVulnerab
 			Author:      firstPartyVuln.Author,
 			Date:        firstPartyVuln.Date,
 		},
-		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) VulnEventDTO {
-			return VulnEventDTO{
+		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {
+			return events.VulnEventDTO{
 				ID:                ev.ID,
 				Type:              ev.Type,
 				VulnID:            ev.VulnID,

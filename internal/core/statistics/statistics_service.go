@@ -12,60 +12,17 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-type assetVersionRepository interface {
-	GetAllAssetsVersionFromDB(tx core.DB) ([]models.AssetVersion, error)
-	Save(tx core.DB, asset *models.AssetVersion) error
-	GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
-	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
-}
-
-type assetRepository interface {
-	GetByAssetID(assetID uuid.UUID) (models.Asset, error)
-}
-
-type statisticsRepository interface {
-	TimeTravelDependencyVulnState(assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error)
-	GetAssetRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
-	GetDependencyVulnCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
-	AverageFixingTime(assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
-}
-
-type componentRepository interface {
-	GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
-}
-type assetRiskHistoryRepository interface {
-	GetRiskHistory(assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error)
-	GetRiskHistoryByProject(projectId uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error)
-	UpdateRiskAggregation(assetRisk *models.AssetRiskHistory) error
-}
-
-type dependencyVulnRepository interface {
-	GetAllOpenVulnsByAssetVersionNameAndAssetId(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	GetDependencyVulnsByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
-}
-
-type projectRepository interface {
-	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
-	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
-	Read(id uuid.UUID) (models.Project, error)
-}
-
-type projectRiskHistoryRepository interface {
-	GetRiskHistory(projectId uuid.UUID, start, end time.Time) ([]models.ProjectRiskHistory, error)
-	UpdateRiskAggregation(projectRisk *models.ProjectRiskHistory) error
-}
-
 type service struct {
-	statisticsRepository         statisticsRepository
-	componentRepository          componentRepository
-	assetRiskHistoryRepository   assetRiskHistoryRepository
-	dependencyVulnRepository     dependencyVulnRepository
-	assetVersionRepository       assetVersionRepository
-	projectRepository            projectRepository
-	projectRiskHistoryRepository projectRiskHistoryRepository
+	statisticsRepository         core.StatisticsRepository
+	componentRepository          core.ComponentRepository
+	assetRiskHistoryRepository   core.AssetRiskHistoryRepository
+	dependencyVulnRepository     core.DependencyVulnRepository
+	assetVersionRepository       core.AssetVersionRepository
+	projectRepository            core.ProjectRepository
+	projectRiskHistoryRepository core.ProjectRiskHistoryRepository
 }
 
-func NewService(statisticsRepository statisticsRepository, componentRepository componentRepository, assetRiskHistoryRepository assetRiskHistoryRepository, dependencyVulnRepository dependencyVulnRepository, assetVersionRepository assetVersionRepository, projectRepository projectRepository, projectRiskHistoryRepository projectRiskHistoryRepository) *service {
+func NewService(statisticsRepository core.StatisticsRepository, componentRepository core.ComponentRepository, assetRiskHistoryRepository core.AssetRiskHistoryRepository, dependencyVulnRepository core.DependencyVulnRepository, assetVersionRepository core.AssetVersionRepository, projectRepository core.ProjectRepository, projectRiskHistoryRepository core.ProjectRiskHistoryRepository) *service {
 	return &service{
 		statisticsRepository:         statisticsRepository,
 		componentRepository:          componentRepository,

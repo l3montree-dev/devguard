@@ -1,4 +1,4 @@
-package obj
+package common
 
 type GitlabIntegrationDTO struct {
 	Name            string `json:"name"`

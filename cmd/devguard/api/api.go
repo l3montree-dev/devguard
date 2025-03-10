@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
 	"github.com/l3montree-dev/devguard/internal/core/org"
@@ -339,8 +340,7 @@ func health(c echo.Context) error {
 	return c.String(200, "ok")
 }
 
-func Start(db core.DB) {
-
+func BuildRouter(db core.DB) *echo.Echo {
 	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_PUBLIC"))
 	oryAdmin := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_ADMIN"))
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
@@ -371,6 +371,8 @@ func Start(db core.DB) {
 	projectService := project.NewService(projectRepository)
 	dependencyVulnController := dependencyVuln.NewHttpController(dependencyVulnRepository, dependencyVulnService, projectService)
 
+	vulnEventController := events.NewVulnEventController(vulnEventRepository)
+
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
 
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository)
@@ -385,7 +387,7 @@ func Start(db core.DB) {
 	assetController := asset.NewHttpController(assetRepository, assetService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService)
 
-	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, componentRepository)
+	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository)
 
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
 
@@ -572,6 +574,8 @@ func Start(db core.DB) {
 	dependencyVulnRouter.POST("/:dependencyVulnId/", dependencyVulnController.CreateEvent, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	dependencyVulnRouter.POST("/:dependencyVulnId/mitigate/", dependencyVulnController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
+	dependencyVulnRouter.GET("/:dependencyVulnId/events/", vulnEventController.ReadAssetEventsByVulnID)
+
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {
 		return routes[i].Path < routes[j].Path
@@ -582,5 +586,10 @@ func Start(db core.DB) {
 			slog.Info(route.Path, "method", route.Method)
 		}
 	}
-	slog.Error("failed to start server", "err", server.Start(":8080").Error())
+	return server
+
+}
+
+func Start(db core.DB) {
+	slog.Error("failed to start server", "err", BuildRouter(db).Start(":8080").Error())
 }

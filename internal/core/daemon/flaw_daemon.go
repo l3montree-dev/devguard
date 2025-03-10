@@ -4,9 +4,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -40,7 +40,7 @@ func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.Depe
 	return nil, nil
 }
 
-func UpdateComponentProperties(db database.DB) error {
+func UpdateComponentProperties(db core.DB) error {
 	// we need to update component depth and fixedVersion for each dependencyVuln.
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.

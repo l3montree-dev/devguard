@@ -26,20 +26,14 @@ type statisticsService interface {
 	GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)
 }
 
-type projectService interface {
-	ListAllowedProjects(c core.Context) ([]models.Project, error)
-	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
-	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
-}
-
 type httpController struct {
 	statisticsService      statisticsService
-	assetVersionRepository assetVersionRepository
-	assetRepository        assetRepository
-	projectService         projectService
+	assetVersionRepository core.AssetVersionRepository
+	assetRepository        core.AssetRepository
+	projectService         core.ProjectService
 }
 
-func NewHttpController(statisticsService statisticsService, assetRepository assetRepository, assetVersionRepository assetVersionRepository, projectService projectService) *httpController {
+func NewHttpController(statisticsService statisticsService, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, projectService core.ProjectService) *httpController {
 	return &httpController{
 		statisticsService:      statisticsService,
 		assetVersionRepository: assetVersionRepository,

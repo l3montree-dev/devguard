@@ -5,12 +5,11 @@ import (
 	"log/slog"
 	"slices"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
@@ -26,30 +25,10 @@ type dependencyVulnsByPackage struct {
 	DependencyVulns []DependencyVulnDTO `json:"flaws"`
 }
 
-type repository interface {
-	repositories.Repository[string, models.DependencyVuln, core.DB]
-
-	GetDependencyVulnsByAssetVersion(tx core.DB, assetVersionName string, assetVersionID uuid.UUID) ([]models.DependencyVuln, error)
-	GetByAssetVersionPaged(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], map[string]int, error)
-	GetDefaultDependencyVulnsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], error)
-	GetDefaultDependencyVulnsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], error)
-	GetDependencyVulnsByAssetVersionPagedAndFlat(tx core.DB, assetVersionName string, assetVersionID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], error)
-
-	ReadDependencyVulnWithAssetEvents(id string) (models.DependencyVuln, []models.VulnEvent, error)
-}
-
-type projectService interface {
-	ListAllowedProjects(c core.Context) ([]models.Project, error)
-}
-
-type dependencyVulnService interface {
-	UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, assetVersionName string) (models.VulnEvent, error)
-}
-
 type dependencyVulnHttpController struct {
-	dependencyVulnRepository repository
-	dependencyVulnService    dependencyVulnService
-	projectService           projectService
+	dependencyVulnRepository core.DependencyVulnRepository
+	dependencyVulnService    core.DependencyVulnService
+	projectService           core.ProjectService
 }
 
 type DependencyVulnStatus struct {
@@ -57,7 +36,7 @@ type DependencyVulnStatus struct {
 	Justification string `json:"justification"`
 }
 
-func NewHttpController(dependencyVulnRepository repository, dependencyVulnService dependencyVulnService, projectService projectService) *dependencyVulnHttpController {
+func NewHttpController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService) *dependencyVulnHttpController {
 	return &dependencyVulnHttpController{
 		dependencyVulnRepository: dependencyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
@@ -234,7 +213,7 @@ func (c dependencyVulnHttpController) Read(ctx core.Context) error {
 	}
 	asset := core.GetAsset(ctx)
 
-	dependencyVuln, VulnEvents, err := c.dependencyVulnRepository.ReadDependencyVulnWithAssetEvents(dependencyVulnId)
+	dependencyVuln, VulnEvents, err := c.dependencyVulnRepository.ReadDependencyVulnWithAssetVersionEvents(dependencyVulnId)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
@@ -325,14 +304,14 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 			TicketURL:             dependencyVuln.TicketURL,
 			RiskRecalculatedAt:    dependencyVuln.RiskRecalculatedAt,
 		},
-		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) VulnEventDTO {
-			return VulnEventDTO{
+		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {
+			return events.VulnEventDTO{
 				ID:                ev.ID,
 				Type:              ev.Type,
 				VulnID:            ev.VulnID,
 				UserID:            ev.UserID,
 				Justification:     ev.Justification,
-				AssetVersion:      dependencyVuln.AssetVersionName,
+				AssetVersionName:  dependencyVuln.AssetVersionName,
 				ArbitraryJsonData: ev.GetArbitraryJsonData(),
 				CreatedAt:         ev.CreatedAt,
 			}

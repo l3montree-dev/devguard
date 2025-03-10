@@ -5,13 +5,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type statisticsRepository struct {
-	db database.DB
+	db core.DB
 }
 
 func NewStatisticsRepository(db core.DB) *statisticsRepository {

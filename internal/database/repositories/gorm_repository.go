@@ -16,48 +16,15 @@
 package repositories
 
 import (
+	"github.com/l3montree-dev/devguard/internal/common"
 	"gorm.io/gorm"
 )
 
-type Tabler interface {
-	TableName() string
-}
-type ModelWriter[ID any, T Tabler, Tx any] interface {
-	Create(tx Tx, t *T) error
-	Save(tx Tx, t *T) error
-
-	Delete(tx Tx, id ID) error
-	Activate(tx Tx, id ID) error
-}
-
-type ModelReader[ID any, T Tabler] interface {
-	Read(id ID) (T, error)
-	List(ids []ID) ([]T, error)
-}
-
-type BatchModelWriter[T Tabler, Tx any] interface {
-	CreateBatch(tx Tx, ts []T) error
-	SaveBatch(tx Tx, ts []T) error
-}
-
-type Transactioner[Tx any] interface {
-	Transaction(func(tx Tx) error) error
-	GetDB(tx Tx) Tx
-	Begin() Tx
-}
-
-type Repository[ID any, T Tabler, Tx any] interface {
-	ModelWriter[ID, T, Tx]
-	ModelReader[ID, T]
-	BatchModelWriter[T, Tx]
-	Transactioner[Tx]
-}
-
-type GormRepository[ID comparable, T Tabler] struct {
+type GormRepository[ID comparable, T common.Tabler] struct {
 	db *gorm.DB
 }
 
-func newGormRepository[ID comparable, T Tabler](db *gorm.DB) Repository[ID, T, *gorm.DB] {
+func newGormRepository[ID comparable, T common.Tabler](db *gorm.DB) *GormRepository[ID, T] {
 	return &GormRepository[ID, T]{
 		db: db,
 	}

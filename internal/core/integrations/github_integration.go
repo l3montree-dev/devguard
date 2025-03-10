@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/google/go-github/v62/github"
-	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
@@ -48,46 +47,6 @@ func (g githubRepository) toRepository() core.Repository {
 	}
 }
 
-type githubAppInstallationRepository interface {
-	Save(tx core.DB, model *models.GithubAppInstallation) error
-	Read(installationID int) (models.GithubAppInstallation, error)
-	FindByOrganizationId(orgID uuid.UUID) ([]models.GithubAppInstallation, error)
-	Delete(tx core.DB, installationID int) error
-}
-
-type dependencyVulnRepository interface {
-	Read(id string) (models.DependencyVuln, error)
-}
-
-type aggregatedVulnRepository interface {
-	FindByTicketID(tx core.DB, ticketID string) (models.Vuln, error)
-	Save(db core.DB, vuln *models.Vuln) error
-	Transaction(fn func(tx core.DB) error) error
-	GetOrgFromVulnID(tx core.DB, vulnID string) (models.Org, error)
-}
-
-type vulnEventRepository interface {
-	Save(db core.DB, event *models.VulnEvent) error
-}
-
-type externalUserRepository interface {
-	Save(db core.DB, user *models.ExternalUser) error
-	GetDB(tx core.DB) core.DB
-	FindByOrgID(tx core.DB, orgID uuid.UUID) ([]models.ExternalUser, error)
-}
-
-type assetRepository interface {
-	Read(id uuid.UUID) (models.Asset, error)
-}
-
-type assetVersionRepository interface {
-	Read(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
-}
-
-type dependencyVulnService interface {
-	ApplyAndSave(tx core.DB, vuln *models.DependencyVuln, VulnEvent *models.VulnEvent) error
-}
-
 // wrapper around the github package - which provides only the methods
 // we need
 type githubClientFacade interface {
@@ -98,18 +57,18 @@ type githubClientFacade interface {
 }
 
 type githubIntegration struct {
-	githubAppInstallationRepository githubAppInstallationRepository
-	externalUserRepository          externalUserRepository
+	githubAppInstallationRepository core.GithubAppInstallationRepository
+	externalUserRepository          core.ExternalUserRepository
 
-	dependencyVulnRepository dependencyVulnRepository
-	vulnEventRepository      vulnEventRepository
+	dependencyVulnRepository core.DependencyVulnRepository
+	vulnEventRepository      core.VulnEventRepository
 
-	aggregatedVulnRepository aggregatedVulnRepository
+	aggregatedVulnRepository core.VulnRepository
 
 	frontendUrl            string
-	assetRepository        assetRepository
-	assetVersionRepository assetVersionRepository
-	dependencyVulnService  dependencyVulnService
+	assetRepository        core.AssetRepository
+	assetVersionRepository core.AssetVersionRepository
+	dependencyVulnService  core.DependencyVulnService
 
 	githubClientFactory func(repoId string) (githubClientFacade, error)
 }

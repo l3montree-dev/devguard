@@ -1,4 +1,4 @@
-package obj
+package common
 
 import (
 	"strings"

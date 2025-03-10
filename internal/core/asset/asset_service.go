@@ -25,30 +25,14 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-type assetRepository interface {
-	Save(tx core.DB, asset *models.Asset) error
-	Transaction(txFunc func(core.DB) error) error
-
-	GetByAssetID(assetID uuid.UUID) (models.Asset, error)
-}
-
-type dependencyVulnRepository interface {
-	GetAllVulnsByAssetID(tx core.DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	Transaction(txFunc func(core.DB) error) error
-}
-
-type dependencyVulnService interface {
-	RecalculateRawRiskAssessment(tx core.DB, responsible string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error
-}
-
 type service struct {
-	assetRepository          assetRepository
-	dependencyVulnRepository dependencyVulnRepository
-	dependencyVulnService    dependencyVulnService
+	assetRepository          core.AssetRepository
+	dependencyVulnRepository core.DependencyVulnRepository
+	dependencyVulnService    core.DependencyVulnService
 	httpClient               *http.Client
 }
 
-func NewService(assetRepository assetRepository, dependencyVulnRepository dependencyVulnRepository, dependencyVulnService dependencyVulnService) *service {
+func NewService(assetRepository core.AssetRepository, dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService) *service {
 	return &service{
 		assetRepository:          assetRepository,
 		dependencyVulnRepository: dependencyVulnRepository,
@@ -58,7 +42,7 @@ func NewService(assetRepository assetRepository, dependencyVulnRepository depend
 }
 
 func (s *service) GetByAssetID(assetID uuid.UUID) (models.Asset, error) {
-	return s.assetRepository.GetByAssetID(assetID)
+	return s.assetRepository.Read(assetID)
 }
 
 func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error {

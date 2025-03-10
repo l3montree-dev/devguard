@@ -113,6 +113,12 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		version = models.NoVersion
 	}
 
+	version, err := normalize.SemverFix(version)
+	if err != nil {
+		slog.Error("invalid semver version. Defaulting to 0.0.0", "version", version)
+		version = models.NoVersion
+	}
+
 	tag := c.Request().Header.Get("X-Tag")
 
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
@@ -135,15 +141,6 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	if version != models.NoVersion {
-		var err error
-		version, err = normalize.SemverFix(version)
-		// check if valid semver
-		if err != nil {
-			slog.Error("invalid semver version", "version", version)
-			return scanResults, err
-		}
-	}
 	//check if risk management is enabled
 	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
 	doRiskManagement := riskManagementEnabled != "false"

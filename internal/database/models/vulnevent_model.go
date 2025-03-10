@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/obj"
+	"github.com/l3montree-dev/devguard/internal/common"
 )
 
 type VulnEventType string
@@ -37,6 +37,13 @@ type VulnEvent struct {
 
 	ArbitraryJsonData string `json:"arbitraryJsonData" gorm:"type:text;"`
 	arbitraryJsonData map[string]any
+}
+
+type VulnEventDetail struct {
+	VulnEvent
+
+	AssetVersionName string `json:"assetVersionName"`
+	Slug             string `json:"assetVersionSlug"`
 }
 
 func (e *VulnEvent) GetArbitraryJsonData() map[string]any {
@@ -162,7 +169,7 @@ func NewFixedEvent(vulnID string, userID string) VulnEvent {
 	}
 }
 
-func NewDetectedEvent(vulnID string, userID string, riskCalculationReport obj.RiskCalculationReport) VulnEvent {
+func NewDetectedEvent(vulnID string, userID string, riskCalculationReport common.RiskCalculationReport) VulnEvent {
 	ev := VulnEvent{
 		Type:   EventTypeDetected,
 		VulnID: vulnID,
@@ -185,7 +192,7 @@ func NewMitigateEvent(vulnID string, userID string, justification string, arbitr
 	return ev
 }
 
-func NewRawRiskAssessmentUpdatedEvent(vulnID string, userID string, justification string, report obj.RiskCalculationReport) VulnEvent {
+func NewRawRiskAssessmentUpdatedEvent(vulnID string, userID string, justification string, report common.RiskCalculationReport) VulnEvent {
 	event := VulnEvent{
 		Type:          EventTypeRawRiskAssessmentUpdated,
 		VulnID:        vulnID,

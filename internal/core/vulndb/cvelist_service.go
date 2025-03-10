@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
@@ -126,10 +127,10 @@ type cvelistJson struct {
 
 type cvelistService struct {
 	httpClient    *http.Client
-	cveRepository cveRepository
+	cveRepository core.CveRepository
 }
 
-func NewCVEListService(cveRepository cveRepository) cvelistService {
+func NewCVEListService(cveRepository core.CveRepository) cvelistService {
 	return cvelistService{
 		httpClient:    &http.Client{},
 		cveRepository: cveRepository,

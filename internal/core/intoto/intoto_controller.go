@@ -28,43 +28,20 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/database/repositories"
 
 	"github.com/labstack/echo/v4"
 )
 
-// we use this in multiple files in the asset package itself
-type repository interface {
-	repositories.Repository[uuid.UUID, models.InTotoLink, core.DB]
-	FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainId string) ([]models.InTotoLink, error)
-	Save(tx core.DB, model *models.InTotoLink) error
-}
-
-type supplyChainRepository interface {
-	Save(tx core.DB, model *models.SupplyChain) error
-}
-
-type patRepository interface {
-	GetByFingerprint(fingerprint string) (models.PAT, error)
-	FindByUserIDs(userID []uuid.UUID) ([]models.PAT, error)
-}
-
-type inTotoVerifierService interface {
-	VerifySupplyChainWithOutputDigest(supplyChainID string, digest string) (bool, error)
-	VerifySupplyChain(supplyChainID string) (bool, error)
-	VerifySupplyChainByDigestOnly(digest string) (bool, error)
-}
-
 type httpController struct {
-	linkRepository        repository
-	supplyChainRepository supplyChainRepository
+	linkRepository        core.InTotoLinkRepository
+	supplyChainRepository core.SupplyChainRepository
 
-	patRepository patRepository
+	patRepository core.PersonalAccessTokenRepository
 
-	inTotoVerifierService inTotoVerifierService
+	inTotoVerifierService core.InTotoVerifierService
 }
 
-func NewHttpController(repository repository, supplyChainRepository supplyChainRepository, patRepository patRepository, inTotoVerifierService inTotoVerifierService) *httpController {
+func NewHttpController(repository core.InTotoLinkRepository, supplyChainRepository core.SupplyChainRepository, patRepository core.PersonalAccessTokenRepository, inTotoVerifierService core.InTotoVerifierService) *httpController {
 	return &httpController{
 		linkRepository:        repository,
 		supplyChainRepository: supplyChainRepository,

@@ -30,7 +30,7 @@ func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 	for _, assetVersion := range assetVersions {
 		group.Go(func() (models.AssetRiskDistribution, error) {
 			// get the corresponding asset
-			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetID)
+			asset, err := c.assetRepository.Read(assetVersion.AssetID)
 			if err != nil {
 				return models.AssetRiskDistribution{}, errors.Wrap(err, "could not fetch asset by id")
 			}
@@ -89,7 +89,7 @@ func (c *httpController) getProjectRiskDistribution(projectID uuid.UUID) ([]mode
 	for _, assetVersion := range assetVersions {
 		group.Go(func() (models.AssetRiskDistribution, error) {
 			// get the corresponding asset
-			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetID)
+			asset, err := c.assetRepository.Read(assetVersion.AssetID)
 			if err != nil {
 				return models.AssetRiskDistribution{}, errors.Wrap(err, "could not fetch asset by id")
 			}
@@ -166,7 +166,7 @@ func (c *httpController) getAssetVersionsRiskHistory(projectID uuid.UUID, start 
 			if err != nil {
 				return AssetRiskHistory{}, err
 			}
-			asset, err := c.assetRepository.GetByAssetID(assetVersion.AssetID)
+			asset, err := c.assetRepository.Read(assetVersion.AssetID)
 			if err != nil {
 				return AssetRiskHistory{}, err
 			}

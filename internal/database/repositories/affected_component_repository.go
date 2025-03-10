@@ -17,6 +17,7 @@ package repositories
 import (
 	"log/slog"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 
@@ -27,7 +28,7 @@ import (
 
 type affectedCmpRepository struct {
 	db *gorm.DB
-	Repository[string, models.AffectedComponent, core.DB]
+	common.Repository[string, models.AffectedComponent, core.DB]
 }
 
 func (g *affectedCmpRepository) Save(tx *gorm.DB, affectedComponents *models.AffectedComponent) error {

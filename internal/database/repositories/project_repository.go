@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -10,7 +11,7 @@ import (
 
 type projectRepository struct {
 	db core.DB
-	Repository[uuid.UUID, models.Project, core.DB]
+	common.Repository[uuid.UUID, models.Project, core.DB]
 }
 
 func NewProjectRepository(db core.DB) *projectRepository {

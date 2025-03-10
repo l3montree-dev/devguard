@@ -17,9 +17,9 @@ package org
 
 import (
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/obj"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -159,13 +159,13 @@ type OrgDTO struct {
 
 	GithubAppInstallations []models.GithubAppInstallation `json:"githubAppInstallations" gorm:"foreignKey:OrgID;"`
 
-	GitLabIntegrations []obj.GitlabIntegrationDTO `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
+	GitLabIntegrations []common.GitlabIntegrationDTO `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
 
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 }
 
-func obfuscateGitLabIntegrations(integration models.GitLabIntegration) obj.GitlabIntegrationDTO {
-	return obj.GitlabIntegrationDTO{
+func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.GitlabIntegrationDTO {
+	return common.GitlabIntegrationDTO{
 		ID:              integration.ID.String(),
 		Name:            integration.Name,
 		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
