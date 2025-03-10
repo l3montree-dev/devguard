@@ -541,7 +541,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 }
 
 func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
-	fmt.Printf("----------------------Checkpoint A---------------------------------------\n")
+
 	if !strings.HasPrefix(repoId, "github:") {
 		// this integration only handles github repositories.
 		return nil

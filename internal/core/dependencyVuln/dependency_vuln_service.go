@@ -328,7 +328,7 @@ func CreateIssuesForUpdatedVulns(db core.DB, thirdPartyIntegration core.ThirdPar
 		for _, vulnerability := range vulnList {
 
 			if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold || vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
-				fmt.Printf("made it here!")
+
 				err := createIssue(thirdPartyIntegration, vulnerability.ID, asset, repoID, org.Slug, project.Slug)
 				if err != nil {
 					return err
@@ -338,9 +338,9 @@ func CreateIssuesForUpdatedVulns(db core.DB, thirdPartyIntegration core.ThirdPar
 		}
 	} else {
 		if riskThreshold != nil {
-			fmt.Printf("Only risk")
+
 			for _, vulnerability := range vulnList {
-				fmt.Printf("\n%f > %f\n ", *vulnerability.RawRiskAssessment, *asset.RiskAutomaticTicketThreshold)
+
 				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
 					err := createIssue(thirdPartyIntegration, vulnerability.ID, asset, repoID, org.Slug, project.Slug)
 					if err != nil {
@@ -350,9 +350,9 @@ func CreateIssuesForUpdatedVulns(db core.DB, thirdPartyIntegration core.ThirdPar
 				}
 			}
 		} else if cvssThreshold != nil {
-			fmt.Printf("Only cvss")
+
 			for _, vulnerability := range vulnList {
-				fmt.Printf("\n%f > %f\n ", vulnerability.CVE.CVSS, float32(*asset.CVSSAutomaticTicketThreshold))
+
 				if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
 					err := createIssue(thirdPartyIntegration, vulnerability.ID, asset, repoID, org.Slug, project.Slug)
 					if err != nil {
@@ -369,7 +369,7 @@ func CreateIssuesForUpdatedVulns(db core.DB, thirdPartyIntegration core.ThirdPar
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
 func createIssue(thirdPartyIntegration core.ThirdPartyIntegration, cveName string, asset models.Asset, repoId string, orgSlug string, projectSlug string) error {
-	fmt.Printf("Got into the function")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

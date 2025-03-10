@@ -16,7 +16,6 @@
 package scan
 
 import (
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -281,12 +280,12 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(maxSize)
 	if err != nil {
-		fmt.Printf("error when parsing data")
+		slog.Error("error when parsing data")
 		return err
 	}
 	file, _, err := c.Request().FormFile("file")
 	if err != nil {
-		fmt.Printf("error when forming file")
+		slog.Error("error when forming file")
 		return err
 	}
 	defer file.Close()
@@ -307,7 +306,7 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 
 // function to check whether the provided vulnerabilities in a given asset exceeds their respective thresholds and create a ticket for it if they do so
 func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) error {
-	fmt.Printf("Running Issue in scan controller\n")
+
 	asset := core.GetAsset(c)
 	thirdPartyIntegration := core.GetThirdPartyIntegration(c)
 
@@ -316,13 +315,13 @@ func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) erro
 
 	//Check if no automatic Issues are wanted by the user
 	if riskThreshold == nil && cvssThreshold == nil {
-		fmt.Printf("Both null")
+
 		return nil
 	}
 
 	//Determine whether to scan for both risk and cvss or just 1 of them
 	if riskThreshold != nil && cvssThreshold != nil {
-		fmt.Printf("Both")
+
 		for _, vulnerability := range vulnList {
 			if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold || vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
 				if vulnerability.TicketID == nil {
@@ -339,9 +338,9 @@ func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) erro
 		}
 	} else {
 		if riskThreshold != nil {
-			fmt.Printf("Only risk")
+
 			for _, vulnerability := range vulnList {
-				fmt.Printf("\n%f > %f\n ", *vulnerability.RawRiskAssessment, *asset.RiskAutomaticTicketThreshold)
+
 				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
 					if vulnerability.TicketID == nil {
 						c.Set("dependencyVulnId", vulnerability.ID)
@@ -355,9 +354,9 @@ func createIssuesForVulns(vulnList []models.DependencyVuln, c core.Context) erro
 				}
 			}
 		} else if cvssThreshold != nil {
-			fmt.Printf("Only cvss")
+
 			for _, vulnerability := range vulnList {
-				fmt.Printf("\n%f > %f\n ", vulnerability.CVE.CVSS, float32(*asset.CVSSAutomaticTicketThreshold))
+
 				if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
 					if vulnerability.TicketID == nil {
 						c.Set("dependencyVulnId", vulnerability.ID)

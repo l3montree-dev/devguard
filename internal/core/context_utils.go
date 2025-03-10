@@ -168,7 +168,7 @@ func GetProject(c Context) models.Project {
 }
 
 func RecursiveGetProjectRepositoryID(project models.Project) (string, error) {
-	fmt.Printf("Calling recursive")
+
 	if project.RepositoryID != nil {
 		return *project.RepositoryID, nil
 	}
