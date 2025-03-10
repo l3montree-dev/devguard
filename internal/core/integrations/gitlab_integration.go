@@ -47,18 +47,6 @@ type gitlabClientFacade interface {
 	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
 }
 
-type gitlabIntegrationRepository interface {
-	Save(tx core.DB, model *models.GitLabIntegration) error
-	Read(id uuid.UUID) (models.GitLabIntegration, error)
-	FindByOrganizationId(orgID uuid.UUID) ([]models.GitLabIntegration, error)
-	Delete(tx core.DB, id uuid.UUID) error
-}
-
-type projectRepository interface {
-	Read(id uuid.UUID) (models.Project, error)
-	GetProjectByAssetID(assetId uuid.UUID) (models.Project, error)
-}
-
 type gitlabRepository struct {
 	*gitlab.Project
 	gitlabIntegrationId string
@@ -81,16 +69,11 @@ type gitlabIntegration struct {
 	dependencyVulnRepository core.DependencyVulnRepository
 	vulnEventRepository      core.VulnEventRepository
 	frontendUrl              string
-<<<<<<< HEAD
-	assetRepository          assetRepository
-	assetVersionRepository   assetVersionRepository
-	dependencyVulnService    dependencyVulnService
-	ProjectRepository        projectRepository
-=======
-	assetRepository          core.AssetRepository
-	assetVersionRepository   core.AssetVersionRepository
-	dependencyVulnService    core.DependencyVulnService
->>>>>>> main
+
+	ProjectRepository      core.ProjectRepository
+	assetRepository        core.AssetRepository
+	assetVersionRepository core.AssetVersionRepository
+	dependencyVulnService  core.DependencyVulnService
 
 	gitlabClientFactory func(id uuid.UUID) (gitlabClientFacade, error)
 }
@@ -722,6 +705,7 @@ func getTemplatePath(scanner string) string {
 func (g *gitlabIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
 	case core.ManualMitigateEvent:
+		fmt.Printf("Handel Event got called!??!??!?\n")
 		asset := core.GetAsset(event.Ctx)
 		repoId, err := core.GetRepositoryID(event.Ctx)
 		if err != nil {
@@ -957,35 +941,35 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 }
 
 func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
-
+	fmt.Printf("----------------------Checkpoint A---------------------------------------\n")
 	if !strings.HasPrefix(repoId, "gitlab:") {
 		// this integration only handles gitlab repositories
 		return nil
 	}
-
+	fmt.Printf("----------------------Checkpoint B---------------------------------------\n")
 	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
 	if err != nil {
 		slog.Error("failed to extract integration id from repo id", "err", err, "repoId", repoId)
 		return err
 	}
-
+	fmt.Printf("----------------------Checkpoint C---------------------------------------\n")
 	projectId, err := extractProjectIdFromRepoId(repoId)
 	if err != nil {
 		slog.Error("failed to extract project id from repo id", "err", err, "repoId", repoId)
 		return err
 	}
-
+	fmt.Printf("----------------------Checkpoint D---------------------------------------\n")
 	dependencyVuln, err := g.dependencyVulnRepository.Read(dependencyVulnId)
 	if err != nil {
 		return err
 	}
-
+	fmt.Printf("----------------------Checkpoint E---------------------------------------\n")
 	// we create a new ticket in github
 	client, err := g.gitlabClientFactory(integrationUUID)
 	if err != nil {
 		return err
 	}
-
+	fmt.Printf("----------------------Checkpoint F---------------------------------------\n")
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
@@ -996,6 +980,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		"devguard",
 		"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
 	}
+	fmt.Printf("----------------------Checkpoint G---------------------------------------\n")
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("DependencyVuln %s", dependencyVuln.CVE.CVE)),
 		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
@@ -1006,7 +991,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	if err != nil {
 		return err
 	}
-
+	fmt.Printf("----------------------Checkpoint H---------------------------------------\n")
 	dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("gitlab:%d/%d", createdIssue.ProjectID, createdIssue.IID))
 	dependencyVuln.TicketURL = utils.Ptr(createdIssue.WebURL)
 
