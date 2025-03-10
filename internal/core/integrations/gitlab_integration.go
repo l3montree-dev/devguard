@@ -552,7 +552,7 @@ func createProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gi
 
 	for _, hook := range hooks {
 		if strings.HasPrefix(hook.URL, instanceDomain) {
-			slog.Error("hook already exists")
+
 			return projectOptions, fmt.Errorf("hook already exists")
 		}
 	}
@@ -564,7 +564,7 @@ func createProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gi
 	projectOptions.ConfidentialNoteEvents = gitlab.Ptr(true)
 	projectOptions.EnableSSLVerification = gitlab.Ptr(true)
 	if instanceDomain == "" { //If no URL is provided in the enviroment variables default to main URL
-		slog.Error("no URL specified in .env file defaulting to main")
+		slog.Debug("no URL specified in .env file defaulting to main")
 		defaultURL := "https://api.main.devguard.org/api/v1/webhook/"
 		projectOptions.URL = &defaultURL
 	} else {

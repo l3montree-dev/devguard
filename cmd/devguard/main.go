@@ -16,9 +16,6 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
@@ -48,7 +45,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("This is the env: %s", os.Getenv("INSTANCE_DOMAIN"))
+
 	daemon.Start(db)
 
 	api.Start(db)

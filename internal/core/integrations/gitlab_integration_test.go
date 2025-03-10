@@ -33,7 +33,7 @@ func TestCreateProjectHook(t *testing.T) {
 		assert.Equal(t, "https://api.main.devguard.org/api/v1/webhook/", *results.URL)
 
 	})
-	t.Run("Returned ProjectHookOption Struct should have the URL set to stage devguard", func(t *testing.T) {
+	t.Run("Returned ProjectHookOption Struct should have the URL set to stage devguard if the environment variable INSTANCE_DOMAIN is set to ...staged... ", func(t *testing.T) {
 
 		os.Setenv("INSTANCE_DOMAIN", "https://api.stage.devguard.org")
 
@@ -83,6 +83,25 @@ func TestCreateProjectHook(t *testing.T) {
 			return
 		}
 		assert.Equal(t, "https://api.main.devguard.org/api/v1/webhook/", *results.URL)
+
+	})
+
+	t.Run("function should also work if the user provides the url with a trailing slash", func(t *testing.T) {
+
+		os.Setenv("INSTANCE_DOMAIN", "https://api.stage.devguard.org/")
+
+		hooks := []*gitlab.ProjectHook{}
+		token, err := uuid.NewUUID()
+		if err != nil {
+			slog.Error("error when trying to generate token")
+			return
+		}
+		results, err := createProjectHookOptions(token, hooks)
+		if err != nil {
+			slog.Error(err.Error())
+			return
+		}
+		assert.Equal(t, "https://api.stage.devguard.org/api/v1/webhook/", *results.URL)
 
 	})
 }
