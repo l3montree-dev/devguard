@@ -6,6 +6,7 @@
     "licenser.disableAutoHeaderInsertion": false,
     "go.lintTool": "golangci-lint",
     "cSpell.words": [
+        "devguard",
         "ghinstallation",
         "Vulns"
     ]

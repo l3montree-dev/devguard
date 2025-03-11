@@ -14,7 +14,7 @@ import (
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -211,7 +211,7 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 	}
 
 }
-func printSastScanResults(firstPartyVulns []dependencyVuln.FirstPartyVulnDTO, webUI string, assetName string) {
+func printSastScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI string, assetName string) {
 
 	tw := table.NewWriter()
 	for _, vuln := range firstPartyVulns {
@@ -238,7 +238,7 @@ func printSastScanResults(firstPartyVulns []dependencyVuln.FirstPartyVulnDTO, we
 
 }
 
-func printSecretScanResults(firstPartyVulns []dependencyVuln.FirstPartyVulnDTO, webUI string, assetName string) {
+func printSecretScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI string, assetName string) {
 
 	tw := table.NewWriter()
 	for _, vuln := range firstPartyVulns {

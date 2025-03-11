@@ -239,7 +239,7 @@ func (r *dependencyVulnRepository) GetDefaultDependencyVulnsByOrgIdPaged(tx core
 
 func (r *dependencyVulnRepository) GetDependencyVulnAssetIDByDependencyVulnID(tx core.DB, dependencyVulnID string) (string, error) {
 	var dependencyVulnAssetID string
-	if err := r.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Select("dependencyVuln_asset_id").Where("id = ?", dependencyVulnID).Row().Scan(&dependencyVulnAssetID); err != nil {
+	if err := r.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Select("dependency_vuln_asset_id").Where("id = ?", dependencyVulnID).Row().Scan(&dependencyVulnAssetID); err != nil {
 		return "", err
 	}
 	return dependencyVulnAssetID, nil

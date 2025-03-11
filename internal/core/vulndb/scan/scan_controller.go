@@ -21,7 +21,7 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -58,15 +58,15 @@ func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRe
 }
 
 type ScanResponse struct {
-	AmountOpened    int                                `json:"amountOpened"`
-	AmountClosed    int                                `json:"amountClosed"`
-	DependencyVulns []dependencyVuln.DependencyVulnDTO `json:"dependencyVulns"`
+	AmountOpened    int                                 `json:"amountOpened"`
+	AmountClosed    int                                 `json:"amountClosed"`
+	DependencyVulns []dependency_vuln.DependencyVulnDTO `json:"dependencyVulns"`
 }
 
 type FirstPartyScanResponse struct {
-	AmountOpened    int                                `json:"amountOpened"`
-	AmountClosed    int                                `json:"amountClosed"`
-	FirstPartyVulns []dependencyVuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
+	AmountOpened    int                                 `json:"amountOpened"`
+	AmountClosed    int                                 `json:"amountClosed"`
+	FirstPartyVulns []dependency_vuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
 }
 
 func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, error) {
@@ -164,7 +164,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	}
 	scanResults.AmountOpened = amountOpened //Fill in the results
 	scanResults.AmountClosed = amountClose
-	scanResults.DependencyVulns = utils.Map(newState, dependencyVuln.DependencyVulnToDto)
+	scanResults.DependencyVulns = utils.Map(newState, dependency_vuln.DependencyVulnToDto)
 
 	return scanResults, nil
 }
@@ -224,7 +224,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	return c.JSON(200, FirstPartyScanResponse{
 		AmountOpened:    amountOpened,
 		AmountClosed:    amountClose,
-		FirstPartyVulns: utils.Map(newState, dependencyVuln.FirstPartyVulnToDto),
+		FirstPartyVulns: utils.Map(newState, dependency_vuln.FirstPartyVulnToDto),
 	})
 
 }

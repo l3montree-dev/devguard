@@ -51,6 +51,11 @@ jobs:
 
     - name: Run unittests
       run: go test $(go list ./... | grep -v "/mocks") -coverprofile=coverage.out && go tool cover -func=coverage.out
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@v4
+      with:
+        name: code-coverage
+        path: coverage.out
 
   # Docker image build job
   build-image:

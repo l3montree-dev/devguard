@@ -3,6 +3,7 @@ package integrations
 import (
 	"context"
 	"encoding/json"
+	"os"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -63,13 +64,12 @@ type gitlabIntegration struct {
 	externalUserRepository      core.ExternalUserRepository
 
 	aggregatedVulnRepository core.VulnRepository
-
 	//TODO: remove this
 	dependencyVulnRepository core.DependencyVulnRepository
 	vulnEventRepository      core.VulnEventRepository
 	frontendUrl              string
 
-	ProjectRepository      core.ProjectRepository
+	projectRepository      core.ProjectRepository
 	assetRepository        core.AssetRepository
 	assetVersionRepository core.AssetVersionRepository
 
@@ -102,21 +102,24 @@ func messageWasCreatedByDevguard(message string) bool {
 
 func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
+
+	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	externalUserRepository := repositories.NewExternalUserRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	ProjectRepository := repositories.NewProjectRepository(db)
+	projectRepository := repositories.NewProjectRepository(db)
 
 	return &gitlabIntegration{
+		aggregatedVulnRepository:    aggregatedVulnRepository,
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
 		dependencyVulnRepository:    dependencyVulnRepository,
 		vulnEventRepository:         vulnEventRepository,
 		assetRepository:             assetRepository,
 		assetVersionRepository:      assetVersionRepository,
 		externalUserRepository:      externalUserRepository,
-		ProjectRepository:           ProjectRepository,
+		projectRepository:           projectRepository,
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -231,7 +234,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
-			org, err := g.aggregatedVulnRepository.GetOrgFromVulnID(nil, vuln.GetID())
+			org, err := g.aggregatedVulnRepository.GetOrgFromVuln(vuln)
 			if err != nil {
 				slog.Error("could not get org from dependencyVuln id", "err", err)
 				return
@@ -507,26 +510,14 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 		return fmt.Errorf("could not list project hooks: %w", err)
 	}
 
-	for _, hook := range hooks {
-		if hook.URL == "https://api.main.devguard.org/api/v1/webhook/" {
-			// the hook already exists
-			return nil
-		}
-	}
-
 	token, err := createToken()
 	if err != nil {
 		return fmt.Errorf("could not create new token: %w", err)
 	}
 
-	projectOptions := &gitlab.AddProjectHookOptions{
-		IssuesEvents:             gitlab.Ptr(true),
-		ConfidentialIssuesEvents: gitlab.Ptr(true),
-		NoteEvents:               gitlab.Ptr(true),
-		ConfidentialNoteEvents:   gitlab.Ptr(true),
-		EnableSSLVerification:    gitlab.Ptr(true),
-		URL:                      gitlab.Ptr("https://api.main.devguard.org/api/v1/webhook/"),
-		Token:                    gitlab.Ptr(token.String()),
+	projectOptions, err := createProjectHookOptions(token, hooks)
+	if err != nil { //Swallow error: If an error gets returned it means the hook already exists which means we don't have to do anything further and can return without errors
+		return nil
 	}
 
 	projectHook, _, err := client.AddProjectHook(ctx.Request().Context(), projectId, projectOptions)
@@ -549,6 +540,36 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 
 	return nil
 
+}
+
+func createProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
+	projectOptions := &gitlab.AddProjectHookOptions{}
+
+	instanceDomain := os.Getenv("INSTANCE_DOMAIN")
+
+	for _, hook := range hooks {
+		if strings.HasPrefix(hook.URL, instanceDomain) {
+			return projectOptions, fmt.Errorf("hook already exists")
+		}
+	}
+
+	projectOptions.IssuesEvents = gitlab.Ptr(true)
+	projectOptions.ConfidentialIssuesEvents = gitlab.Ptr(true)
+	projectOptions.NoteEvents = gitlab.Ptr(true)
+	projectOptions.ConfidentialNoteEvents = gitlab.Ptr(true)
+	projectOptions.EnableSSLVerification = gitlab.Ptr(true)
+	if instanceDomain == "" { //If no URL is provided in the environment variables default to main URL
+		slog.Debug("no URL specified in .env file defaulting to main")
+		defaultURL := "https://api.main.devguard.org/api/v1/webhook/"
+		projectOptions.URL = &defaultURL
+	} else {
+		instanceDomain = strings.TrimSuffix(instanceDomain, "/") //Remove trailing slash if it exists
+		constructedURL := instanceDomain + "/api/v1/webhook/"
+		projectOptions.URL = &constructedURL
+	}
+	projectOptions.Token = gitlab.Ptr(token.String())
+
+	return projectOptions, nil
 }
 
 func (g *gitlabIntegration) deleteProjectHook(ctx core.Context, integrationUUID uuid.UUID, projectId int, hookId int) error {
@@ -897,6 +918,11 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return err
 	}
+
+	if data.Token == "" {
+		slog.Error("token must not be empty")
+		return ctx.JSON(400, "token must not be empty")
+	}
 	// check if valid url - maybe the user forgot to add the protocol
 	if !strings.HasPrefix(data.Url, "http://") && !strings.HasPrefix(data.Url, "https://") {
 		data.Url = "https://" + data.Url
@@ -911,7 +937,9 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 		MinAccessLevel: gitlab.Ptr(gitlab.ReporterPermissions),
 	})
 	if err != nil {
-		return err
+		return ctx.JSON(400, map[string]any{
+			"message": "Invalid GitLab token",
+		})
 	}
 
 	// save the integration

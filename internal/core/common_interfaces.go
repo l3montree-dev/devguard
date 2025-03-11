@@ -232,7 +232,7 @@ type VulnRepository interface {
 	FindByTicketID(tx DB, ticketID string) (models.Vuln, error)
 	Save(db DB, vuln *models.Vuln) error
 	Transaction(fn func(tx DB) error) error
-	GetOrgFromVulnID(tx DB, vulnID string) (models.Org, error)
+	GetOrgFromVuln(vuln models.Vuln) (models.Org, error)
 }
 
 type ExternalUserRepository interface {
