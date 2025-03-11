@@ -340,8 +340,7 @@ func health(c echo.Context) error {
 	return c.String(200, "ok")
 }
 
-func Start(db core.DB) {
-
+func BuildRouter(db core.DB) *echo.Echo {
 	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_PUBLIC"))
 	oryAdmin := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_ADMIN"))
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
@@ -587,5 +586,10 @@ func Start(db core.DB) {
 			slog.Info(route.Path, "method", route.Method)
 		}
 	}
-	slog.Error("failed to start server", "err", server.Start(":8080").Error())
+	return server
+
+}
+
+func Start(db core.DB) {
+	slog.Error("failed to start server", "err", BuildRouter(db).Start(":8080").Error())
 }

@@ -190,7 +190,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		newRiskAssessment := risk.RawRisk(cve, env, *dependencyVuln.ComponentDepth)
 
 		if *oldRiskAssessment != newRiskAssessment.Risk {
-			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), userID, justification, newRiskAssessment)
+			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), userID, justification, oldRiskAssessment, newRiskAssessment)
 			// apply the event on the dependencyVuln
 			ev.Apply(&dependencyVulns[i])
 			events = append(events, ev)

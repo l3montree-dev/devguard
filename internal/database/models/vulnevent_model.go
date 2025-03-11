@@ -192,14 +192,19 @@ func NewMitigateEvent(vulnID string, userID string, justification string, arbitr
 	return ev
 }
 
-func NewRawRiskAssessmentUpdatedEvent(vulnID string, userID string, justification string, report common.RiskCalculationReport) VulnEvent {
+func NewRawRiskAssessmentUpdatedEvent(vulnID string, userID string, justification string, oldRisk *float64, report common.RiskCalculationReport) VulnEvent {
 	event := VulnEvent{
 		Type:          EventTypeRawRiskAssessmentUpdated,
 		VulnID:        vulnID,
 		UserID:        userID,
 		Justification: &justification,
 	}
-	event.SetArbitraryJsonData(report.Map())
+	m := report.Map()
+	if oldRisk != nil {
+		m["oldRisk"] = *oldRisk
+	}
+
+	event.SetArbitraryJsonData(m)
 	return event
 }
 
