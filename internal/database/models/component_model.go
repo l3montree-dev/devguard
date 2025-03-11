@@ -17,6 +17,7 @@ package models
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -37,12 +38,26 @@ const (
 	ComponentTypePlatform             ComponentType = "platform"
 )
 
+type ComponentProject struct {
+	// project name like "github.com/facebook/react"
+	ID              string `json:"id" gorm:"primaryKey;column:id"`
+	StarsCount      int    `json:"starsCount" gorm:"column:stars_count"`
+	ForksCount      int    `json:"forksCount" gorm:"column:forks_count"`
+	OpenIssuesCount int    `json:"openIssuesCount" gorm:"column:open_issues_count"`
+	Homepage        string `json:"homepage"`
+	License         string `json:"license"`
+	Description     string `json:"description"`
+
+	ScoreCard database.JSONB `json:"scoreCard" gorm:"column:score_card"`
+}
+
 type Component struct {
-	// either cpe or purl is set
 	Purl          string                `json:"purl" gorm:"primaryKey;column:purl"` // without qualifiers!
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType ComponentType         `json:"componentType"`
 	Version       string                `json:"version"`
+
+	ComponentProject *ComponentProject `json:"project" gorm:"foreignKey:ID;references:ComponentProjectID;constraint:OnDelete:CASCADE;"`
 }
 
 type ComponentDependency struct {
