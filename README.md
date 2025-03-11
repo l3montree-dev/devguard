@@ -40,10 +40,8 @@
 
 <p align="center">
 Get in touch with the developers directly via 
-  <a href="https://matrix.to/#/!nIxSDzXCMDEccAtyWz:matrix.org?via=matrix.org">Matrix-Chat</a>
+  <a href="https://matrix.to/#/#devguard:matrix.org">Matrix-Chat</a>
 </p>
-
-
 
 <!-- TABLE OF CONTENTS -->
 <details>
