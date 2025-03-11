@@ -28,7 +28,7 @@ import (
 	"github.com/google/go-github/v62/github"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -95,7 +95,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
-		dependencyVulnService:    dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
+		dependencyVulnService:    dependency_vuln.NewService(dependencyVulnRepository, vulnEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
 
 		frontendUrl:            frontendUrl,
 		assetRepository:        repositories.NewAssetRepository(db),

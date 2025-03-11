@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +35,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		rawRiskAssessment := 42424.42
 		componentFixedVersion := "Example Version"
 
-		v := dependencyVuln.DependencyVulnDTO{}
+		v := dependency_vuln.DependencyVulnDTO{}
 		v.CVEID = &cveid
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion
@@ -59,7 +59,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		rawRiskAssessment := 42424.42
 		componentFixedVersion := "Example Version"
 
-		v := dependencyVuln.DependencyVulnDTO{}
+		v := dependency_vuln.DependencyVulnDTO{}
 		v.CVEID = &cveid
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion

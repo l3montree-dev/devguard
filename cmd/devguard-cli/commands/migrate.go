@@ -43,8 +43,8 @@ func newDependencyVulnHashMigration() *cobra.Command {
 			}
 
 			for _, dependencyVuln := range dependencyVulns {
-				oldHash := dependencyVuln.ID
-				newHash := dependencyVuln.CalculateHash()
+				oldHash := dependency_vuln.ID
+				newHash := dependency_vuln.CalculateHash()
 
 				// update the hash in the database
 				err = dependencyVulnRepository.GetDB(nil).Model(&models.DependencyVuln{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error

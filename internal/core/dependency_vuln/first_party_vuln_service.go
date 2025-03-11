@@ -1,4 +1,4 @@
-package dependencyVuln
+package dependency_vuln
 
 import (
 	"github.com/l3montree-dev/devguard/internal/common"

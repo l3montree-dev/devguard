@@ -6,7 +6,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
-	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -41,8 +41,8 @@ func newSbomCommand() *cobra.Command {
 			dependencyVulnRepository := repositories.NewDependencyVulnRepository(database)
 			firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(database)
 			vulnEventRepository := repositories.NewVulnEventRepository(database)
-			firstPartyVulnService := dependencyVuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
-			dependencyVulnService := dependencyVuln.NewService(dependencyVulnRepository, repositories.NewVulnEventRepository(database), assetRepository, repositories.NewCVERepository(database))
+			firstPartyVulnService := dependency_vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
+			dependencyVulnService := dependency_vuln.NewService(dependencyVulnRepository, repositories.NewVulnEventRepository(database), assetRepository, repositories.NewCVERepository(database))
 			componentRepository := repositories.NewComponentRepository(database)
 
 			assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository)

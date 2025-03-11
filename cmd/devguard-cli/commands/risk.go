@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/spf13/cobra"
@@ -39,7 +39,7 @@ func newCalculateCmd() *cobra.Command {
 			cveRepository := repositories.NewCVERepository(database)
 			assetRepository := repositories.NewAssetRepository(database)
 			assetVersionRepository := repositories.NewAssetVersionRepository(database)
-			dependencyVulnService := dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository)
+			dependencyVulnService := dependency_vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository)
 			statisticsRepository := repositories.NewStatisticsRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
 			projectRepository := repositories.NewProjectRepository(database)

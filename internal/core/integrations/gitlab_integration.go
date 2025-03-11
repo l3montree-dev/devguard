@@ -21,7 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -118,7 +118,7 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 
 		aggregatedVulnRepository: aggregatedVulnRepository,
 
-		dependencyVulnService:  dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository),
+		dependencyVulnService:  dependency_vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository),
 		vulnEventRepository:    vulnEventRepository,
 		assetRepository:        assetRepository,
 		assetVersionRepository: assetVersionRepository,
