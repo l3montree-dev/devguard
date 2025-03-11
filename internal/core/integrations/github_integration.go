@@ -64,8 +64,8 @@ type githubIntegration struct {
 	frontendUrl                     string
 	assetRepository                 core.AssetRepository
 	assetVersionRepository          core.AssetVersionRepository
-	dependencyVulnService           core.DependencyVulnService
-	githubClientFactory             func(repoId string) (githubClientFacade, error)
+
+	githubClientFactory func(repoId string) (githubClientFacade, error)
 }
 
 var _ core.ThirdPartyIntegration = &githubIntegration{}

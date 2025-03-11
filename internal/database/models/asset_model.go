@@ -43,7 +43,7 @@ type Asset struct {
 	AvailabilityRequirement    RequirementLevel `json:"availabilityRequirement" gorm:"default:'high';not null;type:text;"`
 
 	RepositoryID   *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
-	RepositoryName *string `json:"repositoryName"sgorm:"type:text;"`
+	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
 
 	LastHistoryUpdate            *time.Time
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold" gorm:"type:decimal(4,2);default:null"`
