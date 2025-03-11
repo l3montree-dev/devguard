@@ -348,6 +348,9 @@ func BuildRouter(db core.DB) *echo.Echo {
 	if err != nil {
 		panic(err)
 	}
+	githubIntegration := integrations.NewGithubIntegration(db)
+	gitlabIntegration := integrations.NewGitLabIntegration(db)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
 	// init all repositories using the provided database
 	patRepository := repositories.NewPATRepository(db)
@@ -366,7 +369,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 
-	dependencyVulnService := dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository)
+	dependencyVulnService := dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration)
 	firstPartyVulnService := dependencyVuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
 	projectService := project.NewService(projectRepository)
 	dependencyVulnController := dependencyVuln.NewHttpController(dependencyVulnRepository, dependencyVulnService, projectService)
@@ -399,9 +402,6 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	server := echohttp.Server()
 
-	githubIntegration := integrations.NewGithubIntegration(db)
-	gitlabIntegration := integrations.NewGitLabIntegration(db)
-
 	integrationController := integrations.NewIntegrationController()
 
 	apiV1Router := server.Group("/api/v1")
@@ -409,7 +409,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	// this makes the third party integrations available to all controllers
 	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c core.Context) error {
-			core.SetThirdPartyIntegration(c, integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration))
+			core.SetThirdPartyIntegration(c, thirdPartyIntegration)
 			return next(c)
 		}
 	})

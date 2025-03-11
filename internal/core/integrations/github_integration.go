@@ -27,7 +27,6 @@ import (
 	"github.com/google/go-github/v62/github"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -59,18 +58,14 @@ type githubClientFacade interface {
 type githubIntegration struct {
 	githubAppInstallationRepository core.GithubAppInstallationRepository
 	externalUserRepository          core.ExternalUserRepository
-
-	dependencyVulnRepository core.DependencyVulnRepository
-	vulnEventRepository      core.VulnEventRepository
-
-	aggregatedVulnRepository core.VulnRepository
-
-	frontendUrl            string
-	assetRepository        core.AssetRepository
-	assetVersionRepository core.AssetVersionRepository
-	dependencyVulnService  core.DependencyVulnService
-
-	githubClientFactory func(repoId string) (githubClientFacade, error)
+	dependencyVulnRepository        core.DependencyVulnRepository
+	vulnEventRepository             core.VulnEventRepository
+	aggregatedVulnRepository        core.VulnRepository
+	frontendUrl                     string
+	assetRepository                 core.AssetRepository
+	assetVersionRepository          core.AssetVersionRepository
+	dependencyVulnService           core.DependencyVulnService
+	githubClientFactory             func(repoId string) (githubClientFacade, error)
 }
 
 var _ core.ThirdPartyIntegration = &githubIntegration{}
@@ -91,14 +86,11 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 	return &githubIntegration{
 		githubAppInstallationRepository: githubAppInstallationRepository,
 		externalUserRepository:          repositories.NewExternalUserRepository(db),
-
-		dependencyVulnRepository: dependencyVulnRepository,
-		vulnEventRepository:      vulnEventRepository,
-		dependencyVulnService:    dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
-
-		frontendUrl:            frontendUrl,
-		assetRepository:        repositories.NewAssetRepository(db),
-		assetVersionRepository: repositories.NewAssetVersionRepository(db),
+		dependencyVulnRepository:        dependencyVulnRepository,
+		vulnEventRepository:             vulnEventRepository,
+		frontendUrl:                     frontendUrl,
+		assetRepository:                 repositories.NewAssetRepository(db),
+		assetVersionRepository:          repositories.NewAssetVersionRepository(db),
 
 		githubClientFactory: func(repoId string) (githubClientFacade, error) {
 			return NewGithubClient(installationIdFromRepositoryID(repoId))
@@ -611,7 +603,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		"ticketUrl": createdIssue.GetHTMLURL(),
 	})
 	// save the dependencyVuln and the event in a transaction
-	err = g.dependencyVulnService.ApplyAndSave(nil, &dependencyVuln, &VulnEvent)
+	err = g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &VulnEvent)
 	// if an error did happen, delete the issue from github
 	if err != nil {
 		_, _, err := client.EditIssue(context.TODO(), owner, repo, createdIssue.GetNumber(), &github.IssueRequest{

@@ -24,6 +24,35 @@ func NewDependencyVulnRepository(db core.DB) *dependencyVulnRepository {
 	}
 }
 
+func (r *dependencyVulnRepository) ApplyAndSave(tx core.DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error {
+	if tx == nil {
+		// we are not part of a parent transaction - create a new one
+		return r.Transaction(func(d core.DB) error {
+			_, err := r.applyAndSave(d, dependencyVuln, vulnEvent)
+			return err
+		})
+	}
+
+	_, err := r.applyAndSave(tx, dependencyVuln, vulnEvent)
+	return err
+}
+
+func (r *dependencyVulnRepository) applyAndSave(tx core.DB, dependencyVuln *models.DependencyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
+	// apply the event on the dependencyVuln
+	ev.Apply(dependencyVuln)
+
+	// run the updates in the transaction to keep a valid state
+	err := r.Save(tx, dependencyVuln)
+	if err != nil {
+		return models.VulnEvent{}, err
+	}
+	if err := r.GetDB(tx).Save(ev).Error; err != nil {
+		return models.VulnEvent{}, err
+	}
+	dependencyVuln.Events = append(dependencyVuln.Events, *ev)
+	return *ev, nil
+}
+
 func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 
 	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}

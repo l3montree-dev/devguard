@@ -57,8 +57,8 @@ type patchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 
-	CVSSAutomaticTicketThreshold float64 `json:"cvssAutomaticTicketThreshold"`
-	RiskAutomaticTicketThreshold float64 `json:"riskAutomaticTicketThreshold"`
+	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
+	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
 
 	CentralDependencyVulnManagement *bool `json:"centralDependencyVulnManagement"`
 

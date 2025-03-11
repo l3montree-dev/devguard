@@ -8,16 +8,20 @@ import (
 )
 
 func RecalculateRisk(db core.DB) error {
+	githubIntegration := integrations.NewGithubIntegration(db)
+	gitlabIntegration := integrations.NewGitLabIntegration(db)
+
+	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
+
 	dependencyVulnService := dependencyVuln.NewService(
 		repositories.NewDependencyVulnRepository(db),
 		repositories.NewVulnEventRepository(db),
 		repositories.NewAssetRepository(db),
 		repositories.NewCVERepository(db),
+		repositories.NewOrgRepository(db),
+		repositories.NewProjectRepository(db),
+		thirdPartyIntegrationAggregate,
 	)
 
-	gitlabIntegration := integrations.NewGitLabIntegration(db)
-	githubIntegration := integrations.NewGithubIntegration(db)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration)
-
-	return dependencyVulnService.RecalculateAllRawRiskAssessments(thirdPartyIntegration)
+	return dependencyVulnService.RecalculateAllRawRiskAssessments()
 }

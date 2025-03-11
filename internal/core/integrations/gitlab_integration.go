@@ -20,7 +20,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -73,7 +72,6 @@ type gitlabIntegration struct {
 	ProjectRepository      core.ProjectRepository
 	assetRepository        core.AssetRepository
 	assetVersionRepository core.AssetVersionRepository
-	dependencyVulnService  core.DependencyVulnService
 
 	gitlabClientFactory func(id uuid.UUID) (gitlabClientFacade, error)
 }
@@ -109,19 +107,16 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	externalUserRepository := repositories.NewExternalUserRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	cveRepository := repositories.NewCVERepository(db)
 	ProjectRepository := repositories.NewProjectRepository(db)
 
 	return &gitlabIntegration{
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
-
-		dependencyVulnRepository: dependencyVulnRepository,
-		dependencyVulnService:    dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository),
-		vulnEventRepository:      vulnEventRepository,
-		assetRepository:          assetRepository,
-		assetVersionRepository:   assetVersionRepository,
-		externalUserRepository:   externalUserRepository,
-		ProjectRepository:        ProjectRepository,
+		dependencyVulnRepository:    dependencyVulnRepository,
+		vulnEventRepository:         vulnEventRepository,
+		assetRepository:             assetRepository,
+		assetVersionRepository:      assetVersionRepository,
+		externalUserRepository:      externalUserRepository,
+		ProjectRepository:           ProjectRepository,
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -1003,5 +998,5 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 			"ticketUrl": createdIssue.WebURL,
 		})
 
-	return g.dependencyVulnService.ApplyAndSave(nil, &dependencyVuln, &VulnEvent)
+	return g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &VulnEvent)
 }

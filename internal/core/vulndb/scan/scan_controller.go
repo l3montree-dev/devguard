@@ -20,7 +20,6 @@ import (
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
@@ -28,48 +27,20 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-type cveRepository interface {
-	FindAll(cveIDs []string) ([]models.CVE, error)
-}
-
-type componentRepository interface {
-	SaveBatch(tx core.DB, components []models.Component) error
-	LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID, version string) ([]models.ComponentDependency, error)
-}
-
-type assetVersionService interface {
-	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error)
-	UpdateSBOM(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM) error
-
-	HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error)
-}
-
-type assetRepository interface {
-	GetAllAssetsFromDB() ([]models.Asset, error)
-	Save(tx core.DB, asset *models.Asset) error
-}
-
-type assetVersionRepository interface {
-	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranch string) (models.AssetVersion, error)
-	Save(tx core.DB, assetVersion *models.AssetVersion) error
-}
-
-type statisticsService interface {
-	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error
-}
-
 type httpController struct {
 	db                     core.DB
 	sbomScanner            *sbomScanner
-	cveRepository          cveRepository
-	componentRepository    componentRepository
-	assetRepository        assetRepository
-	assetVersionRepository assetVersionRepository
-	assetVersionService    assetVersionService
-	statisticsService      statisticsService
+	cveRepository          core.CveRepository
+	componentRepository    core.ComponentRepository
+	assetRepository        core.AssetRepository
+	assetVersionRepository core.AssetVersionRepository
+	assetVersionService    core.AssetVersionService
+	statisticsService      core.StatisticsService
+
+	dependencyVulnService core.DependencyVulnService
 }
 
-func NewHttpController(db core.DB, cveRepository cveRepository, componentRepository componentRepository, assetRepository assetRepository, assetVersionRepository assetVersionRepository, assetVersionService assetVersionService, statisticsService statisticsService) *httpController {
+func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService) *httpController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -150,7 +121,6 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 			slog.Error("could not update sbom", "err", err)
 			return scanResults, err
 		}
-
 	}
 
 	// scan the bom we just retrieved.
@@ -174,7 +144,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	err = createIssuesForVulns(newState, c)
+	err = s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
 	if err != nil {
 		return scanResults, err
 	}
