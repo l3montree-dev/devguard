@@ -542,32 +542,27 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 }
 
 func createProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
-	projectOptions := &gitlab.AddProjectHookOptions{} //Intialize empty struct to return on error
+	projectOptions := &gitlab.AddProjectHookOptions{}
 
-	instanceDomain := os.Getenv("INSTANCE_DOMAIN") //Get the URL from the .env file
+	instanceDomain := os.Getenv("INSTANCE_DOMAIN")
 
 	for _, hook := range hooks {
 		if strings.HasPrefix(hook.URL, instanceDomain) {
-
 			return projectOptions, fmt.Errorf("hook already exists")
 		}
 	}
 
-	//Assign values to the empty struct
 	projectOptions.IssuesEvents = gitlab.Ptr(true)
 	projectOptions.ConfidentialIssuesEvents = gitlab.Ptr(true)
 	projectOptions.NoteEvents = gitlab.Ptr(true)
 	projectOptions.ConfidentialNoteEvents = gitlab.Ptr(true)
 	projectOptions.EnableSSLVerification = gitlab.Ptr(true)
-	if instanceDomain == "" { //If no URL is provided in the enviroment variables default to main URL
-
+	if instanceDomain == "" { //If no URL is provided in the environment variables default to main URL
 		slog.Debug("no URL specified in .env file defaulting to main")
 		defaultURL := "https://api.main.devguard.org/api/v1/webhook/"
 		projectOptions.URL = &defaultURL
 	} else {
-		if instanceDomain[len(instanceDomain)-1] == '/' {
-			instanceDomain = instanceDomain[0 : len(instanceDomain)-1]
-		}
+		instanceDomain = strings.TrimSuffix(instanceDomain, "/") //Remove trailing slash if it exists
 		constructedURL := instanceDomain + "/api/v1/webhook/"
 		projectOptions.URL = &constructedURL
 	}
@@ -985,6 +980,7 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return err
 	}
+
 	if data.Token == "" {
 		slog.Error("token must not be empty")
 		return ctx.JSON(400, "token must not be empty")
@@ -992,7 +988,6 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 	// check if valid url - maybe the user forgot to add the protocol
 	if !strings.HasPrefix(data.Url, "http://") && !strings.HasPrefix(data.Url, "https://") {
 		data.Url = "https://" + data.Url
-
 	}
 
 	git, err := gitlab.NewClient(data.Token, gitlab.WithBaseURL(data.Url))
@@ -1004,7 +999,9 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 		MinAccessLevel: gitlab.Ptr(gitlab.ReporterPermissions),
 	})
 	if err != nil {
-		return err
+		return ctx.JSON(400, map[string]any{
+			"message": "Invalid GitLab token",
+		})
 	}
 
 	// save the integration
