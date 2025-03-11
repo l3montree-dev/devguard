@@ -326,25 +326,26 @@ func CreateIssuesForUpdatedVulns(db core.DB, thirdPartyIntegration core.ThirdPar
 	if riskThreshold != nil && cvssThreshold != nil {
 
 		for _, vulnerability := range vulnList {
+			if vulnerability.TicketID == nil {
+				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold || vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
 
-			if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold || vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
-
-				err := createIssue(thirdPartyIntegration, vulnerability.ID, asset, repoID, org.Slug, project.Slug)
-				if err != nil {
-					return err
+					err := createIssue(thirdPartyIntegration, vulnerability.ID, asset, repoID, org.Slug, project.Slug)
+					if err != nil {
+						return err
+					}
 				}
 			}
-
 		}
 	} else {
 		if riskThreshold != nil {
 
 			for _, vulnerability := range vulnList {
-
-				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
-					err := createIssue(thirdPartyIntegration, vulnerability.ID, asset, repoID, org.Slug, project.Slug)
-					if err != nil {
-						return err
+				if vulnerability.TicketID == nil {
+					if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
+						err := createIssue(thirdPartyIntegration, vulnerability.ID, asset, repoID, org.Slug, project.Slug)
+						if err != nil {
+							return err
+						}
 					}
 
 				}
@@ -352,13 +353,14 @@ func CreateIssuesForUpdatedVulns(db core.DB, thirdPartyIntegration core.ThirdPar
 		} else if cvssThreshold != nil {
 
 			for _, vulnerability := range vulnList {
+				if vulnerability.TicketID == nil {
+					if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
+						err := createIssue(thirdPartyIntegration, vulnerability.ID, asset, repoID, org.Slug, project.Slug)
+						if err != nil {
+							return err
+						}
 
-				if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
-					err := createIssue(thirdPartyIntegration, vulnerability.ID, asset, repoID, org.Slug, project.Slug)
-					if err != nil {
-						return err
 					}
-
 				}
 			}
 		}

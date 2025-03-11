@@ -964,7 +964,6 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		return err
 	}
 
-	// we create a new ticket in github
 	client, err := g.gitlabClientFactory(integrationUUID)
 	if err != nil {
 		return err
