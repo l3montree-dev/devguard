@@ -56,6 +56,7 @@ type Component struct {
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType ComponentType         `json:"componentType"`
 	Version       string                `json:"version"`
+	License       string                `json:"license" default:"unknown"`
 
 	ComponentProject   *ComponentProject `json:"project" gorm:"foreignKey:ID;references:ComponentProjectID;constraint:OnDelete:CASCADE;"`
 	ComponentProjectID string            `json:"projectId" gorm:"column:project_id"`
