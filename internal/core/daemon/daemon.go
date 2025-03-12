@@ -58,15 +58,23 @@ func markMirrored(configService config.Service, key string) error {
 func Start(db core.DB) {
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
-
+	UpdateDepsDevInformation(db)
 	// only run this function if leader
 	leaderElector.IfLeader(context.Background(), func() error {
 		// we only update the vulnerability database each 6 hours.
 		// thus there is no need to recalculate the risk or anything earlier
 		slog.Info("starting background jobs", "time", time.Now())
+		var start time.Time
+		// update deps dev
+		err := UpdateDepsDevInformation(db)
+		if err != nil {
+			slog.Error("could not update deps dev information", "err", err)
+			return nil
+		}
+		slog.Info("deps dev information updated", "duration", time.Since(start))
+
 		// first update the vulndb
 		// this will give us the latest cves, cwes, exploits and affected components
-		var start time.Time
 		if shouldMirror(configService, "vulndb.vulndb") {
 			start = time.Now()
 			if err := UpdateVulnDB(db); err != nil {

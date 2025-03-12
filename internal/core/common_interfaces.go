@@ -16,6 +16,7 @@
 package core
 
 import (
+	"context"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -84,6 +85,8 @@ type AffectedComponentRepository interface {
 }
 
 type ComponentRepository interface {
+	common.Repository[string, models.Component, DB]
+
 	GetVersions(tx DB, assetVersion models.AssetVersion) ([]string, error)
 	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, scanner, version string) ([]models.ComponentDependency, error)
 	SaveBatch(tx DB, components []models.Component) error
@@ -271,4 +274,13 @@ type ProjectRiskHistoryRepository interface {
 
 type StatisticsService interface {
 	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error
+}
+
+type DepsDevService interface {
+	GetVersion(ctx context.Context, ecosystem, packageName, version string) (common.DepsDevVersionResponse, error)
+	GetProject(ctx context.Context, projectID string) (common.DepsDevProjectResponse, error)
+}
+
+type ComponentProjectRepository interface {
+	common.Repository[string, models.ComponentProject, DB]
 }

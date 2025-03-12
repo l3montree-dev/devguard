@@ -40,6 +40,12 @@ func NewComponentRepository(db core.DB) *componentRepository {
 	}
 }
 
+func (c *componentRepository) FindAllWithoutLicense() ([]models.Component, error) {
+	var components []models.Component
+	err := c.db.Where("license IS NULL OR license = ''").Find(&components).Error
+	return components, err
+}
+
 func (c *componentRepository) UpdateSemverEnd(tx core.DB, ids []uuid.UUID, version *string) error {
 	if len(ids) == 0 {
 		return nil

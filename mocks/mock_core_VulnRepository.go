@@ -80,27 +80,27 @@ func (_c *CoreVulnRepository_FindByTicketID_Call) RunAndReturn(run func(*gorm.DB
 	return _c
 }
 
-// GetOrgFromVulnID provides a mock function with given fields: tx, vulnID
-func (_m *CoreVulnRepository) GetOrgFromVulnID(tx *gorm.DB, vulnID string) (models.Org, error) {
-	ret := _m.Called(tx, vulnID)
+// GetOrgFromVuln provides a mock function with given fields: vuln
+func (_m *CoreVulnRepository) GetOrgFromVuln(vuln models.Vuln) (models.Org, error) {
+	ret := _m.Called(vuln)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetOrgFromVulnID")
+		panic("no return value specified for GetOrgFromVuln")
 	}
 
 	var r0 models.Org
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string) (models.Org, error)); ok {
-		return rf(tx, vulnID)
+	if rf, ok := ret.Get(0).(func(models.Vuln) (models.Org, error)); ok {
+		return rf(vuln)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string) models.Org); ok {
-		r0 = rf(tx, vulnID)
+	if rf, ok := ret.Get(0).(func(models.Vuln) models.Org); ok {
+		r0 = rf(vuln)
 	} else {
 		r0 = ret.Get(0).(models.Org)
 	}
 
-	if rf, ok := ret.Get(1).(func(*gorm.DB, string) error); ok {
-		r1 = rf(tx, vulnID)
+	if rf, ok := ret.Get(1).(func(models.Vuln) error); ok {
+		r1 = rf(vuln)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -108,31 +108,30 @@ func (_m *CoreVulnRepository) GetOrgFromVulnID(tx *gorm.DB, vulnID string) (mode
 	return r0, r1
 }
 
-// CoreVulnRepository_GetOrgFromVulnID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrgFromVulnID'
-type CoreVulnRepository_GetOrgFromVulnID_Call struct {
+// CoreVulnRepository_GetOrgFromVuln_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrgFromVuln'
+type CoreVulnRepository_GetOrgFromVuln_Call struct {
 	*mock.Call
 }
 
-// GetOrgFromVulnID is a helper method to define mock.On call
-//   - tx *gorm.DB
-//   - vulnID string
-func (_e *CoreVulnRepository_Expecter) GetOrgFromVulnID(tx interface{}, vulnID interface{}) *CoreVulnRepository_GetOrgFromVulnID_Call {
-	return &CoreVulnRepository_GetOrgFromVulnID_Call{Call: _e.mock.On("GetOrgFromVulnID", tx, vulnID)}
+// GetOrgFromVuln is a helper method to define mock.On call
+//   - vuln models.Vuln
+func (_e *CoreVulnRepository_Expecter) GetOrgFromVuln(vuln interface{}) *CoreVulnRepository_GetOrgFromVuln_Call {
+	return &CoreVulnRepository_GetOrgFromVuln_Call{Call: _e.mock.On("GetOrgFromVuln", vuln)}
 }
 
-func (_c *CoreVulnRepository_GetOrgFromVulnID_Call) Run(run func(tx *gorm.DB, vulnID string)) *CoreVulnRepository_GetOrgFromVulnID_Call {
+func (_c *CoreVulnRepository_GetOrgFromVuln_Call) Run(run func(vuln models.Vuln)) *CoreVulnRepository_GetOrgFromVuln_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string))
+		run(args[0].(models.Vuln))
 	})
 	return _c
 }
 
-func (_c *CoreVulnRepository_GetOrgFromVulnID_Call) Return(_a0 models.Org, _a1 error) *CoreVulnRepository_GetOrgFromVulnID_Call {
+func (_c *CoreVulnRepository_GetOrgFromVuln_Call) Return(_a0 models.Org, _a1 error) *CoreVulnRepository_GetOrgFromVuln_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *CoreVulnRepository_GetOrgFromVulnID_Call) RunAndReturn(run func(*gorm.DB, string) (models.Org, error)) *CoreVulnRepository_GetOrgFromVulnID_Call {
+func (_c *CoreVulnRepository_GetOrgFromVuln_Call) RunAndReturn(run func(models.Vuln) (models.Org, error)) *CoreVulnRepository_GetOrgFromVuln_Call {
 	_c.Call.Return(run)
 	return _c
 }

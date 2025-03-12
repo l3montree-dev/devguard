@@ -70,6 +70,65 @@ func (_c *CoreAssetVersionRepository_Delete_Call) RunAndReturn(run func(*gorm.DB
 	return _c
 }
 
+// FindOrCreate provides a mock function with given fields: assetVersionName, assetID, tag, defaultBranchName
+func (_m *CoreAssetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error) {
+	ret := _m.Called(assetVersionName, assetID, tag, defaultBranchName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindOrCreate")
+	}
+
+	var r0 models.AssetVersion
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string, string) (models.AssetVersion, error)); ok {
+		return rf(assetVersionName, assetID, tag, defaultBranchName)
+	}
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string, string) models.AssetVersion); ok {
+		r0 = rf(assetVersionName, assetID, tag, defaultBranchName)
+	} else {
+		r0 = ret.Get(0).(models.AssetVersion)
+	}
+
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID, string, string) error); ok {
+		r1 = rf(assetVersionName, assetID, tag, defaultBranchName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreAssetVersionRepository_FindOrCreate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindOrCreate'
+type CoreAssetVersionRepository_FindOrCreate_Call struct {
+	*mock.Call
+}
+
+// FindOrCreate is a helper method to define mock.On call
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - tag string
+//   - defaultBranchName string
+func (_e *CoreAssetVersionRepository_Expecter) FindOrCreate(assetVersionName interface{}, assetID interface{}, tag interface{}, defaultBranchName interface{}) *CoreAssetVersionRepository_FindOrCreate_Call {
+	return &CoreAssetVersionRepository_FindOrCreate_Call{Call: _e.mock.On("FindOrCreate", assetVersionName, assetID, tag, defaultBranchName)}
+}
+
+func (_c *CoreAssetVersionRepository_FindOrCreate_Call) Run(run func(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string)) *CoreAssetVersionRepository_FindOrCreate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *CoreAssetVersionRepository_FindOrCreate_Call) Return(_a0 models.AssetVersion, _a1 error) *CoreAssetVersionRepository_FindOrCreate_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreAssetVersionRepository_FindOrCreate_Call) RunAndReturn(run func(string, uuid.UUID, string, string) (models.AssetVersion, error)) *CoreAssetVersionRepository_FindOrCreate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAllAssetsVersionFromDBByAssetID provides a mock function with given fields: tx, assetID
 func (_m *CoreAssetVersionRepository) GetAllAssetsVersionFromDBByAssetID(tx *gorm.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	ret := _m.Called(tx, assetID)

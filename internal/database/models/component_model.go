@@ -16,6 +16,8 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -48,7 +50,12 @@ type ComponentProject struct {
 	License         string `json:"license"`
 	Description     string `json:"description"`
 
-	ScoreCard database.JSONB `json:"scoreCard" gorm:"column:score_card"`
+	ScoreCard database.JSONB `json:"scoreCard" gorm:"column:score_card;type:jsonb"`
+	UpdatedAt time.Time      `json:"updatedAt" gorm:"column:updated_at"`
+}
+
+func (c ComponentProject) TableName() string {
+	return "component_projects"
 }
 
 type Component struct {
@@ -56,10 +63,10 @@ type Component struct {
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType ComponentType         `json:"componentType"`
 	Version       string                `json:"version"`
-	License       string                `json:"license" default:"unknown"`
+	License       *string               `json:"license"`
 
-	ComponentProject   *ComponentProject `json:"project" gorm:"foreignKey:ID;references:ComponentProjectID;constraint:OnDelete:CASCADE;"`
-	ComponentProjectID string            `json:"projectId" gorm:"column:project_id"`
+	ComponentProject   *ComponentProject `json:"project" gorm:"foreignKey:ComponentProjectID;references:ID;constraint:OnDelete:CASCADE;"`
+	ComponentProjectID *string           `json:"projectId" gorm:"column:project_id"`
 }
 
 type ComponentDependency struct {
