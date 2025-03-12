@@ -301,7 +301,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 
 		for _, vulnerability := range vulnList {
 			if vulnerability.TicketID == nil {
-				if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold || vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
+				if *vulnerability.RawRiskAssessment >= *riskThreshold || vulnerability.CVE.CVSS >= float32(*cvssThreshold) {
 
 					err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
 					if err != nil {
@@ -314,7 +314,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 		if riskThreshold != nil {
 			for _, vulnerability := range vulnList {
 				if vulnerability.TicketID == nil {
-					if *vulnerability.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold {
+					if *vulnerability.RawRiskAssessment >= *riskThreshold {
 						err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
 						if err != nil {
 							return err
@@ -326,7 +326,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 		} else if cvssThreshold != nil {
 			for _, vulnerability := range vulnList {
 				if vulnerability.TicketID == nil {
-					if vulnerability.CVE.CVSS >= float32(*asset.CVSSAutomaticTicketThreshold) {
+					if vulnerability.CVE.CVSS >= float32(*cvssThreshold) {
 						err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
 						if err != nil {
 							return err
