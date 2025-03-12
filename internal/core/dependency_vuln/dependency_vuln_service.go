@@ -293,7 +293,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 
 	repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
 	if err != nil {
-		return nil
+		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
 	}
 
 	//Determine whether to scan for both risk and cvss or just 1 of them
