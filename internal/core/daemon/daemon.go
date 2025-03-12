@@ -59,6 +59,11 @@ func Start(db core.DB) {
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 
+	if err := RecalculateRisk(db); err != nil {
+		slog.Error("could not recalculate risk", "err", err)
+
+	}
+
 	// only run this function if leader
 	leaderElector.IfLeader(context.Background(), func() error {
 		// we only update the vulnerability database each 6 hours.

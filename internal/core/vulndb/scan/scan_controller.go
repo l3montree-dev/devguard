@@ -40,7 +40,7 @@ type httpController struct {
 	dependencyVulnService core.DependencyVulnService
 }
 
-func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService) *httpController {
+func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *httpController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -54,6 +54,7 @@ func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRe
 		assetRepository:        assetRepository,
 		assetVersionRepository: assetVersionRepository,
 		statisticsService:      statisticsService,
+		dependencyVulnService:  dependencyVulnService,
 	}
 }
 
