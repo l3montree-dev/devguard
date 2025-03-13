@@ -1,4 +1,4 @@
-package dependencyVuln
+package dependency_vuln
 
 import (
 	"encoding/json"
@@ -196,7 +196,7 @@ func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not mitigate dependencyVuln").WithInternal(err)
 	}
 
-	// fetch the dependencyVuln again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the dependencyVuln.
+	// fetch the dependencyVuln again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the dependency_vuln.
 	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnId)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")

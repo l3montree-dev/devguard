@@ -143,7 +143,7 @@ WITH events AS (
     FROM
         dependency_vulns
     JOIN
-        vuln_events fe ON dependency_vulns.id = fe.dependencyVuln_id
+        vuln_events fe ON dependency_vulns.id = fe.dependency_vuln_id
     WHERE
         fe.type IN ? AND dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.raw_risk_assessment >= ? AND dependency_vulns.raw_risk_assessment <= ?
 ),

@@ -28,7 +28,7 @@ import (
 	"github.com/google/go-github/v62/github"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -95,7 +95,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
-		dependencyVulnService:    dependencyVuln.NewService(dependencyVulnRepository, vulnEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
+		dependencyVulnService:    dependency_vuln.NewService(dependencyVulnRepository, vulnEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
 
 		frontendUrl:            frontendUrl,
 		assetRepository:        repositories.NewAssetRepository(db),
@@ -219,7 +219,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
-			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVulnID(nil, vuln.GetID())
+			org, err := githubIntegration.aggregatedVulnRepository.GetOrgFromVuln(vuln)
 			if err != nil {
 				slog.Error("could not get org from vuln id", "err", err)
 				return

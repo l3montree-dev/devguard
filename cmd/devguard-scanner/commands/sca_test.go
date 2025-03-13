@@ -18,14 +18,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/core/dependencyVuln"
+	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFlawToPrint(t *testing.T) {
-	t.Run("Should print normally with 2 strings when providing a namespace", func(t *testing.T) {
+func TestDependencyVulnToTableRow(t *testing.T) {
+	t.Run("should print normally with 2 strings when providing a namespace", func(t *testing.T) {
 		pURL := packageurl.PackageURL{}
 		pURL.Type = "npm"
 		pURL.Namespace = "Example Namespace"
@@ -35,7 +35,7 @@ func TestFlawToPrint(t *testing.T) {
 		rawRiskAssessment := 42424.42
 		componentFixedVersion := "Example Version"
 
-		v := dependencyVuln.DependencyVulnDTO{}
+		v := dependency_vuln.DependencyVulnDTO{}
 		v.CVEID = &cveid
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion
@@ -49,7 +49,7 @@ func TestFlawToPrint(t *testing.T) {
 		assert.Equal(t, 2, count, "should be equal")
 
 	})
-	t.Run("Test with empty namespace should result in only 1 slash instead of a double slash", func(t *testing.T) {
+	t.Run("test with empty namespace should result in only 1 slash instead of a double slash", func(t *testing.T) {
 		pURL := packageurl.PackageURL{}
 		pURL.Type = "npm"
 		pURL.Namespace = ""
@@ -59,7 +59,7 @@ func TestFlawToPrint(t *testing.T) {
 		rawRiskAssessment := 42424.42
 		componentFixedVersion := "Example Version"
 
-		v := dependencyVuln.DependencyVulnDTO{}
+		v := dependency_vuln.DependencyVulnDTO{}
 		v.CVEID = &cveid
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion

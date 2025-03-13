@@ -1,5 +1,5 @@
 // TODO: rename the package name to vuln
-package dependencyVuln
+package dependency_vuln
 
 import (
 	"encoding/json"
@@ -93,7 +93,7 @@ func (c firstPartyVulnController) Mitigate(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not mitigate firstPartyVuln").WithInternal(err)
 	}
 
-	// fetch the firstPartyVuln again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the dependencyVuln.
+	// fetch the firstPartyVuln again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the dependency_vuln.
 	firstPartyVuln, err := c.firstPartyVulnRepository.Read(firstPartyVulnId)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")

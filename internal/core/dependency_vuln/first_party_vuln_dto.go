@@ -1,4 +1,4 @@
-package dependencyVuln
+package dependency_vuln
 
 import (
 	"time"
