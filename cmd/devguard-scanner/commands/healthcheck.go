@@ -42,7 +42,7 @@ func NewHealthCheckCommand() *cobra.Command {
 				err := cmd.Run()
 				if err != nil {
 					slog.Error("could not execute command", "command", command, "err", err)
-					return
+					panic(err.Error())
 				}
 				// read the output
 				slog.Info("command executed successfully", "command", command)
