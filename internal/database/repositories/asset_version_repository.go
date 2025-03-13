@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -90,8 +91,8 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 		defaultBranch = true
 	}
 
-	var app models.AssetVersion
-	app, err := a.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
+	var assetVersion models.AssetVersion
+	assetVersion, err := a.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
 	if err != nil {
 
 		var assetVersionType models.AssetVersionType
@@ -101,26 +102,31 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 			assetVersionType = "tag"
 		}
 
-		app = a.assetVersionFactory(assetVersionName, assetID, assetVersionType, defaultBranch)
-		err := a.db.Create(&app).Error
+		assetVersion = a.assetVersionFactory(assetVersionName, assetID, assetVersionType, defaultBranch)
+
+		if assetVersion.Name == "" || assetVersion.Slug == "" {
+			return assetVersion, fmt.Errorf("assetVersions with an empty name or an empty slug are not allowed")
+		}
+
+		err := a.db.Create(&assetVersion).Error
 		//Check if the given assetVersion already exists if thats the case don't want to add a new entry to the db but instead update the existing one
 		if err != nil && strings.Contains(err.Error(), "duplicate key value violates") {
-			a.db.Unscoped().Model(&app).Where("name", assetVersionName).Update("deleted_at", nil) //Update 'deleted_at' to NULL to revert the previous soft delete
-			return app, nil
+			a.db.Unscoped().Model(&assetVersion).Where("name", assetVersionName).Update("deleted_at", nil) //Update 'deleted_at' to NULL to revert the previous soft delete
+			return assetVersion, nil
 		} else if err != nil {
 			return models.AssetVersion{}, err
 		}
-		return app, nil
+		return assetVersion, nil
 	}
-	if app.DefaultBranch != defaultBranch {
-		app.DefaultBranch = defaultBranch
-		if err = a.db.Save(&app).Error; err != nil {
+	if assetVersion.DefaultBranch != defaultBranch {
+		assetVersion.DefaultBranch = defaultBranch
+		if err = a.db.Save(&assetVersion).Error; err != nil {
 			return models.AssetVersion{}, err
 		}
 
 	}
 
-	return app, nil
+	return assetVersion, nil
 }
 
 func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {
