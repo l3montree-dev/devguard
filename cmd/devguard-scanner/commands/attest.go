@@ -81,6 +81,7 @@ func NewAttestCommand() *cobra.Command {
 			err := attestCmd(cmd, args)
 			if err != nil {
 				slog.Error("attestation failed", "err", err)
+				panic(err.Error())
 			}
 		},
 	}

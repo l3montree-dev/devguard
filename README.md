@@ -38,7 +38,10 @@
    <a href="https://github.com/l3montree-dev/devguard/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22"><img src="https://img.shields.io/badge/Help%20Wanted-Contribute-blue"></a>
 </p>
 
-
+<p align="center">
+Get in touch with the developers directly via 
+  <a href="https://matrix.to/#/#devguard:matrix.org">Matrix-Chat</a>
+</p>
 
 <!-- TABLE OF CONTENTS -->
 <details>
