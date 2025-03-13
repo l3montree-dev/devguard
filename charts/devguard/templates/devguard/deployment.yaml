@@ -5,6 +5,12 @@
 {{- end -}}
 {{- $host := index .Values.web.ingress.hosts 0 -}}
 
+{{- $apiProtocol := "http" -}}
+{{- if .Values.api.ingress.tls -}}
+{{- $apiProtocol = "https" -}}
+{{- end -}}
+{{- $apiHost := index .Values.api.ingress.hosts 0 -}}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -61,6 +67,12 @@ spec:
             value: "5432"
           - name: FRONTEND_URL
             value: {{ printf "%s://%s" $protocol $host.host }}
+          - name: INSTANCE_DOMAIN
+            {{- if .Values.api.ingress.enabled }}
+            value: {{ printf "%s://%s" $apiProtocol $apiHost.host }}
+            {{- else }}
+            value: http://devguard-api-service.{{ .Release.Namespace }}.svc.cluster.local:8080
+            {{- end }}
           - name: ORY_KRATOS_PUBLIC
             value: http://kratos:4433
           - name: ORY_KRATOS_ADMIN
