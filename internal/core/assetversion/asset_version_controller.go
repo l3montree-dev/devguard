@@ -199,7 +199,7 @@ func (a *assetVersionController) VEXJSON(c core.Context) error {
 func (a *assetVersionController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 
 	assetVersion := core.GetAssetVersion(c)
-	org := core.GetTenant(c)
+	org := core.GetOrganization(c)
 	// check for version query param
 	version := c.QueryParam("version")
 	if version == "" {
@@ -227,7 +227,7 @@ func (a *assetVersionController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 func (a *assetVersionController) buildVeX(c core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(c)
 	assetVersion := core.GetAssetVersion(c)
-	org := core.GetTenant(c)
+	org := core.GetOrganization(c)
 	// check for version query param
 	version := c.QueryParam("version")
 	if version == "" {

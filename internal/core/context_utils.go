@@ -58,8 +58,12 @@ func GetRBAC(c Context) accesscontrol.AccessControl {
 	return c.Get("rbac").(accesscontrol.AccessControl)
 }
 
-func GetTenant(c Context) models.Org {
-	return c.Get("tenant").(models.Org)
+func GetOrganization(c Context) models.Org {
+	return c.Get("organization").(models.Org)
+}
+
+func SetOrganization(c Context, org models.Org) {
+	c.Set("organization", org)
 }
 
 func SetIsPublicRequest(c Context) {
@@ -108,6 +112,10 @@ func GetOrgSlug(c Context) (string, error) {
 		return "", fmt.Errorf("could not get org slug")
 	}
 	return orgSlug, nil
+}
+
+func SetOrg(c Context, org models.Org) {
+	c.Set("org", org)
 }
 
 func SetOrgSlug(c Context, orgSlug string) {

@@ -113,7 +113,7 @@ func (githubIntegration *githubIntegration) GetID() core.IntegrationID {
 
 func (githubIntegration *githubIntegration) IntegrationEnabled(ctx core.Context) bool {
 	// check if the github app installation exists in the database
-	tenant := core.GetTenant(ctx)
+	tenant := core.GetOrganization(ctx)
 	return len(tenant.GithubAppInstallations) > 0
 }
 
@@ -123,7 +123,7 @@ func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) (
 		return nil, NoGithubAppInstallationError
 	}
 
-	tenant := core.GetTenant(ctx)
+	tenant := core.GetOrganization(ctx)
 
 	repos := []core.Repository{}
 	// check if a github integration exists on that org
@@ -345,7 +345,7 @@ func (githubIntegration *githubIntegration) FinishInstallation(ctx core.Context)
 	}
 
 	// check if the org id does match the current organization id, thus the user has access to the organization
-	tenant := core.GetTenant(ctx)
+	tenant := core.GetOrganization(ctx)
 	// convert the installation id to an integer
 	installationIDInt, err := strconv.Atoi(installationID)
 	if err != nil {

@@ -141,7 +141,7 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 }
 
 func (g *gitlabIntegration) IntegrationEnabled(ctx core.Context) bool {
-	return len(core.GetTenant(ctx).GitLabIntegrations) > 0
+	return len(core.GetOrganization(ctx).GitLabIntegrations) > 0
 }
 
 func (g *gitlabIntegration) WantsToHandleWebhook(ctx core.Context) bool {
@@ -349,7 +349,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 }
 
 func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
-	org := core.GetTenant(ctx)
+	org := core.GetOrganization(ctx)
 	// create a new gitlab batch client
 	gitlabBatchClient, err := newGitLabBatchClient(org.GitLabIntegrations)
 	if err != nil {
@@ -1013,7 +1013,7 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 		GitLabUrl:   data.Url,
 		AccessToken: data.Token,
 		Name:        data.Name,
-		OrgID:       (core.GetTenant(ctx).GetID()),
+		OrgID:       (core.GetOrganization(ctx).GetID()),
 	}
 
 	if err := g.gitlabIntegrationRepository.Save(nil, &integration); err != nil {

@@ -60,13 +60,13 @@ func (p *Controller) Create(c core.Context) error {
 	}
 
 	// add the organization id
-	newProject.OrganizationID = core.GetTenant(c).GetID()
+	newProject.OrganizationID = core.GetOrganization(c).GetID()
 
 	if err := p.projectRepository.Create(nil, &newProject); err != nil {
 		// check if duplicate key error
 		if database.IsDuplicateKeyError(err) {
 			// get the project by slug and project id unscoped
-			project, err := p.projectRepository.ReadBySlugUnscoped(core.GetTenant(c).GetID(), newProject.Slug)
+			project, err := p.projectRepository.ReadBySlugUnscoped(core.GetOrganization(c).GetID(), newProject.Slug)
 			if err != nil {
 				return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
 			}
