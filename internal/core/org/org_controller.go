@@ -17,6 +17,7 @@ package org
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -56,21 +57,25 @@ func (o *httpController) Create(c core.Context) error {
 		return echo.NewHTTPError(400, err.Error())
 	}
 
-	org := req.toModel()
+	organization := req.toModel()
 
-	err := o.organizationRepository.Create(nil, &org)
+	if organization.Name == "" || organization.Slug == "" {
+		return echo.NewHTTPError(409, "organizations with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("organizations with an empty name or an empty slug are not allowed"))
+	}
+
+	err := o.organizationRepository.Create(nil, &organization)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value") { //Check the returned error of Create Function
-			return echo.NewHTTPError(409, "Organization with that name already exists").WithInternal(err) //Error Code 409: conflict in current state of the resource
+			return echo.NewHTTPError(409, "organization with that name already exists").WithInternal(err) //Error Code 409: conflict in current state of the resource
 		}
 		return echo.NewHTTPError(500, "could not create organization").WithInternal(err)
 	}
 
-	if err = o.bootstrapOrg(c, org); err != nil {
+	if err = o.bootstrapOrg(c, organization); err != nil {
 		return echo.NewHTTPError(500, "could not bootstrap organization").WithInternal(err)
 	}
 
-	return c.JSON(200, org)
+	return c.JSON(200, organization)
 }
 
 func (o *httpController) bootstrapOrg(c core.Context, organization models.Org) error {
@@ -121,6 +126,7 @@ func (o *httpController) bootstrapOrg(c core.Context, organization models.Org) e
 
 func (o *httpController) Update(ctx core.Context) error {
 	organization := core.GetTenant(ctx)
+
 	members, err := FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
@@ -137,6 +143,11 @@ func (o *httpController) Update(ctx core.Context) error {
 	}
 
 	updated := patchRequest.applyToModel(&organization)
+
+	if organization.Name == "" || organization.Slug == "" {
+		return echo.NewHTTPError(409, "organizations with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("organizations with an empty name or an empty slug are not allowed"))
+	}
+
 	if updated {
 		err := o.organizationRepository.Update(nil, &organization)
 		if err != nil {
