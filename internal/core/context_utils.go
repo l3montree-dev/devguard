@@ -191,6 +191,9 @@ func GetRepositoryIdFromAssetAndProject(project models.Project, asset models.Ass
 func GetRepositoryID(c Context) (string, error) {
 	// get the asset
 	asset := GetAsset(c)
+	if asset.RepositoryID != nil {
+		return *asset.RepositoryID, nil
+	}
 	// get the project
 	project := GetProject(c)
 	return GetRepositoryIdFromAssetAndProject(project, asset)

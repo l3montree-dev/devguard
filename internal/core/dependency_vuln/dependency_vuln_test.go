@@ -13,7 +13,7 @@ import (
 )
 
 func TestCreateIssuesForVulns(t *testing.T) {
-	t.Run("Both Thresholds set an both CVSS and risk values are provided should return no error", func(t *testing.T) {
+	t.Run("Both Thresholds set and both CVSS and risk values are provided should return no error", func(t *testing.T) {
 		organizationRepository := mocks.NewCoreOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
 
@@ -44,7 +44,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 			t.Fail()
 		}
 	})
-	t.Run("No Thresholds set an both CVSS and risk values are provided should return no error because the user doesn't want automatic tickets", func(t *testing.T) {
+	t.Run("No Thresholds set and both CVSS and risk values are provided should return no error because the user doesn't want automatic tickets", func(t *testing.T) {
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, nil, nil, nil)
 
@@ -89,6 +89,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		asset := models.Asset{
 			RiskAutomaticTicketThreshold: utils.Ptr(0.),
 			ProjectID:                    uuid.MustParse("3bf8dfdd-e82b-42ce-9381-17f6f588bc26"),
+			// no RepositoryID set
 		}
 
 		vuln1 := models.DependencyVuln{}
@@ -114,6 +115,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 			CVSSAutomaticTicketThreshold: utils.Ptr(0.),
 			RiskAutomaticTicketThreshold: utils.Ptr(0.),
 			ProjectID:                    uuid.MustParse("3bf8dfdd-e82b-42ce-9381-17f6f588bc26"),
+			// no RepositoryID set
 		}
 
 		vuln1 := models.DependencyVuln{}
@@ -124,7 +126,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 			t.Fail()
 		}
 	})
-	t.Run("Both Thresholds set an both CVSS and risk values are provided but the create Issue function returns an error and therefore should fail", func(t *testing.T) {
+	t.Run("Both Thresholds set and both CVSS and risk values are provided but the create Issue function returns an error and therefore should fail", func(t *testing.T) {
 		organizationRepository := mocks.NewCoreOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
 
@@ -186,7 +188,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		}
 	})
 
-	t.Run("Only CVSS Threshold is set an both CVSS and risk values are provided but the create Issue function returns an error and therefore should fail", func(t *testing.T) {
+	t.Run("Only CVSS Threshold is set and both CVSS and risk values are provided but the create Issue function returns an error and therefore should fail", func(t *testing.T) {
 		organizationRepository := mocks.NewCoreOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
 
@@ -216,7 +218,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 			t.Fail()
 		}
 	})
-	t.Run("Only Risk Threshold is set an both CVSS and risk values are provided but the create Issue function returns an error and therefore should fail", func(t *testing.T) {
+	t.Run("Only Risk Threshold is set and both CVSS and risk values are provided but the create Issue function returns an error and therefore should fail", func(t *testing.T) {
 		organizationRepository := mocks.NewCoreOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
 

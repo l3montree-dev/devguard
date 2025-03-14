@@ -538,9 +538,9 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		// this integration only handles github repositories.
 		return nil
 	}
-	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+
+	owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
 	if err != nil {
-		slog.Error("failed to extract integration id from repo id", "err", err, "repoId", repoId)
 		return err
 	}
 
@@ -550,7 +550,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	}
 
 	// we create a new ticket in github
-	client, err := g.githubClientFactory(integrationUUID.String())
+	client, err := g.githubClientFactory(repoId)
 	if err != nil {
 		return err
 	}
@@ -565,11 +565,6 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		Title:  dependencyVuln.CVEID,
 		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
 		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment))},
-	}
-
-	owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
-	if err != nil {
-		return err
 	}
 
 	createdIssue, _, err := client.CreateIssue(context.Background(), owner, repo, issue)
