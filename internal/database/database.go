@@ -52,3 +52,24 @@ func (jsonField *JSONB) Scan(value any) error {
 	}
 	return json.Unmarshal(data, &jsonField)
 }
+
+func JsonbFromStruct(m any) (JSONB, error) {
+	data, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+	var jsonb JSONB
+	err = json.Unmarshal(data, &jsonb)
+	if err != nil {
+		return nil, err
+	}
+	return jsonb, nil
+}
+
+func MustJsonBFromStruct(m any) JSONB {
+	jsonb, err := JsonbFromStruct(m)
+	if err != nil {
+		panic(err)
+	}
+	return jsonb
+}

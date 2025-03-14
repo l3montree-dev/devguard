@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
+	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
@@ -393,6 +394,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository)
 
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
+	componentController := component.NewHTTPController(componentRepository)
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
 
@@ -565,6 +567,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
+	assetVersionRouter.GET("/components/", componentController.ListPaged)
 	//TODO: change it
 	//dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter := assetVersionRouter.Group("/flaws")
