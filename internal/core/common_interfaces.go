@@ -108,6 +108,7 @@ type DependencyVulnRepository interface {
 	ReadDependencyVulnWithAssetVersionEvents(id string) (models.DependencyVuln, []models.VulnEvent, error)
 	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByPurl(tx DB, purls []string) ([]models.DependencyVuln, error)
+	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 }
 
 type FirstPartyVulnRepository interface {
@@ -182,7 +183,7 @@ type DependencyVulnService interface {
 	UserFixedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
 	UserDetectedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
 	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, assetVersionName string) (models.VulnEvent, error)
-	ApplyAndSave(tx DB, vuln *models.DependencyVuln, VulnEvent *models.VulnEvent) error
+	CreateIssuesForVulns(asset models.Asset, vulnList []models.DependencyVuln) error
 }
 
 type AssetVersionService interface {

@@ -1,6 +1,10 @@
 package core
 
-import "github.com/l3montree-dev/devguard/internal/database/models"
+import (
+	"context"
+
+	"github.com/l3montree-dev/devguard/internal/database/models"
+)
 
 type Repository struct {
 	ID    string `json:"id"`
@@ -32,6 +36,7 @@ type ThirdPartyIntegration interface {
 	ListRepositories(ctx Context) ([]Repository, error)
 
 	HandleEvent(event any) error
+	CreateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error
 
 	GetUsers(org models.Org) []User
 

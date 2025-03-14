@@ -16,7 +16,6 @@
 package scan
 
 import (
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -37,9 +36,11 @@ type httpController struct {
 	assetVersionRepository core.AssetVersionRepository
 	assetVersionService    core.AssetVersionService
 	statisticsService      core.StatisticsService
+
+	dependencyVulnService core.DependencyVulnService
 }
 
-func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService) *httpController {
+func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *httpController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -53,6 +54,7 @@ func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRe
 		assetRepository:        assetRepository,
 		assetVersionRepository: assetVersionRepository,
 		statisticsService:      statisticsService,
+		dependencyVulnService:  dependencyVulnService,
 	}
 }
 
@@ -120,7 +122,6 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 			slog.Error("could not update sbom", "err", err)
 			return scanResults, err
 		}
-
 	}
 
 	// scan the bom we just retrieved.
@@ -141,6 +142,11 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, version, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
+		return scanResults, err
+	}
+
+	err = s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
+	if err != nil {
 		return scanResults, err
 	}
 
@@ -245,12 +251,12 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(maxSize)
 	if err != nil {
-		fmt.Printf("error when parsing data")
+		slog.Error("error when parsing data")
 		return err
 	}
 	file, _, err := c.Request().FormFile("file")
 	if err != nil {
-		fmt.Printf("error when forming file")
+		slog.Error("error when forming file")
 		return err
 	}
 	defer file.Close()

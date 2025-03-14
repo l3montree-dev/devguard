@@ -73,6 +73,54 @@ func (_c *CoreDependencyVulnRepository_Activate_Call) RunAndReturn(run func(*gor
 	return _c
 }
 
+// ApplyAndSave provides a mock function with given fields: tx, dependencyVuln, vulnEvent
+func (_m *CoreDependencyVulnRepository) ApplyAndSave(tx *gorm.DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error {
+	ret := _m.Called(tx, dependencyVuln, vulnEvent)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ApplyAndSave")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.DependencyVuln, *models.VulnEvent) error); ok {
+		r0 = rf(tx, dependencyVuln, vulnEvent)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreDependencyVulnRepository_ApplyAndSave_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApplyAndSave'
+type CoreDependencyVulnRepository_ApplyAndSave_Call struct {
+	*mock.Call
+}
+
+// ApplyAndSave is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - dependencyVuln *models.DependencyVuln
+//   - vulnEvent *models.VulnEvent
+func (_e *CoreDependencyVulnRepository_Expecter) ApplyAndSave(tx interface{}, dependencyVuln interface{}, vulnEvent interface{}) *CoreDependencyVulnRepository_ApplyAndSave_Call {
+	return &CoreDependencyVulnRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", tx, dependencyVuln, vulnEvent)}
+}
+
+func (_c *CoreDependencyVulnRepository_ApplyAndSave_Call) Run(run func(tx *gorm.DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent)) *CoreDependencyVulnRepository_ApplyAndSave_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(*models.DependencyVuln), args[2].(*models.VulnEvent))
+	})
+	return _c
+}
+
+func (_c *CoreDependencyVulnRepository_ApplyAndSave_Call) Return(_a0 error) *CoreDependencyVulnRepository_ApplyAndSave_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreDependencyVulnRepository_ApplyAndSave_Call) RunAndReturn(run func(*gorm.DB, *models.DependencyVuln, *models.VulnEvent) error) *CoreDependencyVulnRepository_ApplyAndSave_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Begin provides a mock function with no fields
 func (_m *CoreDependencyVulnRepository) Begin() *gorm.DB {
 	ret := _m.Called()
