@@ -65,7 +65,7 @@ func accessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action)
 		return func(c echo.Context) error {
 			// get the rbac
 			rbac := core.GetRBAC(c)
-			org := core.GetTenant(c)
+			org := core.GetOrganization(c)
 			// get the user
 			user := core.GetSession(c).GetUserID()
 
@@ -161,7 +161,7 @@ func projectAccessControlFactory(projectRepository projectRepository) accesscont
 				}
 
 				// get the project by slug and tenant.
-				project, err := projectRepository.ReadBySlug(core.GetTenant(c).GetID(), projectSlug)
+				project, err := projectRepository.ReadBySlug(core.GetOrganization(c).GetID(), projectSlug)
 
 				if err != nil {
 					return echo.NewHTTPError(404, "could not get project")
@@ -207,7 +207,7 @@ func projectAccessControl(projectRepository projectRepository, obj accesscontrol
 			}
 
 			// get the project by slug and tenant.
-			project, err := projectRepository.ReadBySlug(core.GetTenant(c).GetID(), projectSlug)
+			project, err := projectRepository.ReadBySlug(core.GetOrganization(c).GetID(), projectSlug)
 
 			if err != nil {
 				return echo.NewHTTPError(404, "could not get project")

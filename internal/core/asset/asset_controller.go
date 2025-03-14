@@ -77,14 +77,17 @@ func (a *httpController) Create(c core.Context) error {
 
 	project := core.GetProject(c)
 
-	app := req.toModel(project.GetID())
+	newAsset := req.toModel(project.GetID())
 
-	err := a.assetRepository.Create(nil, &app)
+	if newAsset.Name == "" || newAsset.Slug == "" {
+		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
+	}
+	err := a.assetRepository.Create(nil, &newAsset)
 
 	if err != nil {
 		if database.IsDuplicateKeyError(err) {
 			// get the asset by slug and project id unscoped
-			asset, err := a.assetRepository.ReadBySlugUnscoped(project.GetID(), app.Slug)
+			asset, err := a.assetRepository.ReadBySlugUnscoped(project.GetID(), newAsset.Slug)
 			if err != nil {
 				return echo.NewHTTPError(500, "could not read asset").WithInternal(err)
 			}
@@ -93,13 +96,13 @@ func (a *httpController) Create(c core.Context) error {
 				return echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
 			}
 			slog.Info("Asset activated", "assetSlug", asset.Slug, "projectID", project.GetID())
-			app = asset
+			newAsset = asset
 		} else {
 			return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
 		}
 	}
 
-	return c.JSON(200, app)
+	return c.JSON(200, newAsset)
 }
 
 func (a *httpController) Read(c core.Context) error {
@@ -144,6 +147,9 @@ func (c *httpController) Update(ctx core.Context) error {
 	}
 
 	updated := patchRequest.applyToModel(&asset)
+	if asset.Name == "" || asset.Slug == "" {
+		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
+	}
 
 	if updated {
 		err = c.assetRepository.Update(nil, &asset)
