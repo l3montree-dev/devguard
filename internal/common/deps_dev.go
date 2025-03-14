@@ -32,33 +32,35 @@ type DepsDevProjectResponse struct {
 	ProjectKey struct {
 		ID string `json:"id"`
 	} `json:"projectKey"`
-	OpenIssuesCount int    `json:"openIssuesCount"`
-	StarsCount      int    `json:"starsCount"`
-	ForksCount      int    `json:"forksCount"`
-	License         string `json:"license"`
-	Description     string `json:"description"`
-	Homepage        string `json:"homepage"`
-	Scorecard       struct {
-		Date       time.Time `json:"date"`
-		Repository struct {
-			Name   string `json:"name"`
-			Commit string `json:"commit"`
-		} `json:"repository"`
-		Scorecard struct {
-			Version string `json:"version"`
-			Commit  string `json:"commit"`
-		} `json:"scorecard"`
-		Checks []struct {
-			Name          string `json:"name"`
-			Documentation struct {
-				ShortDescription string `json:"shortDescription"`
-				URL              string `json:"url"`
-			} `json:"documentation"`
-			Score   int    `json:"score"`
-			Reason  string `json:"reason"`
-			Details []any  `json:"details"`
-		} `json:"checks"`
-		OverallScore float64 `json:"overallScore"`
-		Metadata     []any   `json:"metadata"`
+	OpenIssuesCount int       `json:"openIssuesCount"`
+	StarsCount      int       `json:"starsCount"`
+	ForksCount      int       `json:"forksCount"`
+	License         string    `json:"license"`
+	Description     string    `json:"description"`
+	Homepage        string    `json:"homepage"`
+	Scorecard       Scorecard `json:"scorecard"`
+}
+
+type Scorecard struct {
+	Date       time.Time `json:"date"`
+	Repository struct {
+		Name   string `json:"name"`
+		Commit string `json:"commit"`
+	} `json:"repository"`
+	Scorecard struct {
+		Version string `json:"version"`
+		Commit  string `json:"commit"`
 	} `json:"scorecard"`
+	Checks []struct {
+		Name          string `json:"name"`
+		Documentation struct {
+			ShortDescription string `json:"shortDescription"`
+			URL              string `json:"url"`
+		} `json:"documentation"`
+		Score   int    `json:"score"`
+		Reason  string `json:"reason"`
+		Details []any  `json:"details"`
+	} `json:"checks"`
+	OverallScore float64 `json:"overallScore"`
+	Metadata     []any   `json:"metadata"`
 }

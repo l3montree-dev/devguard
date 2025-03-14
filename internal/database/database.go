@@ -65,3 +65,11 @@ func JsonbFromStruct(m any) (JSONB, error) {
 	}
 	return jsonb, nil
 }
+
+func MustJsonBFromStruct(m any) JSONB {
+	jsonb, err := JsonbFromStruct(m)
+	if err != nil {
+		panic(err)
+	}
+	return jsonb
+}
