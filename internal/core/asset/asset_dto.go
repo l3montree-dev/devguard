@@ -115,5 +115,15 @@ func (a *patchRequest) applyToModel(
 		}
 	}
 
+	if a.CVSSAutomaticTicketThreshold != nil {
+		updated = true
+		asset.CVSSAutomaticTicketThreshold = a.CVSSAutomaticTicketThreshold
+	}
+
+	if a.RiskAutomaticTicketThreshold != nil {
+		updated = true
+		asset.RiskAutomaticTicketThreshold = a.RiskAutomaticTicketThreshold
+	}
+
 	return updated
 }
