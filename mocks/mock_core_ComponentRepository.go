@@ -3,9 +3,12 @@
 package mocks
 
 import (
-	models "github.com/l3montree-dev/devguard/internal/database/models"
-	mock "github.com/stretchr/testify/mock"
+	core "github.com/l3montree-dev/devguard/internal/core"
 	gorm "gorm.io/gorm"
+
+	mock "github.com/stretchr/testify/mock"
+
+	models "github.com/l3montree-dev/devguard/internal/database/models"
 
 	uuid "github.com/google/uuid"
 )
@@ -648,6 +651,70 @@ func (_c *CoreComponentRepository_LoadComponents_Call) Return(_a0 []models.Compo
 }
 
 func (_c *CoreComponentRepository_LoadComponents_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, string, string) ([]models.ComponentDependency, error)) *CoreComponentRepository_LoadComponents_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LoadComponentsWithProject provides a mock function with given fields: tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort
+func (_m *CoreComponentRepository) LoadComponentsWithProject(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scanner string, version string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+	ret := _m.Called(tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LoadComponentsWithProject")
+	}
+
+	var r0 core.Paged[models.ComponentDependency]
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, string, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.ComponentDependency], error)); ok {
+		return rf(tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, string, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.ComponentDependency]); ok {
+		r0 = rf(tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort)
+	} else {
+		r0 = ret.Get(0).(core.Paged[models.ComponentDependency])
+	}
+
+	if rf, ok := ret.Get(1).(func(*gorm.DB, string, uuid.UUID, string, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
+		r1 = rf(tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreComponentRepository_LoadComponentsWithProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadComponentsWithProject'
+type CoreComponentRepository_LoadComponentsWithProject_Call struct {
+	*mock.Call
+}
+
+// LoadComponentsWithProject is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scanner string
+//   - version string
+//   - pageInfo core.PageInfo
+//   - search string
+//   - filter []core.FilterQuery
+//   - sort []core.SortQuery
+func (_e *CoreComponentRepository_Expecter) LoadComponentsWithProject(tx interface{}, assetVersionName interface{}, assetID interface{}, scanner interface{}, version interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *CoreComponentRepository_LoadComponentsWithProject_Call {
+	return &CoreComponentRepository_LoadComponentsWithProject_Call{Call: _e.mock.On("LoadComponentsWithProject", tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort)}
+}
+
+func (_c *CoreComponentRepository_LoadComponentsWithProject_Call) Run(run func(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scanner string, version string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *CoreComponentRepository_LoadComponentsWithProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(string), args[2].(uuid.UUID), args[3].(string), args[4].(string), args[5].(core.PageInfo), args[6].(string), args[7].([]core.FilterQuery), args[8].([]core.SortQuery))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_LoadComponentsWithProject_Call) Return(_a0 core.Paged[models.ComponentDependency], _a1 error) *CoreComponentRepository_LoadComponentsWithProject_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, string, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.ComponentDependency], error)) *CoreComponentRepository_LoadComponentsWithProject_Call {
 	_c.Call.Return(run)
 	return _c
 }

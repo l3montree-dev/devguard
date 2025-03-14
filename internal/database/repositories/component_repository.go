@@ -85,6 +85,45 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 	return components, err
 }
 
+func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner, version string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+	var components []models.ComponentDependency
+
+	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Preload("Component").Preload("Component.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+
+	if scanner != "" {
+		query = query.Where("scanner_id = ?", scanner)
+	}
+
+	if version == models.NoVersion || version == "" {
+		query = query.Where("semver_end is NULL")
+	} else {
+		query = query.Where("semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)", version, version)
+	}
+
+	for _, f := range filter {
+		query = query.Where(f.SQL(), f.Value())
+	}
+
+	if len(sort) > 0 {
+		for _, s := range sort {
+			query = query.Order(s.SQL())
+		}
+	}
+
+	if search != "" {
+		query = query.Where("component_purl ILIKE ?", "pkg:%"+search+"%")
+	} else {
+		query = query.Where("component_purl ILIKE ?", "pkg:%")
+	}
+
+	var total int64
+	query.Session(&gorm.Session{}).Select("COUNT(DISTINCT component_purl)").Count(&total)
+
+	err := query.Select("DISTINCT ON (component_purl) *").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&components).Error
+
+	return core.NewPaged(pageInfo, total, components), err
+}
+
 func (c *componentRepository) LoadAllLatestComponentFromAssetVersion(tx core.DB, assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, error) {
 	var component []models.ComponentDependency
 	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id AND scanner_id = ? AND semver_end is NULL", assetVersion.Name, assetVersion.AssetID).Find(&component).Error
