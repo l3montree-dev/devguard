@@ -221,7 +221,7 @@ func (c *httpController) AcceptInvitation(ctx core.Context) error {
 	// get the auth admin client from the context
 	authAdminClient := core.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
-	m, _, err := authAdminClient.IdentityAPI.GetIdentity(ctx.Request().Context(), userID).Execute()
+	m, err := authAdminClient.GetIdentity(ctx.Request().Context(), userID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get user").WithInternal(err)
 	}
@@ -350,12 +350,13 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	// get the auth admin client from the context
 	authAdminClient := core.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
-	m, _, err := authAdminClient.IdentityAPI.ListIdentitiesExecute(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
+	m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
 	if err != nil {
 		return nil, err
 	}
 
 	// get the roles for the members
+
 	errGroup := utils.ErrGroup[map[string]string](10)
 	for _, member := range m {
 		errGroup.Go(func() (map[string]string, error) {
@@ -407,20 +408,20 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	return users, nil
 }
 
-func (o *httpController) Members(c core.Context) error {
-	users, err := FetchMembersOfOrganization(c)
+func (o *httpController) Members(ctx core.Context) error {
+	users, err := FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
-	return c.JSON(200, users)
+	return ctx.JSON(200, users)
 }
 
-func (o *httpController) Read(c core.Context) error {
+func (o *httpController) Read(ctx core.Context) error {
 	// get the organization from the context
-	organization := core.GetOrganization(c)
+	organization := core.GetOrganization(ctx)
 	// fetch the regular members of the current organization
-	members, err := FetchMembersOfOrganization(c)
+	members, err := FetchMembersOfOrganization(ctx)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
@@ -431,12 +432,12 @@ func (o *httpController) Read(c core.Context) error {
 		Members: members,
 	}
 
-	return c.JSON(200, resp)
+	return ctx.JSON(200, resp)
 }
 
-func (o *httpController) List(c core.Context) error {
+func (o *httpController) List(ctx core.Context) error {
 	// get all organizations the user has access to
-	userID := core.GetSession(c).GetUserID()
+	userID := core.GetSession(ctx).GetUserID()
 
 	domains, err := o.rbacProvider.DomainsOfUser(userID)
 
@@ -461,13 +462,13 @@ func (o *httpController) List(c core.Context) error {
 		return echo.NewHTTPError(500, "could not read organizations").WithInternal(err)
 	}
 
-	return c.JSON(200, organizations)
+	return ctx.JSON(200, organizations)
 }
 
-func (o *httpController) Metrics(c core.Context) error {
-	owner, err := core.GetRBAC(c).GetOwnerOfOrganization()
+func (o *httpController) Metrics(ctx core.Context) error {
+	owner, err := core.GetRBAC(ctx).GetOwnerOfOrganization()
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get owner of organization").WithInternal(err)
 	}
-	return c.JSON(200, map[string]string{"ownerId": owner})
+	return ctx.JSON(200, map[string]string{"ownerId": owner})
 }

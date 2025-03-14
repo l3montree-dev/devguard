@@ -13,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
+	"github.com/ory/client-go"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -404,8 +405,125 @@ func TestCreate(t *testing.T) {
 	})
 }
 
+func TestFetchMembersOfOrganization(t *testing.T) {
+	t.Run("Should fail if GetAllMembers returns an error", func(t *testing.T) {
+
+		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
+		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, fmt.Errorf("Something went wrong"))
+
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		e := echo.New()
+		ctx := e.NewContext(req, httptest.NewRecorder())
+
+		core.SetOrganization(ctx, models.Org{})
+		core.SetRBAC(ctx, accesscontrol)
+
+		_, err := org.FetchMembersOfOrganization(ctx)
+		if err == nil {
+
+			t.Fail()
+		}
+
+	})
+	t.Run("Should fail if ListUser returns an error", func(t *testing.T) {
+		emptyList := []client.Identity{}
+
+		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
+		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, nil)
+
+		adminClient := mocks.NewCoreAdminClient(t)
+		adminClient.On("ListUser", mock.Anything).Return(emptyList, fmt.Errorf("Something went wrong"))
+
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		e := echo.New()
+		ctx := e.NewContext(req, httptest.NewRecorder())
+
+		core.SetOrganization(ctx, models.Org{})
+		core.SetRBAC(ctx, accesscontrol)
+		core.SetAuthAdminClient(ctx, adminClient)
+
+		_, err := org.FetchMembersOfOrganization(ctx)
+		if err == nil {
+
+			t.Fail()
+		}
+
+	})
+	t.Run("Should succeed if everything works as expected with empty lists", func(t *testing.T) {
+
+		emptyList := []client.Identity{}
+
+		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
+		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, nil)
+
+		adminClient := mocks.NewCoreAdminClient(t)
+		adminClient.On("ListUser", mock.Anything).Return(emptyList, nil)
+
+		thirdPartyIntegration := mocks.NewCoreIntegrationAggregate(t)
+		thirdPartyIntegration.On("GetUsers", mock.Anything).Return([]core.User{})
+
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		e := echo.New()
+		ctx := e.NewContext(req, httptest.NewRecorder())
+
+		core.SetOrganization(ctx, models.Org{})
+		core.SetRBAC(ctx, accesscontrol)
+		core.SetAuthAdminClient(ctx, adminClient)
+		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
+
+		_, err := org.FetchMembersOfOrganization(ctx)
+		if err != nil {
+
+			t.Fail()
+		}
+
+	})
+	t.Run("Should succeed if everything works as expected with minimal contents in the m list", func(t *testing.T) {
+		client1 := client.Identity{
+			Id: "coolID1",
+		}
+		client2 := client.Identity{
+			Id:     "coolID2",
+			Traits: "",
+		}
+		singleList := []client.Identity{client1, client2}
+
+		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
+		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, nil)
+		accesscontrol.On("GetDomainRole", mock.Anything).Return("cool role", nil)
+
+		adminClient := mocks.NewCoreAdminClient(t)
+		adminClient.On("ListUser", mock.Anything).Return(singleList, nil)
+
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		e := echo.New()
+		ctx := e.NewContext(req, httptest.NewRecorder())
+
+		core.SetOrganization(ctx, models.Org{})
+		core.SetRBAC(ctx, accesscontrol)
+		core.SetAuthAdminClient(ctx, adminClient)
+
+		_, err := org.FetchMembersOfOrganization(ctx)
+		if err == nil {
+
+			t.Fail()
+		}
+
+	})
+}
+
 /*func TestUpdate(t *testing.T) {
 	t.Run("Should fail if the FetchMembers function throws an error", func(t *testing.T) {
+		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+
+		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
+		projectService := mocks.NewCoreProjectService(t)
+		invitationRepository := mocks.NewCoreInvitationRepository(t)
+
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
@@ -413,13 +531,6 @@ func TestCreate(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
 		core.SetOrganization(ctx, models.Org{Name: "TestNameLowkey"})
-
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
-
-		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
-
-		projectService := mocks.NewCoreProjectService(t)
-		invitationRepository := mocks.NewCoreInvitationRepository(t)
 
 		h := org.NewHttpController(organizationRepository, rbacProvider, projectService, invitationRepository)
 
@@ -429,4 +540,31 @@ func TestCreate(t *testing.T) {
 		}
 
 	})
+}*/
+
+/*
+var globalVariable int = 0
+
+func TestX(t *testing.T) {
+	var wg sync.WaitGroup
+
+	ch := make(chan int)
+
+	for i := range 200 {
+		wg.Add(1)
+
+		go func(i int) {
+			x := <-ch
+			t.Log(x)
+			globalVariable += i
+		}(i)
+
+		ch <- i
+	}
+
+	// wg.Wait()
+
+	t.Log(globalVariable)
+
+	t.Fail()
 }*/

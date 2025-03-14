@@ -417,7 +417,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	apiV1Router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c core.Context) error {
 			// set the ory admin client to the context
-			core.SetAuthAdminClient(c, oryAdmin)
+			core.SetAuthAdminClient(c, core.NewAdminClient(oryAdmin))
 			return next(c)
 		}
 	})

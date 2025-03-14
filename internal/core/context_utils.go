@@ -15,6 +15,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -38,12 +39,44 @@ func SetThirdPartyIntegration(c Context, i IntegrationAggregate) {
 	c.Set("thirdPartyIntegration", i)
 }
 
-func SetAuthAdminClient(c Context, i *client.APIClient) {
+func SetAuthAdminClient(c Context, i AdminClient) {
 	c.Set("authAdminClient", i)
 }
 
-func GetAuthAdminClient(c Context) *client.APIClient {
-	return c.Get("authAdminClient").(*client.APIClient)
+type AdminClient interface {
+	ListUser(client client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error)
+	GetIdentity(ctx context.Context, userID string) (client.Identity, error)
+}
+
+type adminClientImplementation struct {
+	apiClient *client.APIClient
+}
+
+func NewAdminClient(client *client.APIClient) adminClientImplementation {
+	return adminClientImplementation{
+		apiClient: client,
+	}
+}
+func (a adminClientImplementation) ListUser(request client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error) {
+	clients := []client.Identity{}
+	clients, _, err := a.apiClient.IdentityAPI.ListIdentitiesExecute(request)
+	if err != nil {
+		return clients, err
+	}
+	return clients, nil
+
+}
+
+func (a adminClientImplementation) GetIdentity(ctx context.Context, userID string) (client.Identity, error) {
+	request, _, err := a.apiClient.IdentityAPI.GetIdentity(ctx, userID).Execute()
+	if err != nil {
+		return *request, err
+	}
+	return *request, nil
+}
+
+func GetAuthAdminClient(c Context) AdminClient {
+	return c.Get("authAdminClient").(AdminClient)
 }
 
 func GetVulnID(c Context) (string, error) {
@@ -52,6 +85,10 @@ func GetVulnID(c Context) (string, error) {
 		return "", fmt.Errorf("could not get dependencyVuln id")
 	}
 	return dependencyVulnID, nil
+}
+
+func SetRBAC(ctx Context, rbac accesscontrol.AccessControl) {
+	ctx.Set("rbac", rbac)
 }
 
 func GetRBAC(c Context) accesscontrol.AccessControl {
