@@ -166,10 +166,9 @@ func getCurrentVersion(path string) (string, int, error) {
 	tagList := out.String()
 	tags := strings.Split(tagList, "\n")
 	// remove all tags which are not a valid semver
-	tags = Filter(Map(tags, func(el string) string {
-		return strings.TrimPrefix(el, "v")
-	}), func(tag string) bool {
-		return normalize.ValidSemverRegex.MatchString(tag)
+	tags = Filter(tags, func(tag string) bool {
+		t := strings.TrimPrefix(tag, "v")
+		return normalize.ValidSemverRegex.MatchString(t)
 	})
 
 	// Sort the tags
@@ -205,9 +204,7 @@ func getCurrentVersion(path string) (string, int, error) {
 	}
 	latestTag := tags[0]
 
-	fmt.Println("Latest Tag: ", latestTag)
-
-	cmd = exec.Command("git", "rev-list", "--count", "v"+latestTag+"..HEAD") // nolint:all:Latest Tag is already checked against a semver regex.
+	cmd = exec.Command("git", "rev-list", "--count", latestTag+"..HEAD") // nolint:all:Latest Tag is already checked against a semver regex.
 	var commitOut bytes.Buffer
 	errOut = bytes.Buffer{}
 	cmd.Stdout = &commitOut
