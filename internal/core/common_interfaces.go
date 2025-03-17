@@ -53,6 +53,7 @@ type AssetRepository interface {
 }
 
 type AttestationRepository interface {
+	GetByAssetID(assetID uuid.UUID) ([]models.Attestation, error)
 }
 
 type CveRepository interface {

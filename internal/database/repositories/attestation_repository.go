@@ -22,3 +22,12 @@ func NewAttestationRepository(db core.DB) *attestationRepository {
 		Repository: newGormRepository[uuid.UUID, models.Attestation](db),
 	}
 }
+
+func (a *attestationRepository) GetByAssetID(assetID uuid.UUID) ([]models.Attestation, error) {
+	var attestationList []models.Attestation
+	err := a.db.Where("asset_id = ?", assetID).Find(&attestationList).Error
+	if err != nil {
+		return attestationList, err
+	}
+	return attestationList, nil
+}
