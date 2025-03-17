@@ -12,7 +12,7 @@ type createRequest struct {
 
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
-	EnableReportingRange         bool     `json:"enableReportingRange"`
+	EnableTicketRange            bool     `json:"enableTicketRange"`
 
 	CentralDependencyVulnManagement bool `json:"centralDependencyVulnManagement"`
 
@@ -49,7 +49,7 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 		AvailabilityRequirement:    sanitizeRequirementLevel(a.AvailabilityRequirement),
 	}
 
-	if a.EnableReportingRange {
+	if a.EnableTicketRange {
 		asset.CVSSAutomaticTicketThreshold = a.CVSSAutomaticTicketThreshold
 		asset.RiskAutomaticTicketThreshold = a.RiskAutomaticTicketThreshold
 	}
@@ -63,7 +63,7 @@ type patchRequest struct {
 
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
-	EnableReportingRange         bool     `json:"enableReportingRange "`
+	EnableTicketRange            bool     `json:"enableTicketRange "`
 
 	CentralDependencyVulnManagement *bool `json:"centralDependencyVulnManagement"`
 
@@ -120,7 +120,7 @@ func (a *patchRequest) applyToModel(
 		}
 	}
 
-	if a.EnableReportingRange {
+	if a.EnableTicketRange {
 		if a.CVSSAutomaticTicketThreshold != nil {
 			updated = true
 			asset.CVSSAutomaticTicketThreshold = a.CVSSAutomaticTicketThreshold
