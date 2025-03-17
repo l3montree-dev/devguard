@@ -236,6 +236,16 @@ func projectAccessControl(projectRepository projectRepository, obj accesscontrol
 	}
 }
 
+func neededScope(scopes []string) core.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c core.Context) error {
+			//user := core.GetSession(c).GetUserID()
+
+			return echo.NewHTTPError(403, "forbidden")
+		}
+	}
+}
+
 // this middleware is used to set the project slug parameter based on an X-Asset-ID header.
 // it is useful for reusing the projectAccessControl middleware and rely on the rbac to determine if the user has access to an specific asset
 func assetNameMiddleware() core.MiddlewareFunc {
@@ -435,7 +445,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	//TODO: change "/scan/" to "/sbom-scan/"
 	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
-	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"manage-all", "asset-scan"}), assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
 	patRouter := sessionRouter.Group("/pats")
 	patRouter.POST("/", patController.Create)

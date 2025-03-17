@@ -29,6 +29,7 @@ type RevokeByPrivateKeyRequest struct {
 type CreateRequest struct {
 	Description string `json:"description"`
 	PubKey      string `json:"pubKey"`
+	Scopes      string `json:"scopes"`
 }
 
 func (p CreateRequest) ToModel(userID string) models.PAT {
@@ -41,6 +42,7 @@ func (p CreateRequest) ToModel(userID string) models.PAT {
 	pat := models.PAT{
 		UserID:      uuid.MustParse(userID),
 		Description: p.Description,
+		Scopes:      p.Scopes,
 		PubKey:      p.PubKey,
 		Fingerprint: fingerprint,
 	}
