@@ -52,6 +52,10 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 	if a.EnableTicketRange {
 		asset.CVSSAutomaticTicketThreshold = a.CVSSAutomaticTicketThreshold
 		asset.RiskAutomaticTicketThreshold = a.RiskAutomaticTicketThreshold
+	} else {
+		asset.CVSSAutomaticTicketThreshold = nil
+		asset.RiskAutomaticTicketThreshold = nil
+
 	}
 
 	return asset
