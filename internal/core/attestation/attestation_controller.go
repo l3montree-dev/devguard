@@ -2,6 +2,8 @@ package attestation
 
 import (
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/labstack/echo/v4"
 )
 
 type attestationController struct {
@@ -26,4 +28,16 @@ func NewAttestationController(repository core.AttestationRepository) *attestatio
 	}
 }
 
-func (a *attestationController) Create()
+func (a *attestationController) Create(ctx core.Context) error {
+	var attestation models.Attestation
+	err := ctx.Bind(&attestation)
+	if err != nil {
+		return echo.NewHTTPError(400, "unable to bind data ti attestation model").WithInternal(err)
+	}
+
+	err = core.V.Struct(attestation)
+	if err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+}

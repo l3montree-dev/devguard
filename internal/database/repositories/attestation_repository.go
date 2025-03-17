@@ -31,3 +31,7 @@ func (a *attestationRepository) GetByAssetID(assetID uuid.UUID) ([]models.Attest
 	}
 	return attestationList, nil
 }
+
+func (a *attestationRepository) Create() error {
+	return nil
+}
