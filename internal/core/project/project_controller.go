@@ -29,21 +29,21 @@ import (
 	"github.com/ory/client-go"
 )
 
-type Controller struct {
+type controller struct {
 	projectRepository core.ProjectRepository
 	assetRepository   core.AssetRepository
 	projectService    core.ProjectService
 }
 
-func NewHttpController(repository core.ProjectRepository, assetRepository core.AssetRepository, projectService core.ProjectService) *Controller {
-	return &Controller{
+func NewHttpController(repository core.ProjectRepository, assetRepository core.AssetRepository, projectService core.ProjectService) *controller {
+	return &controller{
 		projectRepository: repository,
 		assetRepository:   assetRepository,
 		projectService:    projectService,
 	}
 }
 
-func (p *Controller) Create(c core.Context) error {
+func (p *controller) Create(c core.Context) error {
 	var req CreateRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
@@ -132,7 +132,7 @@ func FetchMembersOfProject(ctx core.Context) ([]core.User, error) {
 	return users, nil
 }
 
-func (p *Controller) Members(c core.Context) error {
+func (p *controller) Members(c core.Context) error {
 	members, err := FetchMembersOfProject(c)
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (p *Controller) Members(c core.Context) error {
 	return c.JSON(200, members)
 }
 
-func (p *Controller) InviteMembers(c core.Context) error {
+func (p *controller) InviteMembers(c core.Context) error {
 	project := core.GetProject(c)
 
 	// get rbac
@@ -173,7 +173,7 @@ func (p *Controller) InviteMembers(c core.Context) error {
 	return c.NoContent(200)
 }
 
-func (p *Controller) RemoveMember(c core.Context) error {
+func (p *controller) RemoveMember(c core.Context) error {
 	project := core.GetProject(c)
 
 	// get rbac
@@ -191,7 +191,7 @@ func (p *Controller) RemoveMember(c core.Context) error {
 	return c.NoContent(200)
 }
 
-func (p *Controller) ChangeRole(c core.Context) error {
+func (p *controller) ChangeRole(c core.Context) error {
 	project := core.GetProject(c)
 
 	// get rbac
@@ -237,7 +237,7 @@ func (p *Controller) ChangeRole(c core.Context) error {
 	return c.NoContent(200)
 }
 
-func (p *Controller) bootstrapProject(c core.Context, project models.Project) error {
+func (p *controller) bootstrapProject(c core.Context, project models.Project) error {
 	// get the rbac object
 	rbac := core.GetRBAC(c)
 	// make sure to keep the organization roles in sync
@@ -314,7 +314,7 @@ func (p *Controller) bootstrapProject(c core.Context, project models.Project) er
 	return nil
 }
 
-func (p *Controller) Delete(c core.Context) error {
+func (p *controller) Delete(c core.Context) error {
 	project := core.GetProject(c)
 
 	err := p.projectRepository.Delete(nil, project.ID)
@@ -325,7 +325,7 @@ func (p *Controller) Delete(c core.Context) error {
 	return c.NoContent(200)
 }
 
-func (p *Controller) Read(c core.Context) error {
+func (p *controller) Read(c core.Context) error {
 	// just get the project from the context
 	project := core.GetProject(c)
 	// lets fetch the assets related to this project
@@ -350,7 +350,7 @@ func (p *Controller) Read(c core.Context) error {
 	return c.JSON(200, resp)
 }
 
-func (p *Controller) List(c core.Context) error {
+func (p *controller) List(c core.Context) error {
 	// get all projects the user has at least read access to - might be public projects as well
 	projects, err := p.projectService.ListAllowedProjects(c)
 
@@ -361,7 +361,7 @@ func (p *Controller) List(c core.Context) error {
 	return c.JSON(200, projects)
 }
 
-func (p *Controller) Update(c core.Context) error {
+func (p *controller) Update(c core.Context) error {
 	req := c.Request().Body
 	defer req.Close()
 	var patchRequest patchRequest
