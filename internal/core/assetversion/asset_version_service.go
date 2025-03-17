@@ -281,9 +281,9 @@ func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
 		return res
 	}
 
-	for _, c := range *component.Components {
-		res[c.BOMRef] = c
-		for k, v := range recursiveBuildBomRefMap(c) {
+	for _, ctx := range *component.Components {
+		res[ctx.BOMRef] = ctx
+		for k, v := range recursiveBuildBomRefMap(ctx) {
 			res[k] = v
 		}
 	}
@@ -296,9 +296,9 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 		return res
 	}
 
-	for _, c := range *bom.GetComponents() {
-		res[c.BOMRef] = c
-		for k, v := range recursiveBuildBomRefMap(c) {
+	for _, ctx := range *bom.GetComponents() {
+		res[ctx.BOMRef] = ctx
+		for k, v := range recursiveBuildBomRefMap(ctx) {
 			res[k] = v
 		}
 	}
@@ -323,12 +323,12 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 
 	// create all direct dependencies
 	root := sbom.GetMetadata().Component.BOMRef
-	for _, c := range *sbom.GetDependencies() {
-		if c.Ref != root {
+	for _, ctx := range *sbom.GetDependencies() {
+		if ctx.Ref != root {
 			continue // no direct dependency
 		}
 		// we found it.
-		for _, directDependency := range *c.Dependencies {
+		for _, directDependency := range *ctx.Dependencies {
 			component := bomRefMap[directDependency]
 			// the sbom of a container image does not contain the scope. In a container image, we do not have
 			// anything like a deep nested dependency tree. Everything is a direct dependency.
@@ -352,11 +352,11 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	}
 
 	// find all dependencies from this component
-	for _, c := range *sbom.GetDependencies() {
-		comp := bomRefMap[c.Ref]
+	for _, ctx := range *sbom.GetDependencies() {
+		comp := bomRefMap[ctx.Ref]
 		compPackageUrl := normalize.Purl(comp)
 
-		for _, d := range *c.Dependencies {
+		for _, d := range *ctx.Dependencies {
 			dep := bomRefMap[d]
 			depPurlOrName := normalize.Purl(dep)
 
@@ -382,8 +382,8 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	}
 
 	componentsSlice := make([]models.Component, 0, len(components))
-	for _, c := range components {
-		componentsSlice = append(componentsSlice, c)
+	for _, ctx := range components {
+		componentsSlice = append(componentsSlice, ctx)
 	}
 
 	// make sure, that the components exist
@@ -420,36 +420,36 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 	bomComponents := make([]cdx.Component, 0)
 	alreadyIncluded := make(map[string]bool)
 	for _, cLoop := range components {
-		c := cLoop
+		ctx := cLoop
 
 		var p packageurl.PackageURL
 		var err error
-		if c.ComponentPurl != nil {
-			p, err = packageurl.FromString(*c.ComponentPurl)
+		if ctx.ComponentPurl != nil {
+			p, err = packageurl.FromString(*ctx.ComponentPurl)
 			if err == nil {
-				if _, ok := alreadyIncluded[*c.ComponentPurl]; !ok {
-					alreadyIncluded[*c.ComponentPurl] = true
+				if _, ok := alreadyIncluded[*ctx.ComponentPurl]; !ok {
+					alreadyIncluded[*ctx.ComponentPurl] = true
 					bomComponents = append(bomComponents, cdx.Component{
-						BOMRef:     *c.ComponentPurl,
-						Type:       cdx.ComponentType(c.Component.ComponentType),
-						PackageURL: *c.ComponentPurl,
-						Version:    c.Component.Version,
+						BOMRef:     *ctx.ComponentPurl,
+						Type:       cdx.ComponentType(ctx.Component.ComponentType),
+						PackageURL: *ctx.ComponentPurl,
+						Version:    ctx.Component.Version,
 						Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
 					})
 				}
 			}
 		}
 
-		if c.DependencyPurl != "" {
-			p, err = packageurl.FromString(c.DependencyPurl)
+		if ctx.DependencyPurl != "" {
+			p, err = packageurl.FromString(ctx.DependencyPurl)
 			if err == nil {
-				alreadyIncluded[c.DependencyPurl] = true
+				alreadyIncluded[ctx.DependencyPurl] = true
 				bomComponents = append(bomComponents, cdx.Component{
-					BOMRef:     c.DependencyPurl,
-					Type:       cdx.ComponentType(c.Dependency.ComponentType),
-					PackageURL: c.DependencyPurl,
+					BOMRef:     ctx.DependencyPurl,
+					Type:       cdx.ComponentType(ctx.Dependency.ComponentType),
+					PackageURL: ctx.DependencyPurl,
 					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
-					Version:    c.Dependency.Version,
+					Version:    ctx.Dependency.Version,
 				})
 			}
 		}
@@ -457,19 +457,19 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 
 	// build up the dependency map
 	dependencyMap := make(map[string][]string)
-	for _, c := range components {
-		if c.ComponentPurl == nil {
+	for _, ctx := range components {
+		if ctx.ComponentPurl == nil {
 			if _, ok := dependencyMap[assetVersion.Slug]; !ok {
-				dependencyMap[assetVersion.Slug] = []string{c.DependencyPurl}
+				dependencyMap[assetVersion.Slug] = []string{ctx.DependencyPurl}
 				continue
 			}
-			dependencyMap[assetVersion.Slug] = append(dependencyMap[assetVersion.Slug], c.DependencyPurl)
+			dependencyMap[assetVersion.Slug] = append(dependencyMap[assetVersion.Slug], ctx.DependencyPurl)
 			continue
 		}
-		if _, ok := dependencyMap[*c.ComponentPurl]; !ok {
-			dependencyMap[*c.ComponentPurl] = make([]string, 0)
+		if _, ok := dependencyMap[*ctx.ComponentPurl]; !ok {
+			dependencyMap[*ctx.ComponentPurl] = make([]string, 0)
 		}
-		dependencyMap[*c.ComponentPurl] = append(dependencyMap[*c.ComponentPurl], c.DependencyPurl)
+		dependencyMap[*ctx.ComponentPurl] = append(dependencyMap[*ctx.ComponentPurl], ctx.DependencyPurl)
 	}
 
 	// build up the dependencies

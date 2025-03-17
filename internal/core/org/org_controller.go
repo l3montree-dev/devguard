@@ -45,10 +45,10 @@ func NewHttpController(repository core.OrganizationRepository, rbacProvider acce
 	}
 }
 
-func (o *httpController) Create(c core.Context) error {
+func (o *httpController) Create(ctx core.Context) error {
 
 	var req createRequest
-	if err := c.Bind(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil {
 		return err
 	}
 
@@ -66,17 +66,17 @@ func (o *httpController) Create(c core.Context) error {
 		return echo.NewHTTPError(500, "could not create organization").WithInternal(err)
 	}
 
-	if err = o.bootstrapOrg(c, org); err != nil {
+	if err = o.bootstrapOrg(ctx, org); err != nil {
 		return echo.NewHTTPError(500, "could not bootstrap organization").WithInternal(err)
 	}
 
-	return c.JSON(200, org)
+	return ctx.JSON(200, org)
 }
 
-func (o *httpController) bootstrapOrg(c core.Context, organization models.Org) error {
+func (o *httpController) bootstrapOrg(ctx core.Context, organization models.Org) error {
 	// create the permissions for the organization
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
-	userId := core.GetSession(c).GetUserID()
+	userId := core.GetSession(ctx).GetUserID()
 
 	if err := rbac.GrantRole(userId, "owner"); err != nil {
 		return err
@@ -115,12 +115,12 @@ func (o *httpController) bootstrapOrg(c core.Context, organization models.Org) e
 		return err
 	}
 
-	c.Set("rbac", rbac)
+	ctx.Set("rbac", rbac)
 	return nil
 }
 
 func (o *httpController) Update(ctx core.Context) error {
-	organization := core.GetTenant(ctx)
+	organization := core.GetOrganization(ctx)
 	members, err := FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
@@ -152,9 +152,9 @@ func (o *httpController) Update(ctx core.Context) error {
 	return ctx.JSON(200, resp)
 }
 
-func (o *httpController) Delete(c core.Context) error {
+func (o *httpController) Delete(ctx core.Context) error {
 	// get the id of the organization
-	organizationID := core.GetTenant(c).GetID()
+	organizationID := core.GetOrganization(ctx).GetID()
 
 	// delete the organization
 	err := o.organizationRepository.Delete(nil, organizationID)
@@ -162,7 +162,7 @@ func (o *httpController) Delete(c core.Context) error {
 		return echo.NewHTTPError(500, "could not delete organization").WithInternal(err)
 	}
 
-	return c.NoContent(200)
+	return ctx.NoContent(200)
 }
 
 func (c *httpController) ContentTree(ctx core.Context) error {
@@ -170,7 +170,7 @@ func (c *httpController) ContentTree(ctx core.Context) error {
 	// this means all projects and their corresponding assets
 
 	// get the organization from the context
-	organization := core.GetTenant(ctx)
+	organization := core.GetOrganization(ctx)
 
 	ps, err := c.projectService.ListAllowedProjects(ctx)
 	if err != nil {
@@ -251,7 +251,7 @@ func (c *httpController) InviteMember(ctx core.Context) error {
 	}
 
 	// get the organization from the context
-	organization := core.GetTenant(ctx)
+	organization := core.GetOrganization(ctx)
 
 	model := models.Invitation{
 		OrganizationID: organization.GetID(),
@@ -311,7 +311,7 @@ func (c *httpController) RemoveMember(ctx core.Context) error {
 	rbac.RevokeRole(userId, "admin")  // nolint:errcheck// we do not care if the user is not an admin
 
 	// remove member from all projects
-	projects, err := c.projectService.ListProjectsByOrganizationID(core.GetTenant(ctx).GetID())
+	projects, err := c.projectService.ListProjectsByOrganizationID(core.GetOrganization(ctx).GetID())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
@@ -326,7 +326,7 @@ func (c *httpController) RemoveMember(ctx core.Context) error {
 
 func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	// get all members from the organization
-	organization := core.GetTenant(ctx)
+	organization := core.GetOrganization(ctx)
 	accessControl := core.GetRBAC(ctx)
 
 	members, err := accessControl.GetAllMembersOfOrganization()
@@ -395,20 +395,20 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	return users, nil
 }
 
-func (o *httpController) Members(c core.Context) error {
-	users, err := FetchMembersOfOrganization(c)
+func (o *httpController) Members(ctx core.Context) error {
+	users, err := FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
-	return c.JSON(200, users)
+	return ctx.JSON(200, users)
 }
 
-func (o *httpController) Read(c core.Context) error {
+func (o *httpController) Read(ctx core.Context) error {
 	// get the organization from the context
-	organization := core.GetTenant(c)
+	organization := core.GetOrganization(ctx)
 	// fetch the regular members of the current organization
-	members, err := FetchMembersOfOrganization(c)
+	members, err := FetchMembersOfOrganization(ctx)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
@@ -419,12 +419,12 @@ func (o *httpController) Read(c core.Context) error {
 		Members: members,
 	}
 
-	return c.JSON(200, resp)
+	return ctx.JSON(200, resp)
 }
 
-func (o *httpController) List(c core.Context) error {
+func (o *httpController) List(ctx core.Context) error {
 	// get all organizations the user has access to
-	userID := core.GetSession(c).GetUserID()
+	userID := core.GetSession(ctx).GetUserID()
 
 	domains, err := o.rbacProvider.DomainsOfUser(userID)
 
@@ -449,13 +449,13 @@ func (o *httpController) List(c core.Context) error {
 		return echo.NewHTTPError(500, "could not read organizations").WithInternal(err)
 	}
 
-	return c.JSON(200, organizations)
+	return ctx.JSON(200, organizations)
 }
 
-func (o *httpController) Metrics(c core.Context) error {
-	owner, err := core.GetRBAC(c).GetOwnerOfOrganization()
+func (o *httpController) Metrics(ctx core.Context) error {
+	owner, err := core.GetRBAC(ctx).GetOwnerOfOrganization()
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get owner of organization").WithInternal(err)
 	}
-	return c.JSON(200, map[string]string{"ownerId": owner})
+	return ctx.JSON(200, map[string]string{"ownerId": owner})
 }

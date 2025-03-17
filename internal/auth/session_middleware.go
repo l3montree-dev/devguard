@@ -54,32 +54,32 @@ func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSe
 
 func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			oryKratosSessionCookie := getCookie("ory_kratos_session", c.Cookies())
+		return func(ctx echo.Context) error {
+			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())
 
 			var userID string
 			var err error
 
 			if oryKratosSessionCookie == nil {
-				userID, err = verifier.VerifyRequestSignature(c.Request())
+				userID, err = verifier.VerifyRequestSignature(ctx.Request())
 				if err != nil {
-					c.Set("session", NoSession)
-					return next(c)
+					ctx.Set("session", NoSession)
+					return next(ctx)
 				}
 			} else {
-				userID, err = cookieAuth(c.Request().Context(), oryApiClient, oryKratosSessionCookie.String())
+				userID, err = cookieAuth(ctx.Request().Context(), oryApiClient, oryKratosSessionCookie.String())
 				if err != nil {
 					// user is not authenticated
 					// set a special session - it might be that the user is still allowed todo the request
 					// since the org, project etc. is public
-					c.Set("session", NoSession)
-					return next(c)
+					ctx.Set("session", NoSession)
+					return next(ctx)
 				}
 			}
 
-			c.Set("session", NewSession(userID))
+			ctx.Set("session", NewSession(userID))
 
-			return next(c)
+			return next(ctx)
 		}
 	}
 }

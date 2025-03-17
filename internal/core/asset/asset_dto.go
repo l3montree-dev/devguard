@@ -12,6 +12,7 @@ type createRequest struct {
 
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
+	EnableTicketCreation         bool     `json:"enableTicketCreation"`
 
 	CentralDependencyVulnManagement bool `json:"centralDependencyVulnManagement"`
 
@@ -33,14 +34,10 @@ func sanitizeRequirementLevel(level string) models.RequirementLevel {
 }
 
 func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
-	return models.Asset{
-		Name:        a.Name,
+	asset := models.Asset{Name: a.Name,
 		Slug:        slug.Make(a.Name),
 		ProjectID:   projectID,
 		Description: a.Description,
-
-		RiskAutomaticTicketThreshold: a.RiskAutomaticTicketThreshold,
-		CVSSAutomaticTicketThreshold: a.CVSSAutomaticTicketThreshold,
 
 		CentralDependencyVulnManagement: a.CentralDependencyVulnManagement,
 
@@ -51,6 +48,13 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 		IntegrityRequirement:       sanitizeRequirementLevel(a.IntegrityRequirement),
 		AvailabilityRequirement:    sanitizeRequirementLevel(a.AvailabilityRequirement),
 	}
+
+	if a.EnableTicketCreation {
+		asset.CVSSAutomaticTicketThreshold = a.CVSSAutomaticTicketThreshold
+		asset.RiskAutomaticTicketThreshold = a.RiskAutomaticTicketThreshold
+	}
+
+	return asset
 }
 
 type patchRequest struct {
@@ -59,6 +63,7 @@ type patchRequest struct {
 
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
+	EnableTicketCreation         bool     `json:"enableTicketCreation"`
 
 	CentralDependencyVulnManagement *bool `json:"centralDependencyVulnManagement"`
 
@@ -115,14 +120,19 @@ func (a *patchRequest) applyToModel(
 		}
 	}
 
-	if a.CVSSAutomaticTicketThreshold != nil {
-		updated = true
-		asset.CVSSAutomaticTicketThreshold = a.CVSSAutomaticTicketThreshold
-	}
+	if a.EnableTicketCreation {
+		if a.CVSSAutomaticTicketThreshold != nil {
+			updated = true
+			asset.CVSSAutomaticTicketThreshold = a.CVSSAutomaticTicketThreshold
+		}
 
-	if a.RiskAutomaticTicketThreshold != nil {
-		updated = true
-		asset.RiskAutomaticTicketThreshold = a.RiskAutomaticTicketThreshold
+		if a.RiskAutomaticTicketThreshold != nil {
+			updated = true
+			asset.RiskAutomaticTicketThreshold = a.RiskAutomaticTicketThreshold
+		}
+	} else {
+		asset.CVSSAutomaticTicketThreshold = nil
+		asset.RiskAutomaticTicketThreshold = nil
 	}
 
 	return updated

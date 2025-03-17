@@ -84,14 +84,14 @@ func verify(cmd *cobra.Command, args []string) error {
 	}
 
 	// download the layout
-	c := devguard.NewHTTPClient(token, apiUrl)
+	ctx := devguard.NewHTTPClient(token, apiUrl)
 
 	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, apiUrl+"/api/v1/organizations/"+assetName+"/in-toto/root.layout.json", nil)
 	if err != nil {
 		return err
 	}
 
-	resp, err := c.Do(req)
+	resp, err := ctx.Do(req)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func verify(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not create temp dir")
 	}
 
-	err = downloadSupplyChainLinks(cmd.Context(), c, linkDir, apiUrl, assetName, supplyChainId)
+	err = downloadSupplyChainLinks(cmd.Context(), ctx, linkDir, apiUrl, assetName, supplyChainId)
 	if err != nil {
 		return errors.Wrap(err, "could not download supply chain links")
 	}
@@ -140,7 +140,7 @@ func verify(cmd *cobra.Command, args []string) error {
 
 	// now get the digest from the layout argument - we expect it to be an image tag
 	// use crane to get the digest
-	craneCmd := exec.Command("sh", "-c", "crane digest "+fmt.Sprintf("\"%s\"", imageName)+"> image-digest.txt") // nolint:gosec//Checked using regex
+	craneCmd := exec.Command("sh", "-ctx", "crane digest "+fmt.Sprintf("\"%s\"", imageName)+"> image-digest.txt") // nolint:gosec//Checked using regex
 	craneCmd.Stderr = os.Stderr
 	craneCmd.Stdout = os.Stdout
 
