@@ -205,7 +205,9 @@ func getCurrentVersion(path string) (string, int, error) {
 	}
 	latestTag := tags[0]
 
-	cmd = exec.Command("git", "rev-list", "--count", latestTag+"..HEAD") // nolint:all:Latest Tag is already checked against a semver regex.
+	fmt.Println("Latest Tag: ", latestTag)
+
+	cmd = exec.Command("git", "rev-list", "--count", "v"+latestTag+"..HEAD") // nolint:all:Latest Tag is already checked against a semver regex.
 	var commitOut bytes.Buffer
 	errOut = bytes.Buffer{}
 	cmd.Stdout = &commitOut
