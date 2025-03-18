@@ -56,7 +56,7 @@ func (c *componentRepository) CreateComponents(tx core.DB, components []models.C
 	return c.GetDB(tx).Create(&components).Error
 }
 
-func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID, version string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 
@@ -66,11 +66,7 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 		query = query.Where("scanner_id = ?", scannerID)
 	}
 
-	if version == models.NoVersion || version == "" {
-		err = query.Where("semver_end is NULL").Find(&components).Error
-	} else {
-		err = query.Where("semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)", version, version).Find(&components).Error
-	}
+	err = query.Find(&components).Error
 
 	if err != nil {
 		return nil, err
@@ -79,7 +75,7 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 	return components, err
 }
 
-func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner, version string) (map[string]int, error) {
+func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner string) (map[string]int, error) {
 	var licenses []struct {
 		License string
 		Count   int
@@ -91,12 +87,6 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 
 	if scanner != "" {
 		query = query.Where("scanner_id = ?", scanner)
-	}
-
-	if version == models.NoVersion || version == "" {
-		query = query.Where("semver_end is NULL")
-	} else {
-		query = query.Where("semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)", version, version)
 	}
 
 	err = query.Scan(&licenses).Error
@@ -122,19 +112,13 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 	return licensesMap, nil
 }
 
-func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner, version string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
 	var components []models.ComponentDependency
 
 	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Component").Joins("Component.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
 	if scanner != "" {
 		query = query.Where("scanner_id = ?", scanner)
-	}
-
-	if version == models.NoVersion || version == "" {
-		query = query.Where("semver_end is NULL")
-	} else {
-		query = query.Where("semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)", version, version)
 	}
 
 	for _, f := range filter {
@@ -186,7 +170,7 @@ func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Compon
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
+func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
 		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})

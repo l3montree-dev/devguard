@@ -84,17 +84,6 @@ func (a *assetVersionController) Versions(c core.Context) error {
 }
 
 func (a *assetVersionController) AffectedComponents(c core.Context) error {
-	// get the version query param
-	version := c.QueryParam("version")
-	if version == "" {
-		version = models.NoVersion
-	} else {
-		var err error
-		version, err = normalize.SemverFix(version)
-		if err != nil {
-			return err
-		}
-	}
 
 	scanner := c.QueryParam("scanner")
 	if scanner == "" {
@@ -102,7 +91,7 @@ func (a *assetVersionController) AffectedComponents(c core.Context) error {
 	}
 
 	assetVersion := core.GetAssetVersion(c)
-	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scanner, version)
+	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scanner)
 	if err != nil {
 		return err
 	}
@@ -112,8 +101,8 @@ func (a *assetVersionController) AffectedComponents(c core.Context) error {
 	}))
 }
 
-func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, scanner, version string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
-	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner, version)
+func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, scanner string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
+	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -131,24 +120,13 @@ func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 
 func (a *assetVersionController) DependencyGraph(c core.Context) error {
 	app := core.GetAssetVersion(c)
-	// check for version query param
-	version := c.QueryParam("version")
-	if version == "" {
-		version = models.NoVersion
-	} else {
-		var err error
-		version, err = normalize.SemverFix(version)
-		if err != nil {
-			return err
-		}
-	}
 
 	scanner := c.QueryParam("scanner")
 	if scanner == "" {
 		return echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, scanner, version)
+	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, scanner)
 	if err != nil {
 		return err
 	}
@@ -217,7 +195,7 @@ func (a *assetVersionController) buildSBOM(c core.Context) (*cdx.BOM, error) {
 		return nil, echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner, version)
+	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +230,7 @@ func (a *assetVersionController) buildVeX(c core.Context) (*cdx.BOM, error) {
 	}
 
 	// get all associated dependencyVulns
-	components, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scanner, version)
+	components, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scanner)
 	if err != nil {
 		return nil, err
 	}

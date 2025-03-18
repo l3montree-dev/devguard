@@ -17,13 +17,11 @@ func NewHTTPController(componentRepository core.ComponentRepository) *httpContro
 func (httpController httpController) LicenseDistribution(c core.Context) error {
 	assetVersion := core.GetAssetVersion(c)
 	scannerId := c.QueryParam("scannerId")
-	version := c.QueryParam("version")
 
 	licenses, err := httpController.componentRepository.GetLicenseDistribution(nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
 		scannerId,
-		version,
 	)
 
 	if err != nil {
@@ -36,7 +34,7 @@ func (httpController httpController) LicenseDistribution(c core.Context) error {
 func (httpController httpController) ListPaged(c core.Context) error {
 	assetVersion := core.GetAssetVersion(c)
 	scannerId := c.QueryParam("scannerId")
-	version := c.QueryParam("version")
+
 	pageInfo := core.GetPageInfo(c)
 	filter := core.GetFilterQuery(c)
 	search := c.QueryParam("search")
@@ -46,7 +44,6 @@ func (httpController httpController) ListPaged(c core.Context) error {
 		assetVersion.Name,
 		assetVersion.AssetID,
 		scannerId,
-		version,
 		pageInfo,
 		search,
 		filter,

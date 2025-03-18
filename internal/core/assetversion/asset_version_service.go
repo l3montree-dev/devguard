@@ -155,13 +155,13 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
 
-func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner, version)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner)
 	if err != nil {
 		return 0, 0, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
@@ -288,9 +288,9 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 	return res
 }
 
-func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, currentVersion string, sbom normalize.SBOM) error {
+func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
 	// load the asset components
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID, currentVersion)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
 	}
@@ -385,7 +385,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 		return err
 	}
 
-	if err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, currentVersion, assetComponents, dependencies); err != nil {
+	if err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies); err != nil {
 		return err
 	}
 
@@ -393,7 +393,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	go func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
 
-		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion.Name, assetVersion.AssetID, scannerID, currentVersion)
+		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion.Name, assetVersion.AssetID, scannerID)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {
