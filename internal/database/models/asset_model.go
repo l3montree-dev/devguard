@@ -26,7 +26,7 @@ type Asset struct {
 	Name string `json:"name" gorm:"type:text"`
 	Slug string `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
 
-	CentralDependencyVulnManagement bool `json:"centralDependencyVulnManagement" gorm:"default:false;"`
+	CentralFlawManagement bool `json:"centralFlawManagement" gorm:"default:false;"`
 
 	ProjectID   uuid.UUID `json:"projectId" gorm:"uniqueIndex:idx_app_project_slug;not null;type:uuid;"`
 	Description string    `json:"description" gorm:"type:text"`
@@ -46,8 +46,8 @@ type Asset struct {
 	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
 
 	LastHistoryUpdate            *time.Time
-	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold" gorm:"type:decimal(4,2);default:null"`
-	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold" gorm:"type:decimal(4,2);default:null"`
+	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
+	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
 
 	LastSecretScan    *time.Time `json:"lastSecretScan"`
 	LastSastScan      *time.Time `json:"lastSastScan"`
