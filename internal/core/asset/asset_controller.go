@@ -115,6 +115,7 @@ func (c *httpController) Update(ctx core.Context) error {
 	defer req.Close()
 
 	var patchRequest patchRequest
+
 	err := json.NewDecoder(req).Decode(&patchRequest)
 	if err != nil {
 		return fmt.Errorf("Error decoding request: %v", err)

@@ -52,10 +52,6 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 	if a.EnableTicketRange {
 		asset.CVSSAutomaticTicketThreshold = a.CVSSAutomaticTicketThreshold
 		asset.RiskAutomaticTicketThreshold = a.RiskAutomaticTicketThreshold
-	} else {
-		asset.CVSSAutomaticTicketThreshold = nil
-		asset.RiskAutomaticTicketThreshold = nil
-
 	}
 
 	return asset
@@ -67,7 +63,7 @@ type patchRequest struct {
 
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
-	EnableTicketRange            bool     `json:"enableTicketRange "`
+	EnableTicketRange            bool     `json:"enableTicketRange"`
 
 	CentralDependencyVulnManagement *bool `json:"centralDependencyVulnManagement"`
 
