@@ -331,31 +331,6 @@ func GetSortQuery(ctx Context) []SortQuery {
 	return sortQuerys
 }
 
-var field2TableNameMap = map[string]string{
-	"cve":       "CVE",
-	"component": "Component",
-	"project":   "Project",
-}
-
-func field2TableName(fieldName string) string {
-	fieldNameSplits := strings.Split(fieldName, ".")
-	if len(fieldNameSplits) == 1 {
-		return fieldName
-	}
-
-	// do not rename the LAST element
-	// because it is the field name not the table name
-	for i := 0; i < len(fieldNameSplits)-1; i++ {
-		if _, exists := field2TableNameMap[fieldNameSplits[i]]; !exists {
-			continue
-		}
-
-		fieldNameSplits[i] = field2TableNameMap[fieldNameSplits[i]]
-	}
-
-	return strings.Join(fieldNameSplits, ".")
-}
-
 func quoteFields(field string) string {
 	// split at the dot
 	split := strings.Split(field, ".")
