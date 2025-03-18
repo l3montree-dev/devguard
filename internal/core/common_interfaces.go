@@ -287,3 +287,9 @@ type DepsDevService interface {
 type ComponentProjectRepository interface {
 	common.Repository[string, models.ComponentProject, DB]
 }
+
+type ComponentService interface {
+	GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scanner, version string) ([]models.Component, error)
+	RefreshComponentProjectInformation(project models.ComponentProject)
+	GetLicense(component models.Component) (models.Component, error)
+}

@@ -1,10 +1,11 @@
-package daemon
+package component_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -20,45 +21,41 @@ func TestHandleComponent(t *testing.T) {
 		mockComponentProjectRepository := mocks.NewCoreComponentProjectRepository(t)
 		mockComponentRepository := mocks.NewCoreComponentRepository(t)
 
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository)
+
 		component := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
 			Version: "v1.0.0",
 			License: nil,
-		}
-
-		expected := models.Component{
-			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
-			Version: "v1.0.0",
-			License: utils.Ptr("unknown"),
 		}
 
 		mockDepsDevService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.DepsDevVersionResponse{}, nil)
 
-		mockComponentRepository.On("Save", mock.Anything, &expected).Return(nil)
-		handleComponent(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, component)
+		actual, err := service.GetLicense(component)
+
+		assert.NoError(t, err)
+		assert.Equal(t, utils.Ptr("unknown"), actual.License)
 	})
 
-	t.Run("should set the license information to unknown, if there is an error in the deps dev daemon", func(t *testing.T) {
+	t.Run("should set the license information to unknown, if there is an error in the deps dev service", func(t *testing.T) {
 		mockDepsDevService := mocks.NewCoreDepsDevService(t)
 		mockComponentProjectRepository := mocks.NewCoreComponentProjectRepository(t)
 		mockComponentRepository := mocks.NewCoreComponentRepository(t)
 
-		component := models.Component{
+		c := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
 			Version: "v1.0.0",
 			License: nil,
 		}
 
-		expected := models.Component{
-			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
-			Version: "v1.0.0",
-			License: utils.Ptr("unknown"),
-		}
-
 		mockDepsDevService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.DepsDevVersionResponse{}, assert.AnError)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository)
 
-		mockComponentRepository.On("Save", mock.Anything, &expected).Return(nil)
-		handleComponent(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, component)
+		actual, err := service.GetLicense(c)
+
+		assert.NoError(t, err)
+
+		assert.Equal(t, utils.Ptr("unknown"), actual.License)
 	})
 
 	t.Run("should fetch the project information if there is a SOURCE_REPO defined in the related projects", func(t *testing.T) {
@@ -66,17 +63,10 @@ func TestHandleComponent(t *testing.T) {
 		mockComponentProjectRepository := mocks.NewCoreComponentProjectRepository(t)
 		mockComponentRepository := mocks.NewCoreComponentRepository(t)
 
-		component := models.Component{
+		c := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
 			Version: "v1.0.0",
 			License: nil,
-		}
-
-		expected := models.Component{
-			Purl:                "pkg:golang/gorm.io/gorm@v1.25.12",
-			Version:             "v1.0.0",
-			License:             utils.Ptr("unknown"),
-			ComponentProjectKey: utils.Ptr("github/test/project"),
 		}
 
 		mockDepsDevService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.DepsDevVersionResponse{
@@ -103,14 +93,12 @@ func TestHandleComponent(t *testing.T) {
 		}
 		mockDepsDevService.On("GetProject", mock.Anything, "github/test/project").Return(projectResponse, nil)
 
-		jsonB := database.MustJsonBFromStruct(projectResponse.Scorecard)
-		mockComponentProjectRepository.On("Save", mock.Anything, &models.ComponentProject{
-			ProjectKey: "github/test/project",
-			ScoreCard:  &jsonB,
-		}).Return(nil)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository)
 
-		mockComponentRepository.On("Save", mock.Anything, &expected).Return(nil)
-		handleComponent(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, component)
+		actual, err := service.GetLicense(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, utils.Ptr("github/test/project"), actual.ComponentProjectKey)
 	})
 }
 
@@ -162,7 +150,8 @@ func TestHandleProject(t *testing.T) {
 		mockDepsDevService.On("GetProject", mock.Anything, "github/test/project").Return(projectResponse, nil)
 
 		mockComponentProjectRepository.On("Save", mock.Anything, &expectedProject).Return(nil)
-		handleComponentProject(mockDepsDevService, mockComponentProjectRepository, project)
 
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, nil)
+		service.RefreshComponentProjectInformation(project)
 	})
 }
