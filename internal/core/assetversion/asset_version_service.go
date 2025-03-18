@@ -325,10 +325,9 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			// create the direct dependency edge.
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurl:    nil, // direct dependency - therefore set it to nil
-					ScannerID:        scannerID,
-					DependencyPurl:   componentPackageUrl,
-					AssetSemverStart: currentVersion,
+					ComponentPurl:  nil, // direct dependency - therefore set it to nil
+					ScannerID:      scannerID,
+					DependencyPurl: componentPackageUrl,
 				},
 			)
 			if _, ok := existingComponentPurls[componentPackageUrl]; !ok {
@@ -352,10 +351,9 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurl:    utils.EmptyThenNil(compPackageUrl),
-					ScannerID:        scannerID,
-					DependencyPurl:   depPurlOrName,
-					AssetSemverStart: currentVersion,
+					ComponentPurl:  utils.EmptyThenNil(compPackageUrl),
+					ScannerID:      scannerID,
+					DependencyPurl: depPurlOrName,
 				},
 			)
 

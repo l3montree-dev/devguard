@@ -43,12 +43,3 @@ type AssetVersion struct {
 func (m AssetVersion) TableName() string {
 	return "asset_versions"
 }
-func (m AssetVersion) GetCurrentAssetVersionComponents() []ComponentDependency {
-	AssetVersionComponents := make([]ComponentDependency, 0)
-	for _, assetComponent := range m.Components {
-		if assetComponent.AssetSemverEnd == nil {
-			AssetVersionComponents = append(AssetVersionComponents, assetComponent)
-		}
-	}
-	return AssetVersionComponents
-}

@@ -17,7 +17,6 @@ import (
 )
 
 type GitVersionInfo struct {
-	Version       string
 	BranchOrTag   string
 	DefaultBranch string
 }
@@ -50,7 +49,6 @@ func SetGitVersionHeader(path string, req *http.Request) error {
 
 	fmt.Println("Git Version Info: ", gitVersionInfo)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Asset-Version", gitVersionInfo.Version)
 	req.Header.Set("X-Asset-Ref", gitVersionInfo.BranchOrTag)
 	req.Header.Set("X-Asset-Default-Branch", gitVersionInfo.DefaultBranch)
 
@@ -87,7 +85,6 @@ func GetAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 	}
 
 	return GitVersionInfo{
-		Version:       version,
 		BranchOrTag:   branchOrTag,
 		DefaultBranch: defaultBranch,
 	}, nil
