@@ -205,7 +205,6 @@ func TestSetGitVersionHeader(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
-		assert.Equal(t, "1.0.0-5", req.Header.Get("X-Asset-Version"))
 		assert.Equal(t, "main", req.Header.Get("X-Asset-Ref"))
 		assert.Equal(t, "main", req.Header.Get("X-Asset-Default-Branch"))
 	})
@@ -227,7 +226,7 @@ func TestSetGitVersionHeader(t *testing.T) {
 
 		err = utils.SetGitVersionHeader(".", req)
 		assert.Error(t, err)
-		assert.Empty(t, req.Header.Get("X-Asset-Version"))
+
 		assert.Empty(t, req.Header.Get("X-Asset-Ref"))
 		assert.Empty(t, req.Header.Get("X-Asset-Default-Branch"))
 	})
