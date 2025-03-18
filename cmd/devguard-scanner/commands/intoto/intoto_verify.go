@@ -140,7 +140,7 @@ func verify(cmd *cobra.Command, args []string) error {
 
 	// now get the digest from the layout argument - we expect it to be an image tag
 	// use crane to get the digest
-	craneCmd := exec.Command("sh", "-ctx", "crane digest "+fmt.Sprintf("\"%s\"", imageName)+"> image-digest.txt") // nolint:gosec//Checked using regex
+	craneCmd := exec.Command("sh", "-c", "crane digest "+fmt.Sprintf("\"%s\"", imageName)+"> image-digest.txt") // nolint:gosec//Checked using regex
 	craneCmd.Stderr = os.Stderr
 	craneCmd.Stdout = os.Stdout
 
