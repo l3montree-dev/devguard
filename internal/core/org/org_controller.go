@@ -120,7 +120,7 @@ func (o *httpController) bootstrapOrg(c core.Context, organization models.Org) e
 }
 
 func (o *httpController) Update(ctx core.Context) error {
-	organization := core.GetTenant(ctx)
+	organization := core.GetOrganization(ctx)
 	members, err := FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
@@ -154,7 +154,7 @@ func (o *httpController) Update(ctx core.Context) error {
 
 func (o *httpController) Delete(c core.Context) error {
 	// get the id of the organization
-	organizationID := core.GetTenant(c).GetID()
+	organizationID := core.GetOrganization(c).GetID()
 
 	// delete the organization
 	err := o.organizationRepository.Delete(nil, organizationID)
@@ -170,7 +170,7 @@ func (c *httpController) ContentTree(ctx core.Context) error {
 	// this means all projects and their corresponding assets
 
 	// get the organization from the context
-	organization := core.GetTenant(ctx)
+	organization := core.GetOrganization(ctx)
 
 	ps, err := c.projectService.ListAllowedProjects(ctx)
 	if err != nil {
@@ -251,7 +251,7 @@ func (c *httpController) InviteMember(ctx core.Context) error {
 	}
 
 	// get the organization from the context
-	organization := core.GetTenant(ctx)
+	organization := core.GetOrganization(ctx)
 
 	model := models.Invitation{
 		OrganizationID: organization.GetID(),
@@ -311,7 +311,7 @@ func (c *httpController) RemoveMember(ctx core.Context) error {
 	rbac.RevokeRole(userId, "admin")  // nolint:errcheck// we do not care if the user is not an admin
 
 	// remove member from all projects
-	projects, err := c.projectService.ListProjectsByOrganizationID(core.GetTenant(ctx).GetID())
+	projects, err := c.projectService.ListProjectsByOrganizationID(core.GetOrganization(ctx).GetID())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
@@ -326,7 +326,7 @@ func (c *httpController) RemoveMember(ctx core.Context) error {
 
 func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	// get all members from the organization
-	organization := core.GetTenant(ctx)
+	organization := core.GetOrganization(ctx)
 	accessControl := core.GetRBAC(ctx)
 
 	members, err := accessControl.GetAllMembersOfOrganization()
@@ -406,7 +406,7 @@ func (o *httpController) Members(c core.Context) error {
 
 func (o *httpController) Read(c core.Context) error {
 	// get the organization from the context
-	organization := core.GetTenant(c)
+	organization := core.GetOrganization(c)
 	// fetch the regular members of the current organization
 	members, err := FetchMembersOfOrganization(c)
 
