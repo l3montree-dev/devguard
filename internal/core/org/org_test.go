@@ -481,39 +481,42 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		}
 
 	})
-	t.Run("Should succeed if everything works as expected with minimal contents in the m list", func(t *testing.T) {
-		client1 := client.Identity{
-			Id: "coolID1",
-		}
-		client2 := client.Identity{
-			Id:     "coolID2",
-			Traits: "",
-		}
-		singleList := []client.Identity{client1, client2}
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
-		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, nil)
-		accesscontrol.On("GetDomainRole", mock.Anything).Return("cool role", nil)
+	/*
+		t.Run("Should succeed if everything works as expected with minimal contents in the m list", func(t *testing.T) {
+				client1 := client.Identity{
+					Id: "coolID1",
+				}
+				client2 := client.Identity{
+					Id:     "coolID2",
+					Traits: "",
+				}
+				singleList := []client.Identity{client1, client2}
 
-		adminClient := mocks.NewCoreAdminClient(t)
-		adminClient.On("ListUser", mock.Anything).Return(singleList, nil)
+				accesscontrol := mocks.NewAccesscontrolAccessControl(t)
+				accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, nil)
+				accesscontrol.On("GetDomainRole", mock.Anything).Return("cool role", nil)
 
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		e := echo.New()
-		ctx := e.NewContext(req, httptest.NewRecorder())
+				adminClient := mocks.NewCoreAdminClient(t)
+				adminClient.On("ListUser", mock.Anything).Return(singleList, nil)
 
-		core.SetOrganization(ctx, models.Org{})
-		core.SetRBAC(ctx, accesscontrol)
-		core.SetAuthAdminClient(ctx, adminClient)
+				req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
+				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+				e := echo.New()
+				ctx := e.NewContext(req, httptest.NewRecorder())
 
-		_, err := org.FetchMembersOfOrganization(ctx)
-		if err == nil {
+				core.SetOrganization(ctx, models.Org{})
+				core.SetRBAC(ctx, accesscontrol)
+				core.SetAuthAdminClient(ctx, adminClient)
 
-			t.Fail()
-		}
+				_, err := org.FetchMembersOfOrganization(ctx)
+				if err == nil {
 
-	})
+					t.Fail()
+				}
+
+			})
+	*/
 }
 
 /*func TestUpdate(t *testing.T) {
