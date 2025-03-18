@@ -2,6 +2,7 @@ package integrations
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"log/slog"
 
@@ -107,6 +108,18 @@ func (t *thirdPartyIntegrations) HandleEvent(event any) error {
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
 			return struct{}{}, i.HandleEvent(event)
+		})
+	}
+
+	_, err := wg.WaitAndCollect()
+	return err
+}
+
+func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
+	wg := utils.ErrGroup[struct{}](-1)
+	for _, i := range t.integrations {
+		wg.Go(func() (struct{}, error) {
+			return struct{}{}, i.CreateIssue(ctx, asset, repoId, dependencyVulnId, projectSlug, orgSlug)
 		})
 	}
 

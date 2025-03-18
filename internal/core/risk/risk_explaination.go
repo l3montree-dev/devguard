@@ -187,6 +187,10 @@ func describeCVSS(cvss map[string]string) string {
 		}
 	}
 
+	if len(descriptions) == 0 {
+		return ""
+	}
+
 	// create a bullet point list to improve readability
 	descriptions[0] = "- " + descriptions[0]
 	// remove empty strings

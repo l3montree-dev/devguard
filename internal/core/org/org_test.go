@@ -31,7 +31,6 @@ func TestCreate(t *testing.T) {
 		if err == nil {
 			t.Fail()
 		}
-
 	})
 	t.Run("Should fail if the context is in the wrong format", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/webhook", nil)
@@ -481,93 +480,4 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 		}
 
 	})
-
-	/*
-		t.Run("Should succeed if everything works as expected with minimal contents in the m list", func(t *testing.T) {
-				client1 := client.Identity{
-					Id: "coolID1",
-				}
-				client2 := client.Identity{
-					Id:     "coolID2",
-					Traits: "",
-				}
-				singleList := []client.Identity{client1, client2}
-
-				accesscontrol := mocks.NewAccesscontrolAccessControl(t)
-				accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, nil)
-				accesscontrol.On("GetDomainRole", mock.Anything).Return("cool role", nil)
-
-				adminClient := mocks.NewCoreAdminClient(t)
-				adminClient.On("ListUser", mock.Anything).Return(singleList, nil)
-
-				req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
-				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-				e := echo.New()
-				ctx := e.NewContext(req, httptest.NewRecorder())
-
-				core.SetOrganization(ctx, models.Org{})
-				core.SetRBAC(ctx, accesscontrol)
-				core.SetAuthAdminClient(ctx, adminClient)
-
-				_, err := org.FetchMembersOfOrganization(ctx)
-				if err == nil {
-
-					t.Fail()
-				}
-
-			})
-	*/
 }
-
-/*func TestUpdate(t *testing.T) {
-	t.Run("Should fail if the FetchMembers function throws an error", func(t *testing.T) {
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
-
-		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
-		projectService := mocks.NewCoreProjectService(t)
-		invitationRepository := mocks.NewCoreInvitationRepository(t)
-
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-		e := echo.New()
-		ctx := e.NewContext(req, httptest.NewRecorder())
-
-		core.SetOrganization(ctx, models.Org{Name: "TestNameLowkey"})
-
-		h := org.NewHttpController(organizationRepository, rbacProvider, projectService, invitationRepository)
-
-		err := h.Update(ctx)
-		if err != nil {
-			t.Fail()
-		}
-
-	})
-}*/
-
-/*
-var globalVariable int = 0
-
-func TestX(t *testing.T) {
-	var wg sync.WaitGroup
-
-	ch := make(chan int)
-
-	for i := range 200 {
-		wg.Add(1)
-
-		go func(i int) {
-			x := <-ch
-			t.Log(x)
-			globalVariable += i
-		}(i)
-
-		ch <- i
-	}
-
-	// wg.Wait()
-
-	t.Log(globalVariable)
-
-	t.Fail()
-}*/

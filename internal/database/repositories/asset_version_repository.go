@@ -94,7 +94,6 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 	var assetVersion models.AssetVersion
 	assetVersion, err := a.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
 	if err != nil {
-
 		var assetVersionType models.AssetVersionType
 		if tag == "" {
 			assetVersionType = "branch"

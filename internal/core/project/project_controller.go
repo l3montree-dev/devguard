@@ -43,9 +43,9 @@ func NewHttpController(repository core.ProjectRepository, assetRepository core.A
 	}
 }
 
-func (p *Controller) Create(c core.Context) error {
+func (p *Controller) Create(ctx core.Context) error {
 	var req CreateRequest
-	if err := c.Bind(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
@@ -55,18 +55,21 @@ func (p *Controller) Create(c core.Context) error {
 
 	newProject := req.ToModel()
 
+	// add the organization id
+	newProject.OrganizationID = core.GetOrganization(ctx).GetID()
+
 	if newProject.Name == "" || newProject.Slug == "" {
 		return echo.NewHTTPError(409, "projects with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("projects with an empty name or an empty slug are not allowed"))
 	}
 
 	// add the organization id
-	newProject.OrganizationID = core.GetOrganization(c).GetID()
+	newProject.OrganizationID = core.GetOrganization(ctx).GetID()
 
 	if err := p.projectRepository.Create(nil, &newProject); err != nil {
 		// check if duplicate key error
 		if database.IsDuplicateKeyError(err) {
 			// get the project by slug and project id unscoped
-			project, err := p.projectRepository.ReadBySlugUnscoped(core.GetOrganization(c).GetID(), newProject.Slug)
+			project, err := p.projectRepository.ReadBySlugUnscoped(core.GetOrganization(ctx).GetID(), newProject.Slug)
 			if err != nil {
 				return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
 			}
@@ -83,11 +86,11 @@ func (p *Controller) Create(c core.Context) error {
 		}
 	}
 
-	if err := p.bootstrapProject(c, newProject); err != nil {
+	if err := p.bootstrapProject(ctx, newProject); err != nil {
 		return echo.NewHTTPError(500, "could not bootstrap project").WithInternal(err)
 	}
 
-	return c.JSON(200, newProject)
+	return ctx.JSON(200, newProject)
 }
 
 func FetchMembersOfProject(ctx core.Context) ([]core.User, error) {

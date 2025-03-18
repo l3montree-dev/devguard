@@ -10,6 +10,9 @@ type createRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 
+	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
+	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
+
 	CentralDependencyVulnManagement bool `json:"centralDependencyVulnManagement"`
 
 	Importance            int  `json:"importance"`
@@ -36,6 +39,9 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 		ProjectID:   projectID,
 		Description: a.Description,
 
+		RiskAutomaticTicketThreshold: a.RiskAutomaticTicketThreshold,
+		CVSSAutomaticTicketThreshold: a.CVSSAutomaticTicketThreshold,
+
 		CentralDependencyVulnManagement: a.CentralDependencyVulnManagement,
 
 		Importance:            a.Importance,
@@ -50,6 +56,9 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 type patchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
+
+	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
+	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
 
 	CentralDependencyVulnManagement *bool `json:"centralDependencyVulnManagement"`
 
@@ -104,6 +113,16 @@ func (a *patchRequest) applyToModel(
 		} else {
 			asset.RepositoryName = a.RepositoryName
 		}
+	}
+
+	if a.CVSSAutomaticTicketThreshold != nil {
+		updated = true
+		asset.CVSSAutomaticTicketThreshold = a.CVSSAutomaticTicketThreshold
+	}
+
+	if a.RiskAutomaticTicketThreshold != nil {
+		updated = true
+		asset.RiskAutomaticTicketThreshold = a.RiskAutomaticTicketThreshold
 	}
 
 	return updated

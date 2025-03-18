@@ -21,7 +21,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -69,9 +68,10 @@ type gitlabIntegration struct {
 	dependencyVulnRepository core.DependencyVulnRepository
 	vulnEventRepository      core.VulnEventRepository
 	frontendUrl              string
-	assetRepository          core.AssetRepository
-	assetVersionRepository   core.AssetVersionRepository
-	dependencyVulnService    core.DependencyVulnService
+
+	projectRepository      core.ProjectRepository
+	assetRepository        core.AssetRepository
+	assetVersionRepository core.AssetVersionRepository
 
 	gitlabClientFactory func(id uuid.UUID) (gitlabClientFacade, error)
 }
@@ -109,20 +109,17 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	externalUserRepository := repositories.NewExternalUserRepository(db)
 	assetRepository := repositories.NewAssetRepository(db)
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	cveRepository := repositories.NewCVERepository(db)
+	projectRepository := repositories.NewProjectRepository(db)
 
 	return &gitlabIntegration{
+		aggregatedVulnRepository:    aggregatedVulnRepository,
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
-
-		dependencyVulnRepository: dependencyVulnRepository,
-
-		aggregatedVulnRepository: aggregatedVulnRepository,
-
-		dependencyVulnService:  dependency_vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository),
-		vulnEventRepository:    vulnEventRepository,
-		assetRepository:        assetRepository,
-		assetVersionRepository: assetVersionRepository,
-		externalUserRepository: externalUserRepository,
+		dependencyVulnRepository:    dependencyVulnRepository,
+		vulnEventRepository:         vulnEventRepository,
+		assetRepository:             assetRepository,
+		assetVersionRepository:      assetVersionRepository,
+		externalUserRepository:      externalUserRepository,
+		projectRepository:           projectRepository,
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -724,90 +721,27 @@ func getTemplatePath(scanner string) string {
 func (g *gitlabIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
 	case core.ManualMitigateEvent:
+
 		asset := core.GetAsset(event.Ctx)
 		repoId, err := core.GetRepositoryID(event.Ctx)
 		if err != nil {
 			return err
 		}
+		projectSlug, err := core.GetProjectSlug(event.Ctx)
 
-		if !strings.HasPrefix(repoId, "gitlab:") {
-			// this integration only handles gitlab repositories
-			return nil
-		}
-
-		integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
 		if err != nil {
-			slog.Error("failed to extract integration id from repo id", "err", err, "repoId", repoId)
 			return err
 		}
-
-		projectId, err := extractProjectIdFromRepoId(repoId)
-		if err != nil {
-			slog.Error("failed to extract project id from repo id", "err", err, "repoId", repoId)
-			return err
-		}
-
 		dependencyVulnId, err := core.GetVulnID(event.Ctx)
 		if err != nil {
 			return err
 		}
-
-		dependencyVuln, err := g.dependencyVulnRepository.Read(dependencyVulnId)
+		orgSlug, err := core.GetOrgSlug(event.Ctx)
 		if err != nil {
 			return err
 		}
 
-		// we create a new ticket in github
-		client, err := g.gitlabClientFactory(integrationUUID)
-		if err != nil {
-			return err
-		}
-
-		riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
-
-		exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
-
-		// print json stringify to the console
-		orgSlug, _ := core.GetOrgSlug(event.Ctx)
-		projectSlug, _ := core.GetProjectSlug(event.Ctx)
-		assetSlug, _ := core.GetAssetSlug(event.Ctx)
-
-		// read the justification from the body
-		var justification map[string]string
-		err = json.NewDecoder(event.Ctx.Request().Body).Decode(&justification)
-		if err != nil {
-			return err
-		}
-
-		labels := []string{
-			"devguard",
-			"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
-		}
-		issue := &gitlab.CreateIssueOptions{
-			Title:       gitlab.Ptr(fmt.Sprintf("DependencyVuln %s", dependencyVuln.CVE.CVE)),
-			Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug) + "\n\n------\n\n" + justification["comment"]),
-			Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
-		}
-
-		createdIssue, _, err := client.CreateIssue(event.Ctx.Request().Context(), projectId, issue)
-		if err != nil {
-			return err
-		}
-
-		dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("gitlab:%d/%d", createdIssue.ProjectID, createdIssue.IID))
-		dependencyVuln.TicketURL = utils.Ptr(createdIssue.WebURL)
-
-		userId := core.GetSession(event.Ctx).GetUserID()
-		VulnEvent := models.NewMitigateEvent(
-			dependencyVuln.ID,
-			userId,
-			justification["comment"],
-			map[string]any{
-				"ticketId":  *dependencyVuln.TicketID,
-				"ticketUrl": createdIssue.WebURL,
-			})
-
-		return g.dependencyVulnService.ApplyAndSave(nil, &dependencyVuln, &VulnEvent)
+		return g.CreateIssue(event.Ctx.Request().Context(), asset, repoId, dependencyVulnId, projectSlug, orgSlug)
 	case core.VulnEvent:
 		ev := event.Event
 
@@ -1027,4 +961,70 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 		Name:            integration.Name,
 		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
 	})
+}
+
+func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
+
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		slog.Error("failed to extract integration id from repo id", "err", err, "repoId", repoId)
+		return err
+	}
+
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		slog.Error("failed to extract project id from repo id", "err", err, "repoId", repoId)
+		return err
+	}
+
+	dependencyVuln, err := g.dependencyVulnRepository.Read(dependencyVulnId)
+	if err != nil {
+		return err
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return err
+	}
+
+	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
+
+	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
+
+	assetSlug := asset.Slug
+
+	labels := []string{
+		"devguard",
+		"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
+	}
+
+	issue := &gitlab.CreateIssueOptions{
+		Title:       gitlab.Ptr(fmt.Sprintf("DependencyVuln %s", dependencyVuln.CVE.CVE)),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
+	}
+
+	createdIssue, _, err := client.CreateIssue(ctx, projectId, issue)
+	if err != nil {
+		return err
+	}
+
+	dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("gitlab:%d/%d", createdIssue.ProjectID, createdIssue.IID))
+	dependencyVuln.TicketURL = utils.Ptr(createdIssue.WebURL)
+
+	VulnEvent := models.NewMitigateEvent(
+		dependencyVuln.ID,
+		"system",
+		"RISK exceeds predefined threshold",
+		map[string]any{
+			"ticketId":  *dependencyVuln.TicketID,
+			"ticketUrl": createdIssue.WebURL,
+		})
+
+	return g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &VulnEvent)
 }

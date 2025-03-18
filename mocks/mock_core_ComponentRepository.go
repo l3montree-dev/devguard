@@ -3,9 +3,12 @@
 package mocks
 
 import (
-	models "github.com/l3montree-dev/devguard/internal/database/models"
-	mock "github.com/stretchr/testify/mock"
+	core "github.com/l3montree-dev/devguard/internal/core"
 	gorm "gorm.io/gorm"
+
+	mock "github.com/stretchr/testify/mock"
+
+	models "github.com/l3montree-dev/devguard/internal/database/models"
 
 	uuid "github.com/google/uuid"
 )
@@ -21,6 +24,241 @@ type CoreComponentRepository_Expecter struct {
 
 func (_m *CoreComponentRepository) EXPECT() *CoreComponentRepository_Expecter {
 	return &CoreComponentRepository_Expecter{mock: &_m.Mock}
+}
+
+// Activate provides a mock function with given fields: tx, id
+func (_m *CoreComponentRepository) Activate(tx *gorm.DB, id string) error {
+	ret := _m.Called(tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Activate")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string) error); ok {
+		r0 = rf(tx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreComponentRepository_Activate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Activate'
+type CoreComponentRepository_Activate_Call struct {
+	*mock.Call
+}
+
+// Activate is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - id string
+func (_e *CoreComponentRepository_Expecter) Activate(tx interface{}, id interface{}) *CoreComponentRepository_Activate_Call {
+	return &CoreComponentRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
+}
+
+func (_c *CoreComponentRepository_Activate_Call) Run(run func(tx *gorm.DB, id string)) *CoreComponentRepository_Activate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_Activate_Call) Return(_a0 error) *CoreComponentRepository_Activate_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreComponentRepository_Activate_Call) RunAndReturn(run func(*gorm.DB, string) error) *CoreComponentRepository_Activate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Begin provides a mock function with no fields
+func (_m *CoreComponentRepository) Begin() *gorm.DB {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Begin")
+	}
+
+	var r0 *gorm.DB
+	if rf, ok := ret.Get(0).(func() *gorm.DB); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gorm.DB)
+		}
+	}
+
+	return r0
+}
+
+// CoreComponentRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
+type CoreComponentRepository_Begin_Call struct {
+	*mock.Call
+}
+
+// Begin is a helper method to define mock.On call
+func (_e *CoreComponentRepository_Expecter) Begin() *CoreComponentRepository_Begin_Call {
+	return &CoreComponentRepository_Begin_Call{Call: _e.mock.On("Begin")}
+}
+
+func (_c *CoreComponentRepository_Begin_Call) Run(run func()) *CoreComponentRepository_Begin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_Begin_Call) Return(_a0 *gorm.DB) *CoreComponentRepository_Begin_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreComponentRepository_Begin_Call) RunAndReturn(run func() *gorm.DB) *CoreComponentRepository_Begin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Create provides a mock function with given fields: tx, t
+func (_m *CoreComponentRepository) Create(tx *gorm.DB, t *models.Component) error {
+	ret := _m.Called(tx, t)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Create")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.Component) error); ok {
+		r0 = rf(tx, t)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreComponentRepository_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
+type CoreComponentRepository_Create_Call struct {
+	*mock.Call
+}
+
+// Create is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - t *models.Component
+func (_e *CoreComponentRepository_Expecter) Create(tx interface{}, t interface{}) *CoreComponentRepository_Create_Call {
+	return &CoreComponentRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
+}
+
+func (_c *CoreComponentRepository_Create_Call) Run(run func(tx *gorm.DB, t *models.Component)) *CoreComponentRepository_Create_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(*models.Component))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_Create_Call) Return(_a0 error) *CoreComponentRepository_Create_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreComponentRepository_Create_Call) RunAndReturn(run func(*gorm.DB, *models.Component) error) *CoreComponentRepository_Create_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateBatch provides a mock function with given fields: tx, ts
+func (_m *CoreComponentRepository) CreateBatch(tx *gorm.DB, ts []models.Component) error {
+	ret := _m.Called(tx, ts)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateBatch")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.Component) error); ok {
+		r0 = rf(tx, ts)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreComponentRepository_CreateBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateBatch'
+type CoreComponentRepository_CreateBatch_Call struct {
+	*mock.Call
+}
+
+// CreateBatch is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - ts []models.Component
+func (_e *CoreComponentRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *CoreComponentRepository_CreateBatch_Call {
+	return &CoreComponentRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
+}
+
+func (_c *CoreComponentRepository_CreateBatch_Call) Run(run func(tx *gorm.DB, ts []models.Component)) *CoreComponentRepository_CreateBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].([]models.Component))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_CreateBatch_Call) Return(_a0 error) *CoreComponentRepository_CreateBatch_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreComponentRepository_CreateBatch_Call) RunAndReturn(run func(*gorm.DB, []models.Component) error) *CoreComponentRepository_CreateBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Delete provides a mock function with given fields: tx, id
+func (_m *CoreComponentRepository) Delete(tx *gorm.DB, id string) error {
+	ret := _m.Called(tx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string) error); ok {
+		r0 = rf(tx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreComponentRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type CoreComponentRepository_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - id string
+func (_e *CoreComponentRepository_Expecter) Delete(tx interface{}, id interface{}) *CoreComponentRepository_Delete_Call {
+	return &CoreComponentRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
+}
+
+func (_c *CoreComponentRepository_Delete_Call) Run(run func(tx *gorm.DB, id string)) *CoreComponentRepository_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_Delete_Call) Return(_a0 error) *CoreComponentRepository_Delete_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreComponentRepository_Delete_Call) RunAndReturn(run func(*gorm.DB, string) error) *CoreComponentRepository_Delete_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // FindByPurl provides a mock function with given fields: tx, purl
@@ -80,6 +318,54 @@ func (_c *CoreComponentRepository_FindByPurl_Call) RunAndReturn(run func(*gorm.D
 	return _c
 }
 
+// GetDB provides a mock function with given fields: tx
+func (_m *CoreComponentRepository) GetDB(tx *gorm.DB) *gorm.DB {
+	ret := _m.Called(tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDB")
+	}
+
+	var r0 *gorm.DB
+	if rf, ok := ret.Get(0).(func(*gorm.DB) *gorm.DB); ok {
+		r0 = rf(tx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gorm.DB)
+		}
+	}
+
+	return r0
+}
+
+// CoreComponentRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
+type CoreComponentRepository_GetDB_Call struct {
+	*mock.Call
+}
+
+// GetDB is a helper method to define mock.On call
+//   - tx *gorm.DB
+func (_e *CoreComponentRepository_Expecter) GetDB(tx interface{}) *CoreComponentRepository_GetDB_Call {
+	return &CoreComponentRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
+}
+
+func (_c *CoreComponentRepository_GetDB_Call) Run(run func(tx *gorm.DB)) *CoreComponentRepository_GetDB_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_GetDB_Call) Return(_a0 *gorm.DB) *CoreComponentRepository_GetDB_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreComponentRepository_GetDB_Call) RunAndReturn(run func(*gorm.DB) *gorm.DB) *CoreComponentRepository_GetDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDependencyCountPerScanner provides a mock function with given fields: assetVersionName, assetID
 func (_m *CoreComponentRepository) GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
 	ret := _m.Called(assetVersionName, assetID)
@@ -135,6 +421,68 @@ func (_c *CoreComponentRepository_GetDependencyCountPerScanner_Call) Return(_a0 
 }
 
 func (_c *CoreComponentRepository_GetDependencyCountPerScanner_Call) RunAndReturn(run func(string, uuid.UUID) (map[string]int, error)) *CoreComponentRepository_GetDependencyCountPerScanner_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetLicenseDistribution provides a mock function with given fields: tx, assetVersionName, assetID, scanner, version
+func (_m *CoreComponentRepository) GetLicenseDistribution(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scanner string, version string) (map[string]int, error) {
+	ret := _m.Called(tx, assetVersionName, assetID, scanner, version)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetLicenseDistribution")
+	}
+
+	var r0 map[string]int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, string, string) (map[string]int, error)); ok {
+		return rf(tx, assetVersionName, assetID, scanner, version)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, string, string) map[string]int); ok {
+		r0 = rf(tx, assetVersionName, assetID, scanner, version)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]int)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(*gorm.DB, string, uuid.UUID, string, string) error); ok {
+		r1 = rf(tx, assetVersionName, assetID, scanner, version)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreComponentRepository_GetLicenseDistribution_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetLicenseDistribution'
+type CoreComponentRepository_GetLicenseDistribution_Call struct {
+	*mock.Call
+}
+
+// GetLicenseDistribution is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scanner string
+//   - version string
+func (_e *CoreComponentRepository_Expecter) GetLicenseDistribution(tx interface{}, assetVersionName interface{}, assetID interface{}, scanner interface{}, version interface{}) *CoreComponentRepository_GetLicenseDistribution_Call {
+	return &CoreComponentRepository_GetLicenseDistribution_Call{Call: _e.mock.On("GetLicenseDistribution", tx, assetVersionName, assetID, scanner, version)}
+}
+
+func (_c *CoreComponentRepository_GetLicenseDistribution_Call) Run(run func(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scanner string, version string)) *CoreComponentRepository_GetLicenseDistribution_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(string), args[2].(uuid.UUID), args[3].(string), args[4].(string))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_GetLicenseDistribution_Call) Return(_a0 map[string]int, _a1 error) *CoreComponentRepository_GetLicenseDistribution_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreComponentRepository_GetLicenseDistribution_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, string, string) (map[string]int, error)) *CoreComponentRepository_GetLicenseDistribution_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -249,6 +597,64 @@ func (_c *CoreComponentRepository_HandleStateDiff_Call) RunAndReturn(run func(*g
 	return _c
 }
 
+// List provides a mock function with given fields: ids
+func (_m *CoreComponentRepository) List(ids []string) ([]models.Component, error) {
+	ret := _m.Called(ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for List")
+	}
+
+	var r0 []models.Component
+	var r1 error
+	if rf, ok := ret.Get(0).(func([]string) ([]models.Component, error)); ok {
+		return rf(ids)
+	}
+	if rf, ok := ret.Get(0).(func([]string) []models.Component); ok {
+		r0 = rf(ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Component)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func([]string) error); ok {
+		r1 = rf(ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreComponentRepository_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
+type CoreComponentRepository_List_Call struct {
+	*mock.Call
+}
+
+// List is a helper method to define mock.On call
+//   - ids []string
+func (_e *CoreComponentRepository_Expecter) List(ids interface{}) *CoreComponentRepository_List_Call {
+	return &CoreComponentRepository_List_Call{Call: _e.mock.On("List", ids)}
+}
+
+func (_c *CoreComponentRepository_List_Call) Run(run func(ids []string)) *CoreComponentRepository_List_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].([]string))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_List_Call) Return(_a0 []models.Component, _a1 error) *CoreComponentRepository_List_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreComponentRepository_List_Call) RunAndReturn(run func([]string) ([]models.Component, error)) *CoreComponentRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // LoadComponents provides a mock function with given fields: tx, assetVersionName, assetID, scanner, version
 func (_m *CoreComponentRepository) LoadComponents(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scanner string, version string) ([]models.ComponentDependency, error) {
 	ret := _m.Called(tx, assetVersionName, assetID, scanner, version)
@@ -311,6 +717,173 @@ func (_c *CoreComponentRepository_LoadComponents_Call) RunAndReturn(run func(*go
 	return _c
 }
 
+// LoadComponentsWithProject provides a mock function with given fields: tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort
+func (_m *CoreComponentRepository) LoadComponentsWithProject(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scanner string, version string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+	ret := _m.Called(tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LoadComponentsWithProject")
+	}
+
+	var r0 core.Paged[models.ComponentDependency]
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, string, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.ComponentDependency], error)); ok {
+		return rf(tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, string, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.ComponentDependency]); ok {
+		r0 = rf(tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort)
+	} else {
+		r0 = ret.Get(0).(core.Paged[models.ComponentDependency])
+	}
+
+	if rf, ok := ret.Get(1).(func(*gorm.DB, string, uuid.UUID, string, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
+		r1 = rf(tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreComponentRepository_LoadComponentsWithProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadComponentsWithProject'
+type CoreComponentRepository_LoadComponentsWithProject_Call struct {
+	*mock.Call
+}
+
+// LoadComponentsWithProject is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scanner string
+//   - version string
+//   - pageInfo core.PageInfo
+//   - search string
+//   - filter []core.FilterQuery
+//   - sort []core.SortQuery
+func (_e *CoreComponentRepository_Expecter) LoadComponentsWithProject(tx interface{}, assetVersionName interface{}, assetID interface{}, scanner interface{}, version interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *CoreComponentRepository_LoadComponentsWithProject_Call {
+	return &CoreComponentRepository_LoadComponentsWithProject_Call{Call: _e.mock.On("LoadComponentsWithProject", tx, assetVersionName, assetID, scanner, version, pageInfo, search, filter, sort)}
+}
+
+func (_c *CoreComponentRepository_LoadComponentsWithProject_Call) Run(run func(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scanner string, version string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *CoreComponentRepository_LoadComponentsWithProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(string), args[2].(uuid.UUID), args[3].(string), args[4].(string), args[5].(core.PageInfo), args[6].(string), args[7].([]core.FilterQuery), args[8].([]core.SortQuery))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_LoadComponentsWithProject_Call) Return(_a0 core.Paged[models.ComponentDependency], _a1 error) *CoreComponentRepository_LoadComponentsWithProject_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, string, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.ComponentDependency], error)) *CoreComponentRepository_LoadComponentsWithProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Read provides a mock function with given fields: id
+func (_m *CoreComponentRepository) Read(id string) (models.Component, error) {
+	ret := _m.Called(id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Read")
+	}
+
+	var r0 models.Component
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (models.Component, error)); ok {
+		return rf(id)
+	}
+	if rf, ok := ret.Get(0).(func(string) models.Component); ok {
+		r0 = rf(id)
+	} else {
+		r0 = ret.Get(0).(models.Component)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreComponentRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
+type CoreComponentRepository_Read_Call struct {
+	*mock.Call
+}
+
+// Read is a helper method to define mock.On call
+//   - id string
+func (_e *CoreComponentRepository_Expecter) Read(id interface{}) *CoreComponentRepository_Read_Call {
+	return &CoreComponentRepository_Read_Call{Call: _e.mock.On("Read", id)}
+}
+
+func (_c *CoreComponentRepository_Read_Call) Run(run func(id string)) *CoreComponentRepository_Read_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_Read_Call) Return(_a0 models.Component, _a1 error) *CoreComponentRepository_Read_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreComponentRepository_Read_Call) RunAndReturn(run func(string) (models.Component, error)) *CoreComponentRepository_Read_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Save provides a mock function with given fields: tx, t
+func (_m *CoreComponentRepository) Save(tx *gorm.DB, t *models.Component) error {
+	ret := _m.Called(tx, t)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Save")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.Component) error); ok {
+		r0 = rf(tx, t)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreComponentRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
+type CoreComponentRepository_Save_Call struct {
+	*mock.Call
+}
+
+// Save is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - t *models.Component
+func (_e *CoreComponentRepository_Expecter) Save(tx interface{}, t interface{}) *CoreComponentRepository_Save_Call {
+	return &CoreComponentRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
+}
+
+func (_c *CoreComponentRepository_Save_Call) Run(run func(tx *gorm.DB, t *models.Component)) *CoreComponentRepository_Save_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(*models.Component))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_Save_Call) Return(_a0 error) *CoreComponentRepository_Save_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreComponentRepository_Save_Call) RunAndReturn(run func(*gorm.DB, *models.Component) error) *CoreComponentRepository_Save_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SaveBatch provides a mock function with given fields: tx, components
 func (_m *CoreComponentRepository) SaveBatch(tx *gorm.DB, components []models.Component) error {
 	ret := _m.Called(tx, components)
@@ -354,6 +927,52 @@ func (_c *CoreComponentRepository_SaveBatch_Call) Return(_a0 error) *CoreCompone
 }
 
 func (_c *CoreComponentRepository_SaveBatch_Call) RunAndReturn(run func(*gorm.DB, []models.Component) error) *CoreComponentRepository_SaveBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Transaction provides a mock function with given fields: _a0
+func (_m *CoreComponentRepository) Transaction(_a0 func(*gorm.DB) error) error {
+	ret := _m.Called(_a0)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Transaction")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(func(*gorm.DB) error) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreComponentRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
+type CoreComponentRepository_Transaction_Call struct {
+	*mock.Call
+}
+
+// Transaction is a helper method to define mock.On call
+//   - _a0 func(*gorm.DB) error
+func (_e *CoreComponentRepository_Expecter) Transaction(_a0 interface{}) *CoreComponentRepository_Transaction_Call {
+	return &CoreComponentRepository_Transaction_Call{Call: _e.mock.On("Transaction", _a0)}
+}
+
+func (_c *CoreComponentRepository_Transaction_Call) Run(run func(_a0 func(*gorm.DB) error)) *CoreComponentRepository_Transaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(func(*gorm.DB) error))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_Transaction_Call) Return(_a0 error) *CoreComponentRepository_Transaction_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreComponentRepository_Transaction_Call) RunAndReturn(run func(func(*gorm.DB) error) error) *CoreComponentRepository_Transaction_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -31,7 +31,7 @@ var _ AccessControl = &casbinRBAC{}
 var casbinEnforcer *casbin.Enforcer
 
 type casbinRBAC struct {
-	domain   string // scopes this to a specific domain - or tenant
+	domain   string // scopes this to a specific domain - or organization
 	enforcer *casbin.Enforcer
 }
 
