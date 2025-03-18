@@ -16,47 +16,50 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 	t.Run("it should return error if cannot mark as safe path", func(t *testing.T) {
 
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(errors.New("cannot mark as safe path"))
 
-		_, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		_, err := utils.GetAssetVersionInfoFromGit(".")
 		assert.Error(t, err)
 	})
 
 	t.Run("it should return error if cannot get tags", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{"1.0.0"}, errors.New("cannot get tags"))
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		_, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		_, err := utils.GetAssetVersionInfoFromGit(".")
 		assert.Error(t, err)
 	})
 
 	t.Run("it should return the default version if no tags are found", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{""}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(0, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "0.0.0", versionInfo.Version)
-
 	})
 
 	t.Run("it should return the default version if no tags are found, with the count of commits", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{""}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(5, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "0.0.0-5", versionInfo.Version)
@@ -65,13 +68,14 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	t.Run("it should return the default version if no valid tags are found", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{"NotAVersionTag"}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(0, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "0.0.0", versionInfo.Version)
@@ -80,13 +84,14 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	t.Run("it should return the tag version if a tag is found", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{"v1.0.0"}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(0, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "1.0.0", versionInfo.Version)
@@ -95,13 +100,14 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	t.Run("it should return the tag version if a tag is found, with the count of commits", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{"v1.0.0"}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(5, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "1.0.0-5", versionInfo.Version)
@@ -110,13 +116,14 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	t.Run("it shouldss return the latest tag version if multiple tags are found", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{"v1.0.0", "v1.0.5", "v2.0.9"}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(0, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "2.0.9", versionInfo.Version)
@@ -125,13 +132,14 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	t.Run("it should return the latest tag version if multiple tags are found, tags do not start with 'v'", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{"1.0.0", "1.0.5", "2.0.9"}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(0, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "2.0.9", versionInfo.Version)
@@ -140,13 +148,14 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	t.Run("it should return the valid tag version if multiple tags are found", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{"blaBla", "1.0.5", "NOTag"}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(0, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "1.0.5", versionInfo.Version)
@@ -155,13 +164,14 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	t.Run("it should return branch name if no tags are found but commits are present", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(5, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("main", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("main", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "0.0.0-5", versionInfo.Version)
@@ -171,13 +181,14 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	t.Run("it should return branch name if there are tags are found but also commits are present", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{"1.0.0"}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(5, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("main", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("main", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "1.0.0-5", versionInfo.Version)
@@ -188,13 +199,14 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	t.Run("it should return the tag as branch name if there are not any commits present", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(0, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("main", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("main", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "0.0.0", versionInfo.Version)
@@ -205,13 +217,14 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	t.Run("it should return the right default branch name", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(0, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("main", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("NOTmain", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "0.0.0", versionInfo.Version)
@@ -222,13 +235,14 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	t.Run("it should also here return the right default branch name", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
+		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
 		mocksgitLister.On("GetTags", ".").Return([]string{}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(0, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("main", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return(`HEAD branch: NOTmain`, nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(&mocksgitLister, ".")
+		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "0.0.0", versionInfo.Version)
