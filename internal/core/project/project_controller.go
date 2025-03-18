@@ -53,15 +53,23 @@ func (p *Controller) Create(ctx core.Context) error {
 		return echo.NewHTTPError(400, err.Error())
 	}
 
-	model := req.ToModel()
-	// add the organization id
-	model.OrganizationID = core.GetOrganization(ctx).GetID()
+	newProject := req.ToModel()
 
-	if err := p.projectRepository.Create(nil, &model); err != nil {
+	// add the organization id
+	newProject.OrganizationID = core.GetOrganization(ctx).GetID()
+
+	if newProject.Name == "" || newProject.Slug == "" {
+		return echo.NewHTTPError(409, "projects with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("projects with an empty name or an empty slug are not allowed"))
+	}
+
+	// add the organization id
+	newProject.OrganizationID = core.GetOrganization(ctx).GetID()
+
+	if err := p.projectRepository.Create(nil, &newProject); err != nil {
 		// check if duplicate key error
 		if database.IsDuplicateKeyError(err) {
 			// get the project by slug and project id unscoped
-			project, err := p.projectRepository.ReadBySlugUnscoped(core.GetOrganization(ctx).GetID(), model.Slug)
+			project, err := p.projectRepository.ReadBySlugUnscoped(core.GetOrganization(ctx).GetID(), newProject.Slug)
 			if err != nil {
 				return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
 			}
@@ -70,19 +78,19 @@ func (p *Controller) Create(ctx core.Context) error {
 				return echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
 			}
 
-			slog.Info("project activated", "projectSlug", model.Slug, "projectID", project.GetID())
+			slog.Info("project activated", "projectSlug", newProject.Slug, "projectID", project.GetID())
 
-			model = project
+			newProject = project
 		} else {
 			return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 		}
 	}
 
-	if err := p.bootstrapProject(ctx, model); err != nil {
+	if err := p.bootstrapProject(ctx, newProject); err != nil {
 		return echo.NewHTTPError(500, "could not bootstrap project").WithInternal(err)
 	}
 
-	return ctx.JSON(200, model)
+	return ctx.JSON(200, newProject)
 }
 
 func FetchMembersOfProject(ctx core.Context) ([]core.User, error) {
@@ -98,7 +106,7 @@ func FetchMembersOfProject(ctx core.Context) ([]core.User, error) {
 	// get the auth admin client from the context
 	authAdminClient := core.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
-	m, _, err := authAdminClient.IdentityAPI.ListIdentitiesExecute(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
+	m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
 
 	if err != nil {
 		return nil, echo.NewHTTPError(500, "could not get members").WithInternal(err)
@@ -373,6 +381,11 @@ func (p *Controller) Update(c core.Context) error {
 	project := core.GetProject(c)
 
 	updated := patchRequest.applyToModel(&project)
+
+	if project.Name == "" || project.Slug == "" {
+		return echo.NewHTTPError(409, "projects with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("projects with an empty name or an empty slug are not allowed"))
+	}
+
 	if updated {
 		err = p.projectRepository.Update(nil, &project)
 		if err != nil {

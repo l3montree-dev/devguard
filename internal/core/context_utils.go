@@ -15,6 +15,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -39,12 +40,39 @@ func SetThirdPartyIntegration(ctx Context, i IntegrationAggregate) {
 	ctx.Set("thirdPartyIntegration", i)
 }
 
-func SetAuthAdminClient(ctx Context, i *client.APIClient) {
+type AdminClient interface {
+	ListUser(client client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error)
+	GetIdentity(ctx context.Context, userID string) (client.Identity, error)
+}
+
+type adminClientImplementation struct {
+	apiClient *client.APIClient
+}
+
+func NewAdminClient(client *client.APIClient) adminClientImplementation {
+	return adminClientImplementation{
+		apiClient: client,
+	}
+}
+func (a adminClientImplementation) ListUser(request client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error) {
+	clients, _, err := a.apiClient.IdentityAPI.ListIdentitiesExecute(request)
+	return clients, err
+}
+
+func (a adminClientImplementation) GetIdentity(ctx context.Context, userID string) (client.Identity, error) {
+	request, _, err := a.apiClient.IdentityAPI.GetIdentity(ctx, userID).Execute()
+	if err != nil {
+		return *request, err
+	}
+	return *request, nil
+}
+
+func SetAuthAdminClient(ctx Context, i AdminClient) {
 	ctx.Set("authAdminClient", i)
 }
 
-func GetAuthAdminClient(ctx Context) *client.APIClient {
-	return ctx.Get("authAdminClient").(*client.APIClient)
+func GetAuthAdminClient(ctx Context) AdminClient {
+	return ctx.Get("authAdminClient").(AdminClient)
 }
 
 func GetVulnID(ctx Context) (string, error) {
@@ -60,12 +88,20 @@ func GetVulnID(ctx Context) (string, error) {
 	return dependencyVulnID, nil
 }
 
-func GetRBAC(ctx Context) accesscontrol.AccessControl {
-	return ctx.Get("rbac").(accesscontrol.AccessControl)
+func SetRBAC(ctx Context, rbac accesscontrol.AccessControl) {
+	ctx.Set("rbac", rbac)
 }
 
-func GetOrganization(ctx Context) models.Org {
-	return ctx.Get("organization").(models.Org)
+func GetOrganization(c Context) models.Org {
+	return c.Get("organization").(models.Org)
+}
+
+func SetOrganization(c Context, org models.Org) {
+	c.Set("organization", org)
+}
+
+func GetRBAC(ctx Context) accesscontrol.AccessControl {
+	return ctx.Get("rbac").(accesscontrol.AccessControl)
 }
 
 func SetIsPublicRequest(ctx Context) {
@@ -114,6 +150,10 @@ func GetOrgSlug(ctx Context) (string, error) {
 		return "", fmt.Errorf("could not get org slug")
 	}
 	return orgSlug, nil
+}
+
+func SetOrg(c Context, org models.Org) {
+	c.Set("org", org)
 }
 
 func SetOrgSlug(ctx Context, orgSlug string) {
