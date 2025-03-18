@@ -36,11 +36,17 @@ func getDirFromPath(path string) string {
 	return path
 }
 
+var GitLister gitLister = commandLineGitLister{}
+
 func SetGitVersionHeader(path string, req *http.Request) error {
-	gitLister := commandLineGitLister{}
-	gitVersionInfo, err := GetAssetVersionInfoFromGit(gitLister, path)
+
+	gitVersionInfo, err := GetAssetVersionInfoFromGit(GitLister, path)
 	if err != nil {
-		return err
+		if err.Error() == "could not get current version" {
+		} else {
+			return err
+		}
+
 	}
 
 	fmt.Println("Git Version Info: ", gitVersionInfo)
