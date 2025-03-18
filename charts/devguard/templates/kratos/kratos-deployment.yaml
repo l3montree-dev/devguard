@@ -4,7 +4,7 @@ metadata:
   name: kratos
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app.kubernetes.io/name: kratos
+    app: kratos
   annotations: {}
 spec:
   replicas: 1 # keep that at 1 - or use a singleton courier job for kratos mail queue processing.
@@ -18,11 +18,11 @@ spec:
   # If you're running multiple instances of Kratos (for example replicated Kubernetes deployment), you need to run the mail courier as a separate singleton job. The courier can be started with the kratos courier watch command (CLI docs).
   selector:
     matchLabels:
-      app.kubernetes.io/name: kratos
+      app: kratos
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: kratos
+        app: kratos
     spec:
       initContainers:
       - name: kratos-automigrate
@@ -42,12 +42,14 @@ spec:
               key: password
         - name: DSN
           value: postgres://kratos:$(DB_PASSWORD)@postgresql:5432/kratos?sslmode=disable
+        {{- if .Values.mail.existingSMTPConnectionUriSecret }}
         - name: COURIER_SMTP_CONNECTION_URI
           valueFrom:
             secretKeyRef:
               name: "{{ .Values.mail.existingSMTPConnectionUriSecret }}"
               key: uri
               optional: true
+        {{- end }}
         {{- if .Values.oidc.github.enabled }}
         - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_SECRET"
           valueFrom:
@@ -118,12 +120,14 @@ spec:
             secretKeyRef:
               name: kratos
               key: secretsCipher
+        {{- if .Values.mail.existingSMTPConnectionUriSecret }}
         - name: COURIER_SMTP_CONNECTION_URI
           valueFrom:
             secretKeyRef:
               name: "{{ .Values.mail.existingSMTPConnectionUriSecret }}"
               key: uri
               optional: true
+        {{- end }}
         {{- if .Values.oidc.github.enabled }}
         - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_SECRET"
           valueFrom:
