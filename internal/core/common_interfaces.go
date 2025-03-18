@@ -37,7 +37,7 @@ type ProjectRepository interface {
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
-	List(idSlice []uuid.UUID, parentID *uuid.UUID, tenantID uuid.UUID) ([]models.Project, error)
+	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 }
 
 type AssetRepository interface {
