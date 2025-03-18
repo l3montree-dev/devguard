@@ -104,8 +104,8 @@ func (githubIntegration *githubIntegration) GetID() core.IntegrationID {
 
 func (githubIntegration *githubIntegration) IntegrationEnabled(ctx core.Context) bool {
 	// check if the github app installation exists in the database
-	tenant := core.GetTenant(ctx)
-	return len(tenant.GithubAppInstallations) > 0
+	organization := core.GetOrganization(ctx)
+	return len(organization.GithubAppInstallations) > 0
 }
 
 func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
@@ -114,13 +114,13 @@ func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) (
 		return nil, NoGithubAppInstallationError
 	}
 
-	tenant := core.GetTenant(ctx)
+	organization := core.GetOrganization(ctx)
 
 	repos := []core.Repository{}
 	// check if a github integration exists on that org
-	if tenant.GithubAppInstallations != nil {
+	if organization.GithubAppInstallations != nil {
 		// get the github integration
-		githubClient, err := newGithubBatchClient(tenant.GithubAppInstallations)
+		githubClient, err := newGithubBatchClient(organization.GithubAppInstallations)
 		if err != nil {
 			return nil, err
 		}
@@ -336,7 +336,7 @@ func (githubIntegration *githubIntegration) FinishInstallation(ctx core.Context)
 	}
 
 	// check if the org id does match the current organization id, thus the user has access to the organization
-	tenant := core.GetTenant(ctx)
+	organization := core.GetOrganization(ctx)
 	// convert the installation id to an integer
 	installationIDInt, err := strconv.Atoi(installationID)
 	if err != nil {
@@ -352,16 +352,16 @@ func (githubIntegration *githubIntegration) FinishInstallation(ctx core.Context)
 	}
 
 	// check if app installation is already associated with an organization
-	if appInstallation.OrgID != nil && *appInstallation.OrgID != tenant.GetID() {
+	if appInstallation.OrgID != nil && *appInstallation.OrgID != organization.GetID() {
 		slog.Error("github app installation already associated with an organization")
 		return ctx.JSON(400, "github app installation already associated with an organization")
-	} else if appInstallation.OrgID != nil && *appInstallation.OrgID == tenant.GetID() {
+	} else if appInstallation.OrgID != nil && *appInstallation.OrgID == organization.GetID() {
 		slog.Info("github app installation already associated with the organization")
 		return ctx.JSON(200, "ok")
 	}
 
 	// add the organization id to the installation
-	orgId := tenant.GetID()
+	orgId := organization.GetID()
 	appInstallation.OrgID = &orgId
 	// save the installation to the database
 	err = githubIntegration.githubAppInstallationRepository.Save(nil, &appInstallation)

@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMultiTenantMiddleware(t *testing.T) {
+func TestMultiOrganizationMiddleware(t *testing.T) {
 	t.Run("it should allow read requests, if the organization is public", func(t *testing.T) {
 		// arrange
 		e := echo.New()
@@ -29,15 +29,15 @@ func TestMultiTenantMiddleware(t *testing.T) {
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
-		mockOrgRepo.On("ReadBySlug", "tenant-slug").Return(org, nil)
+		mockOrgRepo.On("ReadBySlug", "organization-slug").Return(org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
 		mockRBAC.On("HasAccess", auth.NoSession.GetUserID()).Return(false)
 
-		c.SetParamNames("tenant")
-		c.SetParamValues("tenant-slug")
+		c.SetParamNames("organization")
+		c.SetParamValues("organization-slug")
 		c.Set("session", auth.NoSession)
 
-		middleware := multiTenantMiddleware(&mockRBACProvider, &mockOrgRepo)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgRepo)
 
 		// act
 		err := middleware(func(c echo.Context) error {
@@ -66,15 +66,15 @@ func TestMultiTenantMiddleware(t *testing.T) {
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: false}
 		session := auth.NewSession("user-id")
 
-		mockOrgRepo.On("ReadBySlug", "tenant-slug").Return(org, nil)
+		mockOrgRepo.On("ReadBySlug", "organization-slug").Return(org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
 		mockRBAC.On("HasAccess", "user-id").Return(false)
 
-		c.SetParamNames("tenant")
-		c.SetParamValues("tenant-slug")
+		c.SetParamNames("organization")
+		c.SetParamValues("organization-slug")
 		c.Set("session", session)
 
-		middleware := multiTenantMiddleware(&mockRBACProvider, &mockOrgRepo)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgRepo)
 
 		// act
 		middleware(func(c echo.Context) error {
@@ -88,7 +88,7 @@ func TestMultiTenantMiddleware(t *testing.T) {
 		mockRBAC.AssertExpectations(t)
 	})
 
-	t.Run("it should return error if tenant is not provided", func(t *testing.T) {
+	t.Run("it should return error if organization is not provided", func(t *testing.T) {
 		// arrange
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -98,7 +98,7 @@ func TestMultiTenantMiddleware(t *testing.T) {
 		mockRBACProvider := mocks.AccesscontrolRBACProvider{}
 		mockOrgRepo := mocks.ApiOrgRepository{}
 
-		middleware := multiTenantMiddleware(&mockRBACProvider, &mockOrgRepo)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgRepo)
 
 		// act
 		middleware(func(c echo.Context) error {
@@ -110,7 +110,7 @@ func TestMultiTenantMiddleware(t *testing.T) {
 		mockRBACProvider.AssertExpectations(t)
 	})
 
-	t.Run("it should return error if tenant is not found", func(t *testing.T) {
+	t.Run("it should return error if organization is not found", func(t *testing.T) {
 		// arrange
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -120,12 +120,12 @@ func TestMultiTenantMiddleware(t *testing.T) {
 		mockRBACProvider := mocks.AccesscontrolRBACProvider{}
 		mockOrgRepo := mocks.ApiOrgRepository{}
 
-		mockOrgRepo.On("ReadBySlug", "tenant-slug").Return(models.Org{}, errors.New("not found"))
+		mockOrgRepo.On("ReadBySlug", "organization-slug").Return(models.Org{}, errors.New("not found"))
 
-		c.SetParamNames("tenant")
-		c.SetParamValues("tenant-slug")
+		c.SetParamNames("organization")
+		c.SetParamValues("organization-slug")
 
-		middleware := multiTenantMiddleware(&mockRBACProvider, &mockOrgRepo)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgRepo)
 
 		// act
 		middleware(func(c echo.Context) error {
@@ -148,7 +148,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
 		mockSession := auth.NewSession("user-id")
-		mockTenant := models.Org{}
+		mockOrganization := models.Org{}
 
 		userID := "user-id"
 		obj := accesscontrol.Object("test-object")
@@ -158,7 +158,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		c.Set("rbac", &mockRBAC)
 		c.Set("session", mockSession)
-		c.Set("tenant", mockTenant)
+		c.Set("organization", mockOrganization)
 
 		middleware := accessControlMiddleware(obj, act)
 
@@ -182,7 +182,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
 		mockSession := auth.NewSession("user-id")
-		mockTenant := models.Org{}
+		mockOrganization := models.Org{}
 
 		userID := "user-id"
 		obj := accesscontrol.Object("test-object")
@@ -192,7 +192,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		c.Set("rbac", &mockRBAC)
 		c.Set("session", mockSession)
-		c.Set("tenant", mockTenant)
+		c.Set("organization", mockOrganization)
 
 		middleware := accessControlMiddleware(obj, act)
 
@@ -216,7 +216,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
 		mockSession := auth.NewSession("user-id")
-		mockTenant := models.Org{
+		mockOrganization := models.Org{
 			IsPublic: true,
 		}
 
@@ -228,7 +228,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		c.Set("rbac", &mockRBAC)
 		c.Set("session", &mockSession)
-		c.Set("tenant", mockTenant)
+		c.Set("organization", mockOrganization)
 
 		middleware := accessControlMiddleware(obj, act)
 
@@ -252,7 +252,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
 		mockSession := auth.NewSession("user-id")
-		mockTenant := models.Org{}
+		mockOrganization := models.Org{}
 
 		userID := "user-id"
 		obj := accesscontrol.Object("test-object")
@@ -262,7 +262,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		c.Set("rbac", &mockRBAC)
 		c.Set("session", &mockSession)
-		c.Set("tenant", mockTenant)
+		c.Set("organization", mockOrganization)
 
 		middleware := accessControlMiddleware(obj, act)
 
