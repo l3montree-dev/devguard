@@ -61,9 +61,10 @@ func GetAssetVersionInfoFromGit(gitLister gitLister, path string) (GitVersionInf
 	version, commitAfterTag, err := getCurrentVersion(gitLister, path)
 	if err != nil {
 		slog.Error("could not get current version", "err", err)
+		return GitVersionInfo{}, errors.New("could not get current version")
 	}
 
-	branchOrTag, err := getCurrentBranchName(path)
+	branchOrTag, err := getCurrentBranchName(gitLister, path)
 	if err != nil {
 		return GitVersionInfo{}, errors.Wrap(err, "could not get branch name")
 	}
@@ -75,7 +76,7 @@ func GetAssetVersionInfoFromGit(gitLister gitLister, path string) (GitVersionInf
 		branchOrTag = version
 	}
 
-	defaultBranch, err := getDefaultBranchName(path)
+	defaultBranch, err := getDefaultBranchName(gitLister, path)
 	if err != nil {
 		return GitVersionInfo{}, errors.Wrap(err, "could not get default branch name")
 	}
@@ -87,43 +88,27 @@ func GetAssetVersionInfoFromGit(gitLister gitLister, path string) (GitVersionInf
 	}, nil
 }
 
-func getCurrentBranchName(path string) (string, error) {
+func getCurrentBranchName(gitLister gitLister, path string) (string, error) {
 	// check if a CI variable is set - this provides a more stable way to get the branch name
 	if os.Getenv("CI_COMMIT_REF_NAME") != "" {
 		return os.Getenv("CI_COMMIT_REF_NAME"), nil
 	}
 
-	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-	var out bytes.Buffer
-	var errOut bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &errOut
-	cmd.Dir = getDirFromPath(path)
-	err := cmd.Run()
-	if err != nil {
-		slog.Error("could not run git rev-parse --abbrev-ref HEAD", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
-		return "", err
-	}
-
-	return strings.TrimSpace(out.String()), nil
+	return gitLister.GetBranchName(path)
 }
 
-func getDefaultBranchName(path string) (string, error) {
-	cmd := exec.Command("git", "remote", "show", "origin")
-	var out bytes.Buffer
-	var errOut bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &errOut
-	cmd.Dir = getDirFromPath(path)
-	err := cmd.Run()
+func getDefaultBranchName(gitLister gitLister, path string) (string, error) {
+	outString, err := gitLister.GetDefaultBranchName(path)
 	if err != nil {
-		slog.Error("could not determine default branch", "err", err, "path", getDirFromPath(path), "msg", errOut.String())
 		return "", err
 	}
 
-	parts := strings.Split(strings.TrimSpace(out.String()), "HEAD branch:")
+	parts := strings.Split(strings.TrimSpace(outString), "HEAD branch:")
 	if len(parts) == 0 {
 		return "", fmt.Errorf("unexpected format for default branch output")
+	}
+	if len(parts) == 1 {
+		return strings.TrimSpace(parts[0]), nil
 	}
 	parts = strings.Split(parts[1], "\n")
 	if len(parts) == 0 {
@@ -137,10 +122,43 @@ func getDefaultBranchName(path string) (string, error) {
 type gitLister interface {
 	MarkAsSafePath(path string) error
 	GetTags(path string) ([]string, error)
-	GitCommitCount(path string, tag string) (int, error)
+	GitCommitCount(path string, tag *string) (int, error)
+	GetBranchName(path string) (string, error)
+	GetDefaultBranchName(path string) (string, error)
 }
 
 type commandLineGitLister struct {
+}
+
+func (g commandLineGitLister) GetDefaultBranchName(path string) (string, error) {
+	cmd := exec.Command("git", "remote", "show", "origin")
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	cmd.Dir = getDirFromPath(path)
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	return out.String(), nil
+
+}
+
+func (g commandLineGitLister) GetBranchName(path string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	cmd.Dir = getDirFromPath(path)
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(out.String()), nil
 }
 
 func (g commandLineGitLister) MarkAsSafePath(path string) error {
@@ -169,14 +187,13 @@ func (g commandLineGitLister) GetTags(path string) ([]string, error) {
 	return tags, nil
 }
 
-func (g commandLineGitLister) GitCommitCount(path string, tag string) (int, error) {
+func (g commandLineGitLister) GitCommitCount(path string, tag *string) (int, error) {
 
 	var cmd *exec.Cmd
-	if tag == "_HEAD" {
-		cmd = exec.Command("git", "rev-list", "--count", "HEAD")
+	if tag != nil {
+		cmd = exec.Command("git", "rev-list", "--count", *tag+"..HEAD")
 	} else {
-
-		cmd = exec.Command("git", "rev-list", "--count", tag+"..HEAD")
+		cmd = exec.Command("git", "rev-list", "--count", "HEAD")
 	}
 
 	var out bytes.Buffer
@@ -198,6 +215,7 @@ func (g commandLineGitLister) GitCommitCount(path string, tag string) (int, erro
 	return commitCountInt, nil
 }
 func filterAndSortValidSemverTags(tags []string) (string, string, error) {
+
 	m := map[string]string{}
 
 	// Map the tags and populate the map
@@ -248,7 +266,7 @@ func getCurrentVersion(gitlister gitLister, path string) (string, int, error) {
 	originalLatestTagName, latestTag, err := filterAndSortValidSemverTags(tags)
 	if err != nil {
 		//there is not a single valid semver tag
-		commitCountsInt, err := gitlister.GitCommitCount(path, "_HEAD")
+		commitCountsInt, err := gitlister.GitCommitCount(path, nil)
 		if err != nil {
 			return "", 0, err
 		}
@@ -256,7 +274,7 @@ func getCurrentVersion(gitlister gitLister, path string) (string, int, error) {
 	}
 
 	// get the commit count
-	commitCountsInt, err := gitlister.GitCommitCount(path, originalLatestTagName)
+	commitCountsInt, err := gitlister.GitCommitCount(path, &originalLatestTagName)
 	if err != nil {
 		return "", 0, err
 	}
