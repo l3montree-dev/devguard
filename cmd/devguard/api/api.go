@@ -568,6 +568,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
 	assetVersionRouter.GET("/components/", componentController.ListPaged)
+	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	//TODO: change it
 	//dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter := assetVersionRouter.Group("/flaws")

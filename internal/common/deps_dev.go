@@ -32,13 +32,13 @@ type DepsDevProjectResponse struct {
 	ProjectKey struct {
 		ID string `json:"id"`
 	} `json:"projectKey"`
-	OpenIssuesCount int       `json:"openIssuesCount"`
-	StarsCount      int       `json:"starsCount"`
-	ForksCount      int       `json:"forksCount"`
-	License         string    `json:"license"`
-	Description     string    `json:"description"`
-	Homepage        string    `json:"homepage"`
-	Scorecard       Scorecard `json:"scorecard"`
+	OpenIssuesCount int        `json:"openIssuesCount"`
+	StarsCount      int        `json:"starsCount"`
+	ForksCount      int        `json:"forksCount"`
+	License         string     `json:"license"`
+	Description     string     `json:"description"`
+	Homepage        string     `json:"homepage"`
+	Scorecard       *Scorecard `json:"scorecard"`
 }
 
 type Scorecard struct {

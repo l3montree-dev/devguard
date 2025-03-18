@@ -425,6 +425,68 @@ func (_c *CoreComponentRepository_GetDependencyCountPerScanner_Call) RunAndRetur
 	return _c
 }
 
+// GetLicenseDistribution provides a mock function with given fields: tx, assetVersionName, assetID, scanner, version
+func (_m *CoreComponentRepository) GetLicenseDistribution(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scanner string, version string) (map[string]int, error) {
+	ret := _m.Called(tx, assetVersionName, assetID, scanner, version)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetLicenseDistribution")
+	}
+
+	var r0 map[string]int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, string, string) (map[string]int, error)); ok {
+		return rf(tx, assetVersionName, assetID, scanner, version)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, string, string) map[string]int); ok {
+		r0 = rf(tx, assetVersionName, assetID, scanner, version)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]int)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(*gorm.DB, string, uuid.UUID, string, string) error); ok {
+		r1 = rf(tx, assetVersionName, assetID, scanner, version)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreComponentRepository_GetLicenseDistribution_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetLicenseDistribution'
+type CoreComponentRepository_GetLicenseDistribution_Call struct {
+	*mock.Call
+}
+
+// GetLicenseDistribution is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scanner string
+//   - version string
+func (_e *CoreComponentRepository_Expecter) GetLicenseDistribution(tx interface{}, assetVersionName interface{}, assetID interface{}, scanner interface{}, version interface{}) *CoreComponentRepository_GetLicenseDistribution_Call {
+	return &CoreComponentRepository_GetLicenseDistribution_Call{Call: _e.mock.On("GetLicenseDistribution", tx, assetVersionName, assetID, scanner, version)}
+}
+
+func (_c *CoreComponentRepository_GetLicenseDistribution_Call) Run(run func(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scanner string, version string)) *CoreComponentRepository_GetLicenseDistribution_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(string), args[2].(uuid.UUID), args[3].(string), args[4].(string))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_GetLicenseDistribution_Call) Return(_a0 map[string]int, _a1 error) *CoreComponentRepository_GetLicenseDistribution_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreComponentRepository_GetLicenseDistribution_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, string, string) (map[string]int, error)) *CoreComponentRepository_GetLicenseDistribution_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetVersions provides a mock function with given fields: tx, assetVersion
 func (_m *CoreComponentRepository) GetVersions(tx *gorm.DB, assetVersion models.AssetVersion) ([]string, error) {
 	ret := _m.Called(tx, assetVersion)

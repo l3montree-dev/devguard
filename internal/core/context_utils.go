@@ -22,6 +22,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/ory/client-go"
 )
@@ -330,43 +331,53 @@ func GetSortQuery(ctx Context) []SortQuery {
 	return sortQuerys
 }
 
+var field2TableNameMap = map[string]string{
+	"cve":       "CVE",
+	"component": "Component",
+	"project":   "Project",
+}
+
 func field2TableName(fieldName string) string {
-	switch fieldName {
-	case "cve":
-		return "CVE"
-	default:
+	fieldNameSplits := strings.Split(fieldName, ".")
+	if len(fieldNameSplits) == 1 {
 		return fieldName
 	}
+
+	// do not rename the LAST element
+	// because it is the field name not the table name
+	for i := 0; i < len(fieldNameSplits)-1; i++ {
+		if _, exists := field2TableNameMap[fieldNameSplits[i]]; !exists {
+			continue
+		}
+
+		fieldNameSplits[i] = field2TableNameMap[fieldNameSplits[i]]
+	}
+
+	return strings.Join(fieldNameSplits, ".")
 }
 
-func quoteRelationField(field string) string {
+func quoteFields(field string) string {
 	// split at the dot
 	split := strings.Split(field, ".")
-	if len(split) > 1 {
-		// quote the field. it looks like this: "cve"."cvss"
-		return fmt.Sprintf("\"%s\".\"%s\"", field2TableName(split[0]), split[1])
-	}
-	return field
-}
+	quotedSplits := utils.Map(
+		split,
+		func(s string) string {
+			return fmt.Sprintf(`"%s"`, s)
+		},
+	)
 
-var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+	return strings.Join(quotedSplits, ".")
+}
 
 // Regular expression to validate field names
 var validFieldNameRegex = regexp.MustCompile("^[a-zA-Z0-9_.]+$")
-
-func toSnakeCase(str string) string {
-	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
-	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
-	return strings.ToLower(snake)
-}
 
 func sanitizeField(field string) string {
 	if !validFieldNameRegex.MatchString(field) {
 		panic("invalid field name - to risky, might be sql injection")
 	}
 
-	return quoteRelationField(toSnakeCase(field))
+	return quoteFields(field)
 }
 
 func (f FilterQuery) SQL() string {
@@ -424,6 +435,10 @@ func (s SortQuery) SQL() string {
 		// default do an equals
 		return s.Field + " asc NULLS LAST"
 	}
+}
+
+func (s SortQuery) GetField() string {
+	return sanitizeField(s.Field)
 }
 
 type Environmental struct {

@@ -68,20 +68,28 @@ func handleComponent(depsDevService core.DepsDevService, componentProjectReposit
 					slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
 				}
 
-				jsonbScorecard, err := database.JsonbFromStruct(projectResp.Scorecard)
-				if err != nil {
-					slog.Warn("could not convert scorecard to jsonb", "err", err)
-				}
+				var jsonbScorecard *database.JSONB = nil
+				var scoreCardScore *float64 = nil
+				if projectResp.Scorecard != nil {
+					jsonb, err := database.JsonbFromStruct(*projectResp.Scorecard)
+					scoreCardScore = &projectResp.Scorecard.OverallScore
 
+					if err != nil {
+						slog.Warn("could not convert scorecard to jsonb", "err", err)
+					} else {
+						jsonbScorecard = &jsonb
+					}
+				}
 				// save the project information
 				project := models.ComponentProject{
-					ID:          projectKey,
-					StarsCount:  projectResp.StarsCount,
-					ForksCount:  projectResp.ForksCount,
-					License:     projectResp.License,
-					Description: projectResp.Description,
-					Homepage:    projectResp.Homepage,
-					ScoreCard:   jsonbScorecard,
+					ProjectKey:     projectKey,
+					StarsCount:     projectResp.StarsCount,
+					ForksCount:     projectResp.ForksCount,
+					License:        projectResp.License,
+					Description:    projectResp.Description,
+					Homepage:       projectResp.Homepage,
+					ScoreCard:      jsonbScorecard,
+					ScoreCardScore: scoreCardScore,
 				}
 
 				// save the project
@@ -89,7 +97,7 @@ func handleComponent(depsDevService core.DepsDevService, componentProjectReposit
 					slog.Warn("could not save project", "err", err)
 				}
 
-				component.ComponentProjectID = &projectKey
+				component.ComponentProjectKey = &projectKey
 				break
 			}
 		}
@@ -106,7 +114,7 @@ func handleComponent(depsDevService core.DepsDevService, componentProjectReposit
 }
 
 func handleComponentProject(depsDevService core.DepsDevService, componentProjectRepository core.ComponentProjectRepository, project models.ComponentProject) {
-	projectKey := project.ID
+	projectKey := project.ProjectKey
 	projectResp, err := depsDevService.GetProject(context.Background(), projectKey)
 
 	if err != nil {
@@ -114,9 +122,14 @@ func handleComponentProject(depsDevService core.DepsDevService, componentProject
 		return
 	}
 
-	jsonbScorecard, err := database.JsonbFromStruct(projectResp.Scorecard)
-	if err != nil {
-		slog.Warn("could not convert scorecard to jsonb", "err", err)
+	var jsonbScorecard *database.JSONB = nil
+	if projectResp.Scorecard != nil {
+		jsonb, err := database.JsonbFromStruct(*projectResp.Scorecard)
+		if err != nil {
+			slog.Warn("could not convert scorecard to jsonb", "err", err)
+		} else {
+			jsonbScorecard = &jsonb
+		}
 	}
 
 	// update the project information

@@ -42,7 +42,7 @@ const (
 
 type ComponentProject struct {
 	// project name like "github.com/facebook/react"
-	ID              string `json:"id" gorm:"primaryKey;column:id"`
+	ProjectKey      string `json:"projectKey" gorm:"primaryKey;column:project_key"`
 	StarsCount      int    `json:"starsCount" gorm:"column:stars_count"`
 	ForksCount      int    `json:"forksCount" gorm:"column:forks_count"`
 	OpenIssuesCount int    `json:"openIssuesCount" gorm:"column:open_issues_count"`
@@ -50,8 +50,9 @@ type ComponentProject struct {
 	License         string `json:"license"`
 	Description     string `json:"description"`
 
-	ScoreCard database.JSONB `json:"scoreCard" gorm:"column:score_card;type:jsonb"`
-	UpdatedAt time.Time      `json:"updatedAt" gorm:"column:updated_at"`
+	ScoreCard      *database.JSONB `json:"scoreCard" gorm:"column:score_card;type:jsonb"`
+	ScoreCardScore *float64        `json:"scoreCardScore" gorm:"column:score_card_score"`
+	UpdatedAt      time.Time       `json:"updatedAt" gorm:"column:updated_at"`
 }
 
 func (c ComponentProject) TableName() string {
@@ -65,8 +66,8 @@ type Component struct {
 	Version       string                `json:"version"`
 	License       *string               `json:"license"`
 
-	ComponentProject   *ComponentProject `json:"project" gorm:"foreignKey:ComponentProjectID;references:ID;constraint:OnDelete:CASCADE;"`
-	ComponentProjectID *string           `json:"projectId" gorm:"column:project_id"`
+	ComponentProject    *ComponentProject `json:"project" gorm:"foreignKey:ComponentProjectKey;references:ProjectKey;constraint:OnDelete:CASCADE;"`
+	ComponentProjectKey *string           `json:"projectId" gorm:"column:project_key"`
 }
 
 type ComponentDependency struct {

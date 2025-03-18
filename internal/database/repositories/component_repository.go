@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -85,10 +87,53 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 	return components, err
 }
 
+func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner, version string) (map[string]int, error) {
+	var licenses []struct {
+		License string
+		Count   int
+	}
+
+	var err error
+
+	query := c.GetDB(tx).Table("components").Select("components.license as license, COUNT(components.license) as count").Joins("RIGHT JOIN component_dependencies ON components.purl = component_dependencies.component_purl").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Group("components.license")
+
+	if scanner != "" {
+		query = query.Where("scanner_id = ?", scanner)
+	}
+
+	if version == models.NoVersion || version == "" {
+		query = query.Where("semver_end is NULL")
+	} else {
+		query = query.Where("semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)", version, version)
+	}
+
+	err = query.Scan(&licenses).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// convert to map
+	licensesMap := make(map[string]int)
+	for _, l := range licenses {
+		if l.License == "" {
+			l.License = "unknown"
+		}
+
+		if _, ok := licensesMap[l.License]; !ok {
+			licensesMap[l.License] = 0
+		}
+
+		licensesMap[l.License] += l.Count
+	}
+
+	return licensesMap, nil
+}
+
 func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner, version string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
 	var components []models.ComponentDependency
 
-	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Preload("Component").Preload("Component.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Component").Joins("Component.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
 	if scanner != "" {
 		query = query.Where("scanner_id = ?", scanner)
@@ -110,6 +155,13 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersion
 		}
 	}
 
+	distinctFields := []string{"component_purl"}
+	for _, f := range sort {
+		distinctFields = append(distinctFields, f.GetField())
+	}
+
+	distinctOnQuery := "DISTINCT ON (" + strings.Join(distinctFields, ",") + ") *"
+
 	if search != "" {
 		query = query.Where("component_purl ILIKE ?", "pkg:%"+search+"%")
 	} else {
@@ -117,9 +169,9 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersion
 	}
 
 	var total int64
-	query.Session(&gorm.Session{}).Select("COUNT(DISTINCT component_purl)").Count(&total)
+	query.Session(&gorm.Session{}).Distinct("component_purl").Count(&total)
 
-	err := query.Select("DISTINCT ON (component_purl) *").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&components).Error
+	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Scan(&components).Error
 
 	return core.NewPaged(pageInfo, total, components), err
 }

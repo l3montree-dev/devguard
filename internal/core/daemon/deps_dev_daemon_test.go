@@ -73,10 +73,10 @@ func TestHandleComponent(t *testing.T) {
 		}
 
 		expected := models.Component{
-			Purl:               "pkg:golang/gorm.io/gorm@v1.25.12",
-			Version:            "v1.0.0",
-			License:            utils.Ptr("unknown"),
-			ComponentProjectID: utils.Ptr("github/test/project"),
+			Purl:                "pkg:golang/gorm.io/gorm@v1.25.12",
+			Version:             "v1.0.0",
+			License:             utils.Ptr("unknown"),
+			ComponentProjectKey: utils.Ptr("github/test/project"),
 		}
 
 		mockDepsDevService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.DepsDevVersionResponse{
@@ -103,9 +103,10 @@ func TestHandleComponent(t *testing.T) {
 		}
 		mockDepsDevService.On("GetProject", mock.Anything, "github/test/project").Return(projectResponse, nil)
 
+		jsonB := database.MustJsonBFromStruct(projectResponse.Scorecard)
 		mockComponentProjectRepository.On("Save", mock.Anything, &models.ComponentProject{
-			ID:        "github/test/project",
-			ScoreCard: database.MustJsonBFromStruct(projectResponse.Scorecard),
+			ProjectKey: "github/test/project",
+			ScoreCard:  &jsonB,
 		}).Return(nil)
 
 		mockComponentRepository.On("Save", mock.Anything, &expected).Return(nil)
@@ -119,7 +120,7 @@ func TestHandleProject(t *testing.T) {
 		mockComponentProjectRepository := mocks.NewCoreComponentProjectRepository(t)
 
 		project := models.ComponentProject{
-			ID: "github/test/project",
+			ProjectKey: "github/test/project",
 		}
 
 		var scoreCard common.Scorecard = common.Scorecard{
@@ -140,9 +141,10 @@ func TestHandleProject(t *testing.T) {
 			},
 		}
 
+		jsonB := database.MustJsonBFromStruct(scoreCard)
 		expectedProject := models.ComponentProject{
-			ID:          "github/test/project",
-			ScoreCard:   database.MustJsonBFromStruct(scoreCard),
+			ProjectKey:  "github/test/project",
+			ScoreCard:   &jsonB,
 			Description: "A test project",
 			License:     "MIT",
 		}
@@ -154,7 +156,7 @@ func TestHandleProject(t *testing.T) {
 			License:     "MIT",
 			Description: "A test project",
 			Homepage:    "",
-			Scorecard:   scoreCard,
+			Scorecard:   &scoreCard,
 		}
 
 		mockDepsDevService.On("GetProject", mock.Anything, "github/test/project").Return(projectResponse, nil)
