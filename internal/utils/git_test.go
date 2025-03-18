@@ -114,7 +114,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	})
 
-	t.Run("it shouldss return the latest tag version if multiple tags are found", func(t *testing.T) {
+	t.Run("it should return the latest tag version if multiple tags are found", func(t *testing.T) {
 		mocksgitLister := mocks.UtilsGitLister{}
 		utils.GitLister = &mocksgitLister
 		mocksgitLister.On("MarkAsSafePath", ".").Return(nil)
