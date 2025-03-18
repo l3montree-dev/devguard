@@ -72,9 +72,7 @@ func GetAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 		return GitVersionInfo{}, errors.Wrap(err, "could not get branch name")
 	}
 
-	if commitAfterTag != 0 {
-		version = version + "-" + strconv.Itoa(commitAfterTag)
-	} else {
+	if commitAfterTag == 0 {
 		// we are on a clean tag - use the tag as ref name
 		branchOrTag = version
 	}
