@@ -197,9 +197,9 @@ func (g commandLineGitLister) GitCommitCount(path string, tag *string) (int, err
 
 	var cmd *exec.Cmd
 	if tag != nil {
-		cmd = exec.Command("git", "rev-list", "--count", *tag+"..HEAD")
+		cmd = exec.Command("git", "rev-list", "--count", *tag+"..HEAD") // nolint: gosec
 	} else {
-		cmd = exec.Command("git", "rev-list", "--count", "HEAD")
+		cmd = exec.Command("git", "rev-list", "--count", "HEAD") // nolint: gosec
 	}
 
 	var out bytes.Buffer
