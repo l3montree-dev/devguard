@@ -291,9 +291,9 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 				return errors.New("token is required")
 			}
 
-			ctx := devguard.NewHTTPClient(token, apiUrl)
+			c := devguard.NewHTTPClient(token, apiUrl)
 
-			return downloadSupplyChainLinks(cmd.Context(), ctx, "links", apiUrl, assetName, supplyChainId)
+			return downloadSupplyChainLinks(cmd.Context(), c, "links", apiUrl, assetName, supplyChainId)
 		},
 	}
 

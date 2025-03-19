@@ -84,14 +84,14 @@ func verify(cmd *cobra.Command, args []string) error {
 	}
 
 	// download the layout
-	ctx := devguard.NewHTTPClient(token, apiUrl)
+	c := devguard.NewHTTPClient(token, apiUrl)
 
 	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, apiUrl+"/api/v1/organizations/"+assetName+"/in-toto/root.layout.json", nil)
 	if err != nil {
 		return err
 	}
 
-	resp, err := ctx.Do(req)
+	resp, err := c.Do(req)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func verify(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not create temp dir")
 	}
 
-	err = downloadSupplyChainLinks(cmd.Context(), ctx, linkDir, apiUrl, assetName, supplyChainId)
+	err = downloadSupplyChainLinks(cmd.Context(), c, linkDir, apiUrl, assetName, supplyChainId)
 	if err != nil {
 		return errors.Wrap(err, "could not download supply chain links")
 	}
