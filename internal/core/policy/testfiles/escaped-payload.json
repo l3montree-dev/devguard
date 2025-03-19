@@ -1,0 +1,2205 @@
+{
+    "_type": "https://in-toto.io/Statement/v0.1",
+    "predicate": {
+        "buildDefinition": {
+            "buildType": "",
+            "externalParameters": {
+                "author": "Tim Bastin",
+                "authoremail": "38261809+timbastin@users.noreply.github.com",
+                "branch": "main",
+                "commitdate": "2025-03-18 18:16:28 +0100 +0100",
+                "commitdigest": {
+                    "sha1": "0186ef7d74fe02d2fcd763830c5ced5fcc93e24f"
+                },
+                "commithash": "0186ef7d74fe02d2fcd763830c5ced5fcc93e24f",
+                "commitmessage": "Merge pull request #333 from l3montree-dev/chore/remove-version-from-components\n\nRemoves asset semver start and end from component dependencies table",
+                "committeremail": "noreply@github.com",
+                "committername": "GitHub",
+                "gitbinhash": {
+                    "gitoid:sha1": "gitoid:blob:sha1:733640a67049e89b1d888b9fca0fb751f80e1993",
+                    "gitoid:sha256": "gitoid:blob:sha256:2508b99e845ffa0a0313cc9175885ae36a9bc717dd6e7fa988ed416776376768",
+                    "sha256": "28115b52ca7ca6e2e8196b363da6a8cc189e763a97217005de4760dd93a6e5b2"
+                },
+                "gitbinpath": "/usr/bin/git",
+                "gittool": "go-git+git-bin",
+                "hostname": "0b0855275838",
+                "os": "linux",
+                "parenthashes": [
+                    "e34d4653fb1ce3d51640e4f5f415366ad63e7e04",
+                    "fc4b64c7f1f3935428a2cb71715c3efe5c172fd6"
+                ],
+                "refs": [
+                    "refs/heads/main",
+                    "refs/remotes/origin/main"
+                ],
+                "remotes": [
+                    "https://github.com/l3montree-dev/devguard"
+                ],
+                "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsFcBAABCAAQBQJn2apsCRC1aQ7uu5UhlAAAPkAQAA0dWb/7ky4aY4N3Lbt2/dcQ\neB01p0lOxA2Col4cekb4yhGkQli1xfYRshfO24mm9Z/e5YhfWIUT42XvJvFEgrwy\nGLpDHCV37jwqHLx84LNHjws3JpCFoHRQjPoxJuTu1x4kGjzdUnCnyO2jx0Nmtw8N\nydc0yKmGSM6inBcQE1XVi30/X6+u6vzXA6ymirrftE2xjAgeonqWa90OAmNySgEh\nBQ5Nt23mo6VWe2FNkWcFz180uaswg07gaTVsWAc1Bu2Gby/zo+jGzBdo8seNmH7I\noB9GcyrIhq5p9/QfDuds+KgLT821w9qJbhGc8lH/istsqJPZ80dOI2AM8Sj1N44n\nTSn9IFNSXNMd2pcjYyL2AGhdecMl8gmG/XElkzwJqVR1EjGr09cBrHKDQvbw8kqR\ndL8Xi0JfjLGq0EEO4t6P4MeTaKs/3PKIjqkq7jUlj9i2RoqMz9AqaKyk4VtxdCMf\nXZG/5Xz0RTyrEwuGSU2G/BeRUhj/tkcnvQE4dOMFe4tPfYghAKepayIz3vkQfaK2\nbCjcjyQL7CpTTPprHpG/SrZYIotAzwXC5nMQJtZfUVfGKn7geWkAfDMS0Zmb5/oU\ntW8PswSdBZf8YQm8DHJiu2+wJhpsPZ9Puq9vKs3gH9twxmBT87nsPUa3a/bB6693\nxOSWghlNvEN+MetNvDrF\n=XCFu\n-----END PGP SIGNATURE-----\n\n",
+                "treehash": "fdda6d0c52b4d4360f981e7b30b76c3933800ba5",
+                "username": "root",
+                "variables": {
+                    "ACTIONS_CACHE_URL": "https://acghubeus2.actions.githubusercontent.com/jieWLMgLxLjWpb2rvhIrgFuKgEDIAfS0SsY1OYACMplu9m6sOt/",
+                    "ACTIONS_RESULTS_URL": "https://results-receiver.actions.githubusercontent.com/",
+                    "ACTIONS_RUNTIME_URL": "https://pipelinesghubeus7.actions.githubusercontent.com/jieWLMgLxLjWpb2rvhIrgFuKgEDIAfS0SsY1OYACMplu9m6sOt/",
+                    "BUILD_ARGS": "--context=. --dockerfile=Dockerfile",
+                    "CI": "true",
+                    "GITHUB_ACTION": "__ghcr_io_l3montree-dev_devguard-scanner_main-latest",
+                    "GITHUB_ACTIONS": "true",
+                    "GITHUB_ACTION_REF": "",
+                    "GITHUB_ACTION_REPOSITORY": "",
+                    "GITHUB_ACTOR": "timbastin",
+                    "GITHUB_ACTOR_ID": "38261809",
+                    "GITHUB_API_URL": "https://api.github.com",
+                    "GITHUB_BASE_REF": "",
+                    "GITHUB_ENV": "/github/file_commands/set_env_5851417c-79c2-4b97-aad3-dc56f9fca1ef",
+                    "GITHUB_EVENT_NAME": "push",
+                    "GITHUB_EVENT_PATH": "/github/workflow/event.json",
+                    "GITHUB_GRAPHQL_URL": "https://api.github.com/graphql",
+                    "GITHUB_HEAD_REF": "",
+                    "GITHUB_JOB": "build-image",
+                    "GITHUB_OUTPUT": "/github/file_commands/set_output_5851417c-79c2-4b97-aad3-dc56f9fca1ef",
+                    "GITHUB_PATH": "/github/file_commands/add_path_5851417c-79c2-4b97-aad3-dc56f9fca1ef",
+                    "GITHUB_REF": "refs/heads/main",
+                    "GITHUB_REF_NAME": "main",
+                    "GITHUB_REF_PROTECTED": "true",
+                    "GITHUB_REF_TYPE": "branch",
+                    "GITHUB_REPOSITORY": "l3montree-dev/devguard",
+                    "GITHUB_REPOSITORY_ID": "668606952",
+                    "GITHUB_REPOSITORY_OWNER": "l3montree-dev",
+                    "GITHUB_REPOSITORY_OWNER_ID": "101948992",
+                    "GITHUB_RETENTION_DAYS": "90",
+                    "GITHUB_RUN_ATTEMPT": "1",
+                    "GITHUB_RUN_ID": "13929420428",
+                    "GITHUB_RUN_NUMBER": "629",
+                    "GITHUB_SERVER_URL": "https://github.com",
+                    "GITHUB_SHA": "0186ef7d74fe02d2fcd763830c5ced5fcc93e24f",
+                    "GITHUB_STATE": "/github/file_commands/save_state_5851417c-79c2-4b97-aad3-dc56f9fca1ef",
+                    "GITHUB_STEP_SUMMARY": "/github/file_commands/step_summary_5851417c-79c2-4b97-aad3-dc56f9fca1ef",
+                    "GITHUB_TRIGGERING_ACTOR": "timbastin",
+                    "GITHUB_WORKFLOW": "DevGuard-Workflow",
+                    "GITHUB_WORKFLOW_REF": "l3montree-dev/devguard/.github/workflows/devguard-scanner.yaml@refs/heads/main",
+                    "GITHUB_WORKFLOW_SHA": "0186ef7d74fe02d2fcd763830c5ced5fcc93e24f",
+                    "GITHUB_WORKSPACE": "/github/workspace",
+                    "HOME": "/github/home",
+                    "HOSTNAME": "0b0855275838",
+                    "IMAGE_TAG": "ghcr.io/l3montree-dev/devguard:main-0186ef7d-1742318207",
+                    "INPUT_ARGS": "devguard-scanner intoto stop --step=build --products=image-digest.txt --products=image-tag.txt --REDACTED --apiUrl=https://api.main.devguard.org --assetName=l3montree-cybersecurity/projects/devguard/assets/devguard --supplyChainId=0186ef7d74fe02d2fcd763830c5ced5fcc93e24f --generateSlsaProvenance",
+                    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                    "RUNNER_ARCH": "X64",
+                    "RUNNER_ENVIRONMENT": "github-hosted",
+                    "RUNNER_NAME": "GitHub-Actions-1000001713",
+                    "RUNNER_OS": "Linux",
+                    "RUNNER_TEMP": "/home/runner/work/_temp",
+                    "RUNNER_TOOL_CACHE": "/opt/hostedtoolcache",
+                    "RUNNER_WORKSPACE": "/home/runner/work/devguard"
+                }
+            },
+            "resolvedDependencies": [
+                {
+                    "digest": {
+                        "sha256": "86cc824055f4abbca8830a6e954eb4dec64f4ae770b70a9441283a21a4a68d68"
+                    },
+                    "uri": "file://charts/devguard/templates/kratos/kratos-networkpolicy.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "2c6159164d69e7896ecf20e9560526361aa3163b5748d0db13d792b1ed429523"
+                    },
+                    "uri": "file://internal/core/project/project_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "4dc881bfcf7ed8ce117cf3331ec9bb9908a2e631b41c2eda7e887a58319fab2e"
+                    },
+                    "uri": "file://internal/core/statistics/statistics_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "d67a6a1ec4dbec97a7f4f75bac3efeaded0c7b06dcd5e5928763091f908f34ff"
+                    },
+                    "uri": "file://internal/database/models/asset_version_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "62af246344e2382656f481e5b193f2de5ca302d58219049a64d0ef43e869b7b4"
+                    },
+                    "uri": "file://internal/database/models/comment_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "3d441b83bbd1553d2b6c581fdc77e3a12496291b5847d304ad771fe35e9c192c"
+                    },
+                    "uri": "file://internal/database/models/config_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "7b366a8baf6a34ef9f6b4f36b5decb01a10f3ebfb61f6e2698ef56a8989b97b3"
+                    },
+                    "uri": "file://mocks/mock_core_AuthSession.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "64f32619a58a05ff5a2cd2cf22ed84f54edd5b11a413289219904f36e10bb342"
+                    },
+                    "uri": "file://.github/workflows/vulndb.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "000fd17af04b601774f826b248a67db822e863b901c3f417321d7311d2d7b3f4"
+                    },
+                    "uri": "file://charts/devguard/templates/devguard/service.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "35eb96af32eaa195952050f6b2a19ec6a752c0a5b6757da35c9d7b8cee97c59a"
+                    },
+                    "uri": "file://charts/devguard/templates/kratos-db-secret.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "28068c107f0e604d08882529eb62229e3881ee656a50503ef80186e3440cd6ae"
+                    },
+                    "uri": "file://internal/core/pat/pat_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "64a7ec333b8d526c4b767473ccbf834c3813e63c459ea307782660460e119d5c"
+                    },
+                    "uri": "file://internal/database/models/exploit_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "47850b61f0cead951712367b53cea2077aad7a47a056095fb7a9f8fa4e27606d"
+                    },
+                    "uri": "file://mocks/mock_core_ProjectService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e812a1fc8a24419db6999764846b6d461f197b2f5a639e346023f3bf9611769d"
+                    },
+                    "uri": "file://cmd/devguard/api/api.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "61dd2bd62fd2276924d7f4d2cdb208535bd5939654203efa2f947f1b9681532f"
+                    },
+                    "uri": "file://config/rbac_model.conf"
+                },
+                {
+                    "digest": {
+                        "sha256": "5e99afa318bd20a86dbbf690fd4633a65ff3d281acecd7be9e8e521410c6c2de"
+                    },
+                    "uri": "file://internal/core/assetversion/asset_version_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "7873fb03278090410cd7619d82de1bc931a50ababdbaab89adf8fff3742b6365"
+                    },
+                    "uri": "file://internal/core/daemon/deps_dev_daemon.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "661b14a7bef9c204dec490576be3dd0a01b42d2ef33989d026bf08cb84685547"
+                    },
+                    "uri": "file://internal/database/repositories/asset_version_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "afc85b07f0d4b6c9c8534802ec35884550ab6376ee1579e846e41bbbe40a685f"
+                    },
+                    "uri": "file://test-supply-chain.sh"
+                },
+                {
+                    "digest": {
+                        "sha256": "32f51bfd4ce78c997494ff1ba648a7ac896188278e1ee56a334cf99604d52e5b"
+                    },
+                    "uri": "file://internal/core/assetversion/asset_version_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "5407c9752f571a406a675c9c71c6a0bc371d7da46fc486a3dff1989c354cce94"
+                    },
+                    "uri": "file://internal/database/models/component_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "5026e7f5525fe9b36197fc368f5896e96bd9bd5f8f688a5500c88e5d89c649b5"
+                    },
+                    "uri": "file://internal/database/models/supply_chain_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a04d252e1f9dd228f7e5510e01d087cd3e6dfa4bc29cf5a618eb99817fa150de"
+                    },
+                    "uri": "file://templates/sca_template.yml"
+                },
+                {
+                    "digest": {
+                        "sha256": "89477d356486c2837b8aa7cfac70cffdcc2c55422005ce42c2386e818da5212a"
+                    },
+                    "uri": "file://internal/core/pat/pat_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2579e1f1b8123f8c5d2970a9d955b68324f307ecc35bb2141476e1ff241fff59"
+                    },
+                    "uri": "file://internal/database/repositories/project_risk_history_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2a55a8702a971f2ea0ab11133af928005feabb7710f3ad54d5c0b831e58ef727"
+                    },
+                    "uri": "file://mocks/mock_api_assetRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "606afccb7693fb92707246ad77e865758720fc2d3fe41959d7cdcaceaa7ce1e3"
+                    },
+                    "uri": "file://CHANGELOG.md"
+                },
+                {
+                    "digest": {
+                        "sha256": "ec85b094ae7e4455233334628f8e127d2ccf64d69f59ddbae8f5cd3d317b845b"
+                    },
+                    "uri": "file://charts/devguard/templates/db-secret.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "83511b6b64f1707b4af998d94757216523e6c8829753d9a43303fb4a9dd19164"
+                    },
+                    "uri": "file://internal/auth/session_middleware.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "628597ec099b73e83f8b164fc3477651b9e956038007d0fecb099ac5a24d217a"
+                    },
+                    "uri": "file://internal/database/models/pat_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "29817f305e3ecf7ecee8d9593186d303f7c13dc6618d72eef94a6abbfd4d7c8c"
+                    },
+                    "uri": "file://mocks/mock_api_orgRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "c453708b651a104e9d5bac8ced7654131c2177d81bfe9a6a5675aa29bee87b14"
+                    },
+                    "uri": "file://internal/core/vulndb/epss_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "dc2b6f98f3732b762399b590a9ca599a1e73ee955c8d89f1d86f1320cda705cc"
+                    },
+                    "uri": "file://internal/core/vulndb/nvd_types.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "7391b4bea006422d8c9ef8ee3c7fad1def514e78290606256f22726f3fb46ec9"
+                    },
+                    "uri": "file://internal/testutils/rbac_mock.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "9a6a05e1c2b5d271e8499288cfce5c66ce0979e599546b6fdcdfd6bd3fbb32f0"
+                    },
+                    "uri": "file://mocks/mock_core_AffectedComponentRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "cf0b4a927c0eaf303d20c673888ec7ba52d283a208552c9d7c817fcf9a1fa527"
+                    },
+                    "uri": "file://mocks/mock_core_DependencyVulnService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "4a9637708a6eb54f36672c1260f3e0bc10a4c51b7c6f7802a80272efd69ba910"
+                    },
+                    "uri": "file://images/sponsors/sp-owasp.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "571d5c179228185d83f849308d1ff36c0b1abadb315226f269a0840d6a081020"
+                    },
+                    "uri": "file://Makefile"
+                },
+                {
+                    "digest": {
+                        "sha256": "bb987e6a8ef45a99255d1d632812482d5f0f3255ea841520b4d90342df5fe2b3"
+                    },
+                    "uri": "file://charts/devguard/.helmignore"
+                },
+                {
+                    "digest": {
+                        "sha256": "d5698d4f1bc5b44ceaef43c54326f15eb63c7d517c41d4da7207944205d4dceb"
+                    },
+                    "uri": "file://charts/devguard/templates/kratos/kratos-config.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "a98b76db169bdf38e6660f32e82c75a138dd0ef7641187e955371e627c987e28"
+                    },
+                    "uri": "file://images/sponsors/sp-ikor.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "181d7fb294ed8270799dad8a1186b8a7aba85d7ae5edd20e5f85bd40ae916ff1"
+                    },
+                    "uri": "file://internal/core/asset/asset_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "dacd147b764cd6b45281fe307f05a2789a633a49af31bf4dc7152fbe7118994f"
+                    },
+                    "uri": "file://internal/database/models/cwe_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "9c19a916661187230b25c31d44bbe20184c39cad33f9b2e36dfdc4d2db14ba3a"
+                    },
+                    "uri": "file://internal/database/repositories/first_party_vuln_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "7d1e886c94c2bbcd3297e6a78d5800c2a1ffa1652287339a7b13d64b1f18b233"
+                    },
+                    "uri": "file://charts/devguard/templates/postgresql/postgresql-deployment.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "09276991dd37d920d009a97503949648255bf8396d6e74d601803cac8bf4bb94"
+                    },
+                    "uri": "file://charts/devguard/templates/postgresql/postgresql-persistentvolumeclaim.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "139eaac940c7cb14456410b28f4e1c846fb8f72a7d46926a287048b69fbe5f7e"
+                    },
+                    "uri": "file://SECURITY.md"
+                },
+                {
+                    "digest": {
+                        "sha256": "92ddcb37d8580f360d514b22c2956b3974a1aaebb777718e2ea8a95308bc5c2c"
+                    },
+                    "uri": "file://docs/motivation-objectives.md"
+                },
+                {
+                    "digest": {
+                        "sha256": "a852c238024ab2fb4db84f60b2e5cec4e8232bc9b1d9f3d28f94fca5cc29c1b4"
+                    },
+                    "uri": "file://internal/utils/hash.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "1ad06404b6cfdc5a4c182a2fa485eae538d802db22cdd91ede576304921c1564"
+                    },
+                    "uri": "file://mocks/mock_core_FirstPartyVulnService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "cf1f0c00b69b5983b445d7eb825548fa29535ebc2e430ad0dcf379323c2b70d4"
+                    },
+                    "uri": "file://mocks/mock_core_VulnRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "6ffffef5094cc00ece84458d86d345e12b065e6f340a55024f71686984038747"
+                    },
+                    "uri": "file://.gitignore"
+                },
+                {
+                    "digest": {
+                        "sha256": "3f1d1814f0625c2cc5b6c15dd658a9c54666348775f9ccca291da8662b2cd95d"
+                    },
+                    "uri": "file://charts/devguard/templates/postgresql/postgresql-initdb.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "46f7e8735b93b72e83c1579f7ae0373fbc19d0e47e2be21cca95523573d13af6"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/intoto/intoto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2ed415650292d84294143f73d6b28a1e2f09f16fdd832f8f436844b9e7ee902c"
+                    },
+                    "uri": "file://cosign.pub"
+                },
+                {
+                    "digest": {
+                        "sha256": "8b17f3b532a6d6751c6bb9e0394958bdfdda930da4c7a6ec796095948b6ef330"
+                    },
+                    "uri": "file://internal/database/repositories/gorm_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "90426a41901538dd9a8ad6a59ffe79f450ed24e831cd7d7cdd519fbe3771d60c"
+                    },
+                    "uri": "file://charts/devguard/templates/devguard-web/service.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "92b72ae0289b3597dbfe858f2de23df50e850e36975bf8d6c7fb8b9676d2ea1b"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/secret_scanning.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "8407abe511aaec7d50ccd7dc0fafb613fdde2712a4dec449a08b79099b3a75cd"
+                    },
+                    "uri": "file://internal/core/events/vulnevent_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "46347fe530addc0947194f838953a2b14a641c3e42e6f618e9309685378195c2"
+                    },
+                    "uri": "file://internal/core/integrations/thirdparty_integration.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "57aab308278795b3f272529be9f6c51ad3d1529f5f97f77f47102bd0afeabe8c"
+                    },
+                    "uri": "file://internal/core/vulndb/scan/purl_comparer.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "114f439b3f3d9ba2b2d6b7361ac95eea4b635297c8c97c508118ddd2bc0605a6"
+                    },
+                    "uri": "file://internal/auth/session.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "350c906a7697163ab9a5d9b42f3d5ae40659920b971298357e070a2b2418fa8e"
+                    },
+                    "uri": "file://.github/workflows/postgresql.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "6c8a175633123a6debaad49bfc897b60045807b6d6b023358adc61111a108f52"
+                    },
+                    "uri": "file://mocks/mock_core_ProjectRiskHistoryRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "07444e7bb339fa8e02f53f33f15565be593f80bf57654d82e14ce41ce2cc8fad"
+                    },
+                    "uri": "file://charts/devguard/values.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "ab86d4d56b7d8f3b105d14369907fd3517ed3ec35e09c0cc44312473d65ea581"
+                    },
+                    "uri": "file://docs/assets/vex-crowd-ascii.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "ea1fc67debd86295269425a3544fc1ec17a206a2ffdca9f65a042bc6d6f9773e"
+                    },
+                    "uri": "file://internal/core/events/vuln_event_controller_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "121be38c673db6b018e79300d18463013c99f0c828ad9708c296dd5fc589a660"
+                    },
+                    "uri": "file://internal/core/vulndb/github_exploit_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "cee163c4c4947bb106549488b17064f465ce79d0d490c87b9f5377de8722fd29"
+                    },
+                    "uri": "file://internal/database/models/intoto_link_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "cd1cebb6f71b88d9852355ab30800854204a0d20e471ad46edcfaa03ead937a9"
+                    },
+                    "uri": "file://pkg/devguard/client.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "161a99deb7c63b582c762baf5238b7ad3fae6483634579abd345e038bfa6639f"
+                    },
+                    "uri": "file://.git-template.example"
+                },
+                {
+                    "digest": {
+                        "sha256": "60428ce13f49cd3c98e889aabc60c9b6c4047d2f05fdd74a925456863b6839c0"
+                    },
+                    "uri": "file://.github/workflows/release-charts.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "de92efd96d3520ba8ce65e03a17c8e823eb5ce4d45d857f9806a36439538dcb7"
+                    },
+                    "uri": "file://.golangci.yml"
+                },
+                {
+                    "digest": {
+                        "sha256": "8f9e347611db307cb905818075807d704b995470dcf3c4fa6d8eb5cb7fbc981e"
+                    },
+                    "uri": "file://CONTRIBUTING.md"
+                },
+                {
+                    "digest": {
+                        "sha256": "7c6fbdda4feca4258b40e7404d46b6b1915961ab55dba72036de842cd71025a1"
+                    },
+                    "uri": "file://internal/core/asset/asset_dto_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "260f8ef09dd2f8fa67676f9b52efc971e29e984c612c0010266c54a05e5c520e"
+                    },
+                    "uri": "file://internal/core/statistics/statistics_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "0ac33cba5c94b40f3076b8beacff69a3c15273371189016cb2c52c6cdaa34901"
+                    },
+                    "uri": "file://internal/core/vulndb/mitre_weakness_catalog.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "ae3ddb66423aec7e59eec0a81b17b580f1f9eae8d28e4477c6085833d394b3b3"
+                    },
+                    "uri": "file://internal/core/vulndb/scan/cpe_comparer.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "72e79ce584c2d052ee4f01326c0c9b1b8cf6530420130a30149f321cc047dada"
+                    },
+                    "uri": "file://internal/common/deps_dev.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "c72760980e3d1e65d9cbff3bcfd26e454102a90a17d41da54127a37450d7f355"
+                    },
+                    "uri": "file://internal/common/osv_obj.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "43039e5ca78618ee32a775c1235a179798e8ed2f4dec121373f2d4d978eb9009"
+                    },
+                    "uri": "file://internal/core/component/component_service_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "d3f2f7c30e5331a067774f8dd7f4af8c6bc808e8a81a821cbd0164edecfa160b"
+                    },
+                    "uri": "file://internal/database/models/testdata/GHSA-2v6x-frw8-7r7f.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "b0608ca6db33e008fec5caf36838363bc77f7ca7891625aaae171850471b442f"
+                    },
+                    "uri": "file://internal/database/repositories/vulnerability_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "acdc84aabe68801bd611bd08a092303b9323fadff0245f79494dc4026e2442e1"
+                    },
+                    "uri": "file://internal/utils/timeutils.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "7265b16d23199a3c8e7f55edfb8a31537ede82ab0ebbf4146d57bb2ac144e30d"
+                    },
+                    "uri": "file://mocks/mock_core_ComponentRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "0286f1c03e974ad93a1ffae00c61028cb8906a3adaacfc2d7cd5ad08633d225a"
+                    },
+                    "uri": "file://mocks/mock_core_CweRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "fdebafe3faf37342c6f64efb166fba34a7aa3f8e74ad9d023455aeadd8c9a6e2"
+                    },
+                    "uri": "file://charts/devguard/Chart.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "878db97794922806c28b68a5ff82df61c547ce2a9bd39c46cd5ee28ff59c5976"
+                    },
+                    "uri": "file://cmd/devguard-scanner/main.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "1ce47fb4fe93c2a6dfc3e5b71717d55cff29b78ea9397e7b05abf41fe1721f3f"
+                    },
+                    "uri": "file://internal/core/dependency_vuln/first_party_vuln_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "dc3162af971d3a706ce4971c84c23960a007583620d03440a348a8db8d4d21c5"
+                    },
+                    "uri": "file://internal/core/normalize/purl.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "8ce4dc2a09beba2100590607a67edbe733c24ff299d40de65c996e7303390e74"
+                    },
+                    "uri": "file://internal/core/vulndb/scan/sbom_scanner.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "d90cd1e3725f6650696a2da07cff53bec0d6e89afa7d89d3aa72fe95ab5c8e76"
+                    },
+                    "uri": "file://mocks/mock_api_projectRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "b5fce1b2b78e3e7a0ac86326b756a4a6cbf6e6741a4e2c7038879c47a0ad6566"
+                    },
+                    "uri": "file://mocks/mock_core_ComponentProjectRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "7d0decff4f304eae47efd19fe5e7ccd3f8fdf5aaba8bea00300dd3268e080df1"
+                    },
+                    "uri": "file://mocks/mock_core_InTotoVerifierService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "3ae7d7e11249b29a186086fbb520f654c1edf05bb8d6baf433b3f60233c353c7"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/intoto/intoto_record.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "b99a38b5b60b3dd6338c6ba19d80535fe110db34789b3711f041d43a11c8b954"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/intoto/intoto_record_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "7c34a900fedcc97500bac6d5faba387e44af9c44a41ebea9529ff8f9cdd6798a"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/intoto/intoto_run.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "7fa2829bc94c282239a21e63bb51127701fd7c50d49621740cd083557167260a"
+                    },
+                    "uri": "file://images/sponsors/sp-wetteronline.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "c48a30e3baeacd5f4776dedcf35209902293bfc49e3fb605e0b68fb702507344"
+                    },
+                    "uri": "file://internal/core/thirdparty_integration.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "1bbc55293e944039eb6f84c645810b5925f2d76b5542e68a19ff62f86297de1e"
+                    },
+                    "uri": "file://internal/database/models/affected_component_model_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "8019b0cd1d0314f10e34969e6f27191f8c5e8e78091b84db87e0433ddd598c06"
+                    },
+                    "uri": "file://internal/database/models/cve_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "20e480186a9e3019613e617fbbe82df6305ce2b3d4a06bc5c7c2481d282d3367"
+                    },
+                    "uri": "file://internal/database/repositories/config_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "66687d3a87dd25dd4fcb2dc5a83d6078e1c3431a7a84667d959b6d4c47e329b3"
+                    },
+                    "uri": "file://charts/devguard/templates/kratos/kratos-secret.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "44afe10b9dd3f936b7220330a05e2f1a2157152627cf817fec91cf6a9c2dc3ee"
+                    },
+                    "uri": "file://images/sponsors/sp-digitalhub.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "df96eedf16ebdbedd11381213e6cacdd934d5cc498d685339fdf4d5c7c02ba97"
+                    },
+                    "uri": "file://internal/core/vulndb/cvelist_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "f64b3fe2ce8f5796d643e7cf9b50cd0ae539f00d2078fbbf1a021c73e5e50739"
+                    },
+                    "uri": "file://internal/database/repositories/pat_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e38347d6d294b1b7ba5835d750fe5386e9e58e528c4dd1143a81ddb343d39bde"
+                    },
+                    "uri": "file://internal/database/repositories/vulnevent_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "902a919de895689bab43f912f8343dc9590bd30374f766463fa7b7c95a80f637"
+                    },
+                    "uri": "file://mocks/mock_integrations_githubClientFacade.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "0606c39739d4073076de88f96e526441db25a3819154bd8446c44e85d0b7c0e2"
+                    },
+                    "uri": "file://mocks/mock_scan_componentRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "f4dfae164eedf3f2cf4502f6680f004b275d98ca337db167401578552693cd11"
+                    },
+                    "uri": "file://cmd/devguard-cli/commands/vulndb.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "944aed9c6a44113dd75aa374fde46e3c02b1f8e3190e7110a7215e81d15c6767"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/intoto/intoto_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "225ff5b41f8047fe3d9bfd271f1c59d8c0db29883f93e6560436a834e1611cc4"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/sca.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "741f3b652f0ef4c1919b1441c4885dddbfec0a1ab547c542424fb5c795faf766"
+                    },
+                    "uri": "file://internal/core/vulndb/deps_dev_service_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "754f8aad14a4006bfa23d10eaad058c23545f2ac42231953688234164639f09c"
+                    },
+                    "uri": "file://mocks/mock_core_AssetService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e9ac4eb3df2a95d93f47b2660b58ea04b3ecb6652158eabfb95a1dd7ec091bd7"
+                    },
+                    "uri": "file://mocks/mock_core_ConfigService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "b3479e9b68d2ce1d6b6b4a11fefc5f841f6b33539ab054b9449ca103400c78df"
+                    },
+                    "uri": "file://mocks/mock_core_DependencyVulnRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "656b56fc249eef45f65c0e4a2d37d9033576d9261e82870df638668f37ca4ff0"
+                    },
+                    "uri": "file://mocks/mock_core_IntegrationAggregate.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "9391cd5619d2e7b88b33f34a8133474309a3ea9fba0d596f7048248de0ed3870"
+                    },
+                    "uri": "file://charts/devguard/templates/_helpers.tpl"
+                },
+                {
+                    "digest": {
+                        "sha256": "51b4864ccfb17873e7c607b368d817a46e341916e851b8b7d015c33ea24b55b8"
+                    },
+                    "uri": "file://internal/core/vulndb/nvd_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "bedc36d4ffe2b824c5a18a15df68045f91352ddcca852470307b437e15acd8a9"
+                    },
+                    "uri": "file://internal/database/models/asset_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "5dca8553dc4d358ea816f4879212ed93eb0a28b2978baa906a818f24f10122fa"
+                    },
+                    "uri": "file://internal/database/models/cpe_match_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "77d2c8a0710dc8a56a5f8b026398509e16d0a83fb274bb46bd60463e9779cb5c"
+                    },
+                    "uri": "file://mocks/mock_core_StatisticsRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "81687bc226f1c19255b084d52413873737fc8fa990350a07f901028064421581"
+                    },
+                    "uri": "file://mocks/mock_scan_cveRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "ca07cf5c04864de2f85fbda8c6852fbd4ca4be9e5eaba3d03f2fa2f36cf0d09d"
+                    },
+                    "uri": "file://mocks/mock_accesscontrol_RBACProvider.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "365926c16bb0a5f4d51718bf0b1bddc12013d314a141623aaa795a01a7088445"
+                    },
+                    "uri": "file://internal/core/common_interfaces.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "b8fe47b3aeb8616bde924be974e3cee0abfcdcc65068a5cb0702b5eaef33a0cc"
+                    },
+                    "uri": "file://internal/core/risk/risk.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2aec6ce4c17f3bf0ba92152d0f85bd6e74eaea56a6c1d4d9238c3cfd0057aea2"
+                    },
+                    "uri": "file://internal/core/vulndb/github_exploit_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "ff3f068167bc63acbc2bb829f9aa0a9f4549b28728383e80220d94b3d7a784d6"
+                    },
+                    "uri": "file://mocks/mock_core_AdminClient.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "aeb185e81a20d0a4410e0aa0fa3f902d9dca197a403c06448adb788321b092ef"
+                    },
+                    "uri": "file://mocks/mock_core_GithubAppInstallationRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "8358979a6ee0c1be20030d218bffaf9e9e4fd4554f9373bdcb6ccb3f918e7121"
+                    },
+                    "uri": "file://images/sponsors/sp-wheregroup.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "b0a8414c9044751493c9fe244a64bc2baaed0fe65174711d84fccdf803df7901"
+                    },
+                    "uri": "file://internal/core/vulndb/osv_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "7a5ae314405329b93999726499a23a41e94d0812516e4693fc88b7041bc3bb8e"
+                    },
+                    "uri": "file://mocks/mock_core_ThirdPartyIntegration.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "b303f05d88e0d025110f194899cde424149d45d4f772b65e20b5187b6eeffb0f"
+                    },
+                    "uri": "file://mocks/mock_normalize_SBOM.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "3dc5bcb454fd5426421d68cb3b3941c4551bd93cbf7b5669f8b434dc8c6d288e"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/sign.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e863c7a453cfaec86bbb1aeb6e3f6f24efa8da40d863b47cfd29955f768d422b"
+                    },
+                    "uri": "file://internal/core/intoto/intoto_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "d19f0ba0479309b3815a391c05c54dd0e8faf0b250997c899a4261b8178be863"
+                    },
+                    "uri": "file://mocks/mock_core_AssetRiskHistoryRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "1c0a828549783bf3044cec19b596c424246c4f9194cd555e97f9d453fa61d3e3"
+                    },
+                    "uri": "file://.github/workflows/devguard-scanner.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "df8eba7a2d849b6f8b307e1eb494834bf083ebecd2f193f74651611a7726f25b"
+                    },
+                    "uri": "file://CODE_OF_CONDUCT.md"
+                },
+                {
+                    "digest": {
+                        "sha256": "16e09b3f147c79c775a4bbd8dac5d8416391d1a1af2c9ac739d2250954a0e0d1"
+                    },
+                    "uri": "file://internal/core/component/component_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "6514e1a7cde753cf7780faf375d80547f47ee66d3c73d4215c425e66cbf2f004"
+                    },
+                    "uri": "file://internal/core/dependency_vuln/first_party_vuln_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "f410470042f2898967c05535f57d26ed861321b61524b91a8ada3d374e3021f9"
+                    },
+                    "uri": "file://internal/core/integrations/github_integration_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "1628c8bde875e3a88bd9eae8341db0e60a7ddd0fd4f868b0768301fdb283aae4"
+                    },
+                    "uri": "file://internal/core/vulndb/exploitdb_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "ab2f8faaf8e41b217bfb7e8dabb651850c14ac52cb69303e86fe08cfa03e7ec4"
+                    },
+                    "uri": "file://internal/utils/map.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2086f46ba53363abf66220323223477830de726abe28a66da9d86e9993dee5e2"
+                    },
+                    "uri": "file://.vscode/launch.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "94d60bbfd36efc85bcdb98936276665e97c12471c3a529e2fd74599236bb9506"
+                    },
+                    "uri": "file://Dockerfile"
+                },
+                {
+                    "digest": {
+                        "sha256": "06180f9b03a75d9b44058a9e361e5fd3e8d6f8b4eb4fe7a7762b29956c8ce9f1"
+                    },
+                    "uri": "file://internal/core/intoto/intoto_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "0a4dd2a5c588866604896bdb846447a9d23510707c01478b0e6744d8828a9168"
+                    },
+                    "uri": "file://internal/core/pat/pat_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "d57becf1c0f12f490ae3852d92c89cfac03795077b73e11e5d8051c3f02bcef0"
+                    },
+                    "uri": "file://internal/database/repositories/asset_version_repository_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "0e75659b9003745ff9b72e7a185ac2ede1af7497a043eade9e4a435bef93785e"
+                    },
+                    "uri": "file://internal/utils/git_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "d6515fd1b6026ac7dc11d075e49d384c59f8fa45fdc62fe3062630714b3814cf"
+                    },
+                    "uri": "file://mocks/mock_scan_comparer.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "59a28e386eee4085a3400a3752f76c27bc03aef350e56f5369ff6a5b060fe21f"
+                    },
+                    "uri": "file://README.md"
+                },
+                {
+                    "digest": {
+                        "sha256": "9b7ebcfcb7531498118de04ef5e6931aec8a45d353cb6deda3a58161b1923ba8"
+                    },
+                    "uri": "file://internal/core/daemon/daemon.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "bd8cfa43a116fc13f599f7181b54c765b7e0393fd4731170010e95f7433530ca"
+                    },
+                    "uri": "file://leaks-baseline.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "c10da3356c314cb4afeddcc6f95687e4724061f374e32ea3dcf83e5122e96d5f"
+                    },
+                    "uri": "file://initdb.sql"
+                },
+                {
+                    "digest": {
+                        "sha256": "b16d7ec4b37799418b9bc2123b97dc0383017a8c8e36aca252be5aeec715ebcf"
+                    },
+                    "uri": "file://charts/devguard/templates/devguard-web/deployment.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "72156fd716db8a7bfbc278540fd1e961bb6bbe0315bb1729bbd2928d6dd81f68"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/attest.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "58f8fcfd51e0dbf60cf0832556689ea98b15c9c9c86600e898b01786444faef3"
+                    },
+                    "uri": "file://internal/core/integrations/github_client.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2288261c58778af8775ff661aa6dd9f8c261a64a50ef36abb9b9c64d810292b8"
+                    },
+                    "uri": "file://internal/core/vulndb/import.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "296ce15f480ae2347e92eab629a8f353a4a5b4f95a8479a42fdef92fed335db5"
+                    },
+                    "uri": "file://mocks/mock_core_ProjectRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "10e53b80fe8dd44d1bea14f663c811f7693bcf094e39708703601605a91c597f"
+                    },
+                    "uri": "file://internal/core/dependency_vuln/dependency_vuln_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e3158594038e50cb8910939c68008865128edc99e726be2b62a6b1fe78c8978f"
+                    },
+                    "uri": "file://internal/core/normalize/cdx_bom.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a695713c857dd2b16b696c89700bd6e18d99f19cfe6d9da6f08c2d90d3c60686"
+                    },
+                    "uri": "file://internal/database/models/mitigation_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "1c0dee1f8b83acc5860ec5a0ef57a685265d6c3af6b273003a1ce45db3c74b73"
+                    },
+                    "uri": "file://internal/database/repositories/component_project_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "eed2bcdea80110a623270329c64b7d75b00428b8b0af0306f30cc2fd124ba174"
+                    },
+                    "uri": "file://internal/database/repositories/dependency_vuln_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "fa16b94d292e42b17bb08750ea27b4e7d46edc743706a32f9475e97a5d86a77e"
+                    },
+                    "uri": "file://internal/utils/git.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "9b3eb8e5350d659b91e2eb9f74daf6bf27434ab6377efd9abc44011b4d36804c"
+                    },
+                    "uri": "file://internal/utils/zip.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e71941d27432695683108be344a566ed89bc598a3035b8e2749bcee0610aeac1"
+                    },
+                    "uri": "file://mocks/mock_core_AssetRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "00e4b47e0583d8e797cf84dc9ad228e4c1faf8276f332a5c8c45c9155aa9fd13"
+                    },
+                    "uri": "file://docs/swagger.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "7da0ef85391d56218712662ce3cd6c6a060c6deaec09b2887ff5252fbd2827e1"
+                    },
+                    "uri": "file://internal/core/asset/asset_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "1515b1dfaa15b5ae0751e613d53c62afc5a78f12945ddb50edb0a8a774b0cb65"
+                    },
+                    "uri": "file://internal/core/integrations/gitlab_client.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "93f0629ad20270970fd6e29880315d1d578039abb4fdaa9e4e6ffdce22d0b2c4"
+                    },
+                    "uri": "file://internal/database/repositories/external_user_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "1476089ddf6d98d1ac15cc6d11e7c25bfa7fb05454d40ac3a036cb462767a993"
+                    },
+                    "uri": "file://internal/testutils/session.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "dc2a73fab9bf01a24be997a60846d02e265f4e6539640bf5f3bf09d966737fc1"
+                    },
+                    "uri": "file://LICENSE.txt"
+                },
+                {
+                    "digest": {
+                        "sha256": "d695c23b59c1f3c28ac7a9d20ef04d2d5651c6665ca02d5a50bdd1207eb5de7a"
+                    },
+                    "uri": "file://charts/devguard/templates/kratos/kratos-service.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "5569f1cb1c3358d7f95449b4dd59ec069b0cc41360c6c29e1eb50209f209dad6"
+                    },
+                    "uri": "file://cmd/devguard-cli/main.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "46e1cb459bbf739720b016767a38529836d3a0aaabcb3a494c7c4fe50ea0b1c8"
+                    },
+                    "uri": "file://internal/database/models/vulnevent_model_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "3f967bdcfe69ad8b4e9d72b537926e973b33875859446a40d9fa4c8a797e9ca8"
+                    },
+                    "uri": "file://mocks/mock_core_DepsDevService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "ad8622140e76e095a27044f39ff773862bf18b64112694a9aa0caad4ee7f9185"
+                    },
+                    "uri": "file://mocks/mock_core_StatisticsService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e0d80bb8016552d82cb984d7181dcb95341771b84759695e6783b73eac3823b7"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/container-scanning.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "ba1107da0c2e248de5e9e91e82484586f445f2eaf47b18dece652b9f0c0627d8"
+                    },
+                    "uri": "file://internal/core/events/vuln_event_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "ee49a71c47efafc807de7c944323a369253795b81f2aba49089efac2650629eb"
+                    },
+                    "uri": "file://internal/core/thirdparty_integration_events.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "6c756dc8dfb0776e2f791b1f0fdb210cd9a4866c5253ade3a20462b1aeb36309"
+                    },
+                    "uri": "file://internal/core/vulndb/scan/scan_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "c69812769234f1c3a0058161e0ab7c434a00e2a5ec5139f2f8a1e9e933e7aa02"
+                    },
+                    "uri": "file://internal/core/vulndb/testdata/cve_affected_component.csv"
+                },
+                {
+                    "digest": {
+                        "sha256": "3d7d0864ad6f0355ce377d051debf2c9ae36af67e2eceac4337340ea80e027ad"
+                    },
+                    "uri": "file://internal/database/models/project_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "27ade72f41db12d9a57f9f905087c5a6533cce959f3ab13ab3c742467b469cd5"
+                    },
+                    "uri": "file://internal/echohttp/server.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a94d3307acbcc633790f6513d20b3d2759ab60cf3690306b64dfb5e0ceca8377"
+                    },
+                    "uri": "file://bump_version.sh"
+                },
+                {
+                    "digest": {
+                        "sha256": "68c9d0ce7969644ccdfd036e19171f8718a47c061c2f88030b3be4264896b417"
+                    },
+                    "uri": "file://internal/core/statistics/statistics_project_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "0f7ce0afe1b28e47db506b5d1c6c182278f3b4e66869b407d9418d5138c57be6"
+                    },
+                    "uri": "file://internal/database/models/gitlab_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2e268bca848d0e732b2a6e9c2ceaf286372a33164adac9922e6f62496a0a909a"
+                    },
+                    "uri": "file://mocks/mock_scan_assetVersionRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "ddc88631ed40a0ed51bb5ac5d6543bda4c82e16643b861ce0b2f0331f5f2c41e"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/intoto/intoto_verify.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "487d220978cc7adf9e3ec09a59672fc5613bfa16eb2627ddac320bdcb03bc369"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/sast.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "d28049326aa505e02c59f6b39df2f3c10a133853ed8f579b71ca0f6afeae3c8f"
+                    },
+                    "uri": "file://internal/core/assetversion/asset_version_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2eef1a03d36e183f735513b0633afba0f6b70d55755475ca38ac311efb93e2a3"
+                    },
+                    "uri": "file://.vscode/extensions.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "fe8d9d3a921f6fb4a2b3908f2ed16e8ea0d0b12b85d77f7d5869fa4a7a5a46f2"
+                    },
+                    "uri": "file://internal/core/integrations/gitlab_integration.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "f2fe3d20a1481670db17ae4f5033346debda8887ee186569e635505f50dc4e9f"
+                    },
+                    "uri": "file://internal/core/project/project_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "6957ca5e0702b34cc1e8bd41df68a79db3ccd42225ed24e8555cb0f836f0a894"
+                    },
+                    "uri": "file://internal/core/risk/risk_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "87a7aefdb524a21880d835d007c09e9f688b7e3e8f969d2b438fb7ae7e604150"
+                    },
+                    "uri": "file://internal/database/models/model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "fee76ecff1b262537e23ff6037cb196714e64fe233d8263e5a4edc8708eef16e"
+                    },
+                    "uri": "file://internal/database/models/org_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a2ed310999b36eae6286559e6f388648ef56315b68a242f92685e37b4477f0d4"
+                    },
+                    "uri": "file://intoto-public-key.pem"
+                },
+                {
+                    "digest": {
+                        "sha256": "7ee9167837044d6d5bf1ab2d7dbad8950f19a057e483525d2314265515ab8180"
+                    },
+                    "uri": "file://internal/auth/api_client.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "8e9321eb95a78eddd3cae17b39222cd403932a209ce491f2cd9dc7aacaa5cb57"
+                    },
+                    "uri": "file://internal/database/models/github_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "f2b1680671e32f9ddc9288e9b17a336ae65d0adaf7d4fdb9c3c8bc0d1e89c378"
+                    },
+                    "uri": "file://internal/database/repositories/exploit_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "4cdfb9fb5d5f56a698cf0bf3bf5f5902bd6dcb68480bf5c1c130a7caae7b3b59"
+                    },
+                    "uri": "file://internal/database/repositories/intoto_link_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "36ab35632199a3df734075b5fd523165a23ffb88e4720028e216ed2ffcf7a2b4"
+                    },
+                    "uri": "file://internal/database/repositories/invitation_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "680a716a616f5ed45894744f748ed51377c2a33cfd65b0ac2c5176bb4b52ef51"
+                    },
+                    "uri": "file://mocks/mock_core_GitlabIntegrationRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "343d437594f6c11280f5718c73b7630fce4624e721ff04fb4d06edb885c41821"
+                    },
+                    "uri": "file://.vscode/settings.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "8dfa67b0237cdfe937a4d9aa565867724f730dca29a648d8f4689f54924be09a"
+                    },
+                    "uri": "file://docs/dependency_decisions.yml"
+                },
+                {
+                    "digest": {
+                        "sha256": "106e6568927da3953edead9fa99aebfa1f65083241ce653f7c09712dd4c12210"
+                    },
+                    "uri": "file://internal/core/dependency_vuln/dependency_vuln_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "6984660661061677bff7160a4ca0623deff0904bff2ff550a2d17faa51009253"
+                    },
+                    "uri": "file://internal/database/database.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "81a7a38d7f6fdd439ad6183899daf70b41bffa26a2683d5806e7d9b69b9516a9"
+                    },
+                    "uri": "file://internal/database/repositories/cwe_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "13e5ae63ef6770bbf3398eaae9c422fedc6c3084aac3ec6097e0198942a268da"
+                    },
+                    "uri": "file://internal/database/repositories/org_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "9d67f223bdeaa047020a08fa82492d1a63136db32f3369ae893f09acc899be6f"
+                    },
+                    "uri": "file://internal/database/repositories/statistics_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "07c838c9c4f24099beaef360c5fb5ece8634f4173c2071b31acdf9eaa5fce886"
+                    },
+                    "uri": "file://charts/devguard/templates/devguard-web/ingress.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "985c77a9869c692603ced03d93ffe6d994339a4e9b743a7172764ee7bd8349a3"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/sca_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "8354ce5f5e4c362b80316dbb26a945f47974ead842656b18ecf2041cc57d2ef0"
+                    },
+                    "uri": "file://mocks/mock_core_OrganizationRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "92857ebc437e9ee8a7de0679d97801bbcd3aff90a8f70889c43b2f0d879a706c"
+                    },
+                    "uri": "file://internal/common/contenttree.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2aa5ad07ddcc61571385c81108ca830136451b9a659919704c1bd05d929dcc86"
+                    },
+                    "uri": "file://.github/workflows/pr.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "eb8630a961834601b9f9e5f6b9b9f378f9e2182b0c8f0b006d6c53073f599a36"
+                    },
+                    "uri": "file://internal/core/risk/risk_explaination.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "427e46c1b10ff4491a0541af4233fcba487cc71425b73c831ae63b4979d90416"
+                    },
+                    "uri": "file://internal/database/models/invitation_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "b87c06e134fd129279072ec48edfe3bbd9e7a0c6d201ce59f3fcc3f24b0c590e"
+                    },
+                    "uri": "file://mocks/mock_core_AssetVersionService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "d59d7dd027b02e1ab80de48754cdf717ba8b803e6806c9caf5c9406f7b854b05"
+                    },
+                    "uri": "file://mocks/mock_core_MiddlewareFunc.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e97a601f7866ade4c7333fddb6562a6673163bb750bd57b003c7e1c05a36183d"
+                    },
+                    "uri": "file://mocks/mock_core_PersonalAccessTokenRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "df49f346247363ce1ee14667df53b05b5fae952c300b15e1c0e3d84c9faa272e"
+                    },
+                    "uri": "file://internal/database/repositories/supply_chain_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e6355d7a617eac30bcde896031cad78f958ae22d8bdf7a1e4e684ee9aafa7c53"
+                    },
+                    "uri": "file://mocks/mock_core_InTotoLinkRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "15e6aaed5f503945de8f78e0d4cdedb271b22d838cfc34a8b5dce0cf6b6f1380"
+                    },
+                    "uri": "file://.github/workflows/licenses.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "28e02215be59d14b916deb755075c02ceddfffd1f2952dc383712df14eafcf11"
+                    },
+                    "uri": "file://internal/core/project/project_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2cea2c5dd7dc6d984b1fc8a659134e6a3d62eb9b5c7cf27e1de77e888f23ca89"
+                    },
+                    "uri": "file://mocks/mock_core_CveRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "f8b08ecf2056250a047d9082baa8525f7efb3d96065270006fe29d8e69967384"
+                    },
+                    "uri": "file://templates/container_scanning_template.yml"
+                },
+                {
+                    "digest": {
+                        "sha256": "12e6bc808d9b2b87d7d96065ed17b68741923179dea706c18f0352d7b94f03f3"
+                    },
+                    "uri": "file://internal/core/daemon/vulndb_daemon.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e98017cafc385ca5486b9519190830d736fa32ad96ee0c59f7b901b891c007c2"
+                    },
+                    "uri": "file://internal/core/integrations/integration_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e47480a1fafc7ef7deaff7fca3e91538ed427b156300d0458145b2ad826b7412"
+                    },
+                    "uri": "file://go.mod"
+                },
+                {
+                    "digest": {
+                        "sha256": "eff810c1c59b2f5962798c84399ebfcdde0353fe1508980b48bcd6041f0ccb89"
+                    },
+                    "uri": "file://go.sum"
+                },
+                {
+                    "digest": {
+                        "sha256": "5acbc76e14f335ab15d317aacd9627b4d3d36d8c8f6d251a3af1d114f939ace7"
+                    },
+                    "uri": "file://images/logo_inverse_horizontal.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "7a0884d4237cf283450637cbe230ea7e25390956ece0b8630f1efa1cad744f24"
+                    },
+                    "uri": "file://images/sponsors/sp-hbrs.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "90070ed7f1e45a8ddcf33cee3242a3c9a5e39679f59c5eb386a0297c4721622d"
+                    },
+                    "uri": "file://internal/common/cve_obj.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "c5724b0ca9877adf69d24eeba0c93feda407963aeda0add42e53652079c74544"
+                    },
+                    "uri": "file://charts/devguard/templates/devguard-web/hpa.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "23d13a8980a8a66ca77a895d17a615c9cb9d80d1347e7843bfedafd031a8f455"
+                    },
+                    "uri": "file://docs/docs.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "66cc7f41ef4e0f3ccb18cc20e29cddf8e442739a7c7784360df7d50dcf3f7a4d"
+                    },
+                    "uri": "file://docs/sankey.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "fdb7a6a565f8a88d777c8d1a3675a4e80010dbe9bb7936e225c886bcc0dcff75"
+                    },
+                    "uri": "file://images/sponsors/sp-gitlab.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "4d30e1394736c4f5c50381dff63ea04216eaed83184f53fb6e2e580d0c99660a"
+                    },
+                    "uri": "file://internal/core/daemon/risk_daemon.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "c32b54ba2fd46b617444317a57681159416e1c8d036dc4de9a1303440a27f3a1"
+                    },
+                    "uri": "file://internal/core/dependency_vuln/dependency_vuln_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "da426fbc92e4f023894b3be8c21b4962926505804199a4c7c736d7577a1f7d7b"
+                    },
+                    "uri": "file://internal/database/models/statistic_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "f00f4a5494cf177b7c06e3ef5f5bbe1141193a9f399ae7a506005123d2d4cc6c"
+                    },
+                    "uri": "file://internal/echohttp/recover_middleware.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "27264668624b3fe07f3612c172714f26854a6ed4f950583c51b730ac74fd3f26"
+                    },
+                    "uri": "file://internal/testutils/testutils.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "9841e864ad80d784e66aa40a456edfc935fb16693941e081ecfc95890f718c11"
+                    },
+                    "uri": "file://internal/common/repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a1ce32dd02c7010722096d36914ab06849d2952ab7a1de633aad9fa0f7e8d4a4"
+                    },
+                    "uri": "file://internal/core/component/component_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "5e8254537ee0569b0aed4ebbfa79e18dfa1ac7ac68b0701b936399d6a09773b6"
+                    },
+                    "uri": "file://internal/core/normalize/sbom.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "773721574732836c02e7ae1e9678a76329dbee1b59282f13e789eea15017d564"
+                    },
+                    "uri": "file://internal/core/normalize/semver_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a721b61423af6bf4d9fdcacca1bf6b8db6b9555d0273bca54b22c341574f62c2"
+                    },
+                    "uri": "file://internal/core/vulndb/cwe_types.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "ca0465a80611263cc0a8508b17a2610efb3d39f7df156a38f58ab769d8f7db19"
+                    },
+                    "uri": "file://internal/database/models/sarifResult.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "38211b687e223cfa13c9787f140105c09b9613932dc88213dbb08be0d1cb8e2b"
+                    },
+                    "uri": "file://internal/database/repositories/asset_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a5a35b1d68216b2488190108360005d5d0183c5a36060ad566d93201a27ce8a5"
+                    },
+                    "uri": "file://internal/database/repositories/github_app_installation_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a1139ced7ec8867d7bde15368bc0234e489694eea6bdc654c160371b9e353ba3"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/inspect.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e001e9b7eba11e5ebe7bad065296814774ce4f5e0ba4aff67587cd1f9892a4f9"
+                    },
+                    "uri": "file://internal/core/assetversion/dependency_tree_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "c8be9aadd661977c8840209cc28f1995091f891d3e58aa6b1ed5b25f8e332ed2"
+                    },
+                    "uri": "file://internal/core/normalize/cpe.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "c3ad9d8cf25150c432e26c843f107cfee29053e229110dbaf7195cd8f1f66262"
+                    },
+                    "uri": "file://internal/core/org/org_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "dd0280ed352b41f17a366ae9e75e586b9b285a34baf36bac5c8095b8bcc479b0"
+                    },
+                    "uri": "file://internal/utils/concurrency.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "80915514ebecadfecbc01224f91e9253592290602300f4683a8beeb5d894890e"
+                    },
+                    "uri": "file://mocks/mock_core_AssetVersionRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "65750b163e1ad9b01e563b2399d011e90f83a8d45ba3d345e85e418464bbbf23"
+                    },
+                    "uri": "file://mocks/mock_statistics_statisticsService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a134fad84679c3ca83e5efe8dab0605c4e0080160eedb52fba07fb7b735e8c99"
+                    },
+                    "uri": "file://internal/core/statistics/statistics_asset_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "0d9af1c9065baf69566a842a6b03b8eaad93296823c9d7adf534f08df48da0b9"
+                    },
+                    "uri": "file://internal/database/repositories/component_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "f15b7fdc532f377060cc22c850c1cd9753a6f7e252875629c1ea4ff728c1889c"
+                    },
+                    "uri": "file://internal/database/repositories/gitlab_integration_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "b5fc904f330db90299ee69815783d04256beb440dc6698e33518f12d701712ca"
+                    },
+                    "uri": "file://mocks/mock_api_assetVersionRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "332e5992f5b5956cacec28792c37f77b6f3dc01cfa627347414f403abe53aef7"
+                    },
+                    "uri": "file://mocks/mock_core_ConfigRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "cefeec1c9722e1b07fa39514c0dbf313cee730f0e9b789125fed958c709345a1"
+                    },
+                    "uri": "file://mocks/mock_core_ExternalUserRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "6ffa53e017e0f6951329fc790aee3a56039f804e510ff90507f1ca23f681787d"
+                    },
+                    "uri": "file://mocks/mock_scan_assetVersionService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a644c4d392c87b907a5817e5879bcd3c5c21af629775472090e42bb28ff5f61c"
+                    },
+                    "uri": "file://charts/devguard/templates/devguard/hpa.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "c6afc141f7e52cf5b6cd1e64b55b85403ba6c39f669c28386e86d07d7022269a"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/login.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "8836d1298f3c717ef66b3caddc70fe24ed1be7f2b8d2d6cc5cdb1e34e956774f"
+                    },
+                    "uri": "file://docs/swagger.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "121a94509c6313d7ee808e0ecc897ebada19db9271934acbbfa06e3058a2667b"
+                    },
+                    "uri": "file://internal/core/asset/asset_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "c72ef32398ca256ad7839d7802e3ac317b72858503fd93cd22f363047de4f7dc"
+                    },
+                    "uri": "file://internal/database/models/vulnerability_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "c9990ae16ba2a8b29f113d4f1552abdff69a5e71a517e767e4f265e8f4a2065c"
+                    },
+                    "uri": "file://internal/database/repositories/asset_risk_history_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2e068ceae1d36807ac92332d342c99d97910178ba290e0e4d69b377b3a5e5e4f"
+                    },
+                    "uri": "file://Dockerfile.postgresql"
+                },
+                {
+                    "digest": {
+                        "sha256": "a807f10e2d24dd195b49541af9571a35a0099b0aed422c1bcca97a7be2cc5d1a"
+                    },
+                    "uri": "file://charts/devguard/templates/devguard/deployment.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "20cb6145970f21c7f511c38d11532f7d434e1601170204d84269175d05706950"
+                    },
+                    "uri": "file://charts/devguard/templates/devguard/ingress.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "73aedb851d7201c019020960ab385cc3bd4ca1b4444be572cef0679f48c0c43b"
+                    },
+                    "uri": "file://internal/core/daemon/flaw_daemon.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "9728572d2891e1187a52019fcf435c2d0d856958ae70e4bc31d197282df7a29a"
+                    },
+                    "uri": "file://.mockery.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "9765c101e74ff335dd481c771979251b1635e3ffd7a0187d1b26e0ca9d727d86"
+                    },
+                    "uri": "file://images/logo_horizontal.svg"
+                },
+                {
+                    "digest": {
+                        "sha256": "6831af8485a0e19137bbcb8fa72e4d2e59eefbafbcb6eb49dfb10548614508c7"
+                    },
+                    "uri": "file://internal/core/assetversion/dependency_tree.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "8c28ce3e141b4810c2b9e4b115557c4211b288724128782a057c101a0c66aaa2"
+                    },
+                    "uri": "file://internal/core/normalize/version.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "fa8c04ef4d50994ef7a91c267c94b94b5c2d8b07c4dcd88b35b03b2a320622d3"
+                    },
+                    "uri": "file://internal/core/org/org_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2e9e0d618845bbd304f52beaada69c0d374d6a68614f4507797adfdad072c329"
+                    },
+                    "uri": "file://internal/echohttp/logging_middleware.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "4552ec4e11477d592136826ff8f77902b2e474ce2f95ffe9a1c2cea88dc599cf"
+                    },
+                    "uri": "file://mocks/mock_risk_cvssInterface.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "77cdd3d5640169b593af4e236320f6c2f8d88b9a00afb904a572ca79ef413306"
+                    },
+                    "uri": "file://cmd/devguard/api/api_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "8babebd5ee86af876d2e967126d7f621f6153a43eae8bc8a09c1e9d56a2ac66c"
+                    },
+                    "uri": "file://internal/core/intoto/intoto_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "5bac815b700ee11eff8282ca49566d21701cabad8aea5c0b9da70c5b042be7c2"
+                    },
+                    "uri": "file://internal/core/normalize/version_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "38954b6ea8804e6e25daad1a5f9829f84aedea0ebc1d49d7f29281d9bca95430"
+                    },
+                    "uri": "file://internal/core/vulndb/debian_security_tracker.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "6f6396560d7ef189f7fa784eafc1c5c2603767224fe8551f734d2263c9306329"
+                    },
+                    "uri": "file://internal/database/repositories/cve_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "0981bd0c4380155257ec41211ca5b1cd6bf6ce8ccb7b81c896961d24adcb7587"
+                    },
+                    "uri": "file://mocks/mock_core_FirstPartyVulnRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "725a005f6f33c1f72bc25c114ce6cef4cc020df7a2c41e3526506d3387bcaeee"
+                    },
+                    "uri": "file://.dockerignore"
+                },
+                {
+                    "digest": {
+                        "sha256": "72ed2576cfc828e8ce724ecf536aabff75349d46e905e1bfc960d48728e7d08f"
+                    },
+                    "uri": "file://charts/devguard/templates/kratos/kratos-deployment.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "d943d41f08b4d66eb7a6dfd4dbb3ac5436be431f187cdebc9ac0022fd7a27f78"
+                    },
+                    "uri": "file://internal/core/component/component_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "7a46410a053e0e74500a79fd2a8c0f7283342e8b624b85789e6588d12e6f15a7"
+                    },
+                    "uri": "file://internal/core/core.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "2f5d5a7aa17a1ff9dd62a2d9545f7e7c6ffdb1979476e8acd1c7470c776b97fe"
+                    },
+                    "uri": "file://internal/core/normalize/semver.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "ca140cba82f9dacb082957e6490e2a57dfffe0a58ff240829931f5a03edcd72b"
+                    },
+                    "uri": "file://internal/database/models/vulnevent_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "39656cd899fcba38ac167dbc350f406d484d0c37cfe0d2998e4a337f2d565397"
+                    },
+                    "uri": "file://internal/utils/common.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "86d226e2a69c4987539ceec7f7266955843cf1ef4c29ff9bc52167133d6bd9e0"
+                    },
+                    "uri": "file://mocks/mock_core_Context.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "3a5d5712e3da8c4d420abb5fc338cda46c6203711e8e351b4415b6d3521159f1"
+                    },
+                    "uri": "file://Dockerfile.scanner"
+                },
+                {
+                    "digest": {
+                        "sha256": "a497e670efb6aeb95db78e28a2d64a08be37e81029440b3046ead495afe35cc4"
+                    },
+                    "uri": "file://internal/common/integrations_obj.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a7cc7b4001ff509b3e3204133bc3d4dc936d0f5de8730a871eac5a9826914cf0"
+                    },
+                    "uri": "file://internal/core/vulndb/vulndb_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "498ffa946e8fafb83a3b77bec9d97da4b0f47e4ee0d37098cf807bbb525b59cf"
+                    },
+                    "uri": "file://internal/database/models/dependency_vuln_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "6cd211239f8062d2c8bcb7eaca0ce54cb30ccd0a4002c8b90ef6140b68924d9c"
+                    },
+                    "uri": "file://mocks/mock_core_InvitationRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "c5879e2aa47012124ad3867a1811c76a235c058992ceb0e9423a638fcfb5c911"
+                    },
+                    "uri": "file://mocks/mock_scan_assetRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "481d5176ce04b3c1f21cfd7716f42cc01bd2c8a7d9ea6f156a834f5f970beca2"
+                    },
+                    "uri": "file://templates/full_template.yml"
+                },
+                {
+                    "digest": {
+                        "sha256": "ed923e640a6676ad0379f07ba6750f59cc0cd7841381a0a8079946fceb1eb645"
+                    },
+                    "uri": "file://.github/ISSUE_TEMPLATE/bug_report.md"
+                },
+                {
+                    "digest": {
+                        "sha256": "e64be0c960d46959946c50ec51240508a10685e7f106e05e35a33022e2e581d4"
+                    },
+                    "uri": "file://.kratos/gh-mapping.jsonnet"
+                },
+                {
+                    "digest": {
+                        "sha256": "946090a62fa3ee4843d697b2fde885e196423170665bedcc08af316daaf364ad"
+                    },
+                    "uri": "file://internal/core/vulndb/mitre_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "85bef17a6a3e5952bf6b53537ae6c0422a5326694ec9342edf22634933a07686"
+                    },
+                    "uri": "file://internal/database/repositories/affected_component_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "9bca84c59c031d6ddf7cec23d9d728606d9a385064d1d0ee1cc814e1d5a6f9b4"
+                    },
+                    "uri": "file://cmd/devguard-cli/commands/migrate.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "823a549cc83edc0c64f8f5c6ed1de958912feb5b293136022ec56c516036f171"
+                    },
+                    "uri": "file://.env.example"
+                },
+                {
+                    "digest": {
+                        "sha256": "283d1c88e4a356c0511efb8e29d7275e78f4749913484ffa53b6144312f76836"
+                    },
+                    "uri": "file://internal/core/config/config_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "43d4fe6b32155dd8a67961dcbdc3bdabb55d6348243a98539307ca422b5901b0"
+                    },
+                    "uri": "file://internal/core/org/org_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "9470e727bd8109ddd870f1981a3604a538cba09a819bbdea70eefac3866f80a2"
+                    },
+                    "uri": "file://internal/core/statistics/statistics_org_controller.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "f40682c69535eaa590183d1190089604cea187fe7cbdd32aa6073d28e9a7d5e7"
+                    },
+                    "uri": "file://internal/database/models/affected_component_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "b98e6a6b00776a8e74de78ce2d1be5470368b8e1bf176ccb43c9c550e6da3c32"
+                    },
+                    "uri": "file://mocks/mock_accesscontrol_AccessControl.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "d692766d512ba97db1bed4fe7f9ad4d4e030ca77f19af14541346027759ca6b9"
+                    },
+                    "uri": "file://mocks/mock_integrations_gitlabClientFacade.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "d16723a331684e9ca9aecd5b8f93377145ba26f1ff1b26bb5869676ba4df9f12"
+                    },
+                    "uri": "file://docs/devsecops-pipeline.png"
+                },
+                {
+                    "digest": {
+                        "sha256": "a26437d9fc5a639288a631c9cd9c0ac6302d380017d22a5df0393bd9ef0bf945"
+                    },
+                    "uri": "file://internal/accesscontrol/casbin_rbac.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "dfc5907e0a7ed39b00e61517f4eb9480cfbef2d9a78dae138af115721683ae26"
+                    },
+                    "uri": "file://internal/core/context_utils_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "6ba66f26297edd9a0a4bdb462b86cd02eaa2f67444033a526cbcf27c7c2098fb"
+                    },
+                    "uri": "file://.kratos/kratos.example.yml"
+                },
+                {
+                    "digest": {
+                        "sha256": "2c87d99c3b93556cc414fb84c9a3f3a908c483f1e659bbfb5cf3769209943d93"
+                    },
+                    "uri": "file://internal/core/context_utils.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "ecfe485f7811232161a39d4d7d31f06b53a7bf367269cd0dc0ed8d72c399bf49"
+                    },
+                    "uri": "file://internal/core/dependency_vuln/dependency_vuln_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a92d84523ebcdf018cc232d5a89559b9c526d0323cb330166d8db274cae5dbc0"
+                    },
+                    "uri": "file://mocks/mock_core_ExploitRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "9d12c8448a2cdb3ac247ffe8cb051cf33c1a65ce91397453ae3503e7260f7deb"
+                    },
+                    "uri": "file://mocks/mock_utils_gitLister.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "6e2318a2feff34be7ebd58d489840f01210afdd4900888bc9b20cb7c80be0535"
+                    },
+                    "uri": "file://.kratos/identity.schema.json"
+                },
+                {
+                    "digest": {
+                        "sha256": "c5e3474886962af29dd0df69eea4c6d9b4db2d31101a9363891b5c6936f193ae"
+                    },
+                    "uri": "file://cmd/devguard-scanner/commands/healthcheck.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "350bc5d695b13584174add4b48cf80ab5e1548d9d697128f47b92cf11f3bfdc7"
+                    },
+                    "uri": "file://internal/database/models/first_party_vuln_model.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e1fd4876123580ae12bd966f91de4e59216e605d07f1630865db4d39fdad44d1"
+                    },
+                    "uri": "file://mocks/mock_core_SupplyChainRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "773de6b3997317ca088c5ad563d8fe20805d64b07ea8e7dd821f38b730d03337"
+                    },
+                    "uri": "file://.github/ISSUE_TEMPLATE/feature_request.md"
+                },
+                {
+                    "digest": {
+                        "sha256": "ccde6ce4b95136f06aff83844b6627682de21ec0e843393418478daa916b47d5"
+                    },
+                    "uri": "file://internal/core/pat/pat_service_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "979df72c62eac8ec056a38fa965d4cdd022aace4bfd07dc9a8a79a2456f646cf"
+                    },
+                    "uri": "file://internal/utils/slice.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "3b134a9cc9db916d88896be6e5f40977af5fb3e56ef45bba984e03f0a6f03b8d"
+                    },
+                    "uri": "file://mocks/mock_core_ComponentService.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "69cb22ae8e179dd46a66f7bf17feda5f8abb802dcdc2ad5b1e6fe0d4ccbe84be"
+                    },
+                    "uri": "file://docker-compose.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "f2afc6fbf0456edce22197e1b3e7ef490a3bc97962662661f2924b5afea4cc7f"
+                    },
+                    "uri": "file://internal/accesscontrol/access_control.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "85149b48d3d8ccc2e7daf582ab70f464b697b383b74d297f41669504b4a3f4af"
+                    },
+                    "uri": "file://internal/core/dependency_vuln/first_party_vuln_dto.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "afe0396bfe62832570d3d45aa818e127f5e61ccbc520294fccdaab5ee375f486"
+                    },
+                    "uri": "file://internal/core/integrations/github_integration.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "904f8c05fd1f031434ea38c61ddbf71c6539c260290278fee91b2edb0a6dd74e"
+                    },
+                    "uri": "file://internal/core/integrations/integration_service.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "55486ddb750f7455ea9c9fefdfcc923f64ad714073bd2887cd5273367bff93e7"
+                    },
+                    "uri": "file://internal/database/repositories/project_repository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "f6e01295338457a07e8a2c52563b7b8c2f205d97af5f98129adbb9a8c66950c9"
+                    },
+                    "uri": "file://mocks/mock_core_VulnEventRepository.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e9dff6f821797f0e5757aa7dd2dc975b24fe97214c6671c4b184f060f21a24a6"
+                    },
+                    "uri": "file://charts/devguard/templates/postgresql/postgresql-service.yaml"
+                },
+                {
+                    "digest": {
+                        "sha256": "395f47cf60911c29fa49a54eac95cfa004bf42aaca7094dc2b3e09d5c0ba8d7e"
+                    },
+                    "uri": "file://cmd/devguard/main.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "4a3e2d6106d2a4d21dbbe87e8f7f941c468b100934d547b5534644839d1854f1"
+                    },
+                    "uri": "file://internal/core/daemon/statistics_daemon.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "e2d4e3a3e38f7bd60cbafd7c075cafcdc588efcfdf7bc26ee3c14f7408b10ed2"
+                    },
+                    "uri": "file://docs/dco.txt"
+                },
+                {
+                    "digest": {
+                        "sha256": "677f1897d339732a22257dd2bb6d9329e918f9505a35ae78f733c6a4149d1593"
+                    },
+                    "uri": "file://internal/core/leaderelection/leaderelection.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "a79808d30cea518ee10cbce1b16ae8eab922cb180df3c3c32e85b858b5533ba7"
+                    },
+                    "uri": "file://internal/core/integrations/gitlab_integration_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "9e0668e3b64852e14edfc9dc0b41504a2b92c71640ba6bcc6746bb4de54dbdc5"
+                    },
+                    "uri": "file://internal/core/vulndb/cvelist_service_test.go"
+                },
+                {
+                    "digest": {
+                        "sha256": "fa832a9eddd94573f003c6e8dff0b40e412a62d5e4f639f8dbdcb2288ef7cbde"
+                    },
+                    "uri": "file://internal/core/vulndb/deps_dev_service.go"
+                }
+            ]
+        },
+        "runDetails": {
+            "builder": {
+                "id": "devguard.org"
+            },
+            "metadata": {}
+        }
+    },
+    "predicateType": "https://slsa.dev/provenance/v1",
+    "subject": [
+        {
+            "digest": {
+                "sha256": "11d189a9dae66dadc74212cf22194c12aa200a80edd714c740c29f19ad3a318b"
+            },
+            "name": "image-tag.txt"
+        },
+        {
+            "digest": {
+                "sha256": "5e2db87381dc2e58f1a66d82a6adecd68d661eb8d67d936d7f8f7030cfc34d4e"
+            },
+            "name": "image-digest.txt"
+        }
+    ]
+}
