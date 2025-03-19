@@ -72,12 +72,9 @@ type Component struct {
 
 type ComponentDependency struct {
 	ID uuid.UUID `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
-
 	// the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
 	// we use edges, which provide the information, that a component is used by another component in one asset
-	AssetSemverStart string       `json:"semverStart" gorm:"column:semver_start;type:semver"`
-	AssetSemverEnd   *string      `json:"semverEnd" gorm:"column:semver_end;type:semver"`
 	Component        Component    `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl"`
 	ComponentPurl    *string      `json:"componentPurl" gorm:"column:component_purl;"` // will be nil, for direct dependencies
 	Dependency       Component    `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl"`

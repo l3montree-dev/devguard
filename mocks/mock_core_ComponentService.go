@@ -21,9 +21,9 @@ func (_m *CoreComponentService) EXPECT() *CoreComponentService_Expecter {
 	return &CoreComponentService_Expecter{mock: &_m.Mock}
 }
 
-// GetAndSaveLicenseInformation provides a mock function with given fields: assetVersionName, assetID, scanner, version
-func (_m *CoreComponentService) GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scanner string, version string) ([]models.Component, error) {
-	ret := _m.Called(assetVersionName, assetID, scanner, version)
+// GetAndSaveLicenseInformation provides a mock function with given fields: assetVersionName, assetID, scanner
+func (_m *CoreComponentService) GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scanner string) ([]models.Component, error) {
+	ret := _m.Called(assetVersionName, assetID, scanner)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAndSaveLicenseInformation")
@@ -31,19 +31,19 @@ func (_m *CoreComponentService) GetAndSaveLicenseInformation(assetVersionName st
 
 	var r0 []models.Component
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string, string) ([]models.Component, error)); ok {
-		return rf(assetVersionName, assetID, scanner, version)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) ([]models.Component, error)); ok {
+		return rf(assetVersionName, assetID, scanner)
 	}
-	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string, string) []models.Component); ok {
-		r0 = rf(assetVersionName, assetID, scanner, version)
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) []models.Component); ok {
+		r0 = rf(assetVersionName, assetID, scanner)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Component)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, uuid.UUID, string, string) error); ok {
-		r1 = rf(assetVersionName, assetID, scanner, version)
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
+		r1 = rf(assetVersionName, assetID, scanner)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -60,14 +60,13 @@ type CoreComponentService_GetAndSaveLicenseInformation_Call struct {
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - scanner string
-//   - version string
-func (_e *CoreComponentService_Expecter) GetAndSaveLicenseInformation(assetVersionName interface{}, assetID interface{}, scanner interface{}, version interface{}) *CoreComponentService_GetAndSaveLicenseInformation_Call {
-	return &CoreComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersionName, assetID, scanner, version)}
+func (_e *CoreComponentService_Expecter) GetAndSaveLicenseInformation(assetVersionName interface{}, assetID interface{}, scanner interface{}) *CoreComponentService_GetAndSaveLicenseInformation_Call {
+	return &CoreComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersionName, assetID, scanner)}
 }
 
-func (_c *CoreComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scanner string, version string)) *CoreComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *CoreComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scanner string)) *CoreComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(uuid.UUID), args[2].(string), args[3].(string))
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
 	})
 	return _c
 }
@@ -77,7 +76,7 @@ func (_c *CoreComponentService_GetAndSaveLicenseInformation_Call) Return(_a0 []m
 	return _c
 }
 
-func (_c *CoreComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(string, uuid.UUID, string, string) ([]models.Component, error)) *CoreComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *CoreComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(string, uuid.UUID, string) ([]models.Component, error)) *CoreComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Return(run)
 	return _c
 }

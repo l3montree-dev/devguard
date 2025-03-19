@@ -88,13 +88,13 @@ type ComponentRepository interface {
 	common.Repository[string, models.Component, DB]
 
 	GetVersions(tx DB, assetVersion models.AssetVersion) ([]string, error)
-	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, scanner, version string) ([]models.ComponentDependency, error)
-	LoadComponentsWithProject(tx DB, assetVersionName string, assetID uuid.UUID, scanner, version string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
+	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, scanner string) ([]models.ComponentDependency, error)
+	LoadComponentsWithProject(tx DB, assetVersionName string, assetID uuid.UUID, scanner string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
-	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error
+	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency) error
 	GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
-	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, scanner, version string) (map[string]int, error)
+	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, scanner string) (map[string]int, error)
 }
 
 type DependencyVulnRepository interface {
@@ -193,8 +193,8 @@ type AssetVersionService interface {
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error)
-	UpdateSBOM(assetVersion models.AssetVersion, scannerID string, currentVersion string, sbom normalize.SBOM) error
-	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error)
+	UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error
+	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error)
 }
 
 type AssetVersionRepository interface {
@@ -289,7 +289,7 @@ type ComponentProjectRepository interface {
 }
 
 type ComponentService interface {
-	GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scanner, version string) ([]models.Component, error)
+	GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scanner string) ([]models.Component, error)
 	RefreshComponentProjectInformation(project models.ComponentProject)
 	GetLicense(component models.Component) (models.Component, error)
 }
