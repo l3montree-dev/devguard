@@ -83,7 +83,7 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 
 	var err error
 
-	query := c.GetDB(tx).Table("components").Select("components.license as license, COUNT(components.license) as count").Joins("RIGHT JOIN component_dependencies ON components.purl = component_dependencies.component_purl").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Group("components.license")
+	query := c.GetDB(tx).Table("components").Select("components.license as license, COUNT(components.license) as count").Joins("RIGHT JOIN component_dependencies ON components.purl = component_dependencies.dependency_purl").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Group("components.license")
 
 	if scanner != "" {
 		query = query.Where("scanner_id = ?", scanner)
@@ -115,7 +115,7 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
 	var components []models.ComponentDependency
 
-	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Component").Joins("Component.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
 	if scanner != "" {
 		query = query.Where("scanner_id = ?", scanner)
@@ -131,7 +131,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersion
 		}
 	}
 
-	distinctFields := []string{"component_purl"}
+	distinctFields := []string{"dependency_purl"}
 	for _, f := range sort {
 		distinctFields = append(distinctFields, f.GetField())
 	}
@@ -139,13 +139,13 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersion
 	distinctOnQuery := "DISTINCT ON (" + strings.Join(distinctFields, ",") + ") *"
 
 	if search != "" {
-		query = query.Where("component_purl ILIKE ?", "pkg:%"+search+"%")
+		query = query.Where("dependency_purl ILIKE ?", "pkg:%"+search+"%")
 	} else {
-		query = query.Where("component_purl ILIKE ?", "pkg:%")
+		query = query.Where("dependency_purl ILIKE ?", "pkg:%")
 	}
 
 	var total int64
-	query.Session(&gorm.Session{}).Distinct("component_purl").Count(&total)
+	query.Session(&gorm.Session{}).Distinct("dependency_purl").Count(&total)
 
 	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Scan(&components).Error
 
@@ -154,14 +154,8 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersion
 
 func (c *componentRepository) LoadAllLatestComponentFromAssetVersion(tx core.DB, assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, error) {
 	var component []models.ComponentDependency
-	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id AND scanner_id = ? AND semver_end is NULL", assetVersion.Name, assetVersion.AssetID).Find(&component).Error
+	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id AND scanner_id = ?", assetVersion.Name, assetVersion.AssetID).Find(&component).Error
 	return component, err
-}
-
-func (c *componentRepository) GetVersions(tx core.DB, assetVersion models.AssetVersion) ([]string, error) {
-	var versions []string
-	err := c.GetDB(tx).Model(&models.ComponentDependency{}).Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Distinct("semver_start").Pluck("semver_start", &versions).Error
-	return versions, err
 }
 
 func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Component, error) {

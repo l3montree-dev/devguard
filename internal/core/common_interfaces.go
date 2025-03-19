@@ -87,7 +87,6 @@ type AffectedComponentRepository interface {
 type ComponentRepository interface {
 	common.Repository[string, models.Component, DB]
 
-	GetVersions(tx DB, assetVersion models.AssetVersion) ([]string, error)
 	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, scanner string) ([]models.ComponentDependency, error)
 	LoadComponentsWithProject(tx DB, assetVersionName string, assetID uuid.UUID, scanner string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	SaveBatch(tx DB, components []models.Component) error

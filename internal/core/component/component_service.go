@@ -95,6 +95,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	if len(resp.Licenses) > 0 {
 		// update the license
 		component.License = &resp.Licenses[0]
+		component.Published = &resp.PublishedAt
 	} else {
 		// set the license to unknown
 		component.License = utils.Ptr("unknown")
@@ -160,9 +161,9 @@ func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID 
 	componentsWithoutLicense := make([]models.Component, 0)
 	seen := make(map[string]bool)
 	for _, componentDependency := range componentDependencies {
-		if _, ok := seen[componentDependency.Component.Purl]; !ok && componentDependency.Component.License == nil {
-			seen[componentDependency.Component.Purl] = true
-			componentsWithoutLicense = append(componentsWithoutLicense, componentDependency.Component)
+		if _, ok := seen[componentDependency.DependencyPurl]; !ok && componentDependency.Dependency.License == nil {
+			seen[componentDependency.DependencyPurl] = true
+			componentsWithoutLicense = append(componentsWithoutLicense, componentDependency.Dependency)
 		}
 	}
 
@@ -189,7 +190,7 @@ func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID 
 	// now return all components - each one should have the best license information available
 	allComponents := components
 	for _, componentDependency := range componentDependencies {
-		allComponents = append(allComponents, componentDependency.Component)
+		allComponents = append(allComponents, componentDependency.Dependency)
 	}
 
 	return allComponents, nil

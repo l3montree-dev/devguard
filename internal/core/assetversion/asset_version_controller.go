@@ -2,7 +2,6 @@ package assetversion
 
 import (
 	"net/url"
-	"slices"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -67,23 +66,6 @@ func (a *assetVersionController) GetAssetVersionsByAssetID(ctx core.Context) err
 	return ctx.JSON(200, assetVersions)
 }
 
-func (a *assetVersionController) Versions(ctx core.Context) error {
-	assetVersion := core.GetAssetVersion(ctx)
-	versions, err := a.componentRepository.GetVersions(nil, assetVersion)
-	if err != nil {
-		return err
-	}
-
-	// order the version in descending order
-	normalize.SemverSort(versions)
-
-	// now only reverse it
-	slices.Reverse(versions)
-
-	return ctx.JSON(200, versions)
-}
-
-
 func (a *assetVersionController) AffectedComponents(ctx core.Context) error {
 	scanner := ctx.QueryParam("scanner")
 	if scanner == "" {
@@ -117,7 +99,6 @@ func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 	}
 	return components, dependencyVulns, nil
 }
-
 
 func (a *assetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)

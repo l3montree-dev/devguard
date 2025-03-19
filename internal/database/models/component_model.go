@@ -65,6 +65,7 @@ type Component struct {
 	ComponentType ComponentType         `json:"componentType"`
 	Version       string                `json:"version"`
 	License       *string               `json:"license"`
+	Published     *time.Time            `json:"published"`
 
 	ComponentProject    *ComponentProject `json:"project" gorm:"foreignKey:ComponentProjectKey;references:ProjectKey;constraint:OnDelete:CASCADE;"`
 	ComponentProjectKey *string           `json:"projectId" gorm:"column:project_key"`
