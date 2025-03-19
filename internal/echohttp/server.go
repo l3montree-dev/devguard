@@ -25,18 +25,18 @@ func registerMiddlewares(e *echo.Echo) {
 
 	e.Use(recovermiddleware())
 
-	e.HTTPErrorHandler = func(err error, c echo.Context) {
+	e.HTTPErrorHandler = func(err error, ctx echo.Context) {
 		// do the logging straight inside the error handler
 		// this keeps controller methods clean
-		slog.Error(err.Error(), "method", c.Request().Method, "path", c.Request().URL.Path)
+		slog.Error(err.Error(), "method", ctx.Request().Method, "path", ctx.Request().URL.Path)
 
-		if c.Response().Committed {
+		if ctx.Response().Committed {
 			return
 		}
 
 		if he, ok := err.(*echo.HTTPError); ok {
 			// Send response
-			if err := c.JSON(he.Code, he.Message); err != nil {
+			if err := ctx.JSON(he.Code, he.Message); err != nil {
 				slog.Error("could not send error response", "error", err)
 			}
 			return
@@ -64,12 +64,12 @@ func registerMiddlewares(e *echo.Echo) {
 		}
 
 		// Send response
-		if c.Request().Method == http.MethodHead { // Issue #608
-			if err := c.NoContent(he.Code); err != nil {
+		if ctx.Request().Method == http.MethodHead { // Issue #608
+			if err := ctx.NoContent(he.Code); err != nil {
 				slog.Error("could not send error response", "error", err)
 			}
 		} else {
-			if err := c.JSON(code, message); err != nil {
+			if err := ctx.JSON(code, message); err != nil {
 				slog.Error("could not send error response", "error", err)
 			}
 		}

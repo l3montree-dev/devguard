@@ -10,7 +10,7 @@ import (
 
 func recovermiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) (returnErr error) {
+		return func(ctx echo.Context) (returnErr error) {
 			defer func() {
 				if r := recover(); r != nil {
 					if r == http.ErrAbortHandler {
@@ -33,7 +33,7 @@ func recovermiddleware() echo.MiddlewareFunc {
 					fmt.Println("Stack trace:", string(stack[:length]))
 				}
 			}()
-			return next(c)
+			return next(ctx)
 		}
 	}
 }

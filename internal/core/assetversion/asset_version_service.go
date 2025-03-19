@@ -264,9 +264,9 @@ func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
 		return res
 	}
 
-	for _, c := range *component.Components {
-		res[c.BOMRef] = c
-		for k, v := range recursiveBuildBomRefMap(c) {
+	for _, component := range *component.Components {
+		res[component.BOMRef] = component
+		for k, v := range recursiveBuildBomRefMap(component) {
 			res[k] = v
 		}
 	}
@@ -279,9 +279,9 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 		return res
 	}
 
-	for _, c := range *bom.GetComponents() {
-		res[c.BOMRef] = c
-		for k, v := range recursiveBuildBomRefMap(c) {
+	for _, component := range *bom.GetComponents() {
+		res[component.BOMRef] = component
+		for k, v := range recursiveBuildBomRefMap(component) {
 			res[k] = v
 		}
 	}

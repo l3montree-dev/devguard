@@ -164,7 +164,7 @@ type InvitationRepository interface {
 }
 
 type ProjectService interface {
-	ListAllowedProjects(c Context) ([]models.Project, error)
+	ListAllowedProjects(ctx Context) ([]models.Project, error)
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
