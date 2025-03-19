@@ -16,6 +16,8 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -40,7 +42,7 @@ const (
 
 type ComponentProject struct {
 	// project name like "github.com/facebook/react"
-	ID              string `json:"id" gorm:"primaryKey;column:id"`
+	ProjectKey      string `json:"projectKey" gorm:"primaryKey;column:project_key"`
 	StarsCount      int    `json:"starsCount" gorm:"column:stars_count"`
 	ForksCount      int    `json:"forksCount" gorm:"column:forks_count"`
 	OpenIssuesCount int    `json:"openIssuesCount" gorm:"column:open_issues_count"`
@@ -48,7 +50,13 @@ type ComponentProject struct {
 	License         string `json:"license"`
 	Description     string `json:"description"`
 
-	ScoreCard database.JSONB `json:"scoreCard" gorm:"column:score_card"`
+	ScoreCard      *database.JSONB `json:"scoreCard" gorm:"column:score_card;type:jsonb"`
+	ScoreCardScore *float64        `json:"scoreCardScore" gorm:"column:score_card_score"`
+	UpdatedAt      time.Time       `json:"updatedAt" gorm:"column:updated_at"`
+}
+
+func (c ComponentProject) TableName() string {
+	return "component_projects"
 }
 
 type Component struct {
@@ -56,9 +64,10 @@ type Component struct {
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType ComponentType         `json:"componentType"`
 	Version       string                `json:"version"`
+	License       *string               `json:"license"`
 
-	ComponentProject   *ComponentProject `json:"project" gorm:"foreignKey:ID;references:ComponentProjectID;constraint:OnDelete:CASCADE;"`
-	ComponentProjectID string            `json:"projectId" gorm:"column:project_id"`
+	ComponentProject    *ComponentProject `json:"project" gorm:"foreignKey:ComponentProjectKey;references:ProjectKey;constraint:OnDelete:CASCADE;"`
+	ComponentProjectKey *string           `json:"projectId" gorm:"column:project_key"`
 }
 
 type ComponentDependency struct {

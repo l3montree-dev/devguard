@@ -344,9 +344,9 @@ func (_c *CoreAssetVersionService_HandleScanResult_Call) RunAndReturn(run func(m
 	return _c
 }
 
-// UpdateSBOM provides a mock function with given fields: asset, scanner, version, sbom
-func (_m *CoreAssetVersionService) UpdateSBOM(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM) error {
-	ret := _m.Called(asset, scanner, version, sbom)
+// UpdateSBOM provides a mock function with given fields: assetVersion, scannerID, currentVersion, sbom
+func (_m *CoreAssetVersionService) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, currentVersion string, sbom normalize.SBOM) error {
+	ret := _m.Called(assetVersion, scannerID, currentVersion, sbom)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateSBOM")
@@ -354,7 +354,7 @@ func (_m *CoreAssetVersionService) UpdateSBOM(asset models.AssetVersion, scanner
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(models.AssetVersion, string, string, normalize.SBOM) error); ok {
-		r0 = rf(asset, scanner, version, sbom)
+		r0 = rf(assetVersion, scannerID, currentVersion, sbom)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -368,15 +368,15 @@ type CoreAssetVersionService_UpdateSBOM_Call struct {
 }
 
 // UpdateSBOM is a helper method to define mock.On call
-//   - asset models.AssetVersion
-//   - scanner string
-//   - version string
+//   - assetVersion models.AssetVersion
+//   - scannerID string
+//   - currentVersion string
 //   - sbom normalize.SBOM
-func (_e *CoreAssetVersionService_Expecter) UpdateSBOM(asset interface{}, scanner interface{}, version interface{}, sbom interface{}) *CoreAssetVersionService_UpdateSBOM_Call {
-	return &CoreAssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", asset, scanner, version, sbom)}
+func (_e *CoreAssetVersionService_Expecter) UpdateSBOM(assetVersion interface{}, scannerID interface{}, currentVersion interface{}, sbom interface{}) *CoreAssetVersionService_UpdateSBOM_Call {
+	return &CoreAssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", assetVersion, scannerID, currentVersion, sbom)}
 }
 
-func (_c *CoreAssetVersionService_UpdateSBOM_Call) Run(run func(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM)) *CoreAssetVersionService_UpdateSBOM_Call {
+func (_c *CoreAssetVersionService_UpdateSBOM_Call) Run(run func(assetVersion models.AssetVersion, scannerID string, currentVersion string, sbom normalize.SBOM)) *CoreAssetVersionService_UpdateSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(models.AssetVersion), args[1].(string), args[2].(string), args[3].(normalize.SBOM))
 	})

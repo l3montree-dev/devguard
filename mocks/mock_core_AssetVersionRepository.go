@@ -70,9 +70,9 @@ func (_c *CoreAssetVersionRepository_Delete_Call) RunAndReturn(run func(*gorm.DB
 	return _c
 }
 
-// FindOrCreate provides a mock function with given fields: assetVersionName, assetID, tag, defaultBranch
-func (_m *CoreAssetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranch string) (models.AssetVersion, error) {
-	ret := _m.Called(assetVersionName, assetID, tag, defaultBranch)
+// FindOrCreate provides a mock function with given fields: assetVersionName, assetID, tag, defaultBranchName
+func (_m *CoreAssetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error) {
+	ret := _m.Called(assetVersionName, assetID, tag, defaultBranchName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindOrCreate")
@@ -81,16 +81,16 @@ func (_m *CoreAssetVersionRepository) FindOrCreate(assetVersionName string, asse
 	var r0 models.AssetVersion
 	var r1 error
 	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string, string) (models.AssetVersion, error)); ok {
-		return rf(assetVersionName, assetID, tag, defaultBranch)
+		return rf(assetVersionName, assetID, tag, defaultBranchName)
 	}
 	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string, string) models.AssetVersion); ok {
-		r0 = rf(assetVersionName, assetID, tag, defaultBranch)
+		r0 = rf(assetVersionName, assetID, tag, defaultBranchName)
 	} else {
 		r0 = ret.Get(0).(models.AssetVersion)
 	}
 
 	if rf, ok := ret.Get(1).(func(string, uuid.UUID, string, string) error); ok {
-		r1 = rf(assetVersionName, assetID, tag, defaultBranch)
+		r1 = rf(assetVersionName, assetID, tag, defaultBranchName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -107,12 +107,12 @@ type CoreAssetVersionRepository_FindOrCreate_Call struct {
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - tag string
-//   - defaultBranch string
-func (_e *CoreAssetVersionRepository_Expecter) FindOrCreate(assetVersionName interface{}, assetID interface{}, tag interface{}, defaultBranch interface{}) *CoreAssetVersionRepository_FindOrCreate_Call {
-	return &CoreAssetVersionRepository_FindOrCreate_Call{Call: _e.mock.On("FindOrCreate", assetVersionName, assetID, tag, defaultBranch)}
+//   - defaultBranchName string
+func (_e *CoreAssetVersionRepository_Expecter) FindOrCreate(assetVersionName interface{}, assetID interface{}, tag interface{}, defaultBranchName interface{}) *CoreAssetVersionRepository_FindOrCreate_Call {
+	return &CoreAssetVersionRepository_FindOrCreate_Call{Call: _e.mock.On("FindOrCreate", assetVersionName, assetID, tag, defaultBranchName)}
 }
 
-func (_c *CoreAssetVersionRepository_FindOrCreate_Call) Run(run func(assetVersionName string, assetID uuid.UUID, tag string, defaultBranch string)) *CoreAssetVersionRepository_FindOrCreate_Call {
+func (_c *CoreAssetVersionRepository_FindOrCreate_Call) Run(run func(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string)) *CoreAssetVersionRepository_FindOrCreate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string), args[1].(uuid.UUID), args[2].(string), args[3].(string))
 	})

@@ -17,6 +17,7 @@ package org
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -56,21 +57,25 @@ func (o *httpController) Create(ctx core.Context) error {
 		return echo.NewHTTPError(400, err.Error())
 	}
 
-	org := req.toModel()
+	organization := req.toModel()
 
-	err := o.organizationRepository.Create(nil, &org)
+	if organization.Name == "" || organization.Slug == "" {
+		return echo.NewHTTPError(409, "organizations with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("organizations with an empty name or an empty slug are not allowed"))
+	}
+
+	err := o.organizationRepository.Create(nil, &organization)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value") { //Check the returned error of Create Function
-			return echo.NewHTTPError(409, "Organization with that name already exists").WithInternal(err) //Error Code 409: conflict in current state of the resource
+			return echo.NewHTTPError(409, "organization with that name already exists").WithInternal(err) //Error Code 409: conflict in current state of the resource
 		}
 		return echo.NewHTTPError(500, "could not create organization").WithInternal(err)
 	}
 
-	if err = o.bootstrapOrg(ctx, org); err != nil {
+	if err = o.bootstrapOrg(ctx, organization); err != nil {
 		return echo.NewHTTPError(500, "could not bootstrap organization").WithInternal(err)
 	}
 
-	return ctx.JSON(200, org)
+	return ctx.JSON(200, organization)
 }
 
 func (o *httpController) bootstrapOrg(ctx core.Context, organization models.Org) error {
@@ -137,6 +142,11 @@ func (o *httpController) Update(ctx core.Context) error {
 	}
 
 	updated := patchRequest.applyToModel(&organization)
+
+	if organization.Name == "" || organization.Slug == "" {
+		return echo.NewHTTPError(409, "organizations with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("organizations with an empty name or an empty slug are not allowed"))
+	}
+
 	if updated {
 		err := o.organizationRepository.Update(nil, &organization)
 		if err != nil {
@@ -209,7 +219,7 @@ func (c *httpController) AcceptInvitation(ctx core.Context) error {
 	// get the auth admin client from the context
 	authAdminClient := core.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
-	m, _, err := authAdminClient.IdentityAPI.GetIdentity(ctx.Request().Context(), userID).Execute()
+	m, err := authAdminClient.GetIdentity(ctx.Request().Context(), userID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get user").WithInternal(err)
 	}
@@ -338,12 +348,13 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	// get the auth admin client from the context
 	authAdminClient := core.GetAuthAdminClient(ctx)
 	// fetch the users from the auth service
-	m, _, err := authAdminClient.IdentityAPI.ListIdentitiesExecute(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
+	m, err := authAdminClient.ListUser(client.IdentityAPIListIdentitiesRequest{}.Ids(members))
 	if err != nil {
 		return nil, err
 	}
 
 	// get the roles for the members
+
 	errGroup := utils.ErrGroup[map[string]string](10)
 	for _, member := range m {
 		errGroup.Go(func() (map[string]string, error) {
