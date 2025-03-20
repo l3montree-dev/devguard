@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -57,23 +58,38 @@ func (s *depsDevService) GetProject(ctx context.Context, projectID string) (comm
 	return response, nil
 }
 
-func translateEcosystem(ecosystem string) string {
+func translateEcosystem(ecosystem string) (string, error) {
+	ecosystem = strings.ToLower(ecosystem)
 	if ecosystem == "golang" {
-		return "go"
+		return "go", nil
+	} else if ecosystem == "npm" {
+		return "npm", nil
+	} else if ecosystem == "maven" {
+		return "maven", nil
+	} else if ecosystem == "pypi" {
+		return "pypi", nil
+	} else if ecosystem == "nuget" {
+		return "nuget", nil
+	} else if ecosystem == "cargo" {
+		return "cargo", nil
 	}
 
-	return ecosystem
+	return "", fmt.Errorf("ecosystem %s is not supported", ecosystem)
 }
 
 func (s *depsDevService) GetVersion(ctx context.Context, ecosystem, packageName, version string) (common.DepsDevVersionResponse, error) {
+	ecosystem, err := translateEcosystem(ecosystem)
+	if err != nil {
+		return common.DepsDevVersionResponse{}, err
+	}
+
 	// make sure the package name is url encoded
 	packageName = url.PathEscape(packageName)
-
 	if err := s.rateLimiter.Wait(ctx); err != nil {
 		return common.DepsDevVersionResponse{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/systems/%s/packages/%s/versions/%s", depsDevApiURL, translateEcosystem(ecosystem), packageName, version), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/systems/%s/packages/%s/versions/%s", depsDevApiURL, ecosystem, packageName, version), nil)
 	if err != nil {
 		return common.DepsDevVersionResponse{}, err
 	}

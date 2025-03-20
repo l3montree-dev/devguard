@@ -29,6 +29,7 @@ type ModelWriter[ID any, T Tabler, Tx any] interface {
 type ModelReader[ID any, T Tabler] interface {
 	Read(id ID) (T, error)
 	List(ids []ID) ([]T, error)
+	All() ([]T, error)
 }
 
 type BatchModelWriter[T Tabler, Tx any] interface {

@@ -74,6 +74,63 @@ func (_c *CoreOrganizationRepository_Activate_Call) RunAndReturn(run func(*gorm.
 	return _c
 }
 
+// All provides a mock function with no fields
+func (_m *CoreOrganizationRepository) All() ([]models.Org, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for All")
+	}
+
+	var r0 []models.Org
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]models.Org, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []models.Org); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Org)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreOrganizationRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
+type CoreOrganizationRepository_All_Call struct {
+	*mock.Call
+}
+
+// All is a helper method to define mock.On call
+func (_e *CoreOrganizationRepository_Expecter) All() *CoreOrganizationRepository_All_Call {
+	return &CoreOrganizationRepository_All_Call{Call: _e.mock.On("All")}
+}
+
+func (_c *CoreOrganizationRepository_All_Call) Run(run func()) *CoreOrganizationRepository_All_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *CoreOrganizationRepository_All_Call) Return(_a0 []models.Org, _a1 error) *CoreOrganizationRepository_All_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreOrganizationRepository_All_Call) RunAndReturn(run func() ([]models.Org, error)) *CoreOrganizationRepository_All_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Begin provides a mock function with no fields
 func (_m *CoreOrganizationRepository) Begin() *gorm.DB {
 	ret := _m.Called()

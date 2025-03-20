@@ -73,6 +73,63 @@ func (_c *CoreFirstPartyVulnRepository_Activate_Call) RunAndReturn(run func(*gor
 	return _c
 }
 
+// All provides a mock function with no fields
+func (_m *CoreFirstPartyVulnRepository) All() ([]models.FirstPartyVulnerability, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for All")
+	}
+
+	var r0 []models.FirstPartyVulnerability
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]models.FirstPartyVulnerability, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []models.FirstPartyVulnerability); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.FirstPartyVulnerability)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreFirstPartyVulnRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
+type CoreFirstPartyVulnRepository_All_Call struct {
+	*mock.Call
+}
+
+// All is a helper method to define mock.On call
+func (_e *CoreFirstPartyVulnRepository_Expecter) All() *CoreFirstPartyVulnRepository_All_Call {
+	return &CoreFirstPartyVulnRepository_All_Call{Call: _e.mock.On("All")}
+}
+
+func (_c *CoreFirstPartyVulnRepository_All_Call) Run(run func()) *CoreFirstPartyVulnRepository_All_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *CoreFirstPartyVulnRepository_All_Call) Return(_a0 []models.FirstPartyVulnerability, _a1 error) *CoreFirstPartyVulnRepository_All_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreFirstPartyVulnRepository_All_Call) RunAndReturn(run func() ([]models.FirstPartyVulnerability, error)) *CoreFirstPartyVulnRepository_All_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Begin provides a mock function with no fields
 func (_m *CoreFirstPartyVulnRepository) Begin() *gorm.DB {
 	ret := _m.Called()

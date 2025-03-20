@@ -381,7 +381,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	}
 
 	// make sure, that the components exist
-	if err := s.componentRepository.SaveBatch(nil, componentsSlice); err != nil {
+	if err := s.componentRepository.CreateBatch(nil, componentsSlice); err != nil {
 		return err
 	}
 

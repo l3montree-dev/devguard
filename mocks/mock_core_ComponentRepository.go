@@ -73,6 +73,63 @@ func (_c *CoreComponentRepository_Activate_Call) RunAndReturn(run func(*gorm.DB,
 	return _c
 }
 
+// All provides a mock function with no fields
+func (_m *CoreComponentRepository) All() ([]models.Component, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for All")
+	}
+
+	var r0 []models.Component
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]models.Component, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []models.Component); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Component)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreComponentRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
+type CoreComponentRepository_All_Call struct {
+	*mock.Call
+}
+
+// All is a helper method to define mock.On call
+func (_e *CoreComponentRepository_Expecter) All() *CoreComponentRepository_All_Call {
+	return &CoreComponentRepository_All_Call{Call: _e.mock.On("All")}
+}
+
+func (_c *CoreComponentRepository_All_Call) Run(run func()) *CoreComponentRepository_All_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_All_Call) Return(_a0 []models.Component, _a1 error) *CoreComponentRepository_All_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreComponentRepository_All_Call) RunAndReturn(run func() ([]models.Component, error)) *CoreComponentRepository_All_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Begin provides a mock function with no fields
 func (_m *CoreComponentRepository) Begin() *gorm.DB {
 	ret := _m.Called()
@@ -482,65 +539,6 @@ func (_c *CoreComponentRepository_GetLicenseDistribution_Call) Return(_a0 map[st
 }
 
 func (_c *CoreComponentRepository_GetLicenseDistribution_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, string) (map[string]int, error)) *CoreComponentRepository_GetLicenseDistribution_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetVersions provides a mock function with given fields: tx, assetVersion
-func (_m *CoreComponentRepository) GetVersions(tx *gorm.DB, assetVersion models.AssetVersion) ([]string, error) {
-	ret := _m.Called(tx, assetVersion)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetVersions")
-	}
-
-	var r0 []string
-	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, models.AssetVersion) ([]string, error)); ok {
-		return rf(tx, assetVersion)
-	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, models.AssetVersion) []string); ok {
-		r0 = rf(tx, assetVersion)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(*gorm.DB, models.AssetVersion) error); ok {
-		r1 = rf(tx, assetVersion)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// CoreComponentRepository_GetVersions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetVersions'
-type CoreComponentRepository_GetVersions_Call struct {
-	*mock.Call
-}
-
-// GetVersions is a helper method to define mock.On call
-//   - tx *gorm.DB
-//   - assetVersion models.AssetVersion
-func (_e *CoreComponentRepository_Expecter) GetVersions(tx interface{}, assetVersion interface{}) *CoreComponentRepository_GetVersions_Call {
-	return &CoreComponentRepository_GetVersions_Call{Call: _e.mock.On("GetVersions", tx, assetVersion)}
-}
-
-func (_c *CoreComponentRepository_GetVersions_Call) Run(run func(tx *gorm.DB, assetVersion models.AssetVersion)) *CoreComponentRepository_GetVersions_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(models.AssetVersion))
-	})
-	return _c
-}
-
-func (_c *CoreComponentRepository_GetVersions_Call) Return(_a0 []string, _a1 error) *CoreComponentRepository_GetVersions_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *CoreComponentRepository_GetVersions_Call) RunAndReturn(run func(*gorm.DB, models.AssetVersion) ([]string, error)) *CoreComponentRepository_GetVersions_Call {
 	_c.Call.Return(run)
 	return _c
 }

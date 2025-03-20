@@ -70,6 +70,63 @@ func (_c *CorePersonalAccessTokenRepository_Activate_Call) RunAndReturn(run func
 	return _c
 }
 
+// All provides a mock function with no fields
+func (_m *CorePersonalAccessTokenRepository) All() ([]models.PAT, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for All")
+	}
+
+	var r0 []models.PAT
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]models.PAT, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []models.PAT); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.PAT)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CorePersonalAccessTokenRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
+type CorePersonalAccessTokenRepository_All_Call struct {
+	*mock.Call
+}
+
+// All is a helper method to define mock.On call
+func (_e *CorePersonalAccessTokenRepository_Expecter) All() *CorePersonalAccessTokenRepository_All_Call {
+	return &CorePersonalAccessTokenRepository_All_Call{Call: _e.mock.On("All")}
+}
+
+func (_c *CorePersonalAccessTokenRepository_All_Call) Run(run func()) *CorePersonalAccessTokenRepository_All_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *CorePersonalAccessTokenRepository_All_Call) Return(_a0 []models.PAT, _a1 error) *CorePersonalAccessTokenRepository_All_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CorePersonalAccessTokenRepository_All_Call) RunAndReturn(run func() ([]models.PAT, error)) *CorePersonalAccessTokenRepository_All_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Begin provides a mock function with no fields
 func (_m *CorePersonalAccessTokenRepository) Begin() *gorm.DB {
 	ret := _m.Called()

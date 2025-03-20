@@ -74,10 +74,8 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 
 	p, err := packageurl.FromString(pURL)
 	if err != nil {
-		slog.Warn("could not parse package url", "purl", pURL)
 		// swallow the error
 		component.License = utils.Ptr("unknown")
-
 		return component, nil
 	}
 
