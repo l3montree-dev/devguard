@@ -3,6 +3,16 @@ entries:
   devguard:
   - apiVersion: v2
     appVersion: 0.5.3
+    created: "2025-03-22T11:56:57.96785206Z"
+    description: A Helm chart for Kubernetes
+    digest: 24ad8d3297a9c38698e8005d1ec788c92fecb83b71294fb094a398ddceb3f87a
+    name: devguard
+    type: application
+    urls:
+    - https://github.com/l3montree-dev/devguard/releases/download/devguard-0.5.19/devguard-0.5.19.tgz
+    version: 0.5.19
+  - apiVersion: v2
+    appVersion: 0.5.3
     created: "2025-02-24T17:42:17.040173252Z"
     description: A Helm chart for Kubernetes
     digest: 20bb990939fe0d74b2e2df2d71d460e59a216a1c0c0b865b6f9927669f31e5f0
@@ -371,4 +381,4 @@ entries:
     urls:
     - https://github.com/l3montree-dev/flawfix/releases/download/flawfix-0.2.0/flawfix-0.2.0.tgz
     version: 0.2.0
-generated: "2025-02-24T17:42:17.040362875Z"
+generated: "2025-03-22T11:56:57.968056792Z"
