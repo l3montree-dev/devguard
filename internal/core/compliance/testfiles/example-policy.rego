@@ -1,22 +1,18 @@
-package sigstore
+# METADATA
+# title: Build from signed source
+# description: This policy checks if the build was done from a signed commit. It does not check the signature itself, just that it exists.
+# relatedResources:
+# - https://docs.example.com/policy/rule/E123
+# tags:
+# - iso27001
+# - A.8 Access Control
+package compliance
 
 import rego.v1
 
-validMeta if input._type == "https://in-toto.io/Statement/v0.1"
-
-buildFromSignedCommit if input.predicate.buildDefinition.externalParameters.signature
-
-# make sure, it was build using a valid email address
-buildByTrustedUser if endswith(input.predicate.buildDefinition.externalParameters.committeremail, "@github.com")
-
-buildInTrustedEnvironment if input.predicate.buildDefinition.externalParameters.variables.RUNNER_ENVIRONMENT == "github-hosted"
-
-buildByTrustedBuilder if input.predicate.runDetails.builder.id == "devguard.org"
-
-isCompliant if {
-	validMeta
-    buildFromSignedCommit
-    buildByTrustedUser
-    buildInTrustedEnvironment
-    buildByTrustedBuilder
+allow if {
+    # make sure to look at the build definition to see if it was signed
+    input.predicateType == "https://slsa.dev/provenance/v1"
+    # signature needs to be defined on the external parameters
+    input.predicate.buildDefinition.externalParameters.signature
 }

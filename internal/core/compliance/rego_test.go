@@ -1,13 +1,11 @@
 package compliance_test
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/internal/core/compliance"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEval(t *testing.T) {
@@ -17,19 +15,11 @@ func TestEval(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// unmarshal the json
-	var input map[string]any
-	if err := json.Unmarshal(b, &input); err != nil {
-		t.Fatal(err)
-	}
+	input, err := compliance.ExtractPolicy(string(b))
 
-	// base64 decode the payload
-	payload, err := base64.StdEncoding.DecodeString(input["payload"].(string))
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	escapedPayload := strings.ReplaceAll(string(payload), "\n", "\\n")
 
 	// read the example-policy.rego file
 	policyContent, err := os.ReadFile("testfiles/example-policy.rego")
@@ -38,15 +28,34 @@ func TestEval(t *testing.T) {
 	}
 
 	// create a new policy
-	policy, err := compliance.NewPolicy("example-policy", string(policyContent))
+	policy, err := compliance.NewPolicy(string(policyContent))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// evaluate the policy
-	if err := policy.Eval(escapedPayload); err != nil {
+	if err := policy.Eval(input); err != nil {
 		t.Fatal(err)
 	}
+}
 
-	t.Fail()
+func TestNewPolicy(t *testing.T) {
+	t.Run("should parse the metadata", func(t *testing.T) {
+		// read the example-policy.rego file
+		policyContent, err := os.ReadFile("testfiles/example-policy.rego")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// create a new policy
+		policy, err := compliance.NewPolicy(string(policyContent))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		assert.Equal(t, "Build from signed source", policy.Title)
+		assert.Equal(t, "This policy checks if the build was done from a signed commit. It does not check the signature itself, just that it exists.", policy.Description)
+		assert.Equal(t, []string{"iso27001", "A.8 Access Control"}, policy.Tags)
+
+	})
 }
