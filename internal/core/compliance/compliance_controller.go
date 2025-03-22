@@ -9,18 +9,22 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 )
 
-type httpController struct{}
+type httpController struct {
+	policies []Policy
+}
 
 type deadSimpleSigningEnvelope struct {
 	Payload   string `json:"payload"`
 	Signature string `json:"signature"`
 }
 
-func NewController() *httpController {
-	return &httpController{}
+func NewHTTPController() *httpController {
+	return &httpController{
+		policies: getPolicies(),
+	}
 }
 
-func ExtractPolicy(content string) (any, error) {
+func ExtractAttestationPayload(content string) (any, error) {
 	var envelope deadSimpleSigningEnvelope
 	if err := json.Unmarshal([]byte(content), &envelope); err != nil {
 		return nil, err
@@ -43,28 +47,32 @@ func ExtractPolicy(content string) (any, error) {
 	return input, nil
 }
 
-type complianceEvaluationDTO struct {
-	Name        string                `json:"name"`
-	Evaluations []policyEvaluationDTO `json:"evaluations"`
-}
+func getPolicies() []Policy {
+	// fetch all policies
+	policyFiles, err := os.ReadDir("policies")
+	if err != nil {
+		return nil
+	}
 
-type policyEvaluationDTO struct {
-	Compliant bool   `json:"compliant"`
-	Message   string `json:"message"`
+	var policies []Policy
+	for _, file := range policyFiles {
+		content, err := os.ReadFile("policies/" + file.Name())
+		if err != nil {
+			continue
+		}
+
+		policy, err := NewPolicy(string(content))
+		if err != nil {
+			continue
+		}
+
+		policies = append(policies, *policy)
+	}
+
+	return policies
 }
 
 func (c *httpController) Compliance(ctx core.Context) error {
-	// fetch the policy
-	content, err := os.ReadFile("testfiles/example-policy.rego")
-	if err != nil {
-		return err
-	}
-
-	policy, err := NewPolicy(string(content))
-	if err != nil {
-		return err
-	}
-
 	// get all attestations of the asset
 	attestations, err := os.ReadFile("testfiles/build-provenance-input.json")
 	if err != nil {
@@ -72,14 +80,16 @@ func (c *httpController) Compliance(ctx core.Context) error {
 	}
 
 	// extract the policy
-	input, err := ExtractPolicy(string(attestations))
+	input, err := ExtractAttestationPayload(string(attestations))
 	if err != nil {
 		return err
 	}
 
-	// evaluate the policy
-	if err := policy.Eval(input); err != nil {
+	results := make([]PolicyEvaluation, 0, len(c.policies))
+	for _, policy := range c.policies {
+		results = append(results, policy.Eval(input))
 	}
 
-	return nil
+	// evaluate the policy
+	return ctx.JSON(200, results)
 }

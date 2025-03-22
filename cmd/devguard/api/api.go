@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
+	"github.com/l3montree-dev/devguard/internal/core/compliance"
 	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/events"
@@ -398,6 +399,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository)
+	complianceController := compliance.NewHTTPController()
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
 
@@ -534,6 +536,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	assetVersionRouter.GET("/", assetVersionController.Read)
 	assetVersionRouter.DELETE("/", assetVersionController.Delete) //Delete an asset version
+	assetVersionRouter.GET("/compliance/", complianceController.Compliance)
 
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
 	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)

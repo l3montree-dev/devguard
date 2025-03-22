@@ -15,7 +15,7 @@ func TestEval(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	input, err := compliance.ExtractPolicy(string(b))
+	input, err := compliance.ExtractAttestationPayload(string(b))
 
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func TestEval(t *testing.T) {
 	}
 
 	// evaluate the policy
-	if err := policy.Eval(input); err != nil {
+	if res := policy.Eval(input); !*res.Result {
 		t.Fatal(err)
 	}
 }

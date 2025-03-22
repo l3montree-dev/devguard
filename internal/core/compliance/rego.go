@@ -22,6 +22,11 @@ type Policy struct {
 	query   rego.PreparedEvalQuery
 }
 
+type PolicyEvaluation struct {
+	PolicyMetadata
+	Result *bool
+}
+
 var packageRegexp = regexp.MustCompile(`(?m)^package compliance`)
 var metadataRegexp = regexp.MustCompile(`^\s*#\s*METADATA`)
 
@@ -90,12 +95,18 @@ func NewPolicy(content string) (*Policy, error) {
 	}, nil
 }
 
-func (p *Policy) Eval(input any) error {
+func (p *Policy) Eval(input any) PolicyEvaluation {
 	rs, err := p.query.Eval(context.TODO(), rego.EvalInput(input))
 	if err != nil {
-		return err
+		return PolicyEvaluation{
+			PolicyMetadata: p.PolicyMetadata,
+			Result:         nil,
+		}
 	}
 
-	fmt.Println(rs.Allowed(), err)
-	return nil
+	result := rs.Allowed()
+	return PolicyEvaluation{
+		PolicyMetadata: p.PolicyMetadata,
+		Result:         &result,
+	}
 }
