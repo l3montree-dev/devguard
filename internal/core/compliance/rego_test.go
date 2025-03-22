@@ -1,4 +1,4 @@
-package policy_test
+package compliance_test
 
 import (
 	"encoding/base64"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/core/policy"
+	"github.com/l3montree-dev/devguard/internal/core/compliance"
 )
 
 func TestEval(t *testing.T) {
@@ -38,7 +38,7 @@ func TestEval(t *testing.T) {
 	}
 
 	// create a new policy
-	policy, err := policy.NewPolicy("example-policy", string(policyContent))
+	policy, err := compliance.NewPolicy("example-policy", string(policyContent))
 	if err != nil {
 		t.Fatal(err)
 	}
