@@ -17,9 +17,11 @@ api:
   replicaCount: 1
   image:
     repository: ghcr.io/l3montree-dev/devguard
-    pullPolicy: IfNotPresent
+    # TODO: As we are curently in ALPHA, we are using the latest tag. 
+    # This will be changed to a specific tag once we are in BETA.
+    pullPolicy: Always # IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: v1.0.0
+    tag: main-latest
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
@@ -68,9 +70,11 @@ web:
   devguardApiUrlPublicInternet: ""
   image:
     repository: ghcr.io/l3montree-dev/devguard-web
-    pullPolicy: IfNotPresent
+    # TODO: As we are curently in ALPHA, we are using the latest tag. 
+    # This will be changed to a specific tag once we are in BETA.
+    pullPolicy: Always # IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: v1.0.0
+    tag: main-latest
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
