@@ -133,9 +133,11 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	err = s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
-	if err != nil {
-		return scanResults, err
+	if assetVersion.DefaultBranch {
+		err = s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
+		if err != nil {
+			return scanResults, err
+		}
 	}
 
 	if doRiskManagement {
