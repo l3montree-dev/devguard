@@ -133,10 +133,12 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	//Only create Tickets if the assetVersion is the default assetVersion
-	err = shouldCreateIssue(s, asset, assetVersion, newState)
-	if err != nil {
-		return scanResults, err
+	//Check if we want to create an issue for this assetVersion
+	if shouldCreateIssue(assetVersion) {
+		err := s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
+		if err != nil {
+			return scanResults, err
+		}
 	}
 
 	if doRiskManagement {
@@ -159,15 +161,12 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	return scanResults, nil
 }
 
-func shouldCreateIssue(s *httpController, asset models.Asset, assetVersion models.AssetVersion, newState []models.DependencyVuln) error {
+func shouldCreateIssue(assetVersion models.AssetVersion) bool {
 	//if the vulnerability was found anywhere else than the default branch we don't want to create an issue
 	if assetVersion.DefaultBranch {
-		err := s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
-		if err != nil {
-			return err
-		}
+		return true
 	}
-	return nil
+	return false
 }
 
 func (s *httpController) FirstPartyVulnScan(c core.Context) error {
