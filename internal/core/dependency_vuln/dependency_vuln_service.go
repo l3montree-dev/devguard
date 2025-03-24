@@ -342,6 +342,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
 func (s *service) createIssue(cveName string, asset models.Asset, repoId string, orgSlug string, projectSlug string) error {
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
