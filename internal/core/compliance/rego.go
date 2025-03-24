@@ -10,11 +10,24 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type yamlPolicy struct {
+	Title  string `yaml:"title"`
+	Custom customYaml
+}
+
+type customYaml struct {
+	Description          string `yaml:"description"`
+	Tags                 []string
+	RelatedResources     []string `yaml:"relatedResources"`
+	ComplianceFrameworks []string `yaml:"complianceFrameworks"`
+}
+
 type PolicyMetadata struct {
-	Title            string   `yaml:"title"`
-	Description      string   `yaml:"description"`
-	Tags             []string `yaml:"tags"`
-	RelatedResources []string `yaml:"relatedResources"`
+	Title                string   `yaml:"title" json:"title"`
+	Description          string   `yaml:"description" json:"description"`
+	Tags                 []string `yaml:"tags" json:"tags"`
+	RelatedResources     []string `yaml:"relatedResources" json:"relatedResources"`
+	ComplianceFrameworks []string `yaml:"complianceFrameworks" json:"complianceFrameworks"`
 }
 type Policy struct {
 	PolicyMetadata
@@ -24,7 +37,7 @@ type Policy struct {
 
 type PolicyEvaluation struct {
 	PolicyMetadata
-	Result *bool
+	Result *bool `json:"result"`
 }
 
 var packageRegexp = regexp.MustCompile(`(?m)^package compliance`)
@@ -62,12 +75,18 @@ func parseMetadata(content string) (PolicyMetadata, error) {
 
 	// join the lines and unmarshal the yaml
 	yamlData = strings.Join(collectedLines, "\n")
-	var metadata PolicyMetadata
+	var metadata yamlPolicy
 	if err := yaml.Unmarshal([]byte(yamlData), &metadata); err != nil {
 		return PolicyMetadata{}, err
 	}
 
-	return metadata, nil
+	return PolicyMetadata{
+		Title:                metadata.Title,
+		Description:          metadata.Custom.Description,
+		Tags:                 metadata.Custom.Tags,
+		RelatedResources:     metadata.Custom.RelatedResources,
+		ComplianceFrameworks: metadata.Custom.ComplianceFrameworks,
+	}, nil
 }
 
 func NewPolicy(content string) (*Policy, error) {

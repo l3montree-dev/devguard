@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -48,15 +49,16 @@ func ExtractAttestationPayload(content string) (any, error) {
 }
 
 func getPolicies() []Policy {
+	path, _ := filepath.Abs("./internal/core/compliance/policies")
 	// fetch all policies
-	policyFiles, err := os.ReadDir("policies")
+	policyFiles, err := os.ReadDir(path)
 	if err != nil {
 		return nil
 	}
 
 	var policies []Policy
 	for _, file := range policyFiles {
-		content, err := os.ReadFile("policies/" + file.Name())
+		content, err := os.ReadFile(filepath.Join(path, file.Name()))
 		if err != nil {
 			continue
 		}
@@ -74,7 +76,8 @@ func getPolicies() []Policy {
 
 func (c *httpController) Compliance(ctx core.Context) error {
 	// get all attestations of the asset
-	attestations, err := os.ReadFile("testfiles/build-provenance-input.json")
+	path, _ := filepath.Abs("./internal/core/compliance/testfiles/build-provenance-input.json")
+	attestations, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
