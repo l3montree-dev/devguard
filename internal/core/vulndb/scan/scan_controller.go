@@ -160,6 +160,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 }
 
 func ShouldCreateIssue(s *httpController, asset models.Asset, assetVersion models.AssetVersion, newState []models.DependencyVuln) error {
+	//if the vulnerability was found anywhere else than the default branch we don't want to create an issue
 	if assetVersion.DefaultBranch {
 		err := s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
 		if err != nil {
