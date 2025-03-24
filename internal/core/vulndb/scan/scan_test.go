@@ -15,7 +15,7 @@ func TestShouldCreateIssue(t *testing.T) {
 			DefaultBranch: false,
 		}
 		asset := models.Asset{}
-		err := ShouldCreateIssue(nil, asset, assetVersion, nil)
+		err := shouldCreateIssue(nil, asset, assetVersion, nil)
 		if err != nil {
 			t.Fail()
 		}
@@ -32,7 +32,7 @@ func TestShouldCreateIssue(t *testing.T) {
 
 		controller := NewHttpController(nil, nil, nil, nil, nil, nil, nil, dependencyVulnRepositoryMock)
 
-		err := ShouldCreateIssue(controller, asset, assetVersion, vulns)
+		err := shouldCreateIssue(controller, asset, assetVersion, vulns)
 		if err != nil {
 			t.Fail()
 		}
@@ -49,7 +49,7 @@ func TestShouldCreateIssue(t *testing.T) {
 
 		controller := NewHttpController(nil, nil, nil, nil, nil, nil, nil, dependencyVulnRepositoryMock)
 
-		err := ShouldCreateIssue(controller, asset, assetVersion, vulns)
+		err := shouldCreateIssue(controller, asset, assetVersion, vulns)
 		if err == nil {
 			t.Fail()
 		}
