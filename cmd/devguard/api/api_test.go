@@ -64,7 +64,7 @@ func TestMultiTenantMiddleware(t *testing.T) {
 		mockRBAC := mocks.AccesscontrolAccessControl{}
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: false}
-		session := auth.NewSession("user-id")
+		session := auth.NewSession("user-id", []string{"test-role"})
 
 		mockOrgRepo.On("ReadBySlug", "tenant-slug").Return(org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
@@ -147,7 +147,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
-		mockSession := auth.NewSession("user-id")
+		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockTenant := models.Org{}
 
 		userID := "user-id"
@@ -181,7 +181,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
-		mockSession := auth.NewSession("user-id")
+		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockTenant := models.Org{}
 
 		userID := "user-id"
@@ -215,7 +215,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
-		mockSession := auth.NewSession("user-id")
+		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockTenant := models.Org{
 			IsPublic: true,
 		}
@@ -251,7 +251,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		c := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
-		mockSession := auth.NewSession("user-id")
+		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockTenant := models.Org{}
 
 		userID := "user-id"
