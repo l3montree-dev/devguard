@@ -78,18 +78,6 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 
 	userID := core.GetSession(c).GetUserID()
 
-	// get the X-Asset-Version header
-	version := c.Request().Header.Get("X-Asset-Version")
-	if version == "" {
-		version = models.NoVersion
-	}
-
-	version, err := normalize.SemverFix(version)
-	if err != nil {
-		slog.Error("invalid semver version. Defaulting to 0.0.0", "version", version)
-		version = models.NoVersion
-	}
-
 	tag := c.Request().Header.Get("X-Tag")
 
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
@@ -118,7 +106,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 
 	if doRiskManagement {
 		// update the sbom in the database in parallel
-		if err := s.assetVersionService.UpdateSBOM(assetVersion, scanner, version, normalizedBom); err != nil {
+		if err := s.assetVersionService.UpdateSBOM(assetVersion, scanner, normalizedBom); err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return scanResults, err
 		}
@@ -139,15 +127,18 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	}
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, version, scannerID, userID, doRiskManagement)
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err
 	}
 
-	err = s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
-	if err != nil {
-		return scanResults, err
+	//Check if we want to create an issue for this assetVersion
+	if shouldCreateIssue(assetVersion) {
+		err := s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
+		if err != nil {
+			return scanResults, err
+		}
 	}
 
 	if doRiskManagement {
@@ -170,6 +161,14 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	return scanResults, nil
 }
 
+func shouldCreateIssue(assetVersion models.AssetVersion) bool {
+	//if the vulnerability was found anywhere else than the default branch we don't want to create an issue
+	if assetVersion.DefaultBranch {
+		return true
+	}
+	return false
+}
+
 func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	var sarifScan models.SarifResult
 	if err := c.Bind(&sarifScan); err != nil {
@@ -178,8 +177,6 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 
 	asset := core.GetAsset(c)
 	userID := core.GetSession(c).GetUserID()
-
-	// get the X-Asset-Version header
 
 	tag := c.Request().Header.Get("X-Tag")
 

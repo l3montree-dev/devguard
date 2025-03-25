@@ -22,27 +22,27 @@ func NewHttpController(repository core.AssetRepository, assetService core.AssetS
 	}
 }
 
-func (a *httpController) List(c core.Context) error {
+func (a *httpController) List(ctx core.Context) error {
 
-	project := core.GetProject(c)
+	project := core.GetProject(ctx)
 
 	apps, err := a.assetRepository.GetByProjectID(project.GetID())
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, apps)
+	return ctx.JSON(200, apps)
 }
 
-func (a *httpController) AttachSigningKey(c core.Context) error {
-	asset := core.GetAsset(c)
+func (a *httpController) AttachSigningKey(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
 
 	// read the fingerprint from request body
 	var req struct {
 		PubKey string `json:"publicKey"`
 	}
 
-	if err := c.Bind(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
@@ -56,18 +56,18 @@ func (a *httpController) AttachSigningKey(c core.Context) error {
 	return nil
 }
 
-func (a *httpController) Delete(c core.Context) error {
-	asset := core.GetAsset(c)
+func (a *httpController) Delete(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
 	err := a.assetRepository.Delete(nil, asset.GetID())
 	if err != nil {
 		return err
 	}
-	return c.NoContent(200)
+	return ctx.NoContent(200)
 }
 
-func (a *httpController) Create(c core.Context) error {
+func (a *httpController) Create(ctx core.Context) error {
 	var req createRequest
-	if err := c.Bind(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
@@ -75,16 +75,19 @@ func (a *httpController) Create(c core.Context) error {
 		return echo.NewHTTPError(400, err.Error())
 	}
 
-	project := core.GetProject(c)
+	project := core.GetProject(ctx)
 
-	app := req.toModel(project.GetID())
+	newAsset := req.toModel(project.GetID())
 
-	err := a.assetRepository.Create(nil, &app)
+	if newAsset.Name == "" || newAsset.Slug == "" {
+		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
+	}
+	err := a.assetRepository.Create(nil, &newAsset)
 
 	if err != nil {
 		if database.IsDuplicateKeyError(err) {
 			// get the asset by slug and project id unscoped
-			asset, err := a.assetRepository.ReadBySlugUnscoped(project.GetID(), app.Slug)
+			asset, err := a.assetRepository.ReadBySlugUnscoped(project.GetID(), newAsset.Slug)
 			if err != nil {
 				return echo.NewHTTPError(500, "could not read asset").WithInternal(err)
 			}
@@ -93,19 +96,19 @@ func (a *httpController) Create(c core.Context) error {
 				return echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
 			}
 			slog.Info("Asset activated", "assetSlug", asset.Slug, "projectID", project.GetID())
-			app = asset
+			newAsset = asset
 		} else {
 			return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
 		}
 	}
 
-	return c.JSON(200, app)
+	return ctx.JSON(200, newAsset)
 }
 
-func (a *httpController) Read(c core.Context) error {
-	app := core.GetAsset(c)
+func (a *httpController) Read(ctx core.Context) error {
+	app := core.GetAsset(ctx)
 
-	return c.JSON(200, app)
+	return ctx.JSON(200, app)
 }
 
 func (c *httpController) Update(ctx core.Context) error {
@@ -115,6 +118,7 @@ func (c *httpController) Update(ctx core.Context) error {
 	defer req.Close()
 
 	var patchRequest patchRequest
+
 	err := json.NewDecoder(req).Decode(&patchRequest)
 	if err != nil {
 		return fmt.Errorf("Error decoding request: %v", err)
@@ -144,6 +148,9 @@ func (c *httpController) Update(ctx core.Context) error {
 	}
 
 	updated := patchRequest.applyToModel(&asset)
+	if asset.Name == "" || asset.Slug == "" {
+		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
+	}
 
 	if updated {
 		err = c.assetRepository.Update(nil, &asset)

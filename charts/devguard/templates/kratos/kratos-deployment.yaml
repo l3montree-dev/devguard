@@ -42,12 +42,14 @@ spec:
               key: password
         - name: DSN
           value: postgres://kratos:$(DB_PASSWORD)@postgresql:5432/kratos?sslmode=disable
+        {{- if .Values.mail.existingSMTPConnectionUriSecret }}
         - name: COURIER_SMTP_CONNECTION_URI
           valueFrom:
             secretKeyRef:
               name: "{{ .Values.mail.existingSMTPConnectionUriSecret }}"
               key: uri
               optional: true
+        {{- end }}
         {{- if .Values.oidc.github.enabled }}
         - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_SECRET"
           valueFrom:
@@ -118,12 +120,14 @@ spec:
             secretKeyRef:
               name: kratos
               key: secretsCipher
+        {{- if .Values.mail.existingSMTPConnectionUriSecret }}
         - name: COURIER_SMTP_CONNECTION_URI
           valueFrom:
             secretKeyRef:
               name: "{{ .Values.mail.existingSMTPConnectionUriSecret }}"
               key: uri
               optional: true
+        {{- end }}
         {{- if .Values.oidc.github.enabled }}
         - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_SECRET"
           valueFrom:

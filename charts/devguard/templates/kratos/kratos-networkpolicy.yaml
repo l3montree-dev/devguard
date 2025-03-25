@@ -7,14 +7,14 @@ metadata:
 spec:
     podSelector:
         matchLabels:
-        app.kubernetes.io/name: kratos
+            app.kubernetes.io/name: kratos
     policyTypes:
     - Ingress
     ingress:
     - from:
         - podSelector:
             matchLabels:
-            app.kubernetes.io/name: devguard-api
+                app.kubernetes.io/name: kratos
       ports:
       - protocol: TCP
         port: 4434 # restrict access to the admin port

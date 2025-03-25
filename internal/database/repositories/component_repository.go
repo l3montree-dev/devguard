@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -40,12 +42,10 @@ func NewComponentRepository(db core.DB) *componentRepository {
 	}
 }
 
-func (c *componentRepository) UpdateSemverEnd(tx core.DB, ids []uuid.UUID, version *string) error {
-	if len(ids) == 0 {
-		return nil
-	}
-
-	return c.GetDB(tx).Model(&models.ComponentDependency{}).Where("id IN ?", ids).Update("semver_end", version).Error
+func (c *componentRepository) FindAllWithoutLicense() ([]models.Component, error) {
+	var components []models.Component
+	err := c.db.Where("license IS NULL OR license = ''").Find(&components).Error
+	return components, err
 }
 
 func (c *componentRepository) CreateComponents(tx core.DB, components []models.ComponentDependency) error {
@@ -56,7 +56,7 @@ func (c *componentRepository) CreateComponents(tx core.DB, components []models.C
 	return c.GetDB(tx).Create(&components).Error
 }
 
-func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID, version string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 
@@ -66,11 +66,7 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 		query = query.Where("scanner_id = ?", scannerID)
 	}
 
-	if version == models.NoVersion || version == "" {
-		err = query.Where("semver_end is NULL").Find(&components).Error
-	} else {
-		err = query.Where("semver_start <= ? AND (semver_end >= ? OR semver_end IS NULL)", version, version).Find(&components).Error
-	}
+	err = query.Find(&components).Error
 
 	if err != nil {
 		return nil, err
@@ -79,16 +75,87 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 	return components, err
 }
 
-func (c *componentRepository) LoadAllLatestComponentFromAssetVersion(tx core.DB, assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, error) {
-	var component []models.ComponentDependency
-	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id AND scanner_id = ? AND semver_end is NULL", assetVersion.Name, assetVersion.AssetID).Find(&component).Error
-	return component, err
+func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner string) (map[string]int, error) {
+	var licenses []struct {
+		License string
+		Count   int
+	}
+
+	var err error
+
+	query := c.GetDB(tx).Table("components").Select("components.license as license, COUNT(components.license) as count").Joins("RIGHT JOIN component_dependencies ON components.purl = component_dependencies.dependency_purl").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Group("components.license")
+
+	if scanner != "" {
+		query = query.Where("scanner_id = ?", scanner)
+	}
+
+	err = query.Scan(&licenses).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// convert to map
+	licensesMap := make(map[string]int)
+	for _, l := range licenses {
+		if l.License == "" {
+			l.License = "unknown"
+		}
+
+		if _, ok := licensesMap[l.License]; !ok {
+			licensesMap[l.License] = 0
+		}
+
+		licensesMap[l.License] += l.Count
+	}
+
+	return licensesMap, nil
 }
 
-func (c *componentRepository) GetVersions(tx core.DB, assetVersion models.AssetVersion) ([]string, error) {
-	var versions []string
-	err := c.GetDB(tx).Model(&models.ComponentDependency{}).Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Distinct("semver_start").Pluck("semver_start", &versions).Error
-	return versions, err
+func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+	var components []models.ComponentDependency
+
+	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+
+	if scanner != "" {
+		query = query.Where("scanner_id = ?", scanner)
+	}
+
+	for _, f := range filter {
+		query = query.Where(f.SQL(), f.Value())
+	}
+
+	if len(sort) > 0 {
+		for _, s := range sort {
+			query = query.Order(s.SQL())
+		}
+	}
+
+	distinctFields := []string{"dependency_purl"}
+	for _, f := range sort {
+		distinctFields = append(distinctFields, f.GetField())
+	}
+
+	distinctOnQuery := "DISTINCT ON (" + strings.Join(distinctFields, ",") + ") *"
+
+	if search != "" {
+		query = query.Where("dependency_purl ILIKE ?", "pkg:%"+search+"%")
+	} else {
+		query = query.Where("dependency_purl ILIKE ?", "pkg:%")
+	}
+
+	var total int64
+	query.Session(&gorm.Session{}).Distinct("dependency_purl").Count(&total)
+
+	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Scan(&components).Error
+
+	return core.NewPaged(pageInfo, total, components), err
+}
+
+func (c *componentRepository) LoadAllLatestComponentFromAssetVersion(tx core.DB, assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, error) {
+	var component []models.ComponentDependency
+	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id AND scanner_id = ?", assetVersion.Name, assetVersion.AssetID).Find(&component).Error
+	return component, err
 }
 
 func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Component, error) {
@@ -97,43 +164,21 @@ func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Compon
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
+func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
 		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})
 
 	removed := comparison.OnlyInA
 	added := comparison.OnlyInB
-	both := comparison.InBoth
-
-	// check if we can delete some component. All which would have same SemverStart and SemverEnd
-	var toDelete []models.ComponentDependency
-
-	// Disjoin will first return all elements where the predicate is true
-	// and then all elements where the predicate is false
-	toDelete, removed = utils.Disjoin(removed, func(dep models.ComponentDependency) bool {
-		return dep.AssetSemverStart == version
-	})
 
 	return c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
-		if len(toDelete) != 0 {
-			if err := c.GetDB(tx).Delete(&toDelete).Error; err != nil {
+		if len(removed) != 0 {
+			if err := c.GetDB(tx).Delete(&removed).Error; err != nil {
 				return err
 			}
 		}
 
-		// update semver end as null for all components which are in both
-		if err := c.UpdateSemverEnd(tx, utils.Map(both, func(el models.ComponentDependency) uuid.UUID {
-			return el.ID
-		}), nil); err != nil {
-			return err
-		}
-
-		if err := c.UpdateSemverEnd(tx, utils.Map(removed, func(el models.ComponentDependency) uuid.UUID {
-			return el.ID
-		}), &version); err != nil {
-			return err
-		}
 		// make sure the asset id is set
 		for i := range added {
 			added[i].AssetID = assetID

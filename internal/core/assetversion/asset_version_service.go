@@ -29,10 +29,11 @@ type service struct {
 	firstPartyVulnService    core.FirstPartyVulnService
 	assetVersionRepository   core.AssetVersionRepository
 	assetRepository          core.AssetRepository
+	componentService         core.ComponentService
 	httpClient               *http.Client
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, componentService core.ComponentService) *service {
 	return &service{
 		assetVersionRepository:   assetVersionRepository,
 		componentRepository:      componentRepository,
@@ -40,6 +41,7 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 		firstPartyVulnService:    firstPartyVulnService,
+		componentService:         componentService,
 		assetRepository:          assetRepository,
 		httpClient:               &http.Client{},
 	}
@@ -153,13 +155,13 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
 
-func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner, version)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner)
 	if err != nil {
 		return 0, 0, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
@@ -256,34 +258,15 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 	return len(newDependencyVulns), len(fixedDependencyVulns), append(newDependencyVulns, comparison.InBoth...), nil
 }
 
-type DepsDevResponse struct {
-	Nodes []struct {
-		VersionKey struct {
-			System  string `json:"system"`
-			Name    string `json:"name"`
-			Version string `json:"version"`
-		} `json:"versionKey"`
-		Bundled  bool          `json:"bundled"`
-		Relation string        `json:"relation"`
-		Errors   []interface{} `json:"errors"`
-	} `json:"nodes"`
-	Edges []struct {
-		FromNode    int    `json:"fromNode"`
-		ToNode      int    `json:"toNode"`
-		Requirement string `json:"requirement"`
-	} `json:"edges"`
-	Error string `json:"error"`
-}
-
 func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
 	res := make(map[string]cdx.Component)
 	if component.Components == nil {
 		return res
 	}
 
-	for _, c := range *component.Components {
-		res[c.BOMRef] = c
-		for k, v := range recursiveBuildBomRefMap(c) {
+	for _, component := range *component.Components {
+		res[component.BOMRef] = component
+		for k, v := range recursiveBuildBomRefMap(component) {
 			res[k] = v
 		}
 	}
@@ -296,20 +279,25 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 		return res
 	}
 
-	for _, c := range *bom.GetComponents() {
-		res[c.BOMRef] = c
-		for k, v := range recursiveBuildBomRefMap(c) {
+	for _, component := range *bom.GetComponents() {
+		res[component.BOMRef] = component
+		for k, v := range recursiveBuildBomRefMap(component) {
 			res[k] = v
 		}
 	}
 	return res
 }
 
-func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, currentVersion string, sbom normalize.SBOM) error {
+func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
 	// load the asset components
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID, currentVersion)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
+	}
+
+	existingComponentPurls := make(map[string]bool)
+	for _, c := range assetComponents {
+		existingComponentPurls[c.Component.Purl] = true
 	}
 
 	// we need to check if the SBOM is new or if it already exists.
@@ -337,16 +325,17 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			// create the direct dependency edge.
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurl:    nil, // direct dependency - therefore set it to nil
-					ScannerID:        scannerID,
-					DependencyPurl:   componentPackageUrl,
-					AssetSemverStart: currentVersion,
+					ComponentPurl:  nil, // direct dependency - therefore set it to nil
+					ScannerID:      scannerID,
+					DependencyPurl: componentPackageUrl,
 				},
 			)
-			components[componentPackageUrl] = models.Component{
-				Purl:          componentPackageUrl,
-				ComponentType: models.ComponentType(component.Type),
-				Version:       component.Version,
+			if _, ok := existingComponentPurls[componentPackageUrl]; !ok {
+				components[componentPackageUrl] = models.Component{
+					Purl:          componentPackageUrl,
+					ComponentType: models.ComponentType(component.Type),
+					Version:       component.Version,
+				}
 			}
 		}
 	}
@@ -362,21 +351,26 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurl:    utils.EmptyThenNil(compPackageUrl),
-					ScannerID:        scannerID,
-					DependencyPurl:   depPurlOrName,
-					AssetSemverStart: currentVersion,
+					ComponentPurl:  utils.EmptyThenNil(compPackageUrl),
+					ScannerID:      scannerID,
+					DependencyPurl: depPurlOrName,
 				},
 			)
-			components[depPurlOrName] = models.Component{
-				Purl:          depPurlOrName,
-				ComponentType: models.ComponentType(dep.Type),
-				Version:       dep.Version,
+
+			if _, ok := existingComponentPurls[depPurlOrName]; !ok {
+				components[depPurlOrName] = models.Component{
+					Purl:          depPurlOrName,
+					ComponentType: models.ComponentType(dep.Type),
+					Version:       dep.Version,
+				}
 			}
-			components[compPackageUrl] = models.Component{
-				Purl:          compPackageUrl,
-				ComponentType: models.ComponentType(comp.Type),
-				Version:       comp.Version,
+
+			if _, ok := existingComponentPurls[compPackageUrl]; !ok {
+				components[compPackageUrl] = models.Component{
+					Purl:          compPackageUrl,
+					ComponentType: models.ComponentType(comp.Type),
+					Version:       comp.Version,
+				}
 			}
 		}
 	}
@@ -387,11 +381,27 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	}
 
 	// make sure, that the components exist
-	if err := s.componentRepository.SaveBatch(nil, componentsSlice); err != nil {
+	if err := s.componentRepository.CreateBatch(nil, componentsSlice); err != nil {
 		return err
 	}
 
-	return s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, currentVersion, assetComponents, dependencies)
+	if err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies); err != nil {
+		return err
+	}
+
+	// update the license information in the background
+	go func() {
+		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
+
+		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion.Name, assetVersion.AssetID, scannerID)
+		if err != nil {
+			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
+		} else {
+			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
+		}
+	}()
+
+	return nil
 }
 
 func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {

@@ -89,7 +89,7 @@ func UpdateComponentProperties(db core.DB) error {
 			// build up the dependency tree for the asset
 			for scannerID, assetVersionDependencyVulnMapping := range groups {
 				for assetVersionName, dependencyVulns := range assetVersionDependencyVulnMapping {
-					components, err := componentRepository.LoadComponents(nil, assetVersionName, a.ID, scannerID, "")
+					components, err := componentRepository.LoadComponents(nil, assetVersionName, a.ID, scannerID)
 					if err != nil {
 						slog.Warn("could not load components", "asset", a.ID, "scanner", scannerID, "err", err)
 						continue

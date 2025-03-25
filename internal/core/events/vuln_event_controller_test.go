@@ -32,11 +32,11 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/vuln-events", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		ctx := e.NewContext(req, rec)
 
 		mockRepository := mocks.NewCoreVulnEventRepository(t)
 		// Execution
-		err := events.NewVulnEventController(mockRepository).ReadAssetEventsByVulnID(c)
+		err := events.NewVulnEventController(mockRepository).ReadAssetEventsByVulnID(ctx)
 
 		// Assertion
 		assert.NotNil(t, err)
@@ -50,12 +50,12 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/vuln-events?vulnId=vulnId", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("dependencyVulnId")
-		c.SetParamValues("vulnId")
+		ctx := e.NewContext(req, rec)
+		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamValues("vulnId")
 
 		// Execution
-		err := events.NewVulnEventController(mockRepository).ReadAssetEventsByVulnID(c)
+		err := events.NewVulnEventController(mockRepository).ReadAssetEventsByVulnID(ctx)
 
 		// Assertion
 		assert.NotNil(t, err)

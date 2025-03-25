@@ -16,6 +16,7 @@
 package core
 
 import (
+	"context"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -37,7 +38,7 @@ type ProjectRepository interface {
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
-	List(idSlice []uuid.UUID, parentID *uuid.UUID, tenantID uuid.UUID) ([]models.Project, error)
+	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 }
 
 type AssetRepository interface {
@@ -84,12 +85,15 @@ type AffectedComponentRepository interface {
 }
 
 type ComponentRepository interface {
-	GetVersions(tx DB, assetVersion models.AssetVersion) ([]string, error)
-	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, scanner, version string) ([]models.ComponentDependency, error)
+	common.Repository[string, models.Component, DB]
+
+	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, scanner string) ([]models.ComponentDependency, error)
+	LoadComponentsWithProject(tx DB, assetVersionName string, assetID uuid.UUID, scanner string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
-	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, version string, oldState []models.ComponentDependency, newState []models.ComponentDependency) error
+	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency) error
 	GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
+	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, scanner string) (map[string]int, error)
 }
 
 type DependencyVulnRepository interface {
@@ -159,7 +163,7 @@ type InvitationRepository interface {
 }
 
 type ProjectService interface {
-	ListAllowedProjects(c Context) ([]models.Project, error)
+	ListAllowedProjects(ctx Context) ([]models.Project, error)
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
@@ -187,10 +191,9 @@ type AssetVersionService interface {
 	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) *cdx.BOM
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
-	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, version string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error)
-	UpdateSBOM(asset models.AssetVersion, scanner string, version string, sbom normalize.SBOM) error
-
 	HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error)
+	UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error
+	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error)
 }
 
 type AssetVersionRepository interface {
@@ -201,7 +204,7 @@ type AssetVersionRepository interface {
 	GetAllAssetsVersionFromDBByAssetID(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
-	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranch string) (models.AssetVersion, error)
+	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error)
 }
 
 type FirstPartyVulnService interface {
@@ -272,5 +275,20 @@ type ProjectRiskHistoryRepository interface {
 }
 
 type StatisticsService interface {
-	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, updateProject bool) error
+	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error
+}
+
+type DepsDevService interface {
+	GetVersion(ctx context.Context, ecosystem, packageName, version string) (common.DepsDevVersionResponse, error)
+	GetProject(ctx context.Context, projectID string) (common.DepsDevProjectResponse, error)
+}
+
+type ComponentProjectRepository interface {
+	common.Repository[string, models.ComponentProject, DB]
+}
+
+type ComponentService interface {
+	GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scanner string) ([]models.Component, error)
+	RefreshComponentProjectInformation(project models.ComponentProject)
+	GetLicense(component models.Component) (models.Component, error)
 }

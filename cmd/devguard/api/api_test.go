@@ -15,13 +15,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMultiTenantMiddleware(t *testing.T) {
+func TestMultiOrganizationMiddleware(t *testing.T) {
 	t.Run("it should allow read requests, if the organization is public", func(t *testing.T) {
 		// arrange
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		ctx := e.NewContext(req, rec)
 
 		mockRBACProvider := mocks.AccesscontrolRBACProvider{}
 		mockOrgRepo := mocks.ApiOrgRepository{}
@@ -29,20 +29,20 @@ func TestMultiTenantMiddleware(t *testing.T) {
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
-		mockOrgRepo.On("ReadBySlug", "tenant-slug").Return(org, nil)
+		mockOrgRepo.On("ReadBySlug", "organization-slug").Return(org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
 		mockRBAC.On("HasAccess", auth.NoSession.GetUserID()).Return(false)
 
-		c.SetParamNames("tenant")
-		c.SetParamValues("tenant-slug")
-		c.Set("session", auth.NoSession)
+		ctx.SetParamNames("organization")
+		ctx.SetParamValues("organization-slug")
+		ctx.Set("session", auth.NoSession)
 
-		middleware := multiTenantMiddleware(&mockRBACProvider, &mockOrgRepo)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgRepo)
 
 		// act
-		err := middleware(func(c echo.Context) error {
-			return c.JSON(http.StatusOK, "success")
-		})(c)
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
 
 		// assert
 		assert.NoError(t, err)
@@ -57,7 +57,7 @@ func TestMultiTenantMiddleware(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		ctx := e.NewContext(req, rec)
 
 		mockRBACProvider := mocks.AccesscontrolRBACProvider{}
 		mockOrgRepo := mocks.ApiOrgRepository{}
@@ -66,20 +66,20 @@ func TestMultiTenantMiddleware(t *testing.T) {
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: false}
 		session := auth.NewSession("user-id", []string{"test-role"})
 
-		mockOrgRepo.On("ReadBySlug", "tenant-slug").Return(org, nil)
+		mockOrgRepo.On("ReadBySlug", "organization-slug").Return(org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
 		mockRBAC.On("HasAccess", "user-id").Return(false)
 
-		c.SetParamNames("tenant")
-		c.SetParamValues("tenant-slug")
-		c.Set("session", session)
+		ctx.SetParamNames("organization")
+		ctx.SetParamValues("organization-slug")
+		ctx.Set("session", session)
 
-		middleware := multiTenantMiddleware(&mockRBACProvider, &mockOrgRepo)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgRepo)
 
 		// act
-		middleware(func(c echo.Context) error {
-			return c.JSON(http.StatusOK, "success")
-		})(c) // nolint:errcheck
+		middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx) // nolint:errcheck
 
 		// assert
 		assert.Equal(t, http.StatusForbidden, rec.Code)
@@ -88,49 +88,49 @@ func TestMultiTenantMiddleware(t *testing.T) {
 		mockRBAC.AssertExpectations(t)
 	})
 
-	t.Run("it should return error if tenant is not provided", func(t *testing.T) {
+	t.Run("it should return error if organization is not provided", func(t *testing.T) {
 		// arrange
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		ctx := e.NewContext(req, rec)
 
 		mockRBACProvider := mocks.AccesscontrolRBACProvider{}
 		mockOrgRepo := mocks.ApiOrgRepository{}
 
-		middleware := multiTenantMiddleware(&mockRBACProvider, &mockOrgRepo)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgRepo)
 
 		// act
-		middleware(func(c echo.Context) error {
-			return c.JSON(http.StatusOK, "success")
-		})(c) // nolint:errcheck
+		middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx) // nolint:errcheck
 
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		mockOrgRepo.AssertExpectations(t)
 		mockRBACProvider.AssertExpectations(t)
 	})
 
-	t.Run("it should return error if tenant is not found", func(t *testing.T) {
+	t.Run("it should return error if organization is not found", func(t *testing.T) {
 		// arrange
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		ctx := e.NewContext(req, rec)
 
 		mockRBACProvider := mocks.AccesscontrolRBACProvider{}
 		mockOrgRepo := mocks.ApiOrgRepository{}
 
-		mockOrgRepo.On("ReadBySlug", "tenant-slug").Return(models.Org{}, errors.New("not found"))
+		mockOrgRepo.On("ReadBySlug", "organization-slug").Return(models.Org{}, errors.New("not found"))
 
-		c.SetParamNames("tenant")
-		c.SetParamValues("tenant-slug")
+		ctx.SetParamNames("organization")
+		ctx.SetParamValues("organization-slug")
 
-		middleware := multiTenantMiddleware(&mockRBACProvider, &mockOrgRepo)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgRepo)
 
 		// act
-		middleware(func(c echo.Context) error {
-			return c.JSON(http.StatusOK, "success")
-		})(c) // nolint:errcheck
+		middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx) // nolint:errcheck
 
 		// assert
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -144,11 +144,11 @@ func TestAccessControlMiddleware(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
 		mockSession := auth.NewSession("user-id", []string{"test-role"})
-		mockTenant := models.Org{}
+		mockOrganization := models.Org{}
 
 		userID := "user-id"
 		obj := accesscontrol.Object("test-object")
@@ -156,16 +156,16 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(true, nil)
 
-		c.Set("rbac", &mockRBAC)
-		c.Set("session", mockSession)
-		c.Set("tenant", mockTenant)
+		ctx.Set("rbac", &mockRBAC)
+		ctx.Set("session", mockSession)
+		ctx.Set("organization", mockOrganization)
 
 		middleware := accessControlMiddleware(obj, act)
 
 		// act
-		err := middleware(func(c echo.Context) error {
-			return c.JSON(http.StatusOK, "success")
-		})(c)
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
 
 		// assert
 		assert.NoError(t, err)
@@ -178,11 +178,11 @@ func TestAccessControlMiddleware(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
-		mockSession := auth.NewSession("user-id", []string{"test-role"})
-		mockTenant := models.Org{}
+		mockSession := auth.NewSession("user-id")
+		mockOrganization := models.Org{}
 
 		userID := "user-id"
 		obj := accesscontrol.Object("test-object")
@@ -190,16 +190,16 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(false, nil)
 
-		c.Set("rbac", &mockRBAC)
-		c.Set("session", mockSession)
-		c.Set("tenant", mockTenant)
+		ctx.Set("rbac", &mockRBAC)
+		ctx.Set("session", mockSession)
+		ctx.Set("organization", mockOrganization)
 
 		middleware := accessControlMiddleware(obj, act)
 
 		// act
-		err := middleware(func(c echo.Context) error {
-			return c.JSON(http.StatusOK, "success")
-		})(c) // nolint:errcheck
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx) // nolint:errcheck
 
 		// assert
 		assert.Equal(t, http.StatusForbidden, rec.Code)
@@ -212,11 +212,11 @@ func TestAccessControlMiddleware(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
 		mockSession := auth.NewSession("user-id", []string{"test-role"})
-		mockTenant := models.Org{
+		mockOrganization := models.Org{
 			IsPublic: true,
 		}
 
@@ -226,16 +226,16 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(false, nil)
 
-		c.Set("rbac", &mockRBAC)
-		c.Set("session", &mockSession)
-		c.Set("tenant", mockTenant)
+		ctx.Set("rbac", &mockRBAC)
+		ctx.Set("session", &mockSession)
+		ctx.Set("organization", mockOrganization)
 
 		middleware := accessControlMiddleware(obj, act)
 
 		// act
-		err := middleware(func(c echo.Context) error {
-			return c.JSON(http.StatusOK, "success")
-		})(c)
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
 
 		// assert
 		assert.NoError(t, err)
@@ -248,11 +248,11 @@ func TestAccessControlMiddleware(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
 		mockSession := auth.NewSession("user-id", []string{"test-role"})
-		mockTenant := models.Org{}
+		mockOrganization := models.Org{}
 
 		userID := "user-id"
 		obj := accesscontrol.Object("test-object")
@@ -260,16 +260,16 @@ func TestAccessControlMiddleware(t *testing.T) {
 
 		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(false, errors.New("error"))
 
-		c.Set("rbac", &mockRBAC)
-		c.Set("session", &mockSession)
-		c.Set("tenant", mockTenant)
+		ctx.Set("rbac", &mockRBAC)
+		ctx.Set("session", &mockSession)
+		ctx.Set("organization", mockOrganization)
 
 		middleware := accessControlMiddleware(obj, act)
 
 		// act
-		err := middleware(func(c echo.Context) error {
-			return c.JSON(http.StatusOK, "success")
-		})(c) // nolint:errcheck
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx) // nolint:errcheck
 
 		// assert
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
