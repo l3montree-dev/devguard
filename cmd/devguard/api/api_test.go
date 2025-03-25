@@ -181,7 +181,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
-		mockSession := auth.NewSession("user-id")
+		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockOrganization := models.Org{}
 
 		userID := "user-id"
