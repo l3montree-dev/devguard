@@ -101,7 +101,7 @@ type DependencyVulnRepository interface {
 
 	GetAllVulnsByAssetID(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetVersionNameAndAssetId(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetVersionID uuid.UUID) ([]models.DependencyVuln, error)
+	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], map[string]int, error)
 	GetDefaultDependencyVulnsByOrgIdPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDefaultDependencyVulnsByProjectIdPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
@@ -185,6 +185,7 @@ type DependencyVulnService interface {
 	UserDetectedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
 	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, assetVersionName string) (models.VulnEvent, error)
 	CreateIssuesForVulns(asset models.Asset, vulnList []models.DependencyVuln) error
+	ShouldCreateIssue(assetVersion models.AssetVersion) bool
 }
 
 type AssetVersionService interface {
@@ -197,6 +198,7 @@ type AssetVersionService interface {
 }
 
 type AssetVersionRepository interface {
+	All() ([]models.AssetVersion, error)
 	Read(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error)
 	GetDB(DB) DB
 	Delete(tx DB, assetVersion *models.AssetVersion) error

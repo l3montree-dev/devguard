@@ -33,6 +33,7 @@ type service struct {
 	dependencyVulnRepository core.DependencyVulnRepository
 	vulnEventRepository      core.VulnEventRepository
 
+	assetVersionRepository core.AssetVersionRepository
 	assetRepository        core.AssetRepository
 	cveRepository          core.CveRepository
 	projectRepository      core.ProjectRepository
@@ -40,7 +41,7 @@ type service struct {
 	thirdPartyIntegration  core.ThirdPartyIntegration
 }
 
-func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetRepository core.AssetRepository, cveRepository core.CveRepository, orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, thirdPartyIntegration core.ThirdPartyIntegration) *service {
+func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetRepository core.AssetRepository, cveRepository core.CveRepository, orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, thirdPartyIntegration core.ThirdPartyIntegration, assetVersionRepository core.AssetVersionRepository) *service {
 	return &service{
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
@@ -49,6 +50,7 @@ func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEven
 		projectRepository:        projectRepository,
 		organizationRepository:   orgRepository,
 		thirdPartyIntegration:    thirdPartyIntegration,
+		assetVersionRepository:   assetVersionRepository,
 	}
 }
 
@@ -118,14 +120,14 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	userID := "system"
 	justification := "System recalculated raw risk assessment"
 
-	assets, err := s.assetRepository.GetAllAssetsFromDB()
+	assetVersions, err := s.assetVersionRepository.All()
 	if err != nil {
 		return fmt.Errorf("could not get all assets: %v", err)
 	}
 
-	for _, asset := range assets {
+	for _, assetVersion := range assetVersions {
 		// get all dependencyVulns of the asset
-		dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID)
 		if len(dependencyVulns) == 0 {
 			continue
 		}
@@ -134,14 +136,15 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 			return fmt.Errorf("could not get all dependencyVulns by asset id: %v", err)
 		}
 
-		err = s.RecalculateRawRiskAssessment(nil, userID, dependencyVulns, justification, asset)
+		err = s.RecalculateRawRiskAssessment(nil, userID, dependencyVulns, justification, assetVersion.Asset)
 		if err != nil {
 			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
-
-		err = s.CreateIssuesForVulns(asset, dependencyVulns)
-		if err != nil {
-			return err
+		if s.ShouldCreateIssue(assetVersion) {
+			err = s.CreateIssuesForVulns(assetVersion.Asset, dependencyVulns)
+			if err != nil {
+				return err
+			}
 		}
 
 	}
@@ -352,4 +355,12 @@ func (s *service) createIssue(cveName string, asset models.Asset, assetVersionNa
 	}
 
 	return nil
+}
+
+func (s *service) ShouldCreateIssue(assetVersion models.AssetVersion) bool {
+	//if the vulnerability was found anywhere else than the default branch we don't want to create an issue
+	if assetVersion.DefaultBranch {
+		return true
+	}
+	return false
 }
