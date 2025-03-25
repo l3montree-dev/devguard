@@ -723,6 +723,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 	case core.ManualMitigateEvent:
 
 		asset := core.GetAsset(event.Ctx)
+		assetVersionName := core.GetAssetVersion(event.Ctx).Name
 		repoId, err := core.GetRepositoryID(event.Ctx)
 		if err != nil {
 			return err
@@ -741,7 +742,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		return g.CreateIssue(event.Ctx.Request().Context(), asset, repoId, dependencyVulnId, projectSlug, orgSlug)
+		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, dependencyVulnId, projectSlug, orgSlug)
 	case core.VulnEvent:
 		ev := event.Event
 
@@ -963,7 +964,7 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 	})
 }
 
-func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
+func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
 
 	if !strings.HasPrefix(repoId, "gitlab:") {
 		// this integration only handles gitlab repositories
@@ -1005,7 +1006,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("DependencyVuln %s", dependencyVuln.CVE.CVE)),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	}
 

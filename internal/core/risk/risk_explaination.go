@@ -226,7 +226,7 @@ type Explanation struct {
 	fixedVersion          *string
 }
 
-func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) string {
+func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName string) string {
 	var str strings.Builder
 	str.WriteString(fmt.Sprintf("# %s\n", e.cveId))
 	str.WriteString(e.cveDescription)
@@ -257,7 +257,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) s
 	str.WriteString(fmt.Sprintf("%s\n", e.cvssMessage))
 	str.WriteString("\n")
 	//TODO: change it
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, e.dependencyVulnId))
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
 	str.WriteString("\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180

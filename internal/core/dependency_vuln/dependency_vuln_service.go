@@ -303,7 +303,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 			if vulnerability.TicketID == nil {
 				if *vulnerability.RawRiskAssessment >= *riskThreshold || vulnerability.CVE.CVSS >= float32(*cvssThreshold) {
 
-					err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
+					err := s.createIssue(vulnerability.ID, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
 					if err != nil {
 						return err
 					}
@@ -315,7 +315,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 			for _, vulnerability := range vulnList {
 				if vulnerability.TicketID == nil {
 					if *vulnerability.RawRiskAssessment >= *riskThreshold {
-						err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
+						err := s.createIssue(vulnerability.ID, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
 						if err != nil {
 							return err
 						}
@@ -327,7 +327,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 			for _, vulnerability := range vulnList {
 				if vulnerability.TicketID == nil {
 					if vulnerability.CVE.CVSS >= float32(*cvssThreshold) {
-						err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
+						err := s.createIssue(vulnerability.ID, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
 						if err != nil {
 							return err
 						}
@@ -341,12 +341,12 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
-func (s *service) createIssue(cveName string, asset models.Asset, repoId string, orgSlug string, projectSlug string) error {
+func (s *service) createIssue(cveName string, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.CreateIssue(ctx, asset, repoId, cveName, projectSlug, orgSlug)
+	err := s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, cveName, projectSlug, orgSlug)
 	if err != nil {
 		return err
 	}

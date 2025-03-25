@@ -406,6 +406,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
 		repoId, err := core.GetRepositoryID(event.Ctx)
+		assetVersionName := core.GetAssetVersion(event.Ctx).Name
 		if err != nil {
 			return err
 		}
@@ -423,7 +424,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		return g.CreateIssue(event.Ctx.Request().Context(), asset, repoId, dependencyVulnId, projectSlug, orgSlug)
+		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, dependencyVulnId, projectSlug, orgSlug)
 
 	case core.VulnEvent:
 		ev := event.Event
@@ -532,7 +533,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 	return nil
 }
 
-func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
+func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
 
 	if !strings.HasPrefix(repoId, "github:") {
 		// this integration only handles github repositories.
@@ -563,7 +564,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	issue := &github.IssueRequest{
 		Title:  dependencyVuln.CVEID,
-		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
 		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment))},
 	}
 
