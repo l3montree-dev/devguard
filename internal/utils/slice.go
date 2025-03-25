@@ -150,6 +150,22 @@ func Contains[T comparable](s []T, el T) bool {
 	return false
 }
 
+func ContainAll[T comparable](s []T, needed []T) bool {
+	for _, n := range needed {
+		found := false
+		for _, h := range s {
+			if n == h {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
 func MergeUnrelated[A, B any](a []A, b []B) []any {
 	res := make([]any, 0)
 	for _, v := range a {

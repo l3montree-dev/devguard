@@ -28,6 +28,7 @@ import (
 
 type AuthSession interface {
 	GetUserID() string
+	GetScopes() []string
 }
 
 func GetThirdPartyIntegration(c Context) IntegrationAggregate {

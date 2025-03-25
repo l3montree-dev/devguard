@@ -19,6 +19,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
@@ -58,10 +59,11 @@ func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.M
 			oryKratosSessionCookie := getCookie("ory_kratos_session", c.Cookies())
 
 			var userID string
+			var scopes string
 			var err error
 
 			if oryKratosSessionCookie == nil {
-				userID, _, err = verifier.VerifyRequestSignature(c.Request())
+				userID, scopes, err = verifier.VerifyRequestSignature(c.Request())
 				if err != nil {
 					c.Set("session", NoSession)
 					return next(c)
@@ -75,9 +77,13 @@ func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.M
 					c.Set("session", NoSession)
 					return next(c)
 				}
+				//TODO: check if it is right to set all scopes
+				scopes = "scanAsset manageAsset"
 			}
 
-			c.Set("session", NewSession(userID))
+			scopesArray := strings.Fields(scopes)
+
+			c.Set("session", NewSession(userID, scopesArray))
 
 			return next(c)
 		}

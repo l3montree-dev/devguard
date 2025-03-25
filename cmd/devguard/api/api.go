@@ -41,6 +41,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/echohttp"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -236,12 +237,18 @@ func projectAccessControl(projectRepository projectRepository, obj accesscontrol
 	}
 }
 
-func neededScope(scopes []string) core.MiddlewareFunc {
+func neededScope(neededScopes []string) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c core.Context) error {
-			//user := core.GetSession(c).GetUserID()
+			userScopes := core.GetSession(c).GetScopes()
 
-			return echo.NewHTTPError(403, "forbidden")
+			ok := utils.ContainAll(userScopes, neededScopes)
+			if !ok {
+				return echo.NewHTTPError(403, "your personal access token does not have the required scope, needed scopes: "+strings.Join(neededScopes, ", "))
+			}
+
+			return next(c)
+
 		}
 	}
 }
@@ -443,9 +450,9 @@ func BuildRouter(db core.DB) *echo.Echo {
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation)
 
 	//TODO: change "/scan/" to "/sbom-scan/"
-	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, neededScope([]string{"scanAsset", "manageAsset"}), assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
-	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"manage-all", "asset-scan"}), assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, assetNameMiddleware(), multiTenantMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
 	patRouter := sessionRouter.Group("/pats")
 	patRouter.POST("/", patController.Create)
