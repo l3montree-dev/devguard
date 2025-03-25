@@ -359,8 +359,5 @@ func (s *service) createIssue(cveName string, asset models.Asset, assetVersionNa
 
 func (s *service) ShouldCreateIssue(assetVersion models.AssetVersion) bool {
 	//if the vulnerability was found anywhere else than the default branch we don't want to create an issue
-	if assetVersion.DefaultBranch {
-		return true
-	}
-	return false
+	return assetVersion.DefaultBranch
 }
