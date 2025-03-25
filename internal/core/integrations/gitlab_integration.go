@@ -111,7 +111,13 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
 
+	frontendUrl := os.Getenv("FRONTEND_URL")
+	if frontendUrl == "" {
+		panic("FRONTEND_URL is not set")
+	}
+
 	return &gitlabIntegration{
+		frontendUrl:                 frontendUrl,
 		aggregatedVulnRepository:    aggregatedVulnRepository,
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
 		dependencyVulnRepository:    dependencyVulnRepository,
