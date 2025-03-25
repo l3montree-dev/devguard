@@ -455,9 +455,9 @@ func BuildRouter(db core.DB) *echo.Echo {
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation)
 
 	//TODO: change "/scan/" to "/sbom-scan/"
-	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, neededScope([]string{"scanAsset"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
-	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"scanAsset"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
 	patRouter := sessionRouter.Group("/pats")
 	patRouter.POST("/", patController.Create)
@@ -475,7 +475,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	orgRouter.GET("/", orgController.List)
 
 	//Api functions for interacting with an organization  ->  .../organizations/<organization-name>/...
-	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgRepository), neededScope([]string{"manageAsset", "scanAsset"}))
+	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgRepository), neededScope([]string{"manage", "scan"}))
 	organizationRouter.DELETE("/", orgController.Delete, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
 	organizationRouter.GET("/", orgController.Read, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
 

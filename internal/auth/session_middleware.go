@@ -78,7 +78,7 @@ func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.M
 					return next(c)
 				}
 				//TODO: check if it is right to set all scopes
-				scopes = "scanAsset manageAsset"
+				scopes = "scan manage"
 			}
 
 			scopesArray := strings.Fields(scopes)
