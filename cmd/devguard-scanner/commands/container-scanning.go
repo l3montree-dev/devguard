@@ -45,7 +45,8 @@ func NewContainerScanningCommand() *cobra.Command {
 
 			if err != nil {
 				slog.Error("container scanning failed", "err", err)
-				return
+				panic(err.Error())
+
 			}
 		},
 	}

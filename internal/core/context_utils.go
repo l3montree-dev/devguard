@@ -50,7 +50,12 @@ func GetAuthAdminClient(c Context) *client.APIClient {
 func GetVulnID(c Context) (string, error) {
 	dependencyVulnID := c.Param("dependencyVulnId")
 	if dependencyVulnID == "" {
-		return "", fmt.Errorf("could not get dependencyVuln id")
+		dependencyVulnIDFromGet, ok := c.Get("dependencyVulnId").(string)
+		if !ok || dependencyVulnIDFromGet == "" {
+			return "", fmt.Errorf("could not get dependencyVuln id from Get")
+		}
+
+		return dependencyVulnIDFromGet, nil
 	}
 	return dependencyVulnID, nil
 }
@@ -163,7 +168,8 @@ func GetProject(c Context) models.Project {
 	return c.Get("project").(models.Project)
 }
 
-func recursiveGetProjectRepositoryID(project models.Project) (string, error) {
+func RecursiveGetProjectRepositoryID(project models.Project) (string, error) {
+
 	if project.RepositoryID != nil {
 		return *project.RepositoryID, nil
 	}
@@ -172,7 +178,15 @@ func recursiveGetProjectRepositoryID(project models.Project) (string, error) {
 		return "", fmt.Errorf("could not get repository id")
 	}
 
-	return recursiveGetProjectRepositoryID(*project.Parent)
+	return RecursiveGetProjectRepositoryID(*project.Parent)
+}
+
+func GetRepositoryIdFromAssetAndProject(project models.Project, asset models.Asset) (string, error) {
+	if asset.RepositoryID != nil {
+		return *asset.RepositoryID, nil
+	}
+
+	return RecursiveGetProjectRepositoryID(project)
 }
 
 func GetRepositoryID(c Context) (string, error) {
@@ -181,10 +195,9 @@ func GetRepositoryID(c Context) (string, error) {
 	if asset.RepositoryID != nil {
 		return *asset.RepositoryID, nil
 	}
-
 	// get the project
 	project := GetProject(c)
-	return recursiveGetProjectRepositoryID(project)
+	return GetRepositoryIdFromAssetAndProject(project, asset)
 }
 
 type PageInfo struct {

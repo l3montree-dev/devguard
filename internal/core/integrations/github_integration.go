@@ -17,7 +17,6 @@ package integrations
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -28,7 +27,6 @@ import (
 	"github.com/google/go-github/v62/github"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -60,16 +58,12 @@ type githubClientFacade interface {
 type githubIntegration struct {
 	githubAppInstallationRepository core.GithubAppInstallationRepository
 	externalUserRepository          core.ExternalUserRepository
-
-	dependencyVulnRepository core.DependencyVulnRepository
-	vulnEventRepository      core.VulnEventRepository
-
-	aggregatedVulnRepository core.VulnRepository
-
-	frontendUrl            string
-	assetRepository        core.AssetRepository
-	assetVersionRepository core.AssetVersionRepository
-	dependencyVulnService  core.DependencyVulnService
+	dependencyVulnRepository        core.DependencyVulnRepository
+	vulnEventRepository             core.VulnEventRepository
+	aggregatedVulnRepository        core.VulnRepository
+	frontendUrl                     string
+	assetRepository                 core.AssetRepository
+	assetVersionRepository          core.AssetVersionRepository
 
 	githubClientFactory func(repoId string) (githubClientFacade, error)
 }
@@ -92,14 +86,11 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 	return &githubIntegration{
 		githubAppInstallationRepository: githubAppInstallationRepository,
 		externalUserRepository:          repositories.NewExternalUserRepository(db),
-
-		dependencyVulnRepository: dependencyVulnRepository,
-		vulnEventRepository:      vulnEventRepository,
-		dependencyVulnService:    dependency_vuln.NewService(dependencyVulnRepository, vulnEventRepository, repositories.NewAssetRepository(db), repositories.NewCVERepository(db)),
-
-		frontendUrl:            frontendUrl,
-		assetRepository:        repositories.NewAssetRepository(db),
-		assetVersionRepository: repositories.NewAssetVersionRepository(db),
+		dependencyVulnRepository:        dependencyVulnRepository,
+		vulnEventRepository:             vulnEventRepository,
+		frontendUrl:                     frontendUrl,
+		assetRepository:                 repositories.NewAssetRepository(db),
+		assetVersionRepository:          repositories.NewAssetVersionRepository(db),
 
 		githubClientFactory: func(repoId string) (githubClientFacade, error) {
 			return NewGithubClient(installationIdFromRepositoryID(repoId))
@@ -416,101 +407,23 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		asset := core.GetAsset(event.Ctx)
 		repoId, err := core.GetRepositoryID(event.Ctx)
 		if err != nil {
-			return nil
+			return err
 		}
+		projectSlug, err := core.GetProjectSlug(event.Ctx)
 
-		if !strings.HasPrefix(repoId, "github:") {
-			// this integration only handles github repositories.
-			return nil
+		if err != nil {
+			return err
 		}
-
-		vulnId, err := core.GetVulnID(event.Ctx)
+		dependencyVulnId, err := core.GetVulnID(event.Ctx)
+		if err != nil {
+			return err
+		}
+		orgSlug, err := core.GetOrgSlug(event.Ctx)
 		if err != nil {
 			return err
 		}
 
-		dependencyVuln, err := g.dependencyVulnRepository.Read(vulnId)
-		if err != nil {
-			return err
-		}
-
-		// we create a new ticket in github
-		client, err := g.githubClientFactory(repoId)
-		if err != nil {
-			return err
-		}
-		riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
-
-		exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
-		// print json stringify to the console
-		orgSlug, _ := core.GetOrgSlug(event.Ctx)
-		projectSlug, _ := core.GetProjectSlug(event.Ctx)
-		assetSlug, _ := core.GetAssetSlug(event.Ctx)
-
-		// read the justification from the body
-		var justification map[string]string
-		err = json.NewDecoder(event.Ctx.Request().Body).Decode(&justification)
-		if err != nil {
-			return err
-		}
-
-		// create a new issue
-		issue := &github.IssueRequest{
-			Title:  dependencyVuln.CVEID,
-			Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug) + "\n\n------\n\n" + justification["comment"]),
-			Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment))},
-		}
-
-		owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
-		if err != nil {
-			return err
-		}
-
-		createdIssue, _, err := client.CreateIssue(context.Background(), owner, repo, issue)
-		if err != nil {
-			return err
-		}
-
-		// todo - we are editing the labels on each call. Actually we only need todo it once
-		_, _, err = client.EditIssueLabel(context.Background(), owner, repo, "severity:"+strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), &github.Label{
-			Description: github.String("Severity of the dependencyVuln"),
-			Color:       github.String(risk.RiskToColor(*dependencyVuln.RawRiskAssessment)),
-		})
-		if err != nil {
-			slog.Error("could not update label", "err", err)
-		}
-		_, _, err = client.EditIssueLabel(context.Background(), owner, repo, "devguard", &github.Label{
-			Description: github.String("DevGuard"),
-			Color:       github.String("182654"),
-		})
-		if err != nil {
-			slog.Error("could not update label", "err", err)
-		}
-
-		// save the issue id to the dependencyVuln
-		dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("github:%d", createdIssue.GetNumber()))
-		dependencyVuln.TicketURL = utils.Ptr(createdIssue.GetHTMLURL())
-		session := core.GetSession(event.Ctx)
-		userID := session.GetUserID()
-		// create an event
-		VulnEvent := models.NewMitigateEvent(dependencyVuln.ID, userID, justification["comment"], map[string]any{
-			"ticketId":  *dependencyVuln.TicketID,
-			"ticketUrl": createdIssue.GetHTMLURL(),
-		})
-		// save the dependencyVuln and the event in a transaction
-		err = g.dependencyVulnService.ApplyAndSave(nil, &dependencyVuln, &VulnEvent)
-		// if an error did happen, delete the issue from github
-		if err != nil {
-			_, _, err := client.EditIssue(context.TODO(), owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
-				State: github.String("closed"),
-			})
-			if err != nil {
-				slog.Error("could not delete issue", "err", err)
-			}
-			return err
-		}
-
-		return nil
+		return g.CreateIssue(event.Ctx.Request().Context(), asset, repoId, dependencyVulnId, projectSlug, orgSlug)
 
 	case core.VulnEvent:
 		ev := event.Event
@@ -616,5 +529,86 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
+
+	if !strings.HasPrefix(repoId, "github:") {
+		// this integration only handles github repositories.
+		return nil
+	}
+
+	owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
+	if err != nil {
+		return err
+	}
+
+	dependencyVuln, err := g.dependencyVulnRepository.Read(dependencyVulnId)
+	if err != nil {
+		return err
+	}
+
+	// we create a new ticket in github
+	client, err := g.githubClientFactory(repoId)
+	if err != nil {
+		return err
+	}
+
+	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
+
+	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
+
+	assetSlug := asset.Slug
+
+	issue := &github.IssueRequest{
+		Title:  dependencyVuln.CVEID,
+		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment))},
+	}
+
+	createdIssue, _, err := client.CreateIssue(context.Background(), owner, repo, issue)
+	if err != nil {
+		return err
+	}
+
+	// todo - we are editing the labels on each call. Actually we only need todo it once
+	_, _, err = client.EditIssueLabel(context.Background(), owner, repo, "severity:"+strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), &github.Label{
+		Description: github.String("Severity of the dependencyVuln"),
+		Color:       github.String(risk.RiskToColor(*dependencyVuln.RawRiskAssessment)),
+	})
+	if err != nil {
+		slog.Error("could not update label", "err", err)
+	}
+	_, _, err = client.EditIssueLabel(context.Background(), owner, repo, "devguard", &github.Label{
+		Description: github.String("DevGuard"),
+		Color:       github.String("182654"),
+	})
+	if err != nil {
+		slog.Error("could not update label", "err", err)
+	}
+
+	// save the issue id to the dependencyVuln
+	dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("github:%d", createdIssue.GetNumber()))
+	dependencyVuln.TicketURL = utils.Ptr(createdIssue.GetHTMLURL())
+
+	// create an event
+	VulnEvent := models.NewMitigateEvent(dependencyVuln.ID, "devguard", "Risk exceeds predefined threshold", map[string]any{
+		"ticketId":  *dependencyVuln.TicketID,
+		"ticketUrl": createdIssue.GetHTMLURL(),
+	})
+	// save the dependencyVuln and the event in a transaction
+	err = g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &VulnEvent)
+	// if an error did happen, delete the issue from github
+	if err != nil {
+		_, _, err := client.EditIssue(context.TODO(), owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
+			State: github.String("closed"),
+		})
+		if err != nil {
+			slog.Error("could not delete issue", "err", err)
+		}
+		return err
+	}
+
 	return nil
 }
