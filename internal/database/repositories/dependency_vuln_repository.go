@@ -149,23 +149,6 @@ func (g dependencyVulnRepository) Read(id string) (models.DependencyVuln, error)
 	return t, err
 }
 
-func (g dependencyVulnRepository) ReadDependencyVulnWithAssetVersionEvents(id string) (models.DependencyVuln, []models.VulnEvent, error) {
-	var t models.DependencyVuln
-	err := g.db.Preload("CVE.Weaknesses").Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", id).Error
-
-	if err != nil {
-		return models.DependencyVuln{}, []models.VulnEvent{}, err
-	}
-
-	var vulnEvents []models.VulnEvent
-	err = g.db.Model(&models.VulnEvent{}).Where("vuln_id = ?", id).Order("created_at ASC").Find(&vulnEvents).Error
-	if err != nil {
-		return models.DependencyVuln{}, vulnEvents, err
-	}
-
-	return t, vulnEvents, err
-}
-
 func (r *dependencyVulnRepository) GetDependencyVulnsByPurl(tx core.DB, purl []string) ([]models.DependencyVuln, error) {
 
 	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
