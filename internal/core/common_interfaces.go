@@ -106,7 +106,6 @@ type DependencyVulnRepository interface {
 	GetDefaultDependencyVulnsByOrgIdPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDefaultDependencyVulnsByProjectIdPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDependencyVulnsByAssetVersionPagedAndFlat(tx DB, assetVersionName string, assetVersionID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
-	ReadDependencyVulnWithAssetVersionEvents(id string) (models.DependencyVuln, []models.VulnEvent, error)
 	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByPurl(tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
