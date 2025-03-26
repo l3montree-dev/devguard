@@ -252,7 +252,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 }
 
 func TestShouldCreateIssue(t *testing.T) {
-	t.Run("Function should return false if the assetVersion is the default branch", func(t *testing.T) {
+	t.Run("should return false if the assetVersion is not the default branch", func(t *testing.T) {
 		assetVersion := models.AssetVersion{
 			DefaultBranch: false,
 		}
@@ -263,7 +263,7 @@ func TestShouldCreateIssue(t *testing.T) {
 			t.Fail()
 		}
 	})
-	t.Run("Function should return true if the assetVersion is the default branch", func(t *testing.T) {
+	t.Run("should return true if the assetVersion is the default branch", func(t *testing.T) {
 		assetVersion := models.AssetVersion{
 			DefaultBranch: true,
 		}
