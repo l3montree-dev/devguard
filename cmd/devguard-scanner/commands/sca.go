@@ -408,19 +408,13 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		}
 
 		if resp.StatusCode != http.StatusOK {
-
 			// read the body
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				return errors.Wrap(err, "could not read body")
+				return errors.Wrap(err, "could not scan file")
 			}
 
-			fmt.Println(string(body))
-
-			// print the body
 			return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
-
-			//return fmt.Errorf("could not scan file: %s", resp.Status)
 		}
 
 		// read and parse the body - it should be an array of dependencyVulns

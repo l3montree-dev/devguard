@@ -243,7 +243,7 @@ func neededScope(neededScopes []string) core.MiddlewareFunc {
 		return func(c core.Context) error {
 			userScopes := core.GetSession(c).GetScopes()
 
-			ok := utils.ContainAll(userScopes, neededScopes)
+			ok := utils.ContainsAll(userScopes, neededScopes)
 			if !ok {
 				return echo.NewHTTPError(403, "your personal access token does not have the required scope, needed scopes: "+strings.Join(neededScopes, ", "))
 			}
