@@ -121,11 +121,13 @@ func (a *assetVersionController) DependencyGraph(ctx core.Context) error {
 	return ctx.JSON(200, tree)
 }
 
+// function to return a graph of all dependencies which lead to the requested pURL
 func (a *assetVersionController) GetDependencyPathFromPURL(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 
 	scanner := ctx.QueryParam("scanner")
 	pURL := ctx.QueryParam("purl")
+
 	if scanner == "" {
 		return echo.NewHTTPError(400, "scanner query param is required")
 	}
