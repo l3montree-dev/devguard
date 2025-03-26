@@ -17,10 +17,14 @@ package pat
 
 import (
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
+
+var AllowedScopes = []string{"manage", "scan"}
 
 type RevokeByPrivateKeyRequest struct {
 	PrivateKey string `json:"privkey" validate:"required"`
@@ -39,6 +43,14 @@ func (p CreateRequest) ToModel(userID string) models.PAT {
 		slog.Error("could not convert public key to fingerprint", "err", err)
 		return models.PAT{}
 	}
+
+	//check if the scopes are valid
+	ok := utils.ContainsAll(strings.Fields(p.Scopes), AllowedScopes)
+	if !ok {
+		slog.Error("invalid scopes", "scopes", p.Scopes)
+		return models.PAT{}
+	}
+
 	pat := models.PAT{
 		UserID:      uuid.MustParse(userID),
 		Description: p.Description,

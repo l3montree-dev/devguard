@@ -459,7 +459,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
-	patRouter := sessionRouter.Group("/pats")
+	patRouter := sessionRouter.Group("/pats", neededScope([]string{"manage, scan"}))
 	patRouter.POST("/", patController.Create)
 	patRouter.GET("/", patController.List)
 	patRouter.DELETE("/:tokenId/", patController.Delete)
