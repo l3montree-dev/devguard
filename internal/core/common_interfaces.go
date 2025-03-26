@@ -89,6 +89,7 @@ type ComponentRepository interface {
 
 	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, scanner string) ([]models.ComponentDependency, error)
 	LoadComponentsWithProject(tx DB, assetVersionName string, assetID uuid.UUID, scanner string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
+	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, scanner string) ([]models.ComponentDependency, error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
 	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency) error

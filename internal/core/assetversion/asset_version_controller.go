@@ -121,6 +121,28 @@ func (a *assetVersionController) DependencyGraph(ctx core.Context) error {
 	return ctx.JSON(200, tree)
 }
 
+func (a *assetVersionController) GetDependencyPathFromPURL(ctx core.Context) error {
+	assetVersion := core.GetAssetVersion(ctx)
+
+	scanner := ctx.QueryParam("scanner")
+	pURL := ctx.QueryParam("purl")
+	if scanner == "" {
+		return echo.NewHTTPError(400, "scanner query param is required")
+	}
+
+	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, scanner)
+	if err != nil {
+		return err
+	}
+
+	tree := BuildDependencyTree(components)
+	if tree.Root.Children == nil {
+		tree.Root.Children = make([]*treeNode, 0)
+	}
+
+	return ctx.JSON(200, tree)
+}
+
 func (a *assetVersionController) SBOMJSON(ctx core.Context) error {
 	sbom, err := a.buildSBOM(ctx)
 	if err != nil {

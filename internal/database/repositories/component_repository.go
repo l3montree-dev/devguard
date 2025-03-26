@@ -75,6 +75,34 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 	return components, err
 }
 
+func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error) {
+	var components []models.ComponentDependency
+	var err error
+
+	query := c.GetDB(tx).Raw(`WITH RECURSIVE components_cte AS (
+			SELECT *
+			FROM component_dependencies
+			WHERE dependency_purl like ? AND asset_id = ? AND asset_version_name = ?
+			UNION ALL
+
+			SELECT *
+			FROM component_dependencies AS co
+			INNER JOIN components_cte AS cte ON co.dependency_purl = cte.component_purl AND co.asset_id = ? AND co.asset_version_name = ?
+		)
+		SELECT DISTINCT * FROM components_cte;`, pURL, assetID, assetVersionName, assetID, assetVersionName)
+
+	if scannerID != "" {
+		query = query.Where("scanner_id = ?", scannerID)
+	}
+
+	err = query.Find(&components).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return components, err
+}
+
 func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner string) (map[string]int, error) {
 	var licenses []struct {
 		License string
