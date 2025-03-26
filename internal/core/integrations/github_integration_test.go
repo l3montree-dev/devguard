@@ -29,6 +29,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:123"),
 		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
+		})
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
 			Ctx: ctx,
@@ -51,6 +54,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:owner:repo/1"),
 		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
+		})
 		ctx.SetParamNames("dependencyVulnId", "projectSlug", "orgSlug")
 		ctx.SetParamValues("1", "test", "test")
 
@@ -70,6 +76,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("gitlab:123"),
+		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
 		})
 		core.SetProject(ctx, models.Project{})
 		ctx.SetParamNames("dependencyVulnId", "projectSlug", "orgSlug")
@@ -98,6 +107,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:1"),
+		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
 		})
 		core.SetOrgSlug(ctx, "test")
 		core.SetProjectSlug(ctx, "test")
@@ -158,6 +170,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:owner:repo/1"),
+		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
 		})
 		core.SetOrgSlug(ctx, "test")
 		core.SetProjectSlug(ctx, "test")
@@ -228,6 +243,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:owner:repo/1"),
+		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
 		})
 		core.SetOrgSlug(ctx, "test")
 		core.SetProjectSlug(ctx, "test")

@@ -134,7 +134,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	}
 
 	//Check if we want to create an issue for this assetVersion
-	if shouldCreateIssue(assetVersion) {
+	if s.dependencyVulnService.ShouldCreateIssue(assetVersion) {
 		err := s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
 		if err != nil {
 			return scanResults, err
@@ -159,14 +159,6 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	scanResults.DependencyVulns = utils.Map(newState, dependency_vuln.DependencyVulnToDto)
 
 	return scanResults, nil
-}
-
-func shouldCreateIssue(assetVersion models.AssetVersion) bool {
-	//if the vulnerability was found anywhere else than the default branch we don't want to create an issue
-	if assetVersion.DefaultBranch {
-		return true
-	}
-	return false
 }
 
 func (s *httpController) FirstPartyVulnScan(c core.Context) error {
