@@ -81,9 +81,8 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 	var err error
 
 	//Find all needed components  recursively until we hit the root component
-	var query core.DB
 
-	query = c.GetDB(tx).Raw(`WITH RECURSIVE components_cte AS (
+	query := c.GetDB(tx).Raw(`WITH RECURSIVE components_cte AS (
 			SELECT component_purl,dependency_purl,asset_id,scanner_id,depth,semver_start,semver_end
 			FROM component_dependencies
 			WHERE dependency_purl like ? AND asset_id = ? AND asset_version_name = ? AND scanner_id = ?
