@@ -75,6 +75,8 @@ var NoGithubAppInstallationError = fmt.Errorf("no github app installations found
 func NewGithubIntegration(db core.DB) *githubIntegration {
 	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
 
+	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
+
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	vulnEventRepository := repositories.NewVulnEventRepository(db)
 
@@ -86,6 +88,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 	return &githubIntegration{
 		githubAppInstallationRepository: githubAppInstallationRepository,
 		externalUserRepository:          repositories.NewExternalUserRepository(db),
+		aggregatedVulnRepository:        aggregatedVulnRepository,
 		dependencyVulnRepository:        dependencyVulnRepository,
 		vulnEventRepository:             vulnEventRepository,
 		frontendUrl:                     frontendUrl,
