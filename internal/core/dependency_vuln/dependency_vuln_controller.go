@@ -213,14 +213,10 @@ func (c dependencyVulnHttpController) Read(ctx core.Context) error {
 	}
 	asset := core.GetAsset(ctx)
 
-	dependencyVuln, VulnEvents, err := c.dependencyVulnRepository.ReadDependencyVulnWithAssetVersionEvents(dependencyVulnId)
+	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnId)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
-
-	dependencyVuln.Events = utils.Filter(VulnEvents, func(ev models.VulnEvent) bool {
-		return ev.VulnID == dependencyVuln.ID || ev.Type != models.EventTypeDetected
-	})
 
 	risk, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 	dependencyVuln.CVE.Risk = risk
