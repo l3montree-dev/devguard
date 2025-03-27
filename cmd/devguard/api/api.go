@@ -537,7 +537,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectRouter.PUT("/members/:userId/", projectController.ChangeRole, neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
 
 	//Api functions for interacting with an asset inside a project  ->  .../projects/<project-name>/assets/<asset-name>/...
-	assetRouter := projectRouter.Group("/assets/:assetSlug", neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionRead), assetMiddleware(assetRepository))
+	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read, neededScope([]string{"manage", "scan"}))
 	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
 
@@ -580,6 +580,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, neededScope([]string{"scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	assetRouter.POST("/in-toto/", intotoController.Create, neededScope([]string{"scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 
 	assetVersionRouter.GET("/in-toto/:supplyChainId/", intotoController.Read, neededScope([]string{"manage", "scan"}))
