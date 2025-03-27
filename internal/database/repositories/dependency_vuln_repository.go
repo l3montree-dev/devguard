@@ -73,6 +73,14 @@ func (r *dependencyVulnRepository) ListByScanner(assetVersionName string, assetI
 	return dependencyVulns, nil
 }
 
+func (r *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
+	if err := r.Repository.GetDB(r.db).Preload("CVE").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
+		return nil, err
+	}
+	return dependencyVulns, nil
+}
+
 type riskStats struct {
 	TotalRisk           float64 `json:"total_risk"`
 	AvgRisk             float64 `json:"avg_risk"`

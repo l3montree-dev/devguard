@@ -300,7 +300,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		cveDescription: dependencyVuln.CVE.Description,
 
 		affectedComponentName: utils.SafeDereference(dependencyVuln.ComponentPurl),
-		scanner:               dependencyVuln.ScannerID,
+		scanner:               dependencyVuln.ScannerIDs,
 		fixedVersion:          dependencyVuln.ComponentFixedVersion,
 	}
 }

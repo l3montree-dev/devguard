@@ -12,9 +12,10 @@ import (
 type VulnEventType string
 
 const (
-	EventTypeDetected VulnEventType = "detected"
-	EventTypeFixed    VulnEventType = "fixed"
-	EventTypeReopened VulnEventType = "reopened"
+	EventTypeDetected               VulnEventType = "detected"
+	EventTypeDetectedByOtherScanner VulnEventType = "detected_by_other_scanner"
+	EventTypeFixed                  VulnEventType = "fixed"
+	EventTypeReopened               VulnEventType = "reopened"
 
 	//EventTypeRiskAssessmentUpdated VulnEventType = "riskAssessmentUpdated"
 	EventTypeAccepted          VulnEventType = "accepted"
