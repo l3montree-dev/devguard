@@ -6,28 +6,9 @@ WORKDIR /app
 # like linux/amd64
 ARG TARGETPLATFORM
 
-# Define variables based on TARGETPLATFORM
-RUN case "$TARGETPLATFORM" in \
-    "linux/amd64")  OS="Linux"; ARCH="x86_64"; ARCH_OTHER_NAME="amd64" ;; \
-    "linux/arm64")  OS="Linux"; ARCH="arm64"; ARCH_OTHER_NAME="arm64" ;; \
-    "linux/arm/v7") OS="Linux"; ARCH="armv7"; ARCH_OTHER_NAME="armv7" ;; \
-    "darwin/amd64") OS="Darwin"; ARCH="x86_64"; ARCH_OTHER_NAME="amd64" ;; \
-    "darwin/arm64") OS="Darwin"; ARCH="arm64"; ARCH_OTHER_NAME="arm64" ;; \
-    *) echo "Unsupported TARGETPLATFORM: $TARGETPLATFORM" && exit 1 ;; \
-    esac && \
-    echo -n "$OS" >> /os && \
-    echo -n "$ARCH" >> /arch && \
-    echo -n "$ARCH_OTHER_NAME" >> /arch_other_name
+COPY install_devguard_scanner_deps.sh .
 
-ENV CRANE_VERSION=v0.19.1
-
-RUN curl -sL "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_$(cat /os)_$(cat /arch).tar.gz" > go-containerregistry.tar.gz && \
-    tar -zxvf go-containerregistry.tar.gz -C /usr/local/bin/ crane
-
-RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.54.1
-
-
-RUN curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-$(cat /arch_other_name)" && mv cosign-linux-$(cat /arch_other_name) /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
+RUN ./install_devguard_scanner_deps.sh ${TARGETPLATFORM}
 
 COPY . .
 
