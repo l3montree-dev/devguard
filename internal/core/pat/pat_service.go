@@ -133,10 +133,10 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 
 }
 
-func (p *PatService) getPubKeyAndUserIdUsingFingerprint(fingerprint string) (ecdsa.PublicKey, uuid.UUID, error) {
+func (p *PatService) getPubKeyAndUserIdUsingFingerprint(fingerprint string) (ecdsa.PublicKey, uuid.UUID, string, error) {
 	pat, err := p.patRepository.GetByFingerprint(fingerprint)
 	if err != nil {
-		return ecdsa.PublicKey{}, uuid.New(), fmt.Errorf("could not get public key using fingerprint: %v", err)
+		return ecdsa.PublicKey{}, uuid.New(), "", fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
 	pubKey := pat.PubKey
 
@@ -149,19 +149,20 @@ func (p *PatService) getPubKeyAndUserIdUsingFingerprint(fingerprint string) (ecd
 
 	pubKeyECDSA.X, _ = new(big.Int).SetString(pubKey[:len(pubKey)/2], 16)
 	pubKeyECDSA.Y, _ = new(big.Int).SetString(pubKey[len(pubKey)/2:], 16)
-	return pubKeyECDSA, pat.UserID, nil
+
+	return pubKeyECDSA, pat.UserID, pat.Scopes, nil
 }
 
 func (p *PatService) markAsLastUsedNow(fingerprint string) error {
 	return p.patRepository.MarkAsLastUsedNow(fingerprint)
 }
 
-func (p *PatService) VerifyRequestSignature(req *http.Request) (string, error) {
+func (p *PatService) VerifyRequestSignature(req *http.Request) (string, string, error) {
 	fingerprint := req.Header.Get("X-Fingerprint")
-	pubKey, userId, err := p.getPubKeyAndUserIdUsingFingerprint(fingerprint)
+	pubKey, userId, scopes, err := p.getPubKeyAndUserIdUsingFingerprint(fingerprint)
 
 	if err != nil {
-		return "", fmt.Errorf("could not get public key using fingerprint: %v", err)
+		return "", "", fmt.Errorf("could not get public key using fingerprint: %v", err)
 	}
 
 	//config := httpsign.NewVerifyConfig().SetKeyID("my-shared-secret").SetVerifyCreated(false) // for testing only
@@ -170,12 +171,12 @@ func (p *PatService) VerifyRequestSignature(req *http.Request) (string, error) {
 
 	err = httpsign.VerifyRequest("sig77", *verifier, req)
 	if err != nil {
-		return "", fmt.Errorf("could not verify request: %v", err)
+		return "", "", fmt.Errorf("could not verify request: %v", err)
 	}
 
 	p.markAsLastUsedNow(fingerprint) //nolint:errcheck// we don't care if this fails
 
-	return userId.String(), nil
+	return userId.String(), scopes, nil
 }
 
 func (p *PatService) RevokeByPrivateKey(privKey string) error {

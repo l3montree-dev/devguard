@@ -30,6 +30,7 @@ import (
 
 type AuthSession interface {
 	GetUserID() string
+	GetScopes() []string
 }
 
 func GetThirdPartyIntegration(ctx Context) IntegrationAggregate {

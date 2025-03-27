@@ -64,7 +64,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockRBAC := mocks.AccesscontrolAccessControl{}
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: false}
-		session := auth.NewSession("user-id")
+		session := auth.NewSession("user-id", []string{"test-role"})
 
 		mockOrgRepo.On("ReadBySlug", "organization-slug").Return(org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
@@ -147,7 +147,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
-		mockSession := auth.NewSession("user-id")
+		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockOrganization := models.Org{}
 
 		userID := "user-id"
@@ -181,7 +181,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
-		mockSession := auth.NewSession("user-id")
+		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockOrganization := models.Org{}
 
 		userID := "user-id"
@@ -215,7 +215,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
-		mockSession := auth.NewSession("user-id")
+		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockOrganization := models.Org{
 			IsPublic: true,
 		}
@@ -251,7 +251,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBAC := mocks.AccesscontrolAccessControl{}
-		mockSession := auth.NewSession("user-id")
+		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockOrganization := models.Org{}
 
 		userID := "user-id"
@@ -275,5 +275,105 @@ func TestAccessControlMiddleware(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
 		assert.Error(t, err)
 		mockRBAC.AssertExpectations(t)
+	})
+}
+func TestNeededScope(t *testing.T) {
+	t.Run("it should allow access if user has all required scopes", func(t *testing.T) {
+		// arrange
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockSession := auth.NewSession("user-id", []string{"scope1", "scope2", "scope3"})
+		ctx.Set("session", mockSession)
+
+		middleware := neededScope([]string{"scope1", "scope2"})
+
+		handler := func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		}
+		// act
+		handleWithMiddleware := middleware(handler)
+
+		err := handleWithMiddleware(ctx)
+
+		// assert
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("it should deny access if user does not have all required scopes", func(t *testing.T) {
+		// arrange
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockSession := auth.NewSession("user-id", []string{"scope1"})
+		ctx.Set("session", mockSession)
+
+		middleware := neededScope([]string{"scope1", "scope2"})
+
+		// act
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx) // nolint:errcheck
+
+		// assert
+		assert.Error(t, err)
+
+		// should be an echo.HTTPError
+		httpErr, ok := err.(*echo.HTTPError)
+		assert.True(t, ok)
+		assert.Equal(t, http.StatusForbidden, httpErr.Code)
+	})
+
+	t.Run("it should deny access if user has no scopes", func(t *testing.T) {
+		// arrange
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockSession := auth.NewSession("user-id", []string{})
+		ctx.Set("session", mockSession)
+
+		middleware := neededScope([]string{"scope1"})
+
+		// act
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx) // nolint:errcheck
+
+		// assert
+		assert.Error(t, err)
+
+		// should be an echo.HTTPError
+		httpErr, ok := err.(*echo.HTTPError)
+		assert.True(t, ok)
+		assert.Equal(t, http.StatusForbidden, httpErr.Code)
+	})
+
+	t.Run("it should allow access if no scopes are required", func(t *testing.T) {
+		// arrange
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rec := httptest.NewRecorder()
+		ctx := e.NewContext(req, rec)
+
+		mockSession := auth.NewSession("user-id", []string{"scope1"})
+		ctx.Set("session", mockSession)
+
+		middleware := neededScope([]string{})
+
+		// act
+		err := middleware(func(ctx echo.Context) error {
+			return ctx.JSON(http.StatusOK, "success")
+		})(ctx)
+
+		// assert
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 }

@@ -15,6 +15,8 @@
 
 package utils
 
+import "slices"
+
 func Filter[T any](s []T, f func(T) bool) []T {
 	var r []T
 	for _, v := range s {
@@ -125,6 +127,15 @@ func Any[T any](s []T, f func(T) bool) bool {
 	return false
 }
 
+func All[T any](s []T, f func(T) bool) bool {
+	for _, v := range s {
+		if !f(v) {
+			return false
+		}
+	}
+	return true
+}
+
 func Some[T any](s []T, f func(T) bool) bool {
 	return Any(s, f)
 }
@@ -142,12 +153,13 @@ func UniqBy[T any, K comparable](s []T, f func(T) K) []T {
 }
 
 func Contains[T comparable](s []T, el T) bool {
-	for _, v := range s {
-		if v == el {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s, el)
+}
+
+func ContainsAll[T comparable](s []T, needed []T) bool {
+	return All(needed, func(n T) bool {
+		return Contains(s, n)
+	})
 }
 
 func MergeUnrelated[A, B any](a []A, b []B) []any {
