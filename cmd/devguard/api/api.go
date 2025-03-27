@@ -579,7 +579,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
-	assetRouter.POST("/in-toto/", intotoController.Create, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	assetRouter.POST("/in-toto/", intotoController.Create, neededScope([]string{"scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 
 	assetVersionRouter.GET("/in-toto/:supplyChainId/", intotoController.Read)
