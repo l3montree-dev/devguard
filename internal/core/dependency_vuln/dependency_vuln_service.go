@@ -279,6 +279,11 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 	riskThreshold := asset.RiskAutomaticTicketThreshold
 	cvssThreshold := asset.CVSSAutomaticTicketThreshold
 
+	// filter the vulnerabilities to only include the ones, which are open
+	vulnList = utils.Filter(vulnList, func(v models.DependencyVuln) bool {
+		return v.State == models.VulnStateOpen
+	})
+
 	//Check if no automatic Issues are wanted by the user
 	if riskThreshold == nil && cvssThreshold == nil {
 		return nil
