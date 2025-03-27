@@ -593,12 +593,12 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	dependencyVuln.TicketURL = utils.Ptr(createdIssue.GetHTMLURL())
 
 	// create an event
-	VulnEvent := models.NewMitigateEvent(dependencyVuln.ID, "devguard", "Risk exceeds predefined threshold", map[string]any{
+	vulnEvent := models.NewMitigateEvent(dependencyVuln.ID, "system", "Risk exceeds predefined threshold", map[string]any{
 		"ticketId":  *dependencyVuln.TicketID,
 		"ticketUrl": createdIssue.GetHTMLURL(),
 	})
 	// save the dependencyVuln and the event in a transaction
-	err = g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &VulnEvent)
+	err = g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
 	// if an error did happen, delete the issue from github
 	if err != nil {
 		_, _, err := client.EditIssue(context.TODO(), owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
