@@ -33,6 +33,7 @@ type service struct {
 	dependencyVulnRepository core.DependencyVulnRepository
 	vulnEventRepository      core.VulnEventRepository
 
+	assetVersionRepository core.AssetVersionRepository
 	assetRepository        core.AssetRepository
 	cveRepository          core.CveRepository
 	projectRepository      core.ProjectRepository
@@ -40,7 +41,7 @@ type service struct {
 	thirdPartyIntegration  core.ThirdPartyIntegration
 }
 
-func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetRepository core.AssetRepository, cveRepository core.CveRepository, orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, thirdPartyIntegration core.ThirdPartyIntegration) *service {
+func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetRepository core.AssetRepository, cveRepository core.CveRepository, orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, thirdPartyIntegration core.ThirdPartyIntegration, assetVersionRepository core.AssetVersionRepository) *service {
 	return &service{
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
@@ -49,6 +50,7 @@ func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEven
 		projectRepository:        projectRepository,
 		organizationRepository:   orgRepository,
 		thirdPartyIntegration:    thirdPartyIntegration,
+		assetVersionRepository:   assetVersionRepository,
 	}
 }
 
@@ -118,14 +120,14 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	userID := "system"
 	justification := "System recalculated raw risk assessment"
 
-	assets, err := s.assetRepository.GetAllAssetsFromDB()
+	assetVersions, err := s.assetVersionRepository.All()
 	if err != nil {
 		return fmt.Errorf("could not get all assets: %v", err)
 	}
 
-	for _, asset := range assets {
+	for _, assetVersion := range assetVersions {
 		// get all dependencyVulns of the asset
-		dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID)
 		if len(dependencyVulns) == 0 {
 			continue
 		}
@@ -134,14 +136,15 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 			return fmt.Errorf("could not get all dependencyVulns by asset id: %v", err)
 		}
 
-		err = s.RecalculateRawRiskAssessment(nil, userID, dependencyVulns, justification, asset)
+		err = s.RecalculateRawRiskAssessment(nil, userID, dependencyVulns, justification, assetVersion.Asset)
 		if err != nil {
 			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
-
-		err = s.CreateIssuesForVulns(asset, dependencyVulns)
-		if err != nil {
-			return err
+		if s.ShouldCreateIssue(assetVersion) {
+			err = s.CreateIssuesForVulns(assetVersion.Asset, dependencyVulns)
+			if err != nil {
+				return err
+			}
 		}
 
 	}
@@ -303,7 +306,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 			if vulnerability.TicketID == nil {
 				if *vulnerability.RawRiskAssessment >= *riskThreshold || vulnerability.CVE.CVSS >= float32(*cvssThreshold) {
 
-					err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
+					err := s.createIssue(vulnerability.ID, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
 					if err != nil {
 						return err
 					}
@@ -315,7 +318,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 			for _, vulnerability := range vulnList {
 				if vulnerability.TicketID == nil {
 					if *vulnerability.RawRiskAssessment >= *riskThreshold {
-						err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
+						err := s.createIssue(vulnerability.ID, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
 						if err != nil {
 							return err
 						}
@@ -327,7 +330,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 			for _, vulnerability := range vulnList {
 				if vulnerability.TicketID == nil {
 					if vulnerability.CVE.CVSS >= float32(*cvssThreshold) {
-						err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
+						err := s.createIssue(vulnerability.ID, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
 						if err != nil {
 							return err
 						}
@@ -341,15 +344,20 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
-func (s *service) createIssue(cveName string, asset models.Asset, repoId string, orgSlug string, projectSlug string) error {
+func (s *service) createIssue(cveName string, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.CreateIssue(ctx, asset, repoId, cveName, projectSlug, orgSlug)
+	err := s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, cveName, projectSlug, orgSlug)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *service) ShouldCreateIssue(assetVersion models.AssetVersion) bool {
+	//if the vulnerability was found anywhere else than the default branch we don't want to create an issue
+	return assetVersion.DefaultBranch
 }

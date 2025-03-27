@@ -17,15 +17,21 @@ package auth
 
 type session struct {
 	userID string
+	scopes []string
 }
 
 func (a session) GetUserID() string {
 	return a.userID
 }
 
-func NewSession(userID string) session {
+func (a session) GetScopes() []string {
+	return a.scopes
+}
+
+func NewSession(userID string, scopes []string) session {
 	return session{
 		userID: userID,
+		scopes: scopes,
 	}
 }
 

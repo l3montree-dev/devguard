@@ -75,6 +75,34 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 	return components, err
 }
 
+// function which returns all dependency_components which lead to the package transmitted via the pURL parameter
+func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error) {
+	var components []models.ComponentDependency
+	var err error
+
+	//Find all needed components  recursively until we hit the root component
+
+	query := c.GetDB(tx).Raw(`WITH RECURSIVE components_cte AS (
+			SELECT component_purl,dependency_purl,asset_id,scanner_id,depth,semver_start,semver_end
+			FROM component_dependencies
+			WHERE dependency_purl like ? AND asset_id = ? AND asset_version_name = ? AND scanner_id = ?
+			UNION ALL
+			SELECT co.component_purl,co.dependency_purl,co.asset_id,co.scanner_id,co.depth,co.semver_start,co.semver_end
+			FROM component_dependencies AS co
+			INNER JOIN components_cte AS cte ON co.dependency_purl = cte.component_purl 
+ 			WHERE co.asset_id = ? AND co.asset_version_name = ? AND co.scanner_id = ?
+		)
+		SELECT DISTINCT * FROM components_cte`, pURL, assetID, assetVersionName, scannerID, assetID, assetVersionName, scannerID)
+
+	//Map the query results to the component model
+	err = query.Find(&components).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return components, err
+}
+
 func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner string) (map[string]int, error) {
 	var licenses []struct {
 		License string

@@ -31,4 +31,5 @@ useDefault = true
 [allowlist]
 paths = [
   '''leaks-baseline.json''',
+  '''gitleaks.sarif.json''',
 ]

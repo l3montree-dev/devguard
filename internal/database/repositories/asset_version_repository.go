@@ -44,6 +44,13 @@ func NewAssetVersionRepository(db core.DB) *assetVersionRepository {
 	}
 }
 
+func (a *assetVersionRepository) All() ([]models.AssetVersion, error) {
+	var result []models.AssetVersion
+
+	err := a.db.Model(models.AssetVersion{}).Preload("Asset").Find(&result).Error
+	return result, err
+}
+
 func (a *assetVersionRepository) Read(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
 	var asset models.AssetVersion
 	err := a.db.First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
