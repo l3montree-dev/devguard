@@ -1024,7 +1024,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("gitlab:%d/%d", createdIssue.ProjectID, createdIssue.IID))
 	dependencyVuln.TicketURL = utils.Ptr(createdIssue.WebURL)
 
-	VulnEvent := models.NewMitigateEvent(
+	vulnEvent := models.NewMitigateEvent(
 		dependencyVuln.ID,
 		"system",
 		"RISK exceeds predefined threshold",
@@ -1033,5 +1033,5 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 			"ticketUrl": createdIssue.WebURL,
 		})
 
-	return g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &VulnEvent)
+	return g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
 }
