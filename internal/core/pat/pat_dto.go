@@ -45,7 +45,7 @@ func (p CreateRequest) ToModel(userID string) models.PAT {
 	}
 
 	//check if the scopes are valid
-	ok := utils.ContainsAll(strings.Fields(p.Scopes), AllowedScopes)
+	ok := utils.ContainsAll(AllowedScopes, strings.Fields(p.Scopes))
 	if !ok {
 		slog.Error("invalid scopes", "scopes", p.Scopes)
 		return models.PAT{}
