@@ -259,6 +259,7 @@ func (s *service) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userI
 
 func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string) (models.VulnEvent, error) {
 	var ev models.VulnEvent
+	fmt.Printf("Called 'ApplyAndSave' with vuln: %s", *dependencyVuln.CVEID)
 	switch models.VulnEventType(statusType) {
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), userID, justification)

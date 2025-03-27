@@ -235,6 +235,16 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return dependencyVuln.CalculateHash()
 	})
 
+	for _, vuln := range dependencyVulns {
+		for _, vuln_existing := range existingDependencyVulns {
+			if vuln.CalculateHash() == vuln_existing.CalculateHash() {
+				if !strings.Contains(vuln_existing.ScannerID, vuln.ScannerID) {
+					vuln_existing.ScannerID = vuln_existing.ScannerID + " " + vuln.ScannerID
+				}
+			}
+		}
+	}
+
 	fixedDependencyVulns := comparison.OnlyInA
 	newDependencyVulns := comparison.OnlyInB
 
