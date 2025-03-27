@@ -444,7 +444,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 		}
 	})
 
-	apiV1Router.POST("/webhook/", integrationController.HandleWebhook)
+	apiV1Router.POST("/webhook/", integrationController.HandleWebhook, neededScope([]string{"manage", "scan"}))
 	// apply the health route without any session or multi organization middleware
 	apiV1Router.GET("/health/", health)
 
@@ -452,7 +452,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
 	// register a simple whoami route for testing purposes
 	sessionRouter.GET("/whoami/", whoami)
-	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation)
+	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, neededScope([]string{"manage", "scan"}))
 
 	//TODO: change "/scan/" to "/sbom-scan/"
 	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
@@ -475,122 +475,122 @@ func BuildRouter(db core.DB) *echo.Echo {
 	orgRouter.GET("/", orgController.List)
 
 	//Api functions for interacting with an organization  ->  .../organizations/<organization-name>/...
-	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgRepository), neededScope([]string{"manage", "scan"}))
-	organizationRouter.DELETE("/", orgController.Delete, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
-	organizationRouter.GET("/", orgController.Read, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
+	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgRepository))
+	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage", "scan"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
+	organizationRouter.GET("/", orgController.Read, neededScope([]string{"manage", "scan"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
 
-	organizationRouter.PATCH("/", orgController.Update, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
+	organizationRouter.PATCH("/", orgController.Update, neededScope([]string{"manage", "scan"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
-	organizationRouter.GET("/metrics/", orgController.Metrics)
-	organizationRouter.GET("/content-tree/", orgController.ContentTree)
+	organizationRouter.GET("/metrics/", orgController.Metrics, neededScope([]string{"manage", "scan"}))
+	organizationRouter.GET("/content-tree/", orgController.ContentTree, neededScope([]string{"manage", "scan"}))
 	//TODO: change it
 	//organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
-	organizationRouter.GET("/flaws/", dependencyVulnController.ListByOrgPaged)
+	organizationRouter.GET("/flaws/", dependencyVulnController.ListByOrgPaged, neededScope([]string{"manage", "scan"}))
 
-	organizationRouter.GET("/members/", orgController.Members)
-	organizationRouter.POST("/members/", orgController.InviteMember, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
-	organizationRouter.DELETE("/members/:userId/", orgController.RemoveMember, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
+	organizationRouter.GET("/members/", orgController.Members, neededScope([]string{"manage", "scan"}))
+	organizationRouter.POST("/members/", orgController.InviteMember, neededScope([]string{"manage", "scan"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
+	organizationRouter.DELETE("/members/:userId/", orgController.RemoveMember, neededScope([]string{"manage", "scan"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
 
-	organizationRouter.PUT("/members/:userId/", orgController.ChangeRole, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
+	organizationRouter.PUT("/members/:userId/", orgController.ChangeRole, neededScope([]string{"manage", "scan"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
-	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
+	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation, neededScope([]string{"manage", "scan"}))
 
-	organizationRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitLabIntegration)
-	organizationRouter.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken)
+	organizationRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitLabIntegration, neededScope([]string{"manage", "scan"}))
+	organizationRouter.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken, neededScope([]string{"manage", "scan"}))
 	organizationRouter.GET("/integrations/repositories/", integrationController.
-		ListRepositories)
-	organizationRouter.GET("/stats/risk-history/", statisticsController.GetOrgRiskHistory)
-	organizationRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageOrgFixingTime)
+		ListRepositories, neededScope([]string{"manage", "scan"}))
+	organizationRouter.GET("/stats/risk-history/", statisticsController.GetOrgRiskHistory, neededScope([]string{"manage", "scan"}))
+	organizationRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageOrgFixingTime, neededScope([]string{"manage", "scan"}))
 	//TODO: change it
 	//organizationRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
-	organizationRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
-	organizationRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution)
+	organizationRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange, neededScope([]string{"manage", "scan"}))
+	organizationRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution, neededScope([]string{"manage", "scan"}))
 
-	organizationRouter.GET("/projects/", projectController.List, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
-	organizationRouter.POST("/projects/", projectController.Create, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
+	organizationRouter.GET("/projects/", projectController.List, neededScope([]string{"manage", "scan"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
+	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage", "scan"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)
 	//TODO: change it
 	//projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
-	projectRouter.GET("/flaws/", dependencyVulnController.ListByProjectPaged)
+	projectRouter.GET("/flaws/", dependencyVulnController.ListByProjectPaged, neededScope([]string{"manage", "scan"}))
 
-	projectRouter.PATCH("/", projectController.Update, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
-	projectRouter.DELETE("/", projectController.Delete, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
+	projectRouter.PATCH("/", projectController.Update, neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
+	projectRouter.DELETE("/", projectController.Delete, neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
 
-	projectRouter.POST("/assets/", assetController.Create, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
+	projectRouter.POST("/assets/", assetController.Create, neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
 
-	projectRouter.GET("/assets/", assetController.List)
+	projectRouter.GET("/assets/", assetController.List, neededScope([]string{"manage", "scan"}))
 
-	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution)
-	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory)
+	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution, neededScope([]string{"manage", "scan"}))
+	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory, neededScope([]string{"manage", "scan"}))
 	//TODO: change it
 	//projectRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
-	projectRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
-	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime)
+	projectRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange, neededScope([]string{"manage", "scan"}))
+	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime, neededScope([]string{"manage", "scan"}))
 
-	projectRouter.GET("/members/", projectController.Members)
-	projectRouter.POST("/members/", projectController.InviteMembers, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
-	projectRouter.DELETE("/members/:userId/", projectController.RemoveMember, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
+	projectRouter.GET("/members/", projectController.Members, neededScope([]string{"manage", "scan"}))
+	projectRouter.POST("/members/", projectController.InviteMembers, neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
+	projectRouter.DELETE("/members/:userId/", projectController.RemoveMember, neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
 
-	projectRouter.PUT("/members/:userId/", projectController.ChangeRole, projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
+	projectRouter.PUT("/members/:userId/", projectController.ChangeRole, neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
 
 	//Api functions for interacting with an asset inside a project  ->  .../projects/<project-name>/assets/<asset-name>/...
-	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionRead), assetMiddleware(assetRepository))
-	assetRouter.GET("/", assetController.Read)
-	assetRouter.DELETE("/", assetController.Delete, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
+	assetRouter := projectRouter.Group("/assets/:assetSlug", neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionRead), assetMiddleware(assetRepository))
+	assetRouter.GET("/", assetController.Read, neededScope([]string{"manage", "scan"}))
+	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
 
-	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
+	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID, neededScope([]string{"manage", "scan"}))
 
 	//Api to scan manually using an uploaded SBOM provided by the user
-	assetRouter.POST("/sbom-file/", scanController.ScanSbomFile)
+	assetRouter.POST("/sbom-file/", scanController.ScanSbomFile, neededScope([]string{"scan"}))
 
 	//TODO: add the projectScopedRBAC middleware to the following routes
-	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
+	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", neededScope([]string{"manage", "scan"}), assetVersionMiddleware(assetVersionRepository))
 
-	assetVersionRouter.GET("/", assetVersionController.Read)
-	assetVersionRouter.DELETE("/", assetVersionController.Delete) //Delete an asset version
+	assetVersionRouter.GET("/", assetVersionController.Read, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage", "scan"})) //Delete an asset version
 
-	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
-	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
-	assetVersionRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
-	assetVersionRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
-	assetVersionRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
-	assetVersionRouter.GET("/sbom.xml/", assetVersionController.SBOMXML)
-	assetVersionRouter.GET("/vex.json/", assetVersionController.VEXJSON)
-	assetVersionRouter.GET("/vex.xml/", assetVersionController.VEXXML)
+	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/affected-components/", assetVersionController.AffectedComponents, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/sbom.json/", assetVersionController.SBOMJSON, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/sbom.xml/", assetVersionController.SBOMXML, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/vex.json/", assetVersionController.VEXJSON, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/vex.xml/", assetVersionController.VEXXML, neededScope([]string{"manage", "scan"}))
 
-	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
-	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
-	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetAssetVersionRiskHistory)
+	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetAssetVersionRiskHistory, neededScope([]string{"manage", "scan"}))
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerId)
-	assetVersionRouter.GET("/stats/flaw-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerId)
-	assetVersionRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanner)
+	assetVersionRouter.GET("/stats/flaw-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerId, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanner, neededScope([]string{"manage", "scan"}))
 
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
-	assetVersionRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
-	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetVersionFixingTime)
+	assetVersionRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetVersionFixingTime, neededScope([]string{"manage", "scan"}))
 
-	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage", "scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	assetRouter.PATCH("/", assetController.Update, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
-	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, neededScope([]string{"scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	assetRouter.POST("/in-toto/", intotoController.Create, neededScope([]string{"scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 
-	assetVersionRouter.GET("/in-toto/:supplyChainId/", intotoController.Read)
+	assetVersionRouter.GET("/in-toto/:supplyChainId/", intotoController.Read, neededScope([]string{"manage", "scan"}))
 
-	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
+	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain, neededScope([]string{"manage", "scan"}))
 
-	assetVersionRouter.GET("/components/", componentController.ListPaged)
-	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution)
+	assetVersionRouter.GET("/components/", componentController.ListPaged, neededScope([]string{"manage", "scan"}))
+	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution, neededScope([]string{"manage", "scan"}))
 	//TODO: change it
 	//dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
-	dependencyVulnRouter := assetVersionRouter.Group("/flaws")
+	dependencyVulnRouter := assetVersionRouter.Group("/flaws", neededScope([]string{"manage", "scan"}))
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnId/", dependencyVulnController.Read)
 
