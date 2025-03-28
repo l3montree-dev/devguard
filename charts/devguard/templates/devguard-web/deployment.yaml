@@ -30,12 +30,23 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      automountServiceAccountToken: false
       securityContext:
-        {{- toYaml .Values.web.podSecurityContext | nindent 8 }}
+        seccompProfile:
+          type: RuntimeDefault
+        runAsUser: 53111
+        runAsNonRoot: true
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
-            {{- toYaml .Values.web.securityContext | nindent 12 }}
+            seccompProfile:
+              type: RuntimeDefault
+            allowPrivilegeEscalation: false
+            runAsUser: 53111
+            runAsNonRoot: true
+            capabilities:
+                drop:
+                - ALL
           image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.web.image.pullPolicy }}
           env:
@@ -49,19 +60,19 @@ spec:
             - name: http
               containerPort: 3000
               protocol: TCP
-          # livenessProbe:
-          #   httpGet:
-          #     path: /api/v1/health
-          #     port: http
-          #   initialDelaySeconds: 10
-          # readinessProbe:
-          #   httpGet:
-          #     path: /api/v1/health
-          #     port: http
-          #   initialDelaySeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+          readinessProbe:
+             httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
           resources:
             limits:
-              cpu: 4
+              cpu: "0.5"
               memory: 1024Mi
             requests:
               cpu: 100m
