@@ -38,7 +38,7 @@ func FirstPartyVulnToDto(f models.FirstPartyVulnerability) FirstPartyVulnDTO {
 
 	return FirstPartyVulnDTO{
 		ID:          f.ID,
-		ScannerID:   f.ScannerIDs,
+		ScannerID:   f.ScannerID,
 		Message:     f.Message,
 		AssetID:     f.AssetID.String(),
 		State:       f.State,

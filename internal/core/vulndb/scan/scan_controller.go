@@ -125,7 +125,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		slog.Error("no scanner id provided")
 		return scanResults, err
 	}
-
+	//scannerID = ""
 	// handle the scan result
 	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, scannerID, userID, doRiskManagement)
 	if err != nil {

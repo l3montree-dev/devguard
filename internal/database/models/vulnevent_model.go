@@ -94,6 +94,8 @@ func (e VulnEvent) Apply(vuln Vuln) {
 		vuln.SetState(VulnStateAccepted)
 	case EventTypeFalsePositive:
 		vuln.SetState(VulnStateFalsePositive)
+	case EventTypeDetectedByOtherScanner:
+
 	case EventTypeMarkedForTransfer:
 		vuln.SetState(VulnStateMarkedForTransfer)
 	case EventTypeRawRiskAssessmentUpdated:
