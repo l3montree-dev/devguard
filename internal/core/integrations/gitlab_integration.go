@@ -148,7 +148,8 @@ func (g *gitlabIntegration) IntegrationEnabled(ctx core.Context) bool {
 }
 
 func (g *gitlabIntegration) WantsToHandleWebhook(ctx core.Context) bool {
-	return true
+	event := ctx.Request().Header.Get("X-Gitlab-Event")
+	return strings.TrimSpace(event) != ""
 }
 
 func isEventSubscribed(event gitlab.EventType) bool {

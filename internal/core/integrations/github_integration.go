@@ -181,15 +181,16 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 	switch event := event.(type) {
 	case *github.IssueCommentEvent:
 		// check if the issue is a devguard issue
-		issueId := event.Issue.GetNumber()
+		issueNumber := event.Issue.GetNumber()
+		issueID := event.Issue.GetID()
 		// check if the user is a bot - we do not want to handle bot comments
 		if event.Comment.User.GetType() == "Bot" {
 			return nil
 		}
 		// look for a vuln with such a github ticket id
-		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d", issueId))
+		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 		if err != nil {
-			slog.Debug("could not find vuln by ticket id", "err", err, "ticketId", issueId)
+			slog.Debug("could not find vuln by ticket id", "err", err, "ticketId", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 			return nil
 		}
 
@@ -237,16 +238,16 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		}()
 
 		// create a new event based on the comment
-		VulnEvent := createNewVulnEventBasedOnComment(vuln.GetID(), fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment)
+		vulnEvent := createNewVulnEventBasedOnComment(vuln.GetID(), fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment)
 
-		VulnEvent.Apply(vuln)
+		vulnEvent.Apply(vuln)
 		// save the vuln and the event in a transaction
 		err = githubIntegration.aggregatedVulnRepository.Transaction(func(tx core.DB) error {
 			err := githubIntegration.aggregatedVulnRepository.Save(tx, &vuln)
 			if err != nil {
 				return err
 			}
-			err = githubIntegration.vulnEventRepository.Save(tx, &VulnEvent)
+			err = githubIntegration.vulnEventRepository.Save(tx, &vulnEvent)
 			if err != nil {
 				return err
 			}
@@ -270,21 +271,21 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
-		switch VulnEvent.Type {
+		switch vulnEvent.Type {
 		case models.EventTypeAccepted:
-			_, _, err = client.EditIssue(context.Background(), owner, repo, issueId, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:accepted"},
 			})
 			return err
 		case models.EventTypeFalsePositive:
-			_, _, err = client.EditIssue(context.Background(), owner, repo, issueId, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:false-positive"},
 			})
 			return err
 		case models.EventTypeReopened:
-			_, _, err = client.EditIssue(context.Background(), owner, repo, issueId, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("open"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:open"},
 			})
@@ -404,6 +405,28 @@ func ownerAndRepoFromRepositoryID(repositoryID string) (string, string, error) {
 	return split[0], split[1], nil
 }
 
+// the first return value is the global ticket id - a huge number, the second is the ticket number - like #386 you find in github links
+func githubTicketIdToIdAndNumber(id string) (int, int) {
+	// format: github:123456789/123
+	split := strings.Split(id, "/")
+
+	if len(split) != 2 {
+		return 0, 0
+	}
+
+	ticketId, err := strconv.Atoi(strings.TrimPrefix(split[0], "github:"))
+	if err != nil {
+		return 0, 0
+	}
+
+	ticketNumber, err := strconv.Atoi(split[1])
+	if err != nil {
+		return 0, 0
+	}
+
+	return ticketId, ticketNumber
+}
+
 func (g *githubIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
 	case core.ManualMitigateEvent:
@@ -460,11 +483,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		githubTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "github:")
-		githubTicketIDInt, err := strconv.Atoi(githubTicketID)
-		if err != nil {
-			return err
-		}
+		_, githubTicketNumber := githubTicketIdToIdAndNumber(*dependencyVuln.TicketID)
 
 		members, err := org.FetchMembersOfOrganization(event.Ctx)
 		if err != nil {
@@ -487,47 +506,47 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		switch ev.Type {
 		case models.EventTypeAccepted:
 			// if a dependencyVuln gets accepted, we close the issue and create a comment with that justification
-			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketNumber, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
 			}
-			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketNumber, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:accepted"},
 			})
 			return err
 		case models.EventTypeFalsePositive:
 
-			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketNumber, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
 			}
 
-			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketNumber, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:false-positive"},
 			})
 			return err
 		case models.EventTypeReopened:
-			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketNumber, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
 			}
 
-			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketIDInt, &github.IssueRequest{
+			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketNumber, &github.IssueRequest{
 				State:  github.String("open"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:open"},
 			})
 			return err
 
 		case models.EventTypeComment:
-			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketIDInt, &github.IssueComment{
+			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketNumber, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			return err
@@ -593,7 +612,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	}
 
 	// save the issue id to the dependencyVuln
-	dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("github:%d", createdIssue.GetNumber()))
+	dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("github:%d/%d", createdIssue.GetID(), createdIssue.GetNumber()))
 	dependencyVuln.TicketURL = utils.Ptr(createdIssue.GetHTMLURL())
 
 	// create an event
