@@ -816,7 +816,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		case models.EventTypeAccepted:
 			// if a dependencyVuln gets accepted, we close the issue and create a comment with that justification
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" accepted the dependencyVuln", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -834,7 +834,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		case models.EventTypeFalsePositive:
 
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" marked the dependencyVuln as false positive", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -852,7 +852,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		case models.EventTypeReopened:
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" reopened the dependencyVuln", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -872,7 +872,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 
 		case models.EventTypeComment:
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the dependencyVuln", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			return err
 		}
