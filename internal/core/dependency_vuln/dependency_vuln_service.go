@@ -318,7 +318,8 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 		}
 	}
 
-	return nil
+	_, err = errgroup.WaitAndCollect()
+	return err
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
