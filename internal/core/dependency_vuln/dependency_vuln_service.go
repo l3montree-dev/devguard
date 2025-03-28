@@ -278,6 +278,9 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.DependencyVuln) error {
 	riskThreshold := asset.RiskAutomaticTicketThreshold
 	cvssThreshold := asset.CVSSAutomaticTicketThreshold
+	if riskThreshold == nil && cvssThreshold == nil {
+		return nil
+	}
 
 	// filter the vulnerabilities to only include the ones, which are open
 	vulnList = utils.Filter(vulnList, func(v models.DependencyVuln) bool {
@@ -304,47 +307,17 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
 	}
 
-	//Determine whether to scan for both risk and cvss or just 1 of them
-	if riskThreshold != nil && cvssThreshold != nil {
+	errgroup := utils.ErrGroup[any](10)
 
-		for _, vulnerability := range vulnList {
-			if vulnerability.TicketID == nil {
-				if *vulnerability.RawRiskAssessment >= *riskThreshold || vulnerability.CVE.CVSS >= float32(*cvssThreshold) {
-
-					err := s.createIssue(vulnerability.ID, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
-	} else {
-		if riskThreshold != nil {
-			for _, vulnerability := range vulnList {
-				if vulnerability.TicketID == nil {
-					if *vulnerability.RawRiskAssessment >= *riskThreshold {
-						err := s.createIssue(vulnerability.ID, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
-						if err != nil {
-							return err
-						}
-					}
-
-				}
-			}
-		} else if cvssThreshold != nil {
-			for _, vulnerability := range vulnList {
-				if vulnerability.TicketID == nil {
-					if vulnerability.CVE.CVSS >= float32(*cvssThreshold) {
-						err := s.createIssue(vulnerability.ID, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
-						if err != nil {
-							return err
-						}
-
-					}
-				}
-			}
+	for _, vulnerability := range vulnList {
+		// check that the ticket id is nil currently
+		if vulnerability.TicketID == nil && ((cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold)) {
+			errgroup.Go(func() (any, error) {
+				return nil, s.createIssue(vulnerability.ID, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
+			})
 		}
 	}
+
 	return nil
 }
 
