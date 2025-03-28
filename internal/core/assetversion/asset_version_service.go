@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"math/rand/v2"
 	"net/http"
 	"strings"
 	"time"
@@ -223,8 +222,8 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, doRiskManagement bool, asset models.Asset) (int, int, []models.DependencyVuln, error) {
 	// get all existing dependencyVulns from the database - this is the old state
 
-	number := rand.IntN(len(dependencyVulns))
-	dependencyVulns = dependencyVulns[:number]
+	//number := rand.IntN(len(dependencyVulns))
+	//dependencyVulns = dependencyVulns[:0]
 	scannerID = scannerID + " "
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
@@ -245,8 +244,8 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 	foundByScannerAndExisting := comparison.InBoth     //We have to check if it was already found by this scanner or only by other scanners
 	notFoundByScannerAndExisting := comparison.OnlyInA //We have to update all vulnerabilities which were previously found by this scanner and now aren't
 
-	var vulnerabilitiesToFix []models.DependencyVuln //We should collect all vulnerabilities we want to fix so we can do it all at once
-	var vulnerabilitiesToUpdate []models.DependencyVuln
+	var vulnerabilitiesToFix []models.DependencyVuln    //We should collect all vulnerabilities we want to fix so we can do it all at once
+	var vulnerabilitiesToUpdate []models.DependencyVuln //We should do the same
 	// get a transaction
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 		// We can create the newly found one without checking anything
@@ -257,12 +256,12 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		// Now we work on the vulnerabilities found in both sets -> has the vulnerability this scanner id already in his scanner_ids
 		for i := range foundByScannerAndExisting {
 			if !strings.Contains(foundByScannerAndExisting[i].ScannerID, scannerID) {
-				fmt.Printf("\nThe Scanner ID before : %s\n", foundByScannerAndExisting[i].ScannerID)
 				foundByScannerAndExisting[i].ScannerID = foundByScannerAndExisting[i].ScannerID + scannerID
-				fmt.Printf("\nThe Scanner ID after : %s\n", foundByScannerAndExisting[i].ScannerID)
 			}
 		}
+
 		err := s.dependencyVulnRepository.SaveBatch(tx, foundByScannerAndExisting)
+
 		if err != nil {
 			slog.Error("error when trying to update vulnerabilities")
 			return err
