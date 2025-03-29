@@ -273,19 +273,19 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 
 		switch vulnEvent.Type {
 		case models.EventTypeAccepted:
-			_, _, err = client.EditIssue(context.Background(), owner, repo, issueNumber, &github.IssueRequest{
+			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:accepted"},
 			})
 			return err
 		case models.EventTypeFalsePositive:
-			_, _, err = client.EditIssue(context.Background(), owner, repo, issueNumber, &github.IssueRequest{
+			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:false-positive"},
 			})
 			return err
 		case models.EventTypeReopened:
-			_, _, err = client.EditIssue(context.Background(), owner, repo, issueNumber, &github.IssueRequest{
+			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("open"),
 				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:open"},
 			})
@@ -567,6 +567,37 @@ func (g *githubIntegration) HandleEvent(event any) error {
 	return nil
 }
 
+func (g *githubIntegration) ReopenIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
+	if !strings.HasPrefix(repoId, "github:") || !strings.HasPrefix(*dependencyVuln.TicketID, "github:") {
+		// this integration only handles github repositories.
+		return nil
+	}
+
+	owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
+	if err != nil {
+		return err
+	}
+
+	client, err := g.githubClientFactory(repoId)
+	if err != nil {
+		return err
+	}
+
+	ticketID := fmt.Sprintf("github:%d/%d", dependencyVuln.TicketID, asset.ID)
+
+	_, ticketNumber := githubTicketIdToIdAndNumber(dependencyVuln.TicketID)
+
+	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
+		State:  github.String("open"),
+		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:open"},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (g *githubIntegration) CloseIssueAsFixed(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
 	if !strings.HasPrefix(repoId, "github:") {
 		// this integration only handles github repositories.
@@ -628,13 +659,13 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment))},
 	}
 
-	createdIssue, _, err := client.CreateIssue(context.Background(), owner, repo, issue)
+	createdIssue, _, err := client.CreateIssue(ctx, owner, repo, issue)
 	if err != nil {
 		return err
 	}
 
 	// todo - we are editing the labels on each call. Actually we only need todo it once
-	_, _, err = client.EditIssueLabel(context.Background(), owner, repo, "severity:"+strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), &github.Label{
+	_, _, err = client.EditIssueLabel(ctx, owner, repo, "severity:"+strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), &github.Label{
 		Description: github.String("Severity of the dependencyVuln"),
 		Color:       github.String(risk.RiskToColor(*dependencyVuln.RawRiskAssessment)),
 	})
