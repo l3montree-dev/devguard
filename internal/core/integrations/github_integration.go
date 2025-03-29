@@ -431,7 +431,14 @@ func (g *githubIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
+
 		repoId, err := core.GetRepositoryID(event.Ctx)
+
+		if !strings.HasPrefix(repoId, "github:") {
+			// this integration only handles github repositories.
+			return nil
+		}
+
 		assetVersionName := core.GetAssetVersion(event.Ctx).Name
 		if err != nil {
 			return err

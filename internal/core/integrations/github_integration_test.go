@@ -92,6 +92,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 	t.Run("it should return an error if the owner or repo could not be extracted from the repositoryId", func(t *testing.T) {
 		dependencyVulnRepository := mocks.NewCoreDependencyVulnRepository(t)
+		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, nil)
 
 		githubIntegration := githubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
