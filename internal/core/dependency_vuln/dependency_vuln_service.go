@@ -370,13 +370,6 @@ func (s *service) closeIssue(vulnerability models.DependencyVuln, asset models.A
 	return s.thirdPartyIntegration.CloseIssueAsFixed(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug)
 }
 
-func (s *service) reopenIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	return s.thirdPartyIntegration.ReopenIssue(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug)
-}
-
 func (s *service) ShouldCreateIssues(assetVersion models.AssetVersion) bool {
 	//if the vulnerability was found anywhere else than the default branch we don't want to create an issue
 	return assetVersion.DefaultBranch
