@@ -567,7 +567,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 	return nil
 }
 
-func (g *githubIntegration) ReopenIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
+func (g *githubIntegration) CloseIssueAsFixed(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
 	if !strings.HasPrefix(repoId, "github:") || !strings.HasPrefix(*dependencyVuln.TicketID, "github:") {
 		// this integration only handles github repositories.
 		return nil
@@ -583,40 +583,7 @@ func (g *githubIntegration) ReopenIssue(ctx context.Context, asset models.Asset,
 		return err
 	}
 
-	ticketID := fmt.Sprintf("github:%d/%d", dependencyVuln.TicketID, asset.ID)
-
-	_, ticketNumber := githubTicketIdToIdAndNumber(dependencyVuln.TicketID)
-
-	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
-		State:  github.String("open"),
-		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:open"},
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (g *githubIntegration) CloseIssueAsFixed(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
-	if !strings.HasPrefix(repoId, "github:") {
-		// this integration only handles github repositories.
-		return nil
-	}
-
-	owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
-	if err != nil {
-		return err
-	}
-
-	client, err := g.githubClientFactory(repoId)
-	if err != nil {
-		return err
-	}
-
-	ticketID := fmt.Sprintf("github:%d/%d", dependencyVuln.TicketID, asset.ID)
-
-	_, ticketNumber := githubTicketIdToIdAndNumber(ticketID)
+	_, ticketNumber := githubTicketIdToIdAndNumber(*dependencyVuln.TicketID)
 
 	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
 		State:  github.String("closed"),

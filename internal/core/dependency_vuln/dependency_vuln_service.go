@@ -325,44 +325,6 @@ func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.
 	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug)
 }
 
-func (s *service) ReopenIssues(asset models.Asset, vulnList []models.DependencyVuln) error {
-	project, err := s.projectRepository.Read(asset.ProjectID)
-	if err != nil {
-		return err
-	}
-
-	org, err := s.organizationRepository.Read(project.OrganizationID)
-	if err != nil {
-		return err
-	}
-
-	repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
-	if err != nil {
-		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
-	}
-
-	errgroup := utils.ErrGroup[any](10)
-
-	for _, vulnerability := range vulnList {
-		// check if the ticket id is not nil
-		if vulnerability.TicketID != nil {
-			// check that the ticket id is nil currently
-			errgroup.Go(func() (any, error) {
-				err := s.reopenIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
-				if err != nil {
-					slog.Error("could not reopen issue", "err", err, "ticketUrl", vulnerability.TicketURL)
-					return nil, err
-				}
-				slog.Info("reopened issue", "vulnerability", vulnerability, "ticketUrl", vulnerability.TicketURL)
-				return nil, nil
-			})
-		}
-	}
-
-	_, err = errgroup.WaitAndCollect()
-	return err
-}
-
 func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error {
 	project, err := s.projectRepository.Read(asset.ProjectID)
 	if err != nil {
