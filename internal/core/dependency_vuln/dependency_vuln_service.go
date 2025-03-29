@@ -140,13 +140,12 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 		if err != nil {
 			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
-		if s.ShouldCreateIssue(assetVersion) {
-			err = s.CreateIssuesForVulns(assetVersion.Asset, dependencyVulns)
+		if s.ShouldCreateIssues(assetVersion) {
+			err = s.CreateIssuesForVulnsIfThresholdExceeded(assetVersion.Asset, dependencyVulns)
 			if err != nil {
 				return err
 			}
 		}
-
 	}
 
 	return nil
@@ -275,17 +274,12 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 }
 
 // function to check whether the provided vulnerabilities in a given asset exceeds their respective thresholds and create a ticket for it if they do so
-func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.DependencyVuln) error {
+func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vulnList []models.DependencyVuln) error {
 	riskThreshold := asset.RiskAutomaticTicketThreshold
 	cvssThreshold := asset.CVSSAutomaticTicketThreshold
 	if riskThreshold == nil && cvssThreshold == nil {
 		return nil
 	}
-
-	// filter the vulnerabilities to only include the ones, which are open
-	vulnList = utils.Filter(vulnList, func(v models.DependencyVuln) bool {
-		return v.State == models.VulnStateOpen
-	})
 
 	//Check if no automatic Issues are wanted by the user
 	if riskThreshold == nil && cvssThreshold == nil {
@@ -313,7 +307,7 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 		// check that the ticket id is nil currently
 		if vulnerability.TicketID == nil && ((cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold)) {
 			errgroup.Go(func() (any, error) {
-				return nil, s.createIssue(vulnerability.ID, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
+				return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
 			})
 		}
 	}
@@ -323,20 +317,51 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
-func (s *service) createIssue(cveName string, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string) error {
+func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, cveName, projectSlug, orgSlug)
+	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug)
+}
+
+func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error {
+	project, err := s.projectRepository.Read(asset.ProjectID)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	org, err := s.organizationRepository.Read(project.OrganizationID)
+	if err != nil {
+		return err
+	}
+
+	repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
+	if err != nil {
+		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
+	}
+
+	errgroup := utils.ErrGroup[any](10)
+
+	for _, vulnerability := range vulnList {
+		// check that the ticket id is nil currently
+		errgroup.Go(func() (any, error) {
+			return nil, s.closeIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
+		})
+	}
+
+	_, err = errgroup.WaitAndCollect()
+	return err
 }
 
-func (s *service) ShouldCreateIssue(assetVersion models.AssetVersion) bool {
+func (s *service) closeIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	return s.thirdPartyIntegration.CloseIssueAsFixed(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug)
+}
+
+func (s *service) ShouldCreateIssues(assetVersion models.AssetVersion) bool {
 	//if the vulnerability was found anywhere else than the default branch we don't want to create an issue
 	return assetVersion.DefaultBranch
 }

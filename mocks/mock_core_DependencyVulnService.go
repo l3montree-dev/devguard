@@ -23,12 +23,12 @@ func (_m *CoreDependencyVulnService) EXPECT() *CoreDependencyVulnService_Expecte
 	return &CoreDependencyVulnService_Expecter{mock: &_m.Mock}
 }
 
-// CreateIssuesForVulns provides a mock function with given fields: asset, vulnList
-func (_m *CoreDependencyVulnService) CreateIssuesForVulns(asset models.Asset, vulnList []models.DependencyVuln) error {
+// CloseIssuesAsFixed provides a mock function with given fields: asset, vulnList
+func (_m *CoreDependencyVulnService) CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error {
 	ret := _m.Called(asset, vulnList)
 
 	if len(ret) == 0 {
-		panic("no return value specified for CreateIssuesForVulns")
+		panic("no return value specified for CloseIssuesAsFixed")
 	}
 
 	var r0 error
@@ -41,31 +41,78 @@ func (_m *CoreDependencyVulnService) CreateIssuesForVulns(asset models.Asset, vu
 	return r0
 }
 
-// CoreDependencyVulnService_CreateIssuesForVulns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateIssuesForVulns'
-type CoreDependencyVulnService_CreateIssuesForVulns_Call struct {
+// CoreDependencyVulnService_CloseIssuesAsFixed_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CloseIssuesAsFixed'
+type CoreDependencyVulnService_CloseIssuesAsFixed_Call struct {
 	*mock.Call
 }
 
-// CreateIssuesForVulns is a helper method to define mock.On call
+// CloseIssuesAsFixed is a helper method to define mock.On call
 //   - asset models.Asset
 //   - vulnList []models.DependencyVuln
-func (_e *CoreDependencyVulnService_Expecter) CreateIssuesForVulns(asset interface{}, vulnList interface{}) *CoreDependencyVulnService_CreateIssuesForVulns_Call {
-	return &CoreDependencyVulnService_CreateIssuesForVulns_Call{Call: _e.mock.On("CreateIssuesForVulns", asset, vulnList)}
+func (_e *CoreDependencyVulnService_Expecter) CloseIssuesAsFixed(asset interface{}, vulnList interface{}) *CoreDependencyVulnService_CloseIssuesAsFixed_Call {
+	return &CoreDependencyVulnService_CloseIssuesAsFixed_Call{Call: _e.mock.On("CloseIssuesAsFixed", asset, vulnList)}
 }
 
-func (_c *CoreDependencyVulnService_CreateIssuesForVulns_Call) Run(run func(asset models.Asset, vulnList []models.DependencyVuln)) *CoreDependencyVulnService_CreateIssuesForVulns_Call {
+func (_c *CoreDependencyVulnService_CloseIssuesAsFixed_Call) Run(run func(asset models.Asset, vulnList []models.DependencyVuln)) *CoreDependencyVulnService_CloseIssuesAsFixed_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(models.Asset), args[1].([]models.DependencyVuln))
 	})
 	return _c
 }
 
-func (_c *CoreDependencyVulnService_CreateIssuesForVulns_Call) Return(_a0 error) *CoreDependencyVulnService_CreateIssuesForVulns_Call {
+func (_c *CoreDependencyVulnService_CloseIssuesAsFixed_Call) Return(_a0 error) *CoreDependencyVulnService_CloseIssuesAsFixed_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *CoreDependencyVulnService_CreateIssuesForVulns_Call) RunAndReturn(run func(models.Asset, []models.DependencyVuln) error) *CoreDependencyVulnService_CreateIssuesForVulns_Call {
+func (_c *CoreDependencyVulnService_CloseIssuesAsFixed_Call) RunAndReturn(run func(models.Asset, []models.DependencyVuln) error) *CoreDependencyVulnService_CloseIssuesAsFixed_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateIssuesForVulnsIfThresholdExceeded provides a mock function with given fields: asset, vulnList
+func (_m *CoreDependencyVulnService) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vulnList []models.DependencyVuln) error {
+	ret := _m.Called(asset, vulnList)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateIssuesForVulnsIfThresholdExceeded")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(models.Asset, []models.DependencyVuln) error); ok {
+		r0 = rf(asset, vulnList)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreDependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateIssuesForVulnsIfThresholdExceeded'
+type CoreDependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call struct {
+	*mock.Call
+}
+
+// CreateIssuesForVulnsIfThresholdExceeded is a helper method to define mock.On call
+//   - asset models.Asset
+//   - vulnList []models.DependencyVuln
+func (_e *CoreDependencyVulnService_Expecter) CreateIssuesForVulnsIfThresholdExceeded(asset interface{}, vulnList interface{}) *CoreDependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call {
+	return &CoreDependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call{Call: _e.mock.On("CreateIssuesForVulnsIfThresholdExceeded", asset, vulnList)}
+}
+
+func (_c *CoreDependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call) Run(run func(asset models.Asset, vulnList []models.DependencyVuln)) *CoreDependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(models.Asset), args[1].([]models.DependencyVuln))
+	})
+	return _c
+}
+
+func (_c *CoreDependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call) Return(_a0 error) *CoreDependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreDependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call) RunAndReturn(run func(models.Asset, []models.DependencyVuln) error) *CoreDependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -120,12 +167,12 @@ func (_c *CoreDependencyVulnService_RecalculateRawRiskAssessment_Call) RunAndRet
 	return _c
 }
 
-// ShouldCreateIssue provides a mock function with given fields: assetVersion
-func (_m *CoreDependencyVulnService) ShouldCreateIssue(assetVersion models.AssetVersion) bool {
+// ShouldCreateIssues provides a mock function with given fields: assetVersion
+func (_m *CoreDependencyVulnService) ShouldCreateIssues(assetVersion models.AssetVersion) bool {
 	ret := _m.Called(assetVersion)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ShouldCreateIssue")
+		panic("no return value specified for ShouldCreateIssues")
 	}
 
 	var r0 bool
@@ -138,30 +185,30 @@ func (_m *CoreDependencyVulnService) ShouldCreateIssue(assetVersion models.Asset
 	return r0
 }
 
-// CoreDependencyVulnService_ShouldCreateIssue_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ShouldCreateIssue'
-type CoreDependencyVulnService_ShouldCreateIssue_Call struct {
+// CoreDependencyVulnService_ShouldCreateIssues_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ShouldCreateIssues'
+type CoreDependencyVulnService_ShouldCreateIssues_Call struct {
 	*mock.Call
 }
 
-// ShouldCreateIssue is a helper method to define mock.On call
+// ShouldCreateIssues is a helper method to define mock.On call
 //   - assetVersion models.AssetVersion
-func (_e *CoreDependencyVulnService_Expecter) ShouldCreateIssue(assetVersion interface{}) *CoreDependencyVulnService_ShouldCreateIssue_Call {
-	return &CoreDependencyVulnService_ShouldCreateIssue_Call{Call: _e.mock.On("ShouldCreateIssue", assetVersion)}
+func (_e *CoreDependencyVulnService_Expecter) ShouldCreateIssues(assetVersion interface{}) *CoreDependencyVulnService_ShouldCreateIssues_Call {
+	return &CoreDependencyVulnService_ShouldCreateIssues_Call{Call: _e.mock.On("ShouldCreateIssues", assetVersion)}
 }
 
-func (_c *CoreDependencyVulnService_ShouldCreateIssue_Call) Run(run func(assetVersion models.AssetVersion)) *CoreDependencyVulnService_ShouldCreateIssue_Call {
+func (_c *CoreDependencyVulnService_ShouldCreateIssues_Call) Run(run func(assetVersion models.AssetVersion)) *CoreDependencyVulnService_ShouldCreateIssues_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(models.AssetVersion))
 	})
 	return _c
 }
 
-func (_c *CoreDependencyVulnService_ShouldCreateIssue_Call) Return(_a0 bool) *CoreDependencyVulnService_ShouldCreateIssue_Call {
+func (_c *CoreDependencyVulnService_ShouldCreateIssues_Call) Return(_a0 bool) *CoreDependencyVulnService_ShouldCreateIssues_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *CoreDependencyVulnService_ShouldCreateIssue_Call) RunAndReturn(run func(models.AssetVersion) bool) *CoreDependencyVulnService_ShouldCreateIssue_Call {
+func (_c *CoreDependencyVulnService_ShouldCreateIssues_Call) RunAndReturn(run func(models.AssetVersion) bool) *CoreDependencyVulnService_ShouldCreateIssues_Call {
 	_c.Call.Return(run)
 	return _c
 }

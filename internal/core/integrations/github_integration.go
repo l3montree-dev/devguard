@@ -445,12 +445,17 @@ func (g *githubIntegration) HandleEvent(event any) error {
 		if err != nil {
 			return err
 		}
+		dependencyVuln, err := g.dependencyVulnRepository.Read(dependencyVulnId)
+		if err != nil {
+			return err
+		}
+
 		orgSlug, err := core.GetOrgSlug(event.Ctx)
 		if err != nil {
 			return err
 		}
 
-		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, dependencyVulnId, projectSlug, orgSlug)
+		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug)
 
 	case core.VulnEvent:
 		ev := event.Event
@@ -555,8 +560,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 	return nil
 }
 
-func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
-
+func (g *githubIntegration) CloseIssueAsFixed(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
 	if !strings.HasPrefix(repoId, "github:") {
 		// this integration only handles github repositories.
 		return nil
@@ -567,7 +571,34 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		return err
 	}
 
-	dependencyVuln, err := g.dependencyVulnRepository.Read(dependencyVulnId)
+	client, err := g.githubClientFactory(repoId)
+	if err != nil {
+		return err
+	}
+
+	ticketID := fmt.Sprintf("github:%d/%d", dependencyVuln.TicketID, asset.ID)
+
+	_, ticketNumber := githubTicketIdToIdAndNumber(ticketID)
+
+	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
+		State:  github.String("closed"),
+		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:fixed"},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
+
+	if !strings.HasPrefix(repoId, "github:") {
+		// this integration only handles github repositories.
+		return nil
+	}
+
+	owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
 	if err != nil {
 		return err
 	}

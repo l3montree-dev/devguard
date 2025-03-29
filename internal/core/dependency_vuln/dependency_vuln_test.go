@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestCreateIssuesForVulns(t *testing.T) {
+func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 	t.Run("Both Thresholds set and both CVSS and risk values are provided should return no error", func(t *testing.T) {
 		organizationRepository := mocks.NewCoreOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
@@ -42,7 +42,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		}
 		vulns := []models.DependencyVuln{vuln1}
 
-		err := s.CreateIssuesForVulns(asset, vulns)
+		err := s.CreateIssuesForVulnsIfThresholdExceeded(asset, vulns)
 		if err != nil {
 			t.Fail()
 		}
@@ -56,7 +56,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		vuln1 := models.DependencyVuln{}
 		vulns := []models.DependencyVuln{vuln1}
 
-		err := s.CreateIssuesForVulns(asset, vulns)
+		err := s.CreateIssuesForVulnsIfThresholdExceeded(asset, vulns)
 		if err != nil {
 			t.Fail()
 		}
@@ -75,7 +75,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		vuln1 := models.DependencyVuln{}
 		vulns := []models.DependencyVuln{vuln1}
 
-		err := s.CreateIssuesForVulns(asset, vulns)
+		err := s.CreateIssuesForVulnsIfThresholdExceeded(asset, vulns)
 		if err == nil {
 			t.Fail()
 		}
@@ -98,7 +98,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		vuln1 := models.DependencyVuln{}
 		vulns := []models.DependencyVuln{vuln1}
 
-		err := s.CreateIssuesForVulns(asset, vulns)
+		err := s.CreateIssuesForVulnsIfThresholdExceeded(asset, vulns)
 		if err == nil {
 			t.Fail()
 		}
@@ -124,7 +124,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		vuln1 := models.DependencyVuln{}
 		vulns := []models.DependencyVuln{vuln1}
 
-		err := s.CreateIssuesForVulns(asset, vulns)
+		err := s.CreateIssuesForVulnsIfThresholdExceeded(asset, vulns)
 		if err != nil {
 			t.Fail()
 		}
@@ -157,7 +157,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		}
 		vulns := []models.DependencyVuln{vuln1}
 
-		err := s.CreateIssuesForVulns(asset, vulns)
+		err := s.CreateIssuesForVulnsIfThresholdExceeded(asset, vulns)
 		if err == nil {
 			t.Fail()
 		}
@@ -189,7 +189,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		}
 		vulns := []models.DependencyVuln{vuln1}
 
-		err := s.CreateIssuesForVulns(asset, vulns)
+		err := s.CreateIssuesForVulnsIfThresholdExceeded(asset, vulns)
 		if err != nil {
 			t.Fail()
 		}
@@ -222,7 +222,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		}
 		vulns := []models.DependencyVuln{vuln1}
 
-		err := s.CreateIssuesForVulns(asset, vulns)
+		err := s.CreateIssuesForVulnsIfThresholdExceeded(asset, vulns)
 		if err == nil {
 			t.Fail()
 		}
@@ -254,7 +254,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		}
 		vulns := []models.DependencyVuln{vuln1}
 
-		err := s.CreateIssuesForVulns(asset, vulns)
+		err := s.CreateIssuesForVulnsIfThresholdExceeded(asset, vulns)
 		if err == nil {
 			t.Fail()
 		}
@@ -289,7 +289,7 @@ func TestCreateIssuesForVulns(t *testing.T) {
 		}
 		vulns := []models.DependencyVuln{vuln1}
 
-		err := s.CreateIssuesForVulns(asset, vulns)
+		err := s.CreateIssuesForVulnsIfThresholdExceeded(asset, vulns)
 		if err != nil {
 			t.Fail()
 		}
@@ -304,7 +304,7 @@ func TestShouldCreateIssue(t *testing.T) {
 		}
 		s := dependency_vuln.NewService(nil, nil, nil, nil, nil, nil, nil, nil)
 
-		defaultBranch := s.ShouldCreateIssue(assetVersion)
+		defaultBranch := s.ShouldCreateIssues(assetVersion)
 		if defaultBranch {
 			t.Fail()
 		}
@@ -315,7 +315,7 @@ func TestShouldCreateIssue(t *testing.T) {
 		}
 		s := dependency_vuln.NewService(nil, nil, nil, nil, nil, nil, nil, nil)
 
-		defaultBranch := s.ShouldCreateIssue(assetVersion)
+		defaultBranch := s.ShouldCreateIssues(assetVersion)
 		if !defaultBranch {
 			t.Fail()
 		}
