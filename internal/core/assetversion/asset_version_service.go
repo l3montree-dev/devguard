@@ -209,7 +209,6 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
 
 	switch scanner {
-
 	case devguardScanner + "sca":
 		assetVersion.LastScaScan = utils.Ptr(time.Now())
 	case devguardScanner + "container-scanning":
@@ -251,10 +250,6 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	// the amount we actually fixed, is the amount that was open before
-	fixedDependencyVulns = utils.Filter(fixedDependencyVulns, func(dependencyVuln models.DependencyVuln) bool {
-		return dependencyVuln.State == models.VulnStateOpen
-	})
 	return newDependencyVulns, fixedDependencyVulns, append(newDependencyVulns, comparison.InBoth...), nil
 }
 
