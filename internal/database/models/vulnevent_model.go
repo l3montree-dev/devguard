@@ -89,6 +89,7 @@ func (e VulnEvent) Apply(vuln Vuln) {
 			return
 		}
 		vuln.SetRawRiskAssessment(f)
+		vuln.SetRiskRecalculatedAt(time.Now())
 	case EventTypeAccepted:
 		vuln.SetState(VulnStateAccepted)
 	case EventTypeFalsePositive:
