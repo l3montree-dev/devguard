@@ -143,7 +143,8 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 		if s.ShouldCreateIssues(assetVersion) {
 			err = s.CreateIssuesForVulnsIfThresholdExceeded(assetVersion.Asset, dependencyVulns)
 			if err != nil {
-				return err
+				// swallow the error
+				slog.Warn("could not create issues for vulns", "err", err)
 			}
 		}
 	}
@@ -167,36 +168,13 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 
 	events := make([]models.VulnEvent, 0)
 
-	// get all cveIds of the dependencyVulns
-	cveIds := utils.Filter(utils.Map(dependencyVulns, func(f models.DependencyVuln) string {
-		return utils.SafeDereference(f.CVEID)
-	}), func(s string) bool {
-		return s != ""
-	})
-
-	cves, err := s.cveRepository.FindCVEs(nil, cveIds)
-	if err != nil {
-		return fmt.Errorf("could not get all cves: %v", err)
-	}
-	// create a map of cveId -> cve
-	cveMap := make(map[string]models.CVE)
-	for _, cve := range cves {
-		cveMap[cve.CVE] = cve
-	}
-
 	for i, dependencyVuln := range dependencyVulns {
-		if dependencyVuln.CVEID == nil {
-			continue
-		}
-		cveID := *dependencyVuln.CVEID
-		cve, ok := cveMap[cveID]
-		if !ok {
-			slog.Info("could not find cve", "cve", cveID)
+		if dependencyVuln.CVEID == nil || dependencyVuln.CVE == nil {
 			continue
 		}
 
 		oldRiskAssessment := dependencyVuln.RawRiskAssessment
-		newRiskAssessment := risk.RawRisk(cve, env, *dependencyVuln.ComponentDepth)
+		newRiskAssessment := risk.RawRisk(*dependencyVuln.CVE, env, *dependencyVuln.ComponentDepth)
 
 		if *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), userID, justification, oldRiskAssessment, newRiskAssessment)
@@ -204,7 +182,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 			ev.Apply(&dependencyVulns[i])
 			events = append(events, ev)
 
-			slog.Info("recalculated raw risk assessment", "cve", cve.CVE)
+			slog.Info("recalculated raw risk assessment", "cve", dependencyVuln.CVE)
 		} else {
 			// only update the last calculated time
 			dependencyVulns[i].RiskRecalculatedAt = time.Now()
@@ -229,7 +207,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		return nil
 	}
 
-	err = s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
+	err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
 	if err != nil {
 		return fmt.Errorf("could not save dependencyVulns: %v", err)
 	}
