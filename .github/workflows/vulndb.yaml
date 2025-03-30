@@ -45,11 +45,9 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: 1.22
-
-     
-    - name: Import the last database version (this takes some time)
-      run: |
-        go run ./cmd/devguard-cli/main.go vulndb import || true
+    # - name: Import the last database version (this takes some time)
+    #  run: |
+    #    go run ./cmd/devguard-cli/main.go vulndb import || true
     - name: Build the database (this takes some time)
       run: |
         # will fetch the latest build database from ghcr.io
