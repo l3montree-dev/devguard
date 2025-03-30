@@ -24,7 +24,7 @@ func NewDaemonCommand() *cobra.Command {
 		Short: "daemon",
 	}
 
-	daemon.AddCommand(newDependencyVulnHashMigration())
+	daemon.AddCommand(newTriggerCommand())
 	return &daemon
 }
 
