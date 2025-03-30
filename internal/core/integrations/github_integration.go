@@ -275,19 +275,27 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		case models.EventTypeAccepted:
 			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("closed"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:accepted"},
-			})
+				Labels: &[]string{"devguard", 
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())) ,
+				"state:accepted" })
 			return err
 		case models.EventTypeFalsePositive:
 			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("closed"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:false-positive"},
+				Labels: &[]string{"devguard", 
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"state:false-positive"},
 			})
 			return err
 		case models.EventTypeReopened:
 			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("open"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), "state:open"},
+				Labels: &[]string{"devguard", 
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"state:open"},
 			})
 			return err
 		}
@@ -526,7 +534,10 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			}
 			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketNumber, &github.IssueRequest{
 				State:  github.String("closed"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:accepted"},
+				Labels: &[]string{"devguard", 
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"state:accepted"},
 			})
 			return err
 		case models.EventTypeFalsePositive:
@@ -540,7 +551,10 @@ func (g *githubIntegration) HandleEvent(event any) error {
 
 			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketNumber, &github.IssueRequest{
 				State:  github.String("closed"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:false-positive"},
+				Labels: &[]string{"devguard", 
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"state:false-positive"},
 			})
 			return err
 		case models.EventTypeReopened:
@@ -553,7 +567,10 @@ func (g *githubIntegration) HandleEvent(event any) error {
 
 			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketNumber, &github.IssueRequest{
 				State:  github.String("open"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:open"},
+				Labels: &[]string{"devguard", 
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"state:open"},
 			})
 			return err
 
@@ -587,7 +604,10 @@ func (g *githubIntegration) CloseIssueAsFixed(ctx context.Context, asset models.
 
 	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
 		State:  github.String("closed"),
-		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:fixed"},
+		Labels: &[]string{"devguard", 
+		"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+		"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+		"state:fixed"},
 	})
 	if err != nil {
 		return err
@@ -623,7 +643,9 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	issue := &github.IssueRequest{
 		Title:  dependencyVuln.CVEID,
 		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
-		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment))},
+		Labels: &[]string{"devguard", 
+		"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+		"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment()))},
 	}
 
 	createdIssue, _, err := client.CreateIssue(ctx, owner, repo, issue)

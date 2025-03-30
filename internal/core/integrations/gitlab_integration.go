@@ -311,7 +311,8 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:accepted",
 			}
 
@@ -324,7 +325,8 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:false-positive",
 			}
 
@@ -337,7 +339,8 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:open",
 			}
 
@@ -829,7 +832,8 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			}
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:accepted",
 			}
 			_, _, err = client.EditIssue(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
@@ -847,7 +851,8 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:false-positive",
 			}
 			_, _, err = client.EditIssue(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
@@ -865,7 +870,8 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 
 			labels := []string{
 				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
+				"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+				"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 				"state:open",
 			}
 
@@ -1006,7 +1012,8 @@ func (g *gitlabIntegration) CloseIssueAsFixed(ctx context.Context, asset models.
 
 	labels := []string{
 		"devguard",
-		"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
+		"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())), 
+		"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 		"state:fixed",
 	}
 
@@ -1053,7 +1060,8 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	labels := []string{
 		"devguard",
-		"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
+		"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
+		"cvss-severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 	}
 
 	issue := &gitlab.CreateIssueOptions{
