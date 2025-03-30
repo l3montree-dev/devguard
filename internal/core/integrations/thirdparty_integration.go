@@ -115,6 +115,17 @@ func (t *thirdPartyIntegrations) HandleEvent(event any) error {
 	return err
 }
 
+func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln) error {
+	wg := utils.ErrGroup[struct{}](-1)
+	for _, i := range t.integrations {
+		wg.Go(func() (struct{}, error) {
+			return struct{}{}, i.ReopenIssue(ctx, repoId, dependencyVuln)
+		})
+	}
+	_, err := wg.WaitAndCollect()
+	return err
+}
+
 func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
@@ -127,11 +138,11 @@ func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.A
 	return err
 }
 
-func (t *thirdPartyIntegrations) CloseIssueAsFixed(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
+func (t *thirdPartyIntegrations) CloseIssue(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.CloseIssueAsFixed(ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug)
+			return struct{}{}, i.CloseIssue(ctx, state, repoId, dependencyVuln)
 		})
 	}
 

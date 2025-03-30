@@ -305,10 +305,19 @@ func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vu
 
 	for _, vulnerability := range vulnList {
 		// check that the ticket id is nil currently
-		if vulnerability.TicketID == nil && ((cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold)) {
-			errgroup.Go(func() (any, error) {
-				return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
-			})
+		if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
+			// check if there is already a ticket, we might need to reopen
+			if vulnerability.TicketID == nil {
+				errgroup.Go(func() (any, error) {
+					return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
+				})
+			} else {
+				// check if the ticket id is nil
+				errgroup.Go(func() (any, error) {
+					return nil, s.reopenIssue(vulnerability, repoID)
+				})
+			}
+
 		}
 	}
 
@@ -325,13 +334,15 @@ func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.
 	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug)
 }
 
+func (s *service) reopenIssue(vulnerability models.DependencyVuln, repoId string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	return s.thirdPartyIntegration.ReopenIssue(ctx, repoId, vulnerability)
+}
+
 func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error {
 	project, err := s.projectRepository.Read(asset.ProjectID)
-	if err != nil {
-		return err
-	}
-
-	org, err := s.organizationRepository.Read(project.OrganizationID)
 	if err != nil {
 		return err
 	}
@@ -348,7 +359,7 @@ func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.Depen
 		if vulnerability.TicketID != nil {
 			// check that the ticket id is nil currently
 			errgroup.Go(func() (any, error) {
-				err := s.closeIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
+				err := s.closeIssue(vulnerability, repoID)
 				if err != nil {
 					slog.Error("could not close issue", "err", err, "ticketUrl", vulnerability.TicketURL)
 					return nil, err
@@ -363,11 +374,11 @@ func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.Depen
 	return err
 }
 
-func (s *service) closeIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string) error {
+func (s *service) closeIssue(vulnerability models.DependencyVuln, repoId string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.CloseIssueAsFixed(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug)
+	return s.thirdPartyIntegration.CloseIssue(ctx, "fixed", repoId, vulnerability)
 }
 
 func (s *service) ShouldCreateIssues(assetVersion models.AssetVersion) bool {

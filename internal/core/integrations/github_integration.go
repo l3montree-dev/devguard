@@ -524,11 +524,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			if err != nil {
 				return err
 			}
-			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketNumber, &github.IssueRequest{
-				State:  github.String("closed"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:accepted"},
-			})
-			return err
+			return g.CloseIssue(context.Background(), "accepted", repoId, dependencyVuln)
 		case models.EventTypeFalsePositive:
 
 			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketNumber, &github.IssueComment{
@@ -538,11 +534,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 				return err
 			}
 
-			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketNumber, &github.IssueRequest{
-				State:  github.String("closed"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:false-positive"},
-			})
-			return err
+			return g.CloseIssue(context.Background(), "false-positive", repoId, dependencyVuln)
 		case models.EventTypeReopened:
 			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketNumber, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
@@ -551,12 +543,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 				return err
 			}
 
-			_, _, err = client.EditIssue(context.Background(), owner, repo, githubTicketNumber, &github.IssueRequest{
-				State:  github.String("open"),
-				Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:open"},
-			})
-			return err
-
+			return g.ReopenIssue(context.Background(), repoId, dependencyVuln)
 		case models.EventTypeComment:
 			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketNumber, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
@@ -567,7 +554,7 @@ func (g *githubIntegration) HandleEvent(event any) error {
 	return nil
 }
 
-func (g *githubIntegration) CloseIssueAsFixed(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
+func (g *githubIntegration) CloseIssue(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln) error {
 	if !strings.HasPrefix(repoId, "github:") || !strings.HasPrefix(*dependencyVuln.TicketID, "github:") {
 		// this integration only handles github repositories.
 		return nil
@@ -587,7 +574,36 @@ func (g *githubIntegration) CloseIssueAsFixed(ctx context.Context, asset models.
 
 	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
 		State:  github.String("closed"),
-		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:fixed"},
+		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:" + state},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *githubIntegration) ReopenIssue(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln) error {
+	if !strings.HasPrefix(repoId, "github:") || !strings.HasPrefix(*dependencyVuln.TicketID, "github:") {
+		// this integration only handles github repositories.
+		return nil
+	}
+
+	owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
+	if err != nil {
+		return err
+	}
+
+	client, err := g.githubClientFactory(repoId)
+	if err != nil {
+		return err
+	}
+
+	_, ticketNumber := githubTicketIdToIdAndNumber(*dependencyVuln.TicketID)
+
+	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
+		State:  github.String("open"),
+		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), "state:open"},
 	})
 	if err != nil {
 		return err

@@ -259,6 +259,43 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 			t.Fail()
 		}
 	})
+
+	t.Run("should reopen the issue, if a vuln already has an assigned ticket", func(t *testing.T) {
+		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
+
+		projectRepository := mocks.NewCoreProjectRepository(t)
+		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
+
+		thirdPartyIntegration := mocks.NewCoreThirdPartyIntegration(t)
+
+		thirdPartyIntegration.On("ReopenIssue", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
+
+		asset := models.Asset{
+			CVSSAutomaticTicketThreshold: utils.Ptr(0.),
+			RiskAutomaticTicketThreshold: utils.Ptr(0.),
+			ProjectID:                    uuid.MustParse("3bf8dfdd-e82b-42ce-9381-17f6f588bc26"),
+			RepositoryID:                 utils.Ptr("gitlab:05797bd8-33ac-4bd5-b8ec-e1bb3423dd79:3563"),
+		}
+
+		vuln1 := models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				State: models.VulnStateOpen,
+				ID:    "66ea9a6781904477d8d401dc1a27338187d0502bc7acaed6295cb0b570f11065", AssetVersionName: "GenieOderWAHNSINN",
+				TicketID: utils.Ptr("ticket-id"),
+			},
+			CVE:               &models.CVE{CVSS: 5},
+			RawRiskAssessment: utils.Ptr(5.),
+		}
+		vulns := []models.DependencyVuln{vuln1}
+
+		err := s.CreateIssuesForVulnsIfThresholdExceeded(asset, vulns)
+		if err != nil {
+			t.Fail()
+		}
+	})
 }
 
 func TestShouldCreateIssue(t *testing.T) {
