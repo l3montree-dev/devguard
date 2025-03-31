@@ -26,17 +26,66 @@ func (_m *CoreThirdPartyIntegration) EXPECT() *CoreThirdPartyIntegration_Expecte
 	return &CoreThirdPartyIntegration_Expecter{mock: &_m.Mock}
 }
 
-// CreateIssue provides a mock function with given fields: ctx, asset, assetVersionName, repoId, dependencyVulnId, projectSlug, orgSlug
-func (_m *CoreThirdPartyIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
-	ret := _m.Called(ctx, asset, assetVersionName, repoId, dependencyVulnId, projectSlug, orgSlug)
+// CloseIssue provides a mock function with given fields: ctx, state, repoId, dependencyVuln
+func (_m *CoreThirdPartyIntegration) CloseIssue(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln) error {
+	ret := _m.Called(ctx, state, repoId, dependencyVuln)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CloseIssue")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, models.DependencyVuln) error); ok {
+		r0 = rf(ctx, state, repoId, dependencyVuln)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreThirdPartyIntegration_CloseIssue_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CloseIssue'
+type CoreThirdPartyIntegration_CloseIssue_Call struct {
+	*mock.Call
+}
+
+// CloseIssue is a helper method to define mock.On call
+//   - ctx context.Context
+//   - state string
+//   - repoId string
+//   - dependencyVuln models.DependencyVuln
+func (_e *CoreThirdPartyIntegration_Expecter) CloseIssue(ctx interface{}, state interface{}, repoId interface{}, dependencyVuln interface{}) *CoreThirdPartyIntegration_CloseIssue_Call {
+	return &CoreThirdPartyIntegration_CloseIssue_Call{Call: _e.mock.On("CloseIssue", ctx, state, repoId, dependencyVuln)}
+}
+
+func (_c *CoreThirdPartyIntegration_CloseIssue_Call) Run(run func(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln)) *CoreThirdPartyIntegration_CloseIssue_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(models.DependencyVuln))
+	})
+	return _c
+}
+
+func (_c *CoreThirdPartyIntegration_CloseIssue_Call) Return(_a0 error) *CoreThirdPartyIntegration_CloseIssue_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreThirdPartyIntegration_CloseIssue_Call) RunAndReturn(run func(context.Context, string, string, models.DependencyVuln) error) *CoreThirdPartyIntegration_CloseIssue_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateIssue provides a mock function with given fields: ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug
+func (_m *CoreThirdPartyIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
+	ret := _m.Called(ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateIssue")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, models.Asset, string, string, string, string, string) error); ok {
-		r0 = rf(ctx, asset, assetVersionName, repoId, dependencyVulnId, projectSlug, orgSlug)
+	if rf, ok := ret.Get(0).(func(context.Context, models.Asset, string, string, models.DependencyVuln, string, string) error); ok {
+		r0 = rf(ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -54,16 +103,16 @@ type CoreThirdPartyIntegration_CreateIssue_Call struct {
 //   - asset models.Asset
 //   - assetVersionName string
 //   - repoId string
-//   - dependencyVulnId string
+//   - dependencyVuln models.DependencyVuln
 //   - projectSlug string
 //   - orgSlug string
-func (_e *CoreThirdPartyIntegration_Expecter) CreateIssue(ctx interface{}, asset interface{}, assetVersionName interface{}, repoId interface{}, dependencyVulnId interface{}, projectSlug interface{}, orgSlug interface{}) *CoreThirdPartyIntegration_CreateIssue_Call {
-	return &CoreThirdPartyIntegration_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, asset, assetVersionName, repoId, dependencyVulnId, projectSlug, orgSlug)}
+func (_e *CoreThirdPartyIntegration_Expecter) CreateIssue(ctx interface{}, asset interface{}, assetVersionName interface{}, repoId interface{}, dependencyVuln interface{}, projectSlug interface{}, orgSlug interface{}) *CoreThirdPartyIntegration_CreateIssue_Call {
+	return &CoreThirdPartyIntegration_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug)}
 }
 
-func (_c *CoreThirdPartyIntegration_CreateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVulnId string, projectSlug string, orgSlug string)) *CoreThirdPartyIntegration_CreateIssue_Call {
+func (_c *CoreThirdPartyIntegration_CreateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string)) *CoreThirdPartyIntegration_CreateIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(models.Asset), args[2].(string), args[3].(string), args[4].(string), args[5].(string), args[6].(string))
+		run(args[0].(context.Context), args[1].(models.Asset), args[2].(string), args[3].(string), args[4].(models.DependencyVuln), args[5].(string), args[6].(string))
 	})
 	return _c
 }
@@ -73,7 +122,7 @@ func (_c *CoreThirdPartyIntegration_CreateIssue_Call) Return(_a0 error) *CoreThi
 	return _c
 }
 
-func (_c *CoreThirdPartyIntegration_CreateIssue_Call) RunAndReturn(run func(context.Context, models.Asset, string, string, string, string, string) error) *CoreThirdPartyIntegration_CreateIssue_Call {
+func (_c *CoreThirdPartyIntegration_CreateIssue_Call) RunAndReturn(run func(context.Context, models.Asset, string, string, models.DependencyVuln, string, string) error) *CoreThirdPartyIntegration_CreateIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -363,6 +412,54 @@ func (_c *CoreThirdPartyIntegration_ListRepositories_Call) Return(_a0 []core.Rep
 }
 
 func (_c *CoreThirdPartyIntegration_ListRepositories_Call) RunAndReturn(run func(echo.Context) ([]core.Repository, error)) *CoreThirdPartyIntegration_ListRepositories_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReopenIssue provides a mock function with given fields: ctx, repoId, dependencyVuln
+func (_m *CoreThirdPartyIntegration) ReopenIssue(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln) error {
+	ret := _m.Called(ctx, repoId, dependencyVuln)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReopenIssue")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, models.DependencyVuln) error); ok {
+		r0 = rf(ctx, repoId, dependencyVuln)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreThirdPartyIntegration_ReopenIssue_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReopenIssue'
+type CoreThirdPartyIntegration_ReopenIssue_Call struct {
+	*mock.Call
+}
+
+// ReopenIssue is a helper method to define mock.On call
+//   - ctx context.Context
+//   - repoId string
+//   - dependencyVuln models.DependencyVuln
+func (_e *CoreThirdPartyIntegration_Expecter) ReopenIssue(ctx interface{}, repoId interface{}, dependencyVuln interface{}) *CoreThirdPartyIntegration_ReopenIssue_Call {
+	return &CoreThirdPartyIntegration_ReopenIssue_Call{Call: _e.mock.On("ReopenIssue", ctx, repoId, dependencyVuln)}
+}
+
+func (_c *CoreThirdPartyIntegration_ReopenIssue_Call) Run(run func(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln)) *CoreThirdPartyIntegration_ReopenIssue_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(models.DependencyVuln))
+	})
+	return _c
+}
+
+func (_c *CoreThirdPartyIntegration_ReopenIssue_Call) Return(_a0 error) *CoreThirdPartyIntegration_ReopenIssue_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreThirdPartyIntegration_ReopenIssue_Call) RunAndReturn(run func(context.Context, string, models.DependencyVuln) error) *CoreThirdPartyIntegration_ReopenIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }

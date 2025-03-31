@@ -33,7 +33,7 @@ func (r *eventRepository) ReadAssetEventsByVulnID(vulnID string) ([]models.VulnE
 		return nil, err
 	}
 
-	err = r.db.Table("vuln_events").Debug().
+	err = r.db.Table("vuln_events").
 		Select("vuln_events.*, dependency_vulns.asset_version_name, dependency_vulns.asset_id, asset_versions.slug").
 		Joins("LEFT JOIN dependency_vulns ON vuln_events.vuln_id = dependency_vulns.id").
 		Joins("LEFT JOIN asset_versions ON dependency_vulns.asset_id = asset_versions.asset_id AND dependency_vulns.asset_version_name = asset_versions.name").

@@ -9,19 +9,21 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-func RiskToSeverity(risk float64) string {
+func RiskToSeverity(risk float64) (string, error) {
 	switch {
+	case risk == 0:
+		return "", fmt.Errorf("risk is 0")
 	case risk < 4:
-		return "Low"
+		return "Low", nil
 	case risk < 7:
-		return "Medium"
+		return "Medium", nil
 	case risk < 9:
-		return "High"
+		return "High", nil
 	case risk <= 10:
+		return "Critical", nil
 	default:
-		return "None"
+		return "", fmt.Errorf("risk is greater than 10")
 	}
-	return "None"
 }
 
 // returns hex without leading "#"
@@ -240,7 +242,13 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 		str.WriteString("No fix is available.\n")
 	}
 	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("## Risk: `%.2f (%s)`\n", e.risk, RiskToSeverity(e.risk)))
+	severity, err := RiskToSeverity(e.risk)
+	if err != nil {
+		str.WriteString(fmt.Sprintf("## Risk: `%.2f (%s)`\n", e.risk, "Unknown"))
+	} else {
+		str.WriteString(fmt.Sprintf("## Risk: `%.2f (%s)`\n", e.risk, severity))
+	}
+
 	str.WriteString(fmt.Sprintf("### EPSS: `%.2f %%`\n", e.epss*100))
 	str.WriteString(fmt.Sprintf("%s\n", e.epssMessage))
 	str.WriteString("\n")

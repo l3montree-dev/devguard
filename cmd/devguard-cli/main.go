@@ -55,6 +55,7 @@ func init() {
 	rootCmd.AddCommand(commands.NewVulndbCommand())
 	rootCmd.AddCommand(commands.NewMigrateCommand())
 	rootCmd.AddCommand(commands.NewComponentsCommand())
+	rootCmd.AddCommand(commands.NewDaemonCommand())
 }
 
 func main() {
