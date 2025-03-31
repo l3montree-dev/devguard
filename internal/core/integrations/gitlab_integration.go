@@ -1039,7 +1039,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
-	labels := getLabels(&dependencyVuln, "")
+	labels := getLabels(&dependencyVuln, "open")
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("DependencyVuln %s", dependencyVuln.CVE.CVE)),

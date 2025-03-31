@@ -104,14 +104,24 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 func getLabels(vuln models.Vuln, state string) []string {
 	labels := []string{
 		"devguard",
-		"risk:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
 	}
+
+	riskSeverity, err := risk.RiskToSeverity(vuln.GetRawRiskAssessment())
+	if err == nil {
+		labels = append(labels, "risk:"+strings.ToLower(riskSeverity))
+	}
+
 	if state != "" {
 		labels = append(labels, "state:"+state)
 	}
 
 	if v, ok := vuln.(*models.DependencyVuln); ok {
-		labels = append(labels, "cvss-severity:"+risk.RiskToSeverity(float64(v.CVE.CVSS)))
+		if v.CVE != nil {
+			cvssSeverity, err := risk.RiskToSeverity(float64(v.CVE.CVSS))
+			if err == nil {
+				labels = append(labels, "cvss-severity:"+strings.ToLower(cvssSeverity))
+			}
+		}
 	}
 
 	return labels
@@ -653,7 +663,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
-	labels := getLabels(&dependencyVuln, "")
+	labels := getLabels(&dependencyVuln, "open")
 	issue := &github.IssueRequest{
 		Title:  dependencyVuln.CVEID,
 		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
@@ -665,15 +675,35 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		return err
 	}
 
-	// todo - we are editing the labels on each call. Actually we only need todo it once
-	_, _, err = client.EditIssueLabel(ctx, owner, repo, "severity:"+strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)), &github.Label{
-		Description: github.String("Severity of the dependencyVuln"),
-		Color:       github.String(risk.RiskToColor(*dependencyVuln.RawRiskAssessment)),
-	})
+	riskSeverity, err := risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)
+	if err == nil {
+		// todo - we are editing the labels on each call. Actually we only need todo it once
+		_, _, err = client.EditIssueLabel(ctx, owner, repo, "risk:"+strings.ToLower(riskSeverity), &github.Label{
+			Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
+			Color:       github.String(risk.RiskToColor(*dependencyVuln.RawRiskAssessment)),
+		})
+
+		if err != nil {
+			slog.Error("could not update label", "err", err)
+		}
+	}
+
+	cvssSeverity, err := risk.RiskToSeverity(float64(dependencyVuln.CVE.CVSS))
+	if err == nil {
+		_, _, err = client.EditIssueLabel(ctx, owner, repo, "cvss-severity:"+strings.ToLower(cvssSeverity), &github.Label{
+			Description: github.String("CVSS severity of the vulnerability"),
+			Color:       github.String(risk.RiskToColor(float64(dependencyVuln.CVE.CVSS))),
+		})
+
+		if err != nil {
+			slog.Error("could not update label", "err", err)
+		}
+	}
+
 	if err != nil {
 		slog.Error("could not update label", "err", err)
 	}
-	_, _, err = client.EditIssueLabel(context.Background(), owner, repo, "devguard", &github.Label{
+	_, _, err = client.EditIssueLabel(ctx, owner, repo, "devguard", &github.Label{
 		Description: github.String("DevGuard"),
 		Color:       github.String("182654"),
 	})
