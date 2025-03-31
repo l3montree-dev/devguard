@@ -26,17 +26,17 @@ func (_m *CoreIntegrationAggregate) EXPECT() *CoreIntegrationAggregate_Expecter 
 	return &CoreIntegrationAggregate_Expecter{mock: &_m.Mock}
 }
 
-// CloseIssueAsFixed provides a mock function with given fields: ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug
-func (_m *CoreIntegrationAggregate) CloseIssueAsFixed(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
-	ret := _m.Called(ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug)
+// CloseIssue provides a mock function with given fields: ctx, state, repoId, dependencyVuln
+func (_m *CoreIntegrationAggregate) CloseIssue(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln) error {
+	ret := _m.Called(ctx, state, repoId, dependencyVuln)
 
 	if len(ret) == 0 {
-		panic("no return value specified for CloseIssueAsFixed")
+		panic("no return value specified for CloseIssue")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, models.Asset, string, string, models.DependencyVuln, string, string) error); ok {
-		r0 = rf(ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, models.DependencyVuln) error); ok {
+		r0 = rf(ctx, state, repoId, dependencyVuln)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -44,36 +44,33 @@ func (_m *CoreIntegrationAggregate) CloseIssueAsFixed(ctx context.Context, asset
 	return r0
 }
 
-// CoreIntegrationAggregate_CloseIssueAsFixed_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CloseIssueAsFixed'
-type CoreIntegrationAggregate_CloseIssueAsFixed_Call struct {
+// CoreIntegrationAggregate_CloseIssue_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CloseIssue'
+type CoreIntegrationAggregate_CloseIssue_Call struct {
 	*mock.Call
 }
 
-// CloseIssueAsFixed is a helper method to define mock.On call
+// CloseIssue is a helper method to define mock.On call
 //   - ctx context.Context
-//   - asset models.Asset
-//   - assetVersionName string
+//   - state string
 //   - repoId string
 //   - dependencyVuln models.DependencyVuln
-//   - projectSlug string
-//   - orgSlug string
-func (_e *CoreIntegrationAggregate_Expecter) CloseIssueAsFixed(ctx interface{}, asset interface{}, assetVersionName interface{}, repoId interface{}, dependencyVuln interface{}, projectSlug interface{}, orgSlug interface{}) *CoreIntegrationAggregate_CloseIssueAsFixed_Call {
-	return &CoreIntegrationAggregate_CloseIssueAsFixed_Call{Call: _e.mock.On("CloseIssueAsFixed", ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug)}
+func (_e *CoreIntegrationAggregate_Expecter) CloseIssue(ctx interface{}, state interface{}, repoId interface{}, dependencyVuln interface{}) *CoreIntegrationAggregate_CloseIssue_Call {
+	return &CoreIntegrationAggregate_CloseIssue_Call{Call: _e.mock.On("CloseIssue", ctx, state, repoId, dependencyVuln)}
 }
 
-func (_c *CoreIntegrationAggregate_CloseIssueAsFixed_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string)) *CoreIntegrationAggregate_CloseIssueAsFixed_Call {
+func (_c *CoreIntegrationAggregate_CloseIssue_Call) Run(run func(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln)) *CoreIntegrationAggregate_CloseIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(models.Asset), args[2].(string), args[3].(string), args[4].(models.DependencyVuln), args[5].(string), args[6].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(models.DependencyVuln))
 	})
 	return _c
 }
 
-func (_c *CoreIntegrationAggregate_CloseIssueAsFixed_Call) Return(_a0 error) *CoreIntegrationAggregate_CloseIssueAsFixed_Call {
+func (_c *CoreIntegrationAggregate_CloseIssue_Call) Return(_a0 error) *CoreIntegrationAggregate_CloseIssue_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *CoreIntegrationAggregate_CloseIssueAsFixed_Call) RunAndReturn(run func(context.Context, models.Asset, string, string, models.DependencyVuln, string, string) error) *CoreIntegrationAggregate_CloseIssueAsFixed_Call {
+func (_c *CoreIntegrationAggregate_CloseIssue_Call) RunAndReturn(run func(context.Context, string, string, models.DependencyVuln) error) *CoreIntegrationAggregate_CloseIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -463,6 +460,54 @@ func (_c *CoreIntegrationAggregate_ListRepositories_Call) Return(_a0 []core.Repo
 }
 
 func (_c *CoreIntegrationAggregate_ListRepositories_Call) RunAndReturn(run func(echo.Context) ([]core.Repository, error)) *CoreIntegrationAggregate_ListRepositories_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReopenIssue provides a mock function with given fields: ctx, repoId, dependencyVuln
+func (_m *CoreIntegrationAggregate) ReopenIssue(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln) error {
+	ret := _m.Called(ctx, repoId, dependencyVuln)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReopenIssue")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, models.DependencyVuln) error); ok {
+		r0 = rf(ctx, repoId, dependencyVuln)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreIntegrationAggregate_ReopenIssue_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReopenIssue'
+type CoreIntegrationAggregate_ReopenIssue_Call struct {
+	*mock.Call
+}
+
+// ReopenIssue is a helper method to define mock.On call
+//   - ctx context.Context
+//   - repoId string
+//   - dependencyVuln models.DependencyVuln
+func (_e *CoreIntegrationAggregate_Expecter) ReopenIssue(ctx interface{}, repoId interface{}, dependencyVuln interface{}) *CoreIntegrationAggregate_ReopenIssue_Call {
+	return &CoreIntegrationAggregate_ReopenIssue_Call{Call: _e.mock.On("ReopenIssue", ctx, repoId, dependencyVuln)}
+}
+
+func (_c *CoreIntegrationAggregate_ReopenIssue_Call) Run(run func(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln)) *CoreIntegrationAggregate_ReopenIssue_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(models.DependencyVuln))
+	})
+	return _c
+}
+
+func (_c *CoreIntegrationAggregate_ReopenIssue_Call) Return(_a0 error) *CoreIntegrationAggregate_ReopenIssue_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreIntegrationAggregate_ReopenIssue_Call) RunAndReturn(run func(context.Context, string, models.DependencyVuln) error) *CoreIntegrationAggregate_ReopenIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }
