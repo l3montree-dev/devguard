@@ -308,38 +308,21 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 		switch vulnEvent.Type {
 		case models.EventTypeAccepted:
-
-			labels := []string{
-				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
-				"state:accepted",
-			}
-
+			labels := getLabels(vuln, "accepted")
 			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 		case models.EventTypeFalsePositive:
-
-			labels := []string{
-				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
-				"state:false-positive",
-			}
-
+			labels := getLabels(vuln, "false-positive")
 			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 		case models.EventTypeReopened:
-
-			labels := []string{
-				"devguard",
-				"severity:" + strings.ToLower(risk.RiskToSeverity(vuln.GetRawRiskAssessment())),
-				"state:open",
-			}
+			labels := getLabels(vuln, "open")
 
 			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("reopen"),
@@ -835,7 +818,6 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			if err != nil {
 				return err
 			}
-
 			return g.CloseIssue(event.Ctx.Request().Context(), "false-positive", repoId, dependencyVuln)
 		case models.EventTypeReopened:
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
@@ -974,12 +956,7 @@ func (g *gitlabIntegration) ReopenIssue(ctx context.Context, repoId string, depe
 	if err != nil {
 		return err
 	}
-
-	labels := []string{
-		"devguard",
-		"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
-		"state:open",
-	}
+	labels := getLabels(&dependencyVuln, "open")
 
 	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent: gitlab.Ptr("reopen"),
@@ -1020,12 +997,7 @@ func (g *gitlabIntegration) CloseIssue(ctx context.Context, state string, repoId
 	if err != nil {
 		return err
 	}
-
-	labels := []string{
-		"devguard",
-		"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
-		"state:" + state,
-	}
+	labels := getLabels(&dependencyVuln, state)
 
 	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent: gitlab.Ptr("close"),
@@ -1067,11 +1039,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
-
-	labels := []string{
-		"devguard",
-		"severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment)),
-	}
+	labels := getLabels(&dependencyVuln, "")
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("DependencyVuln %s", dependencyVuln.CVE.CVE)),
