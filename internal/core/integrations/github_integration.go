@@ -190,7 +190,6 @@ func (githubIntegration *githubIntegration) GetUsers(org models.Org) []core.User
 }
 
 func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) error {
-
 	req := ctx.Request()
 	payload, err := github.ValidatePayload(req, []byte(os.Getenv("GITHUB_WEBHOOK_SECRET")))
 	if err != nil {

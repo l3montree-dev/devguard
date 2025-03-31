@@ -235,3 +235,11 @@ func (r *dependencyVulnRepository) GetOrgFromVulnID(tx core.DB, dependencyVulnID
 	}
 	return org, nil
 }
+
+func (r *dependencyVulnRepository) FindByTicketID(tx core.DB, ticketID string) (models.DependencyVuln, error) {
+	var vuln models.DependencyVuln
+	if err := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("ticket_id = ?", ticketID).First(&vuln).Error; err != nil {
+		return vuln, err
+	}
+	return vuln, nil
+}
