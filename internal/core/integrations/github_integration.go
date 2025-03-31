@@ -637,7 +637,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	assetSlug := asset.Slug
 
 	issue := &github.IssueRequest{
-		Title:  dependencyVuln.CVEID,
+		Title:  github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
 		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
 		Labels: &[]string{"devguard", "severity:" + strings.ToLower(risk.RiskToSeverity(*dependencyVuln.RawRiskAssessment))},
 	}
