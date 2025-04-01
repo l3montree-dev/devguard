@@ -1096,10 +1096,10 @@ func (g *gitlabIntegration) renderPathToComponent(assetID uuid.UUID, assetVersio
 	mermaidFlowChart += componentList[0]
 
 	for i := range componentList[1:] {
-		mermaidFlowChart = mermaidFlowChart + " --> " + componentList[i]
+		mermaidFlowChart = mermaidFlowChart + " --> \n" + "node" + strconv.Itoa(i) + "[" + componentList[i] + "]"
 	}
 
-	mermaidFlowChart = "```" + mermaidFlowChart + "\n```"
+	mermaidFlowChart = "```" + mermaidFlowChart + "\n```\n"
 	fmt.Printf("\n\n---------------Result ----------------------------\n%s", mermaidFlowChart)
 	return mermaidFlowChart, nil
 }
