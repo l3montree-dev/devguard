@@ -552,12 +552,9 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
 	assetVersionRouter.GET("/", assetVersionController.Read)
-<<<<<<< HEAD
-	assetVersionRouter.DELETE("/", assetVersionController.Delete) //Delete an asset version
+
 	assetVersionRouter.GET("/compliance/", complianceController.Compliance)
-=======
 	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"})) //Delete an asset version
->>>>>>> main
 
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
 	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
