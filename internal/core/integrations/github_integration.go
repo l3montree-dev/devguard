@@ -745,7 +745,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 }
 
 func (g *githubIntegration) renderPathToComponent(assetID uuid.UUID, assetVersionName string, scannerID string, pURL string) (string, error) {
-	var mermaidFlowChart string
+	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart LR\n"
 	components, err := g.componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, scannerID)
 	if err != nil {
 		return mermaidFlowChart, err
@@ -756,18 +756,19 @@ func (g *githubIntegration) renderPathToComponent(assetID uuid.UUID, assetVersio
 	current := tree.Root
 	for current != nil {
 		componentList = append(componentList, current.Name)
-		if current.Children != nil {
+		if len(current.Children) > 0 {
 			current = current.Children[0]
 		} else {
 			break
 		}
 	}
+	mermaidFlowChart += componentList[0]
 
-	for _, component := range componentList {
-		fmt.Printf("%s -> ", component)
+	for i := range componentList[1:] {
+		mermaidFlowChart = mermaidFlowChart + " --> " + componentList[i]
 	}
 
-	mermaidFlowChart = componentList[len(componentList)-2]
-
+	mermaidFlowChart = "```" + mermaidFlowChart + "\n```"
+	fmt.Printf("\n\n---------------Result ----------------------------\n%s", mermaidFlowChart)
 	return mermaidFlowChart, nil
 }

@@ -100,7 +100,7 @@ func componentDepthMessages(depth int) string {
 	if depth == 1 {
 		return "The vulnerability is in a direct dependency of your project."
 	}
-	return fmt.Sprintf("The vulnerability is in a dependency of a dependency your project. It is %d levels deep.", depth)
+	return fmt.Sprintf("The vulnerability is in a dependency of a dependency in your project. It is %d levels deep.", depth)
 }
 
 type AssetDTO struct {
