@@ -25,10 +25,8 @@ import (
 	"time"
 
 	"github.com/google/go-github/v62/github"
-	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -668,7 +666,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	assetSlug := asset.Slug
 	labels := getLabels(&dependencyVuln, "open")
-	componentTree, err := g.renderPathToComponent(asset.ID, assetVersionName, "SBOM-File-Upload", exp.AffectedComponentName)
+	componentTree, err := RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
 	if err != nil {
 		return err
 	}
@@ -742,41 +740,4 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	}
 
 	return nil
-}
-
-// this function returns a string containing a mermaids js flow chart to the given pURL
-func (g *githubIntegration) renderPathToComponent(assetID uuid.UUID, assetVersionName string, scannerID string, pURL string) (string, error) {
-
-	//basic string to tell markdown that we have a mermaid flow chart with given parameters
-	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart LR\n"
-
-	components, err := g.componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, scannerID)
-	if err != nil {
-		return mermaidFlowChart, err
-	}
-
-	tree := assetversion.BuildDependencyTree(components)
-
-	//we get the path to the component as an array of package names
-	componentList := []string{}
-	current := tree.Root
-	for current != nil {
-		componentList = append(componentList, current.Name)
-		if len(current.Children) > 0 {
-			current = current.Children[0]
-		} else {
-			break
-		}
-	}
-
-	//now we build the string using this list, every new node need prefix and suffix to work with mermaid. [] are used to prohibit mermaid from interpreting some symbols from the package names as mermaid syntax
-	mermaidFlowChart += componentList[0]
-
-	for i, componentName := range componentList[1:] {
-		mermaidFlowChart = mermaidFlowChart + " --> \n" + "node" + strconv.Itoa(i) + "[" + componentName + "]"
-	}
-
-	mermaidFlowChart = "```" + mermaidFlowChart + "\n```\n"
-
-	return mermaidFlowChart, nil
 }
