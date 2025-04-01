@@ -744,14 +744,20 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	return nil
 }
 
+// this function returns a string containing a mermaids js flow chart to the given pURL
 func (g *githubIntegration) renderPathToComponent(assetID uuid.UUID, assetVersionName string, scannerID string, pURL string) (string, error) {
+
+	//basic string to tell markdown that we have a mermaid flow chart with given parameters
 	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart LR\n"
+
 	components, err := g.componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, scannerID)
 	if err != nil {
 		return mermaidFlowChart, err
 	}
 
 	tree := assetversion.BuildDependencyTree(components)
+
+	//we get the path to the component as an array of package names
 	componentList := []string{}
 	current := tree.Root
 	for current != nil {
@@ -762,6 +768,8 @@ func (g *githubIntegration) renderPathToComponent(assetID uuid.UUID, assetVersio
 			break
 		}
 	}
+
+	//now we build the string using this list, every new node need prefix and suffix to work with mermaid. [] are used to prohibit mermaid from interpreting some symbols from the package names as mermaid syntax
 	mermaidFlowChart += componentList[0]
 
 	for i, componentName := range componentList[1:] {
@@ -769,6 +777,6 @@ func (g *githubIntegration) renderPathToComponent(assetID uuid.UUID, assetVersio
 	}
 
 	mermaidFlowChart = "```" + mermaidFlowChart + "\n```\n"
-	fmt.Printf("\n\n---------------Result ----------------------------\n%s", mermaidFlowChart)
+
 	return mermaidFlowChart, nil
 }
