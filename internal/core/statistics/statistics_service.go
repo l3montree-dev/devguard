@@ -278,6 +278,10 @@ func (s *service) GetAssetVersionRiskDistribution(assetVersionName string, asset
 	return s.statisticsRepository.GetAssetRiskDistribution(assetVersionName, assetID, assetName)
 }
 
+func (s *service) GetAssetVersionCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
+	return s.statisticsRepository.GetAssetCvssDistribution(assetVersionName, assetID, assetName)
+}
+
 func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error) {
 	return s.projectRiskHistoryRepository.GetRiskHistory(projectID, start, end)
 }

@@ -15,6 +15,7 @@ import (
 type statisticsService interface {
 	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error)
 	GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
+	GetAssetVersionCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
 	GetDependencyVulnAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (DependencyVulnAggregationStateAndChange, error)
 
@@ -79,6 +80,17 @@ func (c *httpController) GetAssetVersionRiskDistribution(ctx core.Context) error
 	assetVersion := core.GetAssetVersion(ctx)
 	assetName := core.GetAsset(ctx).Name
 	results, err := c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetID, assetName)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(200, results)
+}
+
+func (c *httpController) GetAssetVersionCvssDistribution(ctx core.Context) error {
+	assetVersion := core.GetAssetVersion(ctx)
+	assetName := core.GetAsset(ctx).Name
+	results, err := c.statisticsService.GetAssetVersionCvssDistribution(assetVersion.Name, assetVersion.AssetID, assetName)
 	if err != nil {
 		return err
 	}
