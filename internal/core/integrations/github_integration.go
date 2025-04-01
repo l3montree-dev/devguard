@@ -25,8 +25,10 @@ import (
 	"time"
 
 	"github.com/google/go-github/v62/github"
+	"github.com/google/uuid"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -64,6 +66,7 @@ type githubIntegration struct {
 	frontendUrl                     string
 	assetRepository                 core.AssetRepository
 	assetVersionRepository          core.AssetVersionRepository
+	componentRepository             core.ComponentRepository
 
 	githubClientFactory func(repoId string) (githubClientFacade, error)
 }
@@ -79,6 +82,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	vulnEventRepository := repositories.NewVulnEventRepository(db)
+	componentRepository := repositories.NewComponentRepository(db)
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -94,6 +98,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 		frontendUrl:                     frontendUrl,
 		assetRepository:                 repositories.NewAssetRepository(db),
 		assetVersionRepository:          repositories.NewAssetVersionRepository(db),
+		componentRepository:             componentRepository,
 
 		githubClientFactory: func(repoId string) (githubClientFacade, error) {
 			return NewGithubClient(installationIdFromRepositoryID(repoId))
@@ -663,9 +668,13 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	assetSlug := asset.Slug
 	labels := getLabels(&dependencyVuln, "open")
+	componentTree, err := g.renderPathToComponent(asset.ID, assetVersionName, "SBOM-File-Upload", exp.AffectedComponentName)
+	if err != nil {
+		return err
+	}
 	issue := &github.IssueRequest{
 		Title:  github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
 		Labels: &labels,
 	}
 
@@ -733,4 +742,32 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	}
 
 	return nil
+}
+
+func (g *githubIntegration) renderPathToComponent(assetID uuid.UUID, assetVersionName string, scannerID string, pURL string) (string, error) {
+	var mermaidFlowChart string
+	components, err := g.componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, scannerID)
+	if err != nil {
+		return mermaidFlowChart, err
+	}
+
+	tree := assetversion.BuildDependencyTree(components)
+	componentList := []string{}
+	current := tree.Root
+	for current != nil {
+		componentList = append(componentList, current.Name)
+		if current.Children != nil {
+			current = current.Children[0]
+		} else {
+			break
+		}
+	}
+
+	for _, component := range componentList {
+		fmt.Printf("%s -> ", component)
+	}
+
+	mermaidFlowChart = componentList[len(componentList)-2]
+
+	return mermaidFlowChart, nil
 }

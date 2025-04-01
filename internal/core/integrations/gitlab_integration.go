@@ -72,6 +72,7 @@ type gitlabIntegration struct {
 	projectRepository      core.ProjectRepository
 	assetRepository        core.AssetRepository
 	assetVersionRepository core.AssetVersionRepository
+	componentRepository    core.ComponentRepository
 
 	gitlabClientFactory func(id uuid.UUID) (gitlabClientFacade, error)
 }
@@ -110,6 +111,7 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	assetRepository := repositories.NewAssetRepository(db)
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
+	componentRepositoy := repositories.NewComponentRepository(db)
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -126,6 +128,7 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 		assetVersionRepository:      assetVersionRepository,
 		externalUserRepository:      externalUserRepository,
 		projectRepository:           projectRepository,
+		componentRepository:         componentRepositoy,
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -1043,7 +1046,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName, "") + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	}
 
