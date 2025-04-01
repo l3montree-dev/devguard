@@ -46,10 +46,10 @@ func NewHttpController(repository core.OrganizationRepository, rbacProvider acce
 	}
 }
 
-func (o *httpController) Create(c core.Context) error {
+func (o *httpController) Create(ctx core.Context) error {
 
 	var req createRequest
-	if err := c.Bind(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil {
 		return err
 	}
 
@@ -71,18 +71,17 @@ func (o *httpController) Create(c core.Context) error {
 		return echo.NewHTTPError(500, "could not create organization").WithInternal(err)
 	}
 
-	if err = o.bootstrapOrg(c, organization); err != nil {
+	if err = o.bootstrapOrg(ctx, organization); err != nil {
 		return echo.NewHTTPError(500, "could not bootstrap organization").WithInternal(err)
 	}
 
-	return c.JSON(200, organization)
+	return ctx.JSON(200, organization)
 }
 
-func (o *httpController) bootstrapOrg(c core.Context, organization models.Org) error {
+func (o *httpController) bootstrapOrg(ctx core.Context, organization models.Org) error {
 	// create the permissions for the organization
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
-	session := core.GetSession(c)
-	userId := session.GetUserID()
+	userId := core.GetSession(ctx).GetUserID()
 
 	if err := rbac.GrantRole(userId, "owner"); err != nil {
 		return err
@@ -121,13 +120,12 @@ func (o *httpController) bootstrapOrg(c core.Context, organization models.Org) e
 		return err
 	}
 
-	c.Set("rbac", rbac)
+	ctx.Set("rbac", rbac)
 	return nil
 }
 
 func (o *httpController) Update(ctx core.Context) error {
 	organization := core.GetOrganization(ctx)
-
 	members, err := FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
@@ -164,9 +162,9 @@ func (o *httpController) Update(ctx core.Context) error {
 	return ctx.JSON(200, resp)
 }
 
-func (o *httpController) Delete(c core.Context) error {
+func (o *httpController) Delete(ctx core.Context) error {
 	// get the id of the organization
-	organizationID := core.GetOrganization(c).GetID()
+	organizationID := core.GetOrganization(ctx).GetID()
 
 	// delete the organization
 	err := o.organizationRepository.Delete(nil, organizationID)
@@ -174,7 +172,7 @@ func (o *httpController) Delete(c core.Context) error {
 		return echo.NewHTTPError(500, "could not delete organization").WithInternal(err)
 	}
 
-	return c.NoContent(200)
+	return ctx.NoContent(200)
 }
 
 func (c *httpController) ContentTree(ctx core.Context) error {

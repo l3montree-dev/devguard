@@ -73,6 +73,63 @@ func (_c *CoreComponentRepository_Activate_Call) RunAndReturn(run func(*gorm.DB,
 	return _c
 }
 
+// All provides a mock function with no fields
+func (_m *CoreComponentRepository) All() ([]models.Component, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for All")
+	}
+
+	var r0 []models.Component
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]models.Component, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []models.Component); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Component)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreComponentRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
+type CoreComponentRepository_All_Call struct {
+	*mock.Call
+}
+
+// All is a helper method to define mock.On call
+func (_e *CoreComponentRepository_Expecter) All() *CoreComponentRepository_All_Call {
+	return &CoreComponentRepository_All_Call{Call: _e.mock.On("All")}
+}
+
+func (_c *CoreComponentRepository_All_Call) Run(run func()) *CoreComponentRepository_All_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_All_Call) Return(_a0 []models.Component, _a1 error) *CoreComponentRepository_All_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreComponentRepository_All_Call) RunAndReturn(run func() ([]models.Component, error)) *CoreComponentRepository_All_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Begin provides a mock function with no fields
 func (_m *CoreComponentRepository) Begin() *gorm.DB {
 	ret := _m.Called()
@@ -486,65 +543,6 @@ func (_c *CoreComponentRepository_GetLicenseDistribution_Call) RunAndReturn(run 
 	return _c
 }
 
-// GetVersions provides a mock function with given fields: tx, assetVersion
-func (_m *CoreComponentRepository) GetVersions(tx *gorm.DB, assetVersion models.AssetVersion) ([]string, error) {
-	ret := _m.Called(tx, assetVersion)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetVersions")
-	}
-
-	var r0 []string
-	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, models.AssetVersion) ([]string, error)); ok {
-		return rf(tx, assetVersion)
-	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, models.AssetVersion) []string); ok {
-		r0 = rf(tx, assetVersion)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(*gorm.DB, models.AssetVersion) error); ok {
-		r1 = rf(tx, assetVersion)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// CoreComponentRepository_GetVersions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetVersions'
-type CoreComponentRepository_GetVersions_Call struct {
-	*mock.Call
-}
-
-// GetVersions is a helper method to define mock.On call
-//   - tx *gorm.DB
-//   - assetVersion models.AssetVersion
-func (_e *CoreComponentRepository_Expecter) GetVersions(tx interface{}, assetVersion interface{}) *CoreComponentRepository_GetVersions_Call {
-	return &CoreComponentRepository_GetVersions_Call{Call: _e.mock.On("GetVersions", tx, assetVersion)}
-}
-
-func (_c *CoreComponentRepository_GetVersions_Call) Run(run func(tx *gorm.DB, assetVersion models.AssetVersion)) *CoreComponentRepository_GetVersions_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(models.AssetVersion))
-	})
-	return _c
-}
-
-func (_c *CoreComponentRepository_GetVersions_Call) Return(_a0 []string, _a1 error) *CoreComponentRepository_GetVersions_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *CoreComponentRepository_GetVersions_Call) RunAndReturn(run func(*gorm.DB, models.AssetVersion) ([]string, error)) *CoreComponentRepository_GetVersions_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // HandleStateDiff provides a mock function with given fields: tx, assetVersionName, assetID, oldState, newState
 func (_m *CoreComponentRepository) HandleStateDiff(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
 	ret := _m.Called(tx, assetVersionName, assetID, oldState, newState)
@@ -773,6 +771,68 @@ func (_c *CoreComponentRepository_LoadComponentsWithProject_Call) Return(_a0 cor
 }
 
 func (_c *CoreComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.ComponentDependency], error)) *CoreComponentRepository_LoadComponentsWithProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LoadPathToComponent provides a mock function with given fields: tx, assetVersionName, assetID, pURL, scanner
+func (_m *CoreComponentRepository) LoadPathToComponent(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pURL string, scanner string) ([]models.ComponentDependency, error) {
+	ret := _m.Called(tx, assetVersionName, assetID, pURL, scanner)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LoadPathToComponent")
+	}
+
+	var r0 []models.ComponentDependency
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, string, string) ([]models.ComponentDependency, error)); ok {
+		return rf(tx, assetVersionName, assetID, pURL, scanner)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, string, string) []models.ComponentDependency); ok {
+		r0 = rf(tx, assetVersionName, assetID, pURL, scanner)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.ComponentDependency)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(*gorm.DB, string, uuid.UUID, string, string) error); ok {
+		r1 = rf(tx, assetVersionName, assetID, pURL, scanner)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreComponentRepository_LoadPathToComponent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LoadPathToComponent'
+type CoreComponentRepository_LoadPathToComponent_Call struct {
+	*mock.Call
+}
+
+// LoadPathToComponent is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - pURL string
+//   - scanner string
+func (_e *CoreComponentRepository_Expecter) LoadPathToComponent(tx interface{}, assetVersionName interface{}, assetID interface{}, pURL interface{}, scanner interface{}) *CoreComponentRepository_LoadPathToComponent_Call {
+	return &CoreComponentRepository_LoadPathToComponent_Call{Call: _e.mock.On("LoadPathToComponent", tx, assetVersionName, assetID, pURL, scanner)}
+}
+
+func (_c *CoreComponentRepository_LoadPathToComponent_Call) Run(run func(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pURL string, scanner string)) *CoreComponentRepository_LoadPathToComponent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(string), args[2].(uuid.UUID), args[3].(string), args[4].(string))
+	})
+	return _c
+}
+
+func (_c *CoreComponentRepository_LoadPathToComponent_Call) Return(_a0 []models.ComponentDependency, _a1 error) *CoreComponentRepository_LoadPathToComponent_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreComponentRepository_LoadPathToComponent_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, string, string) ([]models.ComponentDependency, error)) *CoreComponentRepository_LoadPathToComponent_Call {
 	_c.Call.Return(run)
 	return _c
 }

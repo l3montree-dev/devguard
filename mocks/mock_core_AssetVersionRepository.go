@@ -23,6 +23,63 @@ func (_m *CoreAssetVersionRepository) EXPECT() *CoreAssetVersionRepository_Expec
 	return &CoreAssetVersionRepository_Expecter{mock: &_m.Mock}
 }
 
+// All provides a mock function with no fields
+func (_m *CoreAssetVersionRepository) All() ([]models.AssetVersion, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for All")
+	}
+
+	var r0 []models.AssetVersion
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]models.AssetVersion, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []models.AssetVersion); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.AssetVersion)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreAssetVersionRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
+type CoreAssetVersionRepository_All_Call struct {
+	*mock.Call
+}
+
+// All is a helper method to define mock.On call
+func (_e *CoreAssetVersionRepository_Expecter) All() *CoreAssetVersionRepository_All_Call {
+	return &CoreAssetVersionRepository_All_Call{Call: _e.mock.On("All")}
+}
+
+func (_c *CoreAssetVersionRepository_All_Call) Run(run func()) *CoreAssetVersionRepository_All_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *CoreAssetVersionRepository_All_Call) Return(_a0 []models.AssetVersion, _a1 error) *CoreAssetVersionRepository_All_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreAssetVersionRepository_All_Call) RunAndReturn(run func() ([]models.AssetVersion, error)) *CoreAssetVersionRepository_All_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Delete provides a mock function with given fields: tx, assetVersion
 func (_m *CoreAssetVersionRepository) Delete(tx *gorm.DB, assetVersion *models.AssetVersion) error {
 	ret := _m.Called(tx, assetVersion)

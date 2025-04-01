@@ -83,14 +83,14 @@ func (a *httpController) VerifySupplyChain(ctx core.Context) error {
 	return ctx.NoContent(200)
 }
 
-func (a *httpController) Create(c core.Context) error {
+func (a *httpController) Create(ctx core.Context) error {
 	var req createInTotoLinkRequest
-	if err := c.Bind(&req); err != nil {
+	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
 	}
 
 	// check if valid - get the signed pat
-	pat, valid := a.patRepository.GetByFingerprint(c.Request().Header.Get("X-Fingerprint"))
+	pat, valid := a.patRepository.GetByFingerprint(ctx.Request().Header.Get("X-Fingerprint"))
 	if valid != nil {
 		return echo.NewHTTPError(401, "could not find pat").WithInternal(valid)
 	}
@@ -123,13 +123,13 @@ func (a *httpController) Create(c core.Context) error {
 		return echo.NewHTTPError(401, "could not verify signature").WithInternal(err)
 	}
 	// read the asset version name from the header
-	assetVersionName := c.Request().Header.Get("X-Asset-Ref")
+	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
 	if assetVersionName == "" {
 		slog.Warn("could not get asset version name - assuming main")
 		assetVersionName = "main"
 	}
 
-	asset := core.GetAsset(c)
+	asset := core.GetAsset(ctx)
 
 	link := models.InTotoLink{
 		AssetVersionName: assetVersionName,
@@ -167,13 +167,13 @@ func (a *httpController) Create(c core.Context) error {
 		}
 	}
 
-	return c.JSON(200, link)
+	return ctx.JSON(200, link)
 }
 
-func (a *httpController) RootLayout(c core.Context) error {
+func (a *httpController) RootLayout(ctx core.Context) error {
 	// get all pats which are part of the asset
-	project := core.GetProject(c)
-	accessControl := core.GetRBAC(c)
+	project := core.GetProject(ctx)
+	accessControl := core.GetRBAC(ctx)
 
 	users, err := accessControl.GetAllMembersOfProject(project.GetID().String())
 
@@ -292,24 +292,24 @@ func (a *httpController) RootLayout(c core.Context) error {
 	}
 
 	// set the filename to root.layout
-	c.Response().Header().Set("Content-Disposition", "attachment; filename=root.layout")
+	ctx.Response().Header().Set("Content-Disposition", "attachment; filename=root.layout")
 
-	return c.File(tmpfile.Name())
+	return ctx.File(tmpfile.Name())
 }
 
-func (a *httpController) Read(c core.Context) error {
-	app := core.GetAsset(c)
+func (a *httpController) Read(ctx core.Context) error {
+	app := core.GetAsset(ctx)
 	// find a link with the corresponding opaque id
-	links, err := a.linkRepository.FindByAssetAndSupplyChainId(app.GetID(), c.Param("supplyChainId"))
+	links, err := a.linkRepository.FindByAssetAndSupplyChainId(app.GetID(), ctx.Param("supplyChainId"))
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find in-toto link").WithInternal(err)
 	}
 
-	c.Response().Header().Set("Content-Type", "application/zip")
-	c.Response().Header().Set("Content-Disposition", "attachment; filename=\"links.zip\"")
-	c.Response().WriteHeader(http.StatusOK)
+	ctx.Response().Header().Set("Content-Type", "application/zip")
+	ctx.Response().Header().Set("Content-Disposition", "attachment; filename=\"links.zip\"")
+	ctx.Response().WriteHeader(http.StatusOK)
 
-	zipWriter := zip.NewWriter(c.Response().Writer)
+	zipWriter := zip.NewWriter(ctx.Response().Writer)
 
 	for _, link := range links {
 		header := &zip.FileHeader{
@@ -329,7 +329,7 @@ func (a *httpController) Read(c core.Context) error {
 		}
 
 		zipWriter.Flush()
-		flushingWriter, ok := c.Response().Writer.(http.Flusher)
+		flushingWriter, ok := ctx.Response().Writer.(http.Flusher)
 		if ok {
 			flushingWriter.Flush()
 		}

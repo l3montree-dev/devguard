@@ -141,6 +141,11 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
 	// set begin to last second of date
 	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
+	// as max, do 1 year from the past
+	if begin.Before(time.Now().AddDate(-1, 0, 0)) {
+		begin = time.Now().AddDate(-1, 0, 0)
+	}
+
 	// set end to last second of date
 	end = time.Date(end.Year(), end.Month(), end.Day(), 23, 59, 59, 0, time.UTC)
 

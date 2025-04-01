@@ -78,6 +78,7 @@ func TestApplyToModel(t *testing.T) {
 		{
 			name: "Update CVSSAutomaticTicketThreshold and RiskAutomaticTicketThreshold",
 			patch: patchRequest{
+				EnableTicketRange:            true,
 				CVSSAutomaticTicketThreshold: utils.Ptr(5.0),
 				RiskAutomaticTicketThreshold: utils.Ptr(7.0),
 			},

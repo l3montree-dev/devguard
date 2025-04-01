@@ -4,7 +4,7 @@ metadata:
   name: kratos
   namespace: "{{ .Release.Namespace }}"
   labels:
-    app: kratos
+    app.kubernetes.io/name: kratos
   annotations: {}
 spec:
   replicas: 1 # keep that at 1 - or use a singleton courier job for kratos mail queue processing.
@@ -18,11 +18,11 @@ spec:
   # If you're running multiple instances of Kratos (for example replicated Kubernetes deployment), you need to run the mail courier as a separate singleton job. The courier can be started with the kratos courier watch command (CLI docs).
   selector:
     matchLabels:
-      app: kratos
+      app.kubernetes.io/name: kratos
   template:
     metadata:
       labels:
-        app: kratos
+        app.kubernetes.io/name: kratos
     spec:
       initContainers:
       - name: kratos-automigrate

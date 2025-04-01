@@ -115,11 +115,34 @@ func (t *thirdPartyIntegrations) HandleEvent(event any) error {
 	return err
 }
 
-func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVulnId string, projectSlug string, orgSlug string) error {
+func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.CreateIssue(ctx, asset, repoId, dependencyVulnId, projectSlug, orgSlug)
+			return struct{}{}, i.ReopenIssue(ctx, repoId, dependencyVuln)
+		})
+	}
+	_, err := wg.WaitAndCollect()
+	return err
+}
+
+func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
+	wg := utils.ErrGroup[struct{}](-1)
+	for _, i := range t.integrations {
+		wg.Go(func() (struct{}, error) {
+			return struct{}{}, i.CreateIssue(ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug)
+		})
+	}
+
+	_, err := wg.WaitAndCollect()
+	return err
+}
+
+func (t *thirdPartyIntegrations) CloseIssue(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln) error {
+	wg := utils.ErrGroup[struct{}](-1)
+	for _, i := range t.integrations {
+		wg.Go(func() (struct{}, error) {
+			return struct{}{}, i.CloseIssue(ctx, state, repoId, dependencyVuln)
 		})
 	}
 

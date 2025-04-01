@@ -11,4 +11,4 @@ spec:
     port: 4434
     targetPort: 4434
   selector:
-    app: kratos
+    app.kubernetes.io/name: kratos

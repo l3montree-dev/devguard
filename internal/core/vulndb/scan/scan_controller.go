@@ -127,15 +127,25 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	}
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, scannerID, userID, doRiskManagement)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err
 	}
 
-	err = s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
-	if err != nil {
-		return scanResults, err
+	//Check if we want to create an issue for this assetVersion
+	if s.dependencyVulnService.ShouldCreateIssues(assetVersion) {
+		go func() {
+			err := s.dependencyVulnService.CreateIssuesForVulnsIfThresholdExceeded(asset, opened)
+			if err != nil {
+				slog.Error("could not create issues for vulnerabilities", "err", err)
+			}
+			// close the fixed vulnerabilities
+			err = s.dependencyVulnService.CloseIssuesAsFixed(asset, closed)
+			if err != nil {
+				slog.Error("could not close issues for vulnerabilities", "err", err)
+			}
+		}()
 	}
 
 	if doRiskManagement {
@@ -151,8 +161,8 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 			return scanResults, err
 		}
 	}
-	scanResults.AmountOpened = amountOpened //Fill in the results
-	scanResults.AmountClosed = amountClose
+	scanResults.AmountOpened = len(opened) //Fill in the results
+	scanResults.AmountClosed = len(closed)
 	scanResults.DependencyVulns = utils.Map(newState, dependency_vuln.DependencyVulnToDto)
 
 	return scanResults, nil

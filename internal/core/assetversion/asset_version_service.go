@@ -155,7 +155,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
 
-func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, scannerID string, userID string, doRiskManagement bool) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
@@ -163,7 +163,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	// load all asset components again and build a dependency tree
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner)
 	if err != nil {
-		return 0, 0, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
 	// build a dependency tree
 	tree := BuildDependencyTree(assetComponents)
@@ -201,30 +201,29 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	amountOpened, amountClosed, amountExisting, err := s.handleScanResult(userID, scannerID, assetVersion, dependencyVulns, doRiskManagement, asset)
+	opened, closed, newState, err := s.handleScanResult(userID, scannerID, assetVersion, dependencyVulns, doRiskManagement, asset)
 	if err != nil {
-		return 0, 0, []models.DependencyVuln{}, err
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
 
 	switch scanner {
-
 	case devguardScanner + "sca":
 		assetVersion.LastScaScan = utils.Ptr(time.Now())
 	case devguardScanner + "container-scanning":
 		assetVersion.LastContainerScan = utils.Ptr(time.Now())
 	}
 
-	return amountOpened, amountClosed, amountExisting, nil
+	return opened, closed, newState, nil
 }
 
-func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, doRiskManagement bool, asset models.Asset) (int, int, []models.DependencyVuln, error) {
+func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, doRiskManagement bool, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	// get all existing dependencyVulns from the database - this is the old state
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
-		return 0, 0, []models.DependencyVuln{}, err
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 	// remove all fixed dependencyVulns from the existing dependencyVulns
 	existingDependencyVulns = utils.Filter(existingDependencyVulns, func(dependencyVuln models.DependencyVuln) bool {
@@ -248,14 +247,10 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedDependencyVulns, *assetVersion, asset, true)
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)
-		return 0, 0, []models.DependencyVuln{}, err
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	// the amount we actually fixed, is the amount that was open before
-	fixedDependencyVulns = utils.Filter(fixedDependencyVulns, func(dependencyVuln models.DependencyVuln) bool {
-		return dependencyVuln.State == models.VulnStateOpen
-	})
-	return len(newDependencyVulns), len(fixedDependencyVulns), append(newDependencyVulns, comparison.InBoth...), nil
+	return newDependencyVulns, fixedDependencyVulns, append(newDependencyVulns, comparison.InBoth...), nil
 }
 
 func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
@@ -264,9 +259,9 @@ func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
 		return res
 	}
 
-	for _, c := range *component.Components {
-		res[c.BOMRef] = c
-		for k, v := range recursiveBuildBomRefMap(c) {
+	for _, component := range *component.Components {
+		res[component.BOMRef] = component
+		for k, v := range recursiveBuildBomRefMap(component) {
 			res[k] = v
 		}
 	}
@@ -279,9 +274,9 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 		return res
 	}
 
-	for _, c := range *bom.GetComponents() {
-		res[c.BOMRef] = c
-		for k, v := range recursiveBuildBomRefMap(c) {
+	for _, component := range *bom.GetComponents() {
+		res[component.BOMRef] = component
+		for k, v := range recursiveBuildBomRefMap(component) {
 			res[k] = v
 		}
 	}
@@ -381,7 +376,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	}
 
 	// make sure, that the components exist
-	if err := s.componentRepository.SaveBatch(nil, componentsSlice); err != nil {
+	if err := s.componentRepository.CreateBatch(nil, componentsSlice); err != nil {
 		return err
 	}
 

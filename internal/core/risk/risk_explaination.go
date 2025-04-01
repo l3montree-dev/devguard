@@ -9,19 +9,21 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-func RiskToSeverity(risk float64) string {
+func RiskToSeverity(risk float64) (string, error) {
 	switch {
+	case risk == 0:
+		return "", fmt.Errorf("risk is 0")
 	case risk < 4:
-		return "Low"
+		return "Low", nil
 	case risk < 7:
-		return "Medium"
+		return "Medium", nil
 	case risk < 9:
-		return "High"
+		return "High", nil
 	case risk <= 10:
+		return "Critical", nil
 	default:
-		return "None"
+		return "", fmt.Errorf("risk is greater than 10")
 	}
-	return "None"
 }
 
 // returns hex without leading "#"
@@ -226,7 +228,7 @@ type Explanation struct {
 	fixedVersion          *string
 }
 
-func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) string {
+func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName string) string {
 	var str strings.Builder
 	str.WriteString(fmt.Sprintf("# %s\n", e.cveId))
 	str.WriteString(e.cveDescription)
@@ -240,7 +242,13 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) s
 		str.WriteString("No fix is available.\n")
 	}
 	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("## Risk: `%.2f (%s)`\n", e.risk, RiskToSeverity(e.risk)))
+	severity, err := RiskToSeverity(e.risk)
+	if err != nil {
+		str.WriteString(fmt.Sprintf("## Risk: `%.2f (%s)`\n", e.risk, "Unknown"))
+	} else {
+		str.WriteString(fmt.Sprintf("## Risk: `%.2f (%s)`\n", e.risk, severity))
+	}
+
 	str.WriteString(fmt.Sprintf("### EPSS: `%.2f %%`\n", e.epss*100))
 	str.WriteString(fmt.Sprintf("%s\n", e.epssMessage))
 	str.WriteString("\n")
@@ -257,7 +265,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) s
 	str.WriteString(fmt.Sprintf("%s\n", e.cvssMessage))
 	str.WriteString("\n")
 	//TODO: change it
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, e.dependencyVulnId))
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
 	str.WriteString("\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180

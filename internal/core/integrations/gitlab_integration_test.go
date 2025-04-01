@@ -112,11 +112,11 @@ func TestTestAndSave(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", strings.NewReader(`{"url":"localhost:8080/","token":"","name":"GoodName"}`))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
+		ctx := e.NewContext(req, rec)
 
 		g := gitlabIntegration{}
 
-		err := g.TestAndSave(c)
+		err := g.TestAndSave(ctx)
 
 		assert.Nil(t, err)
 		assert.Equal(t, http.StatusBadRequest, rec.Result().StatusCode)

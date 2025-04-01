@@ -29,6 +29,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:123"),
 		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
+		})
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
 			Ctx: ctx,
@@ -51,6 +54,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:owner:repo/1"),
 		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
+		})
 		ctx.SetParamNames("dependencyVulnId", "projectSlug", "orgSlug")
 		ctx.SetParamValues("1", "test", "test")
 
@@ -71,6 +77,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("gitlab:123"),
 		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
+		})
 		core.SetProject(ctx, models.Project{})
 		ctx.SetParamNames("dependencyVulnId", "projectSlug", "orgSlug")
 		ctx.SetParamValues("1", "test", "test")
@@ -83,6 +92,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 	t.Run("it should return an error if the owner or repo could not be extracted from the repositoryId", func(t *testing.T) {
 		dependencyVulnRepository := mocks.NewCoreDependencyVulnRepository(t)
+		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, nil)
 
 		githubIntegration := githubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
@@ -98,6 +108,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx := e.NewContext(req, httptest.NewRecorder())
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:1"),
+		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
 		})
 		core.SetOrgSlug(ctx, "test")
 		core.SetProjectSlug(ctx, "test")
@@ -136,8 +149,8 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			facade := mocks.NewIntegrationsGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
-			facade.On("EditIssueLabel", context.Background(), "repo", "1", "severity:"+"high", &github.Label{
-				Description: github.String("Severity of the dependencyVuln"),
+			facade.On("EditIssueLabel", context.Background(), "repo", "1", "risk:"+"high", &github.Label{
+				Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
 				Color:       github.String("FFA500"),
 			}).Return(nil, nil, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "devguard", &github.Label{
@@ -158,6 +171,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:owner:repo/1"),
+		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
 		})
 		core.SetOrgSlug(ctx, "test")
 		core.SetProjectSlug(ctx, "test")
@@ -209,8 +225,8 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			facade := mocks.NewIntegrationsGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
-			facade.On("EditIssueLabel", context.Background(), "repo", "1", "severity:"+"high", &github.Label{
-				Description: github.String("Severity of the dependencyVuln"),
+			facade.On("EditIssueLabel", context.Background(), "repo", "1", "risk:"+"high", &github.Label{
+				Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
 				Color:       github.String("FFA500"),
 			}).Return(nil, nil, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "devguard", &github.Label{
@@ -229,6 +245,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAsset(ctx, models.Asset{
 			RepositoryID: utils.Ptr("github:owner:repo/1"),
 		})
+		core.SetAssetVersion(ctx, models.AssetVersion{
+			Name: "GenieOderWAHNSINNN",
+		})
 		core.SetOrgSlug(ctx, "test")
 		core.SetProjectSlug(ctx, "test")
 		core.SetAssetSlug(ctx, "test")
@@ -241,4 +260,122 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+}
+func TestGithubTicketIdToIdAndNumber(t *testing.T) {
+	t.Run("it should return the correct ticket ID and number for a valid input", func(t *testing.T) {
+		id := "github:123456789/123"
+		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+
+		assert.Equal(t, 123456789, ticketId)
+		assert.Equal(t, 123, ticketNumber)
+	})
+
+	t.Run("it should return 0, 0 if the input format is invalid (missing slash)", func(t *testing.T) {
+		id := "github:123456789"
+		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+
+		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketNumber)
+	})
+
+	t.Run("it should return the correct values, even if the prefix is missing", func(t *testing.T) {
+		id := "123456789/123"
+		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+
+		assert.Equal(t, 123456789, ticketId)
+		assert.Equal(t, 123, ticketNumber)
+	})
+
+	t.Run("it should return 0, 0 if the ticket ID is not a valid integer", func(t *testing.T) {
+		id := "github:abc/123"
+		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+
+		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketNumber)
+	})
+
+	t.Run("it should return 0, 0 if the ticket number is not a valid integer", func(t *testing.T) {
+		id := "github:123456789/abc"
+		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+
+		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketNumber)
+	})
+
+	t.Run("it should return 0, 0 if the input is empty", func(t *testing.T) {
+		id := ""
+		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+
+		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketNumber)
+	})
+}
+func TestGetLabels(t *testing.T) {
+	t.Run("it should return labels with devguard and risk severity", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			RawRiskAssessment: utils.Ptr(8.0),
+			CVE: &models.CVE{
+				CVSS: 8.0,
+			},
+		}
+
+		labels := getLabels(vuln, "")
+
+		assert.Contains(t, labels, "devguard")
+		assert.Contains(t, labels, "risk:high")
+		assert.NotContains(t, labels, "state:")
+	})
+
+	t.Run("it should include state label if state is provided", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			RawRiskAssessment: utils.Ptr(5.0),
+			CVE: &models.CVE{
+				CVSS: 5.0,
+			},
+		}
+
+		labels := getLabels(vuln, "open")
+
+		assert.Contains(t, labels, "state:open")
+		assert.Contains(t, labels, "risk:medium")
+	})
+
+	t.Run("it should include cvss-severity label for DependencyVuln", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			CVE: &models.CVE{
+				CVSS: 9.8,
+			},
+		}
+		vuln.RawRiskAssessment = utils.Ptr(9.8)
+
+		labels := getLabels(vuln, "closed")
+
+		assert.Contains(t, labels, "cvss-severity:critical")
+		assert.Contains(t, labels, "state:closed")
+		assert.Contains(t, labels, "risk:critical")
+	})
+
+	t.Run("it should handle nil CVE gracefully for DependencyVuln", func(t *testing.T) {
+		vuln := &models.DependencyVuln{}
+		vuln.RawRiskAssessment = utils.Ptr(4.0)
+
+		labels := getLabels(vuln, "open")
+
+		assert.Contains(t, labels, "state:open")
+		assert.Contains(t, labels, "risk:medium")
+
+	})
+
+	t.Run("it should not include risk:none labels", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			CVE: &models.CVE{
+				CVSS: 0.0,
+			},
+		}
+		vuln.RawRiskAssessment = utils.Ptr(0.0)
+
+		labels := getLabels(vuln, "closed")
+
+		assert.Contains(t, labels, "state:closed")
+	})
 }
