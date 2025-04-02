@@ -177,6 +177,7 @@ type InTotoVerifierService interface {
 
 type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
+	UpdateAssetTickets(asset models.Asset) error
 }
 
 type DependencyVulnService interface {

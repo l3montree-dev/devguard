@@ -147,6 +147,35 @@ func (c *httpController) Update(ctx core.Context) error {
 		}
 	}
 
+	enableTicketRangeUpdated := false
+
+	if patchRequest.EnableTicketRange {
+
+		if *patchRequest.CVSSAutomaticTicketThreshold != *asset.CVSSAutomaticTicketThreshold {
+			enableTicketRangeUpdated = true
+			asset.CVSSAutomaticTicketThreshold = patchRequest.CVSSAutomaticTicketThreshold
+		}
+
+		if *patchRequest.RiskAutomaticTicketThreshold != *asset.RiskAutomaticTicketThreshold {
+			enableTicketRangeUpdated = true
+			asset.RiskAutomaticTicketThreshold = patchRequest.RiskAutomaticTicketThreshold
+		}
+
+	} else {
+		if asset.CVSSAutomaticTicketThreshold != nil {
+			enableTicketRangeUpdated = true
+			asset.CVSSAutomaticTicketThreshold = nil
+		}
+		if asset.RiskAutomaticTicketThreshold != nil {
+			enableTicketRangeUpdated = true
+			asset.RiskAutomaticTicketThreshold = nil
+		}
+	}
+
+	if enableTicketRangeUpdated {
+		err = c.assetService.UpdateAssetTickets(asset)
+	}
+
 	updated := patchRequest.applyToModel(&asset)
 	if asset.Name == "" || asset.Slug == "" {
 		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
