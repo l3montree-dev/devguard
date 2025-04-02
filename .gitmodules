@@ -1,0 +1,3 @@
+[submodule "policies"]
+	path = policies
+	url = git@github.com:l3montree-dev/devguard-compliance-policies.git

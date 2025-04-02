@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -49,7 +50,7 @@ func ExtractAttestationPayload(content string) (any, error) {
 }
 
 func getPolicies() []Policy {
-	path, _ := filepath.Abs("./internal/core/compliance/policies")
+	path, _ := filepath.Abs("./policies/policies")
 	// fetch all policies
 	policyFiles, err := os.ReadDir(path)
 	if err != nil {
@@ -70,6 +71,11 @@ func getPolicies() []Policy {
 
 		policies = append(policies, *policy)
 	}
+
+	// sort the policies by priority - use a stable sort
+	sort.SliceStable(policies, func(i, j int) bool {
+		return policies[i].Priority < policies[j].Priority
+	})
 
 	return policies
 }

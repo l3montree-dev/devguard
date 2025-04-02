@@ -17,6 +17,7 @@ type yamlPolicy struct {
 
 type customYaml struct {
 	Description          string `yaml:"description"`
+	Priority             int    `yaml:"priority"`
 	Tags                 []string
 	RelatedResources     []string `yaml:"relatedResources"`
 	ComplianceFrameworks []string `yaml:"complianceFrameworks"`
@@ -25,6 +26,7 @@ type customYaml struct {
 type PolicyMetadata struct {
 	Title                string   `yaml:"title" json:"title"`
 	Description          string   `yaml:"description" json:"description"`
+	Priority             int      `yaml:"priority" json:"priority"`
 	Tags                 []string `yaml:"tags" json:"tags"`
 	RelatedResources     []string `yaml:"relatedResources" json:"relatedResources"`
 	ComplianceFrameworks []string `yaml:"complianceFrameworks" json:"complianceFrameworks"`
@@ -83,6 +85,7 @@ func parseMetadata(content string) (PolicyMetadata, error) {
 	return PolicyMetadata{
 		Title:                metadata.Title,
 		Description:          metadata.Custom.Description,
+		Priority:             metadata.Custom.Priority,
 		Tags:                 metadata.Custom.Tags,
 		RelatedResources:     metadata.Custom.RelatedResources,
 		ComplianceFrameworks: metadata.Custom.ComplianceFrameworks,
