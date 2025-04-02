@@ -174,6 +174,9 @@ func (c *httpController) Update(ctx core.Context) error {
 
 	if enableTicketRangeUpdated {
 		err = c.assetService.UpdateAssetTickets(asset)
+		if err != nil {
+			return fmt.Errorf("Error updating asset tickets: %v", err)
+		}
 	}
 
 	updated := patchRequest.applyToModel(&asset)
