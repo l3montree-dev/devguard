@@ -256,13 +256,77 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	return ev, err
 }
 
+func (s *service) SyncTickets(assetVersion models.AssetVersion) error {
+	asset := assetVersion.Asset
+	vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID)
+	if err != nil {
+		return err
+	}
+	if len(vulnList) == 0 {
+		return nil
+	}
+
+	riskThreshold := asset.RiskAutomaticTicketThreshold
+	cvssThreshold := asset.CVSSAutomaticTicketThreshold
+
+	//Check if no automatic Issues are wanted by the user
+	if riskThreshold == nil && cvssThreshold == nil {
+		return nil
+	}
+
+	project, err := s.projectRepository.Read(asset.ProjectID)
+	if err != nil {
+		return err
+	}
+
+	org, err := s.organizationRepository.Read(project.OrganizationID)
+	if err != nil {
+		return err
+	}
+
+	repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
+	if err != nil {
+		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
+	}
+
+	errgroup := utils.ErrGroup[any](10)
+
+	for _, vulnerability := range vulnList {
+
+		if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
+			fmt.Println("create issue", vulnerability.TicketID)
+			if vulnerability.TicketID == nil {
+				//there is no ticket yet, we need to create one
+				errgroup.Go(func() (any, error) {
+					return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
+				})
+			} else {
+				// there is already a ticket,
+				//TODO: we need to update the ticket with the new information
+				errgroup.Go(func() (any, error) {
+					return nil, s.reopenIssue(vulnerability, repoID)
+				})
+			}
+			// check if the ticket should be closed
+		} else if (cvssThreshold != nil && vulnerability.CVE.CVSS < float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment < *riskThreshold) {
+
+			if vulnerability.TicketID != nil {
+				errgroup.Go(func() (any, error) {
+					return nil, s.closeIssue(vulnerability, repoID)
+				})
+			}
+		}
+	}
+
+	_, err = errgroup.WaitAndCollect()
+	return err
+
+}
+
 // function to check whether the provided vulnerabilities in a given asset exceeds their respective thresholds and create a ticket for it if they do so
 func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vulnList []models.DependencyVuln) error {
 	riskThreshold := asset.RiskAutomaticTicketThreshold
 	cvssThreshold := asset.CVSSAutomaticTicketThreshold
-	if riskThreshold == nil && cvssThreshold == nil {
-		return nil
-	}
 
 	//Check if no automatic Issues are wanted by the user
 	if riskThreshold == nil && cvssThreshold == nil {
