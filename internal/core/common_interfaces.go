@@ -187,6 +187,7 @@ type DependencyVulnService interface {
 	CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vulnList []models.DependencyVuln) error
 	CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error
 
+	SyncTickets(assetVersion models.Asset) error
 	ShouldCreateIssues(assetVersion models.AssetVersion) bool
 }
 
