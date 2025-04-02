@@ -304,7 +304,6 @@ func (s *service) SyncTickets(asset models.Asset) error {
 		for _, vulnerability := range vulnList {
 
 			if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
-				fmt.Println("create issue", vulnerability.TicketID)
 				if vulnerability.TicketID == nil {
 					//there is no ticket yet, we need to create one
 					errgroup.Go(func() (any, error) {

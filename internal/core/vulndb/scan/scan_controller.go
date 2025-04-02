@@ -148,6 +148,12 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		}()
 	}
 
+	// we need to do ticket sync here to ensure that exiting vulns (not with scan opened) are synced
+	err = s.dependencyVulnService.SyncTickets(asset)
+	if err != nil {
+		slog.Error("could not sync tickets for vulnerabilities", "err", err)
+	}
+
 	if doRiskManagement {
 		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
 		if err := s.statisticsService.UpdateAssetRiskAggregation(&assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
