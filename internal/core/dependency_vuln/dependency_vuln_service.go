@@ -24,6 +24,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 
+	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -151,6 +152,11 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		return nil
 	}
 
+	githubIntegration := integrations.NewGithubIntegration(tx)
+	gitlabIntegration := integrations.NewGitLabIntegration(tx)
+
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
+
 	env := core.Environmental{
 		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
 		IntegrityRequirements:       string(asset.IntegrityRequirement),
@@ -176,6 +182,18 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 			events = append(events, ev)
 
 			slog.Info("recalculated raw risk assessment", "cve", dependencyVuln.CVE)
+
+			if dependencyVuln.TicketID != nil {
+				err := thirdPartyIntegration.HandleEvent(core.VulnEvent{
+					//we need context here to handle the event!!
+					//Ctx:   ctx,
+					Event: ev,
+				})
+				if err != nil {
+					slog.Error("could not handle event", "err", err, "event", ev)
+				}
+			}
+
 		} else {
 			// only update the last calculated time
 			dependencyVulns[i].RiskRecalculatedAt = time.Now()
