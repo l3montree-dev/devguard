@@ -7,6 +7,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -151,25 +152,44 @@ func (c *httpController) Update(ctx core.Context) error {
 
 	if patchRequest.EnableTicketRange {
 
-		if *patchRequest.CVSSAutomaticTicketThreshold != *asset.CVSSAutomaticTicketThreshold {
-			enableTicketRangeUpdated = true
-			asset.CVSSAutomaticTicketThreshold = patchRequest.CVSSAutomaticTicketThreshold
+		if patchRequest.CVSSAutomaticTicketThreshold != nil {
+			if asset.CVSSAutomaticTicketThreshold != nil {
+				if !utils.CompareFirstTwoDecimals(*patchRequest.CVSSAutomaticTicketThreshold, *asset.CVSSAutomaticTicketThreshold) {
+					enableTicketRangeUpdated = true
+					asset.CVSSAutomaticTicketThreshold = patchRequest.CVSSAutomaticTicketThreshold
+				}
+			} else {
+				enableTicketRangeUpdated = true
+				asset.CVSSAutomaticTicketThreshold = patchRequest.CVSSAutomaticTicketThreshold
+			}
+		} else {
+			if asset.CVSSAutomaticTicketThreshold != nil {
+				enableTicketRangeUpdated = true
+				asset.CVSSAutomaticTicketThreshold = nil
+			}
 		}
 
-		if *patchRequest.RiskAutomaticTicketThreshold != *asset.RiskAutomaticTicketThreshold {
-			enableTicketRangeUpdated = true
-			asset.RiskAutomaticTicketThreshold = patchRequest.RiskAutomaticTicketThreshold
+		if patchRequest.RiskAutomaticTicketThreshold != nil {
+			if asset.RiskAutomaticTicketThreshold != nil {
+				if !utils.CompareFirstTwoDecimals(*patchRequest.RiskAutomaticTicketThreshold, *asset.RiskAutomaticTicketThreshold) {
+					enableTicketRangeUpdated = true
+					asset.RiskAutomaticTicketThreshold = patchRequest.RiskAutomaticTicketThreshold
+				}
+			} else {
+				enableTicketRangeUpdated = true
+				asset.RiskAutomaticTicketThreshold = patchRequest.RiskAutomaticTicketThreshold
+			}
+		} else {
+			if asset.RiskAutomaticTicketThreshold != nil {
+				enableTicketRangeUpdated = true
+				asset.RiskAutomaticTicketThreshold = nil
+			}
 		}
 
 	} else {
-		if asset.CVSSAutomaticTicketThreshold != nil {
-			enableTicketRangeUpdated = true
-			asset.CVSSAutomaticTicketThreshold = nil
-		}
-		if asset.RiskAutomaticTicketThreshold != nil {
-			enableTicketRangeUpdated = true
-			asset.RiskAutomaticTicketThreshold = nil
-		}
+		// if the enableTicketRange is set to false, we do need to call the ticket sync
+		asset.CVSSAutomaticTicketThreshold = nil
+		asset.RiskAutomaticTicketThreshold = nil
 	}
 
 	if enableTicketRangeUpdated {

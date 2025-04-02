@@ -268,7 +268,6 @@ func (s *service) SyncTickets(asset models.Asset) error {
 
 		slog.Info("syncing tickets", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
 
-		asset := assetVersion.Asset
 		vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID)
 		if err != nil {
 			return err
