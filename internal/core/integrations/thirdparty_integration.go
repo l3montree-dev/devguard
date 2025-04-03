@@ -188,10 +188,26 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 	mermaidFlowChart += componentList[0]
 
 	for i, componentName := range componentList[1:] {
-		mermaidFlowChart = mermaidFlowChart + " --> \n" + "node" + strconv.Itoa(i) + "[" + componentName + "]"
+		mermaidFlowChart = mermaidFlowChart + " --> \n" + "node" + strconv.Itoa(i) + "[" + FormatNode(componentName) + "]"
 	}
 
 	mermaidFlowChart = "```" + mermaidFlowChart + "\n```\n"
 
 	return mermaidFlowChart, nil
+}
+
+// function to automatically put line breaks in the text of a node to help it look bigger when rendered
+func FormatNode(nodeText string) string {
+	formattedText := nodeText
+	slashCount := 0
+	for i, char := range formattedText {
+		if char == '/' {
+			slashCount++
+			if slashCount%2 == 0 {
+				formattedText = formattedText[0:i+slashCount/2] + "\n" + formattedText[i+slashCount/2:]
+
+			}
+		}
+	}
+	return formattedText
 }
