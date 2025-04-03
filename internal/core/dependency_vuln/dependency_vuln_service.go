@@ -322,16 +322,19 @@ func (s *service) SyncTickets(asset models.Asset) error {
 		for _, vulnerability := range vulnList {
 
 			if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
+
 				if vulnerability.TicketID == nil {
-					//there is no ticket yet, we need to create one
-					errgroup.Go(func() (any, error) {
-						return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
-					})
+					if vulnerability.State == models.VulnStateOpen {
+						//there is no ticket yet, we need to create one
+						errgroup.Go(func() (any, error) {
+							return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
+						})
+					}
 				} else {
 					// there is already a ticket,
 					//TODO: we need to update the ticket with the new information
 					errgroup.Go(func() (any, error) {
-						return nil, s.reopenIssue(vulnerability, repoID)
+						return nil, s.updateIssue(asset, vulnerability, repoID)
 					})
 				}
 				// check if the ticket should be closed
@@ -406,6 +409,13 @@ func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.
 	defer cancel()
 
 	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug)
+}
+
+func (s *service) updateIssue(asset models.Asset, vulnerability models.DependencyVuln, repoId string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	return s.thirdPartyIntegration.UpdateIssue(ctx, asset, repoId, vulnerability)
 }
 
 func (s *service) reopenIssue(vulnerability models.DependencyVuln, repoId string) error {

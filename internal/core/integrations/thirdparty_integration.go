@@ -125,6 +125,16 @@ func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, repoId string,
 	_, err := wg.WaitAndCollect()
 	return err
 }
+func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVuln models.DependencyVuln) error {
+	wg := utils.ErrGroup[struct{}](-1)
+	for _, i := range t.integrations {
+		wg.Go(func() (struct{}, error) {
+			return struct{}{}, i.UpdateIssue(ctx, asset, repoId, dependencyVuln)
+		})
+	}
+	_, err := wg.WaitAndCollect()
+	return err
+}
 
 func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
 	wg := utils.ErrGroup[struct{}](-1)
