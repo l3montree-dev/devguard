@@ -199,13 +199,12 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 // function to automatically put line breaks in the text of a node to help it look bigger when rendered
 func FormatNode(nodeText string) string {
 	formattedText := nodeText
-	slashCount := 0
+	slashCount := 0 //used to keep track if we are on the second slash in this line AND how many line breaks (how many extra chars) we added
 	for i, char := range formattedText {
 		if char == '/' {
 			slashCount++
 			if slashCount%2 == 0 {
 				formattedText = formattedText[0:i+slashCount/2] + "\n" + formattedText[i+slashCount/2:]
-
 			}
 		}
 	}
