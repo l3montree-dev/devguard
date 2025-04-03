@@ -141,7 +141,12 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
 		if s.ShouldCreateIssues(assetVersion) {
-			err = s.CreateIssuesForVulnsIfThresholdExceeded(assetVersion.Asset, dependencyVulns)
+			// only create issues for unfixed vulnerabilities
+			unfixedVulns := utils.Filter(dependencyVulns, func(v models.DependencyVuln) bool {
+				return v.State != models.VulnStateFixed
+			})
+
+			err = s.CreateIssuesForVulnsIfThresholdExceeded(assetVersion.Asset, unfixedVulns)
 			if err != nil {
 				// swallow the error
 				slog.Warn("could not create issues for vulns", "err", err)

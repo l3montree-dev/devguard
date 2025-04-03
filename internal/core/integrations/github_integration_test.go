@@ -149,8 +149,8 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			facade := mocks.NewIntegrationsGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
-			facade.On("EditIssueLabel", context.Background(), "repo", "1", "severity:"+"high", &github.Label{
-				Description: github.String("Severity of the dependencyVuln"),
+			facade.On("EditIssueLabel", context.Background(), "repo", "1", "risk:"+"high", &github.Label{
+				Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
 				Color:       github.String("FFA500"),
 			}).Return(nil, nil, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "devguard", &github.Label{
@@ -225,8 +225,8 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			facade := mocks.NewIntegrationsGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
-			facade.On("EditIssueLabel", context.Background(), "repo", "1", "severity:"+"high", &github.Label{
-				Description: github.String("Severity of the dependencyVuln"),
+			facade.On("EditIssueLabel", context.Background(), "repo", "1", "risk:"+"high", &github.Label{
+				Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
 				Color:       github.String("FFA500"),
 			}).Return(nil, nil, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "devguard", &github.Label{
@@ -308,5 +308,74 @@ func TestGithubTicketIdToIdAndNumber(t *testing.T) {
 
 		assert.Equal(t, 0, ticketId)
 		assert.Equal(t, 0, ticketNumber)
+	})
+}
+func TestGetLabels(t *testing.T) {
+	t.Run("it should return labels with devguard and risk severity", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			RawRiskAssessment: utils.Ptr(8.0),
+			CVE: &models.CVE{
+				CVSS: 8.0,
+			},
+		}
+
+		labels := getLabels(vuln, "")
+
+		assert.Contains(t, labels, "devguard")
+		assert.Contains(t, labels, "risk:high")
+		assert.NotContains(t, labels, "state:")
+	})
+
+	t.Run("it should include state label if state is provided", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			RawRiskAssessment: utils.Ptr(5.0),
+			CVE: &models.CVE{
+				CVSS: 5.0,
+			},
+		}
+
+		labels := getLabels(vuln, "open")
+
+		assert.Contains(t, labels, "state:open")
+		assert.Contains(t, labels, "risk:medium")
+	})
+
+	t.Run("it should include cvss-severity label for DependencyVuln", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			CVE: &models.CVE{
+				CVSS: 9.8,
+			},
+		}
+		vuln.RawRiskAssessment = utils.Ptr(9.8)
+
+		labels := getLabels(vuln, "closed")
+
+		assert.Contains(t, labels, "cvss-severity:critical")
+		assert.Contains(t, labels, "state:closed")
+		assert.Contains(t, labels, "risk:critical")
+	})
+
+	t.Run("it should handle nil CVE gracefully for DependencyVuln", func(t *testing.T) {
+		vuln := &models.DependencyVuln{}
+		vuln.RawRiskAssessment = utils.Ptr(4.0)
+
+		labels := getLabels(vuln, "open")
+
+		assert.Contains(t, labels, "state:open")
+		assert.Contains(t, labels, "risk:medium")
+
+	})
+
+	t.Run("it should not include risk:none labels", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			CVE: &models.CVE{
+				CVSS: 0.0,
+			},
+		}
+		vuln.RawRiskAssessment = utils.Ptr(0.0)
+
+		labels := getLabels(vuln, "closed")
+
+		assert.Contains(t, labels, "state:closed")
 	})
 }
