@@ -16,7 +16,6 @@
 package api
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"sort"
@@ -371,7 +370,6 @@ func BuildRouter(db core.DB) *echo.Echo {
 	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 	attestationRepository := repositories.NewAttestationRepository(db)
-	fmt.Printf("%s", attestationRepository)
 
 	dependencyVulnService := dependency_vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration)
 	firstPartyVulnService := dependency_vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
