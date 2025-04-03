@@ -32,12 +32,13 @@ func (a *attestationController) Create(ctx core.Context) error {
 	var attestation models.Attestation
 	err := ctx.Bind(&attestation)
 	if err != nil {
-		return echo.NewHTTPError(400, "unable to bind data ti attestation model").WithInternal(err)
+		return echo.NewHTTPError(400, "unable to bind data to attestation model").WithInternal(err)
 	}
 
 	err = core.V.Struct(attestation)
 	if err != nil {
 		return echo.NewHTTPError(400, err.Error())
 	}
+	return nil
 
 }

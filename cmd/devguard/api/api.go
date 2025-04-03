@@ -29,6 +29,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
+	"github.com/l3montree-dev/devguard/internal/core/attestation"
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
@@ -394,7 +395,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository)
-
+	attestationController := attestation.NewAttestationController(attestationRepository)
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
@@ -565,6 +566,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 
 	assetVersionRouter.GET("/in-toto/:supplyChainId/", intotoController.Read)
+	assetVersionRouter.POST("/attestations/", attestationController.Create)
 
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
@@ -578,6 +580,9 @@ func BuildRouter(db core.DB) *echo.Echo {
 	dependencyVulnRouter.POST("/:dependencyVulnId/mitigate/", dependencyVulnController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	dependencyVulnRouter.GET("/:dependencyVulnId/events/", vulnEventController.ReadAssetEventsByVulnID)
+
+	attestationRouter := assetVersionRouter.Group("/attestations")
+	attestationRouter.GET("/", attestationController.List)
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {
