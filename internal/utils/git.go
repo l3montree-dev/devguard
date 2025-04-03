@@ -35,7 +35,11 @@ func getDirFromPath(path string) string {
 	return path
 }
 
-var GitLister gitLister = commandLineGitLister{}
+var git gitLister = commandLineGitLister{}
+
+func SetGitLister(g gitLister) {
+	git = g
+}
 
 func SetGitVersionHeader(path string, req *http.Request) error {
 	gitVersionInfo, err := GetAssetVersionInfoFromGit(path)
@@ -94,11 +98,11 @@ func getCurrentBranchName(path string) (string, error) {
 		return os.Getenv("CI_COMMIT_REF_NAME"), nil
 	}
 
-	return GitLister.GetBranchName(path)
+	return git.GetBranchName(path)
 }
 
 func getDefaultBranchName(path string) (string, error) {
-	outString, err := GitLister.GetDefaultBranchName(path)
+	outString, err := git.GetDefaultBranchName(path)
 	if err != nil {
 		return "", err
 	}
@@ -249,14 +253,14 @@ func filterAndSortValidSemverTags(tags []string) (string, string, error) {
 func getCurrentVersion(path string) (string, int, error) {
 	// mark the path as safe git directory
 	slog.Debug("marking path as safe", "path", getDirFromPath(path))
-	err := GitLister.MarkAsSafePath(path) // nolint:all
+	err := git.MarkAsSafePath(path) // nolint:all
 	if err != nil {
 		slog.Info("could not mark path as safe", "err", err, "path", getDirFromPath(path), "msg", err.Error())
 		return "", 0, err
 	}
 
 	// get tags from the git repository
-	tags, err := GitLister.GetTags(path)
+	tags, err := git.GetTags(path)
 	if err != nil {
 		slog.Info("could not get tags", "err", err, "path", getDirFromPath(path), "msg", err.Error())
 		return "", 0, err
@@ -266,7 +270,7 @@ func getCurrentVersion(path string) (string, int, error) {
 	originalLatestTagName, latestTag, err := filterAndSortValidSemverTags(tags)
 	if err != nil {
 		//there is not a single valid semver tag
-		commitCountsInt, err := GitLister.GitCommitCount(path, nil)
+		commitCountsInt, err := git.GitCommitCount(path, nil)
 		if err != nil {
 			return "", 0, err
 		}
@@ -274,7 +278,7 @@ func getCurrentVersion(path string) (string, int, error) {
 	}
 
 	// get the commit count
-	commitCountsInt, err := GitLister.GitCommitCount(path, &originalLatestTagName)
+	commitCountsInt, err := git.GitCommitCount(path, &originalLatestTagName)
 	if err != nil {
 		return "", 0, err
 	}
