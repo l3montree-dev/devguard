@@ -211,10 +211,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 	switch event := event.(type) {
 	case *gitlab.IssueEvent:
 		issueId := event.ObjectAttributes.IID
-		// check if the user is a bot - we do not want to handle bot comments
-		// if event.Comment.User.GetType() == "Bot" {
-		// 	return nil
-		// }
+
 		// look for a dependencyVuln with such a github ticket id
 		vuln, err := g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.Project.ID, issueId))
 		if err != nil {
@@ -1054,10 +1051,11 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		return nil
 	}
 
+	// check if the dependencyVuln is open, if not we need to close the issue
 	if dependencyVuln.State != models.VulnStateOpen {
 		if dependencyVuln.TicketState == models.TicketStateOpen {
 			dependencyVuln.TicketState = models.TicketStateClosed
-			vulnEvent := models.NewTicketClosedEvent(dependencyVuln.ID, "User", "This issue is closed")
+			vulnEvent := models.NewTicketClosedEvent(dependencyVuln.ID, "system", "This issue is closed")
 
 			// save the event
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
@@ -1067,25 +1065,6 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 			return nil
 		}
 	}
-
-	assetSlug := asset.Slug
-
-	project, err := g.projectRepository.GetProjectByAssetID(asset.ID)
-	if err != nil {
-		slog.Error("could not get project by asset id", "err", err)
-		return err
-	}
-	projectSlug := project.Slug
-
-	orgID := project.OrganizationID
-	org, err := g.orgRepository.GetOrgByID(orgID)
-	if err != nil {
-		slog.Error("could not get org by id", "err", err)
-		return err
-	}
-	orgSlug := org.Slug
-
-	assetVersionName := dependencyVuln.AssetVersionName
 
 	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
 	if err != nil {
@@ -1104,6 +1083,18 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		return err
 	}
 
+	project, err := g.projectRepository.GetProjectByAssetID(asset.ID)
+	if err != nil {
+		slog.Error("could not get project by asset id", "err", err)
+		return err
+	}
+
+	org, err := g.orgRepository.GetOrgByID(project.OrganizationID)
+	if err != nil {
+		slog.Error("could not get org by id", "err", err)
+		return err
+	}
+
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
@@ -1117,7 +1108,7 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 
 	issue, _, err := client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	})
 	if err != nil {
@@ -1126,7 +1117,7 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 			// the issue was deleted - we need to set the ticket state to deleted
 			dependencyVuln.TicketState = models.TicketStateDeleted
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewTicketDeletedEvent(dependencyVuln.ID, "Unknown", "This issue is deleted")
+			vulnEvent := models.NewTicketDeletedEvent(dependencyVuln.ID, "user", "This issue is deleted")
 			// save the event
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
 			if err != nil {
@@ -1137,6 +1128,8 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		}
 		return err
 	}
+
+	//check if the ticket state in devguard is different from the ticket state in gitlab, if so we need to update the ticket state in devguard
 	ticketState := issue.State
 	devguardTicketState := dependencyVuln.TicketState
 	if ticketState == "closed" {
@@ -1144,7 +1137,7 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 			// the issue was closed - we need to set the ticket state to closed
 			dependencyVuln.TicketState = models.TicketStateClosed
 			// create a new event
-			vulnEvent := models.NewTicketClosedEvent(dependencyVuln.ID, "User", "This issue is closed")
+			vulnEvent := models.NewTicketClosedEvent(dependencyVuln.ID, "user", "This issue is closed")
 
 			// save the event
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
@@ -1162,7 +1155,7 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 			dependencyVuln.TicketState = models.TicketStateOpen
 
 			// create a new event
-			vulnEvent := models.NewReopenedEvent(dependencyVuln.ID, "User", "This issue is reopened")
+			vulnEvent := models.NewReopenedEvent(dependencyVuln.ID, "user", "This issue is reopened")
 			// save the event
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
 			if err != nil {

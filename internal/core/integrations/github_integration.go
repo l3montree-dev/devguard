@@ -739,10 +739,11 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		return nil
 	}
 
+	// check if the dependencyVuln is open, if not we need to close the issue
 	if dependencyVuln.State != models.VulnStateOpen {
 		if dependencyVuln.TicketState == models.TicketStateOpen {
 			dependencyVuln.TicketState = models.TicketStateClosed
-			vulnEvent := models.NewTicketClosedEvent(dependencyVuln.ID, "User", "This issue is closed")
+			vulnEvent := models.NewTicketClosedEvent(dependencyVuln.ID, "system", "This issue is closed")
 
 			// save the event
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
@@ -763,24 +764,17 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		return err
 	}
 
-	assetSlug := asset.Slug
-
 	project, err := g.projectRepository.GetProjectByAssetID(asset.ID)
 	if err != nil {
 		slog.Error("could not get project by asset id", "err", err)
 		return err
 	}
-	projectSlug := project.Slug
 
-	orgID := project.OrganizationID
-	org, err := g.orgRepository.GetOrgByID(orgID)
+	org, err := g.orgRepository.GetOrgByID(project.OrganizationID)
 	if err != nil {
 		slog.Error("could not get org by id", "err", err)
 		return err
 	}
-	orgSlug := org.Slug
-
-	assetVersionName := dependencyVuln.AssetVersionName
 
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
@@ -791,7 +785,7 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	labels := getLabels(&dependencyVuln, "open")
 	issueRequest := &github.IssueRequest{
 		Title:  github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Body:   github.String(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
 		Labels: &labels,
 	}
 
@@ -803,7 +797,7 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 			// the issue was deleted - we need to set the ticket state to deleted
 			dependencyVuln.TicketState = models.TicketStateDeleted
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewTicketDeletedEvent(dependencyVuln.ID, "Unknown", "This issue is deleted")
+			vulnEvent := models.NewTicketDeletedEvent(dependencyVuln.ID, "user", "This issue is deleted")
 			// save the event
 			err = g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
 			if err != nil {
@@ -814,6 +808,7 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		return err
 	}
 
+	//check if the ticket state in devguard is different from the ticket state in gitlab, if so we need to update the ticket state in devguard
 	ticketState := issue.State
 	devguardTicketState := dependencyVuln.TicketState
 	if *ticketState == "closed" {
@@ -821,7 +816,7 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 			// the issue was closed - we need to set the ticket state to closed
 			dependencyVuln.TicketState = models.TicketStateClosed
 			// create a new event
-			vulnEvent := models.NewTicketClosedEvent(dependencyVuln.ID, "User", "This issue is closed")
+			vulnEvent := models.NewTicketClosedEvent(dependencyVuln.ID, "user", "This issue is closed")
 
 			// save the event
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
@@ -839,7 +834,7 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 			dependencyVuln.TicketState = models.TicketStateOpen
 
 			// create a new event
-			vulnEvent := models.NewReopenedEvent(dependencyVuln.ID, "User", "This issue is reopened")
+			vulnEvent := models.NewReopenedEvent(dependencyVuln.ID, "user", "This issue is reopened")
 			// save the event
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
 			if err != nil {
