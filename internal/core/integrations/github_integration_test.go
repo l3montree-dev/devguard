@@ -41,7 +41,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 	})
 
 	t.Run("it should return an error, if the dependencyVuln could not be found", func(t *testing.T) {
-		dependencyVulnRepository := mocks.NewCoreDependencyVulnRepository(t)
+		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, fmt.Errorf("dependencyVuln not found"))
 
 		githubIntegration := githubIntegration{
@@ -91,13 +91,13 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 	})
 
 	t.Run("it should return an error if the owner or repo could not be extracted from the repositoryId", func(t *testing.T) {
-		dependencyVulnRepository := mocks.NewCoreDependencyVulnRepository(t)
+		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, nil)
 
 		githubIntegration := githubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory: func(repoId string) (githubClientFacade, error) {
-				return mocks.NewIntegrationsGithubClientFacade(t), nil
+				return mocks.NewGithubClientFacade(t), nil
 			},
 			frontendUrl: "http://localhost:3000",
 		}
@@ -132,7 +132,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		dependencyVulnRepository := mocks.NewCoreDependencyVulnRepository(t)
+		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
@@ -146,7 +146,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		dependencyVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
 
 		githubClientFactory := func(repoId string) (githubClientFacade, error) {
-			facade := mocks.NewIntegrationsGithubClientFacade(t)
+			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "risk:"+"high", &github.Label{
@@ -207,7 +207,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}
 
-		dependencyVulnRepository := mocks.NewCoreDependencyVulnRepository(t)
+		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(expectDependencyVuln, nil)
 		dependencyVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -222,7 +222,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		expectedEvent.GetArbitraryJsonData()
 
 		githubClientFactory := func(repoId string) (githubClientFacade, error) {
-			facade := mocks.NewIntegrationsGithubClientFacade(t)
+			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "risk:"+"high", &github.Label{
