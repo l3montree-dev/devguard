@@ -131,6 +131,8 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		req := httptest.NewRequest("POST", "/webhook", bytes.NewBufferString(`{"comment": "test"}`))
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
+		componentRepository := mocks.NewCoreComponentRepository(t)
+		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
 
 		dependencyVulnRepository := mocks.NewCoreDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{
@@ -167,6 +169,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
 			frontendUrl:              "http://localhost:3000",
+			componentRepository:      componentRepository,
 		}
 
 		core.SetAsset(ctx, models.Asset{
@@ -211,6 +214,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		dependencyVulnRepository.On("Read", "1").Return(expectDependencyVuln, nil)
 		dependencyVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
+		componentRepository := mocks.NewCoreComponentRepository(t)
+		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
+
 		expectedEvent := models.VulnEvent{
 			Type:   models.EventTypeMitigate,
 			UserID: "1",
@@ -240,6 +246,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
 			frontendUrl:              "http://localhost:3000",
+			componentRepository:      componentRepository,
 		}
 
 		core.SetAsset(ctx, models.Asset{

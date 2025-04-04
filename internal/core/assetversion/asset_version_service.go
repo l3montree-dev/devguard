@@ -14,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+
 	"github.com/l3montree-dev/devguard/internal/database/models"
 
 	"github.com/l3montree-dev/devguard/internal/utils"
