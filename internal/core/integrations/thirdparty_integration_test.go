@@ -29,7 +29,7 @@ func TestRenderPathToComponent(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart LR\nroot\n```\n", result)
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart TD\nroot\n```\n", result)
 
 	})
 	t.Run("LoadPathToComponent fails somehow should return an error", func(t *testing.T) {
@@ -68,7 +68,7 @@ func TestRenderPathToComponent(t *testing.T) {
 		}
 
 		//String for the empty graph + 1 node being root with a linebreak
-		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart LR\nroot\n```\n", result)
+		assert.Equal(t, "```mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart TD\nroot\n```\n", result)
 
 	})
 }
