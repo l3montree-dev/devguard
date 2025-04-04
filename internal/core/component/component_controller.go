@@ -5,17 +5,28 @@ import (
 )
 
 type httpController struct {
-	componentRepository core.ComponentRepository
+	componentRepository    core.ComponentRepository
+	assetVersionRepository core.AssetVersionRepository
 }
 
-func NewHTTPController(componentRepository core.ComponentRepository) *httpController {
+func NewHTTPController(componentRepository core.ComponentRepository, assetVersionRepository core.AssetVersionRepository) *httpController {
 	return &httpController{
-		componentRepository: componentRepository,
+		componentRepository:    componentRepository,
+		assetVersionRepository: assetVersionRepository,
 	}
 }
 
 func (httpController httpController) LicenseDistribution(c core.Context) error {
-	assetVersion := core.GetAssetVersion(c)
+	asset := core.GetAsset(c)
+	assetVersion, err := core.MaybeGetAssetVersion(c)
+	if err != nil {
+		// we need to get the default asset version
+		assetVersion, err = httpController.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		if err != nil {
+			return c.JSON(404, nil)
+		}
+	}
+
 	scannerId := c.QueryParam("scannerId")
 
 	licenses, err := httpController.componentRepository.GetLicenseDistribution(nil,

@@ -415,7 +415,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository)
 
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
-	componentController := component.NewHTTPController(componentRepository)
+	componentController := component.NewHTTPController(componentRepository, assetVersionRepository)
 	complianceController := compliance.NewHTTPController()
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
@@ -542,6 +542,11 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
+
+	assetRouter.GET("/compliance/", complianceController.Compliance)
+	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
+	assetRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
+	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 
