@@ -70,7 +70,7 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
 		h := org.NewHttpController(organizationRepository, nil, nil, nil)
@@ -88,7 +88,7 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong duplicate key value"))
 
 		h := org.NewHttpController(organizationRepository, nil, nil, nil)
@@ -107,23 +107,23 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
-		authSession := mocks.NewCoreAuthSession(t)
+		accesscontrol := mocks.NewAccessControl(t)
+		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("")
 
 		core.SetSession(ctx, authSession)
 
-		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
+		rbacProvider := mocks.NewRBACProvider(t)
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("AllowRole", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		projectService := mocks.NewCoreProjectService(t)
-		invitationRepository := mocks.NewCoreInvitationRepository(t)
+		projectService := mocks.NewProjectService(t)
+		invitationRepository := mocks.NewInvitationRepository(t)
 
 		h := org.NewHttpController(organizationRepository, rbacProvider, projectService, invitationRepository)
 
@@ -140,23 +140,23 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
-		authSession := mocks.NewCoreAuthSession(t)
+		accesscontrol := mocks.NewAccessControl(t)
+		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("")
 
 		core.SetSession(ctx, authSession)
 
-		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
+		rbacProvider := mocks.NewRBACProvider(t)
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("AllowRole", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("something went wrong"))
 
-		projectService := mocks.NewCoreProjectService(t)
-		invitationRepository := mocks.NewCoreInvitationRepository(t)
+		projectService := mocks.NewProjectService(t)
+		invitationRepository := mocks.NewInvitationRepository(t)
 
 		h := org.NewHttpController(organizationRepository, rbacProvider, projectService, invitationRepository)
 
@@ -175,21 +175,21 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
-		authSession := mocks.NewCoreAuthSession(t)
+		accesscontrol := mocks.NewAccessControl(t)
+		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("")
 
 		core.SetSession(ctx, authSession)
 
-		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
+		rbacProvider := mocks.NewRBACProvider(t)
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
-		projectService := mocks.NewCoreProjectService(t)
-		invitationRepository := mocks.NewCoreInvitationRepository(t)
+		projectService := mocks.NewProjectService(t)
+		invitationRepository := mocks.NewInvitationRepository(t)
 
 		h := org.NewHttpController(organizationRepository, rbacProvider, projectService, invitationRepository)
 
@@ -206,23 +206,23 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
-		authSession := mocks.NewCoreAuthSession(t)
+		accesscontrol := mocks.NewAccessControl(t)
+		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("")
 
 		core.SetSession(ctx, authSession)
 
-		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
+		rbacProvider := mocks.NewRBACProvider(t)
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, "admin").Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, "member").Return(fmt.Errorf("something went wrong"))
 
-		projectService := mocks.NewCoreProjectService(t)
-		invitationRepository := mocks.NewCoreInvitationRepository(t)
+		projectService := mocks.NewProjectService(t)
+		invitationRepository := mocks.NewInvitationRepository(t)
 
 		h := org.NewHttpController(organizationRepository, rbacProvider, projectService, invitationRepository)
 
@@ -239,22 +239,22 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
-		authSession := mocks.NewCoreAuthSession(t)
+		accesscontrol := mocks.NewAccessControl(t)
+		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("")
 
 		core.SetSession(ctx, authSession)
 
-		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
+		rbacProvider := mocks.NewRBACProvider(t)
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, "admin").Return(fmt.Errorf("something went wrong"))
 
-		projectService := mocks.NewCoreProjectService(t)
-		invitationRepository := mocks.NewCoreInvitationRepository(t)
+		projectService := mocks.NewProjectService(t)
+		invitationRepository := mocks.NewInvitationRepository(t)
 
 		h := org.NewHttpController(organizationRepository, rbacProvider, projectService, invitationRepository)
 
@@ -271,23 +271,23 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
-		authSession := mocks.NewCoreAuthSession(t)
+		accesscontrol := mocks.NewAccessControl(t)
+		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("")
 
 		core.SetSession(ctx, authSession)
 
-		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
+		rbacProvider := mocks.NewRBACProvider(t)
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("AllowRole", "owner", "organization", mock.Anything).Return(fmt.Errorf("something went wrong"))
 
-		projectService := mocks.NewCoreProjectService(t)
-		invitationRepository := mocks.NewCoreInvitationRepository(t)
+		projectService := mocks.NewProjectService(t)
+		invitationRepository := mocks.NewInvitationRepository(t)
 
 		h := org.NewHttpController(organizationRepository, rbacProvider, projectService, invitationRepository)
 
@@ -304,24 +304,24 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
-		authSession := mocks.NewCoreAuthSession(t)
+		accesscontrol := mocks.NewAccessControl(t)
+		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("")
 
 		core.SetSession(ctx, authSession)
 
-		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
+		rbacProvider := mocks.NewRBACProvider(t)
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("AllowRole", "owner", "organization", mock.Anything).Return(nil)
 		accesscontrol.On("AllowRole", "admin", "organization", mock.Anything).Return(fmt.Errorf("something went wrong"))
 
-		projectService := mocks.NewCoreProjectService(t)
-		invitationRepository := mocks.NewCoreInvitationRepository(t)
+		projectService := mocks.NewProjectService(t)
+		invitationRepository := mocks.NewInvitationRepository(t)
 
 		h := org.NewHttpController(organizationRepository, rbacProvider, projectService, invitationRepository)
 
@@ -338,16 +338,16 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
-		authSession := mocks.NewCoreAuthSession(t)
+		accesscontrol := mocks.NewAccessControl(t)
+		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("")
 
 		core.SetSession(ctx, authSession)
 
-		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
+		rbacProvider := mocks.NewRBACProvider(t)
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, mock.Anything).Return(nil)
@@ -355,8 +355,8 @@ func TestCreate(t *testing.T) {
 		accesscontrol.On("AllowRole", "admin", "organization", mock.Anything).Return(nil)
 		accesscontrol.On("AllowRole", "admin", "project", mock.Anything).Return(fmt.Errorf("something went wrong"))
 
-		projectService := mocks.NewCoreProjectService(t)
-		invitationRepository := mocks.NewCoreInvitationRepository(t)
+		projectService := mocks.NewProjectService(t)
+		invitationRepository := mocks.NewInvitationRepository(t)
 
 		h := org.NewHttpController(organizationRepository, rbacProvider, projectService, invitationRepository)
 
@@ -373,16 +373,16 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Create", mock.Anything, mock.Anything).Return(nil)
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
-		authSession := mocks.NewCoreAuthSession(t)
+		accesscontrol := mocks.NewAccessControl(t)
+		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("")
 
 		core.SetSession(ctx, authSession)
 
-		rbacProvider := mocks.NewAccesscontrolRBACProvider(t)
+		rbacProvider := mocks.NewRBACProvider(t)
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, mock.Anything).Return(nil)
@@ -391,8 +391,8 @@ func TestCreate(t *testing.T) {
 		accesscontrol.On("AllowRole", "admin", "project", mock.Anything).Return(nil)
 		accesscontrol.On("AllowRole", "member", "organization", mock.Anything).Return(fmt.Errorf("something went wrong"))
 
-		projectService := mocks.NewCoreProjectService(t)
-		invitationRepository := mocks.NewCoreInvitationRepository(t)
+		projectService := mocks.NewProjectService(t)
+		invitationRepository := mocks.NewInvitationRepository(t)
 
 		h := org.NewHttpController(organizationRepository, rbacProvider, projectService, invitationRepository)
 
@@ -407,7 +407,7 @@ func TestCreate(t *testing.T) {
 func TestFetchMembersOfOrganization(t *testing.T) {
 	t.Run("Should fail if GetAllMembers returns an error", func(t *testing.T) {
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
+		accesscontrol := mocks.NewAccessControl(t)
 		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, fmt.Errorf("Something went wrong"))
 
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
@@ -428,10 +428,10 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 	t.Run("Should fail if ListUser returns an error", func(t *testing.T) {
 		emptyList := []client.Identity{}
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
+		accesscontrol := mocks.NewAccessControl(t)
 		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, nil)
 
-		adminClient := mocks.NewCoreAdminClient(t)
+		adminClient := mocks.NewAdminClient(t)
 		adminClient.On("ListUser", mock.Anything).Return(emptyList, fmt.Errorf("Something went wrong"))
 
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))
@@ -454,13 +454,13 @@ func TestFetchMembersOfOrganization(t *testing.T) {
 
 		emptyList := []client.Identity{}
 
-		accesscontrol := mocks.NewAccesscontrolAccessControl(t)
+		accesscontrol := mocks.NewAccessControl(t)
 		accesscontrol.On("GetAllMembersOfOrganization", mock.Anything).Return([]string{}, nil)
 
-		adminClient := mocks.NewCoreAdminClient(t)
+		adminClient := mocks.NewAdminClient(t)
 		adminClient.On("ListUser", mock.Anything).Return(emptyList, nil)
 
-		thirdPartyIntegration := mocks.NewCoreIntegrationAggregate(t)
+		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
 		thirdPartyIntegration.On("GetUsers", mock.Anything).Return([]core.User{})
 
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"name": "cool org"}`))

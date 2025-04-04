@@ -17,9 +17,9 @@ import (
 func TestHandleComponent(t *testing.T) {
 
 	t.Run("should set the license to unknown, if there is no license information", func(t *testing.T) {
-		mockDepsDevService := mocks.NewCoreDepsDevService(t)
-		mockComponentProjectRepository := mocks.NewCoreComponentProjectRepository(t)
-		mockComponentRepository := mocks.NewCoreComponentRepository(t)
+		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
+		mockComponentRepository := mocks.NewComponentRepository(t)
 
 		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository)
 
@@ -38,9 +38,9 @@ func TestHandleComponent(t *testing.T) {
 	})
 
 	t.Run("should set the license information to unknown, if there is an error in the deps dev service", func(t *testing.T) {
-		mockDepsDevService := mocks.NewCoreDepsDevService(t)
-		mockComponentProjectRepository := mocks.NewCoreComponentProjectRepository(t)
-		mockComponentRepository := mocks.NewCoreComponentRepository(t)
+		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
+		mockComponentRepository := mocks.NewComponentRepository(t)
 
 		c := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
@@ -59,9 +59,9 @@ func TestHandleComponent(t *testing.T) {
 	})
 
 	t.Run("should fetch the project information if there is a SOURCE_REPO defined in the related projects", func(t *testing.T) {
-		mockDepsDevService := mocks.NewCoreDepsDevService(t)
-		mockComponentProjectRepository := mocks.NewCoreComponentProjectRepository(t)
-		mockComponentRepository := mocks.NewCoreComponentRepository(t)
+		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
+		mockComponentRepository := mocks.NewComponentRepository(t)
 
 		c := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
@@ -104,8 +104,8 @@ func TestHandleComponent(t *testing.T) {
 
 func TestHandleProject(t *testing.T) {
 	t.Run("should save the project information", func(t *testing.T) {
-		mockDepsDevService := mocks.NewCoreDepsDevService(t)
-		mockComponentProjectRepository := mocks.NewCoreComponentProjectRepository(t)
+		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
 
 		project := models.ComponentProject{
 			ProjectKey: "github/test/project",

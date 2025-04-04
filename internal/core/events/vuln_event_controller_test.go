@@ -34,7 +34,7 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRepository := mocks.NewCoreVulnEventRepository(t)
+		mockRepository := mocks.NewVulnEventRepository(t)
 		// Execution
 		err := events.NewVulnEventController(mockRepository).ReadAssetEventsByVulnID(ctx)
 
@@ -44,7 +44,7 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 	})
 
 	t.Run("should return 500 if repository returns an error", func(t *testing.T) {
-		mockRepository := mocks.NewCoreVulnEventRepository(t)
+		mockRepository := mocks.NewVulnEventRepository(t)
 		mockRepository.On("ReadAssetEventsByVulnID", "vulnId").Return(nil, assert.AnError)
 
 		e := echo.New()

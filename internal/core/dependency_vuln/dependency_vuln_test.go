@@ -14,13 +14,13 @@ import (
 
 func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 	t.Run("Both Thresholds set and both CVSS and risk values are provided should return no error", func(t *testing.T) {
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
 
-		projectRepository := mocks.NewCoreProjectRepository(t)
+		projectRepository := mocks.NewProjectRepository(t)
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
-		thirdPartyIntegration := mocks.NewCoreThirdPartyIntegration(t)
+		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
@@ -63,7 +63,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 	})
 	t.Run("Should fail if projectRepository Read returns an error", func(t *testing.T) {
 
-		projectRepository := mocks.NewCoreProjectRepository(t)
+		projectRepository := mocks.NewProjectRepository(t)
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, fmt.Errorf("Something went wrong"))
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, nil, projectRepository, nil, nil)
@@ -81,10 +81,10 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		}
 	})
 	t.Run("Should fail if orgRepository Read returns an error", func(t *testing.T) {
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, fmt.Errorf("Something went wrong"))
 
-		projectRepository := mocks.NewCoreProjectRepository(t)
+		projectRepository := mocks.NewProjectRepository(t)
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, nil, nil)
@@ -104,13 +104,13 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		}
 	})
 	t.Run("Should not fail if repository ID cannot be determined because devguard isn't integrated yet", func(t *testing.T) {
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: ""}, nil)
 
-		projectRepository := mocks.NewCoreProjectRepository(t)
+		projectRepository := mocks.NewProjectRepository(t)
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: ""}, nil)
 
-		thirdPartyIntegration := mocks.NewCoreThirdPartyIntegration(t)
+		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
@@ -130,13 +130,13 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		}
 	})
 	t.Run("Both Thresholds set and both CVSS and risk values are provided but the create Issue function returns an error and therefore should fail", func(t *testing.T) {
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
 
-		projectRepository := mocks.NewCoreProjectRepository(t)
+		projectRepository := mocks.NewProjectRepository(t)
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
-		thirdPartyIntegration := mocks.NewCoreThirdPartyIntegration(t)
+		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
@@ -163,13 +163,13 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		}
 	})
 	t.Run("Only CVSS Threshold is provided an both CVSS and risk values are provided", func(t *testing.T) {
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
 
-		projectRepository := mocks.NewCoreProjectRepository(t)
+		projectRepository := mocks.NewProjectRepository(t)
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
-		thirdPartyIntegration := mocks.NewCoreThirdPartyIntegration(t)
+		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
@@ -196,13 +196,13 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 	})
 
 	t.Run("Only CVSS Threshold is set and both CVSS and risk values are provided but the create Issue function returns an error and therefore should fail", func(t *testing.T) {
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
 
-		projectRepository := mocks.NewCoreProjectRepository(t)
+		projectRepository := mocks.NewProjectRepository(t)
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
-		thirdPartyIntegration := mocks.NewCoreThirdPartyIntegration(t)
+		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
@@ -228,13 +228,13 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		}
 	})
 	t.Run("Only Risk Threshold is set and both CVSS and risk values are provided but the create Issue function returns an error and therefore should fail", func(t *testing.T) {
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
 
-		projectRepository := mocks.NewCoreProjectRepository(t)
+		projectRepository := mocks.NewProjectRepository(t)
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
-		thirdPartyIntegration := mocks.NewCoreThirdPartyIntegration(t)
+		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
@@ -261,13 +261,13 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 	})
 
 	t.Run("should reopen the issue, if a vuln already has an assigned ticket", func(t *testing.T) {
-		organizationRepository := mocks.NewCoreOrganizationRepository(t)
+		organizationRepository := mocks.NewOrganizationRepository(t)
 		organizationRepository.On("Read", mock.Anything).Return(models.Org{Slug: "ptest"}, nil)
 
-		projectRepository := mocks.NewCoreProjectRepository(t)
+		projectRepository := mocks.NewProjectRepository(t)
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
-		thirdPartyIntegration := mocks.NewCoreThirdPartyIntegration(t)
+		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 
 		thirdPartyIntegration.On("ReopenIssue", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
