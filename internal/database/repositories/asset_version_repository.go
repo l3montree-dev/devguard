@@ -148,6 +148,12 @@ func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uu
 	return apps, nil
 }
 
+func (a *assetVersionRepository) GetDefaultAssetVersion(assetID uuid.UUID) (models.AssetVersion, error) {
+	var app models.AssetVersion
+	err := a.db.Model(&models.AssetVersion{}).Where("default_branch = true AND asset_id = ?", assetID).First(&app).Error
+	return app, err
+}
+
 func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
 	err := a.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").

@@ -197,6 +197,14 @@ func GetAssetVersion(ctx Context) models.AssetVersion {
 	return ctx.Get("assetVersion").(models.AssetVersion)
 }
 
+func MaybeGetAssetVersion(ctx Context) (models.AssetVersion, error) {
+	assetVersion, ok := ctx.Get("assetVersion").(models.AssetVersion)
+	if !ok {
+		return models.AssetVersion{}, fmt.Errorf("could not get asset version")
+	}
+	return assetVersion, nil
+}
+
 func SetAssetVersion(ctx Context, assetVersion models.AssetVersion) {
 	ctx.Set("assetVersion", assetVersion)
 }
