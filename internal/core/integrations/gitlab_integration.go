@@ -202,7 +202,6 @@ func parseWebhook(r *http.Request) (any, error) {
 }
 
 func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
-	fmt.Println("Handling GitLab Webhook")
 	event, err := parseWebhook(ctx.Request())
 	if err != nil {
 		slog.Error("could not parse gitlab webhook", "err", err)
@@ -222,8 +221,8 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
 			return nil
 		}
-		state := event.ObjectAttributes.State
-		fmt.Println("state", state)
+
+		action := event.ObjectAttributes.Action
 
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
@@ -251,27 +250,40 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			}
 		}()
 
-		if state == "closed" {
+		switch action {
+		case "close":
+
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
 
 			vulnDependencyVuln.SetTicketState(models.TicketStateClosed)
 			vuln.SetTicketState(models.TicketStateClosed)
 
 			var vulnEvent models.VulnEvent
-			if vuln.GetState() == models.VulnStateOpen {
 
-				vulnEvent = models.NewTicketClosedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This issue is closed by %s", event.User.Username))
+			vulnEvent = models.NewTicketClosedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This issue is closed by %s", event.User.Username))
 
-			} else {
-				vulnEvent = models.NewTicketClosedEvent(vuln.GetID(), "System", "This issue is closed by the system")
+			err := g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
+			if err != nil {
+				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
+		case "reopen":
+
+			vulnDependencyVuln := vuln.(*models.DependencyVuln)
+
+			vulnDependencyVuln.SetTicketState(models.TicketStateOpen)
+			vuln.SetTicketState(models.TicketStateOpen)
+
+			var vulnEvent models.VulnEvent
+
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This issue is reopened by %s", event.User.Username))
+
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
 		}
+
 	case *gitlab.IssueCommentEvent:
-		fmt.Println("event is IssueCommentEvent")
 		// check if the issue is a devguard issue
 		issueId := event.Issue.IID
 
@@ -1111,7 +1123,6 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	if err != nil {
 		//check if err is 404 - if so, we can not reopen the issue
 		if err.Error() == "404 Not Found" {
-			fmt.Println("issue not found!!!!")
 			// the issue was deleted - we need to set the ticket state to deleted
 			dependencyVuln.TicketState = models.TicketStateDeleted
 			// we can not reopen the issue - it is deleted

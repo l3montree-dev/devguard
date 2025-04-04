@@ -218,17 +218,14 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		// check if the issue is a devguard issue
 		issueNumber := event.ObjectAttributes.IID
 		issueID := event.ObjectAttributes.ID
-		// check if the user is a bot - we do not want to handle bot comments
-		if event.User.Username == "Bot" {
-			return nil
-		}
+
 		// look for a vuln with such a github ticket id
 		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 		if err != nil {
 			slog.Debug("could not find vuln by ticket id", "err", err, "ticketId", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 			return nil
 		}
-		state := event.ObjectAttributes.State
+		action := event.ObjectAttributes.Action
 
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
@@ -256,20 +253,45 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			}
 		}()
 
-		if state == "closed" {
+		switch action {
+		case "closed":
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
 
 			vulnDependencyVuln.SetTicketState(models.TicketStateClosed)
 			vuln.SetTicketState(models.TicketStateClosed)
 
 			var vulnEvent models.VulnEvent
-			if vuln.GetState() == models.VulnStateOpen {
 
-				vulnEvent = models.NewTicketClosedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.User.ID), fmt.Sprintf("This issue is closed by %s", event.User.Username))
+			vulnEvent = models.NewTicketClosedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.User.ID), fmt.Sprintf("This issue is closed by %s", event.User.Username))
 
-			} else {
-				vulnEvent = models.NewTicketClosedEvent(vuln.GetID(), "System", "This issue is closed by the system")
+			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
+			if err != nil {
+				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
+
+		case "reopened":
+			vulnDependencyVuln := vuln.(*models.DependencyVuln)
+
+			vulnDependencyVuln.SetTicketState(models.TicketStateClosed)
+			vuln.SetTicketState(models.TicketStateClosed)
+
+			var vulnEvent models.VulnEvent
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.User.ID), fmt.Sprintf("This issue is reopened by %s", event.User.Username))
+
+			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
+			if err != nil {
+				slog.Error("could not save dependencyVuln and event", "err", err)
+			}
+
+		case "deleted":
+			vulnDependencyVuln := vuln.(*models.DependencyVuln)
+
+			vulnDependencyVuln.SetTicketState(models.TicketStateDeleted)
+			vuln.SetTicketState(models.TicketStateDeleted)
+
+			var vulnEvent models.VulnEvent
+			vulnEvent = models.NewTicketDeletedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.User.ID), fmt.Sprintf("This issue is deleted by %s", event.User.Username))
+
 			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
