@@ -73,25 +73,26 @@ func TestRenderPathToComponent(t *testing.T) {
 	})
 }
 
-func TestFormatNode(t *testing.T) {
-	t.Run("Empty String should also return an empty string back", func(t *testing.T) {
+func TestBeautifyPURL(t *testing.T) {
+	t.Run("empty String should also return an empty string back", func(t *testing.T) {
 		inputString := ""
-		result := integrations.BeautifyPURL(inputString)
+		result, _ := integrations.BeautifyPURL(inputString)
 		assert.Equal(t, "", result)
 	})
-	t.Run("Should change nothing when there are less than 2 slashes in the input string", func(t *testing.T) {
-		inputString := "StringWIthOnlyOne/"
-		result := integrations.BeautifyPURL(inputString)
+	t.Run("invalid purl format should also be returned unchanged", func(t *testing.T) {
+		inputString := "this is definitely not a valid purl"
+		result, _ := integrations.BeautifyPURL(inputString)
 		assert.Equal(t, inputString, result)
 	})
-	t.Run("Should put a line break behind the second slash", func(t *testing.T) {
-		inputString := "StringWIthOnlyOne//"
-		result := integrations.BeautifyPURL(inputString)
-		assert.Equal(t, "StringWIthOnlyOne//\n", result)
+	t.Run("should return only the namespace and the name of a valid purl and cut the rest", func(t *testing.T) {
+		inputString := "pkg:npm/@ory/integrations@v0.0.1"
+		result, _ := integrations.BeautifyPURL(inputString)
+		assert.Equal(t, "@ory/integrations", result)
 	})
-	t.Run("Should put a line break behind every second slash", func(t *testing.T) {
-		inputString := "StringWIthOnlyOne//moreText/newText/nowTHefinalTextChallenge//"
-		result := integrations.BeautifyPURL(inputString)
-		assert.Equal(t, "StringWIthOnlyOne//\nmoreText/newText/\nnowTHefinalTextChallenge//\n", result)
+	t.Run("should return no leading slash if the namespace is empty", func(t *testing.T) {
+		inputString := "pkg:npm/integrations@v0.0.1"
+		result, _ := integrations.BeautifyPURL(inputString)
+		assert.Equal(t, "integrations", result)
 	})
+
 }

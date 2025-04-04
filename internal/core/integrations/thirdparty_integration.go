@@ -3,7 +3,6 @@ package integrations
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 	"strconv"
@@ -191,7 +190,7 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 	var nodeContent string
 
 	for i, componentName := range componentList[1:] {
-		fmt.Printf("Component Name: %s", componentName)
+
 		nodeContent, err = BeautifyPURL(componentName)
 		if err != nil {
 			nodeContent = componentName
@@ -212,6 +211,11 @@ func BeautifyPURL(pURL string) (string, error) {
 		slog.Error("cannot convert to purl struct")
 		return pURL, err
 	}
+	//if the namespace is empty we don't want any leading slashes
+	if p.Namespace == "" {
+		return p.Name, nil
+	} else {
+		return p.Namespace + "/" + p.Name, nil
+	}
 
-	return p.Namespace + "/" + p.Name, nil
 }
