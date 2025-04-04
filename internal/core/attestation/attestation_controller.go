@@ -10,6 +10,12 @@ type attestationController struct {
 	attestationRepository core.AttestationRepository
 }
 
+func NewAttestationController(repository core.AttestationRepository) *attestationController {
+	return &attestationController{
+		attestationRepository: repository,
+	}
+}
+
 func (a *attestationController) List(ctx core.Context) error {
 
 	asset := core.GetAsset(ctx)
@@ -20,12 +26,6 @@ func (a *attestationController) List(ctx core.Context) error {
 	}
 
 	return ctx.JSON(200, attestationList)
-}
-
-func NewAttestationController(repository core.AttestationRepository) *attestationController {
-	return &attestationController{
-		attestationRepository: repository,
-	}
 }
 
 func (a *attestationController) Create(ctx core.Context) error {
