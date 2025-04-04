@@ -114,6 +114,19 @@ func Start(db core.DB) {
 			slog.Info("risk recalculated", "duration", time.Since(start))
 		}
 
+		if shouldMirror(configService, "vulndb.tickets") {
+			start = time.Now()
+			// sync tickets
+			if err := SyncTickets(db); err != nil {
+				slog.Error("could not sync tickets", "err", err)
+				return nil
+			}
+			if err := markMirrored(configService, "vulndb.tickets"); err != nil {
+				slog.Error("could not mark vulndb.tickets as mirrored", "err", err)
+			}
+			slog.Info("tickets synced", "duration", time.Since(start))
+		}
+
 		if shouldMirror(configService, "vulndb.statistics") {
 			start = time.Now()
 			// as a last step - update the statistics

@@ -22,6 +22,9 @@ const (
 	EventTypeFalsePositive     VulnEventType = "falsePositive"
 	EventTypeMarkedForTransfer VulnEventType = "markedForTransfer"
 
+	EventTypeTicketClosed  VulnEventType = "ticketClosed"
+	EventTypeTicketDeleted VulnEventType = "ticketDeleted"
+
 	EventTypeRawRiskAssessmentUpdated VulnEventType = "rawRiskAssessmentUpdated"
 
 	EventTypeComment VulnEventType = "comment"
@@ -78,11 +81,14 @@ func (e VulnEvent) Apply(vuln Vuln) {
 	switch e.Type {
 	case EventTypeFixed:
 		vuln.SetState(VulnStateFixed)
+		vuln.SetTicketState(TicketStateClosed)
 		// vuln.State = VulnStateFixed
 	case EventTypeReopened:
 		vuln.SetState(VulnStateOpen)
+		vuln.SetTicketState(TicketStateOpen)
 	case EventTypeDetected:
 		vuln.SetState(VulnStateOpen)
+		vuln.SetTicketState(TicketStateOpen)
 		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
 		if !ok {
 			slog.Error("could not parse risk assessment", "dependencyVulnId", e.VulnID)
@@ -92,8 +98,10 @@ func (e VulnEvent) Apply(vuln Vuln) {
 		vuln.SetRiskRecalculatedAt(time.Now())
 	case EventTypeAccepted:
 		vuln.SetState(VulnStateAccepted)
+		vuln.SetTicketState(TicketStateClosed)
 	case EventTypeFalsePositive:
 		vuln.SetState(VulnStateFalsePositive)
+		vuln.SetTicketState(TicketStateClosed)
 	case EventTypeMarkedForTransfer:
 		vuln.SetState(VulnStateMarkedForTransfer)
 	case EventTypeRawRiskAssessmentUpdated:
@@ -180,6 +188,23 @@ func NewDetectedEvent(vulnID string, userID string, riskCalculationReport common
 	ev.SetArbitraryJsonData(riskCalculationReport.Map())
 
 	return ev
+}
+
+func NewTicketClosedEvent(vulnID string, userID string, justification string) VulnEvent {
+	return VulnEvent{
+		Type:          EventTypeTicketClosed,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+}
+func NewTicketDeletedEvent(vulnID string, userID string, justification string) VulnEvent {
+	return VulnEvent{
+		Type:          EventTypeTicketDeleted,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
+	}
 }
 
 func NewMitigateEvent(vulnID string, userID string, justification string, arbitraryData map[string]any) VulnEvent {

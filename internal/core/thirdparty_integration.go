@@ -40,6 +40,8 @@ type ThirdPartyIntegration interface {
 	CloseIssue(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln) error
 	ReopenIssue(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln) error
 
+	UpdateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVuln models.DependencyVuln) error
+
 	GetUsers(org models.Org) []User
 
 	GetID() IntegrationID

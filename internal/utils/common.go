@@ -18,6 +18,7 @@ package utils
 import (
 	"encoding/csv"
 	"log/slog"
+	"math"
 	"runtime/debug"
 )
 
@@ -112,4 +113,12 @@ func PrintBuildInformation() {
 			}
 		}
 	}
+}
+
+func CompareFirstTwoDecimals(a, b float64) bool {
+
+	aRounded := math.Round(a*100) / 100
+	bRounded := math.Round(b*100) / 100
+
+	return aRounded == bRounded
 }

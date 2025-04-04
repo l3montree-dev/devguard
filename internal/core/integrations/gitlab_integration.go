@@ -69,6 +69,8 @@ type gitlabIntegration struct {
 	vulnEventRepository      core.VulnEventRepository
 	frontendUrl              string
 
+	orgRepository core.OrganizationRepository
+
 	projectRepository      core.ProjectRepository
 	assetRepository        core.AssetRepository
 	assetVersionRepository core.AssetVersionRepository
@@ -111,6 +113,8 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
 
+	orgRepository := repositories.NewOrgRepository(db)
+
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
 		panic("FRONTEND_URL is not set")
@@ -126,6 +130,7 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 		assetVersionRepository:      assetVersionRepository,
 		externalUserRepository:      externalUserRepository,
 		projectRepository:           projectRepository,
+		orgRepository:               orgRepository,
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -204,6 +209,77 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 	}
 
 	switch event := event.(type) {
+	case *gitlab.IssueEvent:
+		issueId := event.ObjectAttributes.IID
+
+		// look for a dependencyVuln with such a github ticket id
+		vuln, err := g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.Project.ID, issueId))
+		if err != nil {
+			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
+			return nil
+		}
+
+		action := event.ObjectAttributes.Action
+
+		// make sure to save the user - it might be a new user or it might have new values defined.
+		// we do not care about any error - and we want speed, thus do it on a goroutine
+		go func() {
+			org, err := g.aggregatedVulnRepository.GetOrgFromVuln(vuln)
+			if err != nil {
+				slog.Error("could not get org from dependencyVuln id", "err", err)
+				return
+			}
+			// save the user in the database
+			user := models.ExternalUser{
+				ID:        fmt.Sprintf("gitlab:%d", event.User.ID),
+				Username:  event.User.Username,
+				AvatarURL: event.User.AvatarURL,
+			}
+
+			err = g.externalUserRepository.Save(nil, &user)
+			if err != nil {
+				slog.Error("could not save github user", "err", err)
+				return
+			}
+
+			if err = g.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
+				slog.Error("could not append user to organization", "err", err)
+			}
+		}()
+
+		switch action {
+		case "close":
+
+			vulnDependencyVuln := vuln.(*models.DependencyVuln)
+
+			vulnDependencyVuln.SetTicketState(models.TicketStateClosed)
+			vuln.SetTicketState(models.TicketStateClosed)
+
+			var vulnEvent models.VulnEvent
+
+			vulnEvent = models.NewTicketClosedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This issue is closed by %s", event.User.Username))
+
+			err := g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
+			if err != nil {
+				slog.Error("could not save dependencyVuln and event", "err", err)
+			}
+		case "reopen":
+
+			vulnDependencyVuln := vuln.(*models.DependencyVuln)
+
+			vulnDependencyVuln.SetTicketState(models.TicketStateOpen)
+			vuln.SetTicketState(models.TicketStateOpen)
+
+			var vulnEvent models.VulnEvent
+
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This issue is reopened by %s", event.User.Username))
+
+			err := g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
+			if err != nil {
+				slog.Error("could not save dependencyVuln and event", "err", err)
+			}
+		}
+
 	case *gitlab.IssueCommentEvent:
 		// check if the issue is a devguard issue
 		issueId := event.Issue.IID
@@ -969,6 +1045,129 @@ func (g *gitlabIntegration) ReopenIssue(ctx context.Context, repoId string, depe
 	return nil
 }
 
+func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVuln models.DependencyVuln) error {
+	if !strings.HasPrefix(repoId, "gitlab:") {
+		// this integration only handles gitlab repositories
+		return nil
+	}
+
+	// check if the dependencyVuln is open, if not we need to close the issue
+	if dependencyVuln.State != models.VulnStateOpen {
+		if dependencyVuln.TicketState == models.TicketStateOpen {
+			dependencyVuln.TicketState = models.TicketStateClosed
+			vulnEvent := models.NewTicketClosedEvent(dependencyVuln.ID, "system", "This issue is closed")
+
+			// save the event
+			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
+			if err != nil {
+				slog.Error("could not save dependencyVuln and event", "err", err)
+			}
+			return nil
+		}
+	}
+
+	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	if err != nil {
+		slog.Error("failed to extract integration id from repo id", "err", err, "repoId", repoId)
+		return err
+	}
+
+	projectId, err := extractProjectIdFromRepoId(repoId)
+	if err != nil {
+		slog.Error("failed to extract project id from repo id", "err", err, "repoId", repoId)
+		return err
+	}
+
+	client, err := g.gitlabClientFactory(integrationUUID)
+	if err != nil {
+		return err
+	}
+
+	project, err := g.projectRepository.GetProjectByAssetID(asset.ID)
+	if err != nil {
+		slog.Error("could not get project by asset id", "err", err)
+		return err
+	}
+
+	org, err := g.orgRepository.GetOrgByID(project.OrganizationID)
+	if err != nil {
+		slog.Error("could not get org by id", "err", err)
+		return err
+	}
+
+	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
+
+	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
+
+	gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
+	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
+	if err != nil {
+		return err
+	}
+	labels := getLabels(&dependencyVuln, "open")
+
+	issue, _, err := client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
+		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
+	})
+	if err != nil {
+		//check if err is 404 - if so, we can not reopen the issue
+		if err.Error() == "404 Not Found" {
+			// the issue was deleted - we need to set the ticket state to deleted
+			dependencyVuln.TicketState = models.TicketStateDeleted
+			// we can not reopen the issue - it is deleted
+			vulnEvent := models.NewTicketDeletedEvent(dependencyVuln.ID, "user", "This issue is deleted")
+			// save the event
+			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
+			if err != nil {
+				slog.Error("could not save dependencyVuln and event", "err", err)
+			}
+
+			return nil
+		}
+		return err
+	}
+
+	//check if the ticket state in devguard is different from the ticket state in gitlab, if so we need to update the ticket state in devguard
+	ticketState := issue.State
+	devguardTicketState := dependencyVuln.TicketState
+	if ticketState == "closed" {
+		if devguardTicketState == models.TicketStateOpen {
+			// the issue was closed - we need to set the ticket state to closed
+			dependencyVuln.TicketState = models.TicketStateClosed
+			// create a new event
+			vulnEvent := models.NewTicketClosedEvent(dependencyVuln.ID, "user", "This issue is closed")
+
+			// save the event
+			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
+			if err != nil {
+				slog.Error("could not save dependencyVuln and event", "err", err)
+			}
+			return nil
+
+		}
+	}
+
+	if ticketState == "opened" {
+		if devguardTicketState == models.TicketStateClosed {
+			// the issue was opened - we need to set the ticket state to open
+			dependencyVuln.TicketState = models.TicketStateOpen
+
+			// create a new event
+			vulnEvent := models.NewReopenedEvent(dependencyVuln.ID, "user", "This issue is reopened")
+			// save the event
+			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
+			if err != nil {
+				slog.Error("could not save dependencyVuln and event", "err", err)
+			}
+			return nil
+		}
+	}
+
+	return nil
+}
+
 func (g *gitlabIntegration) CloseIssue(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln) error {
 	if !strings.HasPrefix(repoId, "gitlab:") {
 		// this integration only handles gitlab repositories
@@ -1054,14 +1253,16 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("gitlab:%d/%d", createdIssue.ProjectID, createdIssue.IID))
 	dependencyVuln.TicketURL = utils.Ptr(createdIssue.WebURL)
+	dependencyVuln.TicketState = models.TicketStateOpen
 
 	vulnEvent := models.NewMitigateEvent(
 		dependencyVuln.ID,
 		"system",
 		"Risk exceeds predefined threshold",
 		map[string]any{
-			"ticketId":  *dependencyVuln.TicketID,
-			"ticketUrl": createdIssue.WebURL,
+			"ticketId":    *dependencyVuln.TicketID,
+			"ticketUrl":   createdIssue.WebURL,
+			"ticketState": models.TicketStateOpen,
 		})
 
 	return g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)

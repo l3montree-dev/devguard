@@ -24,6 +24,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 
+	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -140,18 +141,6 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 		if err != nil {
 			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
-		if s.ShouldCreateIssues(assetVersion) {
-			// only create issues for unfixed vulnerabilities
-			unfixedVulns := utils.Filter(dependencyVulns, func(v models.DependencyVuln) bool {
-				return v.State != models.VulnStateFixed
-			})
-
-			err = s.CreateIssuesForVulnsIfThresholdExceeded(assetVersion.Asset, unfixedVulns)
-			if err != nil {
-				// swallow the error
-				slog.Warn("could not create issues for vulns", "err", err)
-			}
-		}
 	}
 
 	return nil
@@ -162,6 +151,11 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
+
+	githubIntegration := integrations.NewGithubIntegration(tx)
+	gitlabIntegration := integrations.NewGitLabIntegration(tx)
+
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
 	env := core.Environmental{
 		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
@@ -188,6 +182,18 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 			events = append(events, ev)
 
 			slog.Info("recalculated raw risk assessment", "cve", dependencyVuln.CVE)
+
+			if dependencyVuln.TicketID != nil {
+				err := thirdPartyIntegration.HandleEvent(core.VulnEvent{
+					//we need context here to handle the event!!
+					//Ctx:   ctx,
+					Event: ev,
+				})
+				if err != nil {
+					slog.Error("could not handle event", "err", err, "event", ev)
+				}
+			}
+
 		} else {
 			// only update the last calculated time
 			dependencyVulns[i].RiskRecalculatedAt = time.Now()
@@ -256,13 +262,101 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	return ev, err
 }
 
+func (s *service) SyncTicketsForAllAssets() error {
+	assets, err := s.assetRepository.All()
+	if err != nil {
+		return err
+	}
+
+	for _, asset := range assets {
+		err := s.SyncTickets(asset)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *service) SyncTickets(asset models.Asset) error {
+
+	for _, assetVersion := range asset.AssetVersions {
+		if !s.ShouldCreateIssues(assetVersion) {
+			continue
+		}
+
+		slog.Info("syncing tickets", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
+
+		vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID)
+		if err != nil {
+			return err
+		}
+		if len(vulnList) == 0 {
+			return nil
+		}
+
+		riskThreshold := asset.RiskAutomaticTicketThreshold
+		cvssThreshold := asset.CVSSAutomaticTicketThreshold
+
+		//Check if no automatic Issues are wanted by the user
+		if riskThreshold == nil && cvssThreshold == nil {
+			return nil
+		}
+
+		project, err := s.projectRepository.Read(asset.ProjectID)
+		if err != nil {
+			return err
+		}
+
+		org, err := s.organizationRepository.Read(project.OrganizationID)
+		if err != nil {
+			return err
+		}
+
+		repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
+		if err != nil {
+			return nil //We don't want to return an error if the user has not yet linked his repo with devguard
+		}
+
+		errgroup := utils.ErrGroup[any](10)
+
+		for _, vulnerability := range vulnList {
+
+			if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
+
+				if vulnerability.TicketID == nil {
+					if vulnerability.State == models.VulnStateOpen {
+						//there is no ticket yet, we need to create one
+						errgroup.Go(func() (any, error) {
+							return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
+						})
+					}
+				} else {
+					// there is already a ticket,
+					//TODO: we need to update the ticket with the new information
+					errgroup.Go(func() (any, error) {
+						return nil, s.updateIssue(asset, vulnerability, repoID)
+					})
+				}
+				// check if the ticket should be closed
+			} else if (cvssThreshold != nil && vulnerability.CVE.CVSS < float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment < *riskThreshold) {
+
+				if vulnerability.TicketID != nil {
+					errgroup.Go(func() (any, error) {
+						return nil, s.closeIssue(vulnerability, repoID)
+					})
+				}
+			}
+		}
+		_, err = errgroup.WaitAndCollect()
+		return err
+	}
+	return nil
+}
+
 // function to check whether the provided vulnerabilities in a given asset exceeds their respective thresholds and create a ticket for it if they do so
 func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vulnList []models.DependencyVuln) error {
 	riskThreshold := asset.RiskAutomaticTicketThreshold
 	cvssThreshold := asset.CVSSAutomaticTicketThreshold
-	if riskThreshold == nil && cvssThreshold == nil {
-		return nil
-	}
 
 	//Check if no automatic Issues are wanted by the user
 	if riskThreshold == nil && cvssThreshold == nil {
@@ -315,6 +409,13 @@ func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.
 	defer cancel()
 
 	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug)
+}
+
+func (s *service) updateIssue(asset models.Asset, vulnerability models.DependencyVuln, repoId string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	return s.thirdPartyIntegration.UpdateIssue(ctx, asset, repoId, vulnerability)
 }
 
 func (s *service) reopenIssue(vulnerability models.DependencyVuln, repoId string) error {
