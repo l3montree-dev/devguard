@@ -3,6 +3,7 @@ package integrations
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/package-url/packageurl-go"
 )
 
 // batches multiple third party integrations
@@ -163,7 +165,7 @@ func NewThirdPartyIntegrations(integrations ...core.ThirdPartyIntegration) *thir
 func RenderPathToComponent(componentRepository core.ComponentRepository, assetID uuid.UUID, assetVersionName string, scannerID string, pURL string) (string, error) {
 
 	//basic string to tell markdown that we have a mermaid flow chart with given parameters
-	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart LR\n"
+	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart TD\n"
 
 	components, err := componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, scannerID)
 	if err != nil {
@@ -186,9 +188,15 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 
 	//now we build the string using this list, every new node need prefix and suffix to work with mermaid. [] are used to prohibit mermaid from interpreting some symbols from the package names as mermaid syntax
 	mermaidFlowChart += componentList[0]
+	var nodeContent string
 
 	for i, componentName := range componentList[1:] {
-		mermaidFlowChart = mermaidFlowChart + " --> \n" + "node" + strconv.Itoa(i) + "[" + FormatNode(componentName) + "]"
+		fmt.Printf("Component Name: %s", componentName)
+		nodeContent, err = BeautifyPURL(componentName)
+		if err != nil {
+			nodeContent = componentName
+		}
+		mermaidFlowChart = mermaidFlowChart + " --> \n" + "node" + strconv.Itoa(i) + "[" + nodeContent + "]"
 	}
 
 	mermaidFlowChart = "```" + mermaidFlowChart + "\n```\n"
@@ -196,17 +204,14 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 	return mermaidFlowChart, nil
 }
 
-// function to automatically put line breaks in the text of a node to help it look bigger when rendered
-func FormatNode(nodeText string) string {
-	formattedText := nodeText
-	slashCount := 0 //used to keep track if we are on the second slash in this line AND how many line breaks (how many extra chars) we added
-	for i, char := range formattedText {
-		if char == '/' {
-			slashCount++
-			if slashCount%2 == 0 {
-				formattedText = formattedText[0:i+slashCount/2] + "\n" + formattedText[i+slashCount/2:]
-			}
-		}
+// function to make purl look more visually appealing
+func BeautifyPURL(pURL string) (string, error) {
+
+	p, err := packageurl.FromString(pURL)
+	if err != nil {
+		slog.Error("cannot convert to purl struct")
+		return pURL, err
 	}
-	return formattedText
+
+	return p.Namespace + "/" + p.Name, nil
 }

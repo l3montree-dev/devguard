@@ -76,22 +76,22 @@ func TestRenderPathToComponent(t *testing.T) {
 func TestFormatNode(t *testing.T) {
 	t.Run("Empty String should also return an empty string back", func(t *testing.T) {
 		inputString := ""
-		result := integrations.FormatNode(inputString)
+		result := integrations.BeautifyPURL(inputString)
 		assert.Equal(t, "", result)
 	})
 	t.Run("Should change nothing when there are less than 2 slashes in the input string", func(t *testing.T) {
 		inputString := "StringWIthOnlyOne/"
-		result := integrations.FormatNode(inputString)
+		result := integrations.BeautifyPURL(inputString)
 		assert.Equal(t, inputString, result)
 	})
 	t.Run("Should put a line break behind the second slash", func(t *testing.T) {
 		inputString := "StringWIthOnlyOne//"
-		result := integrations.FormatNode(inputString)
+		result := integrations.BeautifyPURL(inputString)
 		assert.Equal(t, "StringWIthOnlyOne//\n", result)
 	})
 	t.Run("Should put a line break behind every second slash", func(t *testing.T) {
 		inputString := "StringWIthOnlyOne//moreText/newText/nowTHefinalTextChallenge//"
-		result := integrations.FormatNode(inputString)
+		result := integrations.BeautifyPURL(inputString)
 		assert.Equal(t, "StringWIthOnlyOne//\nmoreText/newText/\nnowTHefinalTextChallenge//\n", result)
 	})
 }
