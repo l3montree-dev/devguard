@@ -54,7 +54,7 @@ func TestNewPolicy(t *testing.T) {
 		}
 
 		assert.Equal(t, "Build from signed source", policy.Title)
-		assert.Equal(t, "This policy checks if the build was done from a signed commit. It does not check the signature itself, just that it exists.", policy.Description)
+		assert.Equal(t, "This policy checks if the build was done from a signed commit.", policy.Description)
 		assert.Equal(t, []string{"iso27001", "A.8 Access Control"}, policy.Tags)
 
 	})
