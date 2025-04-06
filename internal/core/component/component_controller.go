@@ -17,8 +17,8 @@ func NewHTTPController(componentRepository core.ComponentRepository, assetVersio
 }
 
 type licenseResponse struct {
-	license
-	Count int `json:"count"`
+	License license `json:"license"`
+	Count   int     `json:"count"`
 }
 
 func (httpController httpController) LicenseDistribution(c core.Context) error {
@@ -42,8 +42,16 @@ func (httpController httpController) LicenseDistribution(c core.Context) error {
 
 	var res []licenseResponse = make([]licenseResponse, 0, len(licenses))
 	for id, count := range licenses {
+		// get the license from the license repository
+		l, ok := licenseMap[id]
+		if !ok {
+			l = license{
+				LicenseID: id,
+				Name:      id,
+			}
+		}
 		res = append(res, licenseResponse{
-			license: licenseMap[id],
+			License: l,
 			Count:   count,
 		})
 	}

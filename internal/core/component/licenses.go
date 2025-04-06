@@ -9,10 +9,10 @@ import (
 var licensesFile []byte
 
 type license struct {
-	Reference             string   `json:"reference"`
-	IsDeprecatedLicenseID bool     `json:"isDeprecatedLicenseId"`
-	DetailsURL            string   `json:"detailsUrl"`
-	ReferenceNumber       int      `json:"referenceNumber"`
+	Reference             *string  `json:"reference"`
+	IsDeprecatedLicenseID *bool    `json:"isDeprecatedLicenseId"`
+	DetailsURL            *string  `json:"detailsUrl"`
+	ReferenceNumber       *int     `json:"referenceNumber"`
 	Name                  string   `json:"name"`
 	LicenseID             string   `json:"licenseId"`
 	SeeAlso               []string `json:"seeAlso"`
