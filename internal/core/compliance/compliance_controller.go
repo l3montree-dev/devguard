@@ -1,6 +1,8 @@
 package compliance
 
 import (
+	"embed"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"os"
@@ -52,17 +54,21 @@ func ExtractAttestationPayload(content string) (any, error) {
 	return input, nil
 }
 
+// embed the policies in the binary
+//
+//go:embed attestation-compliance-policies/policies/*.rego
+var policiesFs embed.FS
+
 func getPolicies() []Policy {
-	path, _ := filepath.Abs("./policies/policies")
 	// fetch all policies
-	policyFiles, err := os.ReadDir(path)
+	policyFiles, err := policiesFs.ReadDir("attestation-compliance-policies/policies")
 	if err != nil {
 		return nil
 	}
 
 	var policies []Policy
 	for _, file := range policyFiles {
-		content, err := os.ReadFile(filepath.Join(path, file.Name()))
+		content, err := policiesFs.ReadFile(filepath.Join("attestation-compliance-policies/policies", file.Name()))
 		if err != nil {
 			continue
 		}
