@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -89,16 +88,15 @@ func getPolicies() []Policy {
 	return policies
 }
 
+// embed the build provenance input in the binary - just until we have attestations ready
+//
+//go:embed testfiles/build-provenance-input.json
+var buildProvenanceInput []byte
+
 func (c *httpController) getAssetVersionCompliance(assetVersion models.AssetVersion) ([]PolicyEvaluation, error) {
-	// get all attestations of the asset
-	path, _ := filepath.Abs("./internal/core/compliance/testfiles/build-provenance-input.json")
-	attestations, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
 
 	// extract the policy
-	input, err := ExtractAttestationPayload(string(attestations))
+	input, err := ExtractAttestationPayload(string(buildProvenanceInput))
 	if err != nil {
 		return nil, err
 	}
