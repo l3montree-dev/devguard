@@ -9,10 +9,12 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type httpController struct {
-	policies []Policy
+	policies               []Policy
+	assetVersionRepository core.AssetVersionRepository
 }
 
 type deadSimpleSigningEnvelope struct {
@@ -20,9 +22,10 @@ type deadSimpleSigningEnvelope struct {
 	Signature string `json:"signature"`
 }
 
-func NewHTTPController() *httpController {
+func NewHTTPController(assetVersionRepository core.AssetVersionRepository) *httpController {
 	return &httpController{
-		policies: getPolicies(),
+		assetVersionRepository: assetVersionRepository,
+		policies:               getPolicies(),
 	}
 }
 
@@ -80,18 +83,18 @@ func getPolicies() []Policy {
 	return policies
 }
 
-func (c *httpController) Compliance(ctx core.Context) error {
+func (c *httpController) getAssetVersionCompliance(assetVersion models.AssetVersion) ([]PolicyEvaluation, error) {
 	// get all attestations of the asset
 	path, _ := filepath.Abs("./internal/core/compliance/testfiles/build-provenance-input.json")
 	attestations, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// extract the policy
 	input, err := ExtractAttestationPayload(string(attestations))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	results := make([]PolicyEvaluation, 0, len(c.policies))
@@ -100,5 +103,45 @@ func (c *httpController) Compliance(ctx core.Context) error {
 	}
 
 	// evaluate the policy
+	return results, nil
+}
+
+func (c *httpController) AssetCompliance(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	assetVersion, err := core.MaybeGetAssetVersion(ctx)
+	if err != nil {
+		// we need to get the default asset version
+		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		if err != nil {
+			return ctx.JSON(404, nil)
+		}
+	}
+
+	results, err := c.getAssetVersionCompliance(assetVersion)
+	if err != nil {
+		return ctx.JSON(500, nil)
+	}
+
+	return ctx.JSON(200, results)
+}
+
+func (c *httpController) ProjectCompliance(ctx core.Context) error {
+	// get all default asset version from the project
+	project := core.GetProject(ctx)
+	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectID(project.ID)
+
+	if err != nil {
+		return ctx.JSON(500, nil)
+	}
+
+	results := make([][]PolicyEvaluation, 0, len(assetVersions))
+	for _, assetVersion := range assetVersions {
+		compliance, err := c.getAssetVersionCompliance(assetVersion)
+		if err != nil {
+			return ctx.JSON(500, nil)
+		}
+
+		results = append(results, compliance)
+	}
 	return ctx.JSON(200, results)
 }

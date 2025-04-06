@@ -416,7 +416,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository)
-	complianceController := compliance.NewHTTPController()
+	complianceController := compliance.NewHTTPController(assetVersionRepository)
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
 
@@ -527,6 +527,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution)
 	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory)
+	projectRouter.GET("/compliance/", complianceController.ProjectCompliance)
 	//TODO: change it
 	//projectRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
 	projectRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
@@ -543,7 +544,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
 
-	assetRouter.GET("/compliance/", complianceController.Compliance)
+	assetRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
 	assetRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
 	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
@@ -558,7 +559,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	assetVersionRouter.GET("/", assetVersionController.Read)
 
-	assetVersionRouter.GET("/compliance/", complianceController.Compliance)
+	assetVersionRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"})) //Delete an asset version
 
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)

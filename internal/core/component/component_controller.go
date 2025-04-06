@@ -16,6 +16,11 @@ func NewHTTPController(componentRepository core.ComponentRepository, assetVersio
 	}
 }
 
+type licenseResponse struct {
+	license
+	Count int `json:"count"`
+}
+
 func (httpController httpController) LicenseDistribution(c core.Context) error {
 	asset := core.GetAsset(c)
 	assetVersion, err := core.MaybeGetAssetVersion(c)
@@ -35,11 +40,19 @@ func (httpController httpController) LicenseDistribution(c core.Context) error {
 		scannerId,
 	)
 
+	var res []licenseResponse = make([]licenseResponse, 0, len(licenses))
+	for id, count := range licenses {
+		res = append(res, licenseResponse{
+			license: licenseMap[id],
+			Count:   count,
+		})
+	}
+
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, licenses)
+	return c.JSON(200, res)
 }
 
 func (httpController httpController) ListPaged(c core.Context) error {
