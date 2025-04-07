@@ -64,6 +64,7 @@ type githubIntegration struct {
 	frontendUrl                     string
 	assetRepository                 core.AssetRepository
 	assetVersionRepository          core.AssetVersionRepository
+	componentRepository             core.ComponentRepository
 
 	githubClientFactory func(repoId string) (githubClientFacade, error)
 }
@@ -79,6 +80,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	vulnEventRepository := repositories.NewVulnEventRepository(db)
+	componentRepository := repositories.NewComponentRepository(db)
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -94,6 +96,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 		frontendUrl:                     frontendUrl,
 		assetRepository:                 repositories.NewAssetRepository(db),
 		assetVersionRepository:          repositories.NewAssetVersionRepository(db),
+		componentRepository:             componentRepository,
 
 		githubClientFactory: func(repoId string) (githubClientFacade, error) {
 			return NewGithubClient(installationIdFromRepositoryID(repoId))
@@ -663,9 +666,13 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	assetSlug := asset.Slug
 	labels := getLabels(&dependencyVuln, "open")
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
+	if err != nil {
+		return err
+	}
 	issue := &github.IssueRequest{
 		Title:  github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
 		Labels: &labels,
 	}
 
