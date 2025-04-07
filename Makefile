@@ -7,7 +7,7 @@ clean::
 	docker compose down -v && docker compose up -d
 
 mocks::
-	mockery --config=.mockery.yaml 
+	mockery --config=.mockery.yaml
 
 lint::
 	golangci-lint run ./...

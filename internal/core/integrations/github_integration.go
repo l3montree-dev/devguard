@@ -666,7 +666,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	assetSlug := asset.Slug
 	labels := getLabels(&dependencyVuln, "open")
-	componentTree, err := RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
 	if err != nil {
 		return err
 	}

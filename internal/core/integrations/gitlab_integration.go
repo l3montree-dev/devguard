@@ -111,7 +111,7 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	assetRepository := repositories.NewAssetRepository(db)
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
-	componentRepositoy := repositories.NewComponentRepository(db)
+	componentRepository := repositories.NewComponentRepository(db)
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -128,7 +128,7 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 		assetVersionRepository:      assetVersionRepository,
 		externalUserRepository:      externalUserRepository,
 		projectRepository:           projectRepository,
-		componentRepository:         componentRepositoy,
+		componentRepository:         componentRepository,
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -1043,7 +1043,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	assetSlug := asset.Slug
 	labels := getLabels(&dependencyVuln, "open")
-	componentTree, err := RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
 	if err != nil {
 		return err
 	}

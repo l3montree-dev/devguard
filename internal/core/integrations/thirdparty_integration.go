@@ -161,7 +161,7 @@ func NewThirdPartyIntegrations(integrations ...core.ThirdPartyIntegration) *thir
 }
 
 // this function returns a string containing a mermaids js flow chart to the given pURL
-func RenderPathToComponent(componentRepository core.ComponentRepository, assetID uuid.UUID, assetVersionName string, scannerID string, pURL string) (string, error) {
+func renderPathToComponent(componentRepository core.ComponentRepository, assetID uuid.UUID, assetVersionName string, scannerID string, pURL string) (string, error) {
 
 	//basic string to tell markdown that we have a mermaid flow chart with given parameters
 	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart TD\n"
@@ -191,7 +191,7 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 
 	for i, componentName := range componentList[1:] {
 
-		nodeContent, err = BeautifyPURL(componentName)
+		nodeContent, err = beautifyPURL(componentName)
 		if err != nil {
 			nodeContent = componentName
 		}
@@ -204,8 +204,7 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 }
 
 // function to make purl look more visually appealing
-func BeautifyPURL(pURL string) (string, error) {
-
+func beautifyPURL(pURL string) (string, error) {
 	p, err := packageurl.FromString(pURL)
 	if err != nil {
 		slog.Error("cannot convert to purl struct")
@@ -217,5 +216,4 @@ func BeautifyPURL(pURL string) (string, error) {
 	} else {
 		return p.Namespace + "/" + p.Name, nil
 	}
-
 }
