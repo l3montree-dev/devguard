@@ -16,7 +16,7 @@ func TestRenderPathToComponent(t *testing.T) {
 	t.Run("Everything works as expected with empty lists", func(t *testing.T) {
 
 		components := []models.ComponentDependency{}
-		componentRepository := mocks.NewCoreComponentRepository(t)
+		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
 
 		assetID := uuid.New()
@@ -33,7 +33,7 @@ func TestRenderPathToComponent(t *testing.T) {
 	})
 	t.Run("LoadPathToComponent fails somehow should return an error", func(t *testing.T) {
 		components := []models.ComponentDependency{}
-		componentRepository := mocks.NewCoreComponentRepository(t)
+		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, fmt.Errorf("Something went wrong"))
 
 		assetID := uuid.New()
@@ -53,7 +53,7 @@ func TestRenderPathToComponent(t *testing.T) {
 			{ComponentPurl: utils.Ptr("testomatL"), DependencyPurl: "testPURL"},
 			{ComponentPurl: utils.Ptr("testDependency"), DependencyPurl: "testPURL"},
 		}
-		componentRepository := mocks.NewCoreComponentRepository(t)
+		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
 
 		assetID := uuid.New()
