@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  postgresql:
+    image: ghcr.io/l3montree-dev/devguard-postgresql:v0.4.16
+    container_name: devguard-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: devguard
+    ports:
+      - "5432:5432"
+
+  kratos:
+    image: oryd/kratos:v1.3.1
+    container_name: devguard-kratos
+    depends_on:
+      - postgresql
+    ports:
+      - "4433:4433"  # Public
+      - "4434:4434"  # Admin
+    environment:
+      - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
+      - LOG_LEVEL=debug
+    command: serve --dev --watch-courier
+
+  devguard-api:
+    image: ghcr.io/l3montree-dev/devguard:latest
+    container_name: devguard-api
+    depends_on:
+      - postgresql
+      - kratos
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgresql:5432/devguard
+      - KRATOS_PUBLIC_URL=http://kratos:4433
+      - KRATOS_ADMIN_URL=http://kratos:4434
+      - LOG_LEVEL=debug
