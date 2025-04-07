@@ -23,9 +23,9 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBACProvider := mocks.AccesscontrolRBACProvider{}
-		mockOrgRepo := mocks.ApiOrgRepository{}
-		mockRBAC := mocks.AccesscontrolAccessControl{}
+		mockRBACProvider := mocks.RBACProvider{}
+		mockOrgRepo := mocks.OrganizationRepository{}
+		mockRBAC := mocks.AccessControl{}
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
@@ -59,9 +59,9 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBACProvider := mocks.AccesscontrolRBACProvider{}
-		mockOrgRepo := mocks.ApiOrgRepository{}
-		mockRBAC := mocks.AccesscontrolAccessControl{}
+		mockRBACProvider := mocks.RBACProvider{}
+		mockOrgRepo := mocks.OrganizationRepository{}
+		mockRBAC := mocks.AccessControl{}
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: false}
 		session := auth.NewSession("user-id", []string{"test-role"})
@@ -95,8 +95,8 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBACProvider := mocks.AccesscontrolRBACProvider{}
-		mockOrgRepo := mocks.ApiOrgRepository{}
+		mockRBACProvider := mocks.RBACProvider{}
+		mockOrgRepo := mocks.OrganizationRepository{}
 
 		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgRepo)
 
@@ -117,8 +117,8 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBACProvider := mocks.AccesscontrolRBACProvider{}
-		mockOrgRepo := mocks.ApiOrgRepository{}
+		mockRBACProvider := mocks.RBACProvider{}
+		mockOrgRepo := mocks.OrganizationRepository{}
 
 		mockOrgRepo.On("ReadBySlug", "organization-slug").Return(models.Org{}, errors.New("not found"))
 
@@ -146,7 +146,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccesscontrolAccessControl{}
+		mockRBAC := mocks.AccessControl{}
 		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockOrganization := models.Org{}
 
@@ -180,7 +180,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccesscontrolAccessControl{}
+		mockRBAC := mocks.AccessControl{}
 		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockOrganization := models.Org{}
 
@@ -214,7 +214,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccesscontrolAccessControl{}
+		mockRBAC := mocks.AccessControl{}
 		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockOrganization := models.Org{
 			IsPublic: true,
@@ -250,7 +250,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		mockRBAC := mocks.AccesscontrolAccessControl{}
+		mockRBAC := mocks.AccessControl{}
 		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockOrganization := models.Org{}
 
