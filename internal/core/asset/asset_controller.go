@@ -12,14 +12,16 @@ import (
 )
 
 type httpController struct {
-	assetRepository core.AssetRepository
-	assetService    core.AssetService
+	assetRepository       core.AssetRepository
+	assetService          core.AssetService
+	dependencyVulnService core.DependencyVulnService
 }
 
-func NewHttpController(repository core.AssetRepository, assetService core.AssetService) *httpController {
+func NewHttpController(repository core.AssetRepository, assetService core.AssetService, dependencyVulnService core.DependencyVulnService) *httpController {
 	return &httpController{
-		assetRepository: repository,
-		assetService:    assetService,
+		assetRepository:       repository,
+		assetService:          assetService,
+		dependencyVulnService: dependencyVulnService,
 	}
 }
 
@@ -151,7 +153,6 @@ func (c *httpController) Update(ctx core.Context) error {
 	enableTicketRangeUpdated := false
 
 	if patchRequest.EnableTicketRange {
-
 		if patchRequest.CVSSAutomaticTicketThreshold != nil {
 			if asset.CVSSAutomaticTicketThreshold != nil {
 				if !utils.CompareFirstTwoDecimals(*patchRequest.CVSSAutomaticTicketThreshold, *asset.CVSSAutomaticTicketThreshold) {
@@ -192,8 +193,8 @@ func (c *httpController) Update(ctx core.Context) error {
 		asset.RiskAutomaticTicketThreshold = nil
 	}
 
-	if enableTicketRangeUpdated {
-		err = c.assetService.UpdateAssetTickets(asset)
+	if enableTicketRangeUpdated || justification != "" {
+		err = c.dependencyVulnService.SyncTickets(asset)
 		if err != nil {
 			return fmt.Errorf("Error updating asset tickets: %v", err)
 		}
@@ -204,7 +205,7 @@ func (c *httpController) Update(ctx core.Context) error {
 		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
 	}
 
-	if updated {
+	if updated || enableTicketRangeUpdated {
 		err = c.assetRepository.Update(nil, &asset)
 		if err != nil {
 			return fmt.Errorf("error updating asset: %v", err)

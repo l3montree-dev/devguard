@@ -278,7 +278,6 @@ func (s *service) SyncTicketsForAllAssets() error {
 }
 
 func (s *service) SyncTickets(asset models.Asset) error {
-
 	for _, assetVersion := range asset.AssetVersions {
 		if !s.ShouldCreateIssues(assetVersion) {
 			continue
@@ -318,9 +317,7 @@ func (s *service) SyncTickets(asset models.Asset) error {
 		}
 
 		errgroup := utils.ErrGroup[any](10)
-
 		for _, vulnerability := range vulnList {
-
 			if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
 
 				if vulnerability.TicketID == nil {
@@ -332,14 +329,12 @@ func (s *service) SyncTickets(asset models.Asset) error {
 					}
 				} else {
 					// there is already a ticket,
-					//TODO: we need to update the ticket with the new information
 					errgroup.Go(func() (any, error) {
 						return nil, s.updateIssue(asset, vulnerability, repoID)
 					})
 				}
 				// check if the ticket should be closed
 			} else if (cvssThreshold != nil && vulnerability.CVE.CVSS < float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment < *riskThreshold) {
-
 				if vulnerability.TicketID != nil {
 					errgroup.Go(func() (any, error) {
 						return nil, s.closeIssue(vulnerability, repoID)

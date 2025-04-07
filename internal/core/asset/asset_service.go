@@ -66,34 +66,6 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 			return fmt.Errorf("could not update raw risk assessment: %v", err)
 		}
 
-		err = s.dependencyVulnService.SyncTickets(asset)
-		if err != nil {
-			slog.Info("error syncing tickets", "err", err)
-			return fmt.Errorf("could not sync tickets: %v", err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("could not update asset: %v", err)
-	}
-
-	return nil
-}
-
-func (s *service) UpdateAssetTickets(asset models.Asset) error {
-	err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
-		err := s.assetRepository.Save(tx, &asset)
-		if err != nil {
-			slog.Info("error saving asset", "err", err)
-			return fmt.Errorf("could not save asset: %v", err)
-		}
-
-		err = s.dependencyVulnService.SyncTickets(asset)
-		if err != nil {
-			slog.Info("error syncing tickets", "err", err)
-			return fmt.Errorf("could not sync tickets: %v", err)
-		}
 		return nil
 	})
 	if err != nil {
