@@ -221,7 +221,7 @@ func filterAndSortValidSemverTags(tags []string) (string, string, error) {
 	// Map the tags and populate the map
 	mappedTags := Map(tags, func(el string) string {
 		t := strings.TrimPrefix(el, "v")
-		m[el] = t
+		m[t] = el
 		return t
 	})
 
