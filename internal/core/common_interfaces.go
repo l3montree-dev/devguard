@@ -154,7 +154,6 @@ type OrganizationRepository interface {
 	ReadBySlug(slug string) (models.Org, error)
 	Update(tx DB, organization *models.Org) error
 	ContentTree(orgID uuid.UUID, projects []string) []common.ContentTreeElement
-	GetOrgByID(id uuid.UUID) (models.Org, error)
 }
 
 type InvitationRepository interface {
