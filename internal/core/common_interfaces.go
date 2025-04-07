@@ -209,6 +209,7 @@ type AssetVersionRepository interface {
 	GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
 	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error)
+	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
 }
 
 type FirstPartyVulnService interface {

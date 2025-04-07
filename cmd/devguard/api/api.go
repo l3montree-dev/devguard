@@ -21,7 +21,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 
 	"github.com/l3montree-dev/devguard/internal/auth"
@@ -45,22 +44,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
-
-type assetRepository interface {
-	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
-}
-
-type assetVersionRepository interface {
-	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
-}
-
-type orgRepository interface {
-	ReadBySlug(slugOrId string) (models.Org, error)
-}
-
-type projectRepository interface {
-	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
-}
 
 func accessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -92,7 +75,7 @@ func accessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action)
 	}
 }
 
-func assetMiddleware(repository assetRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+func assetMiddleware(repository core.AssetRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		// get the project
 		return func(ctx echo.Context) error {
@@ -117,7 +100,7 @@ func assetMiddleware(repository assetRepository) func(next echo.HandlerFunc) ech
 	}
 }
 
-func assetVersionMiddleware(repository assetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+func assetVersionMiddleware(repository core.AssetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 
@@ -146,7 +129,7 @@ func assetVersionMiddleware(repository assetVersionRepository) func(next echo.Ha
 	}
 }
 
-func projectAccessControlFactory(projectRepository projectRepository) accesscontrol.RBACMiddleware {
+func projectAccessControlFactory(projectRepository core.ProjectRepository) accesscontrol.RBACMiddleware {
 	return func(obj accesscontrol.Object, act accesscontrol.Action) core.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx core.Context) error {
@@ -193,7 +176,7 @@ func projectAccessControlFactory(projectRepository projectRepository) accesscont
 	}
 }
 
-func projectAccessControl(projectRepository projectRepository, obj accesscontrol.Object, act accesscontrol.Action) core.MiddlewareFunc {
+func projectAccessControl(projectRepository core.ProjectRepository, obj accesscontrol.Object, act accesscontrol.Action) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) error {
 			// get the rbac
@@ -287,7 +270,7 @@ func assetNameMiddleware() core.MiddlewareFunc {
 	}
 }
 
-func multiOrganizationMiddleware(rbacProvider accesscontrol.RBACProvider, organizationRepo orgRepository) core.MiddlewareFunc {
+func multiOrganizationMiddleware(rbacProvider accesscontrol.RBACProvider, organizationRepo core.OrganizationRepository) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) (err error) {
 
