@@ -5,17 +5,33 @@ import (
 )
 
 type httpController struct {
-	componentRepository core.ComponentRepository
+	componentRepository    core.ComponentRepository
+	assetVersionRepository core.AssetVersionRepository
 }
 
-func NewHTTPController(componentRepository core.ComponentRepository) *httpController {
+func NewHTTPController(componentRepository core.ComponentRepository, assetVersionRepository core.AssetVersionRepository) *httpController {
 	return &httpController{
-		componentRepository: componentRepository,
+		componentRepository:    componentRepository,
+		assetVersionRepository: assetVersionRepository,
 	}
 }
 
+type licenseResponse struct {
+	License license `json:"license"`
+	Count   int     `json:"count"`
+}
+
 func (httpController httpController) LicenseDistribution(c core.Context) error {
-	assetVersion := core.GetAssetVersion(c)
+	asset := core.GetAsset(c)
+	assetVersion, err := core.MaybeGetAssetVersion(c)
+	if err != nil {
+		// we need to get the default asset version
+		assetVersion, err = httpController.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		if err != nil {
+			return c.JSON(404, nil)
+		}
+	}
+
 	scannerId := c.QueryParam("scannerId")
 
 	licenses, err := httpController.componentRepository.GetLicenseDistribution(nil,
@@ -24,11 +40,27 @@ func (httpController httpController) LicenseDistribution(c core.Context) error {
 		scannerId,
 	)
 
+	var res []licenseResponse = make([]licenseResponse, 0, len(licenses))
+	for id, count := range licenses {
+		// get the license from the license repository
+		l, ok := licenseMap[id]
+		if !ok {
+			l = license{
+				LicenseID: id,
+				Name:      id,
+			}
+		}
+		res = append(res, licenseResponse{
+			License: l,
+			Count:   count,
+		})
+	}
+
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(200, licenses)
+	return c.JSON(200, res)
 }
 
 func (httpController httpController) ListPaged(c core.Context) error {

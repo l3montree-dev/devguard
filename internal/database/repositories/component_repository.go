@@ -16,7 +16,9 @@
 package repositories
 
 import (
+	"context"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -81,8 +83,11 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 	var err error
 
 	//Find all needed components  recursively until we hit the root component
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	query := c.GetDB(tx).Raw(`WITH RECURSIVE components_cte AS (
+	// using postgresql CYCLE Keyword to detect possible loops
+	query := c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
 			SELECT component_purl,dependency_purl,asset_id,scanner_id,depth,semver_start,semver_end
 			FROM component_dependencies
 			WHERE dependency_purl like ? AND asset_id = ? AND asset_version_name = ? AND scanner_id = ?
@@ -92,6 +97,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 			INNER JOIN components_cte AS cte ON co.dependency_purl = cte.component_purl 
  			WHERE co.asset_id = ? AND co.asset_version_name = ? AND co.scanner_id = ?
 		)
+		CYCLE component_purl SET is_cycle USING path
 		SELECT DISTINCT * FROM components_cte`, pURL, assetID, assetVersionName, scannerID, assetID, assetVersionName, scannerID)
 
 	//Map the query results to the component model

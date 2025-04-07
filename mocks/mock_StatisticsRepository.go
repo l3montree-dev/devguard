@@ -83,6 +83,64 @@ func (_c *StatisticsRepository_AverageFixingTime_Call) RunAndReturn(run func(str
 	return _c
 }
 
+// GetAssetCvssDistribution provides a mock function with given fields: assetVersionName, assetID, assetName
+func (_m *StatisticsRepository) GetAssetCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
+	ret := _m.Called(assetVersionName, assetID, assetName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAssetCvssDistribution")
+	}
+
+	var r0 models.AssetRiskDistribution
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) (models.AssetRiskDistribution, error)); ok {
+		return rf(assetVersionName, assetID, assetName)
+	}
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) models.AssetRiskDistribution); ok {
+		r0 = rf(assetVersionName, assetID, assetName)
+	} else {
+		r0 = ret.Get(0).(models.AssetRiskDistribution)
+	}
+
+	if rf, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
+		r1 = rf(assetVersionName, assetID, assetName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StatisticsRepository_GetAssetCvssDistribution_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAssetCvssDistribution'
+type StatisticsRepository_GetAssetCvssDistribution_Call struct {
+	*mock.Call
+}
+
+// GetAssetCvssDistribution is a helper method to define mock.On call
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - assetName string
+func (_e *StatisticsRepository_Expecter) GetAssetCvssDistribution(assetVersionName interface{}, assetID interface{}, assetName interface{}) *StatisticsRepository_GetAssetCvssDistribution_Call {
+	return &StatisticsRepository_GetAssetCvssDistribution_Call{Call: _e.mock.On("GetAssetCvssDistribution", assetVersionName, assetID, assetName)}
+}
+
+func (_c *StatisticsRepository_GetAssetCvssDistribution_Call) Run(run func(assetVersionName string, assetID uuid.UUID, assetName string)) *StatisticsRepository_GetAssetCvssDistribution_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *StatisticsRepository_GetAssetCvssDistribution_Call) Return(_a0 models.AssetRiskDistribution, _a1 error) *StatisticsRepository_GetAssetCvssDistribution_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *StatisticsRepository_GetAssetCvssDistribution_Call) RunAndReturn(run func(string, uuid.UUID, string) (models.AssetRiskDistribution, error)) *StatisticsRepository_GetAssetCvssDistribution_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAssetRiskDistribution provides a mock function with given fields: assetVersionName, assetID, assetName
 func (_m *StatisticsRepository) GetAssetRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
 	ret := _m.Called(assetVersionName, assetID, assetName)
