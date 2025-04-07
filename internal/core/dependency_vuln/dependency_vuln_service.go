@@ -24,7 +24,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -152,11 +151,6 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		return nil
 	}
 
-	githubIntegration := integrations.NewGithubIntegration(tx)
-	gitlabIntegration := integrations.NewGitLabIntegration(tx)
-
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
-
 	env := core.Environmental{
 		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
 		IntegrityRequirements:       string(asset.IntegrityRequirement),
@@ -182,17 +176,6 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 			events = append(events, ev)
 
 			slog.Info("recalculated raw risk assessment", "cve", dependencyVuln.CVE)
-
-			if dependencyVuln.TicketID != nil {
-				err := thirdPartyIntegration.HandleEvent(core.VulnEvent{
-					//we need context here to handle the event!!
-					//Ctx:   ctx,
-					Event: ev,
-				})
-				if err != nil {
-					slog.Error("could not handle event", "err", err, "event", ev)
-				}
-			}
 
 		} else {
 			// only update the last calculated time
@@ -296,11 +279,6 @@ func (s *service) SyncTickets(asset models.Asset) error {
 		riskThreshold := asset.RiskAutomaticTicketThreshold
 		cvssThreshold := asset.CVSSAutomaticTicketThreshold
 
-		//Check if no automatic Issues are wanted by the user
-		if riskThreshold == nil && cvssThreshold == nil {
-			return nil
-		}
-
 		project, err := s.projectRepository.Read(asset.ProjectID)
 		if err != nil {
 			return err
@@ -318,26 +296,32 @@ func (s *service) SyncTickets(asset models.Asset) error {
 
 		errgroup := utils.ErrGroup[any](10)
 		for _, vulnerability := range vulnList {
-			if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
 
-				if vulnerability.TicketID == nil {
+			if vulnerability.TicketID == nil {
+				// the ticket id is nil - no ticket exists for this dependency vulnerability
+				// check if one of the thresholds is exceeded - if so, we need to create a ticket for this vuln
+				if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
 					if vulnerability.State == models.VulnStateOpen {
 						//there is no ticket yet, we need to create one
 						errgroup.Go(func() (any, error) {
 							return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
 						})
 					}
+				}
+
+			} else {
+				// a ticket does already exists - either we need to update it or close it
+				// if the threshold is not exceeded anymore, we need to close the ticket
+				if (cvssThreshold != nil && vulnerability.CVE.CVSS < float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment < *riskThreshold) {
+					if vulnerability.TicketID != nil {
+						errgroup.Go(func() (any, error) {
+							return nil, s.closeIssue(vulnerability, repoID)
+						})
+					}
 				} else {
-					// there is already a ticket,
+					// the threshold is still exceeded - lets update it (makes sure it is up to date)
 					errgroup.Go(func() (any, error) {
 						return nil, s.updateIssue(asset, vulnerability, repoID)
-					})
-				}
-				// check if the ticket should be closed
-			} else if (cvssThreshold != nil && vulnerability.CVE.CVSS < float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment < *riskThreshold) {
-				if vulnerability.TicketID != nil {
-					errgroup.Go(func() (any, error) {
-						return nil, s.closeIssue(vulnerability, repoID)
 					})
 				}
 			}

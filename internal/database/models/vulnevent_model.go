@@ -80,7 +80,7 @@ func (m VulnEvent) TableName() string {
 func (e VulnEvent) Apply(vuln Vuln) {
 	switch e.Type {
 	case EventTypeTicketDeleted:
-		vuln.SetTicketState(TicketStateClosed)
+		vuln.SetTicketState(TicketStateDeleted)
 	case EventTypeTicketClosed:
 		vuln.SetTicketState(TicketStateClosed)
 	case EventTypeFixed:

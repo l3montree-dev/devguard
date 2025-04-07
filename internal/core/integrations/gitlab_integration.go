@@ -254,7 +254,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 			var vulnEvent models.VulnEvent
 
-			vulnEvent = models.NewTicketClosedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This issue was closed by %s", event.User.Username))
+			vulnEvent = models.NewTicketClosedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This issue was closed by %s", event.User.Name))
 
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
@@ -266,7 +266,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 			var vulnEvent models.VulnEvent
 
-			vulnEvent = models.NewReopenedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This issue was reopened by %s", event.User.Username))
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This issue was reopened by %s", event.User.Name))
 
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
@@ -1092,16 +1092,21 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	})
 	if err != nil {
 		//check if err is 404 - if so, we can not reopen the issue
-		if err.Error() == "404 Not Found" {
+		if err.Error() == "404 Not Found" && dependencyVuln.TicketState != models.TicketStateDeleted {
+			fmt.Println("issue not found")
 			// the issue was deleted - we need to set the ticket state to deleted
 			dependencyVuln.TicketState = models.TicketStateDeleted
 			// we can not reopen the issue - it is deleted
 			vulnEvent := models.NewTicketDeletedEvent(dependencyVuln.ID, "user", "This issue is deleted")
+
+			fmt.Println("dependencyVuln.TicketState1111", dependencyVuln.TicketState)
 			// save the event
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
+
+			fmt.Println("dependencyVuln.TicketState", dependencyVuln.TicketState)
 			return nil
 		}
 		return err
