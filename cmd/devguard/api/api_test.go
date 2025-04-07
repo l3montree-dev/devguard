@@ -24,7 +24,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBACProvider := mocks.RBACProvider{}
-		mockOrgRepo := mocks.OrgRepository{}
+		mockOrgRepo := mocks.OrganizationRepository{}
 		mockRBAC := mocks.AccessControl{}
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
@@ -60,7 +60,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBACProvider := mocks.RBACProvider{}
-		mockOrgRepo := mocks.OrgRepository{}
+		mockOrgRepo := mocks.OrganizationRepository{}
 		mockRBAC := mocks.AccessControl{}
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: false}
@@ -96,7 +96,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBACProvider := mocks.RBACProvider{}
-		mockOrgRepo := mocks.OrgRepository{}
+		mockOrgRepo := mocks.OrganizationRepository{}
 
 		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgRepo)
 
@@ -118,7 +118,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRBACProvider := mocks.RBACProvider{}
-		mockOrgRepo := mocks.OrgRepository{}
+		mockOrgRepo := mocks.OrganizationRepository{}
 
 		mockOrgRepo.On("ReadBySlug", "organization-slug").Return(models.Org{}, errors.New("not found"))
 
