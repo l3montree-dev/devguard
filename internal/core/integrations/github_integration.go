@@ -693,13 +693,18 @@ func (g *githubIntegration) CloseIssue(ctx context.Context, state string, repoId
 
 	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
 
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
+	if err != nil {
+		return err
+	}
+
 	_, ticketNumber := githubTicketIdToIdAndNumber(*dependencyVuln.TicketID)
 	lables := getLabels(&dependencyVuln, state)
 	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
 		State: github.String("closed"),
 
 		Title: github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Body:  github.String(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName)),
+		Body:  github.String(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
 
 		Labels: &lables,
 	})
@@ -771,12 +776,17 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 
 	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
 
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
+	if err != nil {
+		return err
+	}
+
 	_, ticketNumber := githubTicketIdToIdAndNumber(*dependencyVuln.TicketID)
 
 	labels := getLabels(&dependencyVuln, "open")
 	issueRequest := &github.IssueRequest{
 		Title:  github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Body:   github.String(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName)),
+		Body:   github.String(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
 		Labels: &labels,
 	}
 

@@ -1081,6 +1081,11 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 
 	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
 
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
+	if err != nil {
+		return err
+	}
+
 	gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
 	if err != nil {
@@ -1090,7 +1095,7 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 
 	issue, _, err := client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName)),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	})
 	if err != nil {
@@ -1185,6 +1190,11 @@ func (g *gitlabIntegration) CloseIssue(ctx context.Context, state string, repoId
 
 	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
 
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
+	if err != nil {
+		return err
+	}
+
 	gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
 	if err != nil {
@@ -1197,7 +1207,7 @@ func (g *gitlabIntegration) CloseIssue(ctx context.Context, state string, repoId
 		Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName)),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
 	})
 	if err != nil {
 		return err
