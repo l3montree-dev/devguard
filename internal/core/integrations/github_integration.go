@@ -64,6 +64,7 @@ type githubIntegration struct {
 	frontendUrl                     string
 	assetRepository                 core.AssetRepository
 	assetVersionRepository          core.AssetVersionRepository
+	componentRepository             core.ComponentRepository
 
 	orgRepository       core.OrganizationRepository
 	projectRepository   core.ProjectRepository
@@ -80,6 +81,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	vulnEventRepository := repositories.NewVulnEventRepository(db)
+	componentRepository := repositories.NewComponentRepository(db)
 	projectRepository := repositories.NewProjectRepository(db)
 	orgRepository := repositories.NewOrgRepository(db)
 
@@ -97,6 +99,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 		frontendUrl:                     frontendUrl,
 		assetRepository:                 repositories.NewAssetRepository(db),
 		assetVersionRepository:          repositories.NewAssetVersionRepository(db),
+		componentRepository:             componentRepository,
 		projectRepository:               projectRepository,
 		orgRepository:                   orgRepository,
 
@@ -843,9 +846,13 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	assetSlug := asset.Slug
 	labels := getLabels(&dependencyVuln, "open")
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
+	if err != nil {
+		return err
+	}
 	issue := &github.IssueRequest{
 		Title:  github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName)),
+		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)),
 		Labels: &labels,
 	}
 

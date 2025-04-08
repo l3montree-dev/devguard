@@ -100,7 +100,7 @@ func componentDepthMessages(depth int) string {
 	if depth == 1 {
 		return "The vulnerability is in a direct dependency of your project."
 	}
-	return fmt.Sprintf("The vulnerability is in a dependency of a dependency your project. It is %d levels deep.", depth)
+	return fmt.Sprintf("The vulnerability is in a dependency of a dependency in your project. It is %d levels deep.", depth)
 }
 
 type AssetDTO struct {
@@ -223,18 +223,20 @@ type Explanation struct {
 	cveId          string
 	cveDescription string
 
-	affectedComponentName string
+	AffectedComponentName string
 	scanner               string
 	fixedVersion          *string
 }
 
-func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName string) string {
+func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) string {
 	var str strings.Builder
 	str.WriteString(fmt.Sprintf("# %s\n", e.cveId))
 	str.WriteString(e.cveDescription)
 	str.WriteString("\n")
 	str.WriteString("### Affected component \n")
-	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.affectedComponentName, e.scanner))
+	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.AffectedComponentName, e.scanner))
+	str.WriteString("\n### Path to component\n")
+	str.WriteString(mermaidPathToComponent)
 	str.WriteString("### Recommended fix\n")
 	if e.fixedVersion != nil {
 		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))
@@ -307,7 +309,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		cveId:          *dependencyVuln.CVEID,
 		cveDescription: dependencyVuln.CVE.Description,
 
-		affectedComponentName: utils.SafeDereference(dependencyVuln.ComponentPurl),
+		AffectedComponentName: utils.SafeDereference(dependencyVuln.ComponentPurl),
 		scanner:               dependencyVuln.ScannerID,
 		fixedVersion:          dependencyVuln.ComponentFixedVersion,
 	}
