@@ -208,13 +208,8 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		return err
 	}
 
-	fmt.Printf("payload: %T\n", event)
-
 	switch event := event.(type) {
 	case *github.IssuesEvent:
-
-		fmt.Println("event: ", event)
-
 		// check if the issue is a devguard issue
 		issueNumber := event.Issue.GetNumber()
 		issueID := event.Issue.GetID()
@@ -241,8 +236,6 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 				Username:  event.Sender.GetLogin(),
 				AvatarURL: *event.Sender.AvatarURL,
 			}
-
-			fmt.Println("user : ", user)
 
 			err = githubIntegration.externalUserRepository.Save(nil, &user)
 			if err != nil {
