@@ -94,8 +94,8 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	scanner := c.Request().Header.Get("X-Scanner")
-	if scanner == "" {
+	scannerID := c.Request().Header.Get("X-Scanner")
+	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
 		return scanResults, err
 	}
@@ -106,7 +106,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 
 	if doRiskManagement {
 		// update the sbom in the database in parallel
-		if err := s.assetVersionService.UpdateSBOM(assetVersion, scanner, normalizedBom); err != nil {
+		if err := s.assetVersionService.UpdateSBOM(assetVersion, scannerID, normalizedBom); err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return scanResults, err
 		}
@@ -117,12 +117,6 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 
 	if err != nil {
 		slog.Error("could not scan file", "err", err)
-		return scanResults, err
-	}
-
-	scannerID := c.Request().Header.Get("X-Scanner")
-	if scannerID == "" {
-		slog.Error("no scanner id provided")
 		return scanResults, err
 	}
 

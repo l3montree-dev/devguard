@@ -92,7 +92,7 @@ type ComponentRepository interface {
 	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
-	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency) error
+	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) error
 	GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error)
 }
@@ -107,7 +107,6 @@ type DependencyVulnRepository interface {
 	GetDefaultDependencyVulnsByOrgIdPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDefaultDependencyVulnsByProjectIdPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDependencyVulnsByAssetVersionPagedAndFlat(tx DB, assetVersionName string, assetVersionID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
-	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 	ListByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByPurl(tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error

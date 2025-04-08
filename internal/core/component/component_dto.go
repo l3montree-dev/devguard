@@ -14,7 +14,7 @@ type componentDTO struct {
 	Dependency     models.Component `json:"dependency"`
 	DependencyPurl string           `json:"dependencyPurl"` // will be nil, for direct dependencies
 	AssetID        uuid.UUID        `json:"assetVersionId"`
-	ScannerID      string           `json:"scannerId"` // the id of the scanner
+	ScannerIDs     string           `json:"scanner"` // the id of the scanner
 }
 
 func toDTO(m models.ComponentDependency) componentDTO {
@@ -23,6 +23,6 @@ func toDTO(m models.ComponentDependency) componentDTO {
 		Dependency:     m.Dependency,
 		DependencyPurl: m.DependencyPurl,
 		AssetID:        m.AssetID,
-		ScannerID:      m.ScannerID,
+		ScannerIDs:     m.ScannerIDs,
 	}
 }

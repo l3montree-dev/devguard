@@ -336,6 +336,7 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 
 func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
 	// load the asset components
+	scannerID = "AdditionalScanner"
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
@@ -372,7 +373,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  nil, // direct dependency - therefore set it to nil
-					ScannerID:      scannerID,
+					ScannerIDs:     scannerID + " ",
 					DependencyPurl: componentPackageUrl,
 				},
 			)
@@ -398,7 +399,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  utils.EmptyThenNil(compPackageUrl),
-					ScannerID:      scannerID,
+					ScannerIDs:     scannerID + " ",
 					DependencyPurl: depPurlOrName,
 				},
 			)
@@ -431,7 +432,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 		return err
 	}
 
-	if err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies); err != nil {
+	if err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, scannerID); err != nil {
 		return err
 	}
 
