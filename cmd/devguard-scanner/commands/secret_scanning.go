@@ -41,7 +41,7 @@ func NewSecretScanningCommand() *cobra.Command {
 	return secretScanningCommand
 }
 
-func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string) error {
+func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		core.InitLogger()
 		token, assetName, apiUrl, _, webUI := parseConfig(cmd)
@@ -64,7 +64,7 @@ func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string)
 			return errors.Wrap(err, "invalid path")
 		}
 
-		file, err := executeCodeScan(scanner, path)
+		file, err := executeCodeScan(scannerID, path)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
@@ -96,7 +96,7 @@ func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Risk-Management", strconv.FormatBool(doRiskManagement))
 		req.Header.Set("X-Asset-Name", assetName)
-		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scanner)
+		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -116,19 +116,19 @@ func sarifCommandFactory(scanner string) func(cmd *cobra.Command, args []string)
 			return errors.Wrap(err, "could not parse response")
 		}
 
-		printFirstPartyScanResults(scanResponse, assetName, webUI, scanner)
+		printFirstPartyScanResults(scanResponse, assetName, webUI, scannerID)
 		return nil
 	}
 }
 
-func executeCodeScan(scanner, path string) (*os.File, error) {
-	switch scanner {
+func executeCodeScan(scannerID, path string) (*os.File, error) {
+	switch scannerID {
 	case "secret-scanning":
 		return secretScan(path)
 	case "sast":
 		return sastScan(path)
 	default:
-		return nil, fmt.Errorf("unknown scanner: %s", scanner)
+		return nil, fmt.Errorf("unknown scanner: %s", scannerID)
 	}
 
 }
@@ -190,7 +190,7 @@ func secretScan(path string) (*os.File, error) {
 	return file, nil
 }
 
-func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scanner string) {
+func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scannerID string) {
 
 	slog.Info("First party scan results", "firstPartyVulnAmount", len(scanResponse.FirstPartyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
@@ -198,7 +198,7 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 		return
 	}
 
-	switch scanner {
+	switch scannerID {
 	case "secret-scanning":
 		printSecretScanResults(scanResponse.FirstPartyVulns, webUI, assetName)
 		return
@@ -206,7 +206,7 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 		printSastScanResults(scanResponse.FirstPartyVulns, webUI, assetName)
 		return
 	default:
-		slog.Warn("unknown scanner", "scanner", scanner)
+		slog.Warn("unknown scanner", "scanner", scannerID)
 		return
 	}
 

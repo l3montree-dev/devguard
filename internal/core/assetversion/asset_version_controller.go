@@ -67,13 +67,13 @@ func (a *assetVersionController) GetAssetVersionsByAssetID(ctx core.Context) err
 }
 
 func (a *assetVersionController) AffectedComponents(ctx core.Context) error {
-	scanner := ctx.QueryParam("scanner")
-	if scanner == "" {
+	scannerID := ctx.QueryParam("scanner")
+	if scannerID == "" {
 		return echo.NewHTTPError(400, "scanner query param is required")
 	}
 
 	assetVersion := core.GetAssetVersion(ctx)
-	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scanner)
+	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scannerID)
 	if err != nil {
 		return err
 	}
@@ -83,8 +83,8 @@ func (a *assetVersionController) AffectedComponents(ctx core.Context) error {
 	}))
 }
 
-func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, scanner string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
-	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner)
+func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
+	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -103,12 +103,12 @@ func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 func (a *assetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)
 
-	scanner := ctx.QueryParam("scanner")
-	if scanner == "" {
+	scannerID := ctx.QueryParam("scanner")
+	if scannerID == "" {
 		return echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, scanner)
+	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, scannerID)
 	if err != nil {
 		return err
 	}
@@ -125,14 +125,14 @@ func (a *assetVersionController) DependencyGraph(ctx core.Context) error {
 func (a *assetVersionController) GetDependencyPathFromPURL(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 
-	scanner := ctx.QueryParam("scanner")
+	scannerID := ctx.QueryParam("scanner")
 	pURL := ctx.QueryParam("purl")
 
-	if scanner == "" {
+	if scannerID == "" {
 		return echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, scanner)
+	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, scannerID)
 	if err != nil {
 		return err
 	}
@@ -196,12 +196,12 @@ func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 		}
 	}
 
-	scanner := ctx.QueryParam("scanner")
-	if scanner == "" {
+	scannerID := ctx.QueryParam("scanner")
+	if scannerID == "" {
 		return nil, echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner)
+	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return nil, err
 	}
@@ -224,19 +224,19 @@ func (a *assetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 		}
 	}
 
-	scanner := ctx.QueryParam("scanner")
-	if scanner == "" {
+	scannerID := ctx.QueryParam("scanner")
+	if scannerID == "" {
 		return nil, echo.NewHTTPError(400, "scanner query param is required")
 	}
 
 	// url decode the scanner
-	scanner, err := url.QueryUnescape(scanner)
+	scannerID, err := url.QueryUnescape(scannerID)
 	if err != nil {
 		return nil, err
 	}
 
 	// get all associated dependencyVulns
-	components, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scanner)
+	components, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scannerID)
 	if err != nil {
 		return nil, err
 	}

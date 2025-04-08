@@ -2,7 +2,6 @@ package dependency_vuln
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"slices"
 
@@ -136,7 +135,7 @@ func (c dependencyVulnHttpController) ListPaged(ctx core.Context) error {
 		// append the dependencyVuln to the package
 		dependencyVulnsByPackage.DependencyVulns = append(res[*dependencyVuln.ComponentPurl].DependencyVulns, DependencyVulnDTO{
 			ID:                    dependencyVuln.ID,
-			ScannerID:             dependencyVuln.ScannerID,
+			ScannerID:             dependencyVuln.ScannerIDs,
 			Message:               dependencyVuln.Message,
 			AssetVersionName:      dependencyVuln.AssetVersionName,
 			AssetID:               dependencyVuln.AssetID.String(),
@@ -227,7 +226,7 @@ func (c dependencyVulnHttpController) Read(ctx core.Context) error {
 }
 
 func (c dependencyVulnHttpController) CreateEvent(ctx core.Context) error {
-	fmt.Printf("Called 'CreateEvent'")
+
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
@@ -297,7 +296,7 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 			Priority:              dependencyVuln.Priority,
 			LastDetected:          dependencyVuln.LastDetected,
 			CreatedAt:             dependencyVuln.CreatedAt,
-			ScannerID:             dependencyVuln.ScannerID,
+			ScannerID:             dependencyVuln.ScannerIDs,
 			TicketID:              dependencyVuln.TicketID,
 			TicketURL:             dependencyVuln.TicketURL,
 			RiskRecalculatedAt:    dependencyVuln.RiskRecalculatedAt,

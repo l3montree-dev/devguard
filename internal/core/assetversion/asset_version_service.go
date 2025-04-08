@@ -72,7 +72,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 					AssetVersionName: assetVersion.Name,
 					AssetID:          asset.ID,
 					Message:          &result.Message.Text,
-					ScannerID:        scannerID,
+					ScannerIDs:       scannerID,
 				},
 				RuleID:      result.RuleId,
 				Uri:         result.Locations[0].PhysicalLocation.ArtifactLocation.Uri,
@@ -155,13 +155,13 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
 
-func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return 0, 0, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
@@ -183,7 +183,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          asset.ID,
-				ScannerID:        scannerID + " ",
+				ScannerIDs:       scannerID + " ",
 			},
 			CVEID:                 utils.Ptr(v.CVEID),
 			ComponentPurl:         utils.Ptr(v.Purl),
@@ -208,7 +208,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
 
-	switch scanner {
+	switch scannerID {
 
 	case devguardScanner + "sca":
 		assetVersion.LastScaScan = utils.Ptr(time.Now())
@@ -255,8 +255,8 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 
 		// Now we work on the vulnerabilities found in both sets -> has the vulnerability this scanner id already in his scanner_ids
 		for i := range foundByScannerAndExisting {
-			if !strings.Contains(foundByScannerAndExisting[i].ScannerID, scannerID) {
-				foundByScannerAndExisting[i].ScannerID = foundByScannerAndExisting[i].ScannerID + scannerID
+			if !strings.Contains(foundByScannerAndExisting[i].ScannerIDs, scannerID) {
+				foundByScannerAndExisting[i].ScannerIDs = foundByScannerAndExisting[i].ScannerIDs + " " + scannerID
 			}
 		}
 
@@ -270,10 +270,10 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		//Last we have to change the already existing vulnerabilities which were not found this time
 
 		for i := range notFoundByScannerAndExisting {
-			if notFoundByScannerAndExisting[i].ScannerID == scannerID {
-				notFoundByScannerAndExisting[i].ScannerID = ""
+			if notFoundByScannerAndExisting[i].ScannerIDs == scannerID {
+				notFoundByScannerAndExisting[i].ScannerIDs = ""
 				vulnerabilitiesToFix = append(vulnerabilitiesToFix, notFoundByScannerAndExisting[i])
-			} else if strings.Contains(notFoundByScannerAndExisting[i].ScannerID, scannerID) {
+			} else if strings.Contains(notFoundByScannerAndExisting[i].ScannerIDs, scannerID) {
 				removeScannerFromVulnerability(&notFoundByScannerAndExisting[i], scannerID)
 				vulnerabilitiesToUpdate = append(vulnerabilitiesToUpdate, notFoundByScannerAndExisting[i])
 			}
@@ -301,7 +301,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 // pass by reference to edit the actual vulnerability and not a copy
 func removeScannerFromVulnerability(vulnerability *models.DependencyVuln, scannerID string) {
 
-	vulnerability.ScannerID = strings.Replace(vulnerability.ScannerID, scannerID, "", 1)
+	vulnerability.ScannerIDs = strings.Replace(vulnerability.ScannerIDs, scannerID, "", 1)
 }
 
 func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {

@@ -55,7 +55,7 @@ func DependencyVulnToDto(f models.DependencyVuln) DependencyVulnDTO {
 
 	return DependencyVulnDTO{
 		ID:                    f.ID,
-		ScannerID:             f.ScannerID,
+		ScannerID:             f.ScannerIDs,
 		Message:               f.Message,
 		AssetVersionName:      f.AssetVersionName,
 		AssetID:               f.AssetID.String(),

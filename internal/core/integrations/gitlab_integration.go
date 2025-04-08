@@ -711,8 +711,8 @@ func (g *gitlabIntegration) getRepoNameFromProjectId(ctx core.Context, projectId
 	return strings.ReplaceAll(projectName, " ", ""), nil
 }
 
-func getTemplatePath(scanner string) string {
-	switch scanner {
+func getTemplatePath(scannerID string) string {
+	switch scannerID {
 	case "full":
 		return "./templates/full_template.yml"
 	case "sca":

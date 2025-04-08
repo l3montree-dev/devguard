@@ -204,7 +204,7 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVulnerab
 	return detailedFirstPartyVulnDTO{
 		FirstPartyVulnDTO: FirstPartyVulnDTO{
 			ID:          firstPartyVuln.ID,
-			ScannerID:   firstPartyVuln.ScannerID,
+			ScannerID:   firstPartyVuln.ScannerIDs,
 			Message:     firstPartyVuln.Message,
 			AssetID:     firstPartyVuln.AssetID.String(),
 			State:       firstPartyVuln.State,

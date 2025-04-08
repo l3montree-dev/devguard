@@ -125,9 +125,9 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		slog.Error("no scanner id provided")
 		return scanResults, err
 	}
-	//scannerID = "Reboot-Van"
+
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, scannerID, userID, doRiskManagement)
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err
@@ -185,8 +185,8 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
 	}
 
-	scanner := c.Request().Header.Get("X-Scanner")
-	if scanner == "" {
+	scannerID := c.Request().Header.Get("X-Scanner")
+	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
 		return c.JSON(400, map[string]string{
 			"error": "no X-Scanner header found",
@@ -198,7 +198,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	doRiskManagement := riskManagementEnabled != "false"
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, &assetVersion, sarifScan, scanner, userID, true)
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, &assetVersion, sarifScan, scannerID, userID, true)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})

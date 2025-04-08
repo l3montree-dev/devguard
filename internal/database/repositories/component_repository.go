@@ -103,7 +103,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 	return components, err
 }
 
-func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner string) (map[string]int, error) {
+func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error) {
 	var licenses []struct {
 		License string
 		Count   int
@@ -113,8 +113,8 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 
 	query := c.GetDB(tx).Table("components").Select("components.license as license, COUNT(components.license) as count").Joins("RIGHT JOIN component_dependencies ON components.purl = component_dependencies.dependency_purl").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Group("components.license")
 
-	if scanner != "" {
-		query = query.Where("scanner_id LIKE %?%", scanner)
+	if scannerID != "" {
+		query = query.Where("scanner_id LIKE %?%", scannerID)
 	}
 
 	err = query.Scan(&licenses).Error
@@ -140,13 +140,13 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 	return licensesMap, nil
 }
 
-func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
 	var components []models.ComponentDependency
 
 	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
-	if scanner != "" {
-		query = query.Where("scanner_id LIKE %?%", scanner)
+	if scannerID != "" {
+		query = query.Where("scanner_id LIKE %?%", scannerID)
 	}
 
 	for _, f := range filter {
