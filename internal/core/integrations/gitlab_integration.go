@@ -807,7 +807,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug)
+		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug, event.Justification, true)
 	case core.VulnEvent:
 		ev := event.Event
 
@@ -1087,7 +1087,7 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 
 	issue, _, err := client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	})
 	if err != nil {
@@ -1160,6 +1160,28 @@ func (g *gitlabIntegration) CloseIssue(ctx context.Context, state string, repoId
 		return err
 	}
 
+	assetID := dependencyVuln.AssetID
+	asset, err := g.assetRepository.Read(assetID)
+	if err != nil {
+		slog.Error("could not read asset", "err", err)
+	}
+
+	project, err := g.projectRepository.GetProjectByAssetID(asset.ID)
+	if err != nil {
+		slog.Error("could not get project by asset id", "err", err)
+		return err
+	}
+
+	org, err := g.orgRepository.Read(project.OrganizationID)
+	if err != nil {
+		slog.Error("could not get org by id", "err", err)
+		return err
+	}
+
+	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
+
+	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
+
 	gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
 	if err != nil {
@@ -1170,6 +1192,9 @@ func (g *gitlabIntegration) CloseIssue(ctx context.Context, state string, repoId
 	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent: gitlab.Ptr("close"),
 		Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
+
+		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName)),
 	})
 	if err != nil {
 		return err
@@ -1178,7 +1203,7 @@ func (g *gitlabIntegration) CloseIssue(ctx context.Context, state string, repoId
 	return nil
 }
 
-func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error {
+func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string, justification string, manualTicketCreation bool) error {
 
 	if !strings.HasPrefix(repoId, "gitlab:") {
 		// this integration only handles gitlab repositories
@@ -1211,7 +1236,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.SafeDereference(dependencyVuln.ComponentPurl))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n" + "Risk exceeds predefined threshold"),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName) + "\n\n------\n\n"),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	}
 
@@ -1220,14 +1245,23 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		return err
 	}
 
+	// create a comment with the justification
+	_, _, err = client.CreateIssueComment(ctx, projectId, createdIssue.IID, &gitlab.CreateIssueNoteOptions{
+		Body: gitlab.Ptr(fmt.Sprintf("%s\n----\n%s", "Justification for creating the issue", justification)),
+	})
+	if err != nil {
+		slog.Error("could not create issue comment", "err", err)
+	}
+
 	dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("gitlab:%d/%d", createdIssue.ProjectID, createdIssue.IID))
 	dependencyVuln.TicketURL = utils.Ptr(createdIssue.WebURL)
 	dependencyVuln.TicketState = models.TicketStateOpen
+	dependencyVuln.ManualTicketCreation = manualTicketCreation
 
 	vulnEvent := models.NewMitigateEvent(
 		dependencyVuln.ID,
 		"system",
-		"Risk exceeds predefined threshold",
+		justification,
 		map[string]any{
 			"ticketId":    *dependencyVuln.TicketID,
 			"ticketUrl":   createdIssue.WebURL,
