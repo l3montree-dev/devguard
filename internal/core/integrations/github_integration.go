@@ -208,8 +208,13 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		return err
 	}
 
+	fmt.Printf("payload: %T\n", event)
+
 	switch event := event.(type) {
-	case *github.IssueEvent:
+	case *github.IssuesEvent:
+
+		fmt.Println("event: ", event)
+
 		// check if the issue is a devguard issue
 		issueNumber := event.Issue.GetNumber()
 		issueID := event.Issue.GetID()
@@ -220,7 +225,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			slog.Debug("could not find vuln by ticket id", "err", err, "ticketId", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 			return nil
 		}
-		action := event.Action
+		action := *event.Action
 
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
@@ -232,10 +237,12 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			}
 			// save the user in the database
 			user := models.ExternalUser{
-				ID:        fmt.Sprintf("github:%d", event.Actor.ID),
-				Username:  *event.Actor.Name,
-				AvatarURL: *event.Actor.AvatarURL,
+				ID:        fmt.Sprintf("github:%d", event.Issue.User.GetID()),
+				Username:  event.Sender.GetLogin(),
+				AvatarURL: *event.Sender.AvatarURL,
 			}
+
+			fmt.Println("user : ", user)
 
 			err = githubIntegration.externalUserRepository.Save(nil, &user)
 			if err != nil {
@@ -251,7 +258,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		switch action {
 		case "closed":
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewTicketClosedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Actor.ID), fmt.Sprintf("This issue is closed by %s", *event.Actor.Name))
+			vulnEvent := models.NewTicketClosedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This issue is closed by %s", event.Sender.GetLogin()))
 
 			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
@@ -260,7 +267,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 
 		case "reopened":
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewReopenedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Actor.ID), fmt.Sprintf("This issue is reopened by %s", *event.Actor.Name))
+			vulnEvent := models.NewReopenedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This issue is reopened by %s", event.Sender.GetLogin()))
 
 			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
@@ -269,7 +276,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 
 		case "deleted":
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewTicketDeletedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Actor.ID), fmt.Sprintf("This issue is deleted by %s", *event.Actor.Name))
+			vulnEvent := models.NewTicketDeletedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This issue is deleted by %s", event.Sender.GetLogin()))
 
 			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
