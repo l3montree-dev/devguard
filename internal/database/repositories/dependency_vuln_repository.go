@@ -67,7 +67,7 @@ func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB,
 
 func (r *dependencyVulnRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
 	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
-	if err := r.Repository.GetDB(r.db).Preload("CVE").Where("asset_version_name = ? AND asset_id = ? AND scanner_id = ?", assetVersionName, assetID, scannerID).Find(&dependencyVulns).Error; err != nil {
+	if err := r.Repository.GetDB(r.db).Preload("CVE").Where("asset_version_name = ? AND asset_id = ? AND LIKE %?%", assetVersionName, assetID, scannerID).Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil
