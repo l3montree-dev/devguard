@@ -134,12 +134,18 @@ func (c *httpController) Update(ctx core.Context) error {
 	}
 
 	if patchRequest.IntegrityRequirement != nil && *patchRequest.IntegrityRequirement != asset.IntegrityRequirement {
-		justification += ", Integrity Requirement updated: " + string(asset.IntegrityRequirement) + " -> " + string(*patchRequest.IntegrityRequirement)
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Integrity Requirement updated: " + string(asset.IntegrityRequirement) + " -> " + string(*patchRequest.IntegrityRequirement)
 		asset.IntegrityRequirement = *patchRequest.IntegrityRequirement
 	}
 
 	if patchRequest.AvailabilityRequirement != nil && *patchRequest.AvailabilityRequirement != asset.AvailabilityRequirement {
-		justification += ", Availability Requirement updated: " + string(asset.AvailabilityRequirement) + " -> " + string(*patchRequest.AvailabilityRequirement)
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Availability Requirement updated: " + string(asset.AvailabilityRequirement) + " -> " + string(*patchRequest.AvailabilityRequirement)
 		asset.AvailabilityRequirement = *patchRequest.AvailabilityRequirement
 	}
 
