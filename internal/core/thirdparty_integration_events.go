@@ -5,7 +5,8 @@ import (
 )
 
 type ManualMitigateEvent struct {
-	Ctx Context
+	Ctx           Context
+	Justification string
 }
 
 type VulnEvent struct {

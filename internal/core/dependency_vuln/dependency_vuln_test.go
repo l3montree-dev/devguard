@@ -21,7 +21,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
-		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
@@ -137,7 +137,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
-		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
+		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
@@ -170,7 +170,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
-		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
@@ -203,7 +203,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
-		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
+		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
@@ -235,7 +235,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
-		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
+		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
 		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 

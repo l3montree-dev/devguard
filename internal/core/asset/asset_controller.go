@@ -7,18 +7,21 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
 type httpController struct {
-	assetRepository core.AssetRepository
-	assetService    core.AssetService
+	assetRepository       core.AssetRepository
+	assetService          core.AssetService
+	dependencyVulnService core.DependencyVulnService
 }
 
-func NewHttpController(repository core.AssetRepository, assetService core.AssetService) *httpController {
+func NewHttpController(repository core.AssetRepository, assetService core.AssetService, dependencyVulnService core.DependencyVulnService) *httpController {
 	return &httpController{
-		assetRepository: repository,
-		assetService:    assetService,
+		assetRepository:       repository,
+		assetService:          assetService,
+		dependencyVulnService: dependencyVulnService,
 	}
 }
 
@@ -131,12 +134,18 @@ func (c *httpController) Update(ctx core.Context) error {
 	}
 
 	if patchRequest.IntegrityRequirement != nil && *patchRequest.IntegrityRequirement != asset.IntegrityRequirement {
-		justification += ", Integrity Requirement updated: " + string(asset.IntegrityRequirement) + " -> " + string(*patchRequest.IntegrityRequirement)
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Integrity Requirement updated: " + string(asset.IntegrityRequirement) + " -> " + string(*patchRequest.IntegrityRequirement)
 		asset.IntegrityRequirement = *patchRequest.IntegrityRequirement
 	}
 
 	if patchRequest.AvailabilityRequirement != nil && *patchRequest.AvailabilityRequirement != asset.AvailabilityRequirement {
-		justification += ", Availability Requirement updated: " + string(asset.AvailabilityRequirement) + " -> " + string(*patchRequest.AvailabilityRequirement)
+		if justification != "" {
+			justification += ", "
+		}
+		justification += "Availability Requirement updated: " + string(asset.AvailabilityRequirement) + " -> " + string(*patchRequest.AvailabilityRequirement)
 		asset.AvailabilityRequirement = *patchRequest.AvailabilityRequirement
 	}
 
@@ -147,12 +156,62 @@ func (c *httpController) Update(ctx core.Context) error {
 		}
 	}
 
+	enableTicketRangeUpdated := false
+
+	if patchRequest.EnableTicketRange {
+		if patchRequest.CVSSAutomaticTicketThreshold != nil {
+			if asset.CVSSAutomaticTicketThreshold != nil {
+				if !utils.CompareFirstTwoDecimals(*patchRequest.CVSSAutomaticTicketThreshold, *asset.CVSSAutomaticTicketThreshold) {
+					enableTicketRangeUpdated = true
+					asset.CVSSAutomaticTicketThreshold = patchRequest.CVSSAutomaticTicketThreshold
+				}
+			} else {
+				enableTicketRangeUpdated = true
+				asset.CVSSAutomaticTicketThreshold = patchRequest.CVSSAutomaticTicketThreshold
+			}
+		} else {
+			if asset.CVSSAutomaticTicketThreshold != nil {
+				enableTicketRangeUpdated = true
+				asset.CVSSAutomaticTicketThreshold = nil
+			}
+		}
+
+		if patchRequest.RiskAutomaticTicketThreshold != nil {
+			if asset.RiskAutomaticTicketThreshold != nil {
+				if !utils.CompareFirstTwoDecimals(*patchRequest.RiskAutomaticTicketThreshold, *asset.RiskAutomaticTicketThreshold) {
+					enableTicketRangeUpdated = true
+					asset.RiskAutomaticTicketThreshold = patchRequest.RiskAutomaticTicketThreshold
+				}
+			} else {
+				enableTicketRangeUpdated = true
+				asset.RiskAutomaticTicketThreshold = patchRequest.RiskAutomaticTicketThreshold
+			}
+		} else {
+			if asset.RiskAutomaticTicketThreshold != nil {
+				enableTicketRangeUpdated = true
+				asset.RiskAutomaticTicketThreshold = nil
+			}
+		}
+
+	} else {
+		// if the enableTicketRange is set to false, we do need to call the ticket sync
+		asset.CVSSAutomaticTicketThreshold = nil
+		asset.RiskAutomaticTicketThreshold = nil
+	}
+
+	if enableTicketRangeUpdated || justification != "" {
+		err = c.dependencyVulnService.SyncTickets(asset)
+		if err != nil {
+			return fmt.Errorf("Error updating asset tickets: %v", err)
+		}
+	}
+
 	updated := patchRequest.applyToModel(&asset)
 	if asset.Name == "" || asset.Slug == "" {
 		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
 	}
 
-	if updated {
+	if updated || enableTicketRangeUpdated {
 		err = c.assetRepository.Update(nil, &asset)
 		if err != nil {
 			return fmt.Errorf("error updating asset: %v", err)

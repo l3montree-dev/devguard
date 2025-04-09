@@ -162,6 +162,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			facade.On("EditIssue", context.TODO(), "repo", "1", 0, &github.IssueRequest{
 				State: github.String("closed"),
 			}).Return(nil, nil, fmt.Errorf("could not close issue"))
+			facade.On(("CreateIssueComment"), context.Background(), "repo", "1", 0, mock.Anything).Return(&github.IssueComment{}, &github.Response{}, nil)
 			return facade, nil
 		}
 
@@ -239,6 +240,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 				Description: github.String("DevGuard"),
 				Color:       github.String("182654"),
 			}).Return(nil, nil, nil)
+			facade.On("CreateIssueComment", context.Background(), "repo", "1", 0, mock.Anything).Return(&github.IssueComment{}, &github.Response{}, nil)
 			return facade, nil
 		}
 

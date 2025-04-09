@@ -106,6 +106,18 @@ func triggerDaemon(db core.DB, daemons []string) error {
 		slog.Info("risk recalculated", "duration", time.Since(start))
 	}
 
+	if emptyOrContains(daemons, "tickets") {
+		start = time.Now()
+		if err := daemon.SyncTickets(db); err != nil {
+			slog.Error("could not sync tickets", "err", err)
+			return nil
+		}
+		if err := markMirrored(configService, "vulndb.tickets"); err != nil {
+			slog.Error("could not mark vulndb.tickets as mirrored", "err", err)
+		}
+		slog.Info("tickets synced", "duration", time.Since(start))
+	}
+
 	if emptyOrContains(daemons, "statistics") {
 		start = time.Now()
 		// as a last step - update the statistics

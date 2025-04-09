@@ -36,9 +36,10 @@ type ThirdPartyIntegration interface {
 	ListRepositories(ctx Context) ([]Repository, error)
 
 	HandleEvent(event any) error
-	CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string) error
+	CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string, justification string, manualTicketCreation bool) error
 	CloseIssue(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln) error
 	ReopenIssue(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln) error
+	UpdateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVuln models.DependencyVuln) error
 
 	GetUsers(org models.Org) []User
 

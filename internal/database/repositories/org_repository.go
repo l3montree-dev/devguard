@@ -114,3 +114,9 @@ func (g *orgRepository) ContentTree(orgID uuid.UUID, projects []string) []common
 
 	return contentTree
 }
+
+func (g *orgRepository) GetOrgByID(id uuid.UUID) (models.Org, error) {
+	var org models.Org
+	err := g.db.Model(models.Org{}).Where("id = ?", id).First(&org).Error
+	return org, err
+}

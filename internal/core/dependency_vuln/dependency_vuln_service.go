@@ -140,18 +140,6 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 		if err != nil {
 			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
-		if s.ShouldCreateIssues(assetVersion) {
-			// only create issues for unfixed vulnerabilities
-			unfixedVulns := utils.Filter(dependencyVulns, func(v models.DependencyVuln) bool {
-				return v.State != models.VulnStateFixed
-			})
-
-			err = s.CreateIssuesForVulnsIfThresholdExceeded(assetVersion.Asset, unfixedVulns)
-			if err != nil {
-				// swallow the error
-				slog.Warn("could not create issues for vulns", "err", err)
-			}
-		}
 	}
 
 	return nil
@@ -188,6 +176,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 			events = append(events, ev)
 
 			slog.Info("recalculated raw risk assessment", "cve", dependencyVuln.CVE)
+
 		} else {
 			// only update the last calculated time
 			dependencyVulns[i].RiskRecalculatedAt = time.Now()
@@ -256,13 +245,111 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	return ev, err
 }
 
+func (s *service) SyncTicketsForAllAssets() error {
+	assets, err := s.assetRepository.GetAllAssetsFromDB()
+	if err != nil {
+		return err
+	}
+
+	for _, asset := range assets {
+		err := s.SyncTickets(asset)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *service) SyncTickets(asset models.Asset) error {
+	for _, assetVersion := range asset.AssetVersions {
+		slog.Info("syncing tickets", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
+
+		vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID)
+		if err != nil {
+			return err
+		}
+		if len(vulnList) == 0 {
+			return nil
+		}
+
+		riskThreshold := asset.RiskAutomaticTicketThreshold
+		cvssThreshold := asset.CVSSAutomaticTicketThreshold
+
+		project, err := s.projectRepository.Read(asset.ProjectID)
+		if err != nil {
+			return err
+		}
+
+		org, err := s.organizationRepository.Read(project.OrganizationID)
+		if err != nil {
+			return err
+		}
+
+		repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
+		if err != nil {
+			return nil //We don't want to return an error if the user has not yet linked his repo with devguard
+		}
+
+		errgroup := utils.ErrGroup[any](10)
+		for _, vulnerability := range vulnList {
+			if vulnerability.TicketID == nil {
+				if !s.ShouldCreateIssues(assetVersion) {
+					continue
+				}
+				// the ticket id is nil - no ticket exists for this dependency vulnerability
+				// check if one of the thresholds is exceeded - if so, we need to create a ticket for this vuln
+				if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
+					if vulnerability.State == models.VulnStateOpen {
+						//there is no ticket yet, we need to create one
+						errgroup.Go(func() (any, error) {
+							return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug, "Risk exceeds predefined threshold", false)
+						})
+					}
+				}
+
+			} else {
+				// a ticket does already exists - either we need to update it or close it
+				// if the threshold is not exceeded anymore, we need to close the ticket
+				var riskThresholdBool bool
+				var cvssThresholdBool bool
+
+				if cvssThreshold != nil {
+					if vulnerability.CVE.CVSS < float32(*cvssThreshold) {
+						cvssThresholdBool = true
+					}
+				}
+
+				if riskThreshold != nil {
+					if *vulnerability.RawRiskAssessment < *riskThreshold {
+						riskThresholdBool = true
+					}
+				}
+
+				// only close ticket if none of the thresholds is exceed AND the ticket was not manually created
+				if riskThresholdBool && cvssThresholdBool && !vulnerability.ManualTicketCreation {
+					if vulnerability.TicketID != nil {
+						errgroup.Go(func() (any, error) {
+							return nil, s.closeIssue(vulnerability, repoID)
+						})
+					}
+				} else {
+					// the threshold is still exceeded - lets update it (makes sure it is up to date)
+					errgroup.Go(func() (any, error) {
+						return nil, s.updateIssue(asset, vulnerability, repoID)
+					})
+				}
+			}
+		}
+		_, err = errgroup.WaitAndCollect()
+		return err
+	}
+	return nil
+}
+
 // function to check whether the provided vulnerabilities in a given asset exceeds their respective thresholds and create a ticket for it if they do so
 func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vulnList []models.DependencyVuln) error {
 	riskThreshold := asset.RiskAutomaticTicketThreshold
 	cvssThreshold := asset.CVSSAutomaticTicketThreshold
-	if riskThreshold == nil && cvssThreshold == nil {
-		return nil
-	}
 
 	//Check if no automatic Issues are wanted by the user
 	if riskThreshold == nil && cvssThreshold == nil {
@@ -292,7 +379,7 @@ func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vu
 			// check if there is already a ticket, we might need to reopen
 			if vulnerability.TicketID == nil {
 				errgroup.Go(func() (any, error) {
-					return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug)
+					return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug, "Risk exceeds predefined threshold", false)
 				})
 			} else {
 				// check if the ticket id is nil
@@ -309,12 +396,19 @@ func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vu
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
-func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string) error {
+func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string, justification string, manualTicketCreation bool) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug)
+	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug, justification, manualTicketCreation)
+}
+
+func (s *service) updateIssue(asset models.Asset, vulnerability models.DependencyVuln, repoId string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	return s.thirdPartyIntegration.UpdateIssue(ctx, asset, repoId, vulnerability)
 }
 
 func (s *service) reopenIssue(vulnerability models.DependencyVuln, repoId string) error {
