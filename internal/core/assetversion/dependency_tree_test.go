@@ -99,3 +99,71 @@ func TestDependencyTree(t *testing.T) {
 
 	})
 }
+func TestCalculateDepth(t *testing.T) {
+	t.Run("calculateDepth with valid tree", func(t *testing.T) {
+		root := &treeNode{Name: "root"}
+		a := &treeNode{Name: "pkg:golang/a"}
+		b := &treeNode{Name: "pkg:golang/b"}
+		c := &treeNode{Name: "pkg:golang/c"}
+		d := &treeNode{Name: "pkg:golang/d"}
+
+		root.Children = []*treeNode{a}
+		a.Children = []*treeNode{b, c}
+		b.Children = []*treeNode{d}
+
+		depthMap := make(map[string]int)
+		CalculateDepth(root, 0, depthMap)
+
+		expectedDepths := map[string]int{
+			"root":         0,
+			"pkg:golang/a": 1,
+			"pkg:golang/b": 2,
+			"pkg:golang/c": 2,
+			"pkg:golang/d": 3,
+		}
+
+		for node, expectedDepth := range expectedDepths {
+			if depthMap[node] != expectedDepth {
+				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, depthMap[node])
+			}
+		}
+	})
+
+	t.Run("calculateDepth with invalid PURL", func(t *testing.T) {
+		root := &treeNode{Name: "root"}
+		a := &treeNode{Name: "go.mod"}
+		b := &treeNode{Name: "tmp"}
+		c := &treeNode{Name: "pkg:golang/github.com/gorilla/websocket"}
+
+		root.Children = []*treeNode{a}
+		a.Children = []*treeNode{b}
+		b.Children = []*treeNode{c}
+
+		depthMap := make(map[string]int)
+		CalculateDepth(root, 0, depthMap)
+
+		expectedDepths := map[string]int{
+			"root":   0,
+			"go.mod": 0,
+			"tmp":    0,
+			"pkg:golang/github.com/gorilla/websocket": 1,
+		}
+
+		for node, expectedDepth := range expectedDepths {
+			if depthMap[node] != expectedDepth {
+				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, depthMap[node])
+			}
+		}
+	})
+
+	t.Run("calculateDepth with empty tree", func(t *testing.T) {
+		root := &treeNode{Name: "root"}
+
+		depthMap := make(map[string]int)
+		CalculateDepth(root, 0, depthMap)
+
+		if len(depthMap) != 1 || depthMap["root"] != 0 {
+			t.Errorf("expected depth map to contain only root with depth 0, got %v", depthMap)
+		}
+	})
+}

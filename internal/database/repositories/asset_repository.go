@@ -113,7 +113,7 @@ func (g *assetRepository) Update(tx core.DB, asset *models.Asset) error {
 
 func (g *assetRepository) GetAllAssetsFromDB() ([]models.Asset, error) {
 	var assets []models.Asset
-	err := g.db.Find(&assets).Error
+	err := g.db.Preload("AssetVersions").Find(&assets).Error
 	return assets, err
 }
 

@@ -171,9 +171,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	// calculate the depth of each component
 	depthMap := make(map[string]int)
 
-	// our dependency tree has a "fake" root node.
-	//  the first - 0 - element is just the name of the application
-	// therefore we start at -1 to get the correct depth. The fake node will be 0, the first real node will be 1
+	// first node will be the package name itself
 	CalculateDepth(tree.Root, -1, depthMap)
 
 	// now we have the depth.

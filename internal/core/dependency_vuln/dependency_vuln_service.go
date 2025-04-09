@@ -246,7 +246,7 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 }
 
 func (s *service) SyncTicketsForAllAssets() error {
-	assets, err := s.assetRepository.All()
+	assets, err := s.assetRepository.GetAllAssetsFromDB()
 	if err != nil {
 		return err
 	}
@@ -262,10 +262,6 @@ func (s *service) SyncTicketsForAllAssets() error {
 
 func (s *service) SyncTickets(asset models.Asset) error {
 	for _, assetVersion := range asset.AssetVersions {
-		if !s.ShouldCreateIssues(assetVersion) {
-			continue
-		}
-
 		slog.Info("syncing tickets", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
 
 		vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID)
@@ -296,8 +292,10 @@ func (s *service) SyncTickets(asset models.Asset) error {
 
 		errgroup := utils.ErrGroup[any](10)
 		for _, vulnerability := range vulnList {
-
 			if vulnerability.TicketID == nil {
+				if !s.ShouldCreateIssues(assetVersion) {
+					continue
+				}
 				// the ticket id is nil - no ticket exists for this dependency vulnerability
 				// check if one of the thresholds is exceeded - if so, we need to create a ticket for this vuln
 				if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
@@ -327,6 +325,7 @@ func (s *service) SyncTickets(asset models.Asset) error {
 					}
 				}
 
+				// only close ticket if none of the thresholds is exceed AND the ticket was not manually created
 				if riskThresholdBool && cvssThresholdBool && !vulnerability.ManualTicketCreation {
 					if vulnerability.TicketID != nil {
 						errgroup.Go(func() (any, error) {
