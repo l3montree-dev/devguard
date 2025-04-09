@@ -234,7 +234,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	var str strings.Builder
 	str.WriteString(fmt.Sprintf("## %s found in %s \n", e.cveId, e.ComponentPurl))
 
-	str.WriteString(fmt.Sprintf("> [!important] \n"))
+	str.WriteString("> [!important] \n")
 
 	severity, err := RiskToSeverity(e.risk)
 	if err != nil {
@@ -245,7 +245,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 
 	str.WriteString(fmt.Sprintf("> **CVSS**: `%.1f` \n", e.BaseScore))
 
-	str.WriteString(fmt.Sprintf("### Description\n"))
+	str.WriteString("### Description\n")
 	str.WriteString(e.cveDescription)
 	str.WriteString("\n")
 	str.WriteString("### Affected component \n")
