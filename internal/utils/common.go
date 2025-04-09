@@ -20,12 +20,19 @@ import (
 	"log/slog"
 	"math"
 	"runtime/debug"
+	"strings"
 )
 
 func Ptr[T any](t T) *T {
 	return &t
 }
 
+func RemovePrefixInsensitive(input string, prefix string) string {
+	if strings.HasPrefix(strings.ToLower(input), strings.ToLower(prefix)) {
+		return input[len(prefix):]
+	}
+	return input
+}
 func SafeDereference(s *string) string {
 	if s == nil {
 		return ""

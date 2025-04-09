@@ -200,7 +200,7 @@ func describeCVSS(cvss map[string]string) string {
 		return s != ""
 	})
 
-	return strings.Join(descriptions, "\n- ")
+	return strings.Join(descriptions, "<br>- ")
 }
 
 type Explanation struct {
@@ -226,45 +226,46 @@ type Explanation struct {
 	AffectedComponentName string
 	scanner               string
 	fixedVersion          *string
+
+	ComponentPurl string `json:"componentPurl" gorm:"type:text;default:null;"`
 }
 
 func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) string {
 	var str strings.Builder
-	str.WriteString(fmt.Sprintf("# %s\n", e.cveId))
+	str.WriteString(fmt.Sprintf("## %s found in %s \n", e.cveId, e.ComponentPurl))
+
+	str.WriteString(fmt.Sprintf("> [!important] \n"))
+
+	severity, err := RiskToSeverity(e.risk)
+	if err != nil {
+		str.WriteString(fmt.Sprintf("> **Risk**: `%.2f (%s)`\n", e.risk, "Unknown"))
+	} else {
+		str.WriteString(fmt.Sprintf("> **Risk**: `%.2f (%s)`\n", e.risk, severity))
+	}
+
+	str.WriteString(fmt.Sprintf("> **CVSS**: `%.1f` \n", e.BaseScore))
+
+	str.WriteString(fmt.Sprintf("### Description\n"))
 	str.WriteString(e.cveDescription)
 	str.WriteString("\n")
 	str.WriteString("### Affected component \n")
 	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.AffectedComponentName, e.scanner))
-	str.WriteString("\n### Path to component\n")
-	str.WriteString(mermaidPathToComponent)
 	str.WriteString("### Recommended fix\n")
 	if e.fixedVersion != nil {
 		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))
 	} else {
 		str.WriteString("No fix is available.\n")
 	}
-	str.WriteString("\n")
-	severity, err := RiskToSeverity(e.risk)
-	if err != nil {
-		str.WriteString(fmt.Sprintf("## Risk: `%.2f (%s)`\n", e.risk, "Unknown"))
-	} else {
-		str.WriteString(fmt.Sprintf("## Risk: `%.2f (%s)`\n", e.risk, severity))
-	}
+	str.WriteString("\n### Path to component\n")
+	str.WriteString(mermaidPathToComponent)
 
-	str.WriteString(fmt.Sprintf("### EPSS: `%.2f %%`\n", e.epss*100))
-	str.WriteString(fmt.Sprintf("%s\n", e.epssMessage))
-	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("### Exploit: `%s`\n", e.exploitMessage.Short))
-	str.WriteString(e.exploitMessage.Long)
-	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("### Vulnerability Depth: `%d`\n", e.depth))
-	str.WriteString(fmt.Sprintf("%s\n", e.componentDepthMessage))
-	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("### CVSS-BE: `%.1f`\n", e.WithEnvironment))
-	str.WriteString(fmt.Sprintf("%s\n", e.cvssBEMessage))
-	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("### CVSS-B: `%.1f`\n", e.BaseScore))
-	str.WriteString(fmt.Sprintf("%s\n", e.cvssMessage))
+	str.WriteString("| Risk Factor  | Value | Description | \n")
+	str.WriteString("| ---- | ----- | ----------- | \n")
+	str.WriteString(fmt.Sprintf("| Vulnerability Depth | `%d` | %s | \n", e.depth, e.componentDepthMessage))
+	str.WriteString(fmt.Sprintf("| EPSS | `%.2f %%` | %s | \n", e.epss*100, e.epssMessage))
+	str.WriteString(fmt.Sprintf("| EXPLOIT | `%s` | %s | \n", e.exploitMessage.Short, e.exploitMessage.Long))
+	str.WriteString(fmt.Sprintf("| CVSS-BE | `%.1f` | %s | \n", e.WithEnvironment, e.cvssBEMessage))
+	str.WriteString(fmt.Sprintf("| CVSS-B | `%.1f` | %s | \n", e.BaseScore, e.cvssMessage))
 	str.WriteString("\n")
 	//TODO: change it
 	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
@@ -272,11 +273,26 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
 	str.WriteString("\n")
-	str.WriteString("### Slash Commands\n")
+
+	str.WriteString("--- \n")
+
+	str.WriteString("### Interact with this vulnerability\n")
 	str.WriteString("You can use the following slash commands to interact with this vulnerability:\n")
-	str.WriteString("- `/accept <Justification>` or `/a <Justification>` - Accept the risk\n")
-	str.WriteString("- `/false-positive <Justification>` or `/fp <Justification>` - Mark the risk as false positive\n")
-	str.WriteString("- `/reopen <Justification>` or `/r <Justification>` - Reopen the risk\n")
+
+	str.WriteString("\n#### 👍   Reply with this to acknowledge and accept the identified risk.\n")
+	str.WriteString("```text\n")
+	str.WriteString("/accept I accept the risk of this vulnerability, because ...\n")
+	str.WriteString("```\n")
+
+	str.WriteString("\n#### ⚠️ Mark the risk as false positive: Use this command if you believe the reported vulnerability is not actually a valid issue.\n")
+	str.WriteString("```text\n")
+	str.WriteString("/false-positive We are not affected by this vulnerability, because ...\n")
+	str.WriteString("```\n")
+
+	str.WriteString("\n#### 🔁  Reopen the risk: Use this command to reopen a previously closed or accepted vulnerability.\n")
+	str.WriteString("```text\n")
+	str.WriteString("/reopen ... \n")
+	str.WriteString("```\n")
 
 	return str.String()
 }
@@ -286,6 +302,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 	cvss := parseCvssVector(vector)
 
 	shortMsg, longMsg := exploitMessage(dependencyVuln, cvss)
+	componentPurl := utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:")
 
 	return Explanation{
 		exploitMessage: struct {
@@ -312,5 +329,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		AffectedComponentName: utils.SafeDereference(dependencyVuln.ComponentPurl),
 		scanner:               dependencyVuln.ScannerID,
 		fixedVersion:          dependencyVuln.ComponentFixedVersion,
+
+		ComponentPurl: componentPurl,
 	}
 }
