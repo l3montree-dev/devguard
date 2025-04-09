@@ -912,7 +912,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	// create comment with the justification
 
 	_, _, err = client.CreateIssueComment(ctx, owner, repo, createdIssue.GetNumber(), &github.IssueComment{
-		Body: github.String(fmt.Sprintf("%s\n", "### This issue is created by DevGuard", justification)),
+		Body: github.String(fmt.Sprintf("%s---%s\n", "### This issue is created by DevGuard", justification)),
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)
