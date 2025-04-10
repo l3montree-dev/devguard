@@ -57,15 +57,15 @@ func parseCvssVector(vector string) map[string]string {
 func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string) (short string, long string) {
 	if obj["E"] == "POC" || obj["E"] == "P" {
 		short = "Proof of Concept"
-		long = "A proof of concept is available for this vulnerability:\n"
+		long = "A proof of concept is available for this vulnerability:<br>"
 		for _, exploit := range dependencyVuln.CVE.Exploits {
-			long += exploit.SourceURL + "\n"
+			long += exploit.SourceURL + "<br>"
 		}
 	} else if obj["E"] == "F" {
 		short = "Functional"
-		long = "A functional exploit is available for this vulnerability:\n"
+		long = "A functional exploit is available for this vulnerability:<br>"
 		for _, exploit := range dependencyVuln.CVE.Exploits {
-			long += exploit.SourceURL + "\n"
+			long += exploit.SourceURL + "<br>"
 		}
 	} else if obj["E"] == "A" {
 		short = "Attacked"
@@ -97,7 +97,7 @@ func epssMessage(epss float64) string {
 
 // componentDepthMessages generates a message based on the component depth.
 func componentDepthMessages(depth int) string {
-	if depth == 1 {
+	if depth <= 1 {
 		return "The vulnerability is in a direct dependency of your project."
 	}
 	return fmt.Sprintf("The vulnerability is in a dependency of a dependency in your project. It is %d levels deep.", depth)
@@ -134,7 +134,7 @@ func cvssBE(asset models.Asset, cvssObj map[string]string) string {
 	} else if cvssObj["C"] == "H" {
 		elements = append(elements, "- Exploiting this vulnerability significantly impacts confidentiality.")
 	}
-	return strings.Join(elements, "\n")
+	return strings.Join(elements, "<br>")
 }
 
 var baseScores = map[string]map[string]string{

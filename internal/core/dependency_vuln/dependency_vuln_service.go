@@ -262,6 +262,21 @@ func (s *service) SyncTicketsForAllAssets() error {
 }
 
 func (s *service) SyncTickets(asset models.Asset) error {
+	project, err := s.projectRepository.Read(asset.ProjectID)
+	if err != nil {
+		return err
+	}
+
+	org, err := s.organizationRepository.Read(project.OrganizationID)
+	if err != nil {
+		return err
+	}
+
+	repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
+	if err != nil {
+		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
+	}
+
 	for _, assetVersion := range asset.AssetVersions {
 		slog.Info("syncing tickets", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
 
@@ -275,21 +290,6 @@ func (s *service) SyncTickets(asset models.Asset) error {
 
 		riskThreshold := asset.RiskAutomaticTicketThreshold
 		cvssThreshold := asset.CVSSAutomaticTicketThreshold
-
-		project, err := s.projectRepository.Read(asset.ProjectID)
-		if err != nil {
-			return err
-		}
-
-		org, err := s.organizationRepository.Read(project.OrganizationID)
-		if err != nil {
-			return err
-		}
-
-		repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
-		if err != nil {
-			return nil //We don't want to return an error if the user has not yet linked his repo with devguard
-		}
 
 		errgroup := utils.ErrGroup[any](10)
 		for _, vulnerability := range vulnList {

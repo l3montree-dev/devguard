@@ -90,7 +90,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 	query := c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
 			SELECT component_purl,dependency_purl,asset_id,scanner_id,depth
 			FROM component_dependencies
-			WHERE dependency_purl like ? AND asset_id = ? AND asset_version_name = ? AND scanner_id = ?
+			WHERE dependency_purl = ? AND asset_id = ? AND asset_version_name = ? AND scanner_id = ?
 			UNION ALL
 			SELECT co.component_purl,co.dependency_purl,co.asset_id,co.scanner_id,co.depth
 			FROM component_dependencies AS co

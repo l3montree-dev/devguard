@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -205,12 +206,17 @@ func renderPathToComponent(componentRepository core.ComponentRepository, assetID
 		if err != nil {
 			nodeContent = componentName
 		}
-		mermaidFlowChart = mermaidFlowChart + " --> \n" + "node" + strconv.Itoa(i) + "[" + nodeContent + "]"
+		mermaidFlowChart = mermaidFlowChart + " --> \n" + "node" + strconv.Itoa(i) + "[\"" + escapeAtSign(nodeContent) + "\"]"
 	}
 
 	mermaidFlowChart = "```" + mermaidFlowChart + "\n```\n"
 
 	return mermaidFlowChart, nil
+}
+
+func escapeAtSign(pURL string) string {
+	// escape @ sign in purl
+	return strings.ReplaceAll(pURL, "@", "\\@")
 }
 
 // function to make purl look more visually appealing

@@ -44,6 +44,7 @@ type ProjectRepository interface {
 type AssetRepository interface {
 	common.Repository[uuid.UUID, models.Asset, DB]
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
+	GetByOrgID(organizationID uuid.UUID) ([]models.Asset, error)
 	FindByName(name string) (models.Asset, error)
 	FindOrCreate(tx DB, name string) (models.Asset, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
