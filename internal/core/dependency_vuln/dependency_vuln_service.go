@@ -153,6 +153,28 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 
 }
 
+func (s *service) MakeAddedScannerEvent(tx core.DB, vulnerabilities []models.DependencyVuln, userID string) error {
+	events := make([]models.VulnEvent, len(vulnerabilities))
+	for i := range vulnerabilities {
+		ev := models.NewAddedScannerEvent(vulnerabilities[i].CalculateHash(), userID)
+		ev.Apply(&vulnerabilities[i])
+		events[i] = ev
+	}
+	return s.vulnEventRepository.SaveBatch(tx, events)
+
+}
+
+func (s *service) MakeRemoveScannerEvent(tx core.DB, vulnerabilities []models.DependencyVuln, userID string) error {
+	events := make([]models.VulnEvent, len(vulnerabilities))
+	for i := range vulnerabilities {
+		ev := models.NewRemovedScannerEvent(vulnerabilities[i].CalculateHash(), userID)
+		ev.Apply(&vulnerabilities[i])
+		events[i] = ev
+	}
+	return s.vulnEventRepository.SaveBatch(tx, events)
+
+}
+
 func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
@@ -270,6 +292,7 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	case models.EventTypeComment:
 		ev = models.NewCommentEvent(dependencyVuln.CalculateHash(), userID, justification)
 	}
+	//Found by toher scanner
 
 	err := s.dependencyVulnRepository.ApplyAndSave(tx, dependencyVuln, &ev)
 	return ev, err

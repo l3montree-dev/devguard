@@ -259,9 +259,13 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 				foundByScannerAndExisting[i].ScannerIDs = foundByScannerAndExisting[i].ScannerIDs + " " + scannerID
 			}
 		}
+		err = s.dependencyVulnService.MakeAddedScannerEvent(tx, foundByScannerAndExisting, userID)
+		if err != nil {
+			slog.Error("error when trying to add events for adding scanner to vulnerability")
+			return err
+		}
 
-		err := s.dependencyVulnRepository.SaveBatch(tx, foundByScannerAndExisting)
-
+		err = s.dependencyVulnRepository.SaveBatch(tx, foundByScannerAndExisting)
 		if err != nil {
 			slog.Error("error when trying to update vulnerabilities")
 			return err
@@ -282,6 +286,12 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		err = s.dependencyVulnRepository.SaveBatch(tx, vulnerabilitiesToUpdate)
 		if err != nil {
 			slog.Error("error when trying to update vulnerabilities")
+			return err
+		}
+
+		err := s.dependencyVulnService.MakeRemoveScannerEvent(tx, vulnerabilitiesToUpdate, userID)
+		if err != nil {
+			slog.Error("error when trying to add events for removing scanner from vulnerability")
 			return err
 		}
 
