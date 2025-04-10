@@ -254,7 +254,8 @@ func (s *service) SyncTicketsForAllAssets() error {
 	for _, asset := range assets {
 		err := s.SyncTickets(asset)
 		if err != nil {
-			return err
+			slog.Warn("could not sync tickets", "err", err, "assetID", asset.ID)
+			continue
 		}
 	}
 	return nil
