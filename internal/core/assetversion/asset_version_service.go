@@ -336,8 +336,8 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 
 func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
 	// load the asset components
-	scannerID = "AdditionalScanner"
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, "")
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
 	}
