@@ -26,6 +26,9 @@ const (
 	EventTypeRawRiskAssessmentUpdated VulnEventType = "rawRiskAssessmentUpdated"
 
 	EventTypeComment VulnEventType = "comment"
+
+	EventTypeAddedScanner   VulnEventType = "addedScanner"
+	EventTypeRemovedScanner VulnEventType = "removedScanner"
 )
 
 type VulnEvent struct {
@@ -211,6 +214,22 @@ func NewRawRiskAssessmentUpdatedEvent(vulnID string, userID string, justificatio
 	return event
 }
 
+func NewAddedScannerEvent(vulnID string, userID string) VulnEvent {
+	return VulnEvent{
+		Type:   EventTypeAddedScanner,
+		VulnID: vulnID,
+		UserID: userID,
+	}
+}
+
+func NewRemovedScannerEvent(vulnID string, userID string) VulnEvent {
+	return VulnEvent{
+		Type:   EventTypeRemovedScanner,
+		VulnID: vulnID,
+		UserID: userID,
+	}
+}
+
 func CheckStatusType(statusType string) error {
 	switch statusType {
 	case "fixed":
@@ -228,6 +247,10 @@ func CheckStatusType(statusType string) error {
 	case "falsePositive":
 		return nil
 	case "markedForTransfer":
+		return nil
+	case "addedScanner":
+		return nil
+	case "removedScanner":
 		return nil
 	default:
 		return fmt.Errorf("invalid status type")
