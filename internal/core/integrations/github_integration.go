@@ -109,18 +109,31 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 	}
 }
 
-func getLabels(vuln models.Vuln, state string) []string {
+func stateToLabel(state models.VulnState) string {
+	switch state {
+	case models.VulnStateFalsePositive:
+		return "false-positive"
+	case models.VulnStateAccepted:
+		return "accepted"
+	case models.VulnStateFixed:
+		return "fixed"
+	case models.VulnStateOpen:
+		return "open"
+	case models.VulnStateMarkedForTransfer:
+		return "marked-for-transfer"
+	}
+	return "unknown"
+}
+
+func getLabels(vuln models.Vuln) []string {
 	labels := []string{
 		"devguard",
+		"state:" + stateToLabel(vuln.GetState()),
 	}
 
 	riskSeverity, err := risk.RiskToSeverity(vuln.GetRawRiskAssessment())
 	if err == nil {
 		labels = append(labels, "risk:"+strings.ToLower(riskSeverity))
-	}
-
-	if state != "" {
-		labels = append(labels, "state:"+state)
 	}
 
 	if v, ok := vuln.(*models.DependencyVuln); ok {
@@ -373,21 +386,21 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 
 		switch vulnEvent.Type {
 		case models.EventTypeAccepted:
-			labels := getLabels(vuln, "accepted")
+			labels := getLabels(vuln)
 			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &labels,
 			})
 			return err
 		case models.EventTypeFalsePositive:
-			labels := getLabels(vuln, "false-positive")
+			labels := getLabels(vuln)
 			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &labels,
 			})
 			return err
 		case models.EventTypeReopened:
-			labels := getLabels(vuln, "open")
+			labels := getLabels(vuln)
 			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
 				State:  github.String("open"),
 				Labels: &labels,
@@ -699,10 +712,9 @@ func (g *githubIntegration) CloseIssue(ctx context.Context, state string, repoId
 	}
 
 	_, ticketNumber := githubTicketIdToIdAndNumber(*dependencyVuln.TicketID)
-	lables := getLabels(&dependencyVuln, state)
+	lables := getLabels(&dependencyVuln)
 	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
 		State: github.String("closed"),
-
 		Title: github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
 		Body:  github.String(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
 
@@ -732,7 +744,7 @@ func (g *githubIntegration) ReopenIssue(ctx context.Context, repoId string, depe
 	}
 
 	_, ticketNumber := githubTicketIdToIdAndNumber(*dependencyVuln.TicketID)
-	lables := getLabels(&dependencyVuln, "open")
+	lables := getLabels(&dependencyVuln)
 	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
 		State:  github.String("open"),
 		Labels: &lables,
@@ -783,8 +795,14 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 
 	_, ticketNumber := githubTicketIdToIdAndNumber(*dependencyVuln.TicketID)
 
-	labels := getLabels(&dependencyVuln, "open")
+	expectedIssueState := "closed"
+	if dependencyVuln.State == models.VulnStateOpen {
+		expectedIssueState = "open"
+	}
+
+	labels := getLabels(&dependencyVuln)
 	issueRequest := &github.IssueRequest{
+		State:  github.String(expectedIssueState),
 		Title:  github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
 		Body:   github.String(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
 		Labels: &labels,
@@ -855,7 +873,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
-	labels := getLabels(&dependencyVuln, "open")
+	labels := getLabels(&dependencyVuln)
 	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
 	if err != nil {
 		return err

@@ -328,24 +328,27 @@ func TestGetLabels(t *testing.T) {
 			},
 		}
 
-		labels := getLabels(vuln, "")
+		labels := getLabels(vuln)
 
 		assert.Contains(t, labels, "devguard")
 		assert.Contains(t, labels, "risk:high")
-		assert.NotContains(t, labels, "state:")
+		assert.NotContains(t, labels, "state:unknown")
 	})
 
-	t.Run("it should include state label if state is provided", func(t *testing.T) {
+	t.Run("it should include state label if dependency vuln has a state", func(t *testing.T) {
 		vuln := &models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				State: models.VulnStateAccepted,
+			},
 			RawRiskAssessment: utils.Ptr(5.0),
 			CVE: &models.CVE{
 				CVSS: 5.0,
 			},
 		}
 
-		labels := getLabels(vuln, "open")
+		labels := getLabels(vuln)
 
-		assert.Contains(t, labels, "state:open")
+		assert.Contains(t, labels, "state:accepted")
 		assert.Contains(t, labels, "risk:medium")
 	})
 
@@ -357,7 +360,7 @@ func TestGetLabels(t *testing.T) {
 		}
 		vuln.RawRiskAssessment = utils.Ptr(9.8)
 
-		labels := getLabels(vuln, "closed")
+		labels := getLabels(vuln)
 
 		assert.Contains(t, labels, "cvss-severity:critical")
 		assert.Contains(t, labels, "state:closed")
@@ -368,23 +371,25 @@ func TestGetLabels(t *testing.T) {
 		vuln := &models.DependencyVuln{}
 		vuln.RawRiskAssessment = utils.Ptr(4.0)
 
-		labels := getLabels(vuln, "open")
+		labels := getLabels(vuln)
 
-		assert.Contains(t, labels, "state:open")
 		assert.Contains(t, labels, "risk:medium")
 
 	})
 
 	t.Run("it should not include risk:none labels", func(t *testing.T) {
 		vuln := &models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				State: models.VulnStateFalsePositive,
+			},
 			CVE: &models.CVE{
 				CVSS: 0.0,
 			},
 		}
 		vuln.RawRiskAssessment = utils.Ptr(0.0)
 
-		labels := getLabels(vuln, "closed")
+		labels := getLabels(vuln)
 
-		assert.Contains(t, labels, "state:closed")
+		assert.Contains(t, labels, "state:false-positive")
 	})
 }

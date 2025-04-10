@@ -381,21 +381,21 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 		switch vulnEvent.Type {
 		case models.EventTypeAccepted:
-			labels := getLabels(vuln, "accepted")
+			labels := getLabels(vuln)
 			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 		case models.EventTypeFalsePositive:
-			labels := getLabels(vuln, "false-positive")
+			labels := getLabels(vuln)
 			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 		case models.EventTypeReopened:
-			labels := getLabels(vuln, "open")
+			labels := getLabels(vuln)
 
 			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("reopen"),
@@ -1029,7 +1029,7 @@ func (g *gitlabIntegration) ReopenIssue(ctx context.Context, repoId string, depe
 	if err != nil {
 		return err
 	}
-	labels := getLabels(&dependencyVuln, "open")
+	labels := getLabels(&dependencyVuln)
 
 	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent: gitlab.Ptr("reopen"),
@@ -1091,9 +1091,15 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	if err != nil {
 		return err
 	}
-	labels := getLabels(&dependencyVuln, "open")
+	labels := getLabels(&dependencyVuln)
+
+	stateEvent := "close"
+	if dependencyVuln.TicketState == models.TicketStateOpen {
+		stateEvent = "reopen"
+	}
 
 	issue, _, err := client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
+		StateEvent:  gitlab.Ptr(stateEvent),
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
 		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, org.Slug, project.Slug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
@@ -1200,7 +1206,7 @@ func (g *gitlabIntegration) CloseIssue(ctx context.Context, state string, repoId
 	if err != nil {
 		return err
 	}
-	labels := getLabels(&dependencyVuln, state)
+	labels := getLabels(&dependencyVuln)
 
 	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent: gitlab.Ptr("close"),
@@ -1245,7 +1251,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	exp := risk.Explain(dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
-	labels := getLabels(&dependencyVuln, "open")
+	labels := getLabels(&dependencyVuln)
 	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerID, exp.AffectedComponentName)
 	if err != nil {
 		return err
