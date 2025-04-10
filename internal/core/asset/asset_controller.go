@@ -200,10 +200,11 @@ func (c *httpController) Update(ctx core.Context) error {
 	}
 
 	if enableTicketRangeUpdated || justification != "" {
-		err = c.dependencyVulnService.SyncTickets(asset)
-		if err != nil {
-			return fmt.Errorf("Error updating asset tickets: %v", err)
-		}
+		go func() {
+			if err := c.dependencyVulnService.SyncTickets(asset); err != nil {
+				slog.Warn("could not sync tickets", "err", err)
+			}
+		}()
 	}
 
 	updated := patchRequest.applyToModel(&asset)
