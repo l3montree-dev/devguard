@@ -70,6 +70,102 @@ func (_c *CoreDependencyVulnService_CreateIssuesForVulns_Call) RunAndReturn(run 
 	return _c
 }
 
+// MakeAddedScannerEvent provides a mock function with given fields: tx, vulnerabilities, userID
+func (_m *CoreDependencyVulnService) MakeAddedScannerEvent(tx *gorm.DB, vulnerabilities []models.DependencyVuln, userID string) error {
+	ret := _m.Called(tx, vulnerabilities, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MakeAddedScannerEvent")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.DependencyVuln, string) error); ok {
+		r0 = rf(tx, vulnerabilities, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreDependencyVulnService_MakeAddedScannerEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MakeAddedScannerEvent'
+type CoreDependencyVulnService_MakeAddedScannerEvent_Call struct {
+	*mock.Call
+}
+
+// MakeAddedScannerEvent is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - vulnerabilities []models.DependencyVuln
+//   - userID string
+func (_e *CoreDependencyVulnService_Expecter) MakeAddedScannerEvent(tx interface{}, vulnerabilities interface{}, userID interface{}) *CoreDependencyVulnService_MakeAddedScannerEvent_Call {
+	return &CoreDependencyVulnService_MakeAddedScannerEvent_Call{Call: _e.mock.On("MakeAddedScannerEvent", tx, vulnerabilities, userID)}
+}
+
+func (_c *CoreDependencyVulnService_MakeAddedScannerEvent_Call) Run(run func(tx *gorm.DB, vulnerabilities []models.DependencyVuln, userID string)) *CoreDependencyVulnService_MakeAddedScannerEvent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].([]models.DependencyVuln), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *CoreDependencyVulnService_MakeAddedScannerEvent_Call) Return(_a0 error) *CoreDependencyVulnService_MakeAddedScannerEvent_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreDependencyVulnService_MakeAddedScannerEvent_Call) RunAndReturn(run func(*gorm.DB, []models.DependencyVuln, string) error) *CoreDependencyVulnService_MakeAddedScannerEvent_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// MakeRemoveScannerEvent provides a mock function with given fields: tx, vulnerabilities, userID
+func (_m *CoreDependencyVulnService) MakeRemoveScannerEvent(tx *gorm.DB, vulnerabilities []models.DependencyVuln, userID string) error {
+	ret := _m.Called(tx, vulnerabilities, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MakeRemoveScannerEvent")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.DependencyVuln, string) error); ok {
+		r0 = rf(tx, vulnerabilities, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CoreDependencyVulnService_MakeRemoveScannerEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MakeRemoveScannerEvent'
+type CoreDependencyVulnService_MakeRemoveScannerEvent_Call struct {
+	*mock.Call
+}
+
+// MakeRemoveScannerEvent is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - vulnerabilities []models.DependencyVuln
+//   - userID string
+func (_e *CoreDependencyVulnService_Expecter) MakeRemoveScannerEvent(tx interface{}, vulnerabilities interface{}, userID interface{}) *CoreDependencyVulnService_MakeRemoveScannerEvent_Call {
+	return &CoreDependencyVulnService_MakeRemoveScannerEvent_Call{Call: _e.mock.On("MakeRemoveScannerEvent", tx, vulnerabilities, userID)}
+}
+
+func (_c *CoreDependencyVulnService_MakeRemoveScannerEvent_Call) Run(run func(tx *gorm.DB, vulnerabilities []models.DependencyVuln, userID string)) *CoreDependencyVulnService_MakeRemoveScannerEvent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].([]models.DependencyVuln), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *CoreDependencyVulnService_MakeRemoveScannerEvent_Call) Return(_a0 error) *CoreDependencyVulnService_MakeRemoveScannerEvent_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *CoreDependencyVulnService_MakeRemoveScannerEvent_Call) RunAndReturn(run func(*gorm.DB, []models.DependencyVuln, string) error) *CoreDependencyVulnService_MakeRemoveScannerEvent_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RecalculateRawRiskAssessment provides a mock function with given fields: tx, responsible, dependencyVulns, justification, asset
 func (_m *CoreDependencyVulnService) RecalculateRawRiskAssessment(tx *gorm.DB, responsible string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
 	ret := _m.Called(tx, responsible, dependencyVulns, justification, asset)

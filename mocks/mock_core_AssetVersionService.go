@@ -265,9 +265,9 @@ func (_c *CoreAssetVersionService_HandleFirstPartyVulnResult_Call) RunAndReturn(
 	return _c
 }
 
-// HandleScanResult provides a mock function with given fields: asset, assetVersion, vulns, scanner, scannerID, userID, doRiskManagement
-func (_m *CoreAssetVersionService) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, scannerID string, userID string, doRiskManagement bool) (int, int, []models.DependencyVuln, error) {
-	ret := _m.Called(asset, assetVersion, vulns, scanner, scannerID, userID, doRiskManagement)
+// HandleScanResult provides a mock function with given fields: asset, assetVersion, vulns, scannerID, userID, doRiskManagement
+func (_m *CoreAssetVersionService) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string, doRiskManagement bool) (int, int, []models.DependencyVuln, error) {
+	ret := _m.Called(asset, assetVersion, vulns, scannerID, userID, doRiskManagement)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleScanResult")
@@ -277,31 +277,31 @@ func (_m *CoreAssetVersionService) HandleScanResult(asset models.Asset, assetVer
 	var r1 int
 	var r2 []models.DependencyVuln
 	var r3 error
-	if rf, ok := ret.Get(0).(func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, string, bool) (int, int, []models.DependencyVuln, error)); ok {
-		return rf(asset, assetVersion, vulns, scanner, scannerID, userID, doRiskManagement)
+	if rf, ok := ret.Get(0).(func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, bool) (int, int, []models.DependencyVuln, error)); ok {
+		return rf(asset, assetVersion, vulns, scannerID, userID, doRiskManagement)
 	}
-	if rf, ok := ret.Get(0).(func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, string, bool) int); ok {
-		r0 = rf(asset, assetVersion, vulns, scanner, scannerID, userID, doRiskManagement)
+	if rf, ok := ret.Get(0).(func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, bool) int); ok {
+		r0 = rf(asset, assetVersion, vulns, scannerID, userID, doRiskManagement)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
 
-	if rf, ok := ret.Get(1).(func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, string, bool) int); ok {
-		r1 = rf(asset, assetVersion, vulns, scanner, scannerID, userID, doRiskManagement)
+	if rf, ok := ret.Get(1).(func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, bool) int); ok {
+		r1 = rf(asset, assetVersion, vulns, scannerID, userID, doRiskManagement)
 	} else {
 		r1 = ret.Get(1).(int)
 	}
 
-	if rf, ok := ret.Get(2).(func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, string, bool) []models.DependencyVuln); ok {
-		r2 = rf(asset, assetVersion, vulns, scanner, scannerID, userID, doRiskManagement)
+	if rf, ok := ret.Get(2).(func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, bool) []models.DependencyVuln); ok {
+		r2 = rf(asset, assetVersion, vulns, scannerID, userID, doRiskManagement)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]models.DependencyVuln)
 		}
 	}
 
-	if rf, ok := ret.Get(3).(func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, string, bool) error); ok {
-		r3 = rf(asset, assetVersion, vulns, scanner, scannerID, userID, doRiskManagement)
+	if rf, ok := ret.Get(3).(func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, bool) error); ok {
+		r3 = rf(asset, assetVersion, vulns, scannerID, userID, doRiskManagement)
 	} else {
 		r3 = ret.Error(3)
 	}
@@ -318,17 +318,16 @@ type CoreAssetVersionService_HandleScanResult_Call struct {
 //   - asset models.Asset
 //   - assetVersion *models.AssetVersion
 //   - vulns []models.VulnInPackage
-//   - scanner string
 //   - scannerID string
 //   - userID string
 //   - doRiskManagement bool
-func (_e *CoreAssetVersionService_Expecter) HandleScanResult(asset interface{}, assetVersion interface{}, vulns interface{}, scanner interface{}, scannerID interface{}, userID interface{}, doRiskManagement interface{}) *CoreAssetVersionService_HandleScanResult_Call {
-	return &CoreAssetVersionService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", asset, assetVersion, vulns, scanner, scannerID, userID, doRiskManagement)}
+func (_e *CoreAssetVersionService_Expecter) HandleScanResult(asset interface{}, assetVersion interface{}, vulns interface{}, scannerID interface{}, userID interface{}, doRiskManagement interface{}) *CoreAssetVersionService_HandleScanResult_Call {
+	return &CoreAssetVersionService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", asset, assetVersion, vulns, scannerID, userID, doRiskManagement)}
 }
 
-func (_c *CoreAssetVersionService_HandleScanResult_Call) Run(run func(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, scannerID string, userID string, doRiskManagement bool)) *CoreAssetVersionService_HandleScanResult_Call {
+func (_c *CoreAssetVersionService_HandleScanResult_Call) Run(run func(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string, doRiskManagement bool)) *CoreAssetVersionService_HandleScanResult_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(models.Asset), args[1].(*models.AssetVersion), args[2].([]models.VulnInPackage), args[3].(string), args[4].(string), args[5].(string), args[6].(bool))
+		run(args[0].(models.Asset), args[1].(*models.AssetVersion), args[2].([]models.VulnInPackage), args[3].(string), args[4].(string), args[5].(bool))
 	})
 	return _c
 }
@@ -338,7 +337,7 @@ func (_c *CoreAssetVersionService_HandleScanResult_Call) Return(amountOpened int
 	return _c
 }
 
-func (_c *CoreAssetVersionService_HandleScanResult_Call) RunAndReturn(run func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, string, bool) (int, int, []models.DependencyVuln, error)) *CoreAssetVersionService_HandleScanResult_Call {
+func (_c *CoreAssetVersionService_HandleScanResult_Call) RunAndReturn(run func(models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string, bool) (int, int, []models.DependencyVuln, error)) *CoreAssetVersionService_HandleScanResult_Call {
 	_c.Call.Return(run)
 	return _c
 }

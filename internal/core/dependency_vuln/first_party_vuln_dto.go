@@ -9,7 +9,7 @@ import (
 
 type FirstPartyVulnDTO struct {
 	ID          string           `json:"id"`
-	ScannerID   string           `json:"scanner"`
+	ScannerIDs  string           `json:"scanner"`
 	Message     *string          `json:"message"`
 	AssetID     string           `json:"assetId"`
 	State       models.VulnState `json:"state"`
@@ -38,7 +38,7 @@ func FirstPartyVulnToDto(f models.FirstPartyVulnerability) FirstPartyVulnDTO {
 
 	return FirstPartyVulnDTO{
 		ID:          f.ID,
-		ScannerID:   f.ScannerIDs,
+		ScannerIDs:  f.ScannerIDs,
 		Message:     f.Message,
 		AssetID:     f.AssetID.String(),
 		State:       f.State,

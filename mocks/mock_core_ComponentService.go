@@ -21,9 +21,9 @@ func (_m *CoreComponentService) EXPECT() *CoreComponentService_Expecter {
 	return &CoreComponentService_Expecter{mock: &_m.Mock}
 }
 
-// GetAndSaveLicenseInformation provides a mock function with given fields: assetVersionName, assetID, scanner
-func (_m *CoreComponentService) GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scanner string) ([]models.Component, error) {
-	ret := _m.Called(assetVersionName, assetID, scanner)
+// GetAndSaveLicenseInformation provides a mock function with given fields: assetVersionName, assetID, scannerID
+func (_m *CoreComponentService) GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Component, error) {
+	ret := _m.Called(assetVersionName, assetID, scannerID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAndSaveLicenseInformation")
@@ -32,10 +32,10 @@ func (_m *CoreComponentService) GetAndSaveLicenseInformation(assetVersionName st
 	var r0 []models.Component
 	var r1 error
 	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) ([]models.Component, error)); ok {
-		return rf(assetVersionName, assetID, scanner)
+		return rf(assetVersionName, assetID, scannerID)
 	}
 	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) []models.Component); ok {
-		r0 = rf(assetVersionName, assetID, scanner)
+		r0 = rf(assetVersionName, assetID, scannerID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Component)
@@ -43,7 +43,7 @@ func (_m *CoreComponentService) GetAndSaveLicenseInformation(assetVersionName st
 	}
 
 	if rf, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
-		r1 = rf(assetVersionName, assetID, scanner)
+		r1 = rf(assetVersionName, assetID, scannerID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -59,12 +59,12 @@ type CoreComponentService_GetAndSaveLicenseInformation_Call struct {
 // GetAndSaveLicenseInformation is a helper method to define mock.On call
 //   - assetVersionName string
 //   - assetID uuid.UUID
-//   - scanner string
-func (_e *CoreComponentService_Expecter) GetAndSaveLicenseInformation(assetVersionName interface{}, assetID interface{}, scanner interface{}) *CoreComponentService_GetAndSaveLicenseInformation_Call {
-	return &CoreComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersionName, assetID, scanner)}
+//   - scannerID string
+func (_e *CoreComponentService_Expecter) GetAndSaveLicenseInformation(assetVersionName interface{}, assetID interface{}, scannerID interface{}) *CoreComponentService_GetAndSaveLicenseInformation_Call {
+	return &CoreComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersionName, assetID, scannerID)}
 }
 
-func (_c *CoreComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scanner string)) *CoreComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *CoreComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scannerID string)) *CoreComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
 	})

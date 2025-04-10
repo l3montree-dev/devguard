@@ -257,22 +257,24 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		for i := range foundByScannerAndExisting {
 			if !strings.Contains(foundByScannerAndExisting[i].ScannerIDs, scannerID) {
 				foundByScannerAndExisting[i].ScannerIDs = foundByScannerAndExisting[i].ScannerIDs + " " + scannerID
+				vulnerabilitiesToUpdate = append(vulnerabilitiesToUpdate, foundByScannerAndExisting[i])
 			}
 		}
-		err = s.dependencyVulnService.MakeAddedScannerEvent(tx, foundByScannerAndExisting, userID)
-		if err != nil {
-			slog.Error("error when trying to add events for adding scanner to vulnerability")
-			return err
-		}
-
 		err = s.dependencyVulnRepository.SaveBatch(tx, foundByScannerAndExisting)
 		if err != nil {
 			slog.Error("error when trying to update vulnerabilities")
 			return err
 		}
 
-		//Last we have to change the already existing vulnerabilities which were not found this time
+		err = s.dependencyVulnService.MakeAddedScannerEvent(tx, vulnerabilitiesToUpdate, userID)
+		if err != nil {
+			slog.Error("error when trying to add events for adding scanner to vulnerability")
+			return err
+		}
 
+		vulnerabilitiesToUpdate = nil
+
+		//Last we have to change the already existing vulnerabilities which were not found this time
 		for i := range notFoundByScannerAndExisting {
 			if notFoundByScannerAndExisting[i].ScannerIDs == scannerID {
 				notFoundByScannerAndExisting[i].ScannerIDs = ""
@@ -346,7 +348,7 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 
 func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
 	// load the asset components
-	scannerID = "Other-Scanner"
+
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, "")
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
