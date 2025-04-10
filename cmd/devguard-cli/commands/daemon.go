@@ -46,6 +46,8 @@ func newTriggerCommand() *cobra.Command {
 		},
 	}
 
+	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "componentProperties", "risk", "tickets", "statistics"}, "List of daemons to trigger")
+
 	return trigger
 }
 
