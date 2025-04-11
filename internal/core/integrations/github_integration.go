@@ -267,7 +267,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		switch action {
 		case "closed":
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewTicketClosedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This issue is closed by %s", event.Sender.GetLogin()))
+			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This CVE is marked as accepted by %s", event.Sender.GetLogin()))
 
 			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
@@ -276,7 +276,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 
 		case "reopened":
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewReopenedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This issue is reopened by %s", event.Sender.GetLogin()))
+			vulnEvent := models.NewReopenedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This CVE is reopened by %s", event.Sender.GetLogin()))
 
 			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
@@ -285,7 +285,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 
 		case "deleted":
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewTicketDeletedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This issue is deleted by %s", event.Sender.GetLogin()))
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This CVE is marked as a false positive due to deletion by %s", event.Sender.GetLogin()))
 
 			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
@@ -808,13 +808,13 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		Labels: &labels,
 	}
 
-	issue, _, err := client.EditIssue(ctx, owner, repo, ticketNumber, issueRequest)
+	_, _, err = client.EditIssue(ctx, owner, repo, ticketNumber, issueRequest)
 
 	if err != nil {
 		//check if err is 404 - if so, we can not reopen the issue
 		if err.Error() == "404 Not Found" {
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewTicketDeletedEvent(dependencyVuln.ID, "user", "This issue is deleted")
+			vulnEvent := models.NewFalsePositiveEvent(dependencyVuln.ID, "user", "This CVE is marked as a false positive due to deletion")
 			// save the event
 			err = g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
 			if err != nil {
@@ -823,28 +823,6 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 			return nil
 		}
 		return err
-	}
-
-	//check if the ticket state in devguard is different from the ticket state in github, if so we need to update the ticket state in devguard
-	ticketState := issue.State
-	devguardTicketState := dependencyVuln.TicketState
-	if *ticketState == "closed" && devguardTicketState == models.TicketStateOpen {
-		// create a new event
-		vulnEvent := models.NewTicketClosedEvent(dependencyVuln.ID, "user", "This issue is closed")
-
-		// save the event
-		err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
-		if err != nil {
-			slog.Error("could not save dependencyVuln and event", "err", err)
-		}
-	} else if *ticketState == "open" && devguardTicketState == models.TicketStateClosed {
-		// create a new event
-		vulnEvent := models.NewReopenedEvent(dependencyVuln.ID, "user", "This issue is reopened")
-		// save the event
-		err := g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
-		if err != nil {
-			slog.Error("could not save dependencyVuln and event", "err", err)
-		}
 	}
 
 	return nil
@@ -939,7 +917,6 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	// save the issue id to the dependencyVuln
 	dependencyVuln.TicketID = utils.Ptr(fmt.Sprintf("github:%d/%d", createdIssue.GetID(), createdIssue.GetNumber()))
 	dependencyVuln.TicketURL = utils.Ptr(createdIssue.GetHTMLURL())
-	dependencyVuln.TicketState = models.TicketStateOpen
 	dependencyVuln.ManualTicketCreation = manualTicketCreation
 
 	// create an event

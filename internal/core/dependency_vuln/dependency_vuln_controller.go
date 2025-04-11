@@ -311,7 +311,6 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 			TicketID:              dependencyVuln.TicketID,
 			TicketURL:             dependencyVuln.TicketURL,
 			ManualTicketCreation:  dependencyVuln.ManualTicketCreation,
-			TicketState:           dependencyVuln.TicketState,
 			RiskRecalculatedAt:    dependencyVuln.RiskRecalculatedAt,
 		},
 		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {
