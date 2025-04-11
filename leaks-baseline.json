@@ -478,5 +478,25 @@
         "Tags": [],
         "RuleID": "generic-api-key",
         "Fingerprint": "e57fad0e2a90bdcf2e0bb15905ea66420c71fd51:internal/core/pat/pat_service_test.go:generic-api-key:146"
+    },
+    {
+        "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+        "StartLine": 339,
+        "EndLine": 339,
+        "StartColumn": 2,
+        "EndColumn": 75,
+        "Match": "--token=\"7277abc9c260ec6ac0080f203e1ecae6e913f4e53cb643b40a165e267d84a16b\"",
+        "Secret": "7277abc9c260ec6ac0080f203e1ecae6e913f4e53cb643b40a165e267d84a16b",
+        "File": "README.md",
+        "SymlinkFile": "",
+        "Commit": "8bfa07397b5e48ea53effd22a1ea2d44b53d0820",
+        "Entropy": 3.84481,
+        "Author": "Rafi",
+        "Email": "refaei.shikho@hotmail.com",
+        "Date": "2025-04-11T12:08:21Z",
+        "Message": "fix ticket state\n\nSigned-off-by: Rafi \u003crefaei.shikho@hotmail.com\u003e",
+        "Tags": [],
+        "RuleID": "generic-api-key",
+        "Fingerprint": "8bfa07397b5e48ea53effd22a1ea2d44b53d0820:README.md:generic-api-key:339"
     }
 ]
