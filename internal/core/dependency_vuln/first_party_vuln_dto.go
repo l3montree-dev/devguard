@@ -9,7 +9,7 @@ import (
 
 type FirstPartyVulnDTO struct {
 	ID                   string           `json:"id"`
-	ScannerIDs           string           `json:"scanner"`
+	ScannerIDs           string           `json:"scannerIds"`
 	Message              *string          `json:"message"`
 	AssetID              string           `json:"assetId"`
 	State                models.VulnState `json:"state"`

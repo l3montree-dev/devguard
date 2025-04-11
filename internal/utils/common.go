@@ -124,11 +124,14 @@ func PrintBuildInformation() {
 }
 
 func AddToWhitespaceSeparatedStringList(s string, item string) string {
+	itemEls := strings.Fields(item)
 	// parse all scanner ids
 	els := strings.Fields(s)
 	// check if the scanner id is already in the list
-	if !slices.Contains(els, item) {
-		els = append(els, item)
+	for _, itemEl := range itemEls {
+		if !slices.Contains(els, itemEl) {
+			els = append(els, itemEl)
+		}
 	}
 
 	return strings.Join(els, " ")

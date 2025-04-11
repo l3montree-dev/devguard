@@ -24,7 +24,7 @@ import (
 
 type DependencyVulnDTO struct {
 	ID                    string           `json:"id"`
-	ScannerIDs            string           `json:"scanner"`
+	ScannerIDs            string           `json:"scannerIds"`
 	Message               *string          `json:"message"`
 	AssetVersionName      string           `json:"assetVersionId"`
 	AssetID               string           `json:"assetId"`
