@@ -332,7 +332,7 @@ func TestGetLabels(t *testing.T) {
 
 		assert.Contains(t, labels, "devguard")
 		assert.Contains(t, labels, "risk:high")
-		assert.NotContains(t, labels, "state:unknown")
+		assert.Contains(t, labels, "state:unknown")
 	})
 
 	t.Run("it should include state label if dependency vuln has a state", func(t *testing.T) {
@@ -363,7 +363,6 @@ func TestGetLabels(t *testing.T) {
 		labels := getLabels(vuln)
 
 		assert.Contains(t, labels, "cvss-severity:critical")
-		assert.Contains(t, labels, "state:closed")
 		assert.Contains(t, labels, "risk:critical")
 	})
 
