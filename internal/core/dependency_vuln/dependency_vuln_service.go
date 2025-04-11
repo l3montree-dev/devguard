@@ -146,6 +146,48 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 
 }
 
+func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error {
+	if len(vulnerabilities) == 0 {
+		return nil
+	}
+
+	// create a new VulnEvent for each fixed dependencyVuln
+	events := make([]models.VulnEvent, len(vulnerabilities))
+
+	for i := range vulnerabilities {
+		ev := models.NewAddedScannerEvent(vulnerabilities[i].CalculateHash(), userID, scannerID)
+		ev.Apply(&vulnerabilities[i])
+		events[i] = ev
+	}
+
+	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
+	if err != nil {
+		return err
+	}
+
+	return s.vulnEventRepository.SaveBatch(tx, events)
+
+}
+
+func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error {
+	if len(vulnerabilities) == 0 {
+		return nil
+	}
+
+	events := make([]models.VulnEvent, len(vulnerabilities))
+	for i := range vulnerabilities {
+		ev := models.NewRemovedScannerEvent(vulnerabilities[i].CalculateHash(), userID, scannerID)
+		ev.Apply(&vulnerabilities[i])
+		events[i] = ev
+	}
+	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
+	if err != nil {
+		return err
+	}
+	// save the events
+	return s.vulnEventRepository.SaveBatch(tx, events)
+}
+
 func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil

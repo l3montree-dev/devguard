@@ -74,15 +74,15 @@ func UpdateComponentProperties(db core.DB) error {
 			// group by scanner id
 			groups := make(map[string]map[string][]models.DependencyVuln)
 			for _, f := range dependencyVulns {
-				if _, ok := groups[f.ScannerID]; !ok {
-					groups[f.ScannerID] = make(map[string][]models.DependencyVuln)
+				if _, ok := groups[f.ScannerIDs]; !ok {
+					groups[f.ScannerIDs] = make(map[string][]models.DependencyVuln)
 				}
 
-				if _, ok := groups[f.ScannerID][f.AssetVersionName]; !ok {
-					groups[f.ScannerID][f.AssetVersionName] = make([]models.DependencyVuln, 0)
+				if _, ok := groups[f.ScannerIDs][f.AssetVersionName]; !ok {
+					groups[f.ScannerIDs][f.AssetVersionName] = make([]models.DependencyVuln, 0)
 				}
 
-				groups[f.ScannerID][f.AssetVersionName] = append(groups[f.ScannerID][f.AssetVersionName], f)
+				groups[f.ScannerIDs][f.AssetVersionName] = append(groups[f.ScannerIDs][f.AssetVersionName], f)
 			}
 
 			// group the dependencyVulns by scanner id

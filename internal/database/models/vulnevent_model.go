@@ -25,6 +25,9 @@ const (
 	EventTypeRawRiskAssessmentUpdated VulnEventType = "rawRiskAssessmentUpdated"
 
 	EventTypeComment VulnEventType = "comment"
+
+	EventTypeAddedScanner   VulnEventType = "addedScanner"
+	EventTypeRemovedScanner VulnEventType = "removedScanner"
 )
 
 type VulnEvent struct {
@@ -76,6 +79,20 @@ func (m VulnEvent) TableName() string {
 
 func (e VulnEvent) Apply(vuln Vuln) {
 	switch e.Type {
+	case EventTypeAddedScanner:
+		scannerID, ok := (e.GetArbitraryJsonData()["scannerId"]).(string)
+		if !ok {
+			slog.Error("could not parse scanner id", "dependencyVulnId", e.VulnID)
+			return
+		}
+		vuln.AddScannerID(scannerID)
+	case EventTypeRemovedScanner:
+		scannerID, ok := (e.GetArbitraryJsonData()["scannerId"]).(string)
+		if !ok {
+			slog.Error("could not parse scanner id", "dependencyVulnId", e.VulnID)
+			return
+		}
+		vuln.RemoveScannerID(scannerID)
 	case EventTypeFixed:
 		vuln.SetState(VulnStateFixed)
 	case EventTypeReopened:
@@ -208,6 +225,28 @@ func NewRawRiskAssessmentUpdatedEvent(vulnID string, userID string, justificatio
 	return event
 }
 
+func NewAddedScannerEvent(vulnID string, userID string, scannerID string) VulnEvent {
+	ev := VulnEvent{
+		Type:   EventTypeAddedScanner,
+		VulnID: vulnID,
+		UserID: userID,
+	}
+
+	ev.SetArbitraryJsonData(map[string]any{"scannerId": scannerID})
+	return ev
+}
+
+func NewRemovedScannerEvent(vulnID string, userID string, scannerID string) VulnEvent {
+	ev := VulnEvent{
+		Type:   EventTypeRemovedScanner,
+		VulnID: vulnID,
+		UserID: userID,
+	}
+
+	ev.SetArbitraryJsonData(map[string]any{"scannerId": scannerID})
+	return ev
+}
+
 func CheckStatusType(statusType string) error {
 	switch statusType {
 	case "fixed":
@@ -225,6 +264,10 @@ func CheckStatusType(statusType string) error {
 	case "falsePositive":
 		return nil
 	case "markedForTransfer":
+		return nil
+	case "addedScanner":
+		return nil
+	case "removedScanner":
 		return nil
 	default:
 		return fmt.Errorf("invalid status type")

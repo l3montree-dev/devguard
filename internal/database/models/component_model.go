@@ -84,7 +84,7 @@ type ComponentDependency struct {
 	AssetVersionName string       `json:"assetVersionName"`
 	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetID,AssetVersionName;references:AssetID,Name;constraint:OnDelete:CASCADE;"`
 
-	ScannerID string `json:"scannerId" gorm:"column:scanner_id"` // the id of the scanner
+	ScannerIDs string `json:"scannerId" gorm:"column:scanner_ids"` // the ids of scanner which found this component separated by white spaces
 
 	Depth int `json:"depth" gorm:"column:depth"`
 }

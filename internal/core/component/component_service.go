@@ -149,8 +149,8 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	return component, nil
 }
 
-func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scanner string) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersionName, assetID, scanner)
+func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Component, error) {
+	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersionName, assetID, scannerID)
 	if err != nil {
 		return nil, err
 	}
