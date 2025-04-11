@@ -82,11 +82,8 @@ var _ core.ThirdPartyIntegration = &gitlabIntegration{}
 
 func messageWasCreatedByDevguard(message string) bool {
 
-	if strings.Contains(message, "<devguard>") {
-		return true
-	}
+	return strings.Contains(message, "<devguard>")
 
-	return false
 }
 
 func NewGitLabIntegration(db core.DB) *gitlabIntegration {
