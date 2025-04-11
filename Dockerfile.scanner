@@ -10,6 +10,8 @@ ENV OS=Linux
 ENV ARCH=x86_64
 
 
+ENV SEMGREP_VERSION=v8.24.2
+
 
 RUN curl -sL "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_${OS}_${ARCH}.tar.gz" > go-containerregistry.tar.gz && \
     tar -zxvf go-containerregistry.tar.gz -C /usr/local/bin/ crane
@@ -19,16 +21,20 @@ RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/
 
 RUN curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64" && mv cosign-linux-amd64 /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
 
-RUN curl -sL "https://github.com/semgrep/semgrep/archive/refs/tags/v1.117.0.tar.gz" > semgrep.tar.gz && \
-    tar -zxvf semgrep.tar.gz -C /usr/local/bin/ semgrep
+RUN curl -O -L "https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_arm64.tar.gz" && \
+    tar -zxvf gitleaks_8.24.2_linux_arm64.tar.gz -C /usr/local/bin/ gitleaks   
 
+
+RUN curl -sL "https://github.com/semgrep/semgrep/archive/refs/tags/v1.117.0.tar.gz" > semgrep.tar.gz && \
+    tar -zxvf semgrep.tar.gz && \
+    mv semgrep-1.117.0 /usr/local/bin/semgrep
 COPY . .
 
 # build the scanner
 RUN CGO_ENABLED=0 make devguard-scanner
 # ----------------------
 # create final image with node:alpine
-FROM zricethezav/gitleaks:v8.24.2@sha256:b5918eb91b8d2473cec722f066abb4352e4ffdc4ec9f4283ec143aba9ec9ebc4
+FROM alpine:3.20.2@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5
 
 RUN apk add --no-cache git
 
@@ -37,5 +43,6 @@ COPY --from=golang-builder /usr/local/bin/trivy /usr/local/bin/trivy
 COPY --from=golang-builder /usr/local/bin/cosign /usr/local/bin/cosign
 COPY --from=golang-builder /usr/local/bin/crane /usr/local/bin/crane
 COPY --from=golang-builder /usr/local/bin/semgrep /usr/local/bin/semgrep
+COPY --from=golang-builder /usr/local/bin/gitleaks /usr/local/bin/gitleaks
 
 ENTRYPOINT [""]
