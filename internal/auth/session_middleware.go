@@ -19,13 +19,14 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
 )
 
 type verifier interface {
-	VerifyRequestSignature(req *http.Request) (string, error)
+	VerifyRequestSignature(req *http.Request) (string, string, error)
 }
 
 func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
@@ -58,10 +59,11 @@ func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.M
 			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())
 
 			var userID string
+			var scopes string
 			var err error
 
 			if oryKratosSessionCookie == nil {
-				userID, err = verifier.VerifyRequestSignature(ctx.Request())
+				userID, scopes, err = verifier.VerifyRequestSignature(ctx.Request())
 				if err != nil {
 					ctx.Set("session", NoSession)
 					return next(ctx)
@@ -75,9 +77,13 @@ func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.M
 					ctx.Set("session", NoSession)
 					return next(ctx)
 				}
+
+				scopes = "scan manage"
 			}
 
-			ctx.Set("session", NewSession(userID))
+			scopesArray := strings.Fields(scopes)
+
+			ctx.Set("session", NewSession(userID, scopesArray))
 
 			return next(ctx)
 		}

@@ -42,6 +42,7 @@ type DependencyVulnDTO struct {
 	CreatedAt             time.Time        `json:"createdAt"`
 	TicketID              *string          `json:"ticketId"`
 	TicketURL             *string          `json:"ticketUrl"`
+	ManualTicketCreation  bool             `json:"manualTicketCreation"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
@@ -73,6 +74,7 @@ func DependencyVulnToDto(f models.DependencyVuln) DependencyVulnDTO {
 		CreatedAt:             f.CreatedAt,
 		TicketID:              f.TicketID,
 		TicketURL:             f.TicketURL,
+		ManualTicketCreation:  f.ManualTicketCreation,
 		RiskRecalculatedAt:    f.RiskRecalculatedAt,
 	}
 }

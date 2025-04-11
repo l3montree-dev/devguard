@@ -33,14 +33,14 @@ func (r *eventRepository) ReadAssetEventsByVulnID(vulnID string) ([]models.VulnE
 		return nil, err
 	}
 
-	err = r.db.Table("vuln_events").Debug().
+	err = r.db.Table("vuln_events").
 		Select("vuln_events.*, dependency_vulns.asset_version_name, dependency_vulns.asset_id, asset_versions.slug").
 		Joins("LEFT JOIN dependency_vulns ON vuln_events.vuln_id = dependency_vulns.id").
 		Joins("LEFT JOIN asset_versions ON dependency_vulns.asset_id = asset_versions.asset_id AND dependency_vulns.asset_version_name = asset_versions.name").
 		Where("vuln_events.vuln_id IN (?)",
 			r.db.Table("dependency_vulns").
 				Select("id").
-				Where("asset_id = ? AND cve_id = ? AND component_purl = ?", t.AssetID, t.CVEID, t.ComponentPurl),
+				Where("asset_id = ? AND cve_id = ? AND component_purl = ? AND scanner_id = ?", t.AssetID, t.CVEID, t.ComponentPurl, t.ScannerID),
 		).
 		Order("vuln_events.created_at ASC").
 		Find(&events).Error

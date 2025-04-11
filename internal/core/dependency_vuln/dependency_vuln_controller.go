@@ -183,6 +183,17 @@ func (c dependencyVulnHttpController) ListPaged(ctx core.Context) error {
 }
 
 func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
+	type justification struct {
+		Comment string `json:"comment"`
+	}
+
+	var j justification
+
+	err := ctx.Bind(&j)
+	if err != nil {
+		slog.Error("could not bind justification", "err", err)
+	}
+
 	dependencyVulnId, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
@@ -191,7 +202,8 @@ func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
 	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
 
 	if err = thirdPartyIntegrations.HandleEvent(core.ManualMitigateEvent{
-		Ctx: ctx,
+		Ctx:           ctx,
+		Justification: j.Comment,
 	}); err != nil {
 		return echo.NewHTTPError(500, "could not mitigate dependencyVuln").WithInternal(err)
 	}
@@ -298,6 +310,7 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 			ScannerID:             dependencyVuln.ScannerID,
 			TicketID:              dependencyVuln.TicketID,
 			TicketURL:             dependencyVuln.TicketURL,
+			ManualTicketCreation:  dependencyVuln.ManualTicketCreation,
 			RiskRecalculatedAt:    dependencyVuln.RiskRecalculatedAt,
 		},
 		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {

@@ -11,6 +11,7 @@ import (
 
 type Vuln interface {
 	SetState(state VulnState)
+	GetState() VulnState
 	SetRawRiskAssessment(risk float64)
 	SetRiskRecalculatedAt(time.Time)
 	GetRawRiskAssessment() float64
