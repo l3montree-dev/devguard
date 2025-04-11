@@ -1,8 +1,6 @@
 package repositories
 
 import (
-	"fmt"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -27,7 +25,6 @@ func NewDependencyVulnRepository(db core.DB) *dependencyVulnRepository {
 }
 
 func (r *dependencyVulnRepository) ApplyAndSave(tx core.DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error {
-	fmt.Printf("Called 'ApplyAndSave' with vuln: %s", *dependencyVuln.CVEID)
 	if tx == nil {
 		// we are not part of a parent transaction - create a new one
 		return r.Transaction(func(d core.DB) error {

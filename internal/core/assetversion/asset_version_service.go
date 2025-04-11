@@ -183,7 +183,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          asset.ID,
-				ScannerIDs:       scannerID + " ",
+				ScannerIDs:       scannerID,
 			},
 			CVEID:                 utils.Ptr(v.CVEID),
 			ComponentPurl:         utils.Ptr(v.Purl),
@@ -209,7 +209,6 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
 
 	switch scannerID {
-
 	case devguardScanner + "sca":
 		assetVersion.LastScaScan = utils.Ptr(time.Now())
 	case devguardScanner + "container-scanning":
@@ -219,12 +218,43 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
+func diffScanResults(currentScanner string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln) {
+	comparison := utils.CompareSlices(existingDependencyVulns, foundVulnerabilities, func(dependencyVuln models.DependencyVuln) string {
+		return dependencyVuln.CalculateHash()
+	})
+
+	foundByScannerAndNotExisting := comparison.OnlyInB //We want to create new vulnerabilities for these
+	foundByScannerAndExisting := comparison.InBoth     //We have to check if it was already found by this scanner or only by other scanners
+	notFoundByScannerAndExisting := comparison.OnlyInA //We have to update all vulnerabilities which were previously found by this scanner and now aren't
+
+	var detectedByOtherScanner []models.DependencyVuln
+	var notDetectedByScannerAnymore []models.DependencyVuln
+
+	var fixedVulns []models.DependencyVuln //We should collect all vulnerabilities we want to fix so we can do it all at once
+
+	// Now we work on the vulnerabilities found in both sets -> has the vulnerability this scanner id already in his scanner_ids
+	for i := range foundByScannerAndExisting {
+		if !strings.Contains(foundByScannerAndExisting[i].ScannerIDs, currentScanner) {
+			detectedByOtherScanner = append(detectedByOtherScanner, foundByScannerAndExisting[i])
+		}
+	}
+
+	// Last we have to change the already existing vulnerabilities which were not found this time
+	for i := range notFoundByScannerAndExisting {
+		if strings.TrimSpace(notFoundByScannerAndExisting[i].ScannerIDs) == currentScanner {
+			fixedVulns = append(fixedVulns, notFoundByScannerAndExisting[i])
+		} else if strings.Contains(notFoundByScannerAndExisting[i].ScannerIDs, currentScanner) {
+			notDetectedByScannerAnymore = append(notDetectedByScannerAnymore, notFoundByScannerAndExisting[i])
+		}
+	}
+
+	return foundByScannerAndNotExisting, fixedVulns, detectedByOtherScanner, notDetectedByScannerAnymore
+}
+
 func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, doRiskManagement bool, asset models.Asset) (int, int, []models.DependencyVuln, error) {
 	// get all existing dependencyVulns from the database - this is the old state
-
 	//number := rand.IntN(len(dependencyVulns))
 	//dependencyVulns = dependencyVulns[:0]
-	scannerID = scannerID + " "
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
@@ -236,84 +266,36 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return dependencyVuln.State != models.VulnStateFixed
 	})
 
-	comparison := utils.CompareSlices(existingDependencyVulns, dependencyVulns, func(dependencyVuln models.DependencyVuln) string {
-		return dependencyVuln.CalculateHash()
-	})
+	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(scannerID, dependencyVulns, existingDependencyVulns)
+	amountFixed := len(utils.Filter(fixedVulns, func(dependencyVuln models.DependencyVuln) bool {
+		return dependencyVuln.State == models.VulnStateOpen
+	}))
 
-	foundByScannerAndNotExisting := comparison.OnlyInB //We want to create new vulnerabilities for these
-	foundByScannerAndExisting := comparison.InBoth     //We have to check if it was already found by this scanner or only by other scanners
-	notFoundByScannerAndExisting := comparison.OnlyInA //We have to update all vulnerabilities which were previously found by this scanner and now aren't
-
-	var vulnerabilitiesToFix []models.DependencyVuln    //We should collect all vulnerabilities we want to fix so we can do it all at once
-	var vulnerabilitiesToUpdate []models.DependencyVuln //We should do the same
-	// get a transaction
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, foundByScannerAndNotExisting, *assetVersion, asset, true); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, newDetectedVulns, *assetVersion, asset, true); err != nil {
 			return err // this will cancel the transaction
 		}
 
-		// Now we work on the vulnerabilities found in both sets -> has the vulnerability this scanner id already in his scanner_ids
-		for i := range foundByScannerAndExisting {
-			if !strings.Contains(foundByScannerAndExisting[i].ScannerIDs, scannerID) {
-				foundByScannerAndExisting[i].ScannerIDs = foundByScannerAndExisting[i].ScannerIDs + " " + scannerID
-				vulnerabilitiesToUpdate = append(vulnerabilitiesToUpdate, foundByScannerAndExisting[i])
-			}
-		}
-		err = s.dependencyVulnRepository.SaveBatch(tx, foundByScannerAndExisting)
-		if err != nil {
-			slog.Error("error when trying to update vulnerabilities")
-			return err
-		}
-
-		err = s.dependencyVulnService.MakeAddedScannerEvent(tx, vulnerabilitiesToUpdate, userID)
+		err = s.dependencyVulnService.UserDetectedDependencyVulnWithAnotherScanner(tx, firstTimeDetectedByCurrentScanner, userID, scannerID)
 		if err != nil {
 			slog.Error("error when trying to add events for adding scanner to vulnerability")
 			return err
 		}
 
-		vulnerabilitiesToUpdate = nil
-
-		//Last we have to change the already existing vulnerabilities which were not found this time
-		for i := range notFoundByScannerAndExisting {
-			if notFoundByScannerAndExisting[i].ScannerIDs == scannerID {
-				notFoundByScannerAndExisting[i].ScannerIDs = ""
-				vulnerabilitiesToFix = append(vulnerabilitiesToFix, notFoundByScannerAndExisting[i])
-			} else if strings.Contains(notFoundByScannerAndExisting[i].ScannerIDs, scannerID) {
-				removeScannerFromVulnerability(&notFoundByScannerAndExisting[i], scannerID)
-				vulnerabilitiesToUpdate = append(vulnerabilitiesToUpdate, notFoundByScannerAndExisting[i])
-			}
-		}
-
-		err = s.dependencyVulnRepository.SaveBatch(tx, vulnerabilitiesToUpdate)
-		if err != nil {
-			slog.Error("error when trying to update vulnerabilities")
-			return err
-		}
-
-		err := s.dependencyVulnService.MakeRemoveScannerEvent(tx, vulnerabilitiesToUpdate, userID)
+		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnWithScannerAnymore(tx, notDetectedByCurrentScannerAnymore, userID, scannerID)
 		if err != nil {
 			slog.Error("error when trying to add events for removing scanner from vulnerability")
 			return err
 		}
 
-		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, vulnerabilitiesToFix, *assetVersion, asset, true)
+		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, true)
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)
 		return 0, 0, []models.DependencyVuln{}, err
 	}
 
-	// the amount we actually fixed, is the amount that was open before
-	vulnerabilitiesToFix = utils.Filter(vulnerabilitiesToFix, func(dependencyVuln models.DependencyVuln) bool {
-		return dependencyVuln.State == models.VulnStateOpen
-	})
-	return len(foundByScannerAndNotExisting /* maybe also return vulns newly found by this scanner*/), len(vulnerabilitiesToFix), append(foundByScannerAndNotExisting, comparison.InBoth...), nil
-}
-
-// pass by reference to edit the actual vulnerability and not a copy
-func removeScannerFromVulnerability(vulnerability *models.DependencyVuln, scannerID string) {
-
-	vulnerability.ScannerIDs = strings.Replace(vulnerability.ScannerIDs, scannerID, "", 1)
+	return len(newDetectedVulns) + len(firstTimeDetectedByCurrentScanner), amountFixed, append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), nil
 }
 
 func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
@@ -348,7 +330,6 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 
 func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
 	// load the asset components
-
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, "")
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
@@ -385,7 +366,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  nil, // direct dependency - therefore set it to nil
-					ScannerIDs:     scannerID + " ",
+					ScannerIDs:     scannerID,
 					DependencyPurl: componentPackageUrl,
 				},
 			)
@@ -411,7 +392,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  utils.EmptyThenNil(compPackageUrl),
-					ScannerIDs:     scannerID + " ",
+					ScannerIDs:     scannerID,
 					DependencyPurl: depPurlOrName,
 				},
 			)

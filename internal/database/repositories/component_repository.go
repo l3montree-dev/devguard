@@ -201,14 +201,18 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 
 	return c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
 		//We remove the scanner id from all components in removed and if it was the only scanner id we remove the component
-		dependenciesToUpdate, err := removeScannerIDFromComponents(tx, c, removed, scannerID)
-		if err != nil {
-			return err
-		}
+		toDelete, toSave := diffComponents(tx, c, removed, scannerID)
 
 		//Now we want to update the database with the new scanner id values
-		if len(dependenciesToUpdate) > 0 {
-			err := c.db.Save(dependenciesToUpdate).Error
+		if len(toSave) > 0 {
+			err := c.db.Save(toSave).Error
+			if err != nil {
+				return err
+			}
+		}
+
+		if len(toDelete) > 0 {
+			err := c.db.Delete(toDelete).Error
 			if err != nil {
 				return err
 			}
@@ -217,7 +221,7 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 		//Next step is adding the scanner id to all existing component dependencies we just found
 		for i := range needToBeChanged {
 			if !strings.Contains(needToBeChanged[i].ScannerIDs, scannerID) {
-				needToBeChanged[i].ScannerIDs = needToBeChanged[i].ScannerIDs + scannerID + " "
+				needToBeChanged[i].ScannerIDs = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID)
 			}
 		}
 		//We also need to update these changes in the database
@@ -264,20 +268,18 @@ func (c *componentRepository) GetDependencyCountPerScanner(assetVersionName stri
 	return counts, nil
 }
 
-func removeScannerIDFromComponents(tx core.DB, c *componentRepository, components []models.ComponentDependency, scannerID string) ([]models.ComponentDependency, error) {
-	var componentDependeciesToChange []models.ComponentDependency
-	scannerID += " "
-	for i := range components {
+func diffComponents(tx core.DB, c *componentRepository, components []models.ComponentDependency, scannerID string) ([]models.ComponentDependency, []models.ComponentDependency) {
+	var componentsToDelete []models.ComponentDependency
+	var componentsToSave []models.ComponentDependency
 
-		if components[i].ScannerIDs == scannerID {
-			if err := c.GetDB(tx).Delete(&components[i]).Error; err != nil {
-				return componentDependeciesToChange, err
-			}
+	for i := range components {
+		if strings.TrimSpace(components[i].ScannerIDs) == scannerID {
+			componentsToDelete = append(componentsToDelete, components[i])
 		} else {
-			components[i].ScannerIDs = strings.Replace(components[i].ScannerIDs, scannerID, "", 1)
-			componentDependeciesToChange = append(componentDependeciesToChange, components[i])
+			components[i].ScannerIDs = utils.RemoveFromWhitespaceSeparatedStringList(components[i].ScannerIDs, scannerID)
+			componentsToSave = append(componentsToSave, components[i])
 		}
 	}
 
-	return componentDependeciesToChange, nil
+	return componentsToDelete, componentsToSave
 }

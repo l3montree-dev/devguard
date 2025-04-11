@@ -19,6 +19,8 @@ import (
 	"encoding/csv"
 	"log/slog"
 	"runtime/debug"
+	"slices"
+	"strings"
 )
 
 func Ptr[T any](t T) *T {
@@ -112,4 +114,29 @@ func PrintBuildInformation() {
 			}
 		}
 	}
+}
+
+func AddToWhitespaceSeparatedStringList(s string, item string) string {
+	// parse all scanner ids
+	els := strings.Fields(s)
+	// check if the scanner id is already in the list
+	if !slices.Contains(els, item) {
+		els = append(els, item)
+	}
+
+	return strings.Join(els, " ")
+}
+
+func RemoveFromWhitespaceSeparatedStringList(s string, item string) string {
+	// parse all scanner els
+	els := strings.Fields(s)
+
+	var res []string
+	for _, id := range els {
+		if id != item {
+			res = append(res, id)
+		}
+	}
+
+	return strings.Join(res, " ")
 }

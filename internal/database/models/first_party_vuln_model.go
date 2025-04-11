@@ -18,6 +18,8 @@ type Vuln interface {
 	GetAssetID() uuid.UUID
 	GetID() string
 	TableName() string
+	AddScannerID(scannerID string)
+	RemoveScannerID(scannerID string)
 }
 
 type FirstPartyVulnerability struct {

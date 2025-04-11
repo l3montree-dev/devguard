@@ -153,26 +153,46 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 
 }
 
-func (s *service) MakeAddedScannerEvent(tx core.DB, vulnerabilities []models.DependencyVuln, userID string) error {
+func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error {
+	if len(vulnerabilities) == 0 {
+		return nil
+	}
+
+	// create a new VulnEvent for each fixed dependencyVuln
 	events := make([]models.VulnEvent, len(vulnerabilities))
+
 	for i := range vulnerabilities {
-		ev := models.NewAddedScannerEvent(vulnerabilities[i].CalculateHash(), userID)
+		ev := models.NewAddedScannerEvent(vulnerabilities[i].CalculateHash(), userID, scannerID)
 		ev.Apply(&vulnerabilities[i])
 		events[i] = ev
 	}
+
+	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
+	if err != nil {
+		return err
+	}
+
 	return s.vulnEventRepository.SaveBatch(tx, events)
 
 }
 
-func (s *service) MakeRemoveScannerEvent(tx core.DB, vulnerabilities []models.DependencyVuln, userID string) error {
+func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error {
+	if len(vulnerabilities) == 0 {
+		return nil
+	}
+
 	events := make([]models.VulnEvent, len(vulnerabilities))
 	for i := range vulnerabilities {
-		ev := models.NewRemovedScannerEvent(vulnerabilities[i].CalculateHash(), userID)
+		ev := models.NewRemovedScannerEvent(vulnerabilities[i].CalculateHash(), userID, scannerID)
 		ev.Apply(&vulnerabilities[i])
 		events[i] = ev
 	}
+	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
+	if err != nil {
+		return err
+	}
+	// save the events
 	return s.vulnEventRepository.SaveBatch(tx, events)
-
 }
 
 func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
@@ -281,7 +301,6 @@ func (s *service) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userI
 
 func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string) (models.VulnEvent, error) {
 	var ev models.VulnEvent
-	fmt.Printf("Called 'ApplyAndSave' with vuln: %s", *dependencyVuln.CVEID)
 	switch models.VulnEventType(statusType) {
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), userID, justification)
@@ -292,7 +311,6 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	case models.EventTypeComment:
 		ev = models.NewCommentEvent(dependencyVuln.CalculateHash(), userID, justification)
 	}
-	//Found by toher scanner
 
 	err := s.dependencyVulnRepository.ApplyAndSave(tx, dependencyVuln, &ev)
 	return ev, err

@@ -226,7 +226,6 @@ func (c dependencyVulnHttpController) Read(ctx core.Context) error {
 }
 
 func (c dependencyVulnHttpController) CreateEvent(ctx core.Context) error {
-
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
