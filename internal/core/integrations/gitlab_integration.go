@@ -243,7 +243,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			}
 
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This CVE is marked as accepted by %s", event.User.Name))
+			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This CVE is marked as accepted by %s, due to closing of the github ticket.", event.User.Name))
 
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {

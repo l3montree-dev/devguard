@@ -270,7 +270,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		switch action {
 		case "closed":
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This CVE is marked as accepted by %s", event.Sender.GetLogin()))
+			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This CVE is marked as accepted by %s, due to closing of the github ticket.", event.Sender.GetLogin()))
 
 			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
@@ -288,7 +288,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 
 		case "deleted":
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This CVE is marked as a false positive due to deletion by %s", event.Sender.GetLogin()))
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This CVE is marked as a false positive by %s, due to the deletion of the github ticket.", event.Sender.GetLogin()))
 
 			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
