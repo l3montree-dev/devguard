@@ -218,7 +218,6 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVulnerab
 			CreatedAt:            firstPartyVuln.CreatedAt,
 			TicketID:             firstPartyVuln.TicketID,
 			TicketURL:            firstPartyVuln.TicketURL,
-			TicketState:          firstPartyVuln.TicketState,
 			ManualTicketCreation: firstPartyVuln.ManualTicketCreation,
 			Commit:               firstPartyVuln.Commit,
 			Email:                firstPartyVuln.Email,

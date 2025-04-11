@@ -17,6 +17,7 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 	"time"
 
@@ -89,17 +90,59 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 
 	// using postgresql CYCLE Keyword to detect possible loops
 	query := c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
-			SELECT component_purl,dependency_purl,asset_id,scanner_id,depth
-			FROM component_dependencies
-			WHERE dependency_purl = ? AND asset_id = ? AND asset_version_name = ? AND scanner_ids LIKE ?
-			UNION ALL
-			SELECT co.component_purl,co.dependency_purl,co.asset_id,co.scanner_id,co.depth
-			FROM component_dependencies AS co
-			INNER JOIN components_cte AS cte ON co.dependency_purl = cte.component_purl 
- 			WHERE co.asset_id = ? AND co.asset_version_name = ? AND co.scanner_ids LIKE ?
-		)
-		CYCLE component_purl SET is_cycle USING path
-		SELECT DISTINCT * FROM components_cte`, pURL, assetID, assetVersionName, "%"+scannerID+"%", assetID, assetVersionName, "%"+scannerID+"%")
+  SELECT
+    component_purl,
+    dependency_purl,
+    asset_id,
+    scanner_id,
+    0 AS depth,
+    ARRAY[dependency_purl] AS path
+  FROM component_dependencies
+  WHERE
+    component_purl IS NULL AND
+    asset_id = @assetID AND
+    asset_version_name = @assetVersionName AND
+    scanner_id LIKE @scannerID
+
+  UNION ALL
+
+  SELECT
+    co.component_purl,
+    co.dependency_purl,
+    co.asset_id,
+    co.scanner_id,
+    cte.depth + 1,
+    cte.path || co.dependency_purl
+  FROM component_dependencies AS co
+  INNER JOIN components_cte AS cte
+    ON co.component_purl = cte.dependency_purl
+  WHERE
+    co.asset_id = @assetID AND
+    co.asset_version_name = @assetVersionName AND
+    co.scanner_id LIKE @scannerID AND
+    NOT co.dependency_purl = ANY(cte.path)
+),
+target_path AS (
+  SELECT * FROM components_cte
+  WHERE dependency_purl = @pURL
+  ORDER BY depth ASC
+  LIMIT 1
+),
+path_edges AS (
+  SELECT
+    DISTINCT
+    component_purl,
+    dependency_purl,
+    asset_id,
+    scanner_id,
+    depth
+  FROM components_cte
+  WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
+)
+SELECT * FROM path_edges
+ORDER BY depth;
+`, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
+		sql.Named("assetVersionName", assetVersionName), sql.Named("scannerID", "%"+scannerID+"%"))
 
 	//Map the query results to the component model
 	err = query.Find(&components).Error
