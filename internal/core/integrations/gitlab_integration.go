@@ -1234,7 +1234,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	// create a comment with the justification
 	_, _, err = client.CreateIssueComment(ctx, projectId, createdIssue.IID, &gitlab.CreateIssueNoteOptions{
-		Body: gitlab.Ptr(fmt.Sprintf("%s---%s\n", "### This issue is created by DevGuard", justification)),
+		Body: gitlab.Ptr(fmt.Sprintf("#### %s\n----\n%s", "This issue is created by DevGuard", justification)),
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)

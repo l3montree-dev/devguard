@@ -89,7 +89,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 
 	// using postgresql CYCLE Keyword to detect possible loops
 	query := c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
-  SELECT 
+  SELECT
     component_purl,
     dependency_purl,
     asset_id,
@@ -97,7 +97,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
     0 AS depth,
     ARRAY[dependency_purl] AS path
   FROM component_dependencies
-  WHERE 
+  WHERE
     component_purl IS NULL AND
     asset_id = @assetID AND
     asset_version_name = @assetVersionName AND
@@ -105,27 +105,43 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 
   UNION ALL
 
-  SELECT 
-    co.*
+  SELECT
+    co.component_purl,
+    co.dependency_purl,
+    co.asset_id,
+    co.scanner_id,
     cte.depth + 1,
-    path || co.dependency_purl
+    cte.path || co.dependency_purl
   FROM component_dependencies AS co
   INNER JOIN components_cte AS cte
     ON co.component_purl = cte.dependency_purl
-  WHERE 
+  WHERE
     co.asset_id = @assetID AND
     co.asset_version_name = @assetVersionName AND
     co.scanner_id = @scannerID AND
-    NOT co.dependency_purl = ANY(cte.path)  -- prevent cycles
+    NOT co.dependency_purl = ANY(cte.path)
 ),
 target_path AS (
   SELECT * FROM components_cte
   WHERE dependency_purl = @pURL
   ORDER BY depth ASC
   LIMIT 1
+),
+path_edges AS (
+  SELECT
+    DISTINCT
+    component_purl,
+    dependency_purl,
+    asset_id,
+    scanner_id,
+    depth
+  FROM components_cte
+  WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
 )
-SELECT * FROM target_path;`, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
-		sql.Named("assetVersionName", assetVersionName))
+SELECT * FROM path_edges
+ORDER BY depth;
+`, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
+		sql.Named("assetVersionName", assetVersionName), sql.Named("scannerID", scannerID))
 
 	//Map the query results to the component model
 	err = query.Find(&components).Error
