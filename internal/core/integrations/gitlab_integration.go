@@ -81,22 +81,9 @@ type gitlabIntegration struct {
 var _ core.ThirdPartyIntegration = &gitlabIntegration{}
 
 func messageWasCreatedByDevguard(message string) bool {
-	var messages = map[string]string{
-		"accept":         "accepted the vulnerability",
-		"false-positive": "marked the vulnerability as false positive",
-		"reopen":         "reopened the vulnerability",
-		"comment":        "commented on the vulnerability",
-	}
 
-	if !strings.Contains(message, "----") {
-		return false
-	}
-
-	// check if one of the messages is in the comment
-	for _, m := range messages {
-		if strings.Contains(message, m) {
-			return true
-		}
+	if strings.Contains(message, "<devguard>") {
+		return true
 	}
 
 	return false
@@ -251,6 +238,9 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 		switch action {
 		case "close":
+			if vuln.GetState() == models.VulnStateAccepted {
+				return nil
+			}
 
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
 			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This CVE is marked as accepted by %s", event.User.Name))
@@ -260,6 +250,9 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
 		case "reopen":
+			if vuln.GetState() == models.VulnStateOpen {
+				return nil
+			}
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
 			vulnEvent := models.NewReopenedEvent(vuln.GetID(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This CVE was reopened by %s", event.User.Name))
 
@@ -870,7 +863,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 		case models.EventTypeAccepted:
 			// if a dependencyVuln gets accepted, we close the issue and create a comment with that justification
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("### %s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("##### <devguard> %s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -878,7 +871,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return g.CloseIssue(event.Ctx.Request().Context(), "accepted", repoId, dependencyVuln)
 		case models.EventTypeFalsePositive:
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("### %s\n----\n%s", member.Name+" marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("##### <devguard> %s\n----\n%s", member.Name+" marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -886,7 +879,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return g.CloseIssue(event.Ctx.Request().Context(), "false-positive", repoId, dependencyVuln)
 		case models.EventTypeReopened:
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("### %s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("##### <devguard> %s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			if err != nil {
 				return err
@@ -895,7 +888,7 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return g.ReopenIssue(event.Ctx.Request().Context(), repoId, dependencyVuln)
 		case models.EventTypeComment:
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("### %s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
+				Body: github.String(fmt.Sprintf("##### <devguard> %s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
 			})
 			return err
 		}
@@ -1222,7 +1215,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	}
 
 	issue := &gitlab.CreateIssueOptions{
-		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
+		Title:       gitlab.Ptr(fmt.Sprintf("<devguard>%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
 		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	}
@@ -1234,7 +1227,7 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	// create a comment with the justification
 	_, _, err = client.CreateIssueComment(ctx, projectId, createdIssue.IID, &gitlab.CreateIssueNoteOptions{
-		Body: gitlab.Ptr(fmt.Sprintf("#### %s\n----\n%s", "This issue is created by DevGuard", justification)),
+		Body: gitlab.Ptr(fmt.Sprintf("##### <devguard> %s\n", justification)),
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)

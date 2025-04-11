@@ -226,6 +226,9 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 
 	switch event := event.(type) {
 	case *github.IssuesEvent:
+		if event.Sender.GetType() == "Bot" {
+			return nil
+		}
 		// check if the issue is a devguard issue
 		issueNumber := event.Issue.GetNumber()
 		issueID := event.Issue.GetID()
@@ -908,7 +911,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	// create comment with the justification
 
 	_, _, err = client.CreateIssueComment(ctx, owner, repo, createdIssue.GetNumber(), &github.IssueComment{
-		Body: github.String(fmt.Sprintf("#### %s\n----\n%s", "This issue is created by DevGuard", justification)),
+		Body: github.String(fmt.Sprintf("##### %s", justification)),
 	})
 	if err != nil {
 		slog.Error("could not create issue comment", "err", err)
@@ -921,9 +924,8 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	// create an event
 	vulnEvent := models.NewMitigateEvent(dependencyVuln.ID, "system", justification, map[string]any{
-		"ticketId":    *dependencyVuln.TicketID,
-		"ticketUrl":   createdIssue.GetHTMLURL(),
-		"ticketState": "open",
+		"ticketId":  *dependencyVuln.TicketID,
+		"ticketUrl": createdIssue.GetHTMLURL(),
 	})
 	// save the dependencyVuln and the event in a transaction
 	err = g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
