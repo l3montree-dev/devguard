@@ -14,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+
 	"github.com/l3montree-dev/devguard/internal/database/models"
 
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -155,7 +156,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
 
-func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string, doRiskManagement bool) (amountOpened int, amountClose int, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string, doRiskManagement bool) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
@@ -163,16 +164,14 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	// load all asset components again and build a dependency tree
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
-		return 0, 0, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
 	// build a dependency tree
 	tree := BuildDependencyTree(assetComponents)
 	// calculate the depth of each component
 	depthMap := make(map[string]int)
 
-	// our dependency tree has a "fake" root node.
-	//  the first - 0 - element is just the name of the application
-	// therefore we start at -1 to get the correct depth. The fake node will be 0, the first real node will be 1
+	// first node will be the package name itself
 	CalculateDepth(tree.Root, -1, depthMap)
 
 	// now we have the depth.
@@ -201,9 +200,9 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	amountOpened, amountClosed, amountExisting, err := s.handleScanResult(userID, scannerID, assetVersion, dependencyVulns, doRiskManagement, asset)
+	opened, closed, newState, err = s.handleScanResult(userID, scannerID, assetVersion, dependencyVulns, doRiskManagement, asset)
 	if err != nil {
-		return 0, 0, []models.DependencyVuln{}, err
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
@@ -215,7 +214,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 		assetVersion.LastContainerScan = utils.Ptr(time.Now())
 	}
 
-	return amountOpened, amountClosed, amountExisting, nil
+	return opened, closed, newState, nil
 }
 
 func diffScanResults(currentScanner string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln) {
@@ -251,14 +250,14 @@ func diffScanResults(currentScanner string, foundVulnerabilities []models.Depend
 	return foundByScannerAndNotExisting, fixedVulns, detectedByOtherScanner, notDetectedByScannerAnymore
 }
 
-func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, doRiskManagement bool, asset models.Asset) (int, int, []models.DependencyVuln, error) {
+func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, doRiskManagement bool, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	// get all existing dependencyVulns from the database - this is the old state
 	//number := rand.IntN(len(dependencyVulns))
 	//dependencyVulns = dependencyVulns[:0]
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
-		return 0, 0, []models.DependencyVuln{}, err
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
 	// remove all fixed dependencyVulns from the existing dependencyVulns
@@ -267,9 +266,6 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 	})
 
 	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(scannerID, dependencyVulns, existingDependencyVulns)
-	amountFixed := len(utils.Filter(fixedVulns, func(dependencyVuln models.DependencyVuln) bool {
-		return dependencyVuln.State == models.VulnStateOpen
-	}))
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 		// We can create the newly found one without checking anything
@@ -292,10 +288,10 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, true)
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)
-		return 0, 0, []models.DependencyVuln{}, err
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	return len(newDetectedVulns) + len(firstTimeDetectedByCurrentScanner), amountFixed, append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), nil
+	return append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), fixedVulns, append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), nil
 }
 
 func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {

@@ -18,6 +18,7 @@ package utils
 import (
 	"encoding/csv"
 	"log/slog"
+	"math"
 	"runtime/debug"
 	"slices"
 	"strings"
@@ -27,6 +28,12 @@ func Ptr[T any](t T) *T {
 	return &t
 }
 
+func RemovePrefixInsensitive(input string, prefix string) string {
+	if strings.HasPrefix(strings.ToLower(input), strings.ToLower(prefix)) {
+		return input[len(prefix):]
+	}
+	return input
+}
 func SafeDereference(s *string) string {
 	if s == nil {
 		return ""
@@ -139,4 +146,12 @@ func RemoveFromWhitespaceSeparatedStringList(s string, item string) string {
 	}
 
 	return strings.Join(res, " ")
+}
+
+func CompareFirstTwoDecimals(a, b float64) bool {
+
+	aRounded := math.Round(a*100) / 100
+	bRounded := math.Round(b*100) / 100
+
+	return aRounded == bRounded
 }

@@ -18,31 +18,31 @@ packages:
     config:
       recursive: true
       all: true
-      filename: "mock_{{.PackageName}}_{{.InterfaceName}}.go"
-      mockName: "{{.PackageName | firstUpper}}{{.InterfaceName | firstUpper}}"
+      filename: "mock_{{.InterfaceName}}.go"
+      mockName: "{{.InterfaceName | firstUpper}}"
       outpkg: "mocks"
       dir: "mocks"
   github.com/l3montree-dev/devguard/internal/accesscontrol:
     config:
       recursive: true
       all: true
-      filename: "mock_{{.PackageName}}_{{.InterfaceName}}.go"
-      mockName: "{{.PackageName | firstUpper}}{{.InterfaceName | firstUpper}}"
+      filename: "mock_{{.InterfaceName}}.go"
+      mockName: "{{.InterfaceName | firstUpper}}"
       outpkg: "mocks"
       dir: "mocks"
   github.com/l3montree-dev/devguard/cmd/devguard/api:
     config:
       recursive: true
       all: true
-      filename: "mock_{{.PackageName}}_{{.InterfaceName}}.go"
-      mockName: "{{.PackageName | firstUpper}}{{.InterfaceName | firstUpper}}"
+      filename: "mock_{{.InterfaceName}}.go"
+      mockName: "{{.InterfaceName | firstUpper}}"
       outpkg: "mocks"
       dir: "mocks"
   github.com/l3montree-dev/devguard/internal/utils:
     config:
       recursive: true
       all: true
-      filename: "mock_{{.PackageName}}_{{.InterfaceName}}.go"
-      mockName: "{{.PackageName | firstUpper}}{{.InterfaceName | firstUpper}}"
+      filename: "mock_{{.InterfaceName}}.go"
+      mockName: "{{.InterfaceName | firstUpper}}"
       outpkg: "mocks"
       dir: "mocks"

@@ -60,6 +60,11 @@ func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int)
 }
 
 func RiskCalculation(cve models.CVE, env core.Environmental) (common.RiskMetrics, string) {
+	if cve.Vector == "" {
+		slog.Warn("No CVSS vector found", "cve", cve.CVE)
+		return common.RiskMetrics{}, ""
+	}
+
 	risk := common.RiskMetrics{
 		BaseScore: float64(cve.CVSS),
 	}
@@ -206,7 +211,7 @@ func RiskCalculation(cve models.CVE, env core.Environmental) (common.RiskMetrics
 		// if all affected components have a fixed version, we set it to official fix
 		cvss, err := gocvss20.ParseVector(vector)
 		if err != nil {
-			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err)
+			slog.Warn("Error parsing CVSS vector", "vector", vector, "error", err, "cve", cve.CVE)
 			return common.RiskMetrics{}, vector
 		}
 		// cvss.Set("RL", "ND") // nolint:errcheck

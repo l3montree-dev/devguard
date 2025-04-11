@@ -37,7 +37,7 @@ type DependencyVuln struct {
 
 	LastDetected time.Time `json:"lastDetected" gorm:"default:now();not null;"`
 
-	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt" gorm:"default:now();"`
+	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt" `
 }
 
 var _ Vuln = &DependencyVuln{}

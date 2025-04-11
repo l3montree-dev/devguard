@@ -262,7 +262,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 			clickableLink := ""
 			if doRiskManagement {
 				//TODO: change flaws
-				clickableLink = fmt.Sprintf("%s/%s/flaws/%s", webUI, assetName, v.ID)
+				clickableLink = fmt.Sprintf("%s/%s/refs/%s/flaws/%s", webUI, assetName, v.AssetVersionName, v.ID)
 			} else {
 				clickableLink = "Risk Management is disabled"
 			}

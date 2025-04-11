@@ -107,11 +107,12 @@ func UpdateComponentProperties(db core.DB) error {
 
 						if dependencyVuln.ComponentFixedVersion == nil {
 							fixedVersion, err := getFixedVersion(purlComparer, dependencyVuln)
-							slog.Info("got fixed version", "fixedVersion", fixedVersion)
+
 							if err != nil {
 								slog.Warn("could not get fixed version", "err", err)
 							}
 							if fixedVersion != nil {
+								slog.Info("got fixed version", "fixedVersion", fixedVersion)
 								dependencyVuln.ComponentFixedVersion = fixedVersion
 								doUpdate = true
 							}
