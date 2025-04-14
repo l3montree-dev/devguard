@@ -233,6 +233,7 @@ type VulnEventRepository interface {
 	SaveBatch(db DB, events []models.VulnEvent) error
 	Save(db DB, event *models.VulnEvent) error
 	ReadAssetEventsByVulnID(vulnID string) ([]models.VulnEventDetail, error)
+	ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
 }
 
 type GithubAppInstallationRepository interface {

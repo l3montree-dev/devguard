@@ -94,10 +94,22 @@ func (e VulnEvent) Apply(vuln Vuln) {
 		}
 		vuln.RemoveScannerID(scannerID)
 	case EventTypeFixed:
+		scannerID, ok := (e.GetArbitraryJsonData()["scannerId"]).(string)
+		if !ok {
+			slog.Error("could not parse scanner id", "dependencyVulnId", e.VulnID)
+			return
+		}
+		vuln.AddScannerID(scannerID)
 		vuln.SetState(VulnStateFixed)
 	case EventTypeReopened:
 		vuln.SetState(VulnStateOpen)
 	case EventTypeDetected:
+		scannerID, ok := (e.GetArbitraryJsonData()["scannerId"]).(string)
+		if !ok {
+			slog.Error("could not parse scanner id", "dependencyVulnId", e.VulnID)
+			return
+		}
+		vuln.AddScannerID(scannerID)
 		vuln.SetState(VulnStateOpen)
 		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
 		if !ok {

@@ -50,3 +50,28 @@ func (r *eventRepository) ReadAssetEventsByVulnID(vulnID string) ([]models.VulnE
 
 	return events, nil
 }
+
+func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, filter []core.FilterQuery) (core.Paged[models.VulnEventDetail], error) {
+
+	dependencyVulnIDS := r.db.Model(&models.DependencyVuln{}).Select("id").Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
+	firstPartyVulnIDS := r.db.Model(&models.FirstPartyVulnerability{}).Select("id").Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
+
+	var events []models.VulnEventDetail
+	q := r.db.Debug().Find(&events).Where("vuln_id IN (?)", dependencyVulnIDS).Or("vuln_id IN (?)", firstPartyVulnIDS).Order("created_at ASC")
+
+	var count int64
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+
+	err := q.Count(&count).Error
+	if err != nil {
+		return core.Paged[models.VulnEventDetail]{}, err
+	}
+
+	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&events).Error
+
+	return core.NewPaged(pageInfo, count, events), err
+}
