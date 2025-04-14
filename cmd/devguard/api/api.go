@@ -21,13 +21,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 
 	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
+	"github.com/l3montree-dev/devguard/internal/core/compliance"
 	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/events"
@@ -45,22 +45,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
-
-type assetRepository interface {
-	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
-}
-
-type assetVersionRepository interface {
-	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
-}
-
-type orgRepository interface {
-	ReadBySlug(slugOrId string) (models.Org, error)
-}
-
-type projectRepository interface {
-	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
-}
 
 func accessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -92,7 +76,7 @@ func accessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action)
 	}
 }
 
-func assetMiddleware(repository assetRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+func assetMiddleware(repository core.AssetRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		// get the project
 		return func(ctx echo.Context) error {
@@ -117,7 +101,7 @@ func assetMiddleware(repository assetRepository) func(next echo.HandlerFunc) ech
 	}
 }
 
-func assetVersionMiddleware(repository assetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
+func assetVersionMiddleware(repository core.AssetVersionRepository) func(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 
@@ -146,7 +130,7 @@ func assetVersionMiddleware(repository assetVersionRepository) func(next echo.Ha
 	}
 }
 
-func projectAccessControlFactory(projectRepository projectRepository) accesscontrol.RBACMiddleware {
+func projectAccessControlFactory(projectRepository core.ProjectRepository) accesscontrol.RBACMiddleware {
 	return func(obj accesscontrol.Object, act accesscontrol.Action) core.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx core.Context) error {
@@ -193,7 +177,7 @@ func projectAccessControlFactory(projectRepository projectRepository) accesscont
 	}
 }
 
-func projectAccessControl(projectRepository projectRepository, obj accesscontrol.Object, act accesscontrol.Action) core.MiddlewareFunc {
+func projectAccessControl(projectRepository core.ProjectRepository, obj accesscontrol.Object, act accesscontrol.Action) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) error {
 			// get the rbac
@@ -287,7 +271,7 @@ func assetNameMiddleware() core.MiddlewareFunc {
 	}
 }
 
-func multiOrganizationMiddleware(rbacProvider accesscontrol.RBACProvider, organizationRepo orgRepository) core.MiddlewareFunc {
+func multiOrganizationMiddleware(rbacProvider accesscontrol.RBACProvider, organizationRepo core.OrganizationRepository) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) (err error) {
 
@@ -408,13 +392,14 @@ func BuildRouter(db core.DB) *echo.Echo {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
-	assetController := asset.NewHttpController(assetRepository, assetService)
+	assetController := asset.NewHttpController(assetRepository, assetService, dependencyVulnService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository)
 
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
-	componentController := component.NewHTTPController(componentRepository)
+	componentController := component.NewHTTPController(componentRepository, assetVersionRepository)
+	complianceController := compliance.NewHTTPController(assetVersionRepository)
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
 
@@ -525,6 +510,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution)
 	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory)
+	projectRouter.GET("/compliance/", complianceController.ProjectCompliance)
 	//TODO: change it
 	//projectRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
 	projectRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
@@ -541,6 +527,11 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
 
+	assetRouter.GET("/compliance/", complianceController.AssetCompliance)
+	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
+	assetRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
+	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
+
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 
 	//Api to scan manually using an uploaded SBOM provided by the user
@@ -550,6 +541,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
 	assetVersionRouter.GET("/", assetVersionController.Read)
+
+	assetVersionRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"})) //Delete an asset version
 
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
@@ -563,6 +556,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
+	assetVersionRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
+
 	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetAssetVersionRiskHistory)
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerId)

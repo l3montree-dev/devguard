@@ -41,7 +41,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 	})
 
 	t.Run("it should return an error, if the dependencyVuln could not be found", func(t *testing.T) {
-		dependencyVulnRepository := mocks.NewCoreDependencyVulnRepository(t)
+		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, fmt.Errorf("dependencyVuln not found"))
 
 		githubIntegration := githubIntegration{
@@ -91,13 +91,13 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 	})
 
 	t.Run("it should return an error if the owner or repo could not be extracted from the repositoryId", func(t *testing.T) {
-		dependencyVulnRepository := mocks.NewCoreDependencyVulnRepository(t)
+		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, nil)
 
 		githubIntegration := githubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory: func(repoId string) (githubClientFacade, error) {
-				return mocks.NewIntegrationsGithubClientFacade(t), nil
+				return mocks.NewGithubClientFacade(t), nil
 			},
 			frontendUrl: "http://localhost:3000",
 		}
@@ -131,8 +131,10 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		req := httptest.NewRequest("POST", "/webhook", bytes.NewBufferString(`{"comment": "test"}`))
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
+		componentRepository := mocks.NewComponentRepository(t)
+		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
 
-		dependencyVulnRepository := mocks.NewCoreDependencyVulnRepository(t)
+		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
@@ -146,11 +148,11 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		dependencyVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
 
 		githubClientFactory := func(repoId string) (githubClientFacade, error) {
-			facade := mocks.NewIntegrationsGithubClientFacade(t)
+			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
-			facade.On("EditIssueLabel", context.Background(), "repo", "1", "severity:"+"high", &github.Label{
-				Description: github.String("Severity of the dependencyVuln"),
+			facade.On("EditIssueLabel", context.Background(), "repo", "1", "risk:"+"high", &github.Label{
+				Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
 				Color:       github.String("FFA500"),
 			}).Return(nil, nil, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "devguard", &github.Label{
@@ -160,6 +162,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			facade.On("EditIssue", context.TODO(), "repo", "1", 0, &github.IssueRequest{
 				State: github.String("closed"),
 			}).Return(nil, nil, fmt.Errorf("could not close issue"))
+			facade.On(("CreateIssueComment"), context.Background(), "repo", "1", 0, mock.Anything).Return(&github.IssueComment{}, &github.Response{}, nil)
 			return facade, nil
 		}
 
@@ -167,6 +170,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
 			frontendUrl:              "http://localhost:3000",
+			componentRepository:      componentRepository,
 		}
 
 		core.SetAsset(ctx, models.Asset{
@@ -207,9 +211,12 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}
 
-		dependencyVulnRepository := mocks.NewCoreDependencyVulnRepository(t)
+		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(expectDependencyVuln, nil)
 		dependencyVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		componentRepository := mocks.NewComponentRepository(t)
+		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
 
 		expectedEvent := models.VulnEvent{
 			Type:   models.EventTypeMitigate,
@@ -222,17 +229,18 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		expectedEvent.GetArbitraryJsonData()
 
 		githubClientFactory := func(repoId string) (githubClientFacade, error) {
-			facade := mocks.NewIntegrationsGithubClientFacade(t)
+			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
-			facade.On("EditIssueLabel", context.Background(), "repo", "1", "severity:"+"high", &github.Label{
-				Description: github.String("Severity of the dependencyVuln"),
+			facade.On("EditIssueLabel", context.Background(), "repo", "1", "risk:"+"high", &github.Label{
+				Description: github.String("Calculated risk of the vulnerability (based on CVSS, EPSS, and other factors)"),
 				Color:       github.String("FFA500"),
 			}).Return(nil, nil, nil)
 			facade.On("EditIssueLabel", context.Background(), "repo", "1", "devguard", &github.Label{
 				Description: github.String("DevGuard"),
 				Color:       github.String("182654"),
 			}).Return(nil, nil, nil)
+			facade.On("CreateIssueComment", context.Background(), "repo", "1", 0, mock.Anything).Return(&github.IssueComment{}, &github.Response{}, nil)
 			return facade, nil
 		}
 
@@ -240,6 +248,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
 			frontendUrl:              "http://localhost:3000",
+			componentRepository:      componentRepository,
 		}
 
 		core.SetAsset(ctx, models.Asset{
@@ -308,5 +317,78 @@ func TestGithubTicketIdToIdAndNumber(t *testing.T) {
 
 		assert.Equal(t, 0, ticketId)
 		assert.Equal(t, 0, ticketNumber)
+	})
+}
+func TestGetLabels(t *testing.T) {
+	t.Run("it should return labels with devguard and risk severity", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			RawRiskAssessment: utils.Ptr(8.0),
+			CVE: &models.CVE{
+				CVSS: 8.0,
+			},
+		}
+
+		labels := getLabels(vuln)
+
+		assert.Contains(t, labels, "devguard")
+		assert.Contains(t, labels, "risk:high")
+		assert.Contains(t, labels, "state:unknown")
+	})
+
+	t.Run("it should include state label if dependency vuln has a state", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				State: models.VulnStateAccepted,
+			},
+			RawRiskAssessment: utils.Ptr(5.0),
+			CVE: &models.CVE{
+				CVSS: 5.0,
+			},
+		}
+
+		labels := getLabels(vuln)
+
+		assert.Contains(t, labels, "state:accepted")
+		assert.Contains(t, labels, "risk:medium")
+	})
+
+	t.Run("it should include cvss-severity label for DependencyVuln", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			CVE: &models.CVE{
+				CVSS: 9.8,
+			},
+		}
+		vuln.RawRiskAssessment = utils.Ptr(9.8)
+
+		labels := getLabels(vuln)
+
+		assert.Contains(t, labels, "cvss-severity:critical")
+		assert.Contains(t, labels, "risk:critical")
+	})
+
+	t.Run("it should handle nil CVE gracefully for DependencyVuln", func(t *testing.T) {
+		vuln := &models.DependencyVuln{}
+		vuln.RawRiskAssessment = utils.Ptr(4.0)
+
+		labels := getLabels(vuln)
+
+		assert.Contains(t, labels, "risk:medium")
+
+	})
+
+	t.Run("it should not include risk:none labels", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				State: models.VulnStateFalsePositive,
+			},
+			CVE: &models.CVE{
+				CVSS: 0.0,
+			},
+		}
+		vuln.RawRiskAssessment = utils.Ptr(0.0)
+
+		labels := getLabels(vuln)
+
+		assert.Contains(t, labels, "state:false-positive")
 	})
 }

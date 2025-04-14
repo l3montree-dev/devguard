@@ -49,13 +49,13 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(assetVersionName st
 
 func (r *statisticsRepository) GetDependencyVulnCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
 	var results []struct {
-		ScannerID string `gorm:"column:scanner_id"`
+		ScannerID string `gorm:"column:scanner_ids"`
 		Count     int    `gorm:"column:count"`
 	}
 
 	err := r.db.Model(&models.DependencyVuln{}).
-		Select("scanner_id , COUNT(*) as count").
-		Group("scanner_id").
+		Select("scanner_ids , COUNT(*) as count").
+		Group("scanner_ids").
 		Where("asset_version_name = ?", assetVersionName).
 		Where("asset_id = ?", assetID).
 		Find(&results).Error
@@ -93,6 +93,48 @@ func (r *statisticsRepository) GetAssetRiskDistribution(assetVersionName string,
         WHERE asset_version_name = ? AND asset_id = ? AND state = 'open'
         GROUP BY severity
     `, assetVersionName, assetID).Scan(&results).Error
+
+	if err != nil {
+		return models.AssetRiskDistribution{}, err
+	}
+
+	// convert to map
+	counts := make(map[string]int)
+	for _, r := range results {
+		counts[r.Severity] = r.Count
+	}
+
+	return models.AssetRiskDistribution{
+		AssetID:          assetID,
+		AssetVersionName: assetVersionName,
+		Label:            assetName,
+		Low:              counts["LOW"],
+		Medium:           counts["MEDIUM"],
+		High:             counts["HIGH"],
+		Critical:         counts["CRITICAL"],
+	}, nil
+}
+
+func (r *statisticsRepository) GetAssetCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
+	var results []struct {
+		Severity string `gorm:"column:severity"`
+		Count    int    `gorm:"column:count"`
+	}
+
+	err := r.db.Raw(`
+		 SELECT 
+            CASE 
+                WHEN cvss >= 0.0 AND cvss < 4.0 THEN 'LOW'
+                WHEN cvss >= 4.0 AND cvss < 7 THEN 'MEDIUM'
+                WHEN cvss >= 7 AND cvss < 9 THEN 'HIGH'
+				WHEN cvss >= 9 AND cvss <= 10.0 THEN 'CRITICAL'
+				ELSE 'unknown'
+            END AS severity,
+			COUNT(*) as count
+		FROM dependency_vulns INNER JOIN cves ON cves.cve = dependency_vulns.cve_id
+		WHERE asset_version_name = ? AND asset_id = ? AND state = 'open'
+		GROUP BY severity, cvss
+	`, assetVersionName, assetID).Scan(&results).Error
 
 	if err != nil {
 		return models.AssetRiskDistribution{}, err

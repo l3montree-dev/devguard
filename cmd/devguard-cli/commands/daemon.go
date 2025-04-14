@@ -46,6 +46,8 @@ func newTriggerCommand() *cobra.Command {
 		},
 	}
 
+	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "componentProperties", "risk", "tickets", "statistics"}, "List of daemons to trigger")
+
 	return trigger
 }
 
@@ -55,15 +57,17 @@ func triggerDaemon(db core.DB, daemons []string) error {
 	// we only update the vulnerability database each 6 hours.
 	// thus there is no need to recalculate the risk or anything earlier
 	slog.Info("starting background jobs", "time", time.Now())
-	var start time.Time = time.Now()
-	// update deps dev
-	err := daemon.UpdateDepsDevInformation(db)
-	if err != nil {
-		slog.Error("could not update deps dev information", "err", err)
-		return nil
+	var start time.Time
+	if emptyOrContains(daemons, "depsDev") {
+		start = time.Now()
+		// update deps dev
+		err := daemon.UpdateDepsDevInformation(db)
+		if err != nil {
+			slog.Error("could not update deps dev information", "err", err)
+			return nil
+		}
+		slog.Info("deps dev information updated", "duration", time.Since(start))
 	}
-	slog.Info("deps dev information updated", "duration", time.Since(start))
-
 	// first update the vulndb
 	// this will give us the latest cves, cwes, exploits and affected components
 	if emptyOrContains(daemons, "vulndb") {
@@ -104,6 +108,18 @@ func triggerDaemon(db core.DB, daemons []string) error {
 			slog.Error("could not mark vulndb.risk as mirrored", "err", err)
 		}
 		slog.Info("risk recalculated", "duration", time.Since(start))
+	}
+
+	if emptyOrContains(daemons, "tickets") {
+		start = time.Now()
+		if err := daemon.SyncTickets(db); err != nil {
+			slog.Error("could not sync tickets", "err", err)
+			return nil
+		}
+		if err := markMirrored(configService, "vulndb.tickets"); err != nil {
+			slog.Error("could not mark vulndb.tickets as mirrored", "err", err)
+		}
+		slog.Info("tickets synced", "duration", time.Since(start))
 	}
 
 	if emptyOrContains(daemons, "statistics") {

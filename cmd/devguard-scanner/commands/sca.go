@@ -262,7 +262,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 			clickableLink := ""
 			if doRiskManagement {
 				//TODO: change flaws
-				clickableLink = fmt.Sprintf("%s/%s/flaws/%s", webUI, assetName, v.ID)
+				clickableLink = fmt.Sprintf("%s/%s/refs/%s/flaws/%s", webUI, assetName, v.AssetVersionName, v.ID)
 			} else {
 				clickableLink = "Risk Management is disabled"
 			}
@@ -343,7 +343,7 @@ func getDirFromPath(path string) string {
 	return path
 }
 
-func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) error {
+func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		core.InitLogger()
 		token, assetName, apiUrl, failOnRisk, webUI := parseConfig(cmd)
@@ -400,7 +400,7 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Risk-Management", strconv.FormatBool(doRiskManagement))
 		req.Header.Set("X-Asset-Name", assetName)
-		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanner)
+		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {

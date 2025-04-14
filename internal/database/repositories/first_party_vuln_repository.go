@@ -23,7 +23,8 @@ func NewFirstPartyVulnerabilityRepository(db core.DB) *firstPartyVulnerabilityRe
 
 func (r *firstPartyVulnerabilityRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVulnerability, error) {
 	var vulns []models.FirstPartyVulnerability = []models.FirstPartyVulnerability{}
-	if err := r.Repository.GetDB(r.db).Where("asset_version_name = ? AND asset_id = ? AND scanner_id = ?", assetVersionName, assetID, scannerID).Find(&vulns).Error; err != nil {
+	scannerID = "%" + scannerID + "%"
+	if err := r.Repository.GetDB(r.db).Where("asset_version_name = ? AND asset_id = ? AND scanner_ids LIKE ?", assetVersionName, assetID, scannerID).Find(&vulns).Error; err != nil {
 		return nil, err
 	}
 	return vulns, nil

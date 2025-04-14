@@ -14,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+
 	"github.com/l3montree-dev/devguard/internal/database/models"
 
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -57,7 +58,6 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 
 	for _, run := range sarifScan.Runs {
 		for _, result := range run.Results {
-
 			snippet := result.Locations[0].PhysicalLocation.Region.Snippet.Text
 			if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/secret-scanning" {
 				snippetMax := 20
@@ -72,7 +72,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 					AssetVersionName: assetVersion.Name,
 					AssetID:          asset.ID,
 					Message:          &result.Message.Text,
-					ScannerID:        scannerID,
+					ScannerIDs:       scannerID,
 				},
 				RuleID:      result.RuleId,
 				Uri:         result.Locations[0].PhysicalLocation.ArtifactLocation.Uri,
@@ -155,13 +155,13 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
 
-func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scanner string, scannerID string, userID string, doRiskManagement bool) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string, doRiskManagement bool) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scanner)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
@@ -170,9 +170,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	// calculate the depth of each component
 	depthMap := make(map[string]int)
 
-	// our dependency tree has a "fake" root node.
-	//  the first - 0 - element is just the name of the application
-	// therefore we start at -1 to get the correct depth. The fake node will be 0, the first real node will be 1
+	// first node will be the package name itself
 	CalculateDepth(tree.Root, -1, depthMap)
 
 	// now we have the depth.
@@ -183,7 +181,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          asset.ID,
-				ScannerID:        scannerID,
+				ScannerIDs:       scannerID,
 			},
 			CVEID:                 utils.Ptr(v.CVEID),
 			ComponentPurl:         utils.Ptr(v.Purl),
@@ -201,14 +199,14 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	opened, closed, newState, err := s.handleScanResult(userID, scannerID, assetVersion, dependencyVulns, doRiskManagement, asset)
+	opened, closed, newState, err = s.handleScanResult(userID, scannerID, assetVersion, dependencyVulns, doRiskManagement, asset)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
 
-	switch scanner {
+	switch scannerID {
 	case devguardScanner + "sca":
 		assetVersion.LastScaScan = utils.Ptr(time.Now())
 	case devguardScanner + "container-scanning":
@@ -218,39 +216,81 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	return opened, closed, newState, nil
 }
 
+func diffScanResults(currentScanner string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln) {
+	comparison := utils.CompareSlices(existingDependencyVulns, foundVulnerabilities, func(dependencyVuln models.DependencyVuln) string {
+		return dependencyVuln.CalculateHash()
+	})
+
+	foundByScannerAndNotExisting := comparison.OnlyInB //We want to create new vulnerabilities for these
+	foundByScannerAndExisting := comparison.InBoth     //We have to check if it was already found by this scanner or only by other scanners
+	notFoundByScannerAndExisting := comparison.OnlyInA //We have to update all vulnerabilities which were previously found by this scanner and now aren't
+
+	var detectedByOtherScanner []models.DependencyVuln
+	var notDetectedByScannerAnymore []models.DependencyVuln
+
+	var fixedVulns []models.DependencyVuln //We should collect all vulnerabilities we want to fix so we can do it all at once
+
+	// Now we work on the vulnerabilities found in both sets -> has the vulnerability this scanner id already in his scanner_ids
+	for i := range foundByScannerAndExisting {
+		if !strings.Contains(foundByScannerAndExisting[i].ScannerIDs, currentScanner) {
+			detectedByOtherScanner = append(detectedByOtherScanner, foundByScannerAndExisting[i])
+		}
+	}
+
+	// Last we have to change the already existing vulnerabilities which were not found this time
+	for i := range notFoundByScannerAndExisting {
+		if strings.TrimSpace(notFoundByScannerAndExisting[i].ScannerIDs) == currentScanner {
+			fixedVulns = append(fixedVulns, notFoundByScannerAndExisting[i])
+		} else if strings.Contains(notFoundByScannerAndExisting[i].ScannerIDs, currentScanner) {
+			notDetectedByScannerAnymore = append(notDetectedByScannerAnymore, notFoundByScannerAndExisting[i])
+		}
+	}
+
+	return foundByScannerAndNotExisting, fixedVulns, detectedByOtherScanner, notDetectedByScannerAnymore
+}
+
 func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, doRiskManagement bool, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	// get all existing dependencyVulns from the database - this is the old state
-	existingDependencyVulns, err := s.dependencyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
+	//number := rand.IntN(len(dependencyVulns))
+	//dependencyVulns = dependencyVulns[:0]
+	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
+
 	// remove all fixed dependencyVulns from the existing dependencyVulns
 	existingDependencyVulns = utils.Filter(existingDependencyVulns, func(dependencyVuln models.DependencyVuln) bool {
 		return dependencyVuln.State != models.VulnStateFixed
 	})
 
-	comparison := utils.CompareSlices(existingDependencyVulns, dependencyVulns, func(dependencyVuln models.DependencyVuln) string {
-		return dependencyVuln.CalculateHash()
-	})
+	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(scannerID, dependencyVulns, existingDependencyVulns)
 
-	fixedDependencyVulns := comparison.OnlyInA
-	newDependencyVulns := comparison.OnlyInB
-
-	// get a transaction
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, newDependencyVulns, *assetVersion, asset, true); err != nil {
+		// We can create the newly found one without checking anything
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, newDetectedVulns, *assetVersion, asset, true); err != nil {
+			return err // this will cancel the transaction
+		}
 
-			// this will cancel the transaction
+		err = s.dependencyVulnService.UserDetectedDependencyVulnWithAnotherScanner(tx, firstTimeDetectedByCurrentScanner, userID, scannerID)
+		if err != nil {
+			slog.Error("error when trying to add events for adding scanner to vulnerability")
 			return err
 		}
-		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedDependencyVulns, *assetVersion, asset, true)
+
+		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnWithScannerAnymore(tx, notDetectedByCurrentScannerAnymore, userID, scannerID)
+		if err != nil {
+			slog.Error("error when trying to add events for removing scanner from vulnerability")
+			return err
+		}
+
+		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, true)
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	return newDependencyVulns, fixedDependencyVulns, append(newDependencyVulns, comparison.InBoth...), nil
+	return append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), fixedVulns, append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), nil
 }
 
 func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
@@ -285,7 +325,7 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 
 func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
 	// load the asset components
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, "")
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
 	}
@@ -321,7 +361,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  nil, // direct dependency - therefore set it to nil
-					ScannerID:      scannerID,
+					ScannerIDs:     scannerID,
 					DependencyPurl: componentPackageUrl,
 				},
 			)
@@ -347,7 +387,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  utils.EmptyThenNil(compPackageUrl),
-					ScannerID:      scannerID,
+					ScannerIDs:     scannerID,
 					DependencyPurl: depPurlOrName,
 				},
 			)
@@ -380,7 +420,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 		return err
 	}
 
-	if err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies); err != nil {
+	if err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, scannerID); err != nil {
 		return err
 	}
 
