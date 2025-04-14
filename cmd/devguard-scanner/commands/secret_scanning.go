@@ -68,6 +68,12 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
+
+		fileContent, err := os.ReadFile(file.Name())
+		if err != nil {
+			return errors.Wrap(err, "could not read file")
+		}
+		fileReader := bytes.NewReader(fileContent)
 		defer os.Remove(file.Name())
 
 		// check if we should do risk management
@@ -76,7 +82,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return errors.Wrap(err, "could not get risk management flag")
 		}
 
-		req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/sarif-scan/", file)
+		req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/sarif-scan/", fileReader)
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
 		}
