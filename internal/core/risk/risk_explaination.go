@@ -224,7 +224,7 @@ type Explanation struct {
 	cveDescription string
 
 	AffectedComponentName string
-	scanner               string
+	scannerIDs            string
 	fixedVersion          *string
 
 	ComponentPurl string `json:"componentPurl" gorm:"type:text;default:null;"`
@@ -249,7 +249,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	str.WriteString(e.cveDescription)
 	str.WriteString("\n")
 	str.WriteString("### Affected component \n")
-	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.AffectedComponentName, e.scanner))
+	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.AffectedComponentName, e.scannerIDs))
 	str.WriteString("### Recommended fix\n")
 	if e.fixedVersion != nil {
 		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))
@@ -327,7 +327,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		cveDescription: dependencyVuln.CVE.Description,
 
 		AffectedComponentName: utils.SafeDereference(dependencyVuln.ComponentPurl),
-		scanner:               dependencyVuln.ScannerID,
+		scannerIDs:            dependencyVuln.ScannerIDs,
 		fixedVersion:          dependencyVuln.ComponentFixedVersion,
 
 		ComponentPurl: componentPurl,

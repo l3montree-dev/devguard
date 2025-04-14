@@ -66,7 +66,8 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 	query := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
 	if scannerID != "" {
-		query = query.Where("scanner_id = ?", scannerID)
+		scannerID = "%" + scannerID + "%"
+		query = query.Where("scanner_ids LIKE ?", scannerID)
 	}
 
 	err = query.Find(&components).Error
@@ -101,7 +102,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
     component_purl IS NULL AND
     asset_id = @assetID AND
     asset_version_name = @assetVersionName AND
-    scanner_id = @scannerID
+    scanner_id LIKE @scannerID
 
   UNION ALL
 
@@ -118,7 +119,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
   WHERE
     co.asset_id = @assetID AND
     co.asset_version_name = @assetVersionName AND
-    co.scanner_id = @scannerID AND
+    co.scanner_id LIKE @scannerID AND
     NOT co.dependency_purl = ANY(cte.path)
 ),
 target_path AS (
@@ -141,7 +142,7 @@ path_edges AS (
 SELECT * FROM path_edges
 ORDER BY depth;
 `, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
-		sql.Named("assetVersionName", assetVersionName), sql.Named("scannerID", scannerID))
+		sql.Named("assetVersionName", assetVersionName), sql.Named("scannerID", "%"+scannerID+"%"))
 
 	//Map the query results to the component model
 	err = query.Find(&components).Error
@@ -152,7 +153,7 @@ ORDER BY depth;
 	return components, err
 }
 
-func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner string) (map[string]int, error) {
+func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error) {
 	var licenses []struct {
 		License string
 		Count   int
@@ -162,8 +163,9 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 
 	query := c.GetDB(tx).Table("components").Select("components.license as license, COUNT(components.license) as count").Joins("RIGHT JOIN component_dependencies ON components.purl = component_dependencies.dependency_purl").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Group("components.license")
 
-	if scanner != "" {
-		query = query.Where("scanner_id = ?", scanner)
+	if scannerID != "" {
+		scannerID = "%" + scannerID + "%"
+		query = query.Where("scanner_ids LIKE ?", scannerID)
 	}
 
 	err = query.Scan(&licenses).Error
@@ -189,13 +191,14 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 	return licensesMap, nil
 }
 
-func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scanner string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
 	var components []models.ComponentDependency
 
 	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
-	if scanner != "" {
-		query = query.Where("scanner_id = ?", scanner)
+	if scannerID != "" {
+		scannerID = "%" + scannerID + "%"
+		query = query.Where("scanner_ids LIKE ?", scannerID)
 	}
 
 	for _, f := range filter {
@@ -229,29 +232,50 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersion
 	return core.NewPaged(pageInfo, total, components), err
 }
 
-func (c *componentRepository) LoadAllLatestComponentFromAssetVersion(tx core.DB, assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, error) {
-	var component []models.ComponentDependency
-	err := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id AND scanner_id = ?", assetVersion.Name, assetVersion.AssetID).Find(&component).Error
-	return component, err
-}
-
 func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Component, error) {
 	var component models.Component
 	err := c.GetDB(tx).Where("purl = ?", purl).First(&component).Error
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency) error {
+func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) error {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
 		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})
 
 	removed := comparison.OnlyInA
 	added := comparison.OnlyInB
+	needToBeChanged := comparison.InBoth
 
 	return c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
-		if len(removed) != 0 {
-			if err := c.GetDB(tx).Delete(&removed).Error; err != nil {
+		//We remove the scanner id from all components in removed and if it was the only scanner id we remove the component
+		toDelete, toSave := diffComponents(tx, c, removed, scannerID)
+
+		//Now we want to update the database with the new scanner id values
+		if len(toSave) > 0 {
+			err := c.db.Save(toSave).Error
+			if err != nil {
+				return err
+			}
+		}
+
+		if len(toDelete) > 0 {
+			err := c.db.Delete(toDelete).Error
+			if err != nil {
+				return err
+			}
+		}
+
+		//Next step is adding the scanner id to all existing component dependencies we just found
+		for i := range needToBeChanged {
+			if !strings.Contains(needToBeChanged[i].ScannerIDs, scannerID) {
+				needToBeChanged[i].ScannerIDs = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID)
+			}
+		}
+		//We also need to update these changes in the database
+		if len(needToBeChanged) > 0 {
+			err := c.db.Save(needToBeChanged).Error
+			if err != nil {
 				return err
 			}
 		}
@@ -262,18 +286,19 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 			added[i].AssetVersionName = assetVersionName
 		}
 
+		//At last we create all the new component dependencies
 		return c.CreateComponents(tx, added)
 	})
 }
 
 func (c *componentRepository) GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
 	var results []struct {
-		ScannerID string `gorm:"column:scanner_id"`
+		ScannerID string `gorm:"column:scanner_ids"`
 		Count     int    `gorm:"column:count"`
 	}
 	err := c.db.Model(&models.Component{}).
-		Select("scanner_id , COUNT(*) as count").
-		Group("scanner_id").
+		Select("scanner_ids , COUNT(*) as count").
+		Group("scanner_ids").
 		Where("asset_version_name = ?", assetVersionName).
 		Where("asset_id = ?", assetID).
 		Find(&results).Error
@@ -289,4 +314,20 @@ func (c *componentRepository) GetDependencyCountPerScanner(assetVersionName stri
 	}
 
 	return counts, nil
+}
+
+func diffComponents(tx core.DB, c *componentRepository, components []models.ComponentDependency, scannerID string) ([]models.ComponentDependency, []models.ComponentDependency) {
+	var componentsToDelete []models.ComponentDependency
+	var componentsToSave []models.ComponentDependency
+
+	for i := range components {
+		if strings.TrimSpace(components[i].ScannerIDs) == scannerID {
+			componentsToDelete = append(componentsToDelete, components[i])
+		} else {
+			components[i].ScannerIDs = utils.RemoveFromWhitespaceSeparatedStringList(components[i].ScannerIDs, scannerID)
+			componentsToSave = append(componentsToSave, components[i])
+		}
+	}
+
+	return componentsToDelete, componentsToSave
 }

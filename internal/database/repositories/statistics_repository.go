@@ -49,13 +49,13 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(assetVersionName st
 
 func (r *statisticsRepository) GetDependencyVulnCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
 	var results []struct {
-		ScannerID string `gorm:"column:scanner_id"`
+		ScannerID string `gorm:"column:scanner_ids"`
 		Count     int    `gorm:"column:count"`
 	}
 
 	err := r.db.Model(&models.DependencyVuln{}).
-		Select("scanner_id , COUNT(*) as count").
-		Group("scanner_id").
+		Select("scanner_ids , COUNT(*) as count").
+		Group("scanner_ids").
 		Where("asset_version_name = ?", assetVersionName).
 		Where("asset_id = ?", assetID).
 		Find(&results).Error

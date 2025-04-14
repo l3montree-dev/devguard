@@ -19,6 +19,8 @@ type Vuln interface {
 	GetAssetID() uuid.UUID
 	GetID() string
 	TableName() string
+	AddScannerID(scannerID string)
+	RemoveScannerID(scannerID string)
 }
 
 type FirstPartyVulnerability struct {
@@ -49,7 +51,7 @@ func (m *FirstPartyVulnerability) CalculateHash() string {
 	startColumnStr := strconv.Itoa(m.StartColumn)
 	endColumnStr := strconv.Itoa(m.EndColumn)
 
-	hash := utils.HashString(startLineStr + endLineStr + startColumnStr + endColumnStr + m.RuleID + m.Uri + m.ScannerID + m.AssetID.String() + m.AssetVersionName)
+	hash := utils.HashString(startLineStr + endLineStr + startColumnStr + endColumnStr + m.RuleID + m.Uri + m.ScannerIDs + m.AssetID.String() + m.AssetVersionName)
 	m.ID = hash
 	return hash
 }

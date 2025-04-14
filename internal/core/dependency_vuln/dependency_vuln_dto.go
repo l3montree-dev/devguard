@@ -24,7 +24,7 @@ import (
 
 type DependencyVulnDTO struct {
 	ID                    string           `json:"id"`
-	ScannerID             string           `json:"scanner"`
+	ScannerIDs            string           `json:"scannerIds"`
 	Message               *string          `json:"message"`
 	AssetVersionName      string           `json:"assetVersionId"`
 	AssetID               string           `json:"assetId"`
@@ -56,7 +56,7 @@ func DependencyVulnToDto(f models.DependencyVuln) DependencyVulnDTO {
 
 	return DependencyVulnDTO{
 		ID:                    f.ID,
-		ScannerID:             f.ScannerID,
+		ScannerIDs:            f.ScannerIDs,
 		Message:               f.Message,
 		AssetVersionName:      f.AssetVersionName,
 		AssetID:               f.AssetID.String(),

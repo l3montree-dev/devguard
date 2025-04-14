@@ -94,8 +94,8 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	scanner := c.Request().Header.Get("X-Scanner")
-	if scanner == "" {
+	scannerID := c.Request().Header.Get("X-Scanner")
+	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
 		return scanResults, err
 	}
@@ -106,7 +106,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 
 	if doRiskManagement {
 		// update the sbom in the database in parallel
-		if err := s.assetVersionService.UpdateSBOM(assetVersion, scanner, normalizedBom); err != nil {
+		if err := s.assetVersionService.UpdateSBOM(assetVersion, scannerID, normalizedBom); err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return scanResults, err
 		}
@@ -120,14 +120,8 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	scannerID := c.Request().Header.Get("X-Scanner")
-	if scannerID == "" {
-		slog.Error("no scanner id provided")
-		return scanResults, err
-	}
-
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, scannerID, userID, doRiskManagement)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err
@@ -192,8 +186,8 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
 	}
 
-	scanner := c.Request().Header.Get("X-Scanner")
-	if scanner == "" {
+	scannerID := c.Request().Header.Get("X-Scanner")
+	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
 		return c.JSON(400, map[string]string{
 			"error": "no X-Scanner header found",
@@ -205,7 +199,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	doRiskManagement := riskManagementEnabled != "false"
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, &assetVersion, sarifScan, scanner, userID, true)
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, &assetVersion, sarifScan, scannerID, userID, true)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
