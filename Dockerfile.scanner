@@ -1,4 +1,4 @@
-FROM golang:1.24.2 AS golang-builder
+FROM golang:1.24.0 AS golang-builder
 
 # set the working directory
 WORKDIR /app
@@ -27,7 +27,7 @@ RUN curl -O -L "https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/g
 
 # install semgrep
 RUN curl -sL "https://github.com/semgrep/semgrep/archive/refs/tags/v1.117.0.tar.gz" > semgrep.tar.gz && \
-    tar -zxvf semgrep.tar.gz && \
+    tar -zxf semgrep.tar.gz && \
     mv semgrep-1.117.0 /usr/local/bin/semgrep
 
 #install unzip
