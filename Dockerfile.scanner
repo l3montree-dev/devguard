@@ -12,22 +12,34 @@ ENV ARCH=x86_64
 
 ENV SEMGREP_VERSION=v8.24.2
 
-
 RUN curl -sL "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_${OS}_${ARCH}.tar.gz" > go-containerregistry.tar.gz && \
     tar -zxvf go-containerregistry.tar.gz -C /usr/local/bin/ crane
 
+# install trivy   
 RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.58.1
 
-
+# install cosign
 RUN curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64" && mv cosign-linux-amd64 /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
 
+# install gitleaks
 RUN curl -O -L "https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_arm64.tar.gz" && \
     tar -zxvf gitleaks_8.24.2_linux_arm64.tar.gz -C /usr/local/bin/ gitleaks   
 
-
+# install semgrep
 RUN curl -sL "https://github.com/semgrep/semgrep/archive/refs/tags/v1.117.0.tar.gz" > semgrep.tar.gz && \
     tar -zxvf semgrep.tar.gz && \
     mv semgrep-1.117.0 /usr/local/bin/semgrep
+
+#install unzip
+RUN apt-get update && apt-get install -y unzip
+
+# install checkov
+RUN curl -sL "https://github.com/bridgecrewio/checkov/releases/download/3.2.403/checkov_linux_X86_64.zip" -o checkov.zip && \
+    unzip checkov.zip && \
+    mv dist/checkov /usr/local/bin/checkov && \
+    chmod +x /usr/local/bin/checkov
+
+
 COPY . .
 
 # build the scanner
@@ -44,5 +56,7 @@ COPY --from=golang-builder /usr/local/bin/cosign /usr/local/bin/cosign
 COPY --from=golang-builder /usr/local/bin/crane /usr/local/bin/crane
 COPY --from=golang-builder /usr/local/bin/semgrep /usr/local/bin/semgrep
 COPY --from=golang-builder /usr/local/bin/gitleaks /usr/local/bin/gitleaks
+COPY --from=golang-builder /usr/local/bin/checkov /usr/local/bin/checkov
+
 
 ENTRYPOINT [""]
