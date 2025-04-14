@@ -70,7 +70,7 @@ jobs:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
   build-scanner-image:
-    uses: l3montree-dev/devguard-action/.github/workflows/build-image-multiarch.yml@feature/multiarch-builds
+    uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
     with:
       image-suffix: "-scanner"
       artifact-suffix: "-scanner"
