@@ -58,7 +58,6 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 
 	for _, run := range sarifScan.Runs {
 		for _, result := range run.Results {
-
 			snippet := result.Locations[0].PhysicalLocation.Region.Snippet.Text
 			if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/secret-scanning" {
 				snippetMax := 20

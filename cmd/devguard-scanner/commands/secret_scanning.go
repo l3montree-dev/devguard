@@ -245,7 +245,6 @@ func printSastScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, w
 }
 
 func printSecretScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI string, assetName string) {
-
 	tw := table.NewWriter()
 	for _, vuln := range firstPartyVulns {
 		fmt.Println(vuln.Snippet)
@@ -271,5 +270,4 @@ func printSecretScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO,
 	tw.Style().Options.SeparateColumns = false
 
 	fmt.Println(tw.Render())
-
 }

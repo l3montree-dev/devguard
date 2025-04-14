@@ -45,13 +45,12 @@ func (f FirstPartyVulnerability) TableName() string {
 }
 
 func (m *FirstPartyVulnerability) CalculateHash() string {
-
 	startLineStr := strconv.Itoa(m.StartLine)
 	endLineStr := strconv.Itoa(m.EndLine)
 	startColumnStr := strconv.Itoa(m.StartColumn)
 	endColumnStr := strconv.Itoa(m.EndColumn)
 
-	hash := utils.HashString(startLineStr + endLineStr + startColumnStr + endColumnStr + m.RuleID + m.Uri + m.ScannerIDs + m.AssetID.String() + m.AssetVersionName)
+	hash := utils.HashString(startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + m.RuleID + "/" + m.Uri + "/" + m.ScannerIDs + "/" + m.AssetID.String() + "/" + m.AssetVersionName)
 	m.ID = hash
 	return hash
 }
