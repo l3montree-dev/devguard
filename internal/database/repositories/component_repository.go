@@ -94,7 +94,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
     component_purl,
     dependency_purl,
     asset_id,
-    scanner_id,
+    scanner_ids,
     0 AS depth,
     ARRAY[dependency_purl] AS path
   FROM component_dependencies
@@ -102,7 +102,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
     component_purl IS NULL AND
     asset_id = @assetID AND
     asset_version_name = @assetVersionName AND
-    scanner_id LIKE @scannerID
+    scanner_ids LIKE @scannerID
 
   UNION ALL
 
@@ -110,7 +110,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
     co.component_purl,
     co.dependency_purl,
     co.asset_id,
-    co.scanner_id,
+    co.scanner_ids,
     cte.depth + 1,
     cte.path || co.dependency_purl
   FROM component_dependencies AS co
@@ -119,7 +119,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
   WHERE
     co.asset_id = @assetID AND
     co.asset_version_name = @assetVersionName AND
-    co.scanner_id LIKE @scannerID AND
+    co.scanner_ids LIKE @scannerID AND
     NOT co.dependency_purl = ANY(cte.path)
 ),
 target_path AS (
@@ -134,7 +134,7 @@ path_edges AS (
     component_purl,
     dependency_purl,
     asset_id,
-    scanner_id,
+    scanner_ids,
     depth
   FROM components_cte
   WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
