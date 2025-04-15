@@ -79,6 +79,65 @@ func (_c *CoreAttestationRepository_GetByAssetID_Call) RunAndReturn(run func(uui
 	return _c
 }
 
+// GetByAssetVersion provides a mock function with given fields: assetID, assetVersion
+func (_m *CoreAttestationRepository) GetByAssetVersion(assetID uuid.UUID, assetVersion string) ([]models.Attestation, error) {
+	ret := _m.Called(assetID, assetVersion)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByAssetVersion")
+	}
+
+	var r0 []models.Attestation
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uuid.UUID, string) ([]models.Attestation, error)); ok {
+		return rf(assetID, assetVersion)
+	}
+	if rf, ok := ret.Get(0).(func(uuid.UUID, string) []models.Attestation); ok {
+		r0 = rf(assetID, assetVersion)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Attestation)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
+		r1 = rf(assetID, assetVersion)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CoreAttestationRepository_GetByAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetVersion'
+type CoreAttestationRepository_GetByAssetVersion_Call struct {
+	*mock.Call
+}
+
+// GetByAssetVersion is a helper method to define mock.On call
+//   - assetID uuid.UUID
+//   - assetVersion string
+func (_e *CoreAttestationRepository_Expecter) GetByAssetVersion(assetID interface{}, assetVersion interface{}) *CoreAttestationRepository_GetByAssetVersion_Call {
+	return &CoreAttestationRepository_GetByAssetVersion_Call{Call: _e.mock.On("GetByAssetVersion", assetID, assetVersion)}
+}
+
+func (_c *CoreAttestationRepository_GetByAssetVersion_Call) Run(run func(assetID uuid.UUID, assetVersion string)) *CoreAttestationRepository_GetByAssetVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(uuid.UUID), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *CoreAttestationRepository_GetByAssetVersion_Call) Return(_a0 []models.Attestation, _a1 error) *CoreAttestationRepository_GetByAssetVersion_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *CoreAttestationRepository_GetByAssetVersion_Call) RunAndReturn(run func(uuid.UUID, string) ([]models.Attestation, error)) *CoreAttestationRepository_GetByAssetVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewCoreAttestationRepository creates a new instance of CoreAttestationRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewCoreAttestationRepository(t interface {
