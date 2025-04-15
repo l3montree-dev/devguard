@@ -1,6 +1,9 @@
 package attestation
 
 import (
+	"fmt"
+	"io/ioutil"
+
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
@@ -30,10 +33,13 @@ func (a *attestationController) List(ctx core.Context) error {
 
 func (a *attestationController) Create(ctx core.Context) error {
 	var attestation models.Attestation
-	err := ctx.Bind(&attestation)
+
+	content, err := ioutil.ReadAll(ctx.Request().Body)
+
 	if err != nil {
 		return echo.NewHTTPError(400, "unable to bind data to attestation model").WithInternal(err)
 	}
+	fmt.Printf("This is the content as string: %s\n", content)
 
 	err = core.V.Struct(attestation)
 	if err != nil {

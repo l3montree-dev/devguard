@@ -8,8 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type AttestationType string
-
 type Attestation struct {
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
