@@ -47,6 +47,7 @@ type VulnEventDetail struct {
 
 	AssetVersionName string `json:"assetVersionName"`
 	Slug             string `json:"assetVersionSlug"`
+	CVEID            string `json:"cveId"`
 }
 
 func (e *VulnEvent) GetArbitraryJsonData() map[string]any {
@@ -94,22 +95,10 @@ func (e VulnEvent) Apply(vuln Vuln) {
 		}
 		vuln.RemoveScannerID(scannerID)
 	case EventTypeFixed:
-		scannerID, ok := (e.GetArbitraryJsonData()["scannerId"]).(string)
-		if !ok {
-			slog.Error("could not parse scanner id", "dependencyVulnId", e.VulnID)
-			return
-		}
-		vuln.AddScannerID(scannerID)
 		vuln.SetState(VulnStateFixed)
 	case EventTypeReopened:
 		vuln.SetState(VulnStateOpen)
 	case EventTypeDetected:
-		scannerID, ok := (e.GetArbitraryJsonData()["scannerId"]).(string)
-		if !ok {
-			slog.Error("could not parse scanner id", "dependencyVulnId", e.VulnID)
-			return
-		}
-		vuln.AddScannerID(scannerID)
 		vuln.SetState(VulnStateOpen)
 		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
 		if !ok {
@@ -132,24 +121,6 @@ func (e VulnEvent) Apply(vuln Vuln) {
 		}
 		vuln.SetRawRiskAssessment(f)
 		vuln.SetRiskRecalculatedAt(time.Now())
-	}
-}
-
-func (e VulnEvent) ApplyFirstPartyVulnEvent(firstPartyVuln *FirstPartyVulnerability) {
-	switch e.Type {
-	case EventTypeFixed:
-		firstPartyVuln.State = VulnStateFixed
-	case EventTypeReopened:
-		firstPartyVuln.State = VulnStateOpen
-	case EventTypeDetected:
-		firstPartyVuln.State = VulnStateOpen
-	case EventTypeAccepted:
-		firstPartyVuln.State = VulnStateAccepted
-	case EventTypeFalsePositive:
-		firstPartyVuln.State = VulnStateFalsePositive
-	case EventTypeMarkedForTransfer:
-		firstPartyVuln.State = VulnStateMarkedForTransfer
-	case EventTypeRawRiskAssessmentUpdated:
 	}
 }
 

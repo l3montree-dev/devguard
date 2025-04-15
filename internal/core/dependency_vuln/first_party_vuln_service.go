@@ -31,7 +31,7 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx core.DB, userID stri
 	for i, vuln := range firstPartyVulns {
 		ev := models.NewFixedEvent(vuln.CalculateHash(), userID)
 
-		ev.ApplyFirstPartyVulnEvent(&firstPartyVulns[i])
+		ev.Apply(&firstPartyVulns[i])
 		events[i] = ev
 	}
 
@@ -55,7 +55,7 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID s
 	for i, firstPartyVuln := range firstPartyVulns {
 		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), userID, common.RiskCalculationReport{})
 		// apply the event on the dependencyVuln
-		ev.ApplyFirstPartyVulnEvent(&firstPartyVulns[i])
+		ev.Apply(&firstPartyVulns[i])
 		events[i] = ev
 	}
 
@@ -115,7 +115,7 @@ func (s *firstPartyVulnService) ApplyAndSave(tx core.DB, firstPartyVuln *models.
 
 func (s *firstPartyVulnService) applyAndSave(tx core.DB, firstPartyVuln *models.FirstPartyVulnerability, ev *models.VulnEvent) (models.VulnEvent, error) {
 	// apply the event on the dependencyVuln
-	ev.ApplyFirstPartyVulnEvent(firstPartyVuln)
+	ev.Apply(firstPartyVuln)
 
 	// run the updates in the transaction to keep a valid state
 	err := s.firstPartyVulnRepository.Save(tx, firstPartyVuln)

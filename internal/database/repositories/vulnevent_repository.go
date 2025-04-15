@@ -53,11 +53,26 @@ func (r *eventRepository) ReadAssetEventsByVulnID(vulnID string) ([]models.VulnE
 
 func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, filter []core.FilterQuery) (core.Paged[models.VulnEventDetail], error) {
 
-	dependencyVulnIDS := r.db.Model(&models.DependencyVuln{}).Select("id").Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
-	firstPartyVulnIDS := r.db.Model(&models.FirstPartyVulnerability{}).Select("id").Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
-
 	var events []models.VulnEventDetail
-	q := r.db.Debug().Find(&events).Where("vuln_id IN (?)", dependencyVulnIDS).Or("vuln_id IN (?)", firstPartyVulnIDS).Order("created_at ASC")
+
+	dependencyVulnSubQuery := r.db.
+		Table("dependency_vulns").
+		Select("id").
+		Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
+
+	firstPartyVulnSubQuery := r.db.
+		Table("first_party_vulnerabilities").
+		Select("id").
+		Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
+
+	q := r.db.
+		Table("vuln_events AS e").
+		Select("e.*, dv.cve_id").
+		Joins("LEFT JOIN dependency_vulns dv ON e.vuln_id = dv.id").
+		Where("e.vuln_id IN (?)", dependencyVulnSubQuery).
+		Or("e.vuln_id IN (?)", firstPartyVulnSubQuery).
+		Order("e.created_at ASC").
+		Find(&events)
 
 	var count int64
 

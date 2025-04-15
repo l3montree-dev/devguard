@@ -35,6 +35,21 @@ func (c vulnEventController) ReadAssetEventsByVulnID(ctx core.Context) error {
 	return ctx.JSON(200, convertToDetailedDTO(events))
 }
 
+func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
+	return VulnEventDTO{
+		ID:                event.ID,
+		Type:              event.Type,
+		VulnID:            event.VulnID,
+		UserID:            event.UserID,
+		Justification:     event.Justification,
+		ArbitraryJsonData: event.GetArbitraryJsonData(),
+		CreatedAt:         event.CreatedAt,
+		AssetVersionName:  event.AssetVersionName,
+		AssetVersionSlug:  event.Slug,
+		FlawName:          event.CVEID,
+	}
+}
+
 func convertToDetailedDTO(event []models.VulnEventDetail) []VulnEventDTO {
 	var dtos []VulnEventDTO
 	for _, e := range event {
@@ -74,6 +89,6 @@ func (c vulnEventController) ReadEventsByAssetIDAndAssetVersionName(ctx core.Con
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
 	return ctx.JSON(200, events.Map(func(ved models.VulnEventDetail) any {
-		return convertToDetailedDTO([]models.VulnEventDetail{ved})
+		return convertSingleToDetailedDTO(ved)
 	}))
 }
