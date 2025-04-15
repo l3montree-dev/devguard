@@ -217,7 +217,6 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		AmountClosed:    amountClose,
 		FirstPartyVulns: utils.Map(newState, dependency_vuln.FirstPartyVulnToDto),
 	})
-
 }
 
 func (s *httpController) ScanDependencyVulnFromProject(c core.Context) error {
