@@ -78,12 +78,6 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		fileReader := bytes.NewReader(fileContent)
 		defer os.Remove(file.Name())
 
-		// check if we should do risk management
-		doRiskManagement, err := cmd.Flags().GetBool("riskManagement")
-		if err != nil {
-			return errors.Wrap(err, "could not get risk management flag")
-		}
-
 		req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/sarif-scan/", fileReader)
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
@@ -102,7 +96,6 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Risk-Management", strconv.FormatBool(doRiskManagement))
 		req.Header.Set("X-Asset-Name", assetName)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
 

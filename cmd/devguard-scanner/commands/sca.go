@@ -27,7 +27,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -228,7 +227,7 @@ git push origin 1.0.1
 }
 
 // can be reused for container scanning as well.
-func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webUI string, doRiskManagement bool) {
+func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webUI string) {
 	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.DependencyVulns) == 0 {
@@ -259,13 +258,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	tw.AppendRows(utils.Map(
 		scanResponse.DependencyVulns,
 		func(v dependency_vuln.DependencyVulnDTO) table.Row {
-			clickableLink := ""
-			if doRiskManagement {
-				//TODO: change flaws
-				clickableLink = fmt.Sprintf("%s/%s/refs/%s/flaws/%s", webUI, assetName, v.AssetVersionName, v.ID)
-			} else {
-				clickableLink = "Risk Management is disabled"
-			}
+			clickableLink := fmt.Sprintf("%s/%s/refs/%s/vulns/%s", webUI, assetName, v.AssetVersionName, v.ID)
 
 			// extract package name and version from purl
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
@@ -374,12 +367,6 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		// check if we should do risk management
-		doRiskManagement, err := cmd.Flags().GetBool("riskManagement")
-		if err != nil {
-			return errors.Wrap(err, "could not get risk management flag")
-		}
-
 		req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/scan", file)
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
@@ -398,7 +385,6 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Risk-Management", strconv.FormatBool(doRiskManagement))
 		req.Header.Set("X-Asset-Name", assetName)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
 
@@ -406,6 +392,7 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 		if err != nil {
 			return errors.Wrap(err, "could not send request")
 		}
+		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			// read the body
@@ -426,7 +413,7 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 			return errors.Wrap(err, "could not parse response")
 		}
 
-		printScaResults(scanResponse, failOnRisk, assetName, webUI, doRiskManagement)
+		printScaResults(scanResponse, failOnRisk, assetName, webUI)
 		return nil
 	}
 }
