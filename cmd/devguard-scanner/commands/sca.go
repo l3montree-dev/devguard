@@ -173,9 +173,9 @@ func parseConfig(cmd *cobra.Command) (string, string, string, string, string) {
 	}
 	apiUrl = sanitizeApiUrl(apiUrl)
 
-	failOnRisk, err := cmd.Flags().GetString("fail-on-risk")
+	failOnRisk, err := cmd.Flags().GetString("failOnRisk")
 	if err != nil {
-		slog.Error("could not get fail-on-risk", "err", err)
+		slog.Error("could not get failOnRisk", "err", err)
 		return "", "", "", "", ""
 	}
 
