@@ -1,4 +1,4 @@
-package models
+package common
 
 type SarifResult struct {
 	Runs []Run `json:"runs"`
