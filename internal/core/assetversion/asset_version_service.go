@@ -137,7 +137,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 
 	// get a transaction
 	if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
-		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, newVulns, true); err != nil {
+		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, newVulns, true); err != nil {
 			// this will cancel the transaction
 			return err
 		}
@@ -268,7 +268,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, newDetectedVulns, *assetVersion, asset, true); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, scannerID, newDetectedVulns, *assetVersion, asset, true); err != nil {
 			return err // this will cancel the transaction
 		}
 

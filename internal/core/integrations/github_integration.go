@@ -288,7 +288,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 
 		case "deleted":
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This CVE is marked as a false positive by %s, due to the deletion of the github ticket.", event.Sender.GetLogin()))
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), fmt.Sprintf("github:%d", event.Sender.GetID()), fmt.Sprintf("This CVE is marked as a false positive by %s, due to the deletion of the github ticket.", event.Sender.GetLogin()), vulnDependencyVuln.ScannerIDs)
 
 			err := githubIntegration.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
@@ -354,7 +354,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 		}()
 
 		// create a new event based on the comment
-		vulnEvent := createNewVulnEventBasedOnComment(vuln.GetID(), fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment)
+		vulnEvent := createNewVulnEventBasedOnComment(vuln.GetID(), fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment, vuln.GetScannerIDs())
 
 		vulnEvent.Apply(vuln)
 		// save the vuln and the event in a transaction
@@ -817,7 +817,7 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		//check if err is 404 - if so, we can not reopen the issue
 		if err.Error() == "404 Not Found" {
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(dependencyVuln.ID, "user", "This CVE is marked as a false positive due to deletion")
+			vulnEvent := models.NewFalsePositiveEvent(dependencyVuln.ID, "user", "This CVE is marked as a false positive due to deletion", dependencyVuln.ScannerIDs)
 			// save the event
 			err = g.dependencyVulnRepository.ApplyAndSave(nil, &dependencyVuln, &vulnEvent)
 			if err != nil {

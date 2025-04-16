@@ -71,7 +71,7 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UU
 		Joins("LEFT JOIN dependency_vulns dv ON e.vuln_id = dv.id").
 		Where("e.vuln_id IN (?)", dependencyVulnSubQuery).
 		Or("e.vuln_id IN (?)", firstPartyVulnSubQuery).
-		Order("e.created_at ASC").
+		Order("e.created_at DESC").
 		Find(&events)
 
 	var count int64

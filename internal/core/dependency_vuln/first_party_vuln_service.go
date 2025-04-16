@@ -29,7 +29,7 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx core.DB, userID stri
 
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, vuln := range firstPartyVulns {
-		ev := models.NewFixedEvent(vuln.CalculateHash(), userID)
+		ev := models.NewFixedEvent(vuln.CalculateHash(), userID, vuln.ScannerIDs)
 
 		ev.Apply(&firstPartyVulns[i])
 		events[i] = ev
@@ -46,14 +46,14 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx core.DB, userID stri
 	return nil
 }
 
-func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error {
+func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID, scannerID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error {
 	if len(firstPartyVulns) == 0 {
 		return nil
 	}
 	// create a new dependencyVulnevent for each fixed dependencyVuln
 	events := make([]models.VulnEvent, len(firstPartyVulns))
 	for i, firstPartyVuln := range firstPartyVulns {
-		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), userID, common.RiskCalculationReport{})
+		ev := models.NewDetectedEvent(firstPartyVuln.CalculateHash(), userID, common.RiskCalculationReport{}, scannerID)
 		// apply the event on the dependencyVuln
 		ev.Apply(&firstPartyVulns[i])
 		events[i] = ev
@@ -90,7 +90,7 @@ func (s *firstPartyVulnService) updateFirstPartyVulnState(tx core.DB, userID str
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), userID, justification)
+		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), userID, justification, firstPartyVuln.ScannerIDs)
 	case models.EventTypeReopened:
 		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), userID, justification)
 	case models.EventTypeComment:
