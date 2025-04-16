@@ -1,15 +1,18 @@
 package commands
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -17,6 +20,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -64,25 +68,23 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return errors.Wrap(err, "invalid path")
 		}
 
-		file, err := executeCodeScan(scannerID, path)
+		sarifResult, err := executeCodeScan(scannerID, path)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
 
-		fileContent, err := os.ReadFile(file.Name())
-		if err != nil {
-			return errors.Wrap(err, "could not read file")
-		}
-		fileReader := bytes.NewReader(fileContent)
-		defer os.Remove(file.Name())
+		// expand snippet and obfuscate it
+		expandAndObfuscateSnippet(*sarifResult, path)
 
+		// marshal the result
+		b, err := json.Marshal(sarifResult)
 		// check if we should do risk management
 		doRiskManagement, err := cmd.Flags().GetBool("riskManagement")
 		if err != nil {
 			return errors.Wrap(err, "could not get risk management flag")
 		}
 
-		req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/sarif-scan/", fileReader)
+		req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/sarif-scan/", bytes.NewReader(b))
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
 		}
@@ -127,7 +129,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 	}
 }
 
-func executeCodeScan(scannerID, path string) (*os.File, error) {
+func executeCodeScan(scannerID, path string) (*models.SarifResult, error) {
 	switch scannerID {
 	case "secret-scanning":
 		return secretScan(path)
@@ -139,7 +141,7 @@ func executeCodeScan(scannerID, path string) (*os.File, error) {
 
 }
 
-func sastScan(path string) (*os.File, error) {
+func sastScan(path string) (*models.SarifResult, error) {
 	file, err := os.CreateTemp("", "*.sarif")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create temp file")
@@ -164,12 +166,27 @@ func sastScan(path string) (*os.File, error) {
 		}
 	}
 
-	return file, nil
+	// read AND parse the file
+	// open the file
+	file, err = os.Open(file.Name())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not open file")
+	}
+	defer file.Close()
+	// parse the file
+	var sarifScan models.SarifResult
+	err = json.NewDecoder(file).Decode(&sarifScan)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not parse sarif file")
+	}
+
+	return &sarifScan, nil
 }
 
-func secretScan(path string) (*os.File, error) {
+func secretScan(path string) (*models.SarifResult, error) {
 
-	file, err := os.CreateTemp("", "*.sarif")
+	//file, err := os.CreateTemp("", "*.sarif")
+	file, err := os.Create("secret-scan.sarif")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create temp file")
 	}
@@ -193,7 +210,129 @@ func secretScan(path string) (*os.File, error) {
 		}
 	}
 
-	return file, nil
+	// read AND parse the file
+	var sarifScan models.SarifResult
+	// open the file
+	file, err = os.Open(file.Name())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not open file")
+	}
+	defer file.Close()
+
+	// parse the file
+	err = json.NewDecoder(file).Decode(&sarifScan)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not parse sarif file")
+	}
+
+	// obfuscate founded secrets
+	sarifScan = obfuscateSecret(sarifScan)
+
+	return &sarifScan, nil
+}
+
+func expandAndObfuscateSnippet(sarifScan models.SarifResult, path string) {
+
+	// expand the snippet
+	for ru, run := range sarifScan.Runs {
+		for re, result := range run.Results {
+			for lo, location := range result.Locations {
+				startLine := location.PhysicalLocation.Region.StartLine
+				endLine := location.PhysicalLocation.Region.EndLine
+				original := location.PhysicalLocation.Region.Snippet.Text
+				// expand the snippet
+				expandedSnippet := expandSnippet(path, location.PhysicalLocation.ArtifactLocation.Uri, startLine, endLine, original)
+				// obfuscate the snippet
+				obfuscateSnippet := obfuscateString(expandedSnippet)
+				// set the snippet
+				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = obfuscateSnippet
+
+				/* 	fmt.Println("Expanded snippet", expandedSnippet)
+				fmt.Println("Obfuscated snippet", obfuscateSnippet)
+				fmt.Println("set snippet", sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text)
+				*/
+			}
+		}
+	}
+
+}
+
+func expandSnippet(path string, fileName string, startLine int, endLine int, original string) string {
+	// open the file
+	file, err := os.Open(path + "/" + fileName)
+	if err != nil {
+		slog.Error("could not open file", "err", err)
+		return ""
+	}
+	defer file.Close()
+
+	// read the file line by line
+	scanner := bufio.NewScanner(file)
+	var lines []string
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		slog.Error("could not read file", "err", err)
+		return ""
+	}
+
+	if startLine < 0 || endLine > len(lines) {
+		slog.Error("start line or end line is out of range", "startLine", startLine, "endLine", endLine, "lines", len(lines))
+		return ""
+	}
+
+	expandedSnippet := ""
+
+	startLineN := int(math.Max(0, float64(startLine)-6))
+	endLineN := int(math.Min(float64(len(lines)), float64(endLine)+5))
+
+	// replace start and endline to make sure any previous tranformations will be applied#
+	start := lines[startLineN : startLine-1]
+	end := lines[endLine:endLineN]
+	expandedSnippet = strings.Join(start, "\n") + "\n" + original + "\n" + strings.Join(end, "\n")
+
+	fmt.Println("startLine", startLine, "endLine", endLine, "lines length", len(lines))
+
+	return expandedSnippet
+
+}
+
+func obfuscateString(str string) string {
+	// replaces all high entropy strings in the provided strings with their obfuscated counterparts
+	els := strings.Split(str, " ")
+	for i, el := range els {
+		// 5 is a magic number!
+		entropy := utils.ShannonEntropy(el)
+		if entropy > 3.5 {
+			els[i] = el[:1+len(el)/2] + strings.Repeat("*", len(el)/2)
+		}
+	}
+
+	return strings.Join(els, " ")
+}
+
+// add obfuscation function for snippet
+func obfuscateSecret(sarifScan models.SarifResult) models.SarifResult {
+	// obfuscate the snippet
+	for ru, run := range sarifScan.Runs {
+		for re, result := range run.Results {
+			for lo, location := range result.Locations {
+				snippet := location.PhysicalLocation.Region.Snippet.Text
+				snippetMax := 20
+				if len(snippet) < snippetMax {
+					snippetMax = len(snippet) / 2
+				}
+				snippet = snippet[:snippetMax] + "****"
+				// set the snippet
+				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = snippet
+			}
+		}
+	}
+
+	return sarifScan
+
 }
 
 func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scannerID string) {

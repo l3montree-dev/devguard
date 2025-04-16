@@ -58,14 +58,6 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 
 	for _, run := range sarifScan.Runs {
 		for _, result := range run.Results {
-			snippet := result.Locations[0].PhysicalLocation.Region.Snippet.Text
-			if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/secret-scanning" {
-				snippetMax := 20
-				if snippetMax < len(snippet)/2 {
-					snippetMax = len(snippet) / 2
-				}
-				snippet = snippet[:snippetMax] + "***"
-			}
 
 			firstPartyVulnerability := models.FirstPartyVulnerability{
 				Vulnerability: models.Vulnerability{
@@ -80,7 +72,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 				StartColumn: result.Locations[0].PhysicalLocation.Region.StartColumn,
 				EndLine:     result.Locations[0].PhysicalLocation.Region.EndLine,
 				EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
-				Snippet:     snippet,
+				Snippet:     result.Locations[0].PhysicalLocation.Region.Snippet.Text,
 				Commit:      result.PartialFingerprints.CommitSha,
 				Email:       result.PartialFingerprints.Email,
 				Author:      result.PartialFingerprints.Author,
