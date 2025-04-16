@@ -11,6 +11,7 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
@@ -52,20 +53,13 @@ func (s *service) GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVe
 	return s.assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(nil, assetID)
 }
 
-func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error) {
+func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error) {
 
 	firstPartyVulnerabilities := []models.FirstPartyVulnerability{}
 
 	for _, run := range sarifScan.Runs {
 		for _, result := range run.Results {
 			snippet := result.Locations[0].PhysicalLocation.Region.Snippet.Text
-			if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/secret-scanning" {
-				snippetMax := 20
-				if snippetMax < len(snippet)/2 {
-					snippetMax = len(snippet) / 2
-				}
-				snippet = snippet[:snippetMax] + "***"
-			}
 
 			firstPartyVulnerability := models.FirstPartyVulnerability{
 				Vulnerability: models.Vulnerability{

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
@@ -73,6 +74,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		if err != nil {
 			return errors.Wrap(err, "could not read file")
 		}
+
 		fileReader := bytes.NewReader(fileContent)
 		defer os.Remove(file.Name())
 
@@ -197,7 +199,6 @@ func secretScan(path string) (*os.File, error) {
 }
 
 func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scannerID string) {
-
 	slog.Info("First party scan results", "firstPartyVulnAmount", len(scanResponse.FirstPartyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.FirstPartyVulns) == 0 {
@@ -217,57 +218,49 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 	}
 
 }
-func printSastScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI string, assetName string) {
 
+func printSastScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI, assetName string) {
 	tw := table.NewWriter()
+	tw.SetAllowedRowLength(180)
+	red := text.FgRed
+	blue := text.FgBlue
+	green := text.FgGreen
 	for _, vuln := range firstPartyVulns {
-
-		raw := []table.Row{
-			{"RuleID:", vuln.RuleID},
-			{"File:", vuln.Uri},
-			{"Line:", vuln.StartLine},
-			{"Snippet:", vuln.Snippet},
-			{"Message:", *vuln.Message},
-			{"Link:", fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID)},
-		}
-
-		tw.AppendRows(raw)
-
-		//tw.AppendSeparator()
-
+		tw.AppendRow(table.Row{"RuleID", vuln.RuleID})
+		tw.AppendRow(table.Row{"File", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))})
+		tw.AppendRow(table.Row{"Snippet", red.Sprint(vuln.Snippet)})
+		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 170)})
+		tw.AppendRow(table.Row{"Line", vuln.StartLine})
+		tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID))})
+		tw.AppendSeparator()
 	}
 
-	tw.Style().Options.DrawBorder = false
-	tw.Style().Options.SeparateColumns = false
-
 	fmt.Println(tw.Render())
-
 }
 
 func printSecretScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI string, assetName string) {
 	tw := table.NewWriter()
+	tw.SetAllowedRowLength(180)
+	red := text.FgRed
+	blue := text.FgBlue
+	green := text.FgGreen
 	for _, vuln := range firstPartyVulns {
-		fmt.Println(vuln.Snippet)
 		raw := []table.Row{
 			{"RuleID:", vuln.RuleID},
-			{"File:", vuln.Uri},
+			{"File:", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))},
+			{"Snippet:", red.Sprint(vuln.Snippet)},
+			{"Message:", text.WrapText(*vuln.Message, 170)},
 			{"Line:", vuln.StartLine},
-			{"Snippet:", vuln.Snippet},
-			{"Message:", *vuln.Message},
 			{"Commit:", vuln.Commit},
 			{"Author:", vuln.Author},
 			{"Email:", vuln.Email},
 			{"Date:", vuln.Date},
-			{"Link:", fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID)},
+			{"Link:", blue.Sprint(fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID))},
 		}
 
 		tw.AppendRows(raw)
-
-		//tw.AppendSeparator()
-
+		tw.AppendSeparator()
 	}
-	tw.Style().Options.DrawBorder = false
-	tw.Style().Options.SeparateColumns = false
 
 	fmt.Println(tw.Render())
 }
