@@ -63,7 +63,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 	events := make([]models.VulnEvent, len(dependencyVulns))
 
 	for i, dependencyVuln := range dependencyVulns {
-		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), userID)
+		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), userID, dependencyVuln.ScannerIDs)
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -80,7 +80,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 	return nil
 }
 
-func (s *service) UserDetectedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
+func (s *service) UserDetectedDependencyVulns(tx core.DB, userID, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -95,7 +95,7 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, userID string, depende
 
 	for i, dependencyVuln := range dependencyVulns {
 		riskReport := risk.RawRisk(*dependencyVuln.CVE, e, *dependencyVuln.ComponentDepth)
-		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), userID, riskReport)
+		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), userID, riskReport, scannerID)
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -276,7 +276,7 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), userID, justification)
+		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), userID, justification, dependencyVuln.ScannerIDs)
 	case models.EventTypeReopened:
 		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), userID, justification)
 	case models.EventTypeComment:

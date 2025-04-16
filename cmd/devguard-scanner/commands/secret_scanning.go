@@ -16,11 +16,12 @@ import (
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -129,7 +130,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 	}
 }
 
-func executeCodeScan(scannerID, path string) (*models.SarifResult, error) {
+func executeCodeScan(scannerID, path string) (*common.SarifResult, error) {
 	switch scannerID {
 	case "secret-scanning":
 		return secretScan(path)
@@ -141,7 +142,7 @@ func executeCodeScan(scannerID, path string) (*models.SarifResult, error) {
 
 }
 
-func sastScan(path string) (*models.SarifResult, error) {
+func sastScan(path string) (*common.SarifResult, error) {
 	file, err := os.CreateTemp("", "*.sarif")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create temp file")
@@ -174,7 +175,7 @@ func sastScan(path string) (*models.SarifResult, error) {
 	}
 	defer file.Close()
 	// parse the file
-	var sarifScan models.SarifResult
+	var sarifScan common.SarifResult
 	err = json.NewDecoder(file).Decode(&sarifScan)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse sarif file")
@@ -183,7 +184,7 @@ func sastScan(path string) (*models.SarifResult, error) {
 	return &sarifScan, nil
 }
 
-func secretScan(path string) (*models.SarifResult, error) {
+func secretScan(path string) (*common.SarifResult, error) {
 
 	//file, err := os.CreateTemp("", "*.sarif")
 	file, err := os.Create("secret-scan.sarif")
@@ -211,7 +212,7 @@ func secretScan(path string) (*models.SarifResult, error) {
 	}
 
 	// read AND parse the file
-	var sarifScan models.SarifResult
+	var sarifScan common.SarifResult
 	// open the file
 	file, err = os.Open(file.Name())
 	if err != nil {
@@ -231,7 +232,7 @@ func secretScan(path string) (*models.SarifResult, error) {
 	return &sarifScan, nil
 }
 
-func expandAndObfuscateSnippet(sarifScan models.SarifResult, path string) {
+func expandAndObfuscateSnippet(sarifScan common.SarifResult, path string) {
 
 	// expand the snippet
 	for ru, run := range sarifScan.Runs {
@@ -314,7 +315,7 @@ func obfuscateString(str string) string {
 }
 
 // add obfuscation function for snippet
-func obfuscateSecret(sarifScan models.SarifResult) models.SarifResult {
+func obfuscateSecret(sarifScan common.SarifResult) common.SarifResult {
 	// obfuscate the snippet
 	for ru, run := range sarifScan.Runs {
 		for re, result := range run.Results {
@@ -336,7 +337,6 @@ func obfuscateSecret(sarifScan models.SarifResult) models.SarifResult {
 }
 
 func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scannerID string) {
-
 	slog.Info("First party scan results", "firstPartyVulnAmount", len(scanResponse.FirstPartyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.FirstPartyVulns) == 0 {
@@ -356,57 +356,49 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 	}
 
 }
-func printSastScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI string, assetName string) {
 
+func printSastScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI, assetName string) {
 	tw := table.NewWriter()
+	tw.SetAllowedRowLength(180)
+	red := text.FgRed
+	blue := text.FgBlue
+	green := text.FgGreen
 	for _, vuln := range firstPartyVulns {
-
-		raw := []table.Row{
-			{"RuleID:", vuln.RuleID},
-			{"File:", vuln.Uri},
-			{"Line:", vuln.StartLine},
-			{"Snippet:", vuln.Snippet},
-			{"Message:", *vuln.Message},
-			{"Link:", fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID)},
-		}
-
-		tw.AppendRows(raw)
-
-		//tw.AppendSeparator()
-
+		tw.AppendRow(table.Row{"RuleID", vuln.RuleID})
+		tw.AppendRow(table.Row{"File", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))})
+		tw.AppendRow(table.Row{"Snippet", red.Sprint(vuln.Snippet)})
+		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 170)})
+		tw.AppendRow(table.Row{"Line", vuln.StartLine})
+		tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID))})
+		tw.AppendSeparator()
 	}
 
-	tw.Style().Options.DrawBorder = false
-	tw.Style().Options.SeparateColumns = false
-
 	fmt.Println(tw.Render())
-
 }
 
 func printSecretScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI string, assetName string) {
 	tw := table.NewWriter()
+	tw.SetAllowedRowLength(180)
+	red := text.FgRed
+	blue := text.FgBlue
+	green := text.FgGreen
 	for _, vuln := range firstPartyVulns {
-		fmt.Println(vuln.Snippet)
 		raw := []table.Row{
 			{"RuleID:", vuln.RuleID},
-			{"File:", vuln.Uri},
+			{"File:", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))},
+			{"Snippet:", red.Sprint(vuln.Snippet)},
+			{"Message:", text.WrapText(*vuln.Message, 170)},
 			{"Line:", vuln.StartLine},
-			{"Snippet:", vuln.Snippet},
-			{"Message:", *vuln.Message},
 			{"Commit:", vuln.Commit},
 			{"Author:", vuln.Author},
 			{"Email:", vuln.Email},
 			{"Date:", vuln.Date},
-			{"Link:", fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID)},
+			{"Link:", blue.Sprint(fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID))},
 		}
 
 		tw.AppendRows(raw)
-
-		//tw.AppendSeparator()
-
+		tw.AppendSeparator()
 	}
-	tw.Style().Options.DrawBorder = false
-	tw.Style().Options.SeparateColumns = false
 
 	fmt.Println(tw.Render())
 }

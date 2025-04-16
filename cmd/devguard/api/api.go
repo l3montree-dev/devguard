@@ -376,7 +376,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectService := project.NewService(projectRepository)
 	dependencyVulnController := dependency_vuln.NewHttpController(dependencyVulnRepository, dependencyVulnService, projectService)
 
-	vulnEventController := events.NewVulnEventController(vulnEventRepository)
+	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
 	depsDevService := vulndb.NewDepsDevService()
@@ -584,6 +584,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	assetVersionRouter.GET("/components/", componentController.ListPaged)
 	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution)
+
+	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)
 	//TODO: change it
 	//dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter := assetVersionRouter.Group("/flaws")

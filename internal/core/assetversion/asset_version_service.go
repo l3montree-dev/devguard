@@ -11,6 +11,7 @@ import (
 	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
@@ -52,7 +53,7 @@ func (s *service) GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVe
 	return s.assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(nil, assetID)
 }
 
-func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan models.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error) {
+func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error) {
 
 	firstPartyVulnerabilities := []models.FirstPartyVulnerability{}
 
@@ -129,7 +130,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 
 	// get a transaction
 	if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
-		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, newVulns, true); err != nil {
+		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, newVulns, true); err != nil {
 			// this will cancel the transaction
 			return err
 		}
@@ -260,7 +261,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, newDetectedVulns, *assetVersion, asset, true); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, scannerID, newDetectedVulns, *assetVersion, asset, true); err != nil {
 			return err // this will cancel the transaction
 		}
 

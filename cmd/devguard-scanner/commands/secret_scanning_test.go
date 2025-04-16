@@ -3,12 +3,12 @@ package commands
 import (
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/stretchr/testify/assert"
 )
 
-var exampleSarifResult = models.SarifResult{
-	Runs: []models.Run{
+var exampleSarifResult = common.SarifResult{
+	Runs: []common.Run{
 		{
 			Tool: struct {
 				Driver struct {
@@ -21,7 +21,7 @@ var exampleSarifResult = models.SarifResult{
 					Name: "ExampleTool",
 				},
 			},
-			Results: []models.Result{
+			Results: []common.Result{
 				{
 					RuleId: "EXAMPLE001",
 					Message: struct {
