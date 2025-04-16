@@ -2,26 +2,10 @@ package models
 
 import (
 	"strconv"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
 )
-
-type Vuln interface {
-	SetState(state VulnState)
-	GetState() VulnState
-	SetRawRiskAssessment(risk float64)
-	SetRiskRecalculatedAt(time.Time)
-	GetRawRiskAssessment() float64
-	GetAssetVersionName() string
-	GetAssetID() uuid.UUID
-	GetID() string
-	TableName() string
-	AddScannerID(scannerID string)
-	RemoveScannerID(scannerID string)
-}
 
 type FirstPartyVulnerability struct {
 	Vulnerability

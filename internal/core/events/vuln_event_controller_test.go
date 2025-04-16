@@ -35,8 +35,9 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 		ctx := e.NewContext(req, rec)
 
 		mockRepository := mocks.NewVulnEventRepository(t)
+		mocksAssetVersionRepository := mocks.NewAssetVersionRepository(t)
 		// Execution
-		err := events.NewVulnEventController(mockRepository).ReadAssetEventsByVulnID(ctx)
+		err := events.NewVulnEventController(mockRepository, mocksAssetVersionRepository).ReadAssetEventsByVulnID(ctx)
 
 		// Assertion
 		assert.NotNil(t, err)
@@ -46,7 +47,7 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 	t.Run("should return 500 if repository returns an error", func(t *testing.T) {
 		mockRepository := mocks.NewVulnEventRepository(t)
 		mockRepository.On("ReadAssetEventsByVulnID", "vulnId").Return(nil, assert.AnError)
-
+		mocksAssetVersionRepository := mocks.NewAssetVersionRepository(t)
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/vuln-events?vulnId=vulnId", nil)
 		rec := httptest.NewRecorder()
@@ -55,7 +56,7 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 		ctx.SetParamValues("vulnId")
 
 		// Execution
-		err := events.NewVulnEventController(mockRepository).ReadAssetEventsByVulnID(ctx)
+		err := events.NewVulnEventController(mockRepository, mocksAssetVersionRepository).ReadAssetEventsByVulnID(ctx)
 
 		// Assertion
 		assert.NotNil(t, err)

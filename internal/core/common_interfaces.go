@@ -184,7 +184,7 @@ type AssetService interface {
 type DependencyVulnService interface {
 	RecalculateRawRiskAssessment(tx DB, responsible string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error
 	UserFixedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
-	UserDetectedDependencyVulns(tx DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
+	UserDetectedDependencyVulns(tx DB, userID string, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error
 	UserDetectedDependencyVulnWithAnotherScanner(tx DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error
 	UserDidNotDetectDependencyVulnWithScannerAnymore(tx DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error
 	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, assetVersionName string) (models.VulnEvent, error)
@@ -220,7 +220,7 @@ type AssetVersionRepository interface {
 
 type FirstPartyVulnService interface {
 	UserFixedFirstPartyVulns(tx DB, userID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error
-	UserDetectedFirstPartyVulns(tx DB, userID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error
+	UserDetectedFirstPartyVulns(tx DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error
 	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVulnerability, statusType string, justification string) (models.VulnEvent, error)
 }
 
@@ -233,6 +233,7 @@ type VulnEventRepository interface {
 	SaveBatch(db DB, events []models.VulnEvent) error
 	Save(db DB, event *models.VulnEvent) error
 	ReadAssetEventsByVulnID(vulnID string) ([]models.VulnEventDetail, error)
+	ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
 }
 
 type GithubAppInstallationRepository interface {

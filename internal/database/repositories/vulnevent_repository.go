@@ -50,3 +50,43 @@ func (r *eventRepository) ReadAssetEventsByVulnID(vulnID string) ([]models.VulnE
 
 	return events, nil
 }
+
+func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, filter []core.FilterQuery) (core.Paged[models.VulnEventDetail], error) {
+
+	var events []models.VulnEventDetail
+
+	dependencyVulnSubQuery := r.db.
+		Table("dependency_vulns").
+		Select("id").
+		Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
+
+	firstPartyVulnSubQuery := r.db.
+		Table("first_party_vulnerabilities").
+		Select("id").
+		Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName)
+
+	q := r.db.
+		Table("vuln_events AS e").
+		Select("e.*, dv.cve_id").
+		Joins("LEFT JOIN dependency_vulns dv ON e.vuln_id = dv.id").
+		Where("e.vuln_id IN (?)", dependencyVulnSubQuery).
+		Or("e.vuln_id IN (?)", firstPartyVulnSubQuery).
+		Order("e.created_at DESC").
+		Find(&events)
+
+	var count int64
+
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+
+	err := q.Count(&count).Error
+	if err != nil {
+		return core.Paged[models.VulnEventDetail]{}, err
+	}
+
+	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&events).Error
+
+	return core.NewPaged(pageInfo, count, events), err
+}
