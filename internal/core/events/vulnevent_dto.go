@@ -19,9 +19,9 @@ type VulnEventDTO struct {
 
 	CreatedAt time.Time `json:"createdAt"`
 
-	AssetVersionName string `json:"assetVersionName"`
-	AssetVersionSlug string `json:"assetVersionSlug"`
-	FlawName         string `json:"flawName"`
+	AssetVersionName  string `json:"assetVersionName"`
+	AssetVersionSlug  string `json:"assetVersionSlug"`
+	VulnerabilityName string `json:"vulnerabilityName"`
 }
 
 func (dto VulnEventDTO) ToModel() models.VulnEvent {

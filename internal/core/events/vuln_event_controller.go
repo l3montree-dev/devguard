@@ -46,7 +46,7 @@ func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
 		CreatedAt:         event.CreatedAt,
 		AssetVersionName:  event.AssetVersionName,
 		AssetVersionSlug:  event.Slug,
-		FlawName:          event.CVEID,
+		VulnerabilityName: event.CVEID,
 	}
 }
 

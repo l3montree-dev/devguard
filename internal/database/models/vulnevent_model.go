@@ -45,9 +45,9 @@ type VulnEvent struct {
 type VulnEventDetail struct {
 	VulnEvent
 
-	AssetVersionName string `json:"assetVersionName"`
-	Slug             string `json:"assetVersionSlug"`
-	CVEID            string `json:"cveId"`
+	AssetVersionName string `json:"assetVersionName" gorm:"column:asset_version_name"`
+	Slug             string `json:"assetVersionSlug" gorm:"column:slug"`
+	CVEID            string `json:"cveId" gorm:"column:cve_id"`
 }
 
 func (e *VulnEvent) GetArbitraryJsonData() map[string]any {
