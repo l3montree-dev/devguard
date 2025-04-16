@@ -27,7 +27,7 @@ func NewContainerScanningCommand() *cobra.Command {
 	containerScanningCommand := &cobra.Command{
 		Use:   "container-scanning",
 		Short: "Software composition analysis of a container image",
-		Long:  `Scan a SBOM for vulnerabilities. This command will scan a SBOM for vulnerabilities and return a list of vulnerabilities found in the SBOM. The SBOM must be passed as an argument.`,
+		Long:  `Scan a container image for vulnerabilities. The image must be a tar file.`,
 		// Args:  cobra.ExactArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			// check if the path has a .tar ending
