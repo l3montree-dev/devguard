@@ -29,10 +29,6 @@ import (
 	"path"
 
 	"github.com/google/uuid"
-	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
-	"oras.land/oras-go/v2/registry/remote/credentials"
 
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
@@ -131,27 +127,6 @@ func tokenToKey(token string) (string, string, error) {
 	}
 
 	return path.Join(tempDir, "cosign.key"), path.Join(tempDir, "cosign.pub"), nil
-}
-
-func login(ctx context.Context, username, password, registryUrl string) error {
-	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{
-		AllowPlaintextPut:        true,
-		DetectDefaultNativeStore: true,
-	})
-	if err != nil {
-		return err
-	}
-
-	return credentials.Login(ctx, store, &remote.Registry{
-		RepositoryOptions: remote.RepositoryOptions{
-			Reference: registry.Reference{
-				Registry: registryUrl,
-			},
-		},
-	}, auth.Credential{
-		Username: username,
-		Password: password,
-	})
 }
 
 func signCmd(cmd *cobra.Command, args []string) error {
