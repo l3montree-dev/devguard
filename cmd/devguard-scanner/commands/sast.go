@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"log/slog"
-
 	"github.com/spf13/cobra"
 )
 
@@ -12,12 +10,8 @@ func NewSastCommand() *cobra.Command {
 		Short: "Launch a static application security test.",
 		Long:  "Launch a static application security test. A SAST test runs predefined rules against your source code",
 
-		Run: func(cmd *cobra.Command, args []string) {
-			err := sarifCommandFactory("sast")(cmd, args)
-			if err != nil {
-				slog.Error("sast failed", "err", err)
-				panic(err.Error())
-			}
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return sarifCommandFactory("sast")(cmd, args)
 		},
 	}
 

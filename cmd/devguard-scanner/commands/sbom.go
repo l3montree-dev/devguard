@@ -26,6 +26,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/pkg/errors"
@@ -33,9 +34,6 @@ import (
 )
 
 func sbomCmd(cmd *cobra.Command, args []string) error {
-	// parse the config
-	token, assetName, apiUrl, failOnRisk, webUI := parseConfig(cmd)
-
 	filePath := args[0]
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return fmt.Errorf("file does not exist: %s", filePath)
@@ -52,39 +50,23 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/scan", bytes.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.ApiUrl), bytes.NewReader(file))
 
 	if err != nil {
 		return err
 	}
 
-	err = pat.SignRequest(token, req)
+	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
 	if err != nil {
 		return err
-	}
-
-	scannerId, err := cmd.Flags().GetString("scanner-id")
-	if err != nil {
-		slog.Error("could not get scanner id", "err", err)
-		return err
-	}
-
-	ref, err := cmd.Flags().GetString("ref")
-	if err != nil {
-		slog.Error("could not get ref", "err", err)
-		return err
-	}
-	defaultRef, err := cmd.Flags().GetString("default-ref")
-	if err != nil || defaultRef == "" {
-		defaultRef = ref
 	}
 
 	// set the headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Asset-Name", assetName)
-	req.Header.Set("X-Scanner", scannerId)
-	req.Header.Set("X-Asset-Ref", ref)
-	req.Header.Set("X-Asset-Default-Branch", defaultRef)
+	req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
+	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
+	req.Header.Set("X-Asset-Ref", config.RuntimeBaseConfig.Ref)
+	req.Header.Set("X-Asset-Default-Branch", config.RuntimeBaseConfig.DefaultRef)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -112,8 +94,7 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not parse response")
 	}
 
-	printScaResults(scanResponse, failOnRisk, assetName, webUI)
-	return nil
+	return printScaResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.ScannerID)
 }
 
 func NewSbomCommand() *cobra.Command {

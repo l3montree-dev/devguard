@@ -23,6 +23,7 @@ import (
 	"time"
 
 	intotocmd "github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/lmittmann/tint"
 
 	"github.com/spf13/cobra"
@@ -162,6 +163,7 @@ func initializeConfig(cmd *cobra.Command) error {
 	// Bind the current command's flags to viper
 	bindFlags(cmd)
 
+	config.ParseBaseConfig()
 	return nil
 }
 
@@ -176,7 +178,12 @@ func bindFlags(cmd *cobra.Command) {
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed && viper.IsSet(configName) {
 			val := viper.Get(configName)
-			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+			cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val)) // nolint: errcheck
+		}
+
+		// Bind the flag to viper
+		if err := viper.BindPFlag(configName, f); err != nil {
+			slog.Error("could not bind flag to viper", "err", err)
 		}
 	})
 }

@@ -30,6 +30,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/spf13/cobra"
@@ -130,40 +131,22 @@ func tokenToKey(token string) (string, string, error) {
 }
 
 func signCmd(cmd *cobra.Command, args []string) error {
-	token, err := cmd.Flags().GetString("token")
-	if err != nil {
-		slog.Error("could not get token", "err", err)
-		return err
-	}
+	// check if the argument is a file, which does exist
+	fileOrImageName := args[0]
 
-	// check if we should login beforehand
-	username, err := cmd.Flags().GetString("username")
-	if username != "" && err == nil {
-		// the user requests to login
-		password, err := cmd.Flags().GetString("password")
-		if err != nil {
-			slog.Error("could not get password. Since username is provided, failing the signing process since logging in is not possible", "err", err)
-			return err
-		}
-
-		registry, err := cmd.Flags().GetString("registry")
-		if err != nil {
-			slog.Error("could not get registry. Since username is provided, failing the signing process since logging in is not possible", "err", err)
-			return err
-		}
-
+	if config.RuntimeBaseConfig.Username != "" && config.RuntimeBaseConfig.Password != "" && config.RuntimeBaseConfig.Registry != "" {
 		// login to the registry
-		err = login(cmd.Context(), username, password, registry)
+		err := login(cmd.Context(), config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, config.RuntimeBaseConfig.Registry)
 		if err != nil {
 			slog.Error("login failed", "err", err)
 			return err
 		}
 
-		slog.Info("logged in", "registry", registry)
+		slog.Info("logged in", "registry", config.RuntimeBaseConfig.Registry)
 	}
 
 	// transform the hex private key to an ecdsa private key
-	keyPath, publicKeyPath, err := tokenToKey(token)
+	keyPath, publicKeyPath, err := tokenToKey(config.RuntimeBaseConfig.Token)
 	if err != nil {
 		slog.Error("could not convert hex token to ecdsa private key", "err", err)
 		return err
@@ -174,30 +157,13 @@ func signCmd(cmd *cobra.Command, args []string) error {
 
 	defer os.RemoveAll(path.Dir(keyPath))
 
-	// upload the key to the backend
-	// get the asset name
-	assetName, err := cmd.Flags().GetString("assetName")
-	if err != nil {
-		slog.Error("could not get asset name", "err", err)
-		return err
-	}
-
-	// get the apiUrl
-	apiUrl, err := cmd.Flags().GetString("apiUrl")
-	if err != nil {
-		slog.Error("could not get api url", "err", err)
-		return err
-	}
-
 	// upload the public key to the backend
-	err = uploadPublicKey(cmd.Context(), token, apiUrl, publicKeyPath, assetName)
+	err = uploadPublicKey(cmd.Context(), config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.ApiUrl, publicKeyPath, config.RuntimeBaseConfig.AssetName)
 	if err != nil {
 		slog.Error("could not upload public key", "err", err)
 		return err
 	}
 
-	// check if the argument is a file, which does exist
-	fileOrImageName := args[0]
 	// forward the current process envs as well
 	envs := os.Environ()
 	envs = append(envs, "COSIGN_PASSWORD=")
@@ -244,13 +210,7 @@ func NewSignCommand() *cobra.Command {
 		Short: "Sign a file or image",
 		Long:  `Sign a file or image`,
 		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			err := signCmd(cmd, args)
-			if err != nil {
-				slog.Error("signing failed", "err", err)
-				os.Exit(1)
-			}
-		},
+		RunE:  signCmd,
 	}
 
 	addDefaultFlags(cmd)

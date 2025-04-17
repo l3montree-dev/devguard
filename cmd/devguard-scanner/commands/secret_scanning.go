@@ -14,7 +14,7 @@ import (
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
-	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
@@ -28,14 +28,7 @@ func NewSecretScanningCommand() *cobra.Command {
 		Use:   "secret-scanning",
 		Short: "Scan your application to see if any secrets have been unintentionally leaked into the source code",
 		Long:  "Scan your application to see if any secrets have been unintentionally leaked into the source code",
-
-		Run: func(cmd *cobra.Command, args []string) {
-			err := sarifCommandFactory("secret-scanning")(cmd, args)
-			if err != nil {
-				slog.Error("secret scanning failed", "err", err)
-				panic(err.Error())
-			}
-		},
+		RunE:  sarifCommandFactory("secret-scanning"),
 	}
 
 	addScanFlags(secretScanningCommand)
@@ -44,28 +37,11 @@ func NewSecretScanningCommand() *cobra.Command {
 
 func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		core.InitLogger()
-		token, assetName, apiUrl, _, webUI := parseConfig(cmd)
-		if token == "" {
-			slog.Error("token seems to be empty. If you provide the token via an environment variable like --token=$DEVGUARD_TOKEN, check, if the environment variable is set or if there are any spelling mistakes", "token", token)
-			return fmt.Errorf("token seems to be empty")
-		}
-
-		core.LoadConfig() // nolint:errcheck // just swallow the error: https://github.com/l3montree-dev/devguard/issues/188
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		path, err := cmd.Flags().GetString("path")
-		if err != nil {
-			return errors.Wrap(err, "could not get path")
-		}
-
-		if isValid, err := isValidPath(path); !isValid && err != nil {
-			return errors.Wrap(err, "invalid path")
-		}
-
-		file, err := executeCodeScan(scannerID, path)
+		file, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
@@ -78,17 +54,17 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		fileReader := bytes.NewReader(fileContent)
 		defer os.Remove(file.Name())
 
-		req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/sarif-scan/", fileReader)
+		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.ApiUrl), fileReader)
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
 		}
 
-		err = pat.SignRequest(token, req)
+		err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
 		if err != nil {
 			return errors.Wrap(err, "could not sign request")
 		}
 
-		err = utils.SetGitVersionHeader(path, req)
+		err = utils.SetGitVersionHeader(config.RuntimeBaseConfig.Path, req)
 
 		if err != nil {
 			printGitHelp(err)
@@ -96,7 +72,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Asset-Name", assetName)
+		req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
 
 		resp, err := http.DefaultClient.Do(req)
@@ -117,7 +93,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return errors.Wrap(err, "could not parse response")
 		}
 
-		printFirstPartyScanResults(scanResponse, assetName, webUI, scannerID)
+		printFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.AssetName, scannerID)
 		return nil
 	}
 }
@@ -163,7 +139,6 @@ func sastScan(path string) (*os.File, error) {
 }
 
 func secretScan(path string) (*os.File, error) {
-
 	file, err := os.CreateTemp("", "*.sarif")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create temp file")

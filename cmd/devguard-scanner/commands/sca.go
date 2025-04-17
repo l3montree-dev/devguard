@@ -29,11 +29,10 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
@@ -97,97 +96,6 @@ func generateSBOM(path string) (*os.File, error) {
 	return os.Open(filepath.Join(getDirFromPath(path), filename))
 }
 
-// containsRune checks if a string contains a specific rune
-func containsRune(s string, r rune) bool {
-	for _, char := range s {
-		if char == r {
-			return true
-		}
-	}
-	return false
-}
-
-// IsValidPath checks if a string is a valid file path
-func isValidPath(path string) (bool, error) {
-	// Check for null bytes
-	if !utf8.ValidString(path) || len(path) == 0 {
-		return false, fmt.Errorf("path contains null bytes")
-	}
-
-	// Check for invalid characters
-	invalidChars := `<>:"\|?*`
-	for _, char := range invalidChars {
-		if containsRune(path, char) {
-			return false, fmt.Errorf("invalid character '%c' in path", char)
-		}
-	}
-
-	// Check if the path length is within the acceptable limit
-	if len(path) > 260 {
-		return false, fmt.Errorf("path length exceeds 260 characters")
-	}
-
-	// Check if the path is either absolute or relative
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return false, err
-	}
-
-	// Check if the path exists
-	_, err = os.Stat(absPath)
-
-	if os.IsNotExist(err) {
-		return false, errors.Wrap(err, "path does not exist: %s"+absPath)
-	}
-
-	return true, nil
-}
-
-func sanitizeApiUrl(apiUrl string) string {
-	// check if the url has a trailing slash
-	apiUrl = strings.TrimSuffix(apiUrl, "/")
-
-	// check if the url has a protocol
-	if !strings.HasPrefix(apiUrl, "http://") && !strings.HasPrefix(apiUrl, "https://") {
-		apiUrl = "https://" + apiUrl
-	}
-
-	return apiUrl
-}
-
-func parseConfig(cmd *cobra.Command) (string, string, string, string, string) {
-	token, err := cmd.PersistentFlags().GetString("token")
-	if err != nil {
-		slog.Error("could not get token", "err", err)
-		return "", "", "", "", ""
-	}
-	assetName, err := cmd.PersistentFlags().GetString("assetName")
-	if err != nil {
-		slog.Error("could not get asset id", "err", err)
-		return "", "", "", "", ""
-	}
-	apiUrl, err := cmd.PersistentFlags().GetString("apiUrl")
-	if err != nil {
-		slog.Error("could not get api url", "err", err)
-		return "", "", "", "", ""
-	}
-	apiUrl = sanitizeApiUrl(apiUrl)
-
-	failOnRisk, err := cmd.Flags().GetString("failOnRisk")
-	if err != nil {
-		slog.Error("could not get failOnRisk", "err", err)
-		return "", "", "", "", ""
-	}
-
-	webUI, err := cmd.Flags().GetString("webUI")
-	if err != nil {
-		slog.Error("could not get webUI", "err", err)
-		return "", "", "", "", ""
-	}
-
-	return token, assetName, apiUrl, failOnRisk, webUI
-}
-
 // Function to dynamically change the format of the table row depending on the input parameters
 func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dependency_vuln.DependencyVulnDTO, clickableLink string) table.Row {
 	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
@@ -227,11 +135,11 @@ git push origin 1.0.1
 }
 
 // can be reused for container scanning as well.
-func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webUI string) {
+func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webUI string) error {
 	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.DependencyVulns) == 0 {
-		return
+		return nil
 	}
 
 	// order the flaws by their risk
@@ -276,23 +184,25 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	switch failOnRisk {
 	case "low":
 		if maxRisk > 0.1 {
-			return
+			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
 		}
 	case "medium":
 		if maxRisk >= 4 {
-			return
+			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
 		}
 
 	case "high":
 		if maxRisk >= 7 {
-			return
+			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
 		}
 
 	case "critical":
 		if maxRisk >= 9 {
-			return
+			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
 		}
 	}
+
+	return nil
 }
 
 func addDefaultFlags(cmd *cobra.Command) {
@@ -317,7 +227,6 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")
-
 }
 
 func getDirFromPath(path string) string {
@@ -336,27 +245,9 @@ func getDirFromPath(path string) string {
 
 func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		core.InitLogger()
-		token, assetName, apiUrl, failOnRisk, webUI := parseConfig(cmd)
-		if token == "" {
-			slog.Error("token seems to be empty. If you provide the token via an environment variable like --token=$DEVGUARD_TOKEN, check, if the environment variable is set or if there are any spelling mistakes", "token", token)
-			return fmt.Errorf("token seems to be empty")
-		}
-
-		core.LoadConfig() // nolint:errcheck // just swallow the error: https://github.com/l3montree-dev/devguard/issues/188
-
-		path, err := cmd.Flags().GetString("path")
-		if err != nil {
-			return errors.Wrap(err, "could not get path")
-		}
-
-		if isValid, err := isValidPath(path); !isValid && err != nil {
-			return errors.Wrap(err, "invalid path")
-		}
-
 		// read the sbom file and post it to the scan endpoint
 		// get the dependencyVulns and print them to the console
-		file, err := generateSBOM(path)
+		file, err := generateSBOM(config.RuntimeBaseConfig.Path)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
@@ -365,17 +256,17 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		req, err := http.NewRequestWithContext(ctx, "POST", apiUrl+"/api/v1/scan", file)
+		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.ApiUrl), file)
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
 		}
 
-		err = pat.SignRequest(token, req)
+		err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
 		if err != nil {
 			return errors.Wrap(err, "could not sign request")
 		}
 
-		err = utils.SetGitVersionHeader(path, req)
+		err = utils.SetGitVersionHeader(config.RuntimeBaseConfig.Path, req)
 
 		if err != nil {
 			printGitHelp(err)
@@ -383,7 +274,7 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Asset-Name", assetName)
+		req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
 
 		resp, err := http.DefaultClient.Do(req)
@@ -411,8 +302,7 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 			return errors.Wrap(err, "could not parse response")
 		}
 
-		printScaResults(scanResponse, failOnRisk, assetName, webUI)
-		return nil
+		return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
 	}
 }
 
@@ -422,13 +312,7 @@ func NewSCACommand() *cobra.Command {
 		Short: "Start a Software composition analysis",
 		Long:  `Scan an application for vulnerabilities. This command will generate a sbom, upload it to devguard and scan it for vulnerabilities.`,
 		// Args:  cobra.ExactArgs(0),
-		Run: func(cmd *cobra.Command, args []string) {
-			err := scaCommandFactory("sca")(cmd, args)
-			if err != nil {
-				slog.Error("software composition analysis failed", "err", err)
-				panic(err.Error())
-			}
-		},
+		RunE: scaCommandFactory("sca"),
 	}
 
 	addScanFlags(scaCommand)

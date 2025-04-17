@@ -21,18 +21,14 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/spf13/cobra"
 )
 
 func attestCmd(cmd *cobra.Command, args []string) error {
-	token, err := cmd.Flags().GetString("token")
-	if err != nil {
-		slog.Error("could not get token", "err", err)
-		return err
-	}
 
 	// transform the hex private key to an ecdsa private key
-	keyPath, _, err := tokenToKey(token)
+	keyPath, _, err := tokenToKey(config.RuntimeBaseConfig.Token)
 	if err != nil {
 		slog.Error("could not convert hex token to ecdsa private key", "err", err)
 		return err
@@ -77,17 +73,12 @@ func NewAttestCommand() *cobra.Command {
 		Short: "Add a new attestation to an image",
 		Long:  `Add a new attestation to an image`,
 		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			err := attestCmd(cmd, args)
-			if err != nil {
-				slog.Error("attestation failed", "err", err)
-				panic(err.Error())
-			}
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return attestCmd(cmd, args)
 		},
 	}
 
 	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-
 	cmd.MarkPersistentFlagRequired("token") // nolint:errcheck
 
 	return cmd
