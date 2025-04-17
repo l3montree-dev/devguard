@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 
 	"github.com/pkg/errors"
@@ -41,13 +42,7 @@ func verify(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid image name")
 	}
 
-	// download the layout
-	supplyChainId, err := cmd.Flags().GetString("supplyChainId")
-	if err != nil {
-		return err
-	}
-
-	if supplyChainId == "" {
+	if config.RuntimeInTotoConfig.SupplyChainID == "" {
 		// check if the image contains the supply chain id
 		// <registry>/<image>:<branch>-<commit>-<timestamp>
 
@@ -62,31 +57,16 @@ func verify(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("tag does not contain supply chain id")
 		}
 
-		supplyChainId = imageTagParts[len(imageTagParts)-2]
+		supplyChainId := imageTagParts[len(imageTagParts)-2]
 		if len(supplyChainId) != 8 {
 			return fmt.Errorf("tag does not contain supply chain id. Expected 8 characters")
 		}
 	}
 
-	token, err := getTokenFromCommandOrKeyring(cmd)
-	if err != nil {
-		return err
-	}
-
-	apiUrl, err := cmd.Flags().GetString("apiUrl")
-	if err != nil {
-		return err
-	}
-
-	assetName, err := cmd.Flags().GetString("assetName")
-	if err != nil {
-		return err
-	}
-
 	// download the layout
-	c := devguard.NewHTTPClient(token, apiUrl)
+	c := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.ApiUrl)
 
-	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, apiUrl+"/api/v1/organizations/"+assetName+"/in-toto/root.layout.json", nil)
+	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/root.layout.json", config.RuntimeBaseConfig.ApiUrl, config.RuntimeBaseConfig.AssetName), nil)
 	if err != nil {
 		return err
 	}
@@ -119,24 +99,12 @@ func verify(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not create temp dir")
 	}
 
-	err = downloadSupplyChainLinks(cmd.Context(), c, linkDir, apiUrl, assetName, supplyChainId)
+	err = downloadSupplyChainLinks(cmd.Context(), c, linkDir, config.RuntimeBaseConfig.ApiUrl, config.RuntimeBaseConfig.AssetName, config.RuntimeInTotoConfig.SupplyChainID)
 	if err != nil {
 		return errors.Wrap(err, "could not download supply chain links")
 	}
 
 	defer os.RemoveAll(linkDir)
-
-	// read the layoutKey
-	layoutKeyPath, err := cmd.Flags().GetString("layoutKey")
-	if err != nil {
-		return err
-	}
-
-	var layoutKey toto.Key
-	err = layoutKey.LoadKey(layoutKeyPath, "ecdsa-sha2-nistp256", []string{"sha256"})
-	if err != nil {
-		return err
-	}
 
 	// now get the digest from the layout argument - we expect it to be an image tag
 	// use crane to get the digest
@@ -150,7 +118,7 @@ func verify(cmd *cobra.Command, args []string) error {
 	}
 
 	_, err = toto.InTotoVerify(rootLayout, map[string]toto.Key{
-		layoutKey.KeyID: layoutKey,
+		config.RuntimeInTotoConfig.LayoutKey.KeyID: config.RuntimeInTotoConfig.LayoutKey,
 	}, linkDir, "", nil, nil, true)
 	if err != nil {
 		return err
@@ -179,7 +147,6 @@ func NewInTotoVerifyCommand() *cobra.Command {
 
 	cmd.Flags().String("supplyChainId", "", "Supply chain ID")
 	cmd.Flags().String("token", "", "Token")
-
 	cmd.Flags().String("layoutKey", "", "Path to the layout key")
 
 	panicOnError(cmd.MarkFlagRequired("token"))
