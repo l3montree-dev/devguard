@@ -99,8 +99,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return errors.Wrap(err, "could not parse response")
 		}
 
-		printFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.AssetName, scannerID)
-		return nil
+		return printFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.AssetName, scannerID)
 	}
 }
 
@@ -113,7 +112,6 @@ func executeCodeScan(scannerID, path string) (*common.SarifResult, error) {
 	default:
 		return nil, fmt.Errorf("unknown scanner: %s", scannerID)
 	}
-
 }
 
 func sastScan(path string) (*common.SarifResult, error) {
