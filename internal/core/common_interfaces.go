@@ -54,6 +54,12 @@ type AssetRepository interface {
 	GetAllAssetsFromDB() ([]models.Asset, error)
 }
 
+type AttestationRepository interface {
+	common.Repository[string, models.Attestation, DB]
+	GetByAssetID(assetID uuid.UUID) ([]models.Attestation, error)
+	GetByAssetVersionAndAssetID(assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)
+}
+
 type CveRepository interface {
 	common.Repository[string, models.CVE, DB]
 	FindByID(id string) (models.CVE, error)
