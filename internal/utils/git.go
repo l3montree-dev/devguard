@@ -45,7 +45,6 @@ func SetGitVersionHeader(path string, req *http.Request) error {
 		} else {
 			return err
 		}
-
 	}
 
 	fmt.Println("Git Version Info: ", gitVersionInfo)

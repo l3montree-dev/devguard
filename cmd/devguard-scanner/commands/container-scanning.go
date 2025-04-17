@@ -17,9 +17,9 @@ package commands
 
 import (
 	"fmt"
-	"log/slog"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/spf13/cobra"
 )
 
@@ -29,25 +29,12 @@ func NewContainerScanningCommand() *cobra.Command {
 		Short: "Software composition analysis of a container image",
 		Long:  `Scan a container image for vulnerabilities. The image must be a tar file.`,
 		// Args:  cobra.ExactArgs(0),
-		Run: func(cmd *cobra.Command, args []string) {
-			// check if the path has a .tar ending
-			path, err := cmd.Flags().GetString("path")
-			if err != nil {
-				slog.Error("could not get path", "err", err)
-				return
-			}
-			if !strings.HasSuffix(path, ".tar") {
-				slog.Error("invalid path", "err", fmt.Errorf("path must be a tar file"))
-				return
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if !strings.HasSuffix(config.RuntimeBaseConfig.Path, ".tar") {
+				return fmt.Errorf("path must be a tar file")
 			}
 
-			err = scaCommandFactory("container-scanning")(cmd, args)
-
-			if err != nil {
-				slog.Error("container scanning failed", "err", err)
-				panic(err.Error())
-
-			}
+			return scaCommandFactory("container-scanning")(cmd, args)
 		},
 	}
 

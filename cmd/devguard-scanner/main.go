@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright (C) 2025 l3montree UG (haftungsbeschraenkt)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -11,55 +11,18 @@
 // GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package main
 
 import (
-	"log/slog"
-	"os"
-
+	"github.com/joho/godotenv"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands"
-	intotocmd "github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
-	"github.com/l3montree-dev/devguard/internal/utils"
-
-	"github.com/phsym/console-slog"
-	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "devguard-scanner",
-	Short: "Vulnerability management for devs.",
-	Long:  `Devguard-Scanner is a tool to identify vulnerabilities in a software. It communicates the result to a devguard instance.`,
-}
-
-func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
-		slog.Error("Error executing command", "err", err)
-	}
-}
-
-func init() {
-	rootCmd.AddCommand(
-		commands.NewSCACommand(),
-		commands.NewContainerScanningCommand(),
-		commands.NewAttestCommand(),
-		commands.NewInspectCommand(),
-		commands.NewSignCommand(),
-		commands.NewSecretScanningCommand(),
-		commands.NewSastCommand(),
-		intotocmd.NewInTotoCommand(),
-	)
-}
-
 func main() {
-
-	logger := slog.New(console.NewHandler(os.Stderr, &console.HandlerOptions{Level: slog.LevelDebug}))
-
-	utils.PrintBuildInformation()
-
-	// optional: set global logger
-	slog.SetDefault(logger)
-	Execute()
+	// read environment variables from .env file
+	// and set them as env variables.
+	godotenv.Load() // nolint: errcheck
+	commands.Execute()
 }

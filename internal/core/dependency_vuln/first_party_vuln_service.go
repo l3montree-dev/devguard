@@ -21,7 +21,7 @@ func NewFirstPartyVulnService(firstPartyVulnRepository core.FirstPartyVulnReposi
 	}
 }
 
-func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error {
+func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVulnerability) error {
 
 	if len(firstPartyVulns) == 0 {
 		return nil
@@ -35,18 +35,15 @@ func (s *firstPartyVulnService) UserFixedFirstPartyVulns(tx core.DB, userID stri
 		events[i] = ev
 	}
 
-	if doRiskManagement {
-		err := s.firstPartyVulnRepository.SaveBatch(tx, firstPartyVulns)
-		if err != nil {
-			return err
-		}
-		return s.vulnEventRepository.SaveBatch(tx, events)
-
+	err := s.firstPartyVulnRepository.SaveBatch(tx, firstPartyVulns)
+	if err != nil {
+		return err
 	}
-	return nil
+	return s.vulnEventRepository.SaveBatch(tx, events)
+
 }
 
-func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID, scannerID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error {
+func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID, scannerID string, firstPartyVulns []models.FirstPartyVulnerability) error {
 	if len(firstPartyVulns) == 0 {
 		return nil
 	}
@@ -59,15 +56,11 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID, 
 		events[i] = ev
 	}
 
-	if doRiskManagement {
-		err := s.firstPartyVulnRepository.SaveBatch(tx, firstPartyVulns)
-		if err != nil {
-			return err
-		}
-		return s.vulnEventRepository.SaveBatch(tx, events)
+	err := s.firstPartyVulnRepository.SaveBatch(tx, firstPartyVulns)
+	if err != nil {
+		return err
 	}
-
-	return nil
+	return s.vulnEventRepository.SaveBatch(tx, events)
 }
 
 func (s *firstPartyVulnService) UpdateFirstPartyVulnState(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVulnerability, statusType string, justification string) (models.VulnEvent, error) {

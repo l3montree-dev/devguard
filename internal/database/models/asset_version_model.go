@@ -23,8 +23,7 @@ type AssetVersion struct {
 	AssetID uuid.UUID `json:"assetId" gorm:"primarykey;not null;type:uuid;"`
 	Asset   Asset     `json:"asset" gorm:"foreignKey:AssetID;references:ID; constraint:OnDelete:CASCADE;"`
 
-	Attestation []Attestation `json:"refs" gorm:"foreignKey:AssetVersionID;references:Name;"`
-
+	Attestations    []Attestation         `json:"attestations"  gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 	DefaultBranch   bool                  `json:"defaultBranch" gorm:"default:false;"`
 	Slug            string                `json:"slug" gorm:"type:text;not null;type:text;"`
 	DependencyVulns []DependencyVuln      `json:"dependencyVulns" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`

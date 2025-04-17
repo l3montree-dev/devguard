@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"os"
 	"regexp"
@@ -36,31 +35,11 @@ import (
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/common"
 	slsa1 "github.com/in-toto/in-toto-golang/in_toto/slsa_provenance/v1"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/zalando/go-keyring"
 )
-
-func getTokenFromKeyring(assetName string) (string, error) {
-	service := "devguard/" + assetName
-	user := "devguard"
-
-	token, err := keyring.Get(service, user)
-	if err != nil {
-		return "", err
-	}
-
-	return token, nil
-}
-
-func storeTokenInKeyring(assetName, token string) error {
-	service := "devguard/" + assetName
-	user := "devguard"
-
-	// set password
-	return keyring.Set(service, user, token)
-}
 
 var patterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)(api[_-]?key|token|secret|password|bearer)[:=\s]?([a-zA-Z0-9-_]+)`),
@@ -310,36 +289,14 @@ func newInTotoSetupCommand() *cobra.Command {
 		Use:   "setup",
 		Short: "Setup in-toto",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// write the token to a file - we need to store it somewhere
-			// so we can use it later
-			token, err := cmd.Flags().GetString("token")
-			if err != nil {
-				return err
-			}
-
-			apiUrl, err := cmd.Flags().GetString("apiUrl")
-			if err != nil {
-				return err
-			}
-
-			assetName, err := cmd.Flags().GetString("assetName")
-			if err != nil {
-				return err
-			}
-
-			if assetName == "" {
-				slog.Error("assetName is required")
-				return fmt.Errorf("assetName is required")
-			}
-
 			// set the token to the keyring
-			err = storeTokenInKeyring(assetName, token)
+			err := config.StoreTokenInKeyring(config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.Token)
 			if err != nil {
 				return err
 			}
 
 			// use empty materials string to avoid default "." which would result in duplicate materials and products
-			commandString := fmt.Sprintf(`devguard-scanner intoto run --materials="" --step=post-commit --apiUrl="%s" --assetName="%s"`, apiUrl, assetName)
+			commandString := fmt.Sprintf(`devguard-scanner intoto run --materials="" --step=post-commit --apiUrl="%s" --assetName="%s"`, config.RuntimeBaseConfig.ApiUrl, config.RuntimeBaseConfig.AssetName)
 
 			// check if a git post-commit hook exists
 			if _, err := os.Stat(".git/hooks/post-commit"); os.IsNotExist(err) {
@@ -379,8 +336,7 @@ func newInTotoSetupCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("apiUrl", "api.main.devguard.org", "The devguard api url")
-	cmd.Flags().String("assetName", "", "The asset name to use")
+	cmd.MarkPersistentFlagRequired("token") // nolint:errcheck
 
 	return cmd
 }
@@ -389,6 +345,10 @@ func NewInTotoCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "intoto",
 		Short: "InToto commands",
+
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			config.ParseInTotoConfig()
+		},
 	}
 
 	cmd.PersistentFlags().String("assetName", "", "The asset name to use")
@@ -399,11 +359,8 @@ func NewInTotoCommand() *cobra.Command {
 	cmd.PersistentFlags().String("step", "", "The name of the in-toto link")
 
 	cmd.PersistentFlags().StringArray("ignore", []string{".git/**/*"}, "The ignore patterns for the in-toto link")
-
 	cmd.PersistentFlags().StringArray("materials", []string{"."}, "The materials to include in the in-toto link. Default is the current directory")
-
 	cmd.PersistentFlags().StringArray("products", []string{"."}, "The products to include in the in-toto link. Default is the current directory")
-
 	cmd.PersistentFlags().String("supplyChainId", "", "The supply chain id to use. If empty, tries to extract the current commit hash.")
 	cmd.PersistentFlags().Bool("generateSlsaProvenance", false, "Generate SLSA provenance for the in-toto link. The provenance will be stored in <stepname>.provenance.json. It will be signed using the intoto token.")
 

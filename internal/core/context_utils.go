@@ -217,6 +217,14 @@ func GetProject(ctx Context) models.Project {
 	return ctx.Get("project").(models.Project)
 }
 
+func GetAttestation(ctx Context) models.Attestation {
+	return ctx.Get("attestation").(models.Attestation)
+}
+
+func SetAttestation(ctx Context, attestation models.Attestation) {
+	ctx.Set("attestation", attestation)
+}
+
 func RecursiveGetProjectRepositoryID(project models.Project) (string, error) {
 
 	if project.RepositoryID != nil {
