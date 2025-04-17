@@ -38,8 +38,8 @@ func NewLoginCommand() *cobra.Command {
 	cmd.Flags().StringP("username", "u", "", "username")
 	cmd.Flags().StringP("password", "p", "", "password")
 	// mark both flags as required
-	cmd.MarkFlagRequired("username")
-	cmd.MarkFlagRequired("password")
+	cmd.MarkFlagRequired("username") // nolint:errcheck
+	cmd.MarkFlagRequired("password") // nolint:errcheck
 	return cmd
 }
 

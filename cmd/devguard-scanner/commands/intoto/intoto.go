@@ -336,7 +336,7 @@ func newInTotoSetupCommand() *cobra.Command {
 		},
 	}
 
-	cmd.MarkPersistentFlagRequired("token")
+	cmd.MarkPersistentFlagRequired("token") // nolint:errcheck
 
 	return cmd
 }
