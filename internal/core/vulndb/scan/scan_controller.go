@@ -100,16 +100,10 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	//check if risk management is enabled
-	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
-	doRiskManagement := riskManagementEnabled != "false"
-
-	if doRiskManagement {
-		// update the sbom in the database in parallel
-		if err := s.assetVersionService.UpdateSBOM(assetVersion, scannerID, normalizedBom); err != nil {
-			slog.Error("could not update sbom", "err", err)
-			return scanResults, err
-		}
+	// update the sbom in the database in parallel
+	if err := s.assetVersionService.UpdateSBOM(assetVersion, scannerID, normalizedBom); err != nil {
+		slog.Error("could not update sbom", "err", err)
+		return scanResults, err
 	}
 
 	// scan the bom we just retrieved.
@@ -121,7 +115,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, userID, doRiskManagement)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err
@@ -142,19 +136,18 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		}()
 	}
 
-	if doRiskManagement {
-		slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
-		if err := s.statisticsService.UpdateAssetRiskAggregation(&assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
-			slog.Error("could not recalculate risk history", "err", err)
-			return scanResults, err
-		}
-
-		// save the asset
-		if err := s.assetVersionRepository.Save(nil, &assetVersion); err != nil {
-			slog.Error("could not save asset", "err", err)
-			return scanResults, err
-		}
+	slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
+	if err := s.statisticsService.UpdateAssetRiskAggregation(&assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {
+		slog.Error("could not recalculate risk history", "err", err)
+		return scanResults, err
 	}
+
+	// save the asset
+	if err := s.assetVersionRepository.Save(nil, &assetVersion); err != nil {
+		slog.Error("could not save asset", "err", err)
+		return scanResults, err
+	}
+
 	scanResults.AmountOpened = len(opened) //Fill in the results
 	scanResults.AmountClosed = len(closed)
 	scanResults.DependencyVulns = utils.Map(newState, dependency_vuln.DependencyVulnToDto)
@@ -194,22 +187,16 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		})
 	}
 
-	//check if risk management is enabled
-	riskManagementEnabled := c.Request().Header.Get("X-Risk-Management")
-	doRiskManagement := riskManagementEnabled != "false"
-
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, &assetVersion, sarifScan, scannerID, userID, true)
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, &assetVersion, sarifScan, scannerID, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
 	}
 
-	if doRiskManagement {
-		err := s.assetVersionRepository.Save(nil, &assetVersion)
-		if err != nil {
-			slog.Error("could not save asset", "err", err)
-		}
+	err = s.assetVersionRepository.Save(nil, &assetVersion)
+	if err != nil {
+		slog.Error("could not save asset", "err", err)
 	}
 
 	return c.JSON(200, FirstPartyScanResponse{

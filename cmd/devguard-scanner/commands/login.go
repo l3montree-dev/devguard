@@ -19,6 +19,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/spf13/cobra"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
@@ -27,21 +28,22 @@ import (
 )
 
 func NewLoginCommand() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "login [flags] <registry>",
 		Short: "Log in to a remote registry",
 		Long:  `Log in to a remote registry`,
-		Run:   runLogin,
+		RunE:  runLogin,
 	}
 
 	cmd.Flags().StringP("username", "u", "", "username")
 	cmd.Flags().StringP("password", "p", "", "password")
+	// mark both flags as required
+	cmd.MarkFlagRequired("username") // nolint:errcheck
+	cmd.MarkFlagRequired("password") // nolint:errcheck
 	return cmd
 }
 
 func login(ctx context.Context, username, password, registryUrl string) error {
-
 	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{
 		AllowPlaintextPut:        true,
 		DetectDefaultNativeStore: true,
@@ -62,29 +64,16 @@ func login(ctx context.Context, username, password, registryUrl string) error {
 	})
 }
 
-func runLogin(cmd *cobra.Command, args []string) {
+func runLogin(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-
-	// extract the username
-	username, _ := cmd.Flags().GetString("username")
-	if username == "" {
-		slog.Error("username is required")
-		return
-	}
-
-	// extract the password
-	password, _ := cmd.Flags().GetString("password")
-	if password == "" {
-		slog.Error("password is required")
-		return
-	}
 
 	registryUrl := args[0]
 
-	err := login(ctx, username, password, registryUrl)
+	err := login(ctx, config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, registryUrl)
 	if err != nil {
 		slog.Error("login failed", "err", err)
 	}
 
 	slog.Info("login successful")
+	return nil
 }

@@ -54,7 +54,7 @@ func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEven
 	}
 }
 
-func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
+func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -69,18 +69,14 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 		events[i] = ev
 	}
 
-	if doRiskManagement {
-		err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
-		if err != nil {
-			return err
-		}
-		return s.vulnEventRepository.SaveBatch(tx, events)
+	err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
+	if err != nil {
+		return err
 	}
-
-	return nil
+	return s.vulnEventRepository.SaveBatch(tx, events)
 }
 
-func (s *service) UserDetectedDependencyVulns(tx core.DB, userID, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
+func (s *service) UserDetectedDependencyVulns(tx core.DB, userID, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -101,16 +97,12 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, userID, scannerID stri
 		events[i] = ev
 	}
 
-	if doRiskManagement {
-		// run the updates in the transaction to keep a valid state
-		err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
-		if err != nil {
-			return err
-		}
-		return s.vulnEventRepository.SaveBatch(tx, events)
+	// run the updates in the transaction to keep a valid state
+	err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
+	if err != nil {
+		return err
 	}
-
-	return nil
+	return s.vulnEventRepository.SaveBatch(tx, events)
 }
 
 func (s *service) RecalculateAllRawRiskAssessments() error {
