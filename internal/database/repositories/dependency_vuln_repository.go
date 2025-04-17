@@ -74,6 +74,7 @@ type riskStats struct {
 	TotalRisk           float64 `json:"total_risk"`
 	AvgRisk             float64 `json:"avg_risk"`
 	MaxRisk             float64 `json:"max_risk"`
+	MaxCVSS             float64 `json:"max_cvss"`
 	DependencyVulnCount int64   `json:"dependency_vuln_count"`
 	PackageName         string  `json:"package_name"`
 }
@@ -98,8 +99,9 @@ func (r *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, assetVersi
 	}
 
 	packageNameQuery := r.GetDB(tx).Table("components").
-		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, COUNT(f.id) as dependency_vuln_count, components.purl as package_name").
+		Select("SUM(f.raw_risk_assessment) as total_risk, AVG(f.raw_risk_assessment) as avg_risk, MAX(f.raw_risk_assessment) as max_risk, MAX(c.cvss) as max_cvss, COUNT(f.id) as dependency_vuln_count, components.purl as package_name").
 		Joins("INNER JOIN dependency_vulns f ON components.purl = f.component_purl").
+		Joins("INNER JOIN cves c ON f.cve_id = c.cve").
 		Where("f.asset_version_name = ?", assetVersionName).
 		Where("f.asset_id = ?", assetID).
 		Group("components.purl").Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize)
@@ -122,7 +124,7 @@ func (r *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, assetVersi
 		return r.PackageName
 	})
 
-	err = q.Where("dependency_vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Find(&dependencyVulns).Error
+	err = q.Where("dependency_vulns.component_purl IN (?)", packageNames).Order("raw_risk_assessment DESC").Preload("CVE").Find(&dependencyVulns).Error
 
 	if err != nil {
 		return core.Paged[models.DependencyVuln]{}, map[string]int{}, err
