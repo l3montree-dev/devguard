@@ -575,10 +575,10 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	assetVersionRouter.GET("/attestations/", attestationController.List)
-	assetVersionRouter.POST("/attestations/", attestationController.Create, neededScope([]string{"manage"}))
+	assetVersionRouter.POST("/attestations/", attestationController.Create, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
-	assetRouter.PATCH("/", assetController.Update, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, neededScope([]string{"scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	assetRouter.POST("/in-toto/", intotoController.Create, neededScope([]string{"scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
