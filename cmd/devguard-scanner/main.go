@@ -50,6 +50,7 @@ func init() {
 		commands.NewSecretScanningCommand(),
 		commands.NewSastCommand(),
 		intotocmd.NewInTotoCommand(),
+		commands.NewLoginCommand(),
 	)
 }
 
