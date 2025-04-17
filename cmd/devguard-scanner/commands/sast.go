@@ -3,14 +3,42 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
+	"strconv"
 
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
+
+func printSastScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI, assetName string) {
+	tw := table.NewWriter()
+	tw.SetAllowedRowLength(180)
+
+	blue := text.FgBlue
+	green := text.FgGreen
+	for _, vuln := range firstPartyVulns {
+		tw.AppendRow(table.Row{"RuleID", vuln.RuleID})
+		if vuln.Snippet != "" {
+			tw.AppendRow(table.Row{"Snippet", vuln.Snippet})
+		}
+		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 170)})
+		if vuln.Uri != "" {
+			tw.AppendRow(table.Row{"File", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))})
+			tw.AppendRow(table.Row{"Line", vuln.StartLine})
+		}
+		tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID))})
+		tw.AppendSeparator()
+	}
+
+	fmt.Println(tw.Render())
+}
 
 func sastScan(path string) (*common.SarifResult, error) {
 	file, err := os.CreateTemp("", "*.sarif")

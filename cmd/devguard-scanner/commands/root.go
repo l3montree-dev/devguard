@@ -97,6 +97,7 @@ func init() {
 		intotocmd.NewInTotoCommand(),
 		NewLoginCommand(),
 		NewIaCCommand(),
+		NewSarifCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.

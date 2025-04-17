@@ -10,6 +10,7 @@
         "ghinstallation",
         "gorm",
         "montree",
+        "sarif",
         "Vulns"
     ]
 }
