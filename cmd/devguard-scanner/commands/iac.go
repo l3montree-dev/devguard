@@ -28,10 +28,7 @@ func iacScan(path string) (*common.SarifResult, error) {
 	scannerCmd = exec.Command("checkov", "-d", path, "--output", "sarif", "--output-file-path", dir) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
-	err = scannerCmd.Run()
-	if err != nil {
-		// return nil, errors.Wrapf(err, "could not run scanner: %s", stderr.String())
-	}
+	scannerCmd.Run() // nolint:errcheck
 
 	// read the file in <dir>/results_sarif.sarif
 	b, err := os.ReadFile(dir + "/results_sarif.sarif")
