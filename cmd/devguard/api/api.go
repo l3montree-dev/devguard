@@ -555,6 +555,9 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	assetVersionRouter.GET("/versions/", assetVersionController.Versions)
 
+	assetVersionRouter.GET("/attestations/", attestationController.List)
+	assetVersionRouter.POST("/attestations/", attestationController.Create)
+
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	assetRouter.PATCH("/", assetController.Update, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
@@ -564,7 +567,6 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 
 	assetVersionRouter.GET("/in-toto/:supplyChainId/", intotoController.Read)
-	assetVersionRouter.POST("/attestations/", attestationController.Create)
 
 	apiV1Router.GET("/verify-supply-chain/", intotoController.VerifySupplyChain)
 
@@ -578,9 +580,6 @@ func BuildRouter(db core.DB) *echo.Echo {
 	dependencyVulnRouter.POST("/:dependencyVulnId/mitigate/", dependencyVulnController.Mitigate, projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	dependencyVulnRouter.GET("/:dependencyVulnId/events/", vulnEventController.ReadAssetEventsByVulnID)
-
-	attestationRouter := assetVersionRouter.Group("/attestations")
-	attestationRouter.GET("/", attestationController.List)
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

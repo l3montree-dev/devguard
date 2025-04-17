@@ -1,7 +1,7 @@
 package attestation
 
 import (
-	"fmt"
+	"encoding/json"
 	"io"
 
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -22,8 +22,9 @@ func NewAttestationController(repository core.AttestationRepository) *attestatio
 func (a *attestationController) List(ctx core.Context) error {
 
 	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
 
-	attestationList, err := a.attestationRepository.GetByAssetID(asset.GetID())
+	attestationList, err := a.attestationRepository.GetByAssetVersion(asset.GetID(), assetVersion.Name)
 	if err != nil {
 		return err
 	}
@@ -33,23 +34,24 @@ func (a *attestationController) List(ctx core.Context) error {
 
 func (a *attestationController) Create(ctx core.Context) error {
 	var attestation models.Attestation
+	jsonContent := make(map[string]any)
 
 	assetVersion := core.GetAssetVersion(ctx)
-
 	attestation.AssetID = core.GetAsset(ctx).ID
 
 	attestation.AssetVersionName = assetVersion.Name
 	attestation.AssetVersion = assetVersion
-	//How to get the name of the attestation ?
+	attestation.AttestationName = ctx.Request().Header.Get("X-Attestation-Name")
 
 	content, err := io.ReadAll(ctx.Request().Body)
-
 	if err != nil {
 		return echo.NewHTTPError(400, "unable to bind data to attestation model").WithInternal(err)
 	}
-	//json := make(map[string]string)
-	//err = json.Unmarshal(content, &json)
-	fmt.Printf("content: %s \n", content)
+
+	err = json.Unmarshal(content, &jsonContent)
+	if err != nil {
+		return err
+	}
 
 	err = core.V.Struct(attestation)
 	if err != nil {
