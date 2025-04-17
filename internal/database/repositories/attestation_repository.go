@@ -32,7 +32,7 @@ func (a *attestationRepository) GetByAssetID(assetID uuid.UUID) ([]models.Attest
 	return attestationList, nil
 }
 
-func (a *attestationRepository) GetByAssetVersion(assetID uuid.UUID, assetVersion string) ([]models.Attestation, error) {
+func (a *attestationRepository) GetByAssetVersionAndAssetID(assetID uuid.UUID, assetVersion string) ([]models.Attestation, error) {
 	var attestationList []models.Attestation
 	err := a.db.Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersion).Find(&attestationList).Error
 	if err != nil {

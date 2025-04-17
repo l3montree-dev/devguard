@@ -24,7 +24,7 @@ func (a *attestationController) List(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 
-	attestationList, err := a.attestationRepository.GetByAssetVersion(asset.GetID(), assetVersion.Name)
+	attestationList, err := a.attestationRepository.GetByAssetVersionAndAssetID(asset.GetID(), assetVersion.Name)
 	if err != nil {
 		return err
 	}
