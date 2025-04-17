@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"math"
 	"testing"
 )
 
@@ -102,12 +103,12 @@ func TestShannonEntropy(t *testing.T) {
 		{
 			name:     "String with all unique characters",
 			input:    "abcdef",
-			expected: 6.,
+			expected: 2.584963,
 		},
 		{
 			name:     "String with repeated characters",
 			input:    "aabbcc",
-			expected: 6.,
+			expected: 1.584963,
 		},
 		{
 			name:     "String with highly repetitive characters",
@@ -117,14 +118,14 @@ func TestShannonEntropy(t *testing.T) {
 		{
 			name:     "String with mixed characters",
 			input:    "abcabcabc",
-			expected: 9.,
+			expected: 1.584963,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ShannonEntropy(tt.input)
-			if result != tt.expected {
+			if math.Abs(result-tt.expected) > 0.000001 {
 				t.Errorf("expected %f, got %f", tt.expected, result)
 			}
 		})

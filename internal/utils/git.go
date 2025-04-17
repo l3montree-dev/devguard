@@ -285,7 +285,8 @@ func getCurrentVersion(path string) (string, int, error) {
 }
 
 func ReadFileFromGitRef(path string, commitSha string, fileName string) ([]byte, error) {
-	cmd := exec.Command("git", "show", commitSha+":"+fileName)
+	cmd := exec.Command("git", "show", fmt.Sprintf("%s:%s", commitSha, fileName))
+
 	var out bytes.Buffer
 	var errOut bytes.Buffer
 	cmd.Stdout = &out

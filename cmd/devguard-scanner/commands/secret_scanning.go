@@ -80,6 +80,9 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 
 		// marshal the result
 		b, err := json.Marshal(sarifResult)
+		if err != nil {
+			return errors.Wrap(err, "could not marshal sarif result")
+		}
 		// check if we should do risk management
 		doRiskManagement, err := cmd.Flags().GetBool("riskManagement")
 		if err != nil {
