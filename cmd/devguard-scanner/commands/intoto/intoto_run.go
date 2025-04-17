@@ -17,9 +17,7 @@ package intotocmd
 
 import (
 	"bytes"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -30,40 +28,12 @@ import (
 	"github.com/briandowns/spinner"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
-	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
-
-func tokenToInTotoKey(token string) (toto.Key, error) {
-	privKey, _, err := pat.HexTokenToECDSA(token)
-	if err != nil {
-		return toto.Key{}, err
-	}
-	privKeyBytes, err := x509.MarshalECPrivateKey(&privKey)
-	if err != nil {
-		return toto.Key{}, err
-	}
-
-	// encode to pem
-	b := pem.EncodeToMemory(&pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: privKeyBytes,
-	})
-
-	// create new reader
-	reader := bytes.NewReader(b)
-
-	var key toto.Key
-	err = key.LoadKeyReader(reader, "ecdsa-sha2-nistp521", []string{"sha256"})
-	if err != nil {
-		return toto.Key{}, errors.Wrap(err, "failed to load key")
-	}
-
-	return key, nil
-}
 
 func getCommitHash() (string, error) {
 	// get the commit hash
@@ -108,20 +78,7 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string
 		return errors.Wrap(err, "failed to marshal body")
 	}
 
-	// cant error - we already called it in the parseCommand
-	token, _ := getTokenFromCommandOrKeyring(cmd)
-
-	apiUrl, err := cmd.Flags().GetString("apiUrl")
-	if err != nil {
-		return errors.Wrap(err, "failed to get api url")
-	}
-
-	assetName, err := cmd.Flags().GetString("assetName")
-	if err != nil {
-		return errors.Wrap(err, "failed to get asset name")
-	}
-
-	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto", apiUrl, assetName), bytes.NewBuffer(bodyjson))
+	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto", config.RuntimeBaseConfig.ApiUrl, config.RuntimeBaseConfig.AssetName), bytes.NewBuffer(bodyjson))
 	if err != nil {
 		return errors.Wrap(err, "failed to create request")
 	}
@@ -133,7 +90,7 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string
 	}
 
 	// send the request
-	resp, err := devguard.NewHTTPClient(token, apiUrl).Do(req)
+	resp, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.ApiUrl).Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to send request")
 	}
@@ -150,17 +107,11 @@ func NewInTotoRunCommand() *cobra.Command {
 		Use:  "run",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			step, supplyChainId, key, generateProvenance, materials, products, ignore, err := parseCommand(cmd)
-			if err != nil {
-				return errors.Wrap(err, "failed to parse command")
-			}
-
 			s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
 			s.Suffix = " Devguard: Recording file hashes for supply chain security"
 			s.Start()
 
-			metadata, err := toto.InTotoRun(step, ".", materials, products, []string{}, key, []string{"sha256"}, ignore, []string{}, true, true, true)
+			metadata, err := toto.InTotoRun(config.RuntimeInTotoConfig.Step, ".", config.RuntimeInTotoConfig.Materials, config.RuntimeInTotoConfig.Products, []string{}, config.RuntimeInTotoConfig.Key, []string{"sha256"}, config.RuntimeInTotoConfig.Ignore, []string{}, true, true, true)
 			if err != nil {
 				return err
 			}
@@ -175,43 +126,43 @@ func NewInTotoRunCommand() *cobra.Command {
 				return errors.New("failed to cast metadata to link")
 			}
 
-			if generateProvenance {
+			if config.RuntimeInTotoConfig.GenerateSlsaProvenance {
 				provenanceEnvelope, err := generateSlsaProvenance(link)
 				if err != nil {
 					return errors.Wrap(err, "failed to generate slsa provenance")
 				}
 
-				err = provenanceEnvelope.Sign(key)
+				err = provenanceEnvelope.Sign(config.RuntimeInTotoConfig.Key)
 				if err != nil {
 					return errors.Wrap(err, "failed to sign envelope")
 				}
 
-				err = provenanceEnvelope.Dump(fmt.Sprintf("%s.provenance.json", step))
+				err = provenanceEnvelope.Dump(fmt.Sprintf("%s.provenance.json", config.RuntimeInTotoConfig.Step))
 				if err != nil {
 					return errors.Wrap(err, "failed to dump envelope")
 				}
 
-				slog.Info("successfully generated provenance", "step", step)
+				slog.Info("successfully generated provenance", "step", config.RuntimeInTotoConfig.Step)
 			}
 
-			err = metadata.Sign(key)
+			err = metadata.Sign(config.RuntimeInTotoConfig.Key)
 			if err != nil {
 				return errors.Wrap(err, "failed to sign metadata")
 			}
 
-			filename := fmt.Sprintf("%s.%s.link", step, key.KeyID[:8])
+			filename := fmt.Sprintf("%s.%s.link", config.RuntimeInTotoConfig.Step, config.RuntimeInTotoConfig.Key.KeyID[:8])
 
 			err = metadata.Dump(filename)
 			if err != nil {
 				return errors.Wrap(err, "failed to dump metadata")
 			}
 
-			err = readAndUploadMetadata(cmd, supplyChainId, step, filename)
+			err = readAndUploadMetadata(cmd, config.RuntimeInTotoConfig.SupplyChainID, config.RuntimeInTotoConfig.Step, filename)
 			if err != nil {
 				return errors.Wrap(err, "failed to read and upload metadata")
 			}
 			s.Stop()
-			slog.Info("successfully uploaded in-toto link", "step", step)
+			slog.Info("successfully uploaded in-toto link", "step", config.RuntimeInTotoConfig.Step, "filename", filename)
 			return nil
 		},
 	}

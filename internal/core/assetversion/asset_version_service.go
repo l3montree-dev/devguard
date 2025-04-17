@@ -53,7 +53,7 @@ func (s *service) GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVe
 	return s.assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(nil, assetID)
 }
 
-func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string, doRiskManagement bool) (int, int, []models.FirstPartyVulnerability, error) {
+func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVulnerability, error) {
 
 	firstPartyVulnerabilities := []models.FirstPartyVulnerability{}
 
@@ -89,7 +89,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 		return f.CalculateHash()
 	})
 
-	amountOpened, amountClosed, amountExisting, err := s.handleFirstPartyVulnResult(userID, scannerID, assetVersion, firstPartyVulnerabilities, doRiskManagement, asset)
+	amountOpened, amountClosed, amountExisting, err := s.handleFirstPartyVulnResult(userID, scannerID, assetVersion, firstPartyVulnerabilities, asset)
 	if err != nil {
 		return 0, 0, []models.FirstPartyVulnerability{}, err
 	}
@@ -109,7 +109,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
-func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVulnerability, doRiskManagement bool, asset models.Asset) (int, int, []models.FirstPartyVulnerability, error) {
+func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVulnerability, asset models.Asset) (int, int, []models.FirstPartyVulnerability, error) {
 	// get all existing vulns from the database - this is the old state
 	existingVulns, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
@@ -131,11 +131,11 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 
 	// get a transaction
 	if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
-		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, newVulns, true); err != nil {
+		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, newVulns); err != nil {
 			// this will cancel the transaction
 			return err
 		}
-		return s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, fixedVulns, true)
+		return s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, fixedVulns)
 	}); err != nil {
 		slog.Error("could not save vulns", "err", err)
 		return 0, 0, []models.FirstPartyVulnerability{}, err
@@ -149,7 +149,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
 
-func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string, doRiskManagement bool) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
@@ -193,7 +193,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	opened, closed, newState, err = s.handleScanResult(userID, scannerID, assetVersion, dependencyVulns, doRiskManagement, asset)
+	opened, closed, newState, err = s.handleScanResult(userID, scannerID, assetVersion, dependencyVulns, asset)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -243,7 +243,7 @@ func diffScanResults(currentScanner string, foundVulnerabilities []models.Depend
 	return foundByScannerAndNotExisting, fixedVulns, detectedByOtherScanner, notDetectedByScannerAnymore
 }
 
-func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, doRiskManagement bool, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	// get all existing dependencyVulns from the database - this is the old state
 	//number := rand.IntN(len(dependencyVulns))
 	//dependencyVulns = dependencyVulns[:0]
@@ -262,7 +262,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, scannerID, newDetectedVulns, *assetVersion, asset, true); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, scannerID, newDetectedVulns, *assetVersion, asset); err != nil {
 			return err // this will cancel the transaction
 		}
 
@@ -278,7 +278,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 			return err
 		}
 
-		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset, true)
+		return s.dependencyVulnService.UserFixedDependencyVulns(tx, userID, fixedVulns, *assetVersion, asset)
 	}); err != nil {
 		slog.Error("could not save dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err

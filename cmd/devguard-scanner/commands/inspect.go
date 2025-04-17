@@ -19,21 +19,20 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"log/slog"
 	"os"
 
 	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-func inspectCmd(cmd *cobra.Command, args []string) {
+func inspectCmd(cmd *cobra.Command, args []string) error {
 	// get the key from the args
 	key := args[0]
 
 	privKey, pubKey, err := pat.HexTokenToECDSA(key)
 	if err != nil {
-		slog.Error("could not parse key", "err", err)
-		return
+		return errors.Wrap(err, "could not parse key")
 	}
 
 	fmt.Println("PRIVATE KEY HEX")
@@ -44,14 +43,12 @@ func inspectCmd(cmd *cobra.Command, args []string) {
 	// encode the private key to PEM
 	privKeyBytes, err := x509.MarshalECPrivateKey(&privKey)
 	if err != nil {
-		slog.Error("could not marshal private key", "err", err)
-		return
+		return errors.Wrap(err, "could not marshal private key")
 	}
 	// encode the private key to PEM
 	err = pem.Encode(os.Stdout, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privKeyBytes})
 	if err != nil {
-		slog.Error("could not encode private key to PEM", "err", err)
-		return
+		return errors.Wrap(err, "could not encode private key to PEM")
 	}
 	fmt.Print("\n\n")
 
@@ -61,15 +58,14 @@ func inspectCmd(cmd *cobra.Command, args []string) {
 	// encode the public key to PEM
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&pubKey)
 	if err != nil {
-		slog.Error("could not marshal public key", "err", err)
-		return
+		return errors.Wrap(err, "could not marshal public key")
 	}
 
 	err = pem.Encode(os.Stdout, &pem.Block{Type: "EC PUBLIC KEY", Bytes: pubKeyBytes})
 	if err != nil {
-		slog.Error("could not encode public key to PEM", "err", err)
-		return
+		return errors.Wrap(err, "could not encode public key to PEM")
 	}
+	return nil
 }
 
 func NewInspectCommand() *cobra.Command {
@@ -78,6 +74,6 @@ func NewInspectCommand() *cobra.Command {
 		Short: "Inspect a devguard token",
 		Long:  `Inspect a devguard token. This will print the private and public key in PEM format.`,
 		Args:  cobra.ExactArgs(1),
-		Run:   inspectCmd,
+		RunE:  inspectCmd,
 	}
 }
