@@ -158,3 +158,20 @@ func CompareFirstTwoDecimals(a, b float64) bool {
 
 	return aRounded == bRounded
 }
+
+func ShannonEntropy(str string) float64 {
+	frequencies := make(map[rune]float64)
+
+	for _, i := range str {
+		frequencies[i]++
+	}
+
+	var sum float64
+
+	for _, v := range frequencies {
+		f := v / float64(len(str))
+		sum += -f * math.Log2(f)
+	}
+
+	return sum
+}

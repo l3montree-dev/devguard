@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"math"
 	"testing"
 )
 
@@ -79,6 +80,53 @@ func TestRemoveFromWhitespaceSeparatedStringList(t *testing.T) {
 			result := RemoveFromWhitespaceSeparatedStringList(tt.input, tt.item)
 			if result != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+func TestShannonEntropy(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected float64
+	}{
+		{
+			name:     "Empty string",
+			input:    "",
+			expected: 0.,
+		},
+		{
+			name:     "Single character string",
+			input:    "a",
+			expected: 0.,
+		},
+		{
+			name:     "String with all unique characters",
+			input:    "abcdef",
+			expected: 2.584963,
+		},
+		{
+			name:     "String with repeated characters",
+			input:    "aabbcc",
+			expected: 1.584963,
+		},
+		{
+			name:     "String with highly repetitive characters",
+			input:    "aaaaaa",
+			expected: 0.,
+		},
+		{
+			name:     "String with mixed characters",
+			input:    "abcabcabc",
+			expected: 1.584963,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ShannonEntropy(tt.input)
+			if math.Abs(result-tt.expected) > 0.000001 {
+				t.Errorf("expected %f, got %f", tt.expected, result)
 			}
 		})
 	}

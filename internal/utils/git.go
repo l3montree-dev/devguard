@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -280,4 +281,27 @@ func getCurrentVersion(path string) (string, int, error) {
 
 	return latestTag, commitCountsInt, nil
 
+}
+
+func ReadFileFromGitRef(path string, commitSha string, fileName string) ([]byte, error) {
+	cmd := exec.Command("git", "show", fmt.Sprintf("%s:%s", commitSha, fileName)) // nolint:gosec // runs on the client. You are free to attack yourself
+
+	var out bytes.Buffer
+	var errOut bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &errOut
+	cmd.Dir = getDirFromPath(path)
+	err := cmd.Run()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not run git command")
+	}
+
+	// read the file line by line
+	bytes, err := io.ReadAll(&out)
+	if err != nil {
+		slog.Error("could not read file", "err", err)
+		return nil, errors.Wrap(err, "could not read file")
+	}
+
+	return bytes, nil
 }
