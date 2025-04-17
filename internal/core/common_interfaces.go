@@ -53,6 +53,7 @@ type AssetRepository interface {
 }
 
 type AttestationRepository interface {
+	common.Repository[string, models.Attestation, DB]
 	GetByAssetID(assetID uuid.UUID) ([]models.Attestation, error)
 	GetByAssetVersion(assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)
 }

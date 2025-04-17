@@ -9,7 +9,7 @@ import (
 
 type attestationRepository struct {
 	db core.DB
-	common.Repository[uuid.UUID, models.Attestation, core.DB]
+	common.Repository[string, models.Attestation, core.DB]
 }
 
 func NewAttestationRepository(db core.DB) *attestationRepository {
@@ -19,7 +19,7 @@ func NewAttestationRepository(db core.DB) *attestationRepository {
 	}
 	return &attestationRepository{
 		db:         db,
-		Repository: newGormRepository[uuid.UUID, models.Attestation](db),
+		Repository: newGormRepository[string, models.Attestation](db),
 	}
 }
 
@@ -39,8 +39,4 @@ func (a *attestationRepository) GetByAssetVersion(assetID uuid.UUID, assetVersio
 		return attestationList, err
 	}
 	return attestationList, nil
-}
-
-func (a *attestationRepository) Create() error {
-	return nil
 }

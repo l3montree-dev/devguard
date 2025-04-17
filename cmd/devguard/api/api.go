@@ -53,6 +53,10 @@ type assetVersionRepository interface {
 	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
 }
 
+type attestationRepository interface {
+	ReadBySlug(attestationName string, slug string) (models.Attestation, error)
+}
+
 type orgRepository interface {
 	ReadBySlug(slugOrId string) (models.Org, error)
 }

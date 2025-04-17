@@ -48,7 +48,7 @@ func (a *attestationController) Create(ctx core.Context) error {
 		return echo.NewHTTPError(400, "unable to bind data to attestation model").WithInternal(err)
 	}
 
-	err = json.Unmarshal(content, &jsonContent)
+	err = json.Unmarshal(content, &jsonContent) //convert the byte array from io.ReadAll into a readable json
 	if err != nil {
 		return err
 	}
@@ -57,6 +57,11 @@ func (a *attestationController) Create(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(400, err.Error())
 	}
-	return nil
 
+	err = a.attestationRepository.Create(nil, &attestation)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
