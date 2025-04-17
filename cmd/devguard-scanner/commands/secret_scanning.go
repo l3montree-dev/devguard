@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -11,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +22,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -186,8 +187,7 @@ func sastScan(path string) (*common.SarifResult, error) {
 
 func secretScan(path string) (*common.SarifResult, error) {
 
-	//file, err := os.CreateTemp("", "*.sarif")
-	file, err := os.Create("secret-scan.sarif")
+	file, err := os.CreateTemp("", "*.sarif")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create temp file")
 	}
@@ -241,68 +241,86 @@ func expandAndObfuscateSnippet(sarifScan common.SarifResult, path string) {
 				startLine := location.PhysicalLocation.Region.StartLine
 				endLine := location.PhysicalLocation.Region.EndLine
 				original := location.PhysicalLocation.Region.Snippet.Text
+
+				// read the file from git
+				fileContent, err := utils.ReadFileFromGitRef(path, sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha, location.PhysicalLocation.ArtifactLocation.Uri)
+				if err != nil {
+					slog.Error("could not read file", "err", err)
+					continue
+				}
 				// expand the snippet
-				expandedSnippet := expandSnippet(path, location.PhysicalLocation.ArtifactLocation.Uri, startLine, endLine, original)
+				expandedSnippet, err := expandSnippet(fileContent, startLine, endLine, original)
+				if err != nil {
+					slog.Error("could not expand snippet", "err", err)
+					continue
+				}
+
 				// obfuscate the snippet
 				obfuscateSnippet := obfuscateString(expandedSnippet)
+
 				// set the snippet
 				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = obfuscateSnippet
 
-				/* 	fmt.Println("Expanded snippet", expandedSnippet)
-				fmt.Println("Obfuscated snippet", obfuscateSnippet)
-				fmt.Println("set snippet", sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text)
-				*/
 			}
 		}
 	}
 
 }
 
-func expandSnippet(path string, fileName string, startLine int, endLine int, original string) string {
-	// open the file
-	file, err := os.Open(path + "/" + fileName)
-	if err != nil {
-		slog.Error("could not open file", "err", err)
-		return ""
-	}
-	defer file.Close()
+func expandSnippet(fileContent []byte, startLine, endLine int, original string) (string, error) {
 
-	// read the file line by line
-	scanner := bufio.NewScanner(file)
-	var lines []string
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
+	startLine--
+	endLine--
 
-	if err := scanner.Err(); err != nil {
-		slog.Error("could not read file", "err", err)
-		return ""
-	}
+	lines := strings.Split(string(fileContent), "\n")
 
 	if startLine < 0 || endLine > len(lines) {
 		slog.Error("start line or end line is out of range", "startLine", startLine, "endLine", endLine, "lines", len(lines))
-		return ""
+		return "", fmt.Errorf("start line or end line is out of range")
 	}
+
+	//original is the string with the secret, but without the beginning of the line, so we reconstruct it
+	// slice the original string where *** are
+	secretStringBegin := strings.Split(original, "***")
+
+	//find the first occurrence of the secret in the line
+	StartColumn := strings.Index(lines[startLine], secretStringBegin[0])
+
+	secretLineBegin := lines[startLine][:StartColumn]
 
 	expandedSnippet := ""
 
-	startLineN := int(math.Max(0, float64(startLine)-6))
-	endLineN := int(math.Min(float64(len(lines)), float64(endLine)+5))
+	startLineN := int(math.Max(0, float64(startLine)-5))
+	endLineN := int(math.Min(float64(len(lines)), float64(endLine)+6))
 
 	// replace start and endline to make sure any previous tranformations will be applied#
-	start := lines[startLineN : startLine-1]
-	end := lines[endLine:endLineN]
-	expandedSnippet = strings.Join(start, "\n") + "\n" + original + "\n" + strings.Join(end, "\n")
+	start := lines[startLineN:startLine]
+	end := lines[endLine+1 : endLineN]
 
-	fmt.Println("startLine", startLine, "endLine", endLine, "lines length", len(lines))
+	startStr := ""
+	endStr := ""
+	if len(start) > 0 {
+		startStr = strings.Join(start, "\n")
+		expandedSnippet = startStr + "\n"
+	}
 
-	return expandedSnippet
+	expandedSnippet += "+++\n" + secretLineBegin + original + "\n+++"
 
+	if len(end) > 0 {
+		endStr = strings.Join(end, "\n")
+		expandedSnippet += "\n" + endStr
+	}
+
+	return expandedSnippet, nil
 }
 
 func obfuscateString(str string) string {
-	// replaces all high entropy strings in the provided strings with their obfuscated counterparts
-	els := strings.Split(str, " ")
+
+	// create regex to split string at whitespace and new line chars
+	reg := regexp.MustCompile(`[\n]+`)
+	// split the string into words
+	els := reg.Split(str, -1)
+
 	for i, el := range els {
 		// 5 is a magic number!
 		entropy := utils.ShannonEntropy(el)
@@ -311,7 +329,7 @@ func obfuscateString(str string) string {
 		}
 	}
 
-	return strings.Join(els, " ")
+	return strings.Join(els, "\n")
 }
 
 // add obfuscation function for snippet
@@ -325,7 +343,7 @@ func obfuscateSecret(sarifScan common.SarifResult) common.SarifResult {
 				if len(snippet) < snippetMax {
 					snippetMax = len(snippet) / 2
 				}
-				snippet = snippet[:snippetMax] + "****"
+				snippet = snippet[:snippetMax] + strings.Repeat("*", len(snippet)-snippetMax)
 				// set the snippet
 				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = snippet
 			}
@@ -343,18 +361,23 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 		return
 	}
 
+	// get all "open" vulns
+	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v dependency_vuln.FirstPartyVulnDTO) bool {
+		return v.State == models.VulnStateOpen
+	})
+
 	switch scannerID {
 	case "secret-scanning":
-		printSecretScanResults(scanResponse.FirstPartyVulns, webUI, assetName)
-		return
+		printSecretScanResults(openVulns, webUI, assetName)
 	case "sast":
-		printSastScanResults(scanResponse.FirstPartyVulns, webUI, assetName)
-		return
+		printSastScanResults(openVulns, webUI, assetName)
 	default:
 		slog.Warn("unknown scanner", "scanner", scannerID)
-		return
 	}
 
+	if len(openVulns) > 0 {
+		os.Exit(1)
+	}
 }
 
 func printSastScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI, assetName string) {
