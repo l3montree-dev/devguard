@@ -18,6 +18,7 @@ type dependencyVulnsByPackage struct {
 	PackageName string  `json:"packageName"`
 	AvgRisk     float64 `json:"avgRisk"`
 	MaxRisk     float64 `json:"maxRisk"`
+	MaxCVSS     float64 `json:"maxCvss"`
 	//TODO: change the name to DependencyVulnCount
 	DependencyVulnCount int     `json:"flawCount"`
 	TotalRisk           float64 `json:"totalRisk"`
@@ -160,15 +161,22 @@ func (c dependencyVulnHttpController) ListPaged(ctx core.Context) error {
 		// calculate the max and average risk
 		maxRisk := 0.
 		totalRisk := 0.
+		maxCvss := 0.
 
 		for _, f := range v.DependencyVulns {
 			totalRisk += utils.OrDefault(f.RawRiskAssessment, 0)
 			if utils.OrDefault(f.RawRiskAssessment, 0) > maxRisk {
 				maxRisk = *f.RawRiskAssessment
 			}
+
+			if float64(f.CVE.CVSS) > maxCvss {
+				maxCvss = float64(f.CVE.CVSS)
+			}
 		}
 		v.AvgRisk = totalRisk / float64(len(v.DependencyVulns))
 		v.MaxRisk = maxRisk
+		v.MaxCVSS = maxCvss
+
 		v.TotalRisk = totalRisk
 		v.DependencyVulnCount = len(v.DependencyVulns)
 		values = append(values, v)
