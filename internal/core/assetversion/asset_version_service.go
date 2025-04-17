@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -53,12 +54,22 @@ func (s *service) GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVe
 	return s.assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(nil, assetID)
 }
 
+var sarifResultKindsIndicatingNotAndIssue = []string{
+	"notApplicable",
+	"informational",
+	"pass",
+	"open",
+}
+
 func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVulnerability, error) {
 
 	firstPartyVulnerabilities := []models.FirstPartyVulnerability{}
 
 	for _, run := range sarifScan.Runs {
 		for _, result := range run.Results {
+			if slices.Contains(sarifResultKindsIndicatingNotAndIssue, result.Kind) {
+				continue
+			}
 
 			firstPartyVulnerability := models.FirstPartyVulnerability{
 				Vulnerability: models.Vulnerability{
@@ -67,17 +78,20 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 					Message:          &result.Message.Text,
 					ScannerIDs:       scannerID,
 				},
-				RuleID:      result.RuleId,
-				Uri:         result.Locations[0].PhysicalLocation.ArtifactLocation.Uri,
-				StartLine:   result.Locations[0].PhysicalLocation.Region.StartLine,
-				StartColumn: result.Locations[0].PhysicalLocation.Region.StartColumn,
-				EndLine:     result.Locations[0].PhysicalLocation.Region.EndLine,
-				EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
-				Snippet:     result.Locations[0].PhysicalLocation.Region.Snippet.Text,
-				Commit:      result.PartialFingerprints.CommitSha,
-				Email:       result.PartialFingerprints.Email,
-				Author:      result.PartialFingerprints.Author,
-				Date:        result.PartialFingerprints.Date,
+				RuleID: result.RuleId,
+				Commit: result.PartialFingerprints.CommitSha,
+				Email:  result.PartialFingerprints.Email,
+				Author: result.PartialFingerprints.Author,
+				Date:   result.PartialFingerprints.Date,
+			}
+
+			if len(result.Locations) > 0 {
+				firstPartyVulnerability.Uri = result.Locations[0].PhysicalLocation.ArtifactLocation.Uri
+				firstPartyVulnerability.StartLine = result.Locations[0].PhysicalLocation.Region.StartLine
+				firstPartyVulnerability.StartColumn = result.Locations[0].PhysicalLocation.Region.StartColumn
+				firstPartyVulnerability.EndLine = result.Locations[0].PhysicalLocation.Region.EndLine
+				firstPartyVulnerability.EndColumn = result.Locations[0].PhysicalLocation.Region.EndColumn
+				firstPartyVulnerability.Snippet = result.Locations[0].PhysicalLocation.Region.Snippet.Text
 			}
 
 			firstPartyVulnerabilities = append(firstPartyVulnerabilities, firstPartyVulnerability)

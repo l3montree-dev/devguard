@@ -103,20 +103,13 @@ func NewSbomCommand() *cobra.Command {
 		Short: "Usage: <sbom.json>. Scan a software bill of materials. Only CycloneDX SBOMs are supported.",
 		Long:  `Scan a software bill of materials. Only CycloneDX SBOMs are supported. This command will scan the SBOM for vulnerabilities and return the results.`,
 		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			err := sbomCmd(cmd, args)
-			if err != nil {
-				slog.Error("sbom scanning failed", "err", err)
-				return err
-			}
-			return nil
-		},
+		RunE:  sbomCmd,
 	}
 
-	cmd.Flags().String("scanner-id", "github.com/l3montree-dev/devguard-scanner/cmd/sbom", "Name of the scanner. DevGuard will compare new and old results based on the scanner-id.")
+	cmd.Flags().String("scannerId", "github.com/l3montree-dev/devguard-scanner/cmd/sbom", "Name of the scanner. DevGuard will compare new and old results based on the scannerId.")
 
 	cmd.Flags().String("ref", "main", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, main will be used")
-	cmd.Flags().String("default-ref", "main", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, --ref will be used.")
+	cmd.Flags().String("defaultRef", "main", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, --ref will be used.")
 
 	addScanFlags(cmd)
 	return cmd

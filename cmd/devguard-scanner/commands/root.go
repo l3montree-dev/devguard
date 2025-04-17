@@ -38,8 +38,9 @@ const (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "devguard-scanner",
-	Short: "Secure your Software Supply Chain",
+	SilenceUsage: true,
+	Use:          "devguard-scanner",
+	Short:        "Secure your Software Supply Chain",
 	Long: `Secure your Software Supply Chain
 	
 Attestation-based compliance as Code, 
@@ -80,7 +81,7 @@ OWASP Incubating Project`,
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		slog.Error("Error executing command", "err", err)
+		os.Exit(1)
 	}
 }
 
@@ -95,6 +96,8 @@ func init() {
 		NewSastCommand(),
 		intotocmd.NewInTotoCommand(),
 		NewLoginCommand(),
+		NewIaCCommand(),
+		NewSarifCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.

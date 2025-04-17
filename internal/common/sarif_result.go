@@ -14,6 +14,7 @@ type Run struct {
 }
 
 type Result struct {
+	Kind    string `json:"kind"`
 	RuleId  string `json:"ruleId"`
 	Message struct {
 		Text string `json:"text"`
