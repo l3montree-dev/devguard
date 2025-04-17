@@ -134,13 +134,13 @@ func TestObfuscateSnippet(t *testing.T) {
 		expectedSnippet := "that is an example c*********************************************************"
 
 		// Call the function with the example data
-		obfuscatedResult := obfuscateSecret(exampleSarifResult)
+		obfuscateSecret(&exampleSarifResult)
 
 		// Check if the original snippet is not present in the obfuscated result
-		assert.NotContains(t, obfuscatedResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text, originalSnippet)
+		assert.NotContains(t, exampleSarifResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text, originalSnippet)
 
 		//check if the obfuscated snippet is as expected
-		assert.Equal(t, expectedSnippet, obfuscatedResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text)
+		assert.Equal(t, expectedSnippet, exampleSarifResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text)
 	})
 
 	t.Run("it should not obfuscate the snippet if it is shorter then 20 characters", func(t *testing.T) {
@@ -155,13 +155,13 @@ func TestObfuscateSnippet(t *testing.T) {
 		exampleSarifResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text = originalSnippet
 
 		// Call the function with the example data
-		obfuscatedResult := obfuscateSecret(exampleSarifResult)
+		obfuscateSecret(&exampleSarifResult)
 
 		// Check if the original snippet is not present in the obfuscated result
-		assert.NotContains(t, obfuscatedResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text, originalSnippet)
+		assert.NotContains(t, exampleSarifResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text, originalSnippet)
 
 		//check if the obfuscated snippet is as expected
-		assert.Equal(t, expectedSnippet, obfuscatedResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text)
+		assert.Equal(t, expectedSnippet, exampleSarifResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text)
 	})
 }
 

@@ -52,7 +52,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		}
 
 		// expand snippet and obfuscate it
-		expandAndObfuscateSnippet(*sarifResult, config.RuntimeBaseConfig.Path)
+		expandAndObfuscateSnippet(sarifResult, config.RuntimeBaseConfig.Path)
 
 		// marshal the result
 		b, err := json.Marshal(sarifResult)
@@ -199,12 +199,12 @@ func secretScan(path string) (*common.SarifResult, error) {
 	}
 
 	// obfuscate founded secrets
-	sarifScan = obfuscateSecret(sarifScan)
+	obfuscateSecret(&sarifScan)
 
 	return &sarifScan, nil
 }
 
-func expandAndObfuscateSnippet(sarifScan common.SarifResult, path string) {
+func expandAndObfuscateSnippet(sarifScan *common.SarifResult, path string) {
 
 	// expand the snippet
 	for ru, run := range sarifScan.Runs {
@@ -305,7 +305,7 @@ func obfuscateString(str string) string {
 }
 
 // add obfuscation function for snippet
-func obfuscateSecret(sarifScan common.SarifResult) common.SarifResult {
+func obfuscateSecret(sarifScan *common.SarifResult) {
 	// obfuscate the snippet
 	for ru, run := range sarifScan.Runs {
 		for re, result := range run.Results {
@@ -321,9 +321,6 @@ func obfuscateSecret(sarifScan common.SarifResult) common.SarifResult {
 			}
 		}
 	}
-
-	return sarifScan
-
 }
 
 func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scannerID string) error {
