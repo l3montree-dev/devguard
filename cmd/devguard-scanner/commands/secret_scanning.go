@@ -326,11 +326,11 @@ func obfuscateSecret(sarifScan common.SarifResult) common.SarifResult {
 
 }
 
-func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scannerID string) {
+func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scannerID string) error {
 	slog.Info("First party scan results", "firstPartyVulnAmount", len(scanResponse.FirstPartyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.FirstPartyVulns) == 0 {
-		return
+		return nil
 	}
 
 	// get all "open" vulns
@@ -348,8 +348,10 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 	}
 
 	if len(openVulns) > 0 {
-		os.Exit(1)
+		return fmt.Errorf("found %d unhandled vulnerabilities", len(openVulns))
 	}
+
+	return nil
 }
 
 func printSastScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI, assetName string) {
