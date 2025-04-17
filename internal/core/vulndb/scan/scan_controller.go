@@ -20,10 +20,10 @@ import (
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -78,18 +78,6 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 
 	userID := core.GetSession(c).GetUserID()
 
-	// get the X-Asset-Version header
-	version := c.Request().Header.Get("X-Asset-Version")
-	if version == "" {
-		version = models.NoVersion
-	}
-
-	version, err := normalize.SemverFix(version)
-	if err != nil {
-		slog.Error("invalid semver version. Defaulting to 0.0.0", "version", version)
-		version = models.NoVersion
-	}
-
 	tag := c.Request().Header.Get("X-Tag")
 
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
@@ -106,8 +94,8 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	scanner := c.Request().Header.Get("X-Scanner")
-	if scanner == "" {
+	scannerID := c.Request().Header.Get("X-Scanner")
+	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
 		return scanResults, err
 	}
@@ -118,7 +106,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 
 	if doRiskManagement {
 		// update the sbom in the database in parallel
-		if err := s.assetVersionService.UpdateSBOM(assetVersion, scanner, version, normalizedBom); err != nil {
+		if err := s.assetVersionService.UpdateSBOM(assetVersion, scannerID, normalizedBom); err != nil {
 			slog.Error("could not update sbom", "err", err)
 			return scanResults, err
 		}
@@ -132,22 +120,26 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	scannerID := c.Request().Header.Get("X-Scanner")
-	if scannerID == "" {
-		slog.Error("no scanner id provided")
-		return scanResults, err
-	}
-
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, version, scannerID, userID, doRiskManagement)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, userID, doRiskManagement)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err
 	}
 
-	err = s.dependencyVulnService.CreateIssuesForVulns(asset, newState)
-	if err != nil {
-		return scanResults, err
+	//Check if we want to create an issue for this assetVersion
+	if s.dependencyVulnService.ShouldCreateIssues(assetVersion) {
+		go func() {
+			err := s.dependencyVulnService.CreateIssuesForVulnsIfThresholdExceeded(asset, opened)
+			if err != nil {
+				slog.Error("could not create issues for vulnerabilities", "err", err)
+			}
+			// close the fixed vulnerabilities
+			err = s.dependencyVulnService.CloseIssuesAsFixed(asset, closed)
+			if err != nil {
+				slog.Error("could not close issues for vulnerabilities", "err", err)
+			}
+		}()
 	}
 
 	if doRiskManagement {
@@ -163,23 +155,21 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 			return scanResults, err
 		}
 	}
-	scanResults.AmountOpened = amountOpened //Fill in the results
-	scanResults.AmountClosed = amountClose
+	scanResults.AmountOpened = len(opened) //Fill in the results
+	scanResults.AmountClosed = len(closed)
 	scanResults.DependencyVulns = utils.Map(newState, dependency_vuln.DependencyVulnToDto)
 
 	return scanResults, nil
 }
 
 func (s *httpController) FirstPartyVulnScan(c core.Context) error {
-	var sarifScan models.SarifResult
+	var sarifScan common.SarifResult
 	if err := c.Bind(&sarifScan); err != nil {
 		return err
 	}
 
 	asset := core.GetAsset(c)
 	userID := core.GetSession(c).GetUserID()
-
-	// get the X-Asset-Version header
 
 	tag := c.Request().Header.Get("X-Tag")
 
@@ -196,8 +186,8 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
 	}
 
-	scanner := c.Request().Header.Get("X-Scanner")
-	if scanner == "" {
+	scannerID := c.Request().Header.Get("X-Scanner")
+	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
 		return c.JSON(400, map[string]string{
 			"error": "no X-Scanner header found",
@@ -209,7 +199,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	doRiskManagement := riskManagementEnabled != "false"
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, &assetVersion, sarifScan, scanner, userID, true)
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, &assetVersion, sarifScan, scannerID, userID, true)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
@@ -227,7 +217,6 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		AmountClosed:    amountClose,
 		FirstPartyVulns: utils.Map(newState, dependency_vuln.FirstPartyVulnToDto),
 	})
-
 }
 
 func (s *httpController) ScanDependencyVulnFromProject(c core.Context) error {

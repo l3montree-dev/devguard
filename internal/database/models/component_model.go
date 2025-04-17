@@ -16,6 +16,8 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -40,7 +42,7 @@ const (
 
 type ComponentProject struct {
 	// project name like "github.com/facebook/react"
-	ID              string `json:"id" gorm:"primaryKey;column:id"`
+	ProjectKey      string `json:"projectKey" gorm:"primaryKey;column:project_key"`
 	StarsCount      int    `json:"starsCount" gorm:"column:stars_count"`
 	ForksCount      int    `json:"forksCount" gorm:"column:forks_count"`
 	OpenIssuesCount int    `json:"openIssuesCount" gorm:"column:open_issues_count"`
@@ -48,7 +50,13 @@ type ComponentProject struct {
 	License         string `json:"license"`
 	Description     string `json:"description"`
 
-	ScoreCard database.JSONB `json:"scoreCard" gorm:"column:score_card"`
+	ScoreCard      *database.JSONB `json:"scoreCard" gorm:"column:score_card;type:jsonb"`
+	ScoreCardScore *float64        `json:"scoreCardScore" gorm:"column:score_card_score"`
+	UpdatedAt      time.Time       `json:"updatedAt" gorm:"column:updated_at"`
+}
+
+func (c ComponentProject) TableName() string {
+	return "component_projects"
 }
 
 type Component struct {
@@ -56,28 +64,27 @@ type Component struct {
 	Dependencies  []ComponentDependency `json:"dependsOn" gorm:"hasMany;"`
 	ComponentType ComponentType         `json:"componentType"`
 	Version       string                `json:"version"`
+	License       *string               `json:"license"`
+	Published     *time.Time            `json:"published"`
 
-	ComponentProject   *ComponentProject `json:"project" gorm:"foreignKey:ID;references:ComponentProjectID;constraint:OnDelete:CASCADE;"`
-	ComponentProjectID string            `json:"projectId" gorm:"column:project_id"`
+	ComponentProject    *ComponentProject `json:"project" gorm:"foreignKey:ComponentProjectKey;references:ProjectKey;constraint:OnDelete:CASCADE;"`
+	ComponentProjectKey *string           `json:"projectId" gorm:"column:project_key"`
 }
 
 type ComponentDependency struct {
 	ID uuid.UUID `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
-
 	// the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
 	// we use edges, which provide the information, that a component is used by another component in one asset
-	AssetSemverStart string       `json:"semverStart" gorm:"column:semver_start;type:semver"`
-	AssetSemverEnd   *string      `json:"semverEnd" gorm:"column:semver_end;type:semver"`
-	Component        Component    `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl"`
+	Component        Component    `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl;constraint:OnDelete:CASCADE;"`
 	ComponentPurl    *string      `json:"componentPurl" gorm:"column:component_purl;"` // will be nil, for direct dependencies
-	Dependency       Component    `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl"`
+	Dependency       Component    `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl;constraint:OnDelete:CASCADE;"`
 	DependencyPurl   string       `json:"dependencyPurl" gorm:"column:dependency_purl;"`
 	AssetID          uuid.UUID    `json:"assetVersionId"`
 	AssetVersionName string       `json:"assetVersionName"`
 	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetID,AssetVersionName;references:AssetID,Name;constraint:OnDelete:CASCADE;"`
 
-	ScannerID string `json:"scannerId" gorm:"column:scanner_id"` // the id of the scanner
+	ScannerIDs string `json:"scannerIds" gorm:"column:scanner_ids"` // the ids of scanner which found this component separated by white spaces
 
 	Depth int `json:"depth" gorm:"column:depth"`
 }

@@ -21,6 +21,7 @@ func RecalculateRisk(db core.DB) error {
 		repositories.NewOrgRepository(db),
 		repositories.NewProjectRepository(db),
 		thirdPartyIntegrationAggregate,
+		repositories.NewAssetVersionRepository(db),
 	)
 
 	return dependencyVulnService.RecalculateAllRawRiskAssessments()

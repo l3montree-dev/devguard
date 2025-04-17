@@ -15,6 +15,7 @@ import (
 type statisticsService interface {
 	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error)
 	GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
+	GetAssetVersionCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
 	GetDependencyVulnAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (DependencyVulnAggregationStateAndChange, error)
 
@@ -76,9 +77,38 @@ func (c *httpController) GetDependencyVulnCountByScannerId(ctx core.Context) err
 }
 
 func (c *httpController) GetAssetVersionRiskDistribution(ctx core.Context) error {
-	assetVersion := core.GetAssetVersion(ctx)
-	assetName := core.GetAsset(ctx).Name
-	results, err := c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetID, assetName)
+	asset := core.GetAsset(ctx)
+	assetVersion, err := core.MaybeGetAssetVersion(ctx)
+	if err != nil {
+		// we need to get the default asset version
+		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		if err != nil {
+			slog.Error("Error getting default asset version", "error", err)
+			return ctx.JSON(404, nil)
+		}
+	}
+
+	results, err := c.statisticsService.GetAssetVersionRiskDistribution(assetVersion.Name, assetVersion.AssetID, asset.Name)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(200, results)
+}
+
+func (c *httpController) GetAssetVersionCvssDistribution(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	assetVersion, err := core.MaybeGetAssetVersion(ctx)
+	if err != nil {
+		// we need to get the default asset version
+		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		if err != nil {
+			slog.Error("Error getting default asset version", "error", err)
+			return ctx.JSON(404, nil)
+		}
+	}
+
+	results, err := c.statisticsService.GetAssetVersionCvssDistribution(assetVersion.Name, assetVersion.AssetID, asset.Name)
 	if err != nil {
 		return err
 	}

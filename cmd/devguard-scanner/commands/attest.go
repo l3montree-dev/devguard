@@ -73,7 +73,7 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 
 func NewAttestCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attest <file> <image>",
+		Use:   "attest <predicate> <image>",
 		Short: "Add a new attestation to an image",
 		Long:  `Add a new attestation to an image`,
 		Args:  cobra.ExactArgs(1),

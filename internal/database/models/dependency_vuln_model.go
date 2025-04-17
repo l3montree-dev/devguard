@@ -37,7 +37,7 @@ type DependencyVuln struct {
 
 	LastDetected time.Time `json:"lastDetected" gorm:"default:now();not null;"`
 
-	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt" gorm:"default:now();"`
+	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt" `
 }
 
 var _ Vuln = &DependencyVuln{}
@@ -67,7 +67,7 @@ func (m DependencyVuln) TableName() string {
 }
 
 func (m *DependencyVuln) CalculateHash() string {
-	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s/%s", *m.CVEID, *m.ComponentPurl, m.ScannerID, m.AssetVersionName, m.AssetID))
+	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", utils.OrDefault(m.CVEID, ""), utils.OrDefault(m.ComponentPurl, ""), m.AssetVersionName, m.AssetID))
 	return hash
 }
 

@@ -74,22 +74,22 @@ func UpdateComponentProperties(db core.DB) error {
 			// group by scanner id
 			groups := make(map[string]map[string][]models.DependencyVuln)
 			for _, f := range dependencyVulns {
-				if _, ok := groups[f.ScannerID]; !ok {
-					groups[f.ScannerID] = make(map[string][]models.DependencyVuln)
+				if _, ok := groups[f.ScannerIDs]; !ok {
+					groups[f.ScannerIDs] = make(map[string][]models.DependencyVuln)
 				}
 
-				if _, ok := groups[f.ScannerID][f.AssetVersionName]; !ok {
-					groups[f.ScannerID][f.AssetVersionName] = make([]models.DependencyVuln, 0)
+				if _, ok := groups[f.ScannerIDs][f.AssetVersionName]; !ok {
+					groups[f.ScannerIDs][f.AssetVersionName] = make([]models.DependencyVuln, 0)
 				}
 
-				groups[f.ScannerID][f.AssetVersionName] = append(groups[f.ScannerID][f.AssetVersionName], f)
+				groups[f.ScannerIDs][f.AssetVersionName] = append(groups[f.ScannerIDs][f.AssetVersionName], f)
 			}
 
 			// group the dependencyVulns by scanner id
 			// build up the dependency tree for the asset
 			for scannerID, assetVersionDependencyVulnMapping := range groups {
 				for assetVersionName, dependencyVulns := range assetVersionDependencyVulnMapping {
-					components, err := componentRepository.LoadComponents(nil, assetVersionName, a.ID, scannerID, "")
+					components, err := componentRepository.LoadComponents(nil, assetVersionName, a.ID, scannerID)
 					if err != nil {
 						slog.Warn("could not load components", "asset", a.ID, "scanner", scannerID, "err", err)
 						continue
@@ -107,11 +107,12 @@ func UpdateComponentProperties(db core.DB) error {
 
 						if dependencyVuln.ComponentFixedVersion == nil {
 							fixedVersion, err := getFixedVersion(purlComparer, dependencyVuln)
-							slog.Info("got fixed version", "fixedVersion", fixedVersion)
+
 							if err != nil {
 								slog.Warn("could not get fixed version", "err", err)
 							}
 							if fixedVersion != nil {
+								slog.Info("got fixed version", "fixedVersion", fixedVersion)
 								dependencyVuln.ComponentFixedVersion = fixedVersion
 								doUpdate = true
 							}

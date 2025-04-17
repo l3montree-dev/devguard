@@ -17,6 +17,7 @@ package assetversion
 
 import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/package-url/packageurl-go"
 )
 
 type treeNode struct {
@@ -84,6 +85,12 @@ func cutCycles(node *treeNode, visited map[*treeNode]bool) {
 }
 
 func CalculateDepth(node *treeNode, currentDepth int, depthMap map[string]int) {
+	// check if the child is a VALID PURL - only then increment depth
+	_, err := packageurl.FromString(node.Name)
+	if err == nil {
+		currentDepth++
+	}
+
 	if _, ok := depthMap[node.Name]; !ok {
 		depthMap[node.Name] = currentDepth
 	} else if depthMap[node.Name] > currentDepth {
@@ -91,7 +98,7 @@ func CalculateDepth(node *treeNode, currentDepth int, depthMap map[string]int) {
 		depthMap[node.Name] = currentDepth
 	}
 	for _, child := range node.Children {
-		CalculateDepth(child, currentDepth+1, depthMap)
+		CalculateDepth(child, currentDepth, depthMap)
 	}
 }
 
@@ -121,6 +128,7 @@ func BuildDependencyTree(elements []models.ComponentDependency) tree {
 func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
 	depthMap := make(map[string]int)
 	tree := BuildDependencyTree(elements)
-	CalculateDepth(tree.Root, 0, depthMap)
+	// first node will be the package name itself
+	CalculateDepth(tree.Root, -1, depthMap)
 	return depthMap
 }

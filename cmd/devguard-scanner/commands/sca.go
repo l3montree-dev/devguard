@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -261,7 +262,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 			clickableLink := ""
 			if doRiskManagement {
 				//TODO: change flaws
-				clickableLink = fmt.Sprintf("%s/%s/flaws/%s", webUI, assetName, v.ID)
+				clickableLink = fmt.Sprintf("%s/%s/refs/%s/flaws/%s", webUI, assetName, v.AssetVersionName, v.ID)
 			} else {
 				clickableLink = "Risk Management is disabled"
 			}
@@ -342,7 +343,7 @@ func getDirFromPath(path string) string {
 	return path
 }
 
-func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) error {
+func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		core.InitLogger()
 		token, assetName, apiUrl, failOnRisk, webUI := parseConfig(cmd)
@@ -399,7 +400,7 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Risk-Management", strconv.FormatBool(doRiskManagement))
 		req.Header.Set("X-Asset-Name", assetName)
-		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner"+"/"+scanner)
+		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -407,7 +408,13 @@ func scaCommandFactory(scanner string) func(cmd *cobra.Command, args []string) e
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("could not scan file: %s", resp.Status)
+			// read the body
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return errors.Wrap(err, "could not scan file")
+			}
+
+			return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
 		}
 
 		// read and parse the body - it should be an array of dependencyVulns

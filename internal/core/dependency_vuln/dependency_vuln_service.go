@@ -33,6 +33,7 @@ type service struct {
 	dependencyVulnRepository core.DependencyVulnRepository
 	vulnEventRepository      core.VulnEventRepository
 
+	assetVersionRepository core.AssetVersionRepository
 	assetRepository        core.AssetRepository
 	cveRepository          core.CveRepository
 	projectRepository      core.ProjectRepository
@@ -40,7 +41,7 @@ type service struct {
 	thirdPartyIntegration  core.ThirdPartyIntegration
 }
 
-func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetRepository core.AssetRepository, cveRepository core.CveRepository, orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, thirdPartyIntegration core.ThirdPartyIntegration) *service {
+func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEventRepository core.VulnEventRepository, assetRepository core.AssetRepository, cveRepository core.CveRepository, orgRepository core.OrganizationRepository, projectRepository core.ProjectRepository, thirdPartyIntegration core.ThirdPartyIntegration, assetVersionRepository core.AssetVersionRepository) *service {
 	return &service{
 		dependencyVulnRepository: dependencyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
@@ -49,6 +50,7 @@ func NewService(dependencyVulnRepository core.DependencyVulnRepository, vulnEven
 		projectRepository:        projectRepository,
 		organizationRepository:   orgRepository,
 		thirdPartyIntegration:    thirdPartyIntegration,
+		assetVersionRepository:   assetVersionRepository,
 	}
 }
 
@@ -61,7 +63,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 	events := make([]models.VulnEvent, len(dependencyVulns))
 
 	for i, dependencyVuln := range dependencyVulns {
-		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), userID)
+		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), userID, dependencyVuln.ScannerIDs)
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -78,7 +80,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 	return nil
 }
 
-func (s *service) UserDetectedDependencyVulns(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
+func (s *service) UserDetectedDependencyVulns(tx core.DB, userID, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -93,7 +95,7 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, userID string, depende
 
 	for i, dependencyVuln := range dependencyVulns {
 		riskReport := risk.RawRisk(*dependencyVuln.CVE, e, *dependencyVuln.ComponentDepth)
-		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), userID, riskReport)
+		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), userID, riskReport, scannerID)
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -118,14 +120,14 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	userID := "system"
 	justification := "System recalculated raw risk assessment"
 
-	assets, err := s.assetRepository.GetAllAssetsFromDB()
+	assetVersions, err := s.assetVersionRepository.All()
 	if err != nil {
 		return fmt.Errorf("could not get all assets: %v", err)
 	}
 
-	for _, asset := range assets {
+	for _, assetVersion := range assetVersions {
 		// get all dependencyVulns of the asset
-		dependencyVulns, err := s.dependencyVulnRepository.GetAllVulnsByAssetID(nil, asset.ID)
+		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID)
 		if len(dependencyVulns) == 0 {
 			continue
 		}
@@ -134,20 +136,56 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 			return fmt.Errorf("could not get all dependencyVulns by asset id: %v", err)
 		}
 
-		err = s.RecalculateRawRiskAssessment(nil, userID, dependencyVulns, justification, asset)
+		err = s.RecalculateRawRiskAssessment(nil, userID, dependencyVulns, justification, assetVersion.Asset)
 		if err != nil {
 			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
-
-		err = s.CreateIssuesForVulns(asset, dependencyVulns)
-		if err != nil {
-			return err
-		}
-
 	}
 
 	return nil
 
+}
+
+func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error {
+	if len(vulnerabilities) == 0 {
+		return nil
+	}
+
+	// create a new VulnEvent for each fixed dependencyVuln
+	events := make([]models.VulnEvent, len(vulnerabilities))
+
+	for i := range vulnerabilities {
+		ev := models.NewAddedScannerEvent(vulnerabilities[i].CalculateHash(), userID, scannerID)
+		ev.Apply(&vulnerabilities[i])
+		events[i] = ev
+	}
+
+	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
+	if err != nil {
+		return err
+	}
+
+	return s.vulnEventRepository.SaveBatch(tx, events)
+
+}
+
+func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error {
+	if len(vulnerabilities) == 0 {
+		return nil
+	}
+
+	events := make([]models.VulnEvent, len(vulnerabilities))
+	for i := range vulnerabilities {
+		ev := models.NewRemovedScannerEvent(vulnerabilities[i].CalculateHash(), userID, scannerID)
+		ev.Apply(&vulnerabilities[i])
+		events[i] = ev
+	}
+	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
+	if err != nil {
+		return err
+	}
+	// save the events
+	return s.vulnEventRepository.SaveBatch(tx, events)
 }
 
 func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
@@ -165,36 +203,13 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 
 	events := make([]models.VulnEvent, 0)
 
-	// get all cveIds of the dependencyVulns
-	cveIds := utils.Filter(utils.Map(dependencyVulns, func(f models.DependencyVuln) string {
-		return utils.SafeDereference(f.CVEID)
-	}), func(s string) bool {
-		return s != ""
-	})
-
-	cves, err := s.cveRepository.FindCVEs(nil, cveIds)
-	if err != nil {
-		return fmt.Errorf("could not get all cves: %v", err)
-	}
-	// create a map of cveId -> cve
-	cveMap := make(map[string]models.CVE)
-	for _, cve := range cves {
-		cveMap[cve.CVE] = cve
-	}
-
 	for i, dependencyVuln := range dependencyVulns {
-		if dependencyVuln.CVEID == nil {
-			continue
-		}
-		cveID := *dependencyVuln.CVEID
-		cve, ok := cveMap[cveID]
-		if !ok {
-			slog.Info("could not find cve", "cve", cveID)
+		if dependencyVuln.CVEID == nil || dependencyVuln.CVE == nil {
 			continue
 		}
 
 		oldRiskAssessment := dependencyVuln.RawRiskAssessment
-		newRiskAssessment := risk.RawRisk(cve, env, *dependencyVuln.ComponentDepth)
+		newRiskAssessment := risk.RawRisk(*dependencyVuln.CVE, env, *dependencyVuln.ComponentDepth)
 
 		if *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), userID, justification, oldRiskAssessment, newRiskAssessment)
@@ -202,7 +217,8 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 			ev.Apply(&dependencyVulns[i])
 			events = append(events, ev)
 
-			slog.Info("recalculated raw risk assessment", "cve", cve.CVE)
+			slog.Info("recalculated raw risk assessment", "cve", dependencyVuln.CVE)
+
 		} else {
 			// only update the last calculated time
 			dependencyVulns[i].RiskRecalculatedAt = time.Now()
@@ -227,7 +243,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		return nil
 	}
 
-	err = s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
+	err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
 	if err != nil {
 		return fmt.Errorf("could not save dependencyVulns: %v", err)
 	}
@@ -260,7 +276,7 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), userID, justification)
+		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), userID, justification, dependencyVuln.ScannerIDs)
 	case models.EventTypeReopened:
 		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), userID, justification)
 	case models.EventTypeComment:
@@ -271,8 +287,110 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	return ev, err
 }
 
+func (s *service) SyncTicketsForAllAssets() error {
+	assets, err := s.assetRepository.GetAllAssetsFromDB()
+	if err != nil {
+		return err
+	}
+
+	for _, asset := range assets {
+		err := s.SyncTickets(asset)
+		if err != nil {
+			slog.Warn("could not sync tickets", "err", err, "assetID", asset.ID)
+			continue
+		}
+	}
+	return nil
+}
+
+func (s *service) SyncTickets(asset models.Asset) error {
+	project, err := s.projectRepository.Read(asset.ProjectID)
+	if err != nil {
+		return err
+	}
+
+	org, err := s.organizationRepository.Read(project.OrganizationID)
+	if err != nil {
+		return err
+	}
+
+	repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
+	if err != nil {
+		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
+	}
+
+	for _, assetVersion := range asset.AssetVersions {
+		slog.Info("syncing tickets", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
+
+		vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID)
+		if err != nil {
+			return err
+		}
+		if len(vulnList) == 0 {
+			return nil
+		}
+
+		riskThreshold := asset.RiskAutomaticTicketThreshold
+		cvssThreshold := asset.CVSSAutomaticTicketThreshold
+
+		errgroup := utils.ErrGroup[any](10)
+		for _, vulnerability := range vulnList {
+			if vulnerability.TicketID == nil {
+				if !s.ShouldCreateIssues(assetVersion) {
+					continue
+				}
+				// the ticket id is nil - no ticket exists for this dependency vulnerability
+				// check if one of the thresholds is exceeded - if so, we need to create a ticket for this vuln
+				if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
+					if vulnerability.State == models.VulnStateOpen {
+						//there is no ticket yet, we need to create one
+						errgroup.Go(func() (any, error) {
+							return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug, "Risk exceeds predefined threshold", false)
+						})
+					}
+				}
+
+			} else {
+				// a ticket does already exists - either we need to update it or close it
+				// if the threshold is not exceeded anymore, we need to close the ticket
+				var riskThresholdBool bool
+				var cvssThresholdBool bool
+
+				if cvssThreshold != nil {
+					if vulnerability.CVE.CVSS < float32(*cvssThreshold) {
+						cvssThresholdBool = true
+					}
+				}
+
+				if riskThreshold != nil {
+					if *vulnerability.RawRiskAssessment < *riskThreshold {
+						riskThresholdBool = true
+					}
+				}
+
+				// only close ticket if none of the thresholds is exceed AND the ticket was not manually created
+				if riskThresholdBool && cvssThresholdBool && !vulnerability.ManualTicketCreation {
+					if vulnerability.TicketID != nil {
+						errgroup.Go(func() (any, error) {
+							return nil, s.closeIssue(vulnerability, repoID)
+						})
+					}
+				} else {
+					// the threshold is still exceeded - lets update it (makes sure it is up to date)
+					errgroup.Go(func() (any, error) {
+						return nil, s.updateIssue(asset, vulnerability, repoID)
+					})
+				}
+			}
+		}
+		_, err = errgroup.WaitAndCollect()
+		return err
+	}
+	return nil
+}
+
 // function to check whether the provided vulnerabilities in a given asset exceeds their respective thresholds and create a ticket for it if they do so
-func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.DependencyVuln) error {
+func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vulnList []models.DependencyVuln) error {
 	riskThreshold := asset.RiskAutomaticTicketThreshold
 	cvssThreshold := asset.CVSSAutomaticTicketThreshold
 
@@ -296,59 +414,94 @@ func (s *service) CreateIssuesForVulns(asset models.Asset, vulnList []models.Dep
 		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
 	}
 
-	//Determine whether to scan for both risk and cvss or just 1 of them
-	if riskThreshold != nil && cvssThreshold != nil {
+	errgroup := utils.ErrGroup[any](10)
 
-		for _, vulnerability := range vulnList {
+	for _, vulnerability := range vulnList {
+		// check that the ticket id is nil currently
+		if (cvssThreshold != nil && vulnerability.CVE.CVSS >= float32(*cvssThreshold)) || (riskThreshold != nil && *vulnerability.RawRiskAssessment >= *riskThreshold) {
+			// check if there is already a ticket, we might need to reopen
 			if vulnerability.TicketID == nil {
-				if *vulnerability.RawRiskAssessment >= *riskThreshold || vulnerability.CVE.CVSS >= float32(*cvssThreshold) {
-
-					err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
-					if err != nil {
-						return err
-					}
-				}
+				errgroup.Go(func() (any, error) {
+					return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug, "Risk exceeds predefined threshold", false)
+				})
+			} else {
+				// check if the ticket id is nil
+				errgroup.Go(func() (any, error) {
+					return nil, s.reopenIssue(vulnerability, repoID)
+				})
 			}
-		}
-	} else {
-		if riskThreshold != nil {
-			for _, vulnerability := range vulnList {
-				if vulnerability.TicketID == nil {
-					if *vulnerability.RawRiskAssessment >= *riskThreshold {
-						err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
-						if err != nil {
-							return err
-						}
-					}
 
-				}
-			}
-		} else if cvssThreshold != nil {
-			for _, vulnerability := range vulnList {
-				if vulnerability.TicketID == nil {
-					if vulnerability.CVE.CVSS >= float32(*cvssThreshold) {
-						err := s.createIssue(vulnerability.ID, asset, repoID, org.Slug, project.Slug)
-						if err != nil {
-							return err
-						}
-
-					}
-				}
-			}
 		}
 	}
-	return nil
+
+	_, err = errgroup.WaitAndCollect()
+	return err
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
-func (s *service) createIssue(cveName string, asset models.Asset, repoId string, orgSlug string, projectSlug string) error {
+func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string, justification string, manualTicketCreation bool) error {
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.CreateIssue(ctx, asset, repoId, cveName, projectSlug, orgSlug)
+	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug, justification, manualTicketCreation)
+}
+
+func (s *service) updateIssue(asset models.Asset, vulnerability models.DependencyVuln, repoId string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	return s.thirdPartyIntegration.UpdateIssue(ctx, asset, repoId, vulnerability)
+}
+
+func (s *service) reopenIssue(vulnerability models.DependencyVuln, repoId string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	return s.thirdPartyIntegration.ReopenIssue(ctx, repoId, vulnerability)
+}
+
+func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error {
+	project, err := s.projectRepository.Read(asset.ProjectID)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
+	if err != nil {
+		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
+	}
+
+	errgroup := utils.ErrGroup[any](10)
+
+	for _, vulnerability := range vulnList {
+		// check if the ticket id is not nil
+		if vulnerability.TicketID != nil {
+			// check that the ticket id is nil currently
+			errgroup.Go(func() (any, error) {
+				err := s.closeIssue(vulnerability, repoID)
+				if err != nil {
+					slog.Error("could not close issue", "err", err, "ticketUrl", vulnerability.TicketURL)
+					return nil, err
+				}
+				slog.Info("closed issue", "vulnerability", vulnerability, "ticketUrl", vulnerability.TicketURL)
+				return nil, nil
+			})
+		}
+	}
+
+	_, err = errgroup.WaitAndCollect()
+	return err
+}
+
+func (s *service) closeIssue(vulnerability models.DependencyVuln, repoId string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	return s.thirdPartyIntegration.CloseIssue(ctx, "fixed", repoId, vulnerability)
+}
+
+func (s *service) ShouldCreateIssues(assetVersion models.AssetVersion) bool {
+	//if the vulnerability was found anywhere else than the default branch we don't want to create an issue
+	return assetVersion.DefaultBranch
 }

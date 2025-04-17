@@ -17,6 +17,7 @@ type PAT struct {
 	ID          uuid.UUID  `json:"id" gorm:"type:uuid;default:gen_random_uuid()"`
 	Fingerprint string     `json:"fingerprint"`
 	LastUsedAt  *time.Time `json:"lastUsedAt" gorm:"default:null"`
+	Scopes      string     `json:"scopes" gorm:"type:text"` // whitespace separated scopes manage-project read-project scan-asset manage-all
 
 	DeletedAt gorm.DeletedAt `json:"deletedAt"`
 }

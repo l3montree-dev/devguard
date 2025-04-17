@@ -78,6 +78,15 @@ func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, e
 	return apps, nil
 }
 
+func (a *assetRepository) GetByOrgID(orgID uuid.UUID) ([]models.Asset, error) {
+	var apps []models.Asset
+	err := a.db.Where("project_id IN (SELECT id from projects where organization_id = ?)", orgID).Preload("AssetVersions").Find(&apps).Error
+	if err != nil {
+		return nil, err
+	}
+	return apps, nil
+}
+
 func (a *assetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
 	err := a.db.Where("project_id IN (?)", projectIDs).Find(&apps).Error
@@ -113,7 +122,7 @@ func (g *assetRepository) Update(tx core.DB, asset *models.Asset) error {
 
 func (g *assetRepository) GetAllAssetsFromDB() ([]models.Asset, error) {
 	var assets []models.Asset
-	err := g.db.Find(&assets).Error
+	err := g.db.Preload("AssetVersions").Find(&assets).Error
 	return assets, err
 }
 

@@ -15,8 +15,9 @@ const (
 type Project struct {
 	Model
 	Name           string    `json:"name" gorm:"type:text"`
-	Assets         []Asset   `json:"assets" gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
+	Assets         []Asset   `json:"assets" gorm:"foreignKey:ProjectID;"`
 	OrganizationID uuid.UUID `json:"organizationId" gorm:"uniqueIndex:idx_project_org_slug;not null;type:uuid"`
+	Organization   Org       `json:"organization" gorm:"foreignKey:OrganizationID;references:ID;constraint:OnDelete:CASCADE;"`
 	Slug           string    `json:"slug" gorm:"type:text;uniqueIndex:idx_project_org_slug;not null"`
 	Description    string    `json:"description" gorm:"type:text"`
 

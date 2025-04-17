@@ -58,15 +58,22 @@ func markMirrored(configService config.Service, key string) error {
 func Start(db core.DB) {
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
-
 	// only run this function if leader
 	leaderElector.IfLeader(context.Background(), func() error {
 		// we only update the vulnerability database each 6 hours.
 		// thus there is no need to recalculate the risk or anything earlier
 		slog.Info("starting background jobs", "time", time.Now())
+		var start time.Time = time.Now()
+		// update deps dev
+		err := UpdateDepsDevInformation(db)
+		if err != nil {
+			slog.Error("could not update deps dev information", "err", err)
+			return nil
+		}
+		slog.Info("deps dev information updated", "duration", time.Since(start))
+
 		// first update the vulndb
 		// this will give us the latest cves, cwes, exploits and affected components
-		var start time.Time
 		if shouldMirror(configService, "vulndb.vulndb") {
 			start = time.Now()
 			if err := UpdateVulnDB(db); err != nil {
@@ -105,6 +112,19 @@ func Start(db core.DB) {
 				slog.Error("could not mark vulndb.risk as mirrored", "err", err)
 			}
 			slog.Info("risk recalculated", "duration", time.Since(start))
+		}
+
+		if shouldMirror(configService, "vulndb.tickets") {
+			start = time.Now()
+			// sync tickets
+			if err := SyncTickets(db); err != nil {
+				slog.Error("could not sync tickets", "err", err)
+				return nil
+			}
+			if err := markMirrored(configService, "vulndb.tickets"); err != nil {
+				slog.Error("could not mark vulndb.tickets as mirrored", "err", err)
+			}
+			slog.Info("tickets synced", "duration", time.Since(start))
 		}
 
 		if shouldMirror(configService, "vulndb.statistics") {

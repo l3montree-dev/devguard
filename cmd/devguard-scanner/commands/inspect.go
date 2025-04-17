@@ -74,9 +74,9 @@ func inspectCmd(cmd *cobra.Command, args []string) {
 
 func NewInspectCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "inspect",
-		Short: "Inspect a file or directory",
-		Long:  `Inspect a file or directory for vulnerabilities`,
+		Use:   "inspect-devguard-token",
+		Short: "Inspect a devguard token",
+		Long:  `Inspect a devguard token. This will print the private and public key in PEM format.`,
 		Args:  cobra.ExactArgs(1),
 		Run:   inspectCmd,
 	}

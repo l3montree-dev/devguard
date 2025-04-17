@@ -18,13 +18,22 @@ package utils
 import (
 	"encoding/csv"
 	"log/slog"
+	"math"
 	"runtime/debug"
+	"slices"
+	"strings"
 )
 
 func Ptr[T any](t T) *T {
 	return &t
 }
 
+func RemovePrefixInsensitive(input string, prefix string) string {
+	if strings.HasPrefix(strings.ToLower(input), strings.ToLower(prefix)) {
+		return input[len(prefix):]
+	}
+	return input
+}
 func SafeDereference(s *string) string {
 	if s == nil {
 		return ""
@@ -112,4 +121,40 @@ func PrintBuildInformation() {
 			}
 		}
 	}
+}
+
+func AddToWhitespaceSeparatedStringList(s string, item string) string {
+	itemEls := strings.Fields(item)
+	// parse all scanner ids
+	els := strings.Fields(s)
+	// check if the scanner id is already in the list
+	for _, itemEl := range itemEls {
+		if !slices.Contains(els, itemEl) {
+			els = append(els, itemEl)
+		}
+	}
+
+	return strings.Join(els, " ")
+}
+
+func RemoveFromWhitespaceSeparatedStringList(s string, item string) string {
+	// parse all scanner els
+	els := strings.Fields(s)
+
+	var res []string
+	for _, id := range els {
+		if id != item {
+			res = append(res, id)
+		}
+	}
+
+	return strings.Join(res, " ")
+}
+
+func CompareFirstTwoDecimals(a, b float64) bool {
+
+	aRounded := math.Round(a*100) / 100
+	bRounded := math.Round(b*100) / 100
+
+	return aRounded == bRounded
 }

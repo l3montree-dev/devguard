@@ -9,19 +9,21 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-func RiskToSeverity(risk float64) string {
+func RiskToSeverity(risk float64) (string, error) {
 	switch {
+	case risk == 0:
+		return "", fmt.Errorf("risk is 0")
 	case risk < 4:
-		return "Low"
+		return "Low", nil
 	case risk < 7:
-		return "Medium"
+		return "Medium", nil
 	case risk < 9:
-		return "High"
+		return "High", nil
 	case risk <= 10:
+		return "Critical", nil
 	default:
-		return "None"
+		return "", fmt.Errorf("risk is greater than 10")
 	}
-	return "None"
 }
 
 // returns hex without leading "#"
@@ -55,15 +57,15 @@ func parseCvssVector(vector string) map[string]string {
 func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string) (short string, long string) {
 	if obj["E"] == "POC" || obj["E"] == "P" {
 		short = "Proof of Concept"
-		long = "A proof of concept is available for this vulnerability:\n"
+		long = "A proof of concept is available for this vulnerability:<br>"
 		for _, exploit := range dependencyVuln.CVE.Exploits {
-			long += exploit.SourceURL + "\n"
+			long += exploit.SourceURL + "<br>"
 		}
 	} else if obj["E"] == "F" {
 		short = "Functional"
-		long = "A functional exploit is available for this vulnerability:\n"
+		long = "A functional exploit is available for this vulnerability:<br>"
 		for _, exploit := range dependencyVuln.CVE.Exploits {
-			long += exploit.SourceURL + "\n"
+			long += exploit.SourceURL + "<br>"
 		}
 	} else if obj["E"] == "A" {
 		short = "Attacked"
@@ -95,10 +97,10 @@ func epssMessage(epss float64) string {
 
 // componentDepthMessages generates a message based on the component depth.
 func componentDepthMessages(depth int) string {
-	if depth == 1 {
+	if depth <= 1 {
 		return "The vulnerability is in a direct dependency of your project."
 	}
-	return fmt.Sprintf("The vulnerability is in a dependency of a dependency your project. It is %d levels deep.", depth)
+	return fmt.Sprintf("The vulnerability is in a dependency of a dependency in your project. It is %d levels deep.", depth)
 }
 
 type AssetDTO struct {
@@ -132,7 +134,7 @@ func cvssBE(asset models.Asset, cvssObj map[string]string) string {
 	} else if cvssObj["C"] == "H" {
 		elements = append(elements, "- Exploiting this vulnerability significantly impacts confidentiality.")
 	}
-	return strings.Join(elements, "\n")
+	return strings.Join(elements, "<br>")
 }
 
 var baseScores = map[string]map[string]string{
@@ -198,7 +200,7 @@ func describeCVSS(cvss map[string]string) string {
 		return s != ""
 	})
 
-	return strings.Join(descriptions, "\n- ")
+	return strings.Join(descriptions, "<br>- ")
 }
 
 type Explanation struct {
@@ -221,52 +223,76 @@ type Explanation struct {
 	cveId          string
 	cveDescription string
 
-	affectedComponentName string
-	scanner               string
+	AffectedComponentName string
+	scannerIDs            string
 	fixedVersion          *string
+
+	ComponentPurl string `json:"componentPurl" gorm:"type:text;default:null;"`
 }
 
-func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug string) string {
+func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) string {
 	var str strings.Builder
-	str.WriteString(fmt.Sprintf("# %s\n", e.cveId))
+	str.WriteString(fmt.Sprintf("## %s found in %s \n", e.cveId, e.ComponentPurl))
+
+	str.WriteString("> [!important] \n")
+
+	severity, err := RiskToSeverity(e.risk)
+	if err != nil {
+		str.WriteString(fmt.Sprintf("> **Risk**: `%.2f (%s)`\n", e.risk, "Unknown"))
+	} else {
+		str.WriteString(fmt.Sprintf("> **Risk**: `%.2f (%s)`\n", e.risk, severity))
+	}
+
+	str.WriteString(fmt.Sprintf("> **CVSS**: `%.1f` \n", e.BaseScore))
+
+	str.WriteString("### Description\n")
 	str.WriteString(e.cveDescription)
 	str.WriteString("\n")
 	str.WriteString("### Affected component \n")
-	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.affectedComponentName, e.scanner))
+	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.AffectedComponentName, e.scannerIDs))
 	str.WriteString("### Recommended fix\n")
 	if e.fixedVersion != nil {
 		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))
 	} else {
 		str.WriteString("No fix is available.\n")
 	}
-	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("## Risk: `%.2f (%s)`\n", e.risk, RiskToSeverity(e.risk)))
-	str.WriteString(fmt.Sprintf("### EPSS: `%.2f %%`\n", e.epss*100))
-	str.WriteString(fmt.Sprintf("%s\n", e.epssMessage))
-	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("### Exploit: `%s`\n", e.exploitMessage.Short))
-	str.WriteString(e.exploitMessage.Long)
-	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("### Vulnerability Depth: `%d`\n", e.depth))
-	str.WriteString(fmt.Sprintf("%s\n", e.componentDepthMessage))
-	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("### CVSS-BE: `%.1f`\n", e.WithEnvironment))
-	str.WriteString(fmt.Sprintf("%s\n", e.cvssBEMessage))
-	str.WriteString("\n")
-	str.WriteString(fmt.Sprintf("### CVSS-B: `%.1f`\n", e.BaseScore))
-	str.WriteString(fmt.Sprintf("%s\n", e.cvssMessage))
+	str.WriteString("\n### Path to component\n")
+	str.WriteString(mermaidPathToComponent)
+
+	str.WriteString("| Risk Factor  | Value | Description | \n")
+	str.WriteString("| ---- | ----- | ----------- | \n")
+	str.WriteString(fmt.Sprintf("| Vulnerability Depth | `%d` | %s | \n", e.depth, e.componentDepthMessage))
+	str.WriteString(fmt.Sprintf("| EPSS | `%.2f %%` | %s | \n", e.epss*100, e.epssMessage))
+	str.WriteString(fmt.Sprintf("| EXPLOIT | `%s` | %s | \n", e.exploitMessage.Short, e.exploitMessage.Long))
+	str.WriteString(fmt.Sprintf("| CVSS-BE | `%.1f` | %s | \n", e.WithEnvironment, e.cvssBEMessage))
+	str.WriteString(fmt.Sprintf("| CVSS-B | `%.1f` | %s | \n", e.BaseScore, e.cvssMessage))
 	str.WriteString("\n")
 	//TODO: change it
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, e.dependencyVulnId))
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
 	str.WriteString("\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
 	str.WriteString("\n")
-	str.WriteString("### Slash Commands\n")
+
+	str.WriteString("--- \n")
+
+	str.WriteString("### Interact with this vulnerability\n")
 	str.WriteString("You can use the following slash commands to interact with this vulnerability:\n")
-	str.WriteString("- `/accept <Justification>` or `/a <Justification>` - Accept the risk\n")
-	str.WriteString("- `/false-positive <Justification>` or `/fp <Justification>` - Mark the risk as false positive\n")
-	str.WriteString("- `/reopen <Justification>` or `/r <Justification>` - Reopen the risk\n")
+
+	str.WriteString("\n#### 👍   Reply with this to acknowledge and accept the identified risk.\n")
+	str.WriteString("```text\n")
+	str.WriteString("/accept I accept the risk of this vulnerability, because ...\n")
+	str.WriteString("```\n")
+
+	str.WriteString("\n#### ⚠️ Mark the risk as false positive: Use this command if you believe the reported vulnerability is not actually a valid issue.\n")
+	str.WriteString("```text\n")
+	str.WriteString("/false-positive We are not affected by this vulnerability, because ...\n")
+	str.WriteString("```\n")
+
+	str.WriteString("\n#### 🔁  Reopen the risk: Use this command to reopen a previously closed or accepted vulnerability.\n")
+	str.WriteString("```text\n")
+	str.WriteString("/reopen ... \n")
+	str.WriteString("```\n")
 
 	return str.String()
 }
@@ -276,6 +302,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 	cvss := parseCvssVector(vector)
 
 	shortMsg, longMsg := exploitMessage(dependencyVuln, cvss)
+	componentPurl := utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:")
 
 	return Explanation{
 		exploitMessage: struct {
@@ -299,8 +326,10 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		cveId:          *dependencyVuln.CVEID,
 		cveDescription: dependencyVuln.CVE.Description,
 
-		affectedComponentName: utils.SafeDereference(dependencyVuln.ComponentPurl),
-		scanner:               dependencyVuln.ScannerID,
+		AffectedComponentName: utils.SafeDereference(dependencyVuln.ComponentPurl),
+		scannerIDs:            dependencyVuln.ScannerIDs,
 		fixedVersion:          dependencyVuln.ComponentFixedVersion,
+
+		ComponentPurl: componentPurl,
 	}
 }

@@ -135,7 +135,7 @@ func (c dependencyVulnHttpController) ListPaged(ctx core.Context) error {
 		// append the dependencyVuln to the package
 		dependencyVulnsByPackage.DependencyVulns = append(res[*dependencyVuln.ComponentPurl].DependencyVulns, DependencyVulnDTO{
 			ID:                    dependencyVuln.ID,
-			ScannerID:             dependencyVuln.ScannerID,
+			ScannerIDs:            dependencyVuln.ScannerIDs,
 			Message:               dependencyVuln.Message,
 			AssetVersionName:      dependencyVuln.AssetVersionName,
 			AssetID:               dependencyVuln.AssetID.String(),
@@ -183,6 +183,17 @@ func (c dependencyVulnHttpController) ListPaged(ctx core.Context) error {
 }
 
 func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
+	type justification struct {
+		Comment string `json:"comment"`
+	}
+
+	var j justification
+
+	err := ctx.Bind(&j)
+	if err != nil {
+		slog.Error("could not bind justification", "err", err)
+	}
+
 	dependencyVulnId, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
@@ -191,7 +202,8 @@ func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
 	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
 
 	if err = thirdPartyIntegrations.HandleEvent(core.ManualMitigateEvent{
-		Ctx: ctx,
+		Ctx:           ctx,
+		Justification: j.Comment,
 	}); err != nil {
 		return echo.NewHTTPError(500, "could not mitigate dependencyVuln").WithInternal(err)
 	}
@@ -213,14 +225,10 @@ func (c dependencyVulnHttpController) Read(ctx core.Context) error {
 	}
 	asset := core.GetAsset(ctx)
 
-	dependencyVuln, VulnEvents, err := c.dependencyVulnRepository.ReadDependencyVulnWithAssetVersionEvents(dependencyVulnId)
+	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnId)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
-
-	dependencyVuln.Events = utils.Filter(VulnEvents, func(ev models.VulnEvent) bool {
-		return ev.VulnID == dependencyVuln.ID || ev.Type != models.EventTypeDetected
-	})
 
 	risk, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 	dependencyVuln.CVE.Risk = risk
@@ -299,9 +307,10 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 			Priority:              dependencyVuln.Priority,
 			LastDetected:          dependencyVuln.LastDetected,
 			CreatedAt:             dependencyVuln.CreatedAt,
-			ScannerID:             dependencyVuln.ScannerID,
+			ScannerIDs:            dependencyVuln.ScannerIDs,
 			TicketID:              dependencyVuln.TicketID,
 			TicketURL:             dependencyVuln.TicketURL,
+			ManualTicketCreation:  dependencyVuln.ManualTicketCreation,
 			RiskRecalculatedAt:    dependencyVuln.RiskRecalculatedAt,
 		},
 		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {

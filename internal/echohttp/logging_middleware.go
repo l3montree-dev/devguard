@@ -10,13 +10,13 @@ import (
 // custom echo middleware used for request logging
 func logger() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
+		return func(ctx echo.Context) error {
 			now := time.Now()
 
-			err := next(c)
+			err := next(ctx)
 
-			if err == nil && c.Request().URL.String() != "/api/v1/health/" {
-				slog.Info("handled request", "method", c.Request().Method, "url", c.Request().URL, "status", c.Response().Status, "duration", time.Since(now))
+			if err == nil && ctx.Request().URL.String() != "/api/v1/health/" {
+				slog.Info("handled request", "method", ctx.Request().Method, "url", ctx.Request().URL, "status", ctx.Response().Status, "duration", time.Since(now))
 			}
 			return err
 		}

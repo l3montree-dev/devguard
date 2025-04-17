@@ -42,16 +42,15 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(
-		commands.NewHealthCheckCommand(),
 		commands.NewSCACommand(),
 		commands.NewContainerScanningCommand(),
 		commands.NewAttestCommand(),
 		commands.NewInspectCommand(),
 		commands.NewSignCommand(),
-		commands.NewLoginCommand(),
 		commands.NewSecretScanningCommand(),
 		commands.NewSastCommand(),
 		intotocmd.NewInTotoCommand(),
+		commands.NewLoginCommand(),
 	)
 }
 

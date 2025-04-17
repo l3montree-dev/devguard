@@ -56,15 +56,15 @@ func (r *dependencyVulnRepository) applyAndSave(tx core.DB, dependencyVuln *mode
 func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 
 	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
-	if err := r.Repository.GetDB(tx).Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
+	if err := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil
 }
 
-func (r *dependencyVulnRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
+func (r *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
-	if err := r.Repository.GetDB(r.db).Preload("CVE").Where("asset_version_name = ? AND asset_id = ? AND scanner_id = ?", assetVersionName, assetID, scannerID).Find(&dependencyVulns).Error; err != nil {
+	if err := r.Repository.GetDB(r.db).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil
@@ -147,23 +147,6 @@ func (g dependencyVulnRepository) Read(id string) (models.DependencyVuln, error)
 	}).Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", id).Error
 
 	return t, err
-}
-
-func (g dependencyVulnRepository) ReadDependencyVulnWithAssetVersionEvents(id string) (models.DependencyVuln, []models.VulnEvent, error) {
-	var t models.DependencyVuln
-	err := g.db.Preload("CVE.Weaknesses").Preload("CVE").Preload("CVE.Exploits").First(&t, "id = ?", id).Error
-
-	if err != nil {
-		return models.DependencyVuln{}, []models.VulnEvent{}, err
-	}
-
-	var vulnEvents []models.VulnEvent
-	err = g.db.Model(&models.VulnEvent{}).Where("vuln_id = ?", id).Order("created_at ASC").Find(&vulnEvents).Error
-	if err != nil {
-		return models.DependencyVuln{}, vulnEvents, err
-	}
-
-	return t, vulnEvents, err
 }
 
 func (r *dependencyVulnRepository) GetDependencyVulnsByPurl(tx core.DB, purl []string) ([]models.DependencyVuln, error) {
@@ -251,4 +234,12 @@ func (r *dependencyVulnRepository) GetOrgFromVulnID(tx core.DB, dependencyVulnID
 		return models.Org{}, err
 	}
 	return org, nil
+}
+
+func (r *dependencyVulnRepository) FindByTicketID(tx core.DB, ticketID string) (models.DependencyVuln, error) {
+	var vuln models.DependencyVuln
+	if err := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("ticket_id = ?", ticketID).First(&vuln).Error; err != nil {
+		return vuln, err
+	}
+	return vuln, nil
 }

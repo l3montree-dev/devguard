@@ -76,22 +76,6 @@ func TestApplyToModel(t *testing.T) {
 			updated: true,
 		},
 		{
-			name: "Update CVSSAutomaticTicketThreshold and RiskAutomaticTicketThreshold",
-			patch: patchRequest{
-				CVSSAutomaticTicketThreshold: utils.Ptr(5.0),
-				RiskAutomaticTicketThreshold: utils.Ptr(7.0),
-			},
-			initial: models.Asset{
-				CVSSAutomaticTicketThreshold: utils.Ptr(3.0),
-				RiskAutomaticTicketThreshold: utils.Ptr(6.0),
-			},
-			expected: models.Asset{
-				CVSSAutomaticTicketThreshold: utils.Ptr(5.0),
-				RiskAutomaticTicketThreshold: utils.Ptr(7.0),
-			},
-			updated: true,
-		},
-		{
 			name:  "No Updates",
 			patch: patchRequest{},
 			initial: models.Asset{

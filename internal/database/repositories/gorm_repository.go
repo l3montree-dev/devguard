@@ -18,6 +18,7 @@ package repositories
 import (
 	"github.com/l3montree-dev/devguard/internal/common"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GormRepository[ID comparable, T common.Tabler] struct {
@@ -28,6 +29,12 @@ func newGormRepository[ID comparable, T common.Tabler](db *gorm.DB) *GormReposit
 	return &GormRepository[ID, T]{
 		db: db,
 	}
+}
+
+func (g *GormRepository[ID, T]) All() ([]T, error) {
+	var ts []T
+	err := g.db.Find(&ts).Error
+	return ts, err
 }
 
 func (g *GormRepository[ID, T]) Save(tx *gorm.DB, t *T) error {
@@ -80,7 +87,7 @@ func (g *GormRepository[ID, T]) Create(tx *gorm.DB, t *T) error {
 }
 
 func (g *GormRepository[ID, T]) CreateBatch(tx *gorm.DB, ts []T) error {
-	return g.GetDB(tx).Create(ts).Error
+	return g.GetDB(tx).Clauses(clause.OnConflict{DoNothing: true}).Create(ts).Error
 }
 
 func (g *GormRepository[ID, T]) Read(id ID) (T, error) {

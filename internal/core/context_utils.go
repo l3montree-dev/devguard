@@ -15,6 +15,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -22,34 +23,63 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/ory/client-go"
 )
 
 type AuthSession interface {
 	GetUserID() string
+	GetScopes() []string
 }
 
-func GetThirdPartyIntegration(c Context) IntegrationAggregate {
-	return c.Get("thirdPartyIntegration").(IntegrationAggregate)
+func GetThirdPartyIntegration(ctx Context) IntegrationAggregate {
+	return ctx.Get("thirdPartyIntegration").(IntegrationAggregate)
 }
 
-func SetThirdPartyIntegration(c Context, i IntegrationAggregate) {
-	c.Set("thirdPartyIntegration", i)
+func SetThirdPartyIntegration(ctx Context, i IntegrationAggregate) {
+	ctx.Set("thirdPartyIntegration", i)
 }
 
-func SetAuthAdminClient(c Context, i *client.APIClient) {
-	c.Set("authAdminClient", i)
+type AdminClient interface {
+	ListUser(client client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error)
+	GetIdentity(ctx context.Context, userID string) (client.Identity, error)
 }
 
-func GetAuthAdminClient(c Context) *client.APIClient {
-	return c.Get("authAdminClient").(*client.APIClient)
+type adminClientImplementation struct {
+	apiClient *client.APIClient
 }
 
-func GetVulnID(c Context) (string, error) {
-	dependencyVulnID := c.Param("dependencyVulnId")
+func NewAdminClient(client *client.APIClient) adminClientImplementation {
+	return adminClientImplementation{
+		apiClient: client,
+	}
+}
+func (a adminClientImplementation) ListUser(request client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error) {
+	clients, _, err := a.apiClient.IdentityAPI.ListIdentitiesExecute(request)
+	return clients, err
+}
+
+func (a adminClientImplementation) GetIdentity(ctx context.Context, userID string) (client.Identity, error) {
+	request, _, err := a.apiClient.IdentityAPI.GetIdentity(ctx, userID).Execute()
+	if err != nil {
+		return *request, err
+	}
+	return *request, nil
+}
+
+func SetAuthAdminClient(ctx Context, i AdminClient) {
+	ctx.Set("authAdminClient", i)
+}
+
+func GetAuthAdminClient(ctx Context) AdminClient {
+	return ctx.Get("authAdminClient").(AdminClient)
+}
+
+func GetVulnID(ctx Context) (string, error) {
+	dependencyVulnID := ctx.Param("dependencyVulnId")
 	if dependencyVulnID == "" {
-		dependencyVulnIDFromGet, ok := c.Get("dependencyVulnId").(string)
+		dependencyVulnIDFromGet, ok := ctx.Get("dependencyVulnId").(string)
 		if !ok || dependencyVulnIDFromGet == "" {
 			return "", fmt.Errorf("could not get dependencyVuln id from Get")
 		}
@@ -59,24 +89,32 @@ func GetVulnID(c Context) (string, error) {
 	return dependencyVulnID, nil
 }
 
-func GetRBAC(c Context) accesscontrol.AccessControl {
-	return c.Get("rbac").(accesscontrol.AccessControl)
+func SetRBAC(ctx Context, rbac accesscontrol.AccessControl) {
+	ctx.Set("rbac", rbac)
 }
 
-func GetTenant(c Context) models.Org {
-	return c.Get("tenant").(models.Org)
+func GetOrganization(c Context) models.Org {
+	return c.Get("organization").(models.Org)
 }
 
-func SetIsPublicRequest(c Context) {
-	c.Set("publicRequest", true)
+func SetOrganization(c Context, org models.Org) {
+	c.Set("organization", org)
 }
 
-func IsPublicRequest(c Context) bool {
-	return c.Get("publicRequest") != nil
+func GetRBAC(ctx Context) accesscontrol.AccessControl {
+	return ctx.Get("rbac").(accesscontrol.AccessControl)
 }
 
-func GetOryClient(c Context) *client.APIClient {
-	return c.Get("ory").(*client.APIClient)
+func SetIsPublicRequest(ctx Context) {
+	ctx.Set("publicRequest", true)
+}
+
+func IsPublicRequest(ctx Context) bool {
+	return ctx.Get("publicRequest") != nil
+}
+
+func GetOryClient(ctx Context) *client.APIClient {
+	return ctx.Get("ory").(*client.APIClient)
 }
 
 func GetSession(ctx Context) AuthSession {
@@ -87,10 +125,10 @@ func SetSession(ctx Context, session AuthSession) {
 	ctx.Set("session", session)
 }
 
-func GetParam(c Context, param string) string {
-	v := c.Param(param)
+func GetParam(ctx Context, param string) string {
+	v := ctx.Param(param)
 	if v == "" {
-		fallback := c.Get(param)
+		fallback := ctx.Get(param)
 		if fallback == nil {
 			return ""
 		}
@@ -99,72 +137,84 @@ func GetParam(c Context, param string) string {
 	return v
 }
 
-func GetProjectSlug(c Context) (string, error) {
-	projectID := GetParam(c, "projectSlug")
+func GetProjectSlug(ctx Context) (string, error) {
+	projectID := GetParam(ctx, "projectSlug")
 	if projectID == "" {
 		return "", fmt.Errorf("could not get project id")
 	}
 	return projectID, nil
 }
 
-func GetOrgSlug(c Context) (string, error) {
-	orgSlug := GetParam(c, "orgSlug")
+func GetOrgSlug(ctx Context) (string, error) {
+	orgSlug := GetParam(ctx, "orgSlug")
 	if orgSlug == "" {
 		return "", fmt.Errorf("could not get org slug")
 	}
 	return orgSlug, nil
 }
 
-func SetOrgSlug(c Context, orgSlug string) {
-	c.Set("orgSlug", orgSlug)
+func SetOrg(c Context, org models.Org) {
+	c.Set("org", org)
 }
 
-func SetProjectSlug(c Context, projectSlug string) {
-	c.Set("projectSlug", projectSlug)
+func SetOrgSlug(ctx Context, orgSlug string) {
+	ctx.Set("orgSlug", orgSlug)
 }
 
-func SetAssetSlug(c Context, assetSlug string) {
-	c.Set("assetSlug", assetSlug)
+func SetProjectSlug(ctx Context, projectSlug string) {
+	ctx.Set("projectSlug", projectSlug)
 }
 
-func GetAssetSlug(c Context) (string, error) {
-	assetSlug := GetParam(c, "assetSlug")
+func SetAssetSlug(ctx Context, assetSlug string) {
+	ctx.Set("assetSlug", assetSlug)
+}
+
+func GetAssetSlug(ctx Context) (string, error) {
+	assetSlug := GetParam(ctx, "assetSlug")
 	if assetSlug == "" {
 		return "", fmt.Errorf("could not get asset slug")
 	}
 	return assetSlug, nil
 }
 
-func GetAssetVersionSlug(c Context) (string, error) {
-	assetVersionSlug := GetParam(c, "assetVersionSlug")
+func GetAssetVersionSlug(ctx Context) (string, error) {
+	assetVersionSlug := GetParam(ctx, "assetVersionSlug")
 	if assetVersionSlug == "" {
 		return "", fmt.Errorf("could not get asset version slug")
 	}
 	return assetVersionSlug, nil
 }
 
-func GetAsset(c Context) models.Asset {
-	return c.Get("asset").(models.Asset)
+func GetAsset(ctx Context) models.Asset {
+	return ctx.Get("asset").(models.Asset)
 }
 
-func SetAsset(c Context, asset models.Asset) {
-	c.Set("asset", asset)
+func SetAsset(ctx Context, asset models.Asset) {
+	ctx.Set("asset", asset)
 }
 
-func GetAssetVersion(c Context) models.AssetVersion {
-	return c.Get("assetVersion").(models.AssetVersion)
+func GetAssetVersion(ctx Context) models.AssetVersion {
+	return ctx.Get("assetVersion").(models.AssetVersion)
 }
 
-func SetAssetVersion(c Context, assetVersion models.AssetVersion) {
-	c.Set("assetVersion", assetVersion)
+func MaybeGetAssetVersion(ctx Context) (models.AssetVersion, error) {
+	assetVersion, ok := ctx.Get("assetVersion").(models.AssetVersion)
+	if !ok {
+		return models.AssetVersion{}, fmt.Errorf("could not get asset version")
+	}
+	return assetVersion, nil
 }
 
-func SetProject(c Context, project models.Project) {
-	c.Set("project", project)
+func SetAssetVersion(ctx Context, assetVersion models.AssetVersion) {
+	ctx.Set("assetVersion", assetVersion)
 }
 
-func GetProject(c Context) models.Project {
-	return c.Get("project").(models.Project)
+func SetProject(ctx Context, project models.Project) {
+	ctx.Set("project", project)
+}
+
+func GetProject(ctx Context) models.Project {
+	return ctx.Get("project").(models.Project)
 }
 
 func GetAttestation(ctx Context) models.Attestation {
@@ -196,14 +246,14 @@ func GetRepositoryIdFromAssetAndProject(project models.Project, asset models.Ass
 	return RecursiveGetProjectRepositoryID(project)
 }
 
-func GetRepositoryID(c Context) (string, error) {
+func GetRepositoryID(ctx Context) (string, error) {
 	// get the asset
-	asset := GetAsset(c)
+	asset := GetAsset(ctx)
 	if asset.RepositoryID != nil {
 		return *asset.RepositoryID, nil
 	}
 	// get the project
-	project := GetProject(c)
+	project := GetProject(ctx)
 	return GetRepositoryIdFromAssetAndProject(project, asset)
 }
 
@@ -338,43 +388,28 @@ func GetSortQuery(ctx Context) []SortQuery {
 	return sortQuerys
 }
 
-func field2TableName(fieldName string) string {
-	switch fieldName {
-	case "cve":
-		return "CVE"
-	default:
-		return fieldName
-	}
-}
-
-func quoteRelationField(field string) string {
+func quoteFields(field string) string {
 	// split at the dot
 	split := strings.Split(field, ".")
-	if len(split) > 1 {
-		// quote the field. it looks like this: "cve"."cvss"
-		return fmt.Sprintf("\"%s\".\"%s\"", field2TableName(split[0]), split[1])
-	}
-	return field
-}
+	quotedSplits := utils.Map(
+		split,
+		func(s string) string {
+			return fmt.Sprintf(`"%s"`, s)
+		},
+	)
 
-var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+	return strings.Join(quotedSplits, ".")
+}
 
 // Regular expression to validate field names
 var validFieldNameRegex = regexp.MustCompile("^[a-zA-Z0-9_.]+$")
-
-func toSnakeCase(str string) string {
-	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
-	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
-	return strings.ToLower(snake)
-}
 
 func sanitizeField(field string) string {
 	if !validFieldNameRegex.MatchString(field) {
 		panic("invalid field name - to risky, might be sql injection")
 	}
 
-	return quoteRelationField(toSnakeCase(field))
+	return quoteFields(field)
 }
 
 func (f FilterQuery) SQL() string {
@@ -432,6 +467,10 @@ func (s SortQuery) SQL() string {
 		// default do an equals
 		return s.Field + " asc NULLS LAST"
 	}
+}
+
+func (s SortQuery) GetField() string {
+	return sanitizeField(s.Field)
 }
 
 type Environmental struct {

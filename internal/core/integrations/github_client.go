@@ -46,7 +46,11 @@ func newGithubBatchClient(appInstallations []models.GithubAppInstallation) (*git
 
 	clients := make([]githubClient, 0)
 	for _, appInstallation := range appInstallations {
-		client, _ := NewGithubClient(appInstallation.InstallationID)
+		client, err := NewGithubClient(appInstallation.InstallationID)
+		if err != nil {
+			slog.Error("error creating github client", "err", err)
+			return nil, err
+		}
 
 		clients = append(clients, client)
 	}
