@@ -619,5 +619,5 @@ func BuildRouter(db core.DB) *echo.Echo {
 }
 
 func Start(db core.DB) {
-	slog.Error("failed to start server", "err", BuildRouter(db).Start(":8081").Error())
+	slog.Error("failed to start server", "err", BuildRouter(db).Start(":8080").Error())
 }
