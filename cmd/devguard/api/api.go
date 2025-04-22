@@ -496,6 +496,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.GET("/projects/", projectController.List, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
 	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
+	organizationRouter.GET("/config-files/:config_file",orgController.)
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)

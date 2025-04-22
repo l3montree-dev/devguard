@@ -412,3 +412,14 @@ func (p *controller) Update(c core.Context) error {
 	}
 	return c.JSON(200, resp)
 }
+
+func (o *controller) GetConfigFile(ctx core.Context, configID string) string {
+	organization := core.GetOrganization(ctx)
+	project := core.GetProject(ctx)
+
+	configContent := project.ConfigFiles[configID]
+	if configContent.(string) == "" {
+		return organization.ConfigFiles[configID].(string)
+	}
+	return configContent.(string)
+}
