@@ -27,7 +27,7 @@ func iacScan(p string) (*common.SarifResult, error) {
 	var scannerCmd *exec.Cmd
 	slog.Info("Starting iac scanning", "path", p)
 
-	scannerCmd = exec.Command("checkov", "-d", p, "--output", "sarif", "--output-file-path", dir) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself
+	scannerCmd = exec.Command("checkov", "-s", "-d", p, "--output", "sarif", "--output-file-path", dir) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 	scannerCmd.Run() // nolint:errcheck

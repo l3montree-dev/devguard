@@ -25,12 +25,6 @@ RUN curl -O -L "https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/g
 #install unzip
 RUN apt-get update && apt-get install -y unzip
 
-# install checkov
-RUN curl -sL "https://github.com/bridgecrewio/checkov/releases/download/3.2.403/checkov_linux_X86_64.zip" -o checkov.zip && \
-    unzip checkov.zip && \
-    mv dist/checkov /usr/local/bin/checkov && \
-    chmod +x /usr/local/bin/checkov
-
 
 COPY . .
 
@@ -43,7 +37,7 @@ FROM alpine:3.21.3@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff45
 RUN apk add --no-cache git python3
 RUN python3 -m venv /usr/local/bin/venv && \
  /usr/local/bin/venv/bin/pip install --upgrade pip && \
- /usr/local/bin/venv/bin/pip install semgrep
+ /usr/local/bin/venv/bin/pip install semgrep checkov
 
  # add venv bin to path
 ENV PATH="/usr/local/bin/venv/bin:$PATH"
@@ -53,6 +47,5 @@ COPY --from=golang-builder /usr/local/bin/trivy /usr/local/bin/trivy
 COPY --from=golang-builder /usr/local/bin/cosign /usr/local/bin/cosign
 COPY --from=golang-builder /usr/local/bin/crane /usr/local/bin/crane
 COPY --from=golang-builder /usr/local/bin/gitleaks /usr/local/bin/gitleaks
-COPY --from=golang-builder /usr/local/bin/checkov /usr/local/bin/checkov
 
 ENTRYPOINT [""]
