@@ -9,9 +9,6 @@ ENV CRANE_VERSION=v0.19.1
 ENV OS=Linux
 ENV ARCH=x86_64
 
-
-ENV SEMGREP_VERSION=v8.24.2
-
 RUN curl -sL "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_${OS}_${ARCH}.tar.gz" > go-containerregistry.tar.gz && \
     tar -zxvf go-containerregistry.tar.gz -C /usr/local/bin/ crane
 
@@ -24,11 +21,6 @@ RUN curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosi
 # install gitleaks
 RUN curl -O -L "https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_arm64.tar.gz" && \
     tar -zxvf gitleaks_8.24.2_linux_arm64.tar.gz -C /usr/local/bin/ gitleaks   
-
-# install semgrep
-RUN curl -sL "https://github.com/semgrep/semgrep/archive/refs/tags/v1.117.0.tar.gz" > semgrep.tar.gz && \
-    tar -zxf semgrep.tar.gz && \
-    mv semgrep-1.117.0 /usr/local/bin/semgrep
 
 #install unzip
 RUN apt-get update && apt-get install -y unzip
@@ -48,13 +40,18 @@ RUN CGO_ENABLED=0 make devguard-scanner
 # create final image with node:alpine
 FROM alpine:3.21.3@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git python3
+RUN python3 -m venv /usr/local/bin/venv && \
+ /usr/local/bin/venv/bin/pip install --upgrade pip && \
+ /usr/local/bin/venv/bin/pip install semgrep
+
+ # add venv bin to path
+ENV PATH="/usr/local/bin/venv/bin:$PATH"
 
 COPY --from=golang-builder /app/devguard-scanner /usr/local/bin/devguard-scanner
 COPY --from=golang-builder /usr/local/bin/trivy /usr/local/bin/trivy
 COPY --from=golang-builder /usr/local/bin/cosign /usr/local/bin/cosign
 COPY --from=golang-builder /usr/local/bin/crane /usr/local/bin/crane
-COPY --from=golang-builder /usr/local/bin/semgrep /usr/local/bin/semgrep
 COPY --from=golang-builder /usr/local/bin/gitleaks /usr/local/bin/gitleaks
 COPY --from=golang-builder /usr/local/bin/checkov /usr/local/bin/checkov
 
