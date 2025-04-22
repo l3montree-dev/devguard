@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -26,22 +27,24 @@ type CreateRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 
-	ParentID *uuid.UUID         `json:"parentId"` // if created as a child project
-	Type     models.ProjectType `json:"type"`
+	ParentID    *uuid.UUID         `json:"parentId"` // if created as a child project
+	Type        models.ProjectType `json:"type"`
+	ConfigFiles database.JSONB     `json:"configFiles"`
 }
 
-func (p *CreateRequest) ToModel() models.Project {
+func (projectCreate *CreateRequest) ToModel() models.Project {
 	// check if valid type
-	if p.Type != models.ProjectTypeDefault && p.Type != models.ProjectTypeKubernetesNamespace {
-		p.Type = models.ProjectTypeDefault
+	if projectCreate.Type != models.ProjectTypeDefault && projectCreate.Type != models.ProjectTypeKubernetesNamespace {
+		projectCreate.Type = models.ProjectTypeDefault
 	}
 
-	return models.Project{Name: p.Name,
-		Slug:        slug.Make(p.Name),
-		Description: p.Description,
+	return models.Project{Name: projectCreate.Name,
+		Slug:        slug.Make(projectCreate.Name),
+		Description: projectCreate.Description,
 
-		ParentID: p.ParentID,
-		Type:     p.Type,
+		ParentID:    projectCreate.ParentID,
+		Type:        projectCreate.Type,
+		ConfigFiles: projectCreate.ConfigFiles,
 	}
 }
 
@@ -60,40 +63,46 @@ type patchRequest struct {
 
 	Type *models.ProjectType `json:"type"`
 
-	RepositoryID   *string `json:"repositoryId"`
-	RepositoryName *string `json:"repositoryName"`
+	RepositoryID   *string         `json:"repositoryId"`
+	RepositoryName *string         `json:"repositoryName"`
+	ConfigFiles    *database.JSONB `json:"configFiles"`
 }
 
-func (p *patchRequest) applyToModel(project *models.Project) bool {
+func (projectPatch *patchRequest) applyToModel(project *models.Project) bool {
 	updated := false
-	if p.Name != nil {
-		project.Name = *p.Name
-		project.Slug = slug.Make(*p.Name)
+	if projectPatch.Name != nil {
+		project.Name = *projectPatch.Name
+		project.Slug = slug.Make(*projectPatch.Name)
 		updated = true
 	}
-	if p.Description != nil {
-		project.Description = *p.Description
-		updated = true
-	}
-
-	if p.IsPublic != nil {
-		project.IsPublic = *p.IsPublic
+	if projectPatch.Description != nil {
+		project.Description = *projectPatch.Description
 		updated = true
 	}
 
-	if p.Type != nil {
-		project.Type = *p.Type
+	if projectPatch.IsPublic != nil {
+		project.IsPublic = *projectPatch.IsPublic
 		updated = true
 	}
 
-	if p.RepositoryID != nil {
-		project.RepositoryID = p.RepositoryID
+	if projectPatch.Type != nil {
+		project.Type = *projectPatch.Type
 		updated = true
 	}
 
-	if p.RepositoryName != nil {
-		project.RepositoryName = p.RepositoryName
+	if projectPatch.RepositoryID != nil {
+		project.RepositoryID = projectPatch.RepositoryID
 		updated = true
+	}
+
+	if projectPatch.RepositoryName != nil {
+		project.RepositoryName = projectPatch.RepositoryName
+		updated = true
+	}
+
+	if projectPatch.ConfigFiles != nil {
+		updated = true
+		project.ConfigFiles = *projectPatch.ConfigFiles
 	}
 
 	return updated
@@ -112,7 +121,8 @@ type ProjectDTO struct {
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
 
-	Assets []models.Asset `json:"assets"`
+	Assets      []models.Asset `json:"assets"`
+	ConfigFiles database.JSONB `json:"configFiles"`
 }
 
 type projectDetailsDTO struct {
@@ -134,6 +144,7 @@ func fromModel(project models.Project) ProjectDTO {
 		RepositoryID:   project.RepositoryID,
 		RepositoryName: project.RepositoryName,
 
-		Assets: project.Assets,
+		Assets:      project.Assets,
+		ConfigFiles: project.ConfigFiles,
 	}
 }

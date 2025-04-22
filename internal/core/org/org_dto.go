@@ -19,6 +19,7 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -36,16 +37,17 @@ type changeRoleRequest struct {
 }
 
 type createRequest struct {
-	Name                   string  `json:"name" validate:"required"`
-	ContactPhoneNumber     *string `json:"contactPhoneNumber"`
-	NumberOfEmployees      *int    `json:"numberOfEmployees"`
-	Country                *string `json:"country"`
-	Industry               *string `json:"industry"`
-	CriticalInfrastructure bool    `json:"criticalInfrastructure"`
-	ISO27001               bool    `json:"iso27001"`
-	NIST                   bool    `json:"nist"`
-	Grundschutz            bool    `json:"grundschutz"`
-	Description            string  `json:"description"`
+	Name                   string         `json:"name" validate:"required"`
+	ContactPhoneNumber     *string        `json:"contactPhoneNumber"`
+	NumberOfEmployees      *int           `json:"numberOfEmployees"`
+	Country                *string        `json:"country"`
+	Industry               *string        `json:"industry"`
+	CriticalInfrastructure bool           `json:"criticalInfrastructure"`
+	ISO27001               bool           `json:"iso27001"`
+	NIST                   bool           `json:"nist"`
+	Grundschutz            bool           `json:"grundschutz"`
+	Description            string         `json:"description"`
+	ConfigFiles            database.JSONB `json:"configFiles"`
 }
 
 func (c createRequest) toModel() models.Org {
@@ -61,6 +63,7 @@ func (c createRequest) toModel() models.Org {
 		NIST:                   c.NIST,
 		Grundschutz:            c.Grundschutz,
 		Slug:                   slug.Make(c.Name),
+		ConfigFiles:            c.ConfigFiles,
 	}
 }
 
@@ -76,7 +79,8 @@ type patchRequest struct {
 	Grundschutz            *bool   `json:"grundschutz"`
 	Description            *string `json:"description"`
 
-	IsPublic *bool `json:"isPublic"`
+	IsPublic    *bool           `json:"isPublic"`
+	ConfigFiles *database.JSONB `json:"configFiles"`
 }
 
 func (p patchRequest) applyToModel(org *models.Org) bool {
@@ -138,6 +142,11 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 		org.IsPublic = *p.IsPublic
 	}
 
+	if p.ConfigFiles != nil {
+		updated = true
+		org.ConfigFiles = *p.ConfigFiles
+	}
+
 	return updated
 
 }
@@ -161,7 +170,8 @@ type OrgDTO struct {
 
 	GitLabIntegrations []common.GitlabIntegrationDTO `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
 
-	IsPublic bool `json:"isPublic" gorm:"default:false;"`
+	IsPublic    bool           `json:"isPublic" gorm:"default:false;"`
+	ConfigFiles database.JSONB `json:"configFiles"`
 }
 
 func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.GitlabIntegrationDTO {
@@ -188,6 +198,7 @@ func fromModel(org models.Org) OrgDTO {
 		Slug:                   org.Slug,
 		Description:            org.Description,
 		IsPublic:               org.IsPublic,
+		ConfigFiles:            org.ConfigFiles,
 
 		Projects:               org.Projects,
 		GithubAppInstallations: org.GithubAppInstallations,

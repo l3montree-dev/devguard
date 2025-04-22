@@ -3,6 +3,7 @@ package asset
 import (
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -22,6 +23,8 @@ type createRequest struct {
 	ConfidentialityRequirement string `json:"confidentialityRequirement" validate:"required"`
 	IntegrityRequirement       string `json:"integrityRequirement" validate:"required"`
 	AvailabilityRequirement    string `json:"availabilityRequirement" validate:"required"`
+
+	ConfigFiles database.JSONB `json:"configFiles"`
 }
 
 func sanitizeRequirementLevel(level string) models.RequirementLevel {
@@ -47,6 +50,8 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 		ConfidentialityRequirement: sanitizeRequirementLevel(a.ConfidentialityRequirement),
 		IntegrityRequirement:       sanitizeRequirementLevel(a.IntegrityRequirement),
 		AvailabilityRequirement:    sanitizeRequirementLevel(a.AvailabilityRequirement),
+
+		ConfigFiles: a.ConfigFiles,
 	}
 
 	if a.EnableTicketRange {
@@ -75,49 +80,54 @@ type patchRequest struct {
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
+
+	ConfigFiles *database.JSONB `json:"configFiles"`
 }
 
-func (a *patchRequest) applyToModel(
-	asset *models.Asset,
-) bool {
+func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
 	updated := false
-	if a.Name != nil {
+	if assetPatch.Name != nil {
 		updated = true
-		asset.Name = *a.Name
-		asset.Slug = slug.Make(*a.Name)
+		asset.Name = *assetPatch.Name
+		asset.Slug = slug.Make(*assetPatch.Name)
 	}
 
-	if a.Description != nil {
+	if assetPatch.Description != nil {
 		updated = true
-		asset.Description = *a.Description
+		asset.Description = *assetPatch.Description
 	}
 
-	if a.CentralDependencyVulnManagement != nil {
+	if assetPatch.CentralDependencyVulnManagement != nil {
 		updated = true
-		asset.CentralDependencyVulnManagement = *a.CentralDependencyVulnManagement
+		asset.CentralDependencyVulnManagement = *assetPatch.CentralDependencyVulnManagement
 	}
 
-	if a.ReachableFromInternet != nil {
+	if assetPatch.ReachableFromInternet != nil {
 		updated = true
-		asset.ReachableFromInternet = *a.ReachableFromInternet
+		asset.ReachableFromInternet = *assetPatch.ReachableFromInternet
 	}
 
-	if a.RepositoryID != nil {
+	if assetPatch.RepositoryID != nil {
 		updated = true
-		if *a.RepositoryID == "" {
+		if *assetPatch.RepositoryID == "" {
 			asset.RepositoryID = nil
 		} else {
-			asset.RepositoryID = a.RepositoryID
+			asset.RepositoryID = assetPatch.RepositoryID
 		}
 	}
 
-	if a.RepositoryName != nil {
+	if assetPatch.RepositoryName != nil {
 		updated = true
-		if *a.RepositoryName == "" {
+		if *assetPatch.RepositoryName == "" {
 			asset.RepositoryName = nil
 		} else {
-			asset.RepositoryName = a.RepositoryName
+			asset.RepositoryName = assetPatch.RepositoryName
 		}
+	}
+
+	if assetPatch.ConfigFiles != nil {
+		updated = true
+		asset.ConfigFiles = *assetPatch.ConfigFiles
 	}
 
 	return updated
