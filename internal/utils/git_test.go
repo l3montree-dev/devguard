@@ -175,7 +175,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 		mocksgitLister.On("GetTags", ".").Return([]string{}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(0, nil)
 		mocksgitLister.On("GetBranchName", ".").Return("main", nil)
-		mocksgitLister.On("GetDefaultBranchName", ".").Return(`HEAD branch: NOTmain`, nil)
+		mocksgitLister.On("GetDefaultBranchName", ".").Return(`NOTmain`, nil)
 
 		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
 

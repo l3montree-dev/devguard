@@ -32,7 +32,7 @@ func iacScan(p string) (*common.SarifResult, error) {
 	scannerCmd.Run() // nolint:errcheck
 
 	// read the file in <dir>/results_sarif.sarif
-	b, err := os.ReadFile(dir + "/results_sarif.sarif")
+	b, err := os.ReadFile(path.Join(dir, "results_sarif.sarif"))
 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read file")
@@ -46,7 +46,7 @@ func iacScan(p string) (*common.SarifResult, error) {
 	}
 
 	// remove the file
-	err = os.Remove(dir + "/results_sarif.sarif")
+	err = os.Remove(path.Join(dir, "results_sarif.sarif"))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not remove file")
 	}

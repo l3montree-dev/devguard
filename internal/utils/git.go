@@ -47,7 +47,7 @@ func SetGitVersionHeader(path string, req *http.Request) error {
 		}
 	}
 
-	fmt.Println("Git Version Info: ", gitVersionInfo)
+	slog.Info("git version info", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", gitVersionInfo.DefaultBranch)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Asset-Ref", gitVersionInfo.BranchOrTag)
 	req.Header.Set("X-Asset-Default-Branch", gitVersionInfo.DefaultBranch)
@@ -77,7 +77,7 @@ func GetAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 		branchOrTag = version
 	}
 
-	defaultBranch, err := getDefaultBranchName(path)
+	defaultBranch, err := GitLister.GetDefaultBranchName(path)
 	if err != nil {
 		return GitVersionInfo{}, errors.Wrap(err, "could not get default branch name")
 	}
@@ -97,28 +97,6 @@ func getCurrentBranchName(path string) (string, error) {
 	return GitLister.GetBranchName(path)
 }
 
-func getDefaultBranchName(path string) (string, error) {
-	outString, err := GitLister.GetDefaultBranchName(path)
-	if err != nil {
-		return "", err
-	}
-
-	parts := strings.Split(strings.TrimSpace(outString), "HEAD branch:")
-	if len(parts) == 0 {
-		return "", fmt.Errorf("unexpected format for default branch output")
-	}
-	if len(parts) == 1 {
-		return strings.TrimSpace(parts[0]), nil
-	}
-	parts = strings.Split(parts[1], "\n")
-	if len(parts) == 0 {
-		return "", fmt.Errorf("unexpected format for default branch output")
-	}
-	defaultBranch := strings.TrimSpace(parts[0])
-
-	return defaultBranch, nil
-}
-
 type gitLister interface {
 	MarkAsSafePath(path string) error
 	GetTags(path string) ([]string, error)
@@ -131,7 +109,10 @@ type commandLineGitLister struct {
 }
 
 func (g commandLineGitLister) GetDefaultBranchName(path string) (string, error) {
-	cmd := exec.Command("git", "remote", "show", "origin")
+	// returns something like
+	// "origin/main"
+
+	cmd := exec.Command("git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD")
 	var out bytes.Buffer
 	var errOut bytes.Buffer
 	cmd.Stdout = &out
@@ -139,11 +120,16 @@ func (g commandLineGitLister) GetDefaultBranchName(path string) (string, error) 
 	cmd.Dir = getDirFromPath(path)
 	err := cmd.Run()
 	if err != nil {
+		fmt.Println(errOut.String())
 		return "", err
 	}
 
-	return out.String(), nil
-
+	outStr := strings.TrimSpace(out.String())
+	if outStr == "" {
+		return "", fmt.Errorf("could not get default branch name")
+	}
+	// remove the "origin/" prefix
+	return strings.TrimPrefix(outStr, "origin/"), nil
 }
 
 func (g commandLineGitLister) GetBranchName(path string) (string, error) {
