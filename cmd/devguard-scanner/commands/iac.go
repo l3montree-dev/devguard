@@ -3,6 +3,7 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -30,6 +31,10 @@ func iacScan(p string) (*common.SarifResult, error) {
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 	scannerCmd.Run() // nolint:errcheck
+	if scannerCmd.ProcessState.ExitCode() != 0 {
+		slog.Error("infrastructure as code scanning failed", "stderr", stderr.String())
+		return nil, fmt.Errorf("iac scan failed: %s", stderr.String())
+	}
 
 	// read the file in <dir>/results_sarif.sarif
 	b, err := os.ReadFile(path.Join(dir, "results_sarif.sarif"))
