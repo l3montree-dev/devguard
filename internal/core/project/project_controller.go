@@ -419,7 +419,7 @@ func (o *controller) GetConfigFile(ctx core.Context) error {
 	configID := ctx.Param("config-file")
 
 	configContent := project.ConfigFiles[configID]
-	if configContent.(string) == "" {
+	if configContent.(string) == "" { //if we have no config files in this project we want to look in the corresponding organization
 		return ctx.JSON(200, organization.ConfigFiles[configID].(string))
 	}
 	return ctx.JSON(200, configContent.(string))

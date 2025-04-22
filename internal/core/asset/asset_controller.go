@@ -229,7 +229,7 @@ func (a *httpController) GetConfigFile(ctx core.Context) error {
 	configID := ctx.Param("config-file")
 
 	configContent := asset.ConfigFiles[configID]
-	if configContent.(string) == "" {
+	if configContent.(string) == "" { //if we have no config files in this asset we want to look in the corresponding project and then in the organization
 		if project.ConfigFiles[configID].(string) == "" {
 			return ctx.JSON(200, organization.ConfigFiles[configID].(string))
 		}
