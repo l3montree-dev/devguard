@@ -471,8 +471,10 @@ func (o *httpController) Metrics(ctx core.Context) error {
 	return ctx.JSON(200, map[string]string{"ownerId": owner})
 }
 
-func (o *httpController) GetConfigFile(ctx core.Context, configID string) string {
+func (o *httpController) GetConfigFile(ctx core.Context) error {
 	organization := core.GetOrganization(ctx)
+	configID := ctx.Param("config-file")
+
 	configContent := organization.ConfigFiles[configID]
-	return configContent.(string)
+	return ctx.JSON(200, configContent.(string))
 }

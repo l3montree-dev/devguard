@@ -222,17 +222,18 @@ func (a *httpController) Update(ctx core.Context) error {
 	return ctx.JSON(200, asset)
 }
 
-func (a *httpController) GetConfigFile(ctx core.Context, configID string) string {
+func (a *httpController) GetConfigFile(ctx core.Context) error {
 	organization := core.GetOrganization(ctx)
 	project := core.GetProject(ctx)
 	asset := core.GetAsset(ctx)
+	configID := ctx.Param("config-file")
 
 	configContent := asset.ConfigFiles[configID]
 	if configContent.(string) == "" {
 		if project.ConfigFiles[configID].(string) == "" {
-			return organization.ConfigFiles[configID].(string)
+			return ctx.JSON(200, organization.ConfigFiles[configID].(string))
 		}
-		return project.ConfigFiles[configID].(string)
+		return ctx.JSON(200, project.ConfigFiles[configID].(string))
 	}
-	return configContent.(string)
+	return ctx.JSON(200, configContent.(string))
 }
