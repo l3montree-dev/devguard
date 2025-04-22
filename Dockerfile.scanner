@@ -1,4 +1,4 @@
-FROM golang:1.24.0 AS golang-builder
+FROM golang:1.24.2@sha256:d9db32125db0c3a680cfb7a1afcaefb89c898a075ec148fdc2f0f646cc2ed509 AS golang-builder
 
 # set the working directory
 WORKDIR /app
@@ -57,6 +57,5 @@ COPY --from=golang-builder /usr/local/bin/crane /usr/local/bin/crane
 COPY --from=golang-builder /usr/local/bin/semgrep /usr/local/bin/semgrep
 COPY --from=golang-builder /usr/local/bin/gitleaks /usr/local/bin/gitleaks
 COPY --from=golang-builder /usr/local/bin/checkov /usr/local/bin/checkov
-
 
 ENTRYPOINT [""]
