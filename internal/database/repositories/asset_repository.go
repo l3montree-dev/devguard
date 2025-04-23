@@ -135,8 +135,3 @@ func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (mo
 		First(&asset).Error
 	return asset, err
 }
-
-func (g *assetRepository) GetOrganizationFromAsset(assetID uuid.UUID) (string, error) {
-	err := 
-	return "", nil
-}
