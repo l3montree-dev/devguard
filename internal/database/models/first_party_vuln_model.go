@@ -3,17 +3,19 @@ package models
 import (
 	"strconv"
 
+	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
 )
 
 type FirstPartyVulnerability struct {
 	Vulnerability
-	RuleID          string `json:"ruleId"`
-	RuleName        string `json:"ruleName"`
-	RuleDescription string `json:"ruleDescription"`
-	RuleHelp        string `json:"ruleHelp"`
-	RuleHelpUri     string `json:"ruleHelpUri"`
+	RuleID          string         `json:"ruleId"`
+	RuleName        string         `json:"ruleName"`
+	RuleDescription string         `json:"ruleDescription"`
+	RuleHelp        string         `json:"ruleHelp"`
+	RuleHelpUri     string         `json:"ruleHelpUri"`
+	RuleProperties  database.JSONB `json:"ruleProperties"`
 
 	Uri         string `json:"uri"`
 	StartLine   int    `json:"startLine" `

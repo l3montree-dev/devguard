@@ -7,7 +7,8 @@ type SarifResult struct {
 }
 
 type Text struct {
-	Text string `json:"text"`
+	Text     string `json:"text"`
+	Markdown string `json:"markdown"`
 }
 
 type Rule struct {
@@ -17,6 +18,7 @@ type Rule struct {
 	Help             Text   `json:"help"`
 	HelpUri          string `json:"helpUri"`
 	ShortDescription Text   `json:"shortDescription"`
+	Properties       map[string]any
 }
 
 type Run struct {

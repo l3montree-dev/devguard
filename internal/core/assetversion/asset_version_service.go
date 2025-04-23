@@ -16,6 +16,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+	"github.com/l3montree-dev/devguard/internal/database"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
 
@@ -62,10 +63,24 @@ var sarifResultKindsIndicatingNotAndIssue = []string{
 }
 
 func getBestDescription(rule common.Rule) string {
+	if rule.FullDescription.Markdown != "" {
+		return rule.FullDescription.Markdown
+	}
 	if rule.FullDescription.Text != "" {
 		return rule.FullDescription.Text
 	}
+	if rule.ShortDescription.Markdown != "" {
+		return rule.ShortDescription.Markdown
+	}
+
 	return rule.ShortDescription.Text
+}
+
+func preferMarkdown(text common.Text) string {
+	if text.Markdown != "" {
+		return text.Markdown
+	}
+	return text.Text
 }
 
 func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVulnerability, error) {
@@ -95,10 +110,11 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 					ScannerIDs:       scannerID,
 				},
 				RuleID:          result.RuleId,
-				RuleHelp:        rule.Help.Text,
+				RuleHelp:        preferMarkdown(rule.Help),
 				RuleName:        rule.Name,
 				RuleHelpUri:     rule.HelpUri,
 				RuleDescription: getBestDescription(rule),
+				RuleProperties:  database.JSONB(rule.Properties),
 				Commit:          result.PartialFingerprints.CommitSha,
 				Email:           result.PartialFingerprints.Email,
 				Author:          result.PartialFingerprints.Author,
