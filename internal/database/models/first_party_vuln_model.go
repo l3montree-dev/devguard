@@ -10,6 +10,7 @@ import (
 type FirstPartyVulnerability struct {
 	Vulnerability
 	RuleID                  string `json:"ruleId"`
+	RuleDescription         string `json:"ruleDescription"`
 	Uri                     string `json:"uri"`
 	StartLine               int    `json:"startLine" `
 	StartColumn             int    `json:"startColumn"`

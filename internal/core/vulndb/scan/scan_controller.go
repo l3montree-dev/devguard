@@ -22,8 +22,8 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -59,15 +59,15 @@ func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRe
 }
 
 type ScanResponse struct {
-	AmountOpened    int                                 `json:"amountOpened"`
-	AmountClosed    int                                 `json:"amountClosed"`
-	DependencyVulns []dependency_vuln.DependencyVulnDTO `json:"dependencyVulns"`
+	AmountOpened    int                      `json:"amountOpened"`
+	AmountClosed    int                      `json:"amountClosed"`
+	DependencyVulns []vuln.DependencyVulnDTO `json:"dependencyVulns"`
 }
 
 type FirstPartyScanResponse struct {
-	AmountOpened    int                                 `json:"amountOpened"`
-	AmountClosed    int                                 `json:"amountClosed"`
-	FirstPartyVulns []dependency_vuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
+	AmountOpened    int                      `json:"amountOpened"`
+	AmountClosed    int                      `json:"amountClosed"`
+	FirstPartyVulns []vuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
 }
 
 func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, error) {
@@ -150,7 +150,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 
 	scanResults.AmountOpened = len(opened) //Fill in the results
 	scanResults.AmountClosed = len(closed)
-	scanResults.DependencyVulns = utils.Map(newState, dependency_vuln.DependencyVulnToDto)
+	scanResults.DependencyVulns = utils.Map(newState, vuln.DependencyVulnToDto)
 
 	return scanResults, nil
 }
@@ -202,7 +202,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	return c.JSON(200, FirstPartyScanResponse{
 		AmountOpened:    amountOpened,
 		AmountClosed:    amountClose,
-		FirstPartyVulns: utils.Map(newState, dependency_vuln.FirstPartyVulnToDto),
+		FirstPartyVulns: utils.Map(newState, vuln.FirstPartyVulnToDto),
 	})
 }
 

@@ -12,12 +12,12 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-func printSastScanResults(firstPartyVulns []dependency_vuln.FirstPartyVulnDTO, webUI, assetName string) {
+func printSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, assetName string) {
 	tw := table.NewWriter()
 	tw.SetAllowedRowLength(180)
 
