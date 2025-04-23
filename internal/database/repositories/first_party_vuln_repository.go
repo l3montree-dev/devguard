@@ -8,21 +8,21 @@ import (
 
 type firstPartyVulnerabilityRepository struct {
 	db core.DB
-	VulnerabilityRepository[models.FirstPartyVulnerability]
+	VulnerabilityRepository[models.FirstPartyVuln]
 }
 
 func NewFirstPartyVulnerabilityRepository(db core.DB) *firstPartyVulnerabilityRepository {
-	if err := db.AutoMigrate(&models.FirstPartyVulnerability{}); err != nil {
+	if err := db.AutoMigrate(&models.FirstPartyVuln{}); err != nil {
 		panic(err)
 	}
 	return &firstPartyVulnerabilityRepository{
 		db:                      db,
-		VulnerabilityRepository: *NewVulnerabilityRepository[models.FirstPartyVulnerability](db),
+		VulnerabilityRepository: *NewVulnerabilityRepository[models.FirstPartyVuln](db),
 	}
 }
 
-func (r *firstPartyVulnerabilityRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVulnerability, error) {
-	var vulns []models.FirstPartyVulnerability = []models.FirstPartyVulnerability{}
+func (r *firstPartyVulnerabilityRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+	var vulns []models.FirstPartyVuln = []models.FirstPartyVuln{}
 	scannerID = "%" + scannerID + "%"
 	if err := r.Repository.GetDB(r.db).Where("asset_version_name = ? AND asset_id = ? AND scanner_ids LIKE ?", assetVersionName, assetID, scannerID).Find(&vulns).Error; err != nil {
 		return nil, err
@@ -30,12 +30,12 @@ func (r *firstPartyVulnerabilityRepository) ListByScanner(assetVersionName strin
 	return vulns, nil
 }
 
-func (r *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], map[string]int, error) {
+func (r *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], map[string]int, error) {
 
 	var count int64
-	var firstPartyVulns []models.FirstPartyVulnerability = []models.FirstPartyVulnerability{}
+	var firstPartyVulns []models.FirstPartyVuln = []models.FirstPartyVuln{}
 
-	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVulnerability{}).Where("firstPartyVulns.asset_version_name = ?", assetVersionName).Where("firstPartyVulns.asset_id = ?", assetID)
+	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("firstPartyVulns.asset_version_name = ?", assetVersionName).Where("firstPartyVulns.asset_id = ?", assetID)
 
 	/* 	// apply filters
 	   	for _, f := range filter {
@@ -49,35 +49,35 @@ func (r *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx core.DB, a
 
 	err := q.Count(&count).Error
 	if err != nil {
-		return core.Paged[models.FirstPartyVulnerability]{}, nil, err
+		return core.Paged[models.FirstPartyVuln]{}, nil, err
 	}
 
 	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&firstPartyVulns).Error
 
 	if err != nil {
-		return core.Paged[models.FirstPartyVulnerability]{}, nil, err
+		return core.Paged[models.FirstPartyVuln]{}, nil, err
 	}
 	//TODO: check it
 	return core.NewPaged(pageInfo, count, firstPartyVulns), nil, nil
 }
 
-func (r *firstPartyVulnerabilityRepository) GetFirstPartyVulnsByAssetIdPagedAndFlat(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+func (r *firstPartyVulnerabilityRepository) GetFirstPartyVulnsByAssetIdPagedAndFlat(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
 	return r.GetFirstPartyVulnsPaged(tx, []string{assetVersionName}, []string{assetID.String()}, pageInfo, search, filter, sort)
 }
 
-func (r firstPartyVulnerabilityRepository) Read(id string) (models.FirstPartyVulnerability, error) {
-	var t models.FirstPartyVulnerability
+func (r firstPartyVulnerabilityRepository) Read(id string) (models.FirstPartyVuln, error) {
+	var t models.FirstPartyVuln
 	err := r.db.First(&t, id).Error
 
 	return t, err
 }
 
-func (g firstPartyVulnerabilityRepository) ReadDependencyVulnWithAssetVersionEvents(id string) (models.FirstPartyVulnerability, []models.VulnEvent, error) {
-	var t models.FirstPartyVulnerability
+func (g firstPartyVulnerabilityRepository) ReadDependencyVulnWithAssetVersionEvents(id string) (models.FirstPartyVuln, []models.VulnEvent, error) {
+	var t models.FirstPartyVuln
 	err := g.db.First(&t, "id = ?", id).Error
 
 	if err != nil {
-		return models.FirstPartyVulnerability{}, []models.VulnEvent{}, err
+		return models.FirstPartyVuln{}, []models.VulnEvent{}, err
 	}
 
 	var VulnEvents []models.VulnEvent
@@ -86,35 +86,35 @@ func (g firstPartyVulnerabilityRepository) ReadDependencyVulnWithAssetVersionEve
 		"asset_id = ?", t.AssetID,
 	)).Order("created_at ASC").Find(&t.Events).Error
 	if err != nil {
-		return models.FirstPartyVulnerability{}, VulnEvents, err
+		return models.FirstPartyVuln{}, VulnEvents, err
 	}
 
 	return t, VulnEvents, err
 }
 
 // TODO: change it
-func (r *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(tx core.DB, assetVersionNamesSubquery any, assetVersionAssetIdSubquery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
-	var firstPartyVulns []models.FirstPartyVulnerability = []models.FirstPartyVulnerability{}
+func (r *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(tx core.DB, assetVersionNamesSubquery any, assetVersionAssetIdSubquery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
+	var firstPartyVulns []models.FirstPartyVuln = []models.FirstPartyVuln{}
 
-	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVulnerability{}).Where("firstPartyVulns.asset_version_name IN (?) AND firstPartyVulns.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIdSubquery)
+	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("firstPartyVulns.asset_version_name IN (?) AND firstPartyVulns.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIdSubquery)
 
 	var count int64
 
 	err := q.Count(&count).Error
 	if err != nil {
-		return core.Paged[models.FirstPartyVulnerability]{}, err
+		return core.Paged[models.FirstPartyVuln]{}, err
 	}
 
 	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&firstPartyVulns).Error
 
 	if err != nil {
-		return core.Paged[models.FirstPartyVulnerability]{}, err
+		return core.Paged[models.FirstPartyVuln]{}, err
 	}
 
 	return core.NewPaged(pageInfo, count, firstPartyVulns), nil
 }
 
-func (r *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+func (r *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
 	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("project_id = ?", projectID)
 
 	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)
@@ -122,7 +122,7 @@ func (r *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByProjectId
 	return r.GetFirstPartyVulnsPaged(tx, subQuery, subQueryAssetIDs, pageInfo, search, filter, sort)
 }
 
-func (r *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+func (r *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
 
 	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
 
@@ -137,4 +137,30 @@ func (r *firstPartyVulnerabilityRepository) GetOrgFromVulnID(tx core.DB, firstPa
 		return models.Org{}, err
 	}
 	return org, nil
+}
+
+func (r *firstPartyVulnerabilityRepository) ApplyAndSave(tx core.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) error {
+	if tx == nil {
+		// we are not part of a parent transaction - create a new one
+		return r.Transaction(func(d core.DB) error {
+			_, err := r.applyAndSave(d, firstPartyVuln, ev)
+			return err
+		})
+	}
+
+	_, err := r.applyAndSave(tx, firstPartyVuln, ev)
+	return err
+}
+
+func (r *firstPartyVulnerabilityRepository) applyAndSave(tx core.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
+	// apply the event on the dependencyVuln
+	ev.Apply(firstPartyVuln)
+	// save the event
+	if err := r.VulnerabilityRepository.Save(tx, firstPartyVuln); err != nil {
+		return models.VulnEvent{}, err
+	}
+	if err := r.GetDB(tx).Save(ev).Error; err != nil {
+		return models.VulnEvent{}, err
+	}
+	return *ev, nil
 }

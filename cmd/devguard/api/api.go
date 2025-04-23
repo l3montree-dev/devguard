@@ -472,7 +472,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.GET("/content-tree/", orgController.ContentTree)
 	//TODO: change it
 	//organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
-	organizationRouter.GET("/flaws/", dependencyVulnController.ListByOrgPaged)
+	organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
 
 	organizationRouter.GET("/members/", orgController.Members)
 	organizationRouter.POST("/members/", orgController.InviteMember, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
@@ -501,7 +501,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectRouter.GET("/", projectController.Read)
 	//TODO: change it
 	//projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
-	projectRouter.GET("/flaws/", dependencyVulnController.ListByProjectPaged)
+	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
 
 	projectRouter.PATCH("/", projectController.Update, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
 	projectRouter.DELETE("/", projectController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
@@ -595,7 +595,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)
 	//TODO: change it
 	//dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
-	dependencyVulnRouter := assetVersionRouter.Group("/flaws")
+	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnId/", dependencyVulnController.Read)
 

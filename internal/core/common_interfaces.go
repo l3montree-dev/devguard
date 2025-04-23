@@ -120,17 +120,18 @@ type DependencyVulnRepository interface {
 }
 
 type FirstPartyVulnRepository interface {
-	common.Repository[string, models.FirstPartyVulnerability, DB]
-	SaveBatch(tx DB, vulns []models.FirstPartyVulnerability) error
-	Save(tx DB, vuln *models.FirstPartyVulnerability) error
+	common.Repository[string, models.FirstPartyVuln, DB]
+	SaveBatch(tx DB, vulns []models.FirstPartyVuln) error
+	Save(tx DB, vuln *models.FirstPartyVuln) error
 	Transaction(txFunc func(DB) error) error
 	Begin() DB
-	GetDefaultFirstPartyVulnsByProjectIdPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVulnerability], error)
-	GetDefaultFirstPartyVulnsByOrgIdPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVulnerability], error)
-	GetFirstPartyVulnsByAssetIdPagedAndFlat(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVulnerability], error)
-	GetByAssetId(tx DB, assetId uuid.UUID) ([]models.FirstPartyVulnerability, error)
-	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVulnerability], map[string]int, error)
-	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVulnerability, error)
+	GetDefaultFirstPartyVulnsByProjectIdPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
+	GetDefaultFirstPartyVulnsByOrgIdPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
+	GetFirstPartyVulnsByAssetIdPagedAndFlat(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
+	GetByAssetId(tx DB, assetId uuid.UUID) ([]models.FirstPartyVuln, error)
+	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], map[string]int, error)
+	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
+	ApplyAndSave(tx DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error
 }
 
 type InTotoLinkRepository interface {
@@ -205,7 +206,7 @@ type AssetVersionService interface {
 	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) *cdx.BOM
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
-	HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVulnerability, error)
+	HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error)
 	UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error
 	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 }
@@ -225,9 +226,9 @@ type AssetVersionRepository interface {
 }
 
 type FirstPartyVulnService interface {
-	UserFixedFirstPartyVulns(tx DB, userID string, firstPartyVulns []models.FirstPartyVulnerability) error
-	UserDetectedFirstPartyVulns(tx DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVulnerability) error
-	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVulnerability, statusType string, justification string) (models.VulnEvent, error)
+	UserFixedFirstPartyVulns(tx DB, userID string, firstPartyVulns []models.FirstPartyVuln) error
+	UserDetectedFirstPartyVulns(tx DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVuln) error
+	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string) (models.VulnEvent, error)
 }
 
 type ConfigRepository interface {
@@ -254,6 +255,7 @@ type VulnRepository interface {
 	Save(db DB, vuln *models.Vuln) error
 	Transaction(fn func(tx DB) error) error
 	GetOrgFromVuln(vuln models.Vuln) (models.Org, error)
+	ApplyAndSave(tx DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent) error
 }
 
 type ExternalUserRepository interface {

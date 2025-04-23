@@ -74,23 +74,23 @@ func (_c *FirstPartyVulnRepository_Activate_Call) RunAndReturn(run func(*gorm.DB
 }
 
 // All provides a mock function with no fields
-func (_m *FirstPartyVulnRepository) All() ([]models.FirstPartyVulnerability, error) {
+func (_m *FirstPartyVulnRepository) All() ([]models.FirstPartyVuln, error) {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for All")
 	}
 
-	var r0 []models.FirstPartyVulnerability
+	var r0 []models.FirstPartyVuln
 	var r1 error
-	if rf, ok := ret.Get(0).(func() ([]models.FirstPartyVulnerability, error)); ok {
+	if rf, ok := ret.Get(0).(func() ([]models.FirstPartyVuln, error)); ok {
 		return rf()
 	}
-	if rf, ok := ret.Get(0).(func() []models.FirstPartyVulnerability); ok {
+	if rf, ok := ret.Get(0).(func() []models.FirstPartyVuln); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.FirstPartyVulnerability)
+			r0 = ret.Get(0).([]models.FirstPartyVuln)
 		}
 	}
 
@@ -120,12 +120,60 @@ func (_c *FirstPartyVulnRepository_All_Call) Run(run func()) *FirstPartyVulnRepo
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_All_Call) Return(_a0 []models.FirstPartyVulnerability, _a1 error) *FirstPartyVulnRepository_All_Call {
+func (_c *FirstPartyVulnRepository_All_Call) Return(_a0 []models.FirstPartyVuln, _a1 error) *FirstPartyVulnRepository_All_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_All_Call) RunAndReturn(run func() ([]models.FirstPartyVulnerability, error)) *FirstPartyVulnRepository_All_Call {
+func (_c *FirstPartyVulnRepository_All_Call) RunAndReturn(run func() ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_All_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ApplyAndSave provides a mock function with given fields: tx, dependencyVuln, vulnEvent
+func (_m *FirstPartyVulnRepository) ApplyAndSave(tx *gorm.DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error {
+	ret := _m.Called(tx, dependencyVuln, vulnEvent)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ApplyAndSave")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.FirstPartyVuln, *models.VulnEvent) error); ok {
+		r0 = rf(tx, dependencyVuln, vulnEvent)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// FirstPartyVulnRepository_ApplyAndSave_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApplyAndSave'
+type FirstPartyVulnRepository_ApplyAndSave_Call struct {
+	*mock.Call
+}
+
+// ApplyAndSave is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - dependencyVuln *models.FirstPartyVuln
+//   - vulnEvent *models.VulnEvent
+func (_e *FirstPartyVulnRepository_Expecter) ApplyAndSave(tx interface{}, dependencyVuln interface{}, vulnEvent interface{}) *FirstPartyVulnRepository_ApplyAndSave_Call {
+	return &FirstPartyVulnRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", tx, dependencyVuln, vulnEvent)}
+}
+
+func (_c *FirstPartyVulnRepository_ApplyAndSave_Call) Run(run func(tx *gorm.DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent)) *FirstPartyVulnRepository_ApplyAndSave_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(*models.FirstPartyVuln), args[2].(*models.VulnEvent))
+	})
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_ApplyAndSave_Call) Return(_a0 error) *FirstPartyVulnRepository_ApplyAndSave_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_ApplyAndSave_Call) RunAndReturn(run func(*gorm.DB, *models.FirstPartyVuln, *models.VulnEvent) error) *FirstPartyVulnRepository_ApplyAndSave_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -178,7 +226,7 @@ func (_c *FirstPartyVulnRepository_Begin_Call) RunAndReturn(run func() *gorm.DB)
 }
 
 // Create provides a mock function with given fields: tx, t
-func (_m *FirstPartyVulnRepository) Create(tx *gorm.DB, t *models.FirstPartyVulnerability) error {
+func (_m *FirstPartyVulnRepository) Create(tx *gorm.DB, t *models.FirstPartyVuln) error {
 	ret := _m.Called(tx, t)
 
 	if len(ret) == 0 {
@@ -186,7 +234,7 @@ func (_m *FirstPartyVulnRepository) Create(tx *gorm.DB, t *models.FirstPartyVuln
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.FirstPartyVulnerability) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.FirstPartyVuln) error); ok {
 		r0 = rf(tx, t)
 	} else {
 		r0 = ret.Error(0)
@@ -202,14 +250,14 @@ type FirstPartyVulnRepository_Create_Call struct {
 
 // Create is a helper method to define mock.On call
 //   - tx *gorm.DB
-//   - t *models.FirstPartyVulnerability
+//   - t *models.FirstPartyVuln
 func (_e *FirstPartyVulnRepository_Expecter) Create(tx interface{}, t interface{}) *FirstPartyVulnRepository_Create_Call {
 	return &FirstPartyVulnRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
-func (_c *FirstPartyVulnRepository_Create_Call) Run(run func(tx *gorm.DB, t *models.FirstPartyVulnerability)) *FirstPartyVulnRepository_Create_Call {
+func (_c *FirstPartyVulnRepository_Create_Call) Run(run func(tx *gorm.DB, t *models.FirstPartyVuln)) *FirstPartyVulnRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(*models.FirstPartyVulnerability))
+		run(args[0].(*gorm.DB), args[1].(*models.FirstPartyVuln))
 	})
 	return _c
 }
@@ -219,13 +267,13 @@ func (_c *FirstPartyVulnRepository_Create_Call) Return(_a0 error) *FirstPartyVul
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_Create_Call) RunAndReturn(run func(*gorm.DB, *models.FirstPartyVulnerability) error) *FirstPartyVulnRepository_Create_Call {
+func (_c *FirstPartyVulnRepository_Create_Call) RunAndReturn(run func(*gorm.DB, *models.FirstPartyVuln) error) *FirstPartyVulnRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateBatch provides a mock function with given fields: tx, ts
-func (_m *FirstPartyVulnRepository) CreateBatch(tx *gorm.DB, ts []models.FirstPartyVulnerability) error {
+func (_m *FirstPartyVulnRepository) CreateBatch(tx *gorm.DB, ts []models.FirstPartyVuln) error {
 	ret := _m.Called(tx, ts)
 
 	if len(ret) == 0 {
@@ -233,7 +281,7 @@ func (_m *FirstPartyVulnRepository) CreateBatch(tx *gorm.DB, ts []models.FirstPa
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.FirstPartyVulnerability) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.FirstPartyVuln) error); ok {
 		r0 = rf(tx, ts)
 	} else {
 		r0 = ret.Error(0)
@@ -249,14 +297,14 @@ type FirstPartyVulnRepository_CreateBatch_Call struct {
 
 // CreateBatch is a helper method to define mock.On call
 //   - tx *gorm.DB
-//   - ts []models.FirstPartyVulnerability
+//   - ts []models.FirstPartyVuln
 func (_e *FirstPartyVulnRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *FirstPartyVulnRepository_CreateBatch_Call {
 	return &FirstPartyVulnRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
-func (_c *FirstPartyVulnRepository_CreateBatch_Call) Run(run func(tx *gorm.DB, ts []models.FirstPartyVulnerability)) *FirstPartyVulnRepository_CreateBatch_Call {
+func (_c *FirstPartyVulnRepository_CreateBatch_Call) Run(run func(tx *gorm.DB, ts []models.FirstPartyVuln)) *FirstPartyVulnRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].([]models.FirstPartyVulnerability))
+		run(args[0].(*gorm.DB), args[1].([]models.FirstPartyVuln))
 	})
 	return _c
 }
@@ -266,7 +314,7 @@ func (_c *FirstPartyVulnRepository_CreateBatch_Call) Return(_a0 error) *FirstPar
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_CreateBatch_Call) RunAndReturn(run func(*gorm.DB, []models.FirstPartyVulnerability) error) *FirstPartyVulnRepository_CreateBatch_Call {
+func (_c *FirstPartyVulnRepository_CreateBatch_Call) RunAndReturn(run func(*gorm.DB, []models.FirstPartyVuln) error) *FirstPartyVulnRepository_CreateBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -319,23 +367,23 @@ func (_c *FirstPartyVulnRepository_Delete_Call) RunAndReturn(run func(*gorm.DB, 
 }
 
 // GetByAssetId provides a mock function with given fields: tx, assetId
-func (_m *FirstPartyVulnRepository) GetByAssetId(tx *gorm.DB, assetId uuid.UUID) ([]models.FirstPartyVulnerability, error) {
+func (_m *FirstPartyVulnRepository) GetByAssetId(tx *gorm.DB, assetId uuid.UUID) ([]models.FirstPartyVuln, error) {
 	ret := _m.Called(tx, assetId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByAssetId")
 	}
 
-	var r0 []models.FirstPartyVulnerability
+	var r0 []models.FirstPartyVuln
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) ([]models.FirstPartyVulnerability, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) ([]models.FirstPartyVuln, error)); ok {
 		return rf(tx, assetId)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) []models.FirstPartyVulnerability); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID) []models.FirstPartyVuln); ok {
 		r0 = rf(tx, assetId)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.FirstPartyVulnerability)
+			r0 = ret.Get(0).([]models.FirstPartyVuln)
 		}
 	}
 
@@ -367,34 +415,34 @@ func (_c *FirstPartyVulnRepository_GetByAssetId_Call) Run(run func(tx *gorm.DB, 
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetByAssetId_Call) Return(_a0 []models.FirstPartyVulnerability, _a1 error) *FirstPartyVulnRepository_GetByAssetId_Call {
+func (_c *FirstPartyVulnRepository_GetByAssetId_Call) Return(_a0 []models.FirstPartyVuln, _a1 error) *FirstPartyVulnRepository_GetByAssetId_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetByAssetId_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.FirstPartyVulnerability, error)) *FirstPartyVulnRepository_GetByAssetId_Call {
+func (_c *FirstPartyVulnRepository_GetByAssetId_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetByAssetId_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetByAssetVersionPaged provides a mock function with given fields: tx, assetVersionName, assetID, pageInfo, search, filter, sort
-func (_m *FirstPartyVulnRepository) GetByAssetVersionPaged(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], map[string]int, error) {
+func (_m *FirstPartyVulnRepository) GetByAssetVersionPaged(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], map[string]int, error) {
 	ret := _m.Called(tx, assetVersionName, assetID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByAssetVersionPaged")
 	}
 
-	var r0 core.Paged[models.FirstPartyVulnerability]
+	var r0 core.Paged[models.FirstPartyVuln]
 	var r1 map[string]int
 	var r2 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], map[string]int, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVuln], map[string]int, error)); ok {
 		return rf(tx, assetVersionName, assetID, pageInfo, search, filter, sort)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.FirstPartyVulnerability]); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.FirstPartyVuln]); ok {
 		r0 = rf(tx, assetVersionName, assetID, pageInfo, search, filter, sort)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.FirstPartyVulnerability])
+		r0 = ret.Get(0).(core.Paged[models.FirstPartyVuln])
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) map[string]int); ok {
@@ -438,12 +486,12 @@ func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) Run(run func(tx 
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) Return(_a0 core.Paged[models.FirstPartyVulnerability], _a1 map[string]int, _a2 error) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
+func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) Return(_a0 core.Paged[models.FirstPartyVuln], _a1 map[string]int, _a2 error) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
 	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], map[string]int, error)) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
+func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVuln], map[string]int, error)) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -497,22 +545,22 @@ func (_c *FirstPartyVulnRepository_GetDB_Call) RunAndReturn(run func(*gorm.DB) *
 }
 
 // GetDefaultFirstPartyVulnsByOrgIdPaged provides a mock function with given fields: tx, userAllowedProjectIds, pageInfo, search, filter, sort
-func (_m *FirstPartyVulnRepository) GetDefaultFirstPartyVulnsByOrgIdPaged(tx *gorm.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+func (_m *FirstPartyVulnRepository) GetDefaultFirstPartyVulnsByOrgIdPaged(tx *gorm.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
 	ret := _m.Called(tx, userAllowedProjectIds, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDefaultFirstPartyVulnsByOrgIdPaged")
 	}
 
-	var r0 core.Paged[models.FirstPartyVulnerability]
+	var r0 core.Paged[models.FirstPartyVuln]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVuln], error)); ok {
 		return rf(tx, userAllowedProjectIds, pageInfo, search, filter, sort)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.FirstPartyVulnerability]); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.FirstPartyVuln]); ok {
 		r0 = rf(tx, userAllowedProjectIds, pageInfo, search, filter, sort)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.FirstPartyVulnerability])
+		r0 = ret.Get(0).(core.Paged[models.FirstPartyVuln])
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
@@ -547,33 +595,33 @@ func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call) R
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call) Return(_a0 core.Paged[models.FirstPartyVulnerability], _a1 error) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call {
+func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call) Return(_a0 core.Paged[models.FirstPartyVuln], _a1 error) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call) RunAndReturn(run func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call {
+func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call) RunAndReturn(run func(*gorm.DB, []string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVuln], error)) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetDefaultFirstPartyVulnsByProjectIdPaged provides a mock function with given fields: tx, projectID, pageInfo, search, filter, sort
-func (_m *FirstPartyVulnRepository) GetDefaultFirstPartyVulnsByProjectIdPaged(tx *gorm.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+func (_m *FirstPartyVulnRepository) GetDefaultFirstPartyVulnsByProjectIdPaged(tx *gorm.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
 	ret := _m.Called(tx, projectID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetDefaultFirstPartyVulnsByProjectIdPaged")
 	}
 
-	var r0 core.Paged[models.FirstPartyVulnerability]
+	var r0 core.Paged[models.FirstPartyVuln]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVuln], error)); ok {
 		return rf(tx, projectID, pageInfo, search, filter, sort)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.FirstPartyVulnerability]); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.FirstPartyVuln]); ok {
 		r0 = rf(tx, projectID, pageInfo, search, filter, sort)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.FirstPartyVulnerability])
+		r0 = ret.Get(0).(core.Paged[models.FirstPartyVuln])
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
@@ -608,33 +656,33 @@ func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIdPaged_Cal
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIdPaged_Call) Return(_a0 core.Paged[models.FirstPartyVulnerability], _a1 error) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIdPaged_Call {
+func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIdPaged_Call) Return(_a0 core.Paged[models.FirstPartyVuln], _a1 error) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIdPaged_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIdPaged_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIdPaged_Call {
+func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIdPaged_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVuln], error)) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIdPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetFirstPartyVulnsByAssetIdPagedAndFlat provides a mock function with given fields: tx, assetVersionName, assetID, pageInfo, search, filter, sort
-func (_m *FirstPartyVulnRepository) GetFirstPartyVulnsByAssetIdPagedAndFlat(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error) {
+func (_m *FirstPartyVulnRepository) GetFirstPartyVulnsByAssetIdPagedAndFlat(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
 	ret := _m.Called(tx, assetVersionName, assetID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetFirstPartyVulnsByAssetIdPagedAndFlat")
 	}
 
-	var r0 core.Paged[models.FirstPartyVulnerability]
+	var r0 core.Paged[models.FirstPartyVuln]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVuln], error)); ok {
 		return rf(tx, assetVersionName, assetID, pageInfo, search, filter, sort)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.FirstPartyVulnerability]); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.FirstPartyVuln]); ok {
 		r0 = rf(tx, assetVersionName, assetID, pageInfo, search, filter, sort)
 	} else {
-		r0 = ret.Get(0).(core.Paged[models.FirstPartyVulnerability])
+		r0 = ret.Get(0).(core.Paged[models.FirstPartyVuln])
 	}
 
 	if rf, ok := ret.Get(1).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
@@ -670,34 +718,34 @@ func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call) Return(_a0 core.Paged[models.FirstPartyVulnerability], _a1 error) *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call {
+func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call) Return(_a0 core.Paged[models.FirstPartyVuln], _a1 error) *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVulnerability], error)) *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call {
+func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVuln], error)) *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // List provides a mock function with given fields: ids
-func (_m *FirstPartyVulnRepository) List(ids []string) ([]models.FirstPartyVulnerability, error) {
+func (_m *FirstPartyVulnRepository) List(ids []string) ([]models.FirstPartyVuln, error) {
 	ret := _m.Called(ids)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
 	}
 
-	var r0 []models.FirstPartyVulnerability
+	var r0 []models.FirstPartyVuln
 	var r1 error
-	if rf, ok := ret.Get(0).(func([]string) ([]models.FirstPartyVulnerability, error)); ok {
+	if rf, ok := ret.Get(0).(func([]string) ([]models.FirstPartyVuln, error)); ok {
 		return rf(ids)
 	}
-	if rf, ok := ret.Get(0).(func([]string) []models.FirstPartyVulnerability); ok {
+	if rf, ok := ret.Get(0).(func([]string) []models.FirstPartyVuln); ok {
 		r0 = rf(ids)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.FirstPartyVulnerability)
+			r0 = ret.Get(0).([]models.FirstPartyVuln)
 		}
 	}
 
@@ -728,34 +776,34 @@ func (_c *FirstPartyVulnRepository_List_Call) Run(run func(ids []string)) *First
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_List_Call) Return(_a0 []models.FirstPartyVulnerability, _a1 error) *FirstPartyVulnRepository_List_Call {
+func (_c *FirstPartyVulnRepository_List_Call) Return(_a0 []models.FirstPartyVuln, _a1 error) *FirstPartyVulnRepository_List_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_List_Call) RunAndReturn(run func([]string) ([]models.FirstPartyVulnerability, error)) *FirstPartyVulnRepository_List_Call {
+func (_c *FirstPartyVulnRepository_List_Call) RunAndReturn(run func([]string) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // ListByScanner provides a mock function with given fields: assetVersionName, assetID, scannerID
-func (_m *FirstPartyVulnRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVulnerability, error) {
+func (_m *FirstPartyVulnRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
 	ret := _m.Called(assetVersionName, assetID, scannerID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListByScanner")
 	}
 
-	var r0 []models.FirstPartyVulnerability
+	var r0 []models.FirstPartyVuln
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) ([]models.FirstPartyVulnerability, error)); ok {
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) ([]models.FirstPartyVuln, error)); ok {
 		return rf(assetVersionName, assetID, scannerID)
 	}
-	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) []models.FirstPartyVulnerability); ok {
+	if rf, ok := ret.Get(0).(func(string, uuid.UUID, string) []models.FirstPartyVuln); ok {
 		r0 = rf(assetVersionName, assetID, scannerID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.FirstPartyVulnerability)
+			r0 = ret.Get(0).([]models.FirstPartyVuln)
 		}
 	}
 
@@ -788,33 +836,33 @@ func (_c *FirstPartyVulnRepository_ListByScanner_Call) Run(run func(assetVersion
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_ListByScanner_Call) Return(_a0 []models.FirstPartyVulnerability, _a1 error) *FirstPartyVulnRepository_ListByScanner_Call {
+func (_c *FirstPartyVulnRepository_ListByScanner_Call) Return(_a0 []models.FirstPartyVuln, _a1 error) *FirstPartyVulnRepository_ListByScanner_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_ListByScanner_Call) RunAndReturn(run func(string, uuid.UUID, string) ([]models.FirstPartyVulnerability, error)) *FirstPartyVulnRepository_ListByScanner_Call {
+func (_c *FirstPartyVulnRepository_ListByScanner_Call) RunAndReturn(run func(string, uuid.UUID, string) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_ListByScanner_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Read provides a mock function with given fields: id
-func (_m *FirstPartyVulnRepository) Read(id string) (models.FirstPartyVulnerability, error) {
+func (_m *FirstPartyVulnRepository) Read(id string) (models.FirstPartyVuln, error) {
 	ret := _m.Called(id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Read")
 	}
 
-	var r0 models.FirstPartyVulnerability
+	var r0 models.FirstPartyVuln
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string) (models.FirstPartyVulnerability, error)); ok {
+	if rf, ok := ret.Get(0).(func(string) (models.FirstPartyVuln, error)); ok {
 		return rf(id)
 	}
-	if rf, ok := ret.Get(0).(func(string) models.FirstPartyVulnerability); ok {
+	if rf, ok := ret.Get(0).(func(string) models.FirstPartyVuln); ok {
 		r0 = rf(id)
 	} else {
-		r0 = ret.Get(0).(models.FirstPartyVulnerability)
+		r0 = ret.Get(0).(models.FirstPartyVuln)
 	}
 
 	if rf, ok := ret.Get(1).(func(string) error); ok {
@@ -844,18 +892,18 @@ func (_c *FirstPartyVulnRepository_Read_Call) Run(run func(id string)) *FirstPar
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_Read_Call) Return(_a0 models.FirstPartyVulnerability, _a1 error) *FirstPartyVulnRepository_Read_Call {
+func (_c *FirstPartyVulnRepository_Read_Call) Return(_a0 models.FirstPartyVuln, _a1 error) *FirstPartyVulnRepository_Read_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_Read_Call) RunAndReturn(run func(string) (models.FirstPartyVulnerability, error)) *FirstPartyVulnRepository_Read_Call {
+func (_c *FirstPartyVulnRepository_Read_Call) RunAndReturn(run func(string) (models.FirstPartyVuln, error)) *FirstPartyVulnRepository_Read_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function with given fields: tx, vuln
-func (_m *FirstPartyVulnRepository) Save(tx *gorm.DB, vuln *models.FirstPartyVulnerability) error {
+func (_m *FirstPartyVulnRepository) Save(tx *gorm.DB, vuln *models.FirstPartyVuln) error {
 	ret := _m.Called(tx, vuln)
 
 	if len(ret) == 0 {
@@ -863,7 +911,7 @@ func (_m *FirstPartyVulnRepository) Save(tx *gorm.DB, vuln *models.FirstPartyVul
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.FirstPartyVulnerability) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, *models.FirstPartyVuln) error); ok {
 		r0 = rf(tx, vuln)
 	} else {
 		r0 = ret.Error(0)
@@ -879,14 +927,14 @@ type FirstPartyVulnRepository_Save_Call struct {
 
 // Save is a helper method to define mock.On call
 //   - tx *gorm.DB
-//   - vuln *models.FirstPartyVulnerability
+//   - vuln *models.FirstPartyVuln
 func (_e *FirstPartyVulnRepository_Expecter) Save(tx interface{}, vuln interface{}) *FirstPartyVulnRepository_Save_Call {
 	return &FirstPartyVulnRepository_Save_Call{Call: _e.mock.On("Save", tx, vuln)}
 }
 
-func (_c *FirstPartyVulnRepository_Save_Call) Run(run func(tx *gorm.DB, vuln *models.FirstPartyVulnerability)) *FirstPartyVulnRepository_Save_Call {
+func (_c *FirstPartyVulnRepository_Save_Call) Run(run func(tx *gorm.DB, vuln *models.FirstPartyVuln)) *FirstPartyVulnRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(*models.FirstPartyVulnerability))
+		run(args[0].(*gorm.DB), args[1].(*models.FirstPartyVuln))
 	})
 	return _c
 }
@@ -896,13 +944,13 @@ func (_c *FirstPartyVulnRepository_Save_Call) Return(_a0 error) *FirstPartyVulnR
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_Save_Call) RunAndReturn(run func(*gorm.DB, *models.FirstPartyVulnerability) error) *FirstPartyVulnRepository_Save_Call {
+func (_c *FirstPartyVulnRepository_Save_Call) RunAndReturn(run func(*gorm.DB, *models.FirstPartyVuln) error) *FirstPartyVulnRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SaveBatch provides a mock function with given fields: tx, vulns
-func (_m *FirstPartyVulnRepository) SaveBatch(tx *gorm.DB, vulns []models.FirstPartyVulnerability) error {
+func (_m *FirstPartyVulnRepository) SaveBatch(tx *gorm.DB, vulns []models.FirstPartyVuln) error {
 	ret := _m.Called(tx, vulns)
 
 	if len(ret) == 0 {
@@ -910,7 +958,7 @@ func (_m *FirstPartyVulnRepository) SaveBatch(tx *gorm.DB, vulns []models.FirstP
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.FirstPartyVulnerability) error); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.FirstPartyVuln) error); ok {
 		r0 = rf(tx, vulns)
 	} else {
 		r0 = ret.Error(0)
@@ -926,14 +974,14 @@ type FirstPartyVulnRepository_SaveBatch_Call struct {
 
 // SaveBatch is a helper method to define mock.On call
 //   - tx *gorm.DB
-//   - vulns []models.FirstPartyVulnerability
+//   - vulns []models.FirstPartyVuln
 func (_e *FirstPartyVulnRepository_Expecter) SaveBatch(tx interface{}, vulns interface{}) *FirstPartyVulnRepository_SaveBatch_Call {
 	return &FirstPartyVulnRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, vulns)}
 }
 
-func (_c *FirstPartyVulnRepository_SaveBatch_Call) Run(run func(tx *gorm.DB, vulns []models.FirstPartyVulnerability)) *FirstPartyVulnRepository_SaveBatch_Call {
+func (_c *FirstPartyVulnRepository_SaveBatch_Call) Run(run func(tx *gorm.DB, vulns []models.FirstPartyVuln)) *FirstPartyVulnRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].([]models.FirstPartyVulnerability))
+		run(args[0].(*gorm.DB), args[1].([]models.FirstPartyVuln))
 	})
 	return _c
 }
@@ -943,7 +991,7 @@ func (_c *FirstPartyVulnRepository_SaveBatch_Call) Return(_a0 error) *FirstParty
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_SaveBatch_Call) RunAndReturn(run func(*gorm.DB, []models.FirstPartyVulnerability) error) *FirstPartyVulnRepository_SaveBatch_Call {
+func (_c *FirstPartyVulnRepository_SaveBatch_Call) RunAndReturn(run func(*gorm.DB, []models.FirstPartyVuln) error) *FirstPartyVulnRepository_SaveBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

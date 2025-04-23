@@ -120,32 +120,32 @@ func (t *thirdPartyIntegrations) HandleEvent(event any) error {
 	return err
 }
 
-func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln) error {
+func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.ReopenIssue(ctx, repoId, dependencyVuln)
+			return struct{}{}, i.ReopenIssue(ctx, repoId, vuln)
 		})
 	}
 	_, err := wg.WaitAndCollect()
 	return err
 }
-func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVuln models.DependencyVuln) error {
+func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, repoId string, vuln models.Vuln) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.UpdateIssue(ctx, asset, repoId, dependencyVuln)
+			return struct{}{}, i.UpdateIssue(ctx, asset, repoId, vuln)
 		})
 	}
 	_, err := wg.WaitAndCollect()
 	return err
 }
 
-func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string, justification string, manualTicketCreation bool) error {
+func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, manualTicketCreation bool) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.CreateIssue(ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug, justification, manualTicketCreation)
+			return struct{}{}, i.CreateIssue(ctx, asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, justification, manualTicketCreation)
 		})
 	}
 
@@ -153,11 +153,11 @@ func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.A
 	return err
 }
 
-func (t *thirdPartyIntegrations) CloseIssue(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln) error {
+func (t *thirdPartyIntegrations) CloseIssue(ctx context.Context, state string, repoId string, vuln models.Vuln) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.CloseIssue(ctx, state, repoId, dependencyVuln)
+			return struct{}{}, i.CloseIssue(ctx, state, repoId, vuln)
 		})
 	}
 

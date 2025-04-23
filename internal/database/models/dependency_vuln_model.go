@@ -54,6 +54,10 @@ func (d *DependencyVuln) SetRiskRecalculatedAt(t time.Time) {
 	d.RiskRecalculatedAt = t
 }
 
+func (d *DependencyVuln) GetType() VulnType {
+	return VulnTypeDependencyVuln
+}
+
 type DependencyVulnRisk struct {
 	DependencyVulnID  string
 	CreatedAt         time.Time

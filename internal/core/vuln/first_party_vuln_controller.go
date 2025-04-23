@@ -53,7 +53,7 @@ func (c firstPartyVulnController) ListByOrgPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVulnerability) any {
+	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVuln) any {
 		return convertFirstPartyVulnToDetailedDTO(firstPartyVuln)
 	}))
 }
@@ -74,13 +74,13 @@ func (c firstPartyVulnController) ListByProjectPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVulnerability) any {
+	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVuln) any {
 		return convertFirstPartyVulnToDetailedDTO(firstPartyVuln)
 	}))
 }
 
 func (c firstPartyVulnController) Mitigate(ctx core.Context) error {
-	firstPartyVulnId, err := core.GetVulnID(ctx)
+	firstPartyVulnId, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnId")
 	}
@@ -103,7 +103,7 @@ func (c firstPartyVulnController) Mitigate(ctx core.Context) error {
 }
 
 func (c firstPartyVulnController) Read(ctx core.Context) error {
-	firstPartyVulnId, err := core.GetVulnID(ctx)
+	firstPartyVulnId, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnId")
 	}
@@ -117,7 +117,7 @@ func (c firstPartyVulnController) Read(ctx core.Context) error {
 }
 func (c firstPartyVulnController) CreateEvent(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	firstPartyVulnId, err := core.GetVulnID(ctx)
+	firstPartyVulnId, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnId")
 	}
@@ -175,7 +175,7 @@ func (c firstPartyVulnController) ListPaged(ctx core.Context) error {
 			return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 		}
 
-		return ctx.JSON(200, firstPartyVulns.Map(func(firstPartyVuln models.FirstPartyVulnerability) any {
+		return ctx.JSON(200, firstPartyVulns.Map(func(firstPartyVuln models.FirstPartyVuln) any {
 			return convertFirstPartyVulnToDetailedDTO(firstPartyVuln)
 		}))
 	}
@@ -194,13 +194,13 @@ func (c firstPartyVulnController) ListPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVulnerability) any {
+	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVuln) any {
 		return convertFirstPartyVulnToDetailedDTO(firstPartyVuln)
 	}))
 
 }
 
-func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVulnerability) detailedFirstPartyVulnDTO {
+func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) detailedFirstPartyVulnDTO {
 	return detailedFirstPartyVulnDTO{
 		FirstPartyVulnDTO: FirstPartyVulnDTO{
 			ID:                   firstPartyVuln.ID,

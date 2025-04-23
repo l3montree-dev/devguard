@@ -26,28 +26,28 @@ import (
 type integrationController struct {
 }
 
-func createNewVulnEventBasedOnComment(vulnId, userId, comment string, scannerIds string) models.VulnEvent {
+func createNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, userId, comment string, scannerIds string) models.VulnEvent {
 	if strings.HasPrefix(comment, "/accept") {
 		// create a new dependencyVuln accept event
-		return models.NewAcceptedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
+		return models.NewAcceptedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
 	} else if strings.HasPrefix(comment, "/false-positive") {
 		// create a new dependencyVuln false positive event
-		return models.NewFalsePositiveEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")), scannerIds)
+		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")), scannerIds)
 	} else if strings.HasPrefix(comment, "/reopen") {
 		// create a new dependencyVuln reopen event
-		return models.NewReopenedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
+		return models.NewReopenedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
 	} else if strings.HasPrefix(comment, "/a") {
 		// create a new dependencyVuln accept event
-		return models.NewAcceptedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
+		return models.NewAcceptedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
 	} else if strings.HasPrefix(comment, "/fp") {
 		// create a new dependencyVuln false positive event
-		return models.NewFalsePositiveEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")), scannerIds)
+		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")), scannerIds)
 	} else if strings.HasPrefix(comment, "/r") {
 		// create a new dependencyVuln reopen event
-		return models.NewReopenedEvent(vulnId, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
+		return models.NewReopenedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
 	} else {
 		// create a new comment event
-		return models.NewCommentEvent(vulnId, userId, comment)
+		return models.NewCommentEvent(vulnId, vulnType, userId, comment)
 	}
 }
 

@@ -63,7 +63,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 	events := make([]models.VulnEvent, len(dependencyVulns))
 
 	for i, dependencyVuln := range dependencyVulns {
-		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), userID, dependencyVuln.ScannerIDs)
+		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, dependencyVuln.ScannerIDs)
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -91,7 +91,7 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, userID, scannerID stri
 
 	for i, dependencyVuln := range dependencyVulns {
 		riskReport := risk.RawRisk(*dependencyVuln.CVE, e, *dependencyVuln.ComponentDepth)
-		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), userID, riskReport, scannerID)
+		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, riskReport, scannerID)
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -147,7 +147,7 @@ func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulne
 	events := make([]models.VulnEvent, len(vulnerabilities))
 
 	for i := range vulnerabilities {
-		ev := models.NewAddedScannerEvent(vulnerabilities[i].CalculateHash(), userID, scannerID)
+		ev := models.NewAddedScannerEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, userID, scannerID)
 		ev.Apply(&vulnerabilities[i])
 		events[i] = ev
 	}
@@ -168,7 +168,7 @@ func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, v
 
 	events := make([]models.VulnEvent, len(vulnerabilities))
 	for i := range vulnerabilities {
-		ev := models.NewRemovedScannerEvent(vulnerabilities[i].CalculateHash(), userID, scannerID)
+		ev := models.NewRemovedScannerEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, userID, scannerID)
 		ev.Apply(&vulnerabilities[i])
 		events[i] = ev
 	}
@@ -204,7 +204,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		newRiskAssessment := risk.RawRisk(*dependencyVuln.CVE, env, *dependencyVuln.ComponentDepth)
 
 		if *oldRiskAssessment != newRiskAssessment.Risk {
-			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), userID, justification, oldRiskAssessment, newRiskAssessment)
+			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, oldRiskAssessment, newRiskAssessment)
 			// apply the event on the dependencyVuln
 			ev.Apply(&dependencyVulns[i])
 			events = append(events, ev)
@@ -266,13 +266,13 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	var ev models.VulnEvent
 	switch models.VulnEventType(statusType) {
 	case models.EventTypeAccepted:
-		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), userID, justification)
+		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), userID, justification, dependencyVuln.ScannerIDs)
+		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, dependencyVuln.ScannerIDs)
 	case models.EventTypeReopened:
-		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), userID, justification)
+		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
 	case models.EventTypeComment:
-		ev = models.NewCommentEvent(dependencyVuln.CalculateHash(), userID, justification)
+		ev = models.NewCommentEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
 	}
 
 	err := s.dependencyVulnRepository.ApplyAndSave(tx, dependencyVuln, &ev)
@@ -318,6 +318,7 @@ func (s *service) SyncTickets(asset models.Asset) error {
 		if err != nil {
 			return err
 		}
+
 		if len(vulnList) == 0 {
 			return nil
 		}
@@ -436,21 +437,21 @@ func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, vulnerability, projectSlug, orgSlug, justification, manualTicketCreation)
+	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, &vulnerability, projectSlug, orgSlug, justification, manualTicketCreation)
 }
 
 func (s *service) updateIssue(asset models.Asset, vulnerability models.DependencyVuln, repoId string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.UpdateIssue(ctx, asset, repoId, vulnerability)
+	return s.thirdPartyIntegration.UpdateIssue(ctx, asset, repoId, &vulnerability)
 }
 
 func (s *service) reopenIssue(vulnerability models.DependencyVuln, repoId string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.ReopenIssue(ctx, repoId, vulnerability)
+	return s.thirdPartyIntegration.ReopenIssue(ctx, repoId, &vulnerability)
 }
 
 func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error {
@@ -468,15 +469,15 @@ func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.Depen
 
 	for _, vulnerability := range vulnList {
 		// check if the ticket id is not nil
-		if vulnerability.TicketID != nil {
+		if vulnerability.GetTicketID() != nil {
 			// check that the ticket id is nil currently
 			errgroup.Go(func() (any, error) {
 				err := s.closeIssue(vulnerability, repoID)
 				if err != nil {
-					slog.Error("could not close issue", "err", err, "ticketUrl", vulnerability.TicketURL)
+					slog.Error("could not close issue", "err", err, "ticketUrl", vulnerability.GetTicketURL())
 					return nil, err
 				}
-				slog.Info("closed issue", "vulnerability", vulnerability, "ticketUrl", vulnerability.TicketURL)
+				slog.Info("closed issue", "vulnerability", vulnerability, "ticketUrl", vulnerability.GetTicketURL())
 				return nil, nil
 			})
 		}
@@ -490,7 +491,7 @@ func (s *service) closeIssue(vulnerability models.DependencyVuln, repoId string)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.CloseIssue(ctx, "fixed", repoId, vulnerability)
+	return s.thirdPartyIntegration.CloseIssue(ctx, "fixed", repoId, &vulnerability)
 }
 
 func (s *service) ShouldCreateIssues(assetVersion models.AssetVersion) bool {

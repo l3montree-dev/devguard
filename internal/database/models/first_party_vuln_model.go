@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/l3montree-dev/devguard/internal/database"
@@ -8,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type FirstPartyVulnerability struct {
+type FirstPartyVuln struct {
 	Vulnerability
 	RuleID          string         `json:"ruleId"`
 	RuleName        string         `json:"ruleName"`
@@ -29,13 +30,17 @@ type FirstPartyVulnerability struct {
 	Date        string `json:"date"`
 }
 
-var _ Vuln = &FirstPartyVulnerability{}
+var _ Vuln = &FirstPartyVuln{}
 
-func (f FirstPartyVulnerability) TableName() string {
+func (f *FirstPartyVuln) GetType() VulnType {
+	return VulnTypeFirstPartyVuln
+}
+
+func (f FirstPartyVuln) TableName() string {
 	return "first_party_vulnerabilities"
 }
 
-func (m *FirstPartyVulnerability) CalculateHash() string {
+func (m *FirstPartyVuln) CalculateHash() string {
 	startLineStr := strconv.Itoa(m.StartLine)
 	endLineStr := strconv.Itoa(m.EndLine)
 	startColumnStr := strconv.Itoa(m.StartColumn)
@@ -46,8 +51,16 @@ func (m *FirstPartyVulnerability) CalculateHash() string {
 	return hash
 }
 
-func (f *FirstPartyVulnerability) BeforeSave(tx *gorm.DB) (err error) {
+func (f *FirstPartyVuln) BeforeSave(tx *gorm.DB) (err error) {
 	hash := f.CalculateHash()
 	f.ID = hash
 	return nil
+}
+
+func (f *FirstPartyVuln) RenderMarkdown() string {
+	return *f.Message
+}
+
+func (f *FirstPartyVuln) Title() string {
+	return fmt.Sprintf("%s found in %s", f.RuleID, f.Uri)
 }

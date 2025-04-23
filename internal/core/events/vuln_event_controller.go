@@ -22,7 +22,7 @@ func NewVulnEventController(vulnEventRepository core.VulnEventRepository, assetV
 
 func (c vulnEventController) ReadAssetEventsByVulnID(ctx core.Context) error {
 
-	vulnId, err := core.GetVulnID(ctx)
+	vulnId, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "vulnId is required").WithInternal(err)
 	}

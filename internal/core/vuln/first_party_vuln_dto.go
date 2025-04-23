@@ -35,7 +35,7 @@ type detailedFirstPartyVulnDTO struct {
 	Events []events.VulnEventDTO `json:"events"`
 }
 
-func FirstPartyVulnToDto(f models.FirstPartyVulnerability) FirstPartyVulnDTO {
+func FirstPartyVulnToDto(f models.FirstPartyVuln) FirstPartyVulnDTO {
 
 	return FirstPartyVulnDTO{
 		ID:                   f.ID,

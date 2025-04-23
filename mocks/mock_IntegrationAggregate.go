@@ -26,17 +26,17 @@ func (_m *IntegrationAggregate) EXPECT() *IntegrationAggregate_Expecter {
 	return &IntegrationAggregate_Expecter{mock: &_m.Mock}
 }
 
-// CloseIssue provides a mock function with given fields: ctx, state, repoId, dependencyVuln
-func (_m *IntegrationAggregate) CloseIssue(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln) error {
-	ret := _m.Called(ctx, state, repoId, dependencyVuln)
+// CloseIssue provides a mock function with given fields: ctx, state, repoId, vuln
+func (_m *IntegrationAggregate) CloseIssue(ctx context.Context, state string, repoId string, vuln models.Vuln) error {
+	ret := _m.Called(ctx, state, repoId, vuln)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CloseIssue")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, models.DependencyVuln) error); ok {
-		r0 = rf(ctx, state, repoId, dependencyVuln)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, models.Vuln) error); ok {
+		r0 = rf(ctx, state, repoId, vuln)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -53,14 +53,14 @@ type IntegrationAggregate_CloseIssue_Call struct {
 //   - ctx context.Context
 //   - state string
 //   - repoId string
-//   - dependencyVuln models.DependencyVuln
-func (_e *IntegrationAggregate_Expecter) CloseIssue(ctx interface{}, state interface{}, repoId interface{}, dependencyVuln interface{}) *IntegrationAggregate_CloseIssue_Call {
-	return &IntegrationAggregate_CloseIssue_Call{Call: _e.mock.On("CloseIssue", ctx, state, repoId, dependencyVuln)}
+//   - vuln models.Vuln
+func (_e *IntegrationAggregate_Expecter) CloseIssue(ctx interface{}, state interface{}, repoId interface{}, vuln interface{}) *IntegrationAggregate_CloseIssue_Call {
+	return &IntegrationAggregate_CloseIssue_Call{Call: _e.mock.On("CloseIssue", ctx, state, repoId, vuln)}
 }
 
-func (_c *IntegrationAggregate_CloseIssue_Call) Run(run func(ctx context.Context, state string, repoId string, dependencyVuln models.DependencyVuln)) *IntegrationAggregate_CloseIssue_Call {
+func (_c *IntegrationAggregate_CloseIssue_Call) Run(run func(ctx context.Context, state string, repoId string, vuln models.Vuln)) *IntegrationAggregate_CloseIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(models.DependencyVuln))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(models.Vuln))
 	})
 	return _c
 }
@@ -70,22 +70,22 @@ func (_c *IntegrationAggregate_CloseIssue_Call) Return(_a0 error) *IntegrationAg
 	return _c
 }
 
-func (_c *IntegrationAggregate_CloseIssue_Call) RunAndReturn(run func(context.Context, string, string, models.DependencyVuln) error) *IntegrationAggregate_CloseIssue_Call {
+func (_c *IntegrationAggregate_CloseIssue_Call) RunAndReturn(run func(context.Context, string, string, models.Vuln) error) *IntegrationAggregate_CloseIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// CreateIssue provides a mock function with given fields: ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug, justification, manualTicketCreation
-func (_m *IntegrationAggregate) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string, justification string, manualTicketCreation bool) error {
-	ret := _m.Called(ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug, justification, manualTicketCreation)
+// CreateIssue provides a mock function with given fields: ctx, asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, justification, manualTicketCreation
+func (_m *IntegrationAggregate) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, manualTicketCreation bool) error {
+	ret := _m.Called(ctx, asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, justification, manualTicketCreation)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateIssue")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, models.Asset, string, string, models.DependencyVuln, string, string, string, bool) error); ok {
-		r0 = rf(ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug, justification, manualTicketCreation)
+	if rf, ok := ret.Get(0).(func(context.Context, models.Asset, string, string, models.Vuln, string, string, string, bool) error); ok {
+		r0 = rf(ctx, asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, justification, manualTicketCreation)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -103,18 +103,18 @@ type IntegrationAggregate_CreateIssue_Call struct {
 //   - asset models.Asset
 //   - assetVersionName string
 //   - repoId string
-//   - dependencyVuln models.DependencyVuln
+//   - vuln models.Vuln
 //   - projectSlug string
 //   - orgSlug string
 //   - justification string
 //   - manualTicketCreation bool
-func (_e *IntegrationAggregate_Expecter) CreateIssue(ctx interface{}, asset interface{}, assetVersionName interface{}, repoId interface{}, dependencyVuln interface{}, projectSlug interface{}, orgSlug interface{}, justification interface{}, manualTicketCreation interface{}) *IntegrationAggregate_CreateIssue_Call {
-	return &IntegrationAggregate_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, asset, assetVersionName, repoId, dependencyVuln, projectSlug, orgSlug, justification, manualTicketCreation)}
+func (_e *IntegrationAggregate_Expecter) CreateIssue(ctx interface{}, asset interface{}, assetVersionName interface{}, repoId interface{}, vuln interface{}, projectSlug interface{}, orgSlug interface{}, justification interface{}, manualTicketCreation interface{}) *IntegrationAggregate_CreateIssue_Call {
+	return &IntegrationAggregate_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, justification, manualTicketCreation)}
 }
 
-func (_c *IntegrationAggregate_CreateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, dependencyVuln models.DependencyVuln, projectSlug string, orgSlug string, justification string, manualTicketCreation bool)) *IntegrationAggregate_CreateIssue_Call {
+func (_c *IntegrationAggregate_CreateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, manualTicketCreation bool)) *IntegrationAggregate_CreateIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(models.Asset), args[2].(string), args[3].(string), args[4].(models.DependencyVuln), args[5].(string), args[6].(string), args[7].(string), args[8].(bool))
+		run(args[0].(context.Context), args[1].(models.Asset), args[2].(string), args[3].(string), args[4].(models.Vuln), args[5].(string), args[6].(string), args[7].(string), args[8].(bool))
 	})
 	return _c
 }
@@ -124,7 +124,7 @@ func (_c *IntegrationAggregate_CreateIssue_Call) Return(_a0 error) *IntegrationA
 	return _c
 }
 
-func (_c *IntegrationAggregate_CreateIssue_Call) RunAndReturn(run func(context.Context, models.Asset, string, string, models.DependencyVuln, string, string, string, bool) error) *IntegrationAggregate_CreateIssue_Call {
+func (_c *IntegrationAggregate_CreateIssue_Call) RunAndReturn(run func(context.Context, models.Asset, string, string, models.Vuln, string, string, string, bool) error) *IntegrationAggregate_CreateIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -466,17 +466,17 @@ func (_c *IntegrationAggregate_ListRepositories_Call) RunAndReturn(run func(echo
 	return _c
 }
 
-// ReopenIssue provides a mock function with given fields: ctx, repoId, dependencyVuln
-func (_m *IntegrationAggregate) ReopenIssue(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln) error {
-	ret := _m.Called(ctx, repoId, dependencyVuln)
+// ReopenIssue provides a mock function with given fields: ctx, repoId, vuln
+func (_m *IntegrationAggregate) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
+	ret := _m.Called(ctx, repoId, vuln)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReopenIssue")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, models.DependencyVuln) error); ok {
-		r0 = rf(ctx, repoId, dependencyVuln)
+	if rf, ok := ret.Get(0).(func(context.Context, string, models.Vuln) error); ok {
+		r0 = rf(ctx, repoId, vuln)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -492,14 +492,14 @@ type IntegrationAggregate_ReopenIssue_Call struct {
 // ReopenIssue is a helper method to define mock.On call
 //   - ctx context.Context
 //   - repoId string
-//   - dependencyVuln models.DependencyVuln
-func (_e *IntegrationAggregate_Expecter) ReopenIssue(ctx interface{}, repoId interface{}, dependencyVuln interface{}) *IntegrationAggregate_ReopenIssue_Call {
-	return &IntegrationAggregate_ReopenIssue_Call{Call: _e.mock.On("ReopenIssue", ctx, repoId, dependencyVuln)}
+//   - vuln models.Vuln
+func (_e *IntegrationAggregate_Expecter) ReopenIssue(ctx interface{}, repoId interface{}, vuln interface{}) *IntegrationAggregate_ReopenIssue_Call {
+	return &IntegrationAggregate_ReopenIssue_Call{Call: _e.mock.On("ReopenIssue", ctx, repoId, vuln)}
 }
 
-func (_c *IntegrationAggregate_ReopenIssue_Call) Run(run func(ctx context.Context, repoId string, dependencyVuln models.DependencyVuln)) *IntegrationAggregate_ReopenIssue_Call {
+func (_c *IntegrationAggregate_ReopenIssue_Call) Run(run func(ctx context.Context, repoId string, vuln models.Vuln)) *IntegrationAggregate_ReopenIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(models.DependencyVuln))
+		run(args[0].(context.Context), args[1].(string), args[2].(models.Vuln))
 	})
 	return _c
 }
@@ -509,22 +509,22 @@ func (_c *IntegrationAggregate_ReopenIssue_Call) Return(_a0 error) *IntegrationA
 	return _c
 }
 
-func (_c *IntegrationAggregate_ReopenIssue_Call) RunAndReturn(run func(context.Context, string, models.DependencyVuln) error) *IntegrationAggregate_ReopenIssue_Call {
+func (_c *IntegrationAggregate_ReopenIssue_Call) RunAndReturn(run func(context.Context, string, models.Vuln) error) *IntegrationAggregate_ReopenIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// UpdateIssue provides a mock function with given fields: ctx, asset, repoId, dependencyVuln
-func (_m *IntegrationAggregate) UpdateIssue(ctx context.Context, asset models.Asset, repoId string, dependencyVuln models.DependencyVuln) error {
-	ret := _m.Called(ctx, asset, repoId, dependencyVuln)
+// UpdateIssue provides a mock function with given fields: ctx, asset, repoId, vuln
+func (_m *IntegrationAggregate) UpdateIssue(ctx context.Context, asset models.Asset, repoId string, vuln models.Vuln) error {
+	ret := _m.Called(ctx, asset, repoId, vuln)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateIssue")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, models.Asset, string, models.DependencyVuln) error); ok {
-		r0 = rf(ctx, asset, repoId, dependencyVuln)
+	if rf, ok := ret.Get(0).(func(context.Context, models.Asset, string, models.Vuln) error); ok {
+		r0 = rf(ctx, asset, repoId, vuln)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -541,14 +541,14 @@ type IntegrationAggregate_UpdateIssue_Call struct {
 //   - ctx context.Context
 //   - asset models.Asset
 //   - repoId string
-//   - dependencyVuln models.DependencyVuln
-func (_e *IntegrationAggregate_Expecter) UpdateIssue(ctx interface{}, asset interface{}, repoId interface{}, dependencyVuln interface{}) *IntegrationAggregate_UpdateIssue_Call {
-	return &IntegrationAggregate_UpdateIssue_Call{Call: _e.mock.On("UpdateIssue", ctx, asset, repoId, dependencyVuln)}
+//   - vuln models.Vuln
+func (_e *IntegrationAggregate_Expecter) UpdateIssue(ctx interface{}, asset interface{}, repoId interface{}, vuln interface{}) *IntegrationAggregate_UpdateIssue_Call {
+	return &IntegrationAggregate_UpdateIssue_Call{Call: _e.mock.On("UpdateIssue", ctx, asset, repoId, vuln)}
 }
 
-func (_c *IntegrationAggregate_UpdateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, repoId string, dependencyVuln models.DependencyVuln)) *IntegrationAggregate_UpdateIssue_Call {
+func (_c *IntegrationAggregate_UpdateIssue_Call) Run(run func(ctx context.Context, asset models.Asset, repoId string, vuln models.Vuln)) *IntegrationAggregate_UpdateIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(models.Asset), args[2].(string), args[3].(models.DependencyVuln))
+		run(args[0].(context.Context), args[1].(models.Asset), args[2].(string), args[3].(models.Vuln))
 	})
 	return _c
 }
@@ -558,7 +558,7 @@ func (_c *IntegrationAggregate_UpdateIssue_Call) Return(_a0 error) *IntegrationA
 	return _c
 }
 
-func (_c *IntegrationAggregate_UpdateIssue_Call) RunAndReturn(run func(context.Context, models.Asset, string, models.DependencyVuln) error) *IntegrationAggregate_UpdateIssue_Call {
+func (_c *IntegrationAggregate_UpdateIssue_Call) RunAndReturn(run func(context.Context, models.Asset, string, models.Vuln) error) *IntegrationAggregate_UpdateIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }
