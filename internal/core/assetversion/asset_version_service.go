@@ -61,15 +61,31 @@ var sarifResultKindsIndicatingNotAndIssue = []string{
 	"open",
 }
 
+func getBestDescription(rule common.Rule) string {
+	if rule.FullDescription.Text != "" {
+		return rule.FullDescription.Text
+	}
+	return rule.ShortDescription.Text
+}
+
 func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVulnerability, error) {
 
 	firstPartyVulnerabilities := []models.FirstPartyVulnerability{}
+
+	ruleMap := make(map[string]common.Rule)
+	for _, run := range sarifScan.Runs {
+		for _, rule := range run.Tool.Driver.Rules {
+			ruleMap[rule.Id] = rule
+		}
+	}
 
 	for _, run := range sarifScan.Runs {
 		for _, result := range run.Results {
 			if slices.Contains(sarifResultKindsIndicatingNotAndIssue, result.Kind) {
 				continue
 			}
+
+			rule := ruleMap[result.RuleId]
 
 			firstPartyVulnerability := models.FirstPartyVulnerability{
 				Vulnerability: models.Vulnerability{
@@ -78,11 +94,15 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 					Message:          &result.Message.Text,
 					ScannerIDs:       scannerID,
 				},
-				RuleID: result.RuleId,
-				Commit: result.PartialFingerprints.CommitSha,
-				Email:  result.PartialFingerprints.Email,
-				Author: result.PartialFingerprints.Author,
-				Date:   result.PartialFingerprints.Date,
+				RuleID:          result.RuleId,
+				RuleHelp:        rule.Help.Text,
+				RuleName:        rule.Name,
+				RuleHelpUri:     rule.HelpUri,
+				RuleDescription: getBestDescription(rule),
+				Commit:          result.PartialFingerprints.CommitSha,
+				Email:           result.PartialFingerprints.Email,
+				Author:          result.PartialFingerprints.Author,
+				Date:            result.PartialFingerprints.Date,
 			}
 
 			if len(result.Locations) > 0 {

@@ -157,6 +157,9 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 
 func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	var sarifScan common.SarifResult
+
+	defer c.Request().Body.Close()
+
 	if err := c.Bind(&sarifScan); err != nil {
 		return err
 	}
