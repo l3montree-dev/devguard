@@ -475,6 +475,9 @@ func (o *httpController) GetConfigFile(ctx core.Context) error {
 	organization := core.GetOrganization(ctx)
 	configID := ctx.Param("config-file")
 
-	configContent := organization.ConfigFiles[configID]
-	return ctx.JSON(200, configContent.(string))
+	configContent := organization.ConfigFiles[configID].(string)
+	if configContent == "" {
+		return ctx.JSON(404, configContent)
+	}
+	return ctx.JSON(200, configContent)
 }

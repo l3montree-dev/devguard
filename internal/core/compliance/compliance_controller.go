@@ -56,7 +56,6 @@ func ExtractAttestationPayload(content string) (any, error) {
 // embed the policies in the binary
 //
 //go:embed attestation-compliance-policies/policies/*.rego
-
 var policiesFs embed.FS
 
 func getPolicies() []Policy {

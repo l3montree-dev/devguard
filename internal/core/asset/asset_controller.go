@@ -228,12 +228,17 @@ func (a *httpController) GetConfigFile(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	configID := ctx.Param("config-file")
 
-	configContent := asset.ConfigFiles[configID]
-	if configContent.(string) == "" { //if we have no config files in this asset we want to look in the corresponding project and then in the organization
-		if project.ConfigFiles[configID].(string) == "" {
-			return ctx.JSON(200, organization.ConfigFiles[configID].(string))
+	configContent := asset.ConfigFiles[configID].(string)
+	if configContent == "" { //if we have no config files in this asset we want to look in the corresponding project and then in the organization
+		configContent = project.ConfigFiles[configID].(string)
+		if configContent == "" {
+			configContent = organization.ConfigFiles[configID].(string)
+			if configContent == "" {
+				return ctx.JSON(404, configContent)
+			}
+			return ctx.JSON(200, configContent)
 		}
-		return ctx.JSON(200, project.ConfigFiles[configID].(string))
+		return ctx.JSON(200, configContent)
 	}
-	return ctx.JSON(200, configContent.(string))
+	return ctx.JSON(200, configContent)
 }

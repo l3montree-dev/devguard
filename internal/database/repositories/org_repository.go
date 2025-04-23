@@ -45,9 +45,7 @@ func (g *orgRepository) ReadBySlug(slug string) (models.Org, error) {
 	return t, err
 }
 
-func (g *orgRepository) List(
-	ids []uuid.UUID,
-) ([]models.Org, error) {
+func (g *orgRepository) List(ids []uuid.UUID) ([]models.Org, error) {
 	var ts []models.Org
 	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Where("id IN ?", ids).Find(&ts).Error
 	return ts, err
