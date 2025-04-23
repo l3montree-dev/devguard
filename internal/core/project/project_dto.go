@@ -16,6 +16,8 @@
 package project
 
 import (
+	"encoding/json"
+
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -27,9 +29,8 @@ type CreateRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 
-	ParentID    *uuid.UUID         `json:"parentId"` // if created as a child project
-	Type        models.ProjectType `json:"type"`
-	ConfigFiles database.JSONB     `json:"configFiles"`
+	ParentID *uuid.UUID         `json:"parentId"` // if created as a child project
+	Type     models.ProjectType `json:"type"`
 }
 
 func (projectCreate *CreateRequest) ToModel() models.Project {
@@ -42,9 +43,8 @@ func (projectCreate *CreateRequest) ToModel() models.Project {
 		Slug:        slug.Make(projectCreate.Name),
 		Description: projectCreate.Description,
 
-		ParentID:    projectCreate.ParentID,
-		Type:        projectCreate.Type,
-		ConfigFiles: projectCreate.ConfigFiles,
+		ParentID: projectCreate.ParentID,
+		Type:     projectCreate.Type,
 	}
 }
 
@@ -63,9 +63,9 @@ type patchRequest struct {
 
 	Type *models.ProjectType `json:"type"`
 
-	RepositoryID   *string         `json:"repositoryId"`
-	RepositoryName *string         `json:"repositoryName"`
-	ConfigFiles    *database.JSONB `json:"configFiles"`
+	RepositoryID   *string `json:"repositoryId"`
+	RepositoryName *string `json:"repositoryName"`
+	ConfigFiles    *string `json:"configFiles"`
 }
 
 func (projectPatch *patchRequest) applyToModel(project *models.Project) bool {
@@ -101,10 +101,13 @@ func (projectPatch *patchRequest) applyToModel(project *models.Project) bool {
 	}
 
 	if projectPatch.ConfigFiles != nil {
-		updated = true
-		project.ConfigFiles = *projectPatch.ConfigFiles
+		var convertedJSON database.JSONB
+		err := json.Unmarshal([]byte(*projectPatch.ConfigFiles), &convertedJSON)
+		if err == nil {
+			updated = true
+			project.ConfigFiles = convertedJSON
+		}
 	}
-
 	return updated
 }
 
@@ -122,7 +125,7 @@ type ProjectDTO struct {
 	RepositoryName *string `json:"repositoryName"`
 
 	Assets      []models.Asset `json:"assets"`
-	ConfigFiles database.JSONB `json:"configFiles"`
+	ConfigFiles string         `json:"configFiles"`
 }
 
 type projectDetailsDTO struct {
@@ -131,6 +134,11 @@ type projectDetailsDTO struct {
 }
 
 func fromModel(project models.Project) ProjectDTO {
+	configFiles, err := json.Marshal(project.ConfigFiles)
+	if err != nil {
+		configFiles = []byte{}
+	}
+
 	return ProjectDTO{
 		ID:          project.ID,
 		Name:        project.Name,
@@ -145,6 +153,6 @@ func fromModel(project models.Project) ProjectDTO {
 		RepositoryName: project.RepositoryName,
 
 		Assets:      project.Assets,
-		ConfigFiles: project.ConfigFiles,
+		ConfigFiles: string(configFiles),
 	}
 }

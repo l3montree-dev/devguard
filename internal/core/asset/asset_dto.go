@@ -1,6 +1,8 @@
 package asset
 
 import (
+	"encoding/json"
+
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/database"
@@ -23,8 +25,6 @@ type createRequest struct {
 	ConfidentialityRequirement string `json:"confidentialityRequirement" validate:"required"`
 	IntegrityRequirement       string `json:"integrityRequirement" validate:"required"`
 	AvailabilityRequirement    string `json:"availabilityRequirement" validate:"required"`
-
-	ConfigFiles database.JSONB `json:"configFiles"`
 }
 
 func sanitizeRequirementLevel(level string) models.RequirementLevel {
@@ -50,8 +50,6 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 		ConfidentialityRequirement: sanitizeRequirementLevel(a.ConfidentialityRequirement),
 		IntegrityRequirement:       sanitizeRequirementLevel(a.IntegrityRequirement),
 		AvailabilityRequirement:    sanitizeRequirementLevel(a.AvailabilityRequirement),
-
-		ConfigFiles: a.ConfigFiles,
 	}
 
 	if a.EnableTicketRange {
@@ -81,7 +79,7 @@ type patchRequest struct {
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
 
-	ConfigFiles *database.JSONB `json:"configFiles"`
+	ConfigFiles *string `json:"configFiles"`
 }
 
 func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
@@ -126,8 +124,12 @@ func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
 	}
 
 	if assetPatch.ConfigFiles != nil {
-		updated = true
-		asset.ConfigFiles = *assetPatch.ConfigFiles
+		var convertedJSON database.JSONB
+		err := json.Unmarshal([]byte(*assetPatch.ConfigFiles), &convertedJSON)
+		if err == nil {
+			updated = true
+			asset.ConfigFiles = convertedJSON
+		}
 	}
 
 	return updated
