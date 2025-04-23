@@ -50,7 +50,7 @@ func (c firstPartyVulnController) ListByOrgPaged(ctx core.Context) error {
 		core.GetSortQuery(ctx),
 	)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
+		return echo.NewHTTPError(500, "could not get first party vulns").WithInternal(err)
 	}
 
 	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVuln) any {

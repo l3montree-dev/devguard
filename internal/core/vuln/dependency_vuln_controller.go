@@ -20,10 +20,10 @@ type dependencyVulnsByPackage struct {
 	MaxRisk     float64 `json:"maxRisk"`
 	MaxCVSS     float64 `json:"maxCvss"`
 	//TODO: change the name to DependencyVulnCount
-	DependencyVulnCount int     `json:"flawCount"`
+	DependencyVulnCount int     `json:"vulnCount"`
 	TotalRisk           float64 `json:"totalRisk"`
 	//TODO: change the name to DependencyVulns
-	DependencyVulns []DependencyVulnDTO `json:"flaws"`
+	DependencyVulns []DependencyVulnDTO `json:"vulns"`
 }
 
 type dependencyVulnHttpController struct {

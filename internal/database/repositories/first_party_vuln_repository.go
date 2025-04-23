@@ -35,7 +35,7 @@ func (r *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx core.DB, a
 	var count int64
 	var firstPartyVulns []models.FirstPartyVuln = []models.FirstPartyVuln{}
 
-	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("firstPartyVulns.asset_version_name = ?", assetVersionName).Where("firstPartyVulns.asset_id = ?", assetID)
+	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).Where("first_party_vulnerabilities.asset_id = ?", assetID)
 
 	/* 	// apply filters
 	   	for _, f := range filter {
@@ -96,7 +96,7 @@ func (g firstPartyVulnerabilityRepository) ReadDependencyVulnWithAssetVersionEve
 func (r *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(tx core.DB, assetVersionNamesSubquery any, assetVersionAssetIdSubquery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
 	var firstPartyVulns []models.FirstPartyVuln = []models.FirstPartyVuln{}
 
-	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("firstPartyVulns.asset_version_name IN (?) AND firstPartyVulns.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIdSubquery)
+	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name IN (?) AND first_party_vulnerabilities.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIdSubquery)
 
 	var count int64
 
