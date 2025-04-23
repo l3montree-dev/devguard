@@ -1,12 +1,15 @@
 package daemon
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 )
 
@@ -37,8 +40,25 @@ func ScanAssetVersions(db core.DB) error {
 	if err != nil {
 		return err
 	}
+	var org models.Org
 	for i := range assetVersions {
-		bom := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", "", nil)
+		org, err = getOrgFromAsset(db, assetVersions[i].AssetID)
+		if err != nil {
+			continue
+		}
+		bom := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", org.Name, assetVersions[i].Components)
+		normalizedBOM := normalize.FromCdxBom(bom, true)
+
 	}
 	return nil
+}
+
+func getOrgFromAsset(db core.DB, assetID uuid.UUID) (models.Org, error) {
+	var org models.Org
+
+	err := db.Raw("SELECT o.* FROM organizations o JOIN projects p ON p.organization_id = o.id JOIN assets a ON p.id = a.project_idWHERE a.id = ?", assetID).First(&org).Error
+	if err != nil {
+		return org, err
+	}
+	return org, nil
 }
