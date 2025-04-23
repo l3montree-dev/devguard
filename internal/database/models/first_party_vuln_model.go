@@ -15,7 +15,7 @@ type FirstPartyVulnerability struct {
 	RuleDescription string         `json:"ruleDescription"`
 	RuleHelp        string         `json:"ruleHelp"`
 	RuleHelpUri     string         `json:"ruleHelpUri"`
-	RuleProperties  database.JSONB `json:"ruleProperties"`
+	RuleProperties  database.JSONB `json:"ruleProperties" gorm:"type:jsonb"`
 
 	Uri         string `json:"uri"`
 	StartLine   int    `json:"startLine" `
