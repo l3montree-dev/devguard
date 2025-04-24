@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/l3montree-dev/devguard/internal/core/events"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -46,7 +47,7 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 
 	t.Run("should return 500 if repository returns an error", func(t *testing.T) {
 		mockRepository := mocks.NewVulnEventRepository(t)
-		mockRepository.On("ReadAssetEventsByVulnID", "vulnId").Return(nil, assert.AnError)
+		mockRepository.On("ReadAssetEventsByVulnID", "vulnId", models.VulnTypeDependencyVuln).Return(nil, assert.AnError)
 		mocksAssetVersionRepository := mocks.NewAssetVersionRepository(t)
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/vuln-events?vulnId=vulnId", nil)
