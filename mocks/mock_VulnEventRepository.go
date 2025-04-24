@@ -26,9 +26,9 @@ func (_m *VulnEventRepository) EXPECT() *VulnEventRepository_Expecter {
 	return &VulnEventRepository_Expecter{mock: &_m.Mock}
 }
 
-// ReadAssetEventsByVulnID provides a mock function with given fields: vulnID
-func (_m *VulnEventRepository) ReadAssetEventsByVulnID(vulnID string) ([]models.VulnEventDetail, error) {
-	ret := _m.Called(vulnID)
+// ReadAssetEventsByVulnID provides a mock function with given fields: vulnID, vulnType
+func (_m *VulnEventRepository) ReadAssetEventsByVulnID(vulnID string, vulnType models.VulnType) ([]models.VulnEventDetail, error) {
+	ret := _m.Called(vulnID, vulnType)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReadAssetEventsByVulnID")
@@ -36,19 +36,19 @@ func (_m *VulnEventRepository) ReadAssetEventsByVulnID(vulnID string) ([]models.
 
 	var r0 []models.VulnEventDetail
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string) ([]models.VulnEventDetail, error)); ok {
-		return rf(vulnID)
+	if rf, ok := ret.Get(0).(func(string, models.VulnType) ([]models.VulnEventDetail, error)); ok {
+		return rf(vulnID, vulnType)
 	}
-	if rf, ok := ret.Get(0).(func(string) []models.VulnEventDetail); ok {
-		r0 = rf(vulnID)
+	if rf, ok := ret.Get(0).(func(string, models.VulnType) []models.VulnEventDetail); ok {
+		r0 = rf(vulnID, vulnType)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.VulnEventDetail)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(vulnID)
+	if rf, ok := ret.Get(1).(func(string, models.VulnType) error); ok {
+		r1 = rf(vulnID, vulnType)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -63,13 +63,14 @@ type VulnEventRepository_ReadAssetEventsByVulnID_Call struct {
 
 // ReadAssetEventsByVulnID is a helper method to define mock.On call
 //   - vulnID string
-func (_e *VulnEventRepository_Expecter) ReadAssetEventsByVulnID(vulnID interface{}) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
-	return &VulnEventRepository_ReadAssetEventsByVulnID_Call{Call: _e.mock.On("ReadAssetEventsByVulnID", vulnID)}
+//   - vulnType models.VulnType
+func (_e *VulnEventRepository_Expecter) ReadAssetEventsByVulnID(vulnID interface{}, vulnType interface{}) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
+	return &VulnEventRepository_ReadAssetEventsByVulnID_Call{Call: _e.mock.On("ReadAssetEventsByVulnID", vulnID, vulnType)}
 }
 
-func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) Run(run func(vulnID string)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
+func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) Run(run func(vulnID string, vulnType models.VulnType)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		run(args[0].(string), args[1].(models.VulnType))
 	})
 	return _c
 }
@@ -79,7 +80,7 @@ func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) Return(_a0 []models.
 	return _c
 }
 
-func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) RunAndReturn(run func(string) ([]models.VulnEventDetail, error)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
+func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) RunAndReturn(run func(string, models.VulnType) ([]models.VulnEventDetail, error)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -76,17 +76,26 @@ func GetAuthAdminClient(ctx Context) AdminClient {
 	return ctx.Get("authAdminClient").(AdminClient)
 }
 
-func GetVulnID(ctx Context) (string, error) {
+func GetVulnID(ctx Context) (string, models.VulnType, error) {
 	dependencyVulnID := ctx.Param("dependencyVulnId")
-	if dependencyVulnID == "" {
-		dependencyVulnIDFromGet, ok := ctx.Get("dependencyVulnId").(string)
-		if !ok || dependencyVulnIDFromGet == "" {
-			return "", fmt.Errorf("could not get dependencyVuln id from Get")
-		}
-
-		return dependencyVulnIDFromGet, nil
+	if dependencyVulnID != "" {
+		return dependencyVulnID, models.VulnTypeDependencyVuln, nil
 	}
-	return dependencyVulnID, nil
+
+	dependencyVulnIDFromGet, ok := ctx.Get("dependencyVulnId").(string)
+	if ok && dependencyVulnIDFromGet != "" {
+		return dependencyVulnIDFromGet, models.VulnTypeDependencyVuln, nil
+	}
+	firstPartyVulnID := ctx.Param("firstPartyVulnId")
+	if firstPartyVulnID != "" {
+		return firstPartyVulnID, models.VulnTypeFirstPartyVuln, nil
+	}
+	firstPartyVulnIDFromGet, ok := ctx.Get("firstPartyVulnId").(string)
+	if ok && firstPartyVulnIDFromGet != "" {
+		return firstPartyVulnIDFromGet, models.VulnTypeFirstPartyVuln, nil
+	}
+
+	return "", "", fmt.Errorf("could not get vuln id")
 }
 
 func SetRBAC(ctx Context, rbac accesscontrol.AccessControl) {

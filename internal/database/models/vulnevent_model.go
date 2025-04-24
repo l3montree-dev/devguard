@@ -11,6 +11,13 @@ import (
 
 type VulnEventType string
 
+type VulnType string
+
+const (
+	VulnTypeDependencyVuln VulnType = "dependencyVuln"
+	VulnTypeFirstPartyVuln VulnType = "firstPartyVuln"
+)
+
 const (
 	EventTypeDetected VulnEventType = "detected"
 	EventTypeFixed    VulnEventType = "fixed"
@@ -32,9 +39,10 @@ const (
 
 type VulnEvent struct {
 	Model
-	Type   VulnEventType `json:"type" gorm:"type:text"`
-	VulnID string        `json:"vulnId"`
-	UserID string        `json:"userId"`
+	Type     VulnEventType `json:"type" gorm:"type:text"`
+	VulnID   string        `json:"vulnId"`
+	VulnType VulnType      `json:"vulnType" gorm:"type:text;not null;default:'dependencyVuln'"`
+	UserID   string        `json:"userId"`
 
 	Justification *string `json:"justification" gorm:"type:text;"`
 
@@ -124,38 +132,42 @@ func (e VulnEvent) Apply(vuln Vuln) {
 	}
 }
 
-func NewAcceptedEvent(vulnID, userID, justification string) VulnEvent {
+func NewAcceptedEvent(vulnID string, vulnType VulnType, userID, justification string) VulnEvent {
 
 	return VulnEvent{
 		Type:          EventTypeAccepted,
 		VulnID:        vulnID,
 		UserID:        userID,
+		VulnType:      vulnType,
 		Justification: &justification,
 	}
 }
 
-func NewReopenedEvent(vulnID, userID, justification string) VulnEvent {
+func NewReopenedEvent(vulnID string, vulnType VulnType, userID, justification string) VulnEvent {
 	return VulnEvent{
 		Type:          EventTypeReopened,
+		VulnType:      vulnType,
 		VulnID:        vulnID,
 		UserID:        userID,
 		Justification: &justification,
 	}
 }
 
-func NewCommentEvent(vulnID, userID, justification string) VulnEvent {
+func NewCommentEvent(vulnID string, vulnType VulnType, userID, justification string) VulnEvent {
 	return VulnEvent{
 		Type:          EventTypeComment,
+		VulnType:      vulnType,
 		VulnID:        vulnID,
 		UserID:        userID,
 		Justification: &justification,
 	}
 }
 
-func NewFalsePositiveEvent(vulnID, userID, justification string, scannerID string) VulnEvent {
+func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justification string, scannerID string) VulnEvent {
 	ev := VulnEvent{
 		Type:          EventTypeFalsePositive,
 		VulnID:        vulnID,
+		VulnType:      vulnType,
 		UserID:        userID,
 		Justification: &justification,
 	}
@@ -163,21 +175,23 @@ func NewFalsePositiveEvent(vulnID, userID, justification string, scannerID strin
 	return ev
 }
 
-func NewFixedEvent(vulnID string, userID string, scannerID string) VulnEvent {
+func NewFixedEvent(vulnID string, vulnType VulnType, userID string, scannerID string) VulnEvent {
 	ev := VulnEvent{
-		Type:   EventTypeFixed,
-		VulnID: vulnID,
-		UserID: userID,
+		Type:     EventTypeFixed,
+		VulnType: vulnType,
+		VulnID:   vulnID,
+		UserID:   userID,
 	}
 	ev.SetArbitraryJsonData(map[string]any{"scannerIds": scannerID})
 	return ev
 }
 
-func NewDetectedEvent(vulnID string, userID string, riskCalculationReport common.RiskCalculationReport, scannerID string) VulnEvent {
+func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalculationReport common.RiskCalculationReport, scannerID string) VulnEvent {
 	ev := VulnEvent{
-		Type:   EventTypeDetected,
-		VulnID: vulnID,
-		UserID: userID,
+		Type:     EventTypeDetected,
+		VulnType: vulnType,
+		VulnID:   vulnID,
+		UserID:   userID,
 	}
 
 	m := riskCalculationReport.Map()
@@ -188,10 +202,11 @@ func NewDetectedEvent(vulnID string, userID string, riskCalculationReport common
 	return ev
 }
 
-func NewMitigateEvent(vulnID string, userID string, justification string, arbitraryData map[string]any) VulnEvent {
+func NewMitigateEvent(vulnID string, vulnType VulnType, userID string, justification string, arbitraryData map[string]any) VulnEvent {
 	ev := VulnEvent{
 		Type:          EventTypeMitigate,
 		VulnID:        vulnID,
+		VulnType:      vulnType,
 		UserID:        userID,
 		Justification: &justification,
 	}
@@ -199,10 +214,11 @@ func NewMitigateEvent(vulnID string, userID string, justification string, arbitr
 	return ev
 }
 
-func NewRawRiskAssessmentUpdatedEvent(vulnID string, userID string, justification string, oldRisk *float64, report common.RiskCalculationReport) VulnEvent {
+func NewRawRiskAssessmentUpdatedEvent(vulnID string, vulnType VulnType, userID string, justification string, oldRisk *float64, report common.RiskCalculationReport) VulnEvent {
 	event := VulnEvent{
 		Type:          EventTypeRawRiskAssessmentUpdated,
 		VulnID:        vulnID,
+		VulnType:      vulnType,
 		UserID:        userID,
 		Justification: &justification,
 	}
@@ -215,22 +231,24 @@ func NewRawRiskAssessmentUpdatedEvent(vulnID string, userID string, justificatio
 	return event
 }
 
-func NewAddedScannerEvent(vulnID string, userID string, scannerID string) VulnEvent {
+func NewAddedScannerEvent(vulnID string, vulnType VulnType, userID string, scannerID string) VulnEvent {
 	ev := VulnEvent{
-		Type:   EventTypeAddedScanner,
-		VulnID: vulnID,
-		UserID: userID,
+		Type:     EventTypeAddedScanner,
+		VulnID:   vulnID,
+		VulnType: vulnType,
+		UserID:   userID,
 	}
 
 	ev.SetArbitraryJsonData(map[string]any{"scannerIds": scannerID})
 	return ev
 }
 
-func NewRemovedScannerEvent(vulnID string, userID string, scannerID string) VulnEvent {
+func NewRemovedScannerEvent(vulnID string, vulnType VulnType, userID string, scannerID string) VulnEvent {
 	ev := VulnEvent{
-		Type:   EventTypeRemovedScanner,
-		VulnID: vulnID,
-		UserID: userID,
+		Type:     EventTypeRemovedScanner,
+		VulnID:   vulnID,
+		VulnType: vulnType,
+		UserID:   userID,
 	}
 
 	ev.SetArbitraryJsonData(map[string]any{"scannerIds": scannerID})

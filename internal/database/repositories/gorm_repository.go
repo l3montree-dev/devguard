@@ -92,7 +92,7 @@ func (g *GormRepository[ID, T]) CreateBatch(tx *gorm.DB, ts []T) error {
 
 func (g *GormRepository[ID, T]) Read(id ID) (T, error) {
 	var t T
-	err := g.db.First(&t, id).Error
+	err := g.db.First(&t, "id = ?", id).Error
 
 	return t, err
 }

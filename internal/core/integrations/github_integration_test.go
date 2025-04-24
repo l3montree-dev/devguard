@@ -119,6 +119,10 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		ctx.SetParamNames("dependencyVulnId")
 		ctx.SetParamValues("1")
+		authSession := mocks.NewAuthSession(t)
+		authSession.On("GetUserID").Return("abc")
+
+		core.SetSession(ctx, authSession)
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
 			Ctx: ctx,
@@ -135,7 +139,11 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
+		aggregatedVulnRepository := mocks.NewVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				ID: "abc",
+			},
 			CVE: &models.CVE{
 				Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
 			},
@@ -145,7 +153,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			ComponentDepth:        utils.Ptr(1),
 			ComponentFixedVersion: utils.Ptr("1.0.1"),
 		}, nil)
-		dependencyVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
+		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
 
 		githubClientFactory := func(repoId string) (githubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
@@ -171,6 +179,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			githubClientFactory:      githubClientFactory,
 			frontendUrl:              "http://localhost:3000",
 			componentRepository:      componentRepository,
+			aggregatedVulnRepository: aggregatedVulnRepository,
 		}
 
 		core.SetAsset(ctx, models.Asset{
@@ -185,6 +194,10 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		ctx.SetParamNames("dependencyVulnId")
 		ctx.SetParamValues("1")
 
+		authSession := mocks.NewAuthSession(t)
+		authSession.On("GetUserID").Return("abc")
+		core.SetSession(ctx, authSession)
+
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
 			Ctx: ctx,
 		})
@@ -198,6 +211,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		expectDependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
+				ID:        "abc",
 				TicketID:  utils.Ptr("github:0"),
 				TicketURL: utils.Ptr(""),
 			},
@@ -212,8 +226,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}
 
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
+		aggregatedVulnRepository := mocks.NewVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(expectDependencyVuln, nil)
-		dependencyVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]models.ComponentDependency{}, nil)
@@ -249,6 +264,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			githubClientFactory:      githubClientFactory,
 			frontendUrl:              "http://localhost:3000",
 			componentRepository:      componentRepository,
+			aggregatedVulnRepository: aggregatedVulnRepository,
 		}
 
 		core.SetAsset(ctx, models.Asset{
@@ -262,6 +278,10 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAssetSlug(ctx, "test")
 		ctx.SetParamNames("dependencyVulnId")
 		ctx.SetParamValues("1")
+
+		authSession := mocks.NewAuthSession(t)
+		authSession.On("GetUserID").Return("1")
+		core.SetSession(ctx, authSession)
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
 			Ctx: ctx,

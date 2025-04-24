@@ -404,6 +404,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	complianceController := compliance.NewHTTPController(assetVersionRepository)
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
+	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)
 
 	patService := pat.NewPatService(patRepository)
 
@@ -472,7 +473,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.GET("/content-tree/", orgController.ContentTree)
 	//TODO: change it
 	//organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
-	organizationRouter.GET("/flaws/", dependencyVulnController.ListByOrgPaged)
+	organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
+	organizationRouter.GET("/first-party-vulns/", firstPartyVulnController.ListByOrgPaged)
 
 	organizationRouter.GET("/members/", orgController.Members)
 	organizationRouter.POST("/members/", orgController.InviteMember, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
@@ -490,7 +492,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageOrgFixingTime)
 	//TODO: change it
 	//organizationRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
-	organizationRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
+	organizationRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
 	organizationRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution)
 
 	organizationRouter.GET("/projects/", projectController.List, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
@@ -501,7 +503,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectRouter.GET("/", projectController.Read)
 	//TODO: change it
 	//projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
-	projectRouter.GET("/flaws/", dependencyVulnController.ListByProjectPaged)
+	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
 
 	projectRouter.PATCH("/", projectController.Update, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
 	projectRouter.DELETE("/", projectController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
@@ -515,7 +517,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectRouter.GET("/compliance/", complianceController.ProjectCompliance)
 	//TODO: change it
 	//projectRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
-	projectRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
+	projectRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
 	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime)
 
 	projectRouter.GET("/members/", projectController.Members)
@@ -563,12 +565,12 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetAssetVersionRiskHistory)
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerId)
-	assetVersionRouter.GET("/stats/flaw-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerId)
+	assetVersionRouter.GET("/stats/vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerId)
 	assetVersionRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanner)
 
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
-	assetVersionRouter.GET("/stats/flaw-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
+	assetVersionRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
 	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetVersionFixingTime)
 
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
@@ -593,9 +595,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 
 	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)
-	//TODO: change it
-	//dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
-	dependencyVulnRouter := assetVersionRouter.Group("/flaws")
+
+	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnId/", dependencyVulnController.Read)
 
@@ -603,6 +604,13 @@ func BuildRouter(db core.DB) *echo.Echo {
 	dependencyVulnRouter.POST("/:dependencyVulnId/mitigate/", dependencyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 
 	dependencyVulnRouter.GET("/:dependencyVulnId/events/", vulnEventController.ReadAssetEventsByVulnID)
+
+	firstPartyVulnRouter := assetVersionRouter.Group("/first-party-vulns")
+	firstPartyVulnRouter.GET("/", firstPartyVulnController.ListPaged)
+	firstPartyVulnRouter.GET("/:firstPartyVulnId/", firstPartyVulnController.Read)
+	firstPartyVulnRouter.POST("/:firstPartyVulnId/", firstPartyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	firstPartyVulnRouter.POST("/:firstPartyVulnId/mitigate/", firstPartyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	firstPartyVulnRouter.GET("/:firstPartyVulnId/events/", vulnEventController.ReadAssetEventsByVulnID)
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

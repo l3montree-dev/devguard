@@ -19,7 +19,7 @@ type firstPartyVulnController struct {
 }
 
 type FirstPartyVulnStatus struct {
-	StatusType    string `json:"statusType"`
+	StatusType    string `json:"status"`
 	Justification string `json:"justification"`
 }
 
@@ -50,10 +50,10 @@ func (c firstPartyVulnController) ListByOrgPaged(ctx core.Context) error {
 		core.GetSortQuery(ctx),
 	)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
+		return echo.NewHTTPError(500, "could not get first party vulns").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVulnerability) any {
+	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVuln) any {
 		return convertFirstPartyVulnToDetailedDTO(firstPartyVuln)
 	}))
 }
@@ -74,21 +74,31 @@ func (c firstPartyVulnController) ListByProjectPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVulnerability) any {
+	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVuln) any {
 		return convertFirstPartyVulnToDetailedDTO(firstPartyVuln)
 	}))
 }
 
 func (c firstPartyVulnController) Mitigate(ctx core.Context) error {
-	firstPartyVulnId, err := core.GetVulnID(ctx)
+	firstPartyVulnId, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnId")
 	}
 
 	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
 
+	var j struct {
+		Justification string `json:"justification"`
+	}
+
+	err = json.NewDecoder(ctx.Request().Body).Decode(&j)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
 	if err = thirdPartyIntegrations.HandleEvent(core.ManualMitigateEvent{
-		Ctx: ctx,
+		Justification: j.Justification,
+		Ctx:           ctx,
 	}); err != nil {
 		return echo.NewHTTPError(500, "could not mitigate firstPartyVuln").WithInternal(err)
 	}
@@ -103,7 +113,7 @@ func (c firstPartyVulnController) Mitigate(ctx core.Context) error {
 }
 
 func (c firstPartyVulnController) Read(ctx core.Context) error {
-	firstPartyVulnId, err := core.GetVulnID(ctx)
+	firstPartyVulnId, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnId")
 	}
@@ -117,7 +127,7 @@ func (c firstPartyVulnController) Read(ctx core.Context) error {
 }
 func (c firstPartyVulnController) CreateEvent(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	firstPartyVulnId, err := core.GetVulnID(ctx)
+	firstPartyVulnId, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid firstPartyVulnId")
 	}
@@ -137,6 +147,7 @@ func (c firstPartyVulnController) CreateEvent(ctx core.Context) error {
 	statusType := status.StatusType
 	err = models.CheckStatusType(statusType)
 	if err != nil {
+		slog.Error("invalid status type", "statusType", statusType, "err", err)
 		return echo.NewHTTPError(400, "invalid status type")
 	}
 	justification := status.Justification
@@ -168,18 +179,6 @@ func (c firstPartyVulnController) ListPaged(ctx core.Context) error {
 	// get the asset
 	assetVersion := core.GetAssetVersion(ctx)
 
-	// check if we should list flat - this means not grouped by package
-	if ctx.QueryParam("flat") == "true" {
-		firstPartyVulns, err := c.firstPartyVulnRepository.GetFirstPartyVulnsByAssetIdPagedAndFlat(nil, assetVersion.Name, assetVersion.AssetID, core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
-		if err != nil {
-			return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
-		}
-
-		return ctx.JSON(200, firstPartyVulns.Map(func(firstPartyVuln models.FirstPartyVulnerability) any {
-			return convertFirstPartyVulnToDetailedDTO(firstPartyVuln)
-		}))
-	}
-
 	pagedResp, _, err := c.firstPartyVulnRepository.GetByAssetVersionPaged(
 		nil,
 		assetVersion.Name,
@@ -194,36 +193,15 @@ func (c firstPartyVulnController) ListPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
 	}
 
-	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVulnerability) any {
+	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVuln) any {
 		return convertFirstPartyVulnToDetailedDTO(firstPartyVuln)
 	}))
 
 }
 
-func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVulnerability) detailedFirstPartyVulnDTO {
+func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) detailedFirstPartyVulnDTO {
 	return detailedFirstPartyVulnDTO{
-		FirstPartyVulnDTO: FirstPartyVulnDTO{
-			ID:                   firstPartyVuln.ID,
-			ScannerIDs:           firstPartyVuln.ScannerIDs,
-			Message:              firstPartyVuln.Message,
-			AssetID:              firstPartyVuln.AssetID.String(),
-			State:                firstPartyVuln.State,
-			RuleID:               firstPartyVuln.RuleID,
-			Uri:                  firstPartyVuln.Uri,
-			StartLine:            firstPartyVuln.StartLine,
-			StartColumn:          firstPartyVuln.StartColumn,
-			EndLine:              firstPartyVuln.EndLine,
-			EndColumn:            firstPartyVuln.EndColumn,
-			Snippet:              firstPartyVuln.Snippet,
-			CreatedAt:            firstPartyVuln.CreatedAt,
-			TicketID:             firstPartyVuln.TicketID,
-			TicketURL:            firstPartyVuln.TicketURL,
-			ManualTicketCreation: firstPartyVuln.ManualTicketCreation,
-			Commit:               firstPartyVuln.Commit,
-			Email:                firstPartyVuln.Email,
-			Author:               firstPartyVuln.Author,
-			Date:                 firstPartyVuln.Date,
-		},
+		FirstPartyVulnDTO: FirstPartyVulnToDto(firstPartyVuln),
 		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {
 			return events.VulnEventDTO{
 				ID:                ev.ID,

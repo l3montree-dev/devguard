@@ -142,7 +142,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 		return nil
 	}
 
-	// order the flaws by their risk
+	// order the vulns by their risk
 	slices.SortFunc(scanResponse.DependencyVulns, func(a, b vuln.DependencyVulnDTO) int {
 		return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
 	})
