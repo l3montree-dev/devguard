@@ -59,24 +59,13 @@ func (r *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx core.DB, a
 	return core.NewPaged(pageInfo, count, firstPartyVulns), nil, nil
 }
 
-func (g firstPartyVulnerabilityRepository) ReadDependencyVulnWithAssetVersionEvents(id string) (models.FirstPartyVuln, []models.VulnEvent, error) {
+func (g firstPartyVulnerabilityRepository) Read(id string) (models.FirstPartyVuln, error) {
 	var t models.FirstPartyVuln
-	err := g.db.First(&t, "id = ?", id).Error
+	err := g.db.Preload("Events", func(db core.DB) core.DB {
+		return db.Order("created_at ASC")
+	}).First(&t, "id = ?", id).Error
 
-	if err != nil {
-		return models.FirstPartyVuln{}, []models.VulnEvent{}, err
-	}
-
-	var VulnEvents []models.VulnEvent
-	// get the asset id - and read dependencyVulns with the same cve id and asset id
-	err = g.db.Model(&models.VulnEvent{}).Where("id IN ?", g.db.Model(models.DependencyVuln{}).Where(
-		"asset_id = ?", t.AssetID,
-	)).Order("created_at ASC").Find(&t.Events).Error
-	if err != nil {
-		return models.FirstPartyVuln{}, VulnEvents, err
-	}
-
-	return t, VulnEvents, err
+	return t, err
 }
 
 // TODO: change it

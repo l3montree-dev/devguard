@@ -338,7 +338,7 @@ func (s *service) SyncTickets(asset models.Asset) error {
 					if vulnerability.State == models.VulnStateOpen {
 						//there is no ticket yet, we need to create one
 						errgroup.Go(func() (any, error) {
-							return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug, "Risk exceeds predefined threshold", false)
+							return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system")
 						})
 					}
 				}
@@ -415,7 +415,7 @@ func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vu
 			// check if there is already a ticket, we might need to reopen
 			if vulnerability.TicketID == nil {
 				errgroup.Go(func() (any, error) {
-					return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug, "Risk exceeds predefined threshold", false)
+					return nil, s.createIssue(vulnerability, asset, vulnerability.AssetVersionName, repoID, org.Slug, project.Slug, "Risk exceeds predefined threshold", "system")
 				})
 			} else {
 				// check if the ticket id is nil
@@ -432,12 +432,12 @@ func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vu
 }
 
 // function to remove duplicate code from the different cases of the createIssuesForVulns function
-func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string, justification string, manualTicketCreation bool) error {
+func (s *service) createIssue(vulnerability models.DependencyVuln, asset models.Asset, assetVersionName string, repoId string, orgSlug string, projectSlug string, justification string, userID string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, &vulnerability, projectSlug, orgSlug, justification, manualTicketCreation)
+	return s.thirdPartyIntegration.CreateIssue(ctx, asset, assetVersionName, repoId, &vulnerability, projectSlug, orgSlug, justification, userID)
 }
 
 func (s *service) updateIssue(asset models.Asset, vulnerability models.DependencyVuln, repoId string) error {

@@ -141,11 +141,11 @@ func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.A
 	return err
 }
 
-func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, manualTicketCreation bool) error {
+func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.CreateIssue(ctx, asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, justification, manualTicketCreation)
+			return struct{}{}, i.CreateIssue(ctx, asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, justification, userID)
 		})
 	}
 

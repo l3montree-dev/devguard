@@ -808,7 +808,9 @@ func (g *gitlabIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, event.Justification, true)
+		session := core.GetSession(event.Ctx)
+
+		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
 	case core.VulnEvent:
 		ev := event.Event
 
@@ -1268,7 +1270,7 @@ func (g *gitlabIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 	return err
 }
 
-func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, manualTicketCreation bool) error {
+func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 
 	if !strings.HasPrefix(repoId, "gitlab:") {
 		// this integration only handles gitlab repositories
@@ -1309,12 +1311,12 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	vuln.SetTicketID(fmt.Sprintf("gitlab:%d/%d", createdIssue.ProjectID, createdIssue.IID))
 	vuln.SetTicketURL(createdIssue.WebURL)
-	vuln.SetManualTicketCreation(manualTicketCreation)
+	vuln.SetManualTicketCreation(userID != "system")
 
 	vulnEvent := models.NewMitigateEvent(
 		vuln.GetID(),
 		vuln.GetType(),
-		"system",
+		userID,
 		justification,
 		map[string]any{
 			"ticketId":  vuln.GetTicketID(),

@@ -666,68 +666,6 @@ func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIdPaged_Cal
 	return _c
 }
 
-// GetFirstPartyVulnsByAssetIdPagedAndFlat provides a mock function with given fields: tx, assetVersionName, assetID, pageInfo, search, filter, sort
-func (_m *FirstPartyVulnRepository) GetFirstPartyVulnsByAssetIdPagedAndFlat(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
-	ret := _m.Called(tx, assetVersionName, assetID, pageInfo, search, filter, sort)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetFirstPartyVulnsByAssetIdPagedAndFlat")
-	}
-
-	var r0 core.Paged[models.FirstPartyVuln]
-	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVuln], error)); ok {
-		return rf(tx, assetVersionName, assetID, pageInfo, search, filter, sort)
-	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.FirstPartyVuln]); ok {
-		r0 = rf(tx, assetVersionName, assetID, pageInfo, search, filter, sort)
-	} else {
-		r0 = ret.Get(0).(core.Paged[models.FirstPartyVuln])
-	}
-
-	if rf, ok := ret.Get(1).(func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
-		r1 = rf(tx, assetVersionName, assetID, pageInfo, search, filter, sort)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFirstPartyVulnsByAssetIdPagedAndFlat'
-type FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call struct {
-	*mock.Call
-}
-
-// GetFirstPartyVulnsByAssetIdPagedAndFlat is a helper method to define mock.On call
-//   - tx *gorm.DB
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - pageInfo core.PageInfo
-//   - search string
-//   - filter []core.FilterQuery
-//   - sort []core.SortQuery
-func (_e *FirstPartyVulnRepository_Expecter) GetFirstPartyVulnsByAssetIdPagedAndFlat(tx interface{}, assetVersionName interface{}, assetID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call {
-	return &FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call{Call: _e.mock.On("GetFirstPartyVulnsByAssetIdPagedAndFlat", tx, assetVersionName, assetID, pageInfo, search, filter, sort)}
-}
-
-func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call) Run(run func(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].(uuid.UUID), args[3].(core.PageInfo), args[4].(string), args[5].([]core.FilterQuery), args[6].([]core.SortQuery))
-	})
-	return _c
-}
-
-func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call) Return(_a0 core.Paged[models.FirstPartyVuln], _a1 error) *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call) RunAndReturn(run func(*gorm.DB, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.FirstPartyVuln], error)) *FirstPartyVulnRepository_GetFirstPartyVulnsByAssetIdPagedAndFlat_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // List provides a mock function with given fields: ids
 func (_m *FirstPartyVulnRepository) List(ids []string) ([]models.FirstPartyVuln, error) {
 	ret := _m.Called(ids)

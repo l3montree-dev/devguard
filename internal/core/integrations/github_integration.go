@@ -597,7 +597,9 @@ func (g *githubIntegration) HandleEvent(event any) error {
 			return err
 		}
 
-		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, event.Justification, true)
+		session := core.GetSession(event.Ctx)
+
+		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
 	case core.VulnEvent:
 		ev := event.Event
 
@@ -737,8 +739,8 @@ func (g *githubIntegration) CloseIssue(ctx context.Context, state string, repoId
 	case *models.DependencyVuln:
 		return g.closeDependencyVulnIssue(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, owner, repo)
 	case *models.FirstPartyVuln:
+		return g.closeFirstPartyVulnIssue(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, owner, repo)
 	}
-
 	return nil
 }
 
@@ -762,6 +764,18 @@ func (g *githubIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 		Labels: &lables,
 	})
 
+	return err
+}
+
+func (g *githubIntegration) closeFirstPartyVulnIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client githubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
+	_, ticketNumber := githubTicketIdToIdAndNumber(*vuln.TicketID)
+	lables := getLabels(vuln)
+	_, _, err := client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
+		State:  github.String("closed"),
+		Title:  github.String(vuln.Title()),
+		Body:   github.String(vuln.RenderMarkdown()),
+		Labels: &lables,
+	})
 	return err
 }
 
@@ -833,7 +847,7 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		//check if err is 404 - if so, we can not reopen the issue
 		if err.Error() == "404 Not Found" {
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This CVE is marked as a false positive due to deletion", vuln.GetScannerIDs())
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", vuln.GetScannerIDs())
 			// save the event
 			err = g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
@@ -897,7 +911,7 @@ func (g *githubIntegration) updateDependencyVulnTicket(ctx context.Context, depe
 	return err
 }
 
-func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, manualTicketCreation bool) error {
+func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 
 	if !strings.HasPrefix(repoId, "github:") {
 		// this integration only handles github repositories.
@@ -933,10 +947,10 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	// save the issue id to the dependencyVuln
 	vuln.SetTicketID(fmt.Sprintf("github:%d/%d", createdIssue.GetID(), createdIssue.GetNumber()))
 	vuln.SetTicketURL(createdIssue.GetHTMLURL())
-	vuln.SetManualTicketCreation(manualTicketCreation)
+	vuln.SetManualTicketCreation(userID != "system")
 
 	// create an event
-	vulnEvent := models.NewMitigateEvent(vuln.GetID(), vuln.GetType(), "system", justification, map[string]any{
+	vulnEvent := models.NewMitigateEvent(vuln.GetID(), vuln.GetType(), userID, justification, map[string]any{
 		"ticketId":  vuln.GetTicketID(),
 		"ticketUrl": vuln.GetTicketURL(),
 	})

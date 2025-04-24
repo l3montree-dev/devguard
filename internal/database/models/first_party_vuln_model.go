@@ -3,7 +3,9 @@ package models
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
@@ -58,9 +60,41 @@ func (f *FirstPartyVuln) BeforeSave(tx *gorm.DB) (err error) {
 }
 
 func (f *FirstPartyVuln) RenderMarkdown() string {
-	return *f.Message
+	var str strings.Builder
+	str.WriteString(*f.Message)
+	// check if there is a filename and snippet - if so, we can render that as well
+	if f.Snippet != "" {
+		str.WriteString("\n\n")
+		str.WriteString("```")
+		str.WriteString("\n")
+		str.WriteString(f.Snippet)
+		str.WriteString("\n")
+		str.WriteString("```")
+	}
+
+	if f.Uri != "" {
+		str.WriteString("\n\n")
+		str.WriteString("File: ")
+
+		link := fmt.Sprintf("[%s](%s)", f.Uri, strings.TrimPrefix(f.Uri, "/"))
+		// add the line number to the link
+		if f.StartLine != 0 {
+			link += fmt.Sprintf("#L%d", f.StartLine)
+		}
+
+		str.WriteString(link)
+		str.WriteString("\n")
+	}
+
+	common.AddSlashCommands(&str)
+
+	return str.String()
 }
 
 func (f *FirstPartyVuln) Title() string {
-	return fmt.Sprintf("%s found in %s", f.RuleID, f.Uri)
+	if f.Uri == "" {
+		return f.RuleName
+	}
+
+	return fmt.Sprintf("%s found in %s", f.RuleName, f.Uri)
 }

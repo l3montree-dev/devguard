@@ -87,8 +87,18 @@ func (c firstPartyVulnController) Mitigate(ctx core.Context) error {
 
 	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
 
+	var j struct {
+		Justification string `json:"justification"`
+	}
+
+	err = json.NewDecoder(ctx.Request().Body).Decode(&j)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid payload").WithInternal(err)
+	}
+
 	if err = thirdPartyIntegrations.HandleEvent(core.ManualMitigateEvent{
-		Ctx: ctx,
+		Justification: j.Justification,
+		Ctx:           ctx,
 	}); err != nil {
 		return echo.NewHTTPError(500, "could not mitigate firstPartyVuln").WithInternal(err)
 	}
