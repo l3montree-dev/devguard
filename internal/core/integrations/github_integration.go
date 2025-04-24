@@ -826,7 +826,7 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	case *models.DependencyVuln:
 		err = g.updateDependencyVulnTicket(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, owner, repo)
 	case *models.FirstPartyVuln:
-		vuln = v
+		err = g.updateFirstPartyVulnTicket(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, owner, repo)
 	}
 
 	if err != nil {

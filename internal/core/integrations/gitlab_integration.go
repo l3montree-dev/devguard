@@ -1378,5 +1378,5 @@ func (g *gitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 	_, _, err = client.CreateIssueComment(ctx, projectId, createdIssue.IID, &gitlab.CreateIssueNoteOptions{
 		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
-	return createdIssue, nil
+	return createdIssue, err
 }
