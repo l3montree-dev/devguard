@@ -19,7 +19,7 @@ type firstPartyVulnController struct {
 }
 
 type FirstPartyVulnStatus struct {
-	StatusType    string `json:"statusType"`
+	StatusType    string `json:"status"`
 	Justification string `json:"justification"`
 }
 
@@ -137,6 +137,7 @@ func (c firstPartyVulnController) CreateEvent(ctx core.Context) error {
 	statusType := status.StatusType
 	err = models.CheckStatusType(statusType)
 	if err != nil {
+		slog.Error("invalid status type", "statusType", statusType, "err", err)
 		return echo.NewHTTPError(400, "invalid status type")
 	}
 	justification := status.Justification
@@ -168,18 +169,6 @@ func (c firstPartyVulnController) ListPaged(ctx core.Context) error {
 	// get the asset
 	assetVersion := core.GetAssetVersion(ctx)
 
-	// check if we should list flat - this means not grouped by package
-	if ctx.QueryParam("flat") == "true" {
-		firstPartyVulns, err := c.firstPartyVulnRepository.GetFirstPartyVulnsByAssetIdPagedAndFlat(nil, assetVersion.Name, assetVersion.AssetID, core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
-		if err != nil {
-			return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
-		}
-
-		return ctx.JSON(200, firstPartyVulns.Map(func(firstPartyVuln models.FirstPartyVuln) any {
-			return convertFirstPartyVulnToDetailedDTO(firstPartyVuln)
-		}))
-	}
-
 	pagedResp, _, err := c.firstPartyVulnRepository.GetByAssetVersionPaged(
 		nil,
 		assetVersion.Name,
@@ -202,28 +191,7 @@ func (c firstPartyVulnController) ListPaged(ctx core.Context) error {
 
 func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) detailedFirstPartyVulnDTO {
 	return detailedFirstPartyVulnDTO{
-		FirstPartyVulnDTO: FirstPartyVulnDTO{
-			ID:                   firstPartyVuln.ID,
-			ScannerIDs:           firstPartyVuln.ScannerIDs,
-			Message:              firstPartyVuln.Message,
-			AssetID:              firstPartyVuln.AssetID.String(),
-			State:                firstPartyVuln.State,
-			RuleID:               firstPartyVuln.RuleID,
-			Uri:                  firstPartyVuln.Uri,
-			StartLine:            firstPartyVuln.StartLine,
-			StartColumn:          firstPartyVuln.StartColumn,
-			EndLine:              firstPartyVuln.EndLine,
-			EndColumn:            firstPartyVuln.EndColumn,
-			Snippet:              firstPartyVuln.Snippet,
-			CreatedAt:            firstPartyVuln.CreatedAt,
-			TicketID:             firstPartyVuln.TicketID,
-			TicketURL:            firstPartyVuln.TicketURL,
-			ManualTicketCreation: firstPartyVuln.ManualTicketCreation,
-			Commit:               firstPartyVuln.Commit,
-			Email:                firstPartyVuln.Email,
-			Author:               firstPartyVuln.Author,
-			Date:                 firstPartyVuln.Date,
-		},
+		FirstPartyVulnDTO: FirstPartyVulnToDto(firstPartyVuln),
 		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {
 			return events.VulnEventDTO{
 				ID:                ev.ID,

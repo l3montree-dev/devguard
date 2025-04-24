@@ -28,6 +28,12 @@ type FirstPartyVulnDTO struct {
 	Email                string           `json:"email"`
 	Author               string           `json:"author"`
 	Date                 string           `json:"date"`
+
+	RuleName        string         `json:"ruleName"`
+	RuleHelp        string         `json:"ruleHelp"`
+	RuleHelpUri     string         `json:"ruleHelpUri"`
+	RuleDescription string         `json:"ruleDescription"`
+	RuleProperties  map[string]any `json:"ruleProperties"`
 }
 
 type detailedFirstPartyVulnDTO struct {
@@ -58,5 +64,11 @@ func FirstPartyVulnToDto(f models.FirstPartyVuln) FirstPartyVulnDTO {
 		Email:                f.Email,
 		Author:               f.Author,
 		Date:                 f.Date,
+
+		RuleName:        f.RuleName,
+		RuleHelp:        f.RuleHelp,
+		RuleHelpUri:     f.RuleHelpUri,
+		RuleDescription: f.RuleDescription,
+		RuleProperties:  f.RuleProperties,
 	}
 }

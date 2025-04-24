@@ -127,7 +127,6 @@ type FirstPartyVulnRepository interface {
 	Begin() DB
 	GetDefaultFirstPartyVulnsByProjectIdPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
 	GetDefaultFirstPartyVulnsByOrgIdPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
-	GetFirstPartyVulnsByAssetIdPagedAndFlat(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
 	GetByAssetId(tx DB, assetId uuid.UUID) ([]models.FirstPartyVuln, error)
 	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], map[string]int, error)
 	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
@@ -239,7 +238,7 @@ type ConfigRepository interface {
 type VulnEventRepository interface {
 	SaveBatch(db DB, events []models.VulnEvent) error
 	Save(db DB, event *models.VulnEvent) error
-	ReadAssetEventsByVulnID(vulnID string) ([]models.VulnEventDetail, error)
+	ReadAssetEventsByVulnID(vulnID string, vulnType models.VulnType) ([]models.VulnEventDetail, error)
 	ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string, pageInfo PageInfo, filter []FilterQuery) (Paged[models.VulnEventDetail], error)
 }
 

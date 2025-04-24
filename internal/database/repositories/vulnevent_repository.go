@@ -22,8 +22,43 @@ func NewVulnEventRepository(db core.DB) *eventRepository {
 	}
 }
 
-func (r *eventRepository) ReadAssetEventsByVulnID(vulnID string) ([]models.VulnEventDetail, error) {
+func (r *eventRepository) ReadAssetEventsByVulnID(vulnID string, vulnType models.VulnType) ([]models.VulnEventDetail, error) {
+	if vulnType == models.VulnTypeDependencyVuln {
+		return r.readDependencyVulnAssetEvents(vulnID)
+	}
+	return r.readFirstPartyVulnAssetEvents(vulnID)
+}
 
+func (r *eventRepository) readFirstPartyVulnAssetEvents(vulnID string) ([]models.VulnEventDetail, error) {
+	var events []models.VulnEventDetail
+
+	//get the dependency vuln to get the asset id and cve id
+	var t models.FirstPartyVuln
+	err := r.db.First(&t, "id = ?", vulnID).Error
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.db.Table("vuln_events").
+		Select("vuln_events.*, first_party_vulnerabilities.asset_version_name, first_party_vulnerabilities.asset_id, asset_versions.slug").
+		Joins("LEFT JOIN first_party_vulnerabilities ON vuln_events.vuln_id = first_party_vulnerabilities.id").
+		Joins("LEFT JOIN asset_versions ON first_party_vulnerabilities.asset_id = asset_versions.asset_id AND first_party_vulnerabilities.asset_version_name = asset_versions.name").
+		Where("vuln_events.vuln_id IN (?)",
+			r.db.Table("first_party_vulnerabilities").
+				Select("id").
+				Where("asset_id = ? AND scanner_ids = ? AND rule_id = ? AND uri = ? AND start_line = ?", t.AssetID, t.ScannerIDs, t.RuleID, t.Uri, t.StartLine),
+		).
+		Order("vuln_events.created_at ASC").
+		Find(&events).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return events, nil
+}
+
+func (r *eventRepository) readDependencyVulnAssetEvents(vulnID string) ([]models.VulnEventDetail, error) {
 	var events []models.VulnEventDetail
 
 	//get the dependency vuln to get the asset id and cve id
@@ -44,6 +79,7 @@ func (r *eventRepository) ReadAssetEventsByVulnID(vulnID string) ([]models.VulnE
 		).
 		Order("vuln_events.created_at ASC").
 		Find(&events).Error
+
 	if err != nil {
 		return nil, err
 	}

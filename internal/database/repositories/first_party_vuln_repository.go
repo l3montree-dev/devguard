@@ -37,15 +37,13 @@ func (r *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx core.DB, a
 
 	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).Where("first_party_vulnerabilities.asset_id = ?", assetID)
 
-	/* 	// apply filters
-	   	for _, f := range filter {
-	   		q = q.Where(f.SQL(), f.Value())
-	   	}
-	   	if search != "" && len(search) > 2 {
-	   		q = q.Where("(\"CVE\".description ILIKE ?  OR dependencyVulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
-	   	}
-
-	*/
+	// apply filters
+	for _, f := range filter {
+		q = q.Where(f.SQL(), f.Value())
+	}
+	if search != "" && len(search) > 2 {
+		q = q.Where("(\"first_party_vulnerabilities\".message ILIKE ?  OR first_party_vulnerabilities.filename ILIKE ? OR rule_description ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+	}
 
 	err := q.Count(&count).Error
 	if err != nil {
@@ -59,17 +57,6 @@ func (r *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx core.DB, a
 	}
 	//TODO: check it
 	return core.NewPaged(pageInfo, count, firstPartyVulns), nil, nil
-}
-
-func (r *firstPartyVulnerabilityRepository) GetFirstPartyVulnsByAssetIdPagedAndFlat(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
-	return r.GetFirstPartyVulnsPaged(tx, []string{assetVersionName}, []string{assetID.String()}, pageInfo, search, filter, sort)
-}
-
-func (r firstPartyVulnerabilityRepository) Read(id string) (models.FirstPartyVuln, error) {
-	var t models.FirstPartyVuln
-	err := r.db.First(&t, id).Error
-
-	return t, err
 }
 
 func (g firstPartyVulnerabilityRepository) ReadDependencyVulnWithAssetVersionEvents(id string) (models.FirstPartyVuln, []models.VulnEvent, error) {
