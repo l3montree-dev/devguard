@@ -49,15 +49,29 @@ func ScanAssetVersions(db core.DB) error {
 		return err
 	}
 	var org models.Org
+	orgCache := make(map[uuid.UUID]*models.Org) //stash every org we already found so we avoid querying for the same org of an asset/project repeatedly
 	for i := range assetVersions {
-		org, err = getOrgFromAsset(db, assetVersions[i].AssetID)
+		if orgCache[assetVersions[i].AssetID] == nil { //check if we already have found the org for this asset
+			if orgCache[assetVersions[i].Asset.ProjectID] == nil { //if not we check if we already have found the org for the project
+				org, err = getOrgFromAsset(db, assetVersions[i].AssetID)
+				if err != nil {
+					continue
+				}
+				orgCache[assetVersions[i].AssetID] = &org //put both the keys of the assetID and the projectID into the stash
+				orgCache[assetVersions[i].Asset.ProjectID] = &org
+			} else {
+				org = *orgCache[assetVersions[i].Asset.ProjectID] //if we already queried this org we just retrieve it from the map
+			}
+		} else {
+			org = *orgCache[assetVersions[i].AssetID]
+		}
+
+		bom := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", org.Name, assetVersions[i].Components)
+		normalizedBOM := normalize.FromCdxBom(bom, false)
+		_, err := scan.ScanNormalizedSBOM(s, assetVersions[i].Asset, assetVersions[i], normalizedBOM, assetVersions[i].Components[0].ScannerIDs, "system")
 		if err != nil {
 			continue
 		}
-		bom := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", org.Name, assetVersions[i].Components)
-		normalizedBOM := normalize.FromCdxBom(bom, true)
-		scan.ScanNormalizedSBOM(s, nil, assetVersions[i], normalizedBOM, assetVersions[i].Components[0].ScannerIDs)
-
 	}
 	return nil
 }
