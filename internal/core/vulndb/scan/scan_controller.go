@@ -24,6 +24,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -105,8 +106,11 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
+	return ScanNormalizedSBOM(s, asset, assetVersion, normalizedBom, scannerID, userID)
+}
 
-	// scan the bom we just retrieved.
+func ScanNormalizedSBOM(s *httpController, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
+	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
 	if err != nil {
