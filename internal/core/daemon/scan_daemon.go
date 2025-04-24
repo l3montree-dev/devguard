@@ -1,6 +1,9 @@
 package daemon
 
 import (
+	"fmt"
+	"log/slog"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
@@ -16,6 +19,7 @@ import (
 )
 
 func ScanAssetVersions(db core.DB) error {
+	fmt.Printf("----------------FUNCTION GOT CALLED-----------------------------")
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
@@ -55,6 +59,7 @@ func ScanAssetVersions(db core.DB) error {
 			if orgCache[assetVersions[i].Asset.ProjectID] == nil { //if not we check if we already have found the org for the project
 				org, err = getOrgFromAsset(db, assetVersions[i].AssetID)
 				if err != nil {
+					slog.Error("Error in the loop 1")
 					continue
 				}
 				orgCache[assetVersions[i].AssetID] = &org //put both the keys of the assetID and the projectID into the stash
@@ -65,13 +70,24 @@ func ScanAssetVersions(db core.DB) error {
 		} else {
 			org = *orgCache[assetVersions[i].AssetID]
 		}
-
-		bom := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", org.Name, assetVersions[i].Components)
-		normalizedBOM := normalize.FromCdxBom(bom, false)
-		_, err := scan.ScanNormalizedSBOM(s, assetVersions[i].Asset, assetVersions[i], normalizedBOM, assetVersions[i].Components[0].ScannerIDs, "system")
+		components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, "")
 		if err != nil {
+			slog.Error("Error in the loop 2")
 			continue
 		}
+		bom := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", org.Name, components)
+		normalizedBOM := normalize.FromCdxBom(bom, false)
+		if len(components) <= 0 {
+			_, err = scan.ScanNormalizedSBOM(s, assetVersions[i].Asset, assetVersions[i], normalizedBOM, "Automatic-Scan", "system")
+		} else {
+			_, err = scan.ScanNormalizedSBOM(s, assetVersions[i].Asset, assetVersions[i], normalizedBOM, components[0].ScannerIDs, "system")
+		}
+
+		if err != nil {
+			slog.Error("Error in the loop 3")
+			continue
+		}
+		fmt.Printf("\nNO ERROR\n")
 	}
 	return nil
 }
@@ -79,7 +95,7 @@ func ScanAssetVersions(db core.DB) error {
 func getOrgFromAsset(db core.DB, assetID uuid.UUID) (models.Org, error) {
 	var org models.Org
 
-	err := db.Raw("SELECT o.* FROM organizations o JOIN projects p ON p.organization_id = o.id JOIN assets a ON p.id = a.project_idWHERE a.id = ?", assetID).First(&org).Error
+	err := db.Raw("SELECT o.* FROM organizations o JOIN projects p ON p.organization_id = o.id JOIN assets a ON p.id = a.project_id WHERE a.id = ?", assetID).First(&org).Error
 	if err != nil {
 		return org, err
 	}
