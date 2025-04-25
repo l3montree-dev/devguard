@@ -1,9 +1,6 @@
 package daemon
 
 import (
-	"log/slog"
-
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
@@ -51,24 +48,8 @@ func ScanAssetVersions(db core.DB) error {
 	if err != nil {
 		return err
 	}
-	var org models.Org
-	orgCache := make(map[uuid.UUID]*models.Org) //stash every org we already found so we avoid querying for the same org of an asset/project repeatedly
+
 	for i := range assetVersions {
-		if orgCache[assetVersions[i].AssetID] == nil { //check if we already have found the org for this asset
-			if orgCache[assetVersions[i].Asset.ProjectID] == nil { //if not we check if we already have found the org for the project
-				org, err = getOrgFromAsset(db, assetVersions[i].AssetID)
-				if err != nil {
-					slog.Error("Error in the loop 1")
-					continue
-				}
-				orgCache[assetVersions[i].AssetID] = &org //put both the keys of the assetID and the projectID into the stash
-				orgCache[assetVersions[i].Asset.ProjectID] = &org
-			} else {
-				org = *orgCache[assetVersions[i].Asset.ProjectID] //if we already queried this org we just retrieve it from the map
-			}
-		} else {
-			org = *orgCache[assetVersions[i].AssetID]
-		}
 		components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, "")
 		if err != nil {
 			continue
@@ -81,7 +62,7 @@ func ScanAssetVersions(db core.DB) error {
 		}
 
 		for scannerID, components := range scannerIDMap {
-			bom := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", org.Name, components)
+			bom := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", "", components)
 			normalizedBOM := normalize.FromCdxBom(bom, false)
 			if len(components) <= 0 {
 				continue
@@ -95,14 +76,4 @@ func ScanAssetVersions(db core.DB) error {
 		}
 	}
 	return nil
-}
-
-func getOrgFromAsset(db core.DB, assetID uuid.UUID) (models.Org, error) {
-	var org models.Org
-
-	err := db.Raw("SELECT o.* FROM organizations o JOIN projects p ON p.organization_id = o.id JOIN assets a ON p.id = a.project_id WHERE a.id = ?", assetID).First(&org).Error
-	if err != nil {
-		return org, err
-	}
-	return org, nil
 }
