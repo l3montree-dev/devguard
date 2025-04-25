@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -29,17 +30,21 @@ func NewSecretScanningCommand() *cobra.Command {
 	return secretScanningCommand
 }
 
-func secretScan(path string) (*common.SarifResult, error) {
-	file, err := os.CreateTemp("", "secret-scanning.sarif")
+func secretScan(p string) (*common.SarifResult, error) {
+	dir := os.TempDir()
+	dir = path.Join(dir, "sast")
+
+	// create new directory
+	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create temp file")
 	}
 
 	var scannerCmd *exec.Cmd
 
-	slog.Info("Starting secret scanning", "path", path)
+	slog.Info("Starting secret scanning", "path", p)
 
-	scannerCmd = exec.Command("gitleaks", "git", "-v", path, "--report-path", file.Name(), "--report-format", "sarif") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
+	scannerCmd = exec.Command("gitleaks", "git", "-v", p, "--report-path", path.Join(dir, "result.sarif"), "--report-format", "sarif") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
@@ -57,7 +62,7 @@ func secretScan(path string) (*common.SarifResult, error) {
 	// read AND parse the file
 	var sarifScan common.SarifResult
 	// open the file
-	file, err = os.Open(file.Name())
+	file, err := os.Open(path.Join(dir, "result.sarif"))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open file")
 	}

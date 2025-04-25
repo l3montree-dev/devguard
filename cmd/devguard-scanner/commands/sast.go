@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -40,17 +41,22 @@ func printSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, asset
 	fmt.Println(tw.Render())
 }
 
-func sastScan(path string) (*common.SarifResult, error) {
-	file, err := os.CreateTemp("", "*.sarif")
+func sastScan(p string) (*common.SarifResult, error) {
+	dir := os.TempDir()
+	dir = path.Join(dir, "sast")
+
+	// create new directory
+	err := os.MkdirAll(dir, 0755)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create temp file")
 	}
 
 	var scannerCmd *exec.Cmd
 
-	slog.Info("Starting sast scanning", "path", path)
+	slog.Info("Starting sast scanning", "path", p)
 
-	scannerCmd = exec.Command("semgrep", "scan", path, "--sarif", "--sarif-output", file.Name(), "-v") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack
+	scannerCmd = exec.Command("semgrep", "scan", p, "--sarif", "--sarif-output", path.Join(dir, "result.sarif"), "-v") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack
 
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
@@ -67,7 +73,7 @@ func sastScan(path string) (*common.SarifResult, error) {
 
 	// read AND parse the file
 	// open the file
-	file, err = os.Open(file.Name())
+	file, err := os.Open(path.Join(dir, "result.sarif"))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not open file")
 	}
