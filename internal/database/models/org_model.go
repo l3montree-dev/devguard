@@ -1,5 +1,7 @@
 package models
 
+import "github.com/l3montree-dev/devguard/internal/database"
+
 type Org struct {
 	Model
 	Name                   string    `json:"name" gorm:"type:text"`
@@ -20,6 +22,8 @@ type Org struct {
 	GitLabIntegrations []GitLabIntegration `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
 
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
+
+	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
 }
 
 func (m Model) TableName() string {

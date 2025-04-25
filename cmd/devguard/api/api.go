@@ -498,6 +498,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.GET("/projects/", projectController.List, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
 	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
+	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)
@@ -524,6 +525,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectRouter.POST("/members/", projectController.InviteMembers, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
 	projectRouter.DELETE("/members/:userId/", projectController.RemoveMember, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
 
+	projectRouter.GET("/config-files/:config-file/", projectController.GetConfigFile)
+
 	projectRouter.PUT("/members/:userId/", projectController.ChangeRole, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
 
 	//Api functions for interacting with an asset inside a project  ->  .../projects/<project-name>/assets/<asset-name>/...
@@ -535,6 +538,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
 	assetRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
 	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
+	assetRouter.GET("/config-files/:config-file/", assetController.GetConfigFile)
 
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 

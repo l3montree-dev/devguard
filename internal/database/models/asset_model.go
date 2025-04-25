@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/database"
 )
 
 type AssetType string
@@ -57,6 +58,8 @@ type Asset struct {
 	LastDastScan      *time.Time `json:"lastDastScan"`
 
 	SigningPubKey *string `json:"signingPubKey" gorm:"type:text;"`
+
+	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
 }
 
 func (m Asset) TableName() string {

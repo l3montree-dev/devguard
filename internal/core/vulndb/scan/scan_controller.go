@@ -24,6 +24,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -72,7 +73,6 @@ type FirstPartyScanResponse struct {
 
 func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
-
 	normalizedBom := bom
 	asset := core.GetAsset(c)
 
@@ -106,7 +106,11 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		return scanResults, err
 	}
 
-	// scan the bom we just retrieved.
+	return ScanNormalizedSBOM(s, asset, assetVersion, normalizedBom, scannerID, userID)
+}
+
+func ScanNormalizedSBOM(s *httpController, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
+	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
 	if err != nil {
