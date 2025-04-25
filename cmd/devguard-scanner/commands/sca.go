@@ -166,7 +166,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	tw.AppendRows(utils.Map(
 		scanResponse.DependencyVulns,
 		func(v vuln.DependencyVulnDTO) table.Row {
-			clickableLink := fmt.Sprintf("%s/%s/refs/%s/vulns/%s", webUI, assetName, v.AssetVersionName, v.ID)
+			clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/%s", webUI, assetName, v.AssetVersionName, v.ID)
 
 			// extract package name and version from purl
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
