@@ -21,13 +21,12 @@ func NewVulnEventController(vulnEventRepository core.VulnEventRepository, assetV
 }
 
 func (c vulnEventController) ReadAssetEventsByVulnID(ctx core.Context) error {
-
-	vulnId, err := core.GetVulnID(ctx)
+	vulnId, vulnType, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "vulnId is required").WithInternal(err)
 	}
 
-	events, err := c.vulnEventRepository.ReadAssetEventsByVulnID(vulnId)
+	events, err := c.vulnEventRepository.ReadAssetEventsByVulnID(vulnId, vulnType)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}

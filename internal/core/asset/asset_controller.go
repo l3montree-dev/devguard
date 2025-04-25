@@ -114,7 +114,7 @@ func (a *httpController) Read(ctx core.Context) error {
 	return ctx.JSON(200, app)
 }
 
-func (c *httpController) Update(ctx core.Context) error {
+func (a *httpController) Update(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 
 	req := ctx.Request().Body
@@ -150,7 +150,7 @@ func (c *httpController) Update(ctx core.Context) error {
 	}
 
 	if justification != "" {
-		err = c.assetService.UpdateAssetRequirements(asset, core.GetSession(ctx).GetUserID(), justification)
+		err = a.assetService.UpdateAssetRequirements(asset, core.GetSession(ctx).GetUserID(), justification)
 		if err != nil {
 			return fmt.Errorf("Error updating requirements: %v", err)
 		}
@@ -201,7 +201,7 @@ func (c *httpController) Update(ctx core.Context) error {
 
 	if enableTicketRangeUpdated || justification != "" {
 		go func() {
-			if err := c.dependencyVulnService.SyncTickets(asset); err != nil {
+			if err := a.dependencyVulnService.SyncTickets(asset); err != nil {
 				slog.Warn("could not sync tickets", "err", err)
 			}
 		}()
@@ -213,11 +213,32 @@ func (c *httpController) Update(ctx core.Context) error {
 	}
 
 	if updated || enableTicketRangeUpdated {
-		err = c.assetRepository.Update(nil, &asset)
+		err = a.assetRepository.Update(nil, &asset)
 		if err != nil {
 			return fmt.Errorf("error updating asset: %v", err)
 		}
 	}
 
 	return ctx.JSON(200, asset)
+}
+
+func (a *httpController) GetConfigFile(ctx core.Context) error {
+	organization := core.GetOrganization(ctx)
+	project := core.GetProject(ctx)
+	asset := core.GetAsset(ctx)
+	configID := ctx.Param("config-file")
+
+	configContent, ok := asset.ConfigFiles[configID]
+	if !ok { //if we have no config files in this asset we want to look in the corresponding project and then in the organization
+		configContent, ok = project.ConfigFiles[configID]
+		if !ok {
+			configContent, ok = organization.ConfigFiles[configID]
+			if !ok {
+				return ctx.NoContent(404)
+			}
+			return ctx.JSON(200, configContent)
+		}
+		return ctx.JSON(200, configContent)
+	}
+	return ctx.JSON(200, configContent)
 }

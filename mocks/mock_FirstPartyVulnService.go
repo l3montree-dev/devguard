@@ -22,7 +22,7 @@ func (_m *FirstPartyVulnService) EXPECT() *FirstPartyVulnService_Expecter {
 }
 
 // UpdateFirstPartyVulnState provides a mock function with given fields: tx, userID, firstPartyVuln, statusType, justification
-func (_m *FirstPartyVulnService) UpdateFirstPartyVulnState(tx *gorm.DB, userID string, firstPartyVuln *models.FirstPartyVulnerability, statusType string, justification string) (models.VulnEvent, error) {
+func (_m *FirstPartyVulnService) UpdateFirstPartyVulnState(tx *gorm.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string) (models.VulnEvent, error) {
 	ret := _m.Called(tx, userID, firstPartyVuln, statusType, justification)
 
 	if len(ret) == 0 {
@@ -31,16 +31,16 @@ func (_m *FirstPartyVulnService) UpdateFirstPartyVulnState(tx *gorm.DB, userID s
 
 	var r0 models.VulnEvent
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.FirstPartyVulnerability, string, string) (models.VulnEvent, error)); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.FirstPartyVuln, string, string) (models.VulnEvent, error)); ok {
 		return rf(tx, userID, firstPartyVuln, statusType, justification)
 	}
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.FirstPartyVulnerability, string, string) models.VulnEvent); ok {
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, *models.FirstPartyVuln, string, string) models.VulnEvent); ok {
 		r0 = rf(tx, userID, firstPartyVuln, statusType, justification)
 	} else {
 		r0 = ret.Get(0).(models.VulnEvent)
 	}
 
-	if rf, ok := ret.Get(1).(func(*gorm.DB, string, *models.FirstPartyVulnerability, string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(*gorm.DB, string, *models.FirstPartyVuln, string, string) error); ok {
 		r1 = rf(tx, userID, firstPartyVuln, statusType, justification)
 	} else {
 		r1 = ret.Error(1)
@@ -57,16 +57,16 @@ type FirstPartyVulnService_UpdateFirstPartyVulnState_Call struct {
 // UpdateFirstPartyVulnState is a helper method to define mock.On call
 //   - tx *gorm.DB
 //   - userID string
-//   - firstPartyVuln *models.FirstPartyVulnerability
+//   - firstPartyVuln *models.FirstPartyVuln
 //   - statusType string
 //   - justification string
 func (_e *FirstPartyVulnService_Expecter) UpdateFirstPartyVulnState(tx interface{}, userID interface{}, firstPartyVuln interface{}, statusType interface{}, justification interface{}) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	return &FirstPartyVulnService_UpdateFirstPartyVulnState_Call{Call: _e.mock.On("UpdateFirstPartyVulnState", tx, userID, firstPartyVuln, statusType, justification)}
 }
 
-func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Run(run func(tx *gorm.DB, userID string, firstPartyVuln *models.FirstPartyVulnerability, statusType string, justification string)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
+func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Run(run func(tx *gorm.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].(*models.FirstPartyVulnerability), args[3].(string), args[4].(string))
+		run(args[0].(*gorm.DB), args[1].(string), args[2].(*models.FirstPartyVuln), args[3].(string), args[4].(string))
 	})
 	return _c
 }
@@ -76,22 +76,22 @@ func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Return(_a0 model
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) RunAndReturn(run func(*gorm.DB, string, *models.FirstPartyVulnerability, string, string) (models.VulnEvent, error)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
+func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) RunAndReturn(run func(*gorm.DB, string, *models.FirstPartyVuln, string, string) (models.VulnEvent, error)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// UserDetectedFirstPartyVulns provides a mock function with given fields: tx, userID, scannerId, firstPartyVulns, doRiskManagement
-func (_m *FirstPartyVulnService) UserDetectedFirstPartyVulns(tx *gorm.DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error {
-	ret := _m.Called(tx, userID, scannerId, firstPartyVulns, doRiskManagement)
+// UserDetectedFirstPartyVulns provides a mock function with given fields: tx, userID, scannerId, firstPartyVulns
+func (_m *FirstPartyVulnService) UserDetectedFirstPartyVulns(tx *gorm.DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVuln) error {
+	ret := _m.Called(tx, userID, scannerId, firstPartyVulns)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserDetectedFirstPartyVulns")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, string, []models.FirstPartyVulnerability, bool) error); ok {
-		r0 = rf(tx, userID, scannerId, firstPartyVulns, doRiskManagement)
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, string, []models.FirstPartyVuln) error); ok {
+		r0 = rf(tx, userID, scannerId, firstPartyVulns)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -108,15 +108,14 @@ type FirstPartyVulnService_UserDetectedFirstPartyVulns_Call struct {
 //   - tx *gorm.DB
 //   - userID string
 //   - scannerId string
-//   - firstPartyVulns []models.FirstPartyVulnerability
-//   - doRiskManagement bool
-func (_e *FirstPartyVulnService_Expecter) UserDetectedFirstPartyVulns(tx interface{}, userID interface{}, scannerId interface{}, firstPartyVulns interface{}, doRiskManagement interface{}) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
-	return &FirstPartyVulnService_UserDetectedFirstPartyVulns_Call{Call: _e.mock.On("UserDetectedFirstPartyVulns", tx, userID, scannerId, firstPartyVulns, doRiskManagement)}
+//   - firstPartyVulns []models.FirstPartyVuln
+func (_e *FirstPartyVulnService_Expecter) UserDetectedFirstPartyVulns(tx interface{}, userID interface{}, scannerId interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+	return &FirstPartyVulnService_UserDetectedFirstPartyVulns_Call{Call: _e.mock.On("UserDetectedFirstPartyVulns", tx, userID, scannerId, firstPartyVulns)}
 }
 
-func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Run(run func(tx *gorm.DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool)) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Run(run func(tx *gorm.DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].(string), args[3].([]models.FirstPartyVulnerability), args[4].(bool))
+		run(args[0].(*gorm.DB), args[1].(string), args[2].(string), args[3].([]models.FirstPartyVuln))
 	})
 	return _c
 }
@@ -126,22 +125,22 @@ func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Return(_a0 err
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) RunAndReturn(run func(*gorm.DB, string, string, []models.FirstPartyVulnerability, bool) error) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) RunAndReturn(run func(*gorm.DB, string, string, []models.FirstPartyVuln) error) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// UserFixedFirstPartyVulns provides a mock function with given fields: tx, userID, firstPartyVulns, doRiskManagement
-func (_m *FirstPartyVulnService) UserFixedFirstPartyVulns(tx *gorm.DB, userID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool) error {
-	ret := _m.Called(tx, userID, firstPartyVulns, doRiskManagement)
+// UserFixedFirstPartyVulns provides a mock function with given fields: tx, userID, firstPartyVulns
+func (_m *FirstPartyVulnService) UserFixedFirstPartyVulns(tx *gorm.DB, userID string, firstPartyVulns []models.FirstPartyVuln) error {
+	ret := _m.Called(tx, userID, firstPartyVulns)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserFixedFirstPartyVulns")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, []models.FirstPartyVulnerability, bool) error); ok {
-		r0 = rf(tx, userID, firstPartyVulns, doRiskManagement)
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, []models.FirstPartyVuln) error); ok {
+		r0 = rf(tx, userID, firstPartyVulns)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -157,15 +156,14 @@ type FirstPartyVulnService_UserFixedFirstPartyVulns_Call struct {
 // UserFixedFirstPartyVulns is a helper method to define mock.On call
 //   - tx *gorm.DB
 //   - userID string
-//   - firstPartyVulns []models.FirstPartyVulnerability
-//   - doRiskManagement bool
-func (_e *FirstPartyVulnService_Expecter) UserFixedFirstPartyVulns(tx interface{}, userID interface{}, firstPartyVulns interface{}, doRiskManagement interface{}) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
-	return &FirstPartyVulnService_UserFixedFirstPartyVulns_Call{Call: _e.mock.On("UserFixedFirstPartyVulns", tx, userID, firstPartyVulns, doRiskManagement)}
+//   - firstPartyVulns []models.FirstPartyVuln
+func (_e *FirstPartyVulnService_Expecter) UserFixedFirstPartyVulns(tx interface{}, userID interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
+	return &FirstPartyVulnService_UserFixedFirstPartyVulns_Call{Call: _e.mock.On("UserFixedFirstPartyVulns", tx, userID, firstPartyVulns)}
 }
 
-func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) Run(run func(tx *gorm.DB, userID string, firstPartyVulns []models.FirstPartyVulnerability, doRiskManagement bool)) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) Run(run func(tx *gorm.DB, userID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].([]models.FirstPartyVulnerability), args[3].(bool))
+		run(args[0].(*gorm.DB), args[1].(string), args[2].([]models.FirstPartyVuln))
 	})
 	return _c
 }
@@ -175,7 +173,7 @@ func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) Return(_a0 error)
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) RunAndReturn(run func(*gorm.DB, string, []models.FirstPartyVulnerability, bool) error) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) RunAndReturn(run func(*gorm.DB, string, []models.FirstPartyVuln) error) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }

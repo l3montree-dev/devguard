@@ -73,7 +73,6 @@ type FirstPartyScanResponse struct {
 
 func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
-
 	normalizedBom := bom
 	asset := core.GetAsset(c)
 

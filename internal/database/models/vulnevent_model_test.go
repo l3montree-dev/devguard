@@ -18,7 +18,7 @@ func TestNewRawRiskAssessmentUpdatedEvent(t *testing.T) {
 			// populate with necessary fields
 		}
 
-		event := models.NewRawRiskAssessmentUpdatedEvent(vulnID, userID, justification, &oldRisk, report)
+		event := models.NewRawRiskAssessmentUpdatedEvent(vulnID, models.VulnTypeDependencyVuln, userID, justification, &oldRisk, report)
 
 		assert.Equal(t, models.EventTypeRawRiskAssessmentUpdated, event.Type)
 		assert.Equal(t, vulnID, event.VulnID)

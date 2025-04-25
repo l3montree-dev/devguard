@@ -227,7 +227,7 @@ func obfuscateString(str string) string {
 	for i, el := range els {
 		// 5 is a magic number!
 		entropy := utils.ShannonEntropy(el)
-		if entropy > 3.5 {
+		if entropy > 4 {
 			els[i] = el[:1+len(el)/2] + strings.Repeat("*", len(el)/2)
 		}
 	}

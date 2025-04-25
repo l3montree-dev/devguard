@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/database"
 )
 
 type ProjectType string
@@ -31,6 +32,8 @@ type Project struct {
 
 	RepositoryID   *string `json:"repositoryId" gorm:"type:text;"` // the id will be prefixed with the provider name, e.g. github:<github app installation id>:123456
 	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
+
+	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
 }
 
 func (m Project) TableName() string {

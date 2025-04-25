@@ -42,6 +42,7 @@ services:
         condition: service_started
     volumes:
       - type: bind
+        read_only: true
         source: ./.kratos
         target: /etc/config/kratos
     ports:

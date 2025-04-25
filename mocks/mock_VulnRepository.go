@@ -21,6 +21,54 @@ func (_m *VulnRepository) EXPECT() *VulnRepository_Expecter {
 	return &VulnRepository_Expecter{mock: &_m.Mock}
 }
 
+// ApplyAndSave provides a mock function with given fields: tx, dependencyVuln, vulnEvent
+func (_m *VulnRepository) ApplyAndSave(tx *gorm.DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent) error {
+	ret := _m.Called(tx, dependencyVuln, vulnEvent)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ApplyAndSave")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, models.Vuln, *models.VulnEvent) error); ok {
+		r0 = rf(tx, dependencyVuln, vulnEvent)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// VulnRepository_ApplyAndSave_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApplyAndSave'
+type VulnRepository_ApplyAndSave_Call struct {
+	*mock.Call
+}
+
+// ApplyAndSave is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - dependencyVuln models.Vuln
+//   - vulnEvent *models.VulnEvent
+func (_e *VulnRepository_Expecter) ApplyAndSave(tx interface{}, dependencyVuln interface{}, vulnEvent interface{}) *VulnRepository_ApplyAndSave_Call {
+	return &VulnRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", tx, dependencyVuln, vulnEvent)}
+}
+
+func (_c *VulnRepository_ApplyAndSave_Call) Run(run func(tx *gorm.DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent)) *VulnRepository_ApplyAndSave_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(models.Vuln), args[2].(*models.VulnEvent))
+	})
+	return _c
+}
+
+func (_c *VulnRepository_ApplyAndSave_Call) Return(_a0 error) *VulnRepository_ApplyAndSave_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *VulnRepository_ApplyAndSave_Call) RunAndReturn(run func(*gorm.DB, models.Vuln, *models.VulnEvent) error) *VulnRepository_ApplyAndSave_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByTicketID provides a mock function with given fields: tx, ticketID
 func (_m *VulnRepository) FindByTicketID(tx *gorm.DB, ticketID string) (models.Vuln, error) {
 	ret := _m.Called(tx, ticketID)

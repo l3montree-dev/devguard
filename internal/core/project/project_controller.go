@@ -412,3 +412,19 @@ func (p *controller) Update(c core.Context) error {
 	}
 	return c.JSON(200, resp)
 }
+
+func (o *controller) GetConfigFile(ctx core.Context) error {
+	organization := core.GetOrganization(ctx)
+	project := core.GetProject(ctx)
+	configID := ctx.Param("config-file")
+
+	configContent, ok := project.ConfigFiles[configID]
+	if !ok { //if we have no config files in this project we want to look in the corresponding organization
+		configContent, ok = organization.ConfigFiles[configID]
+		if !ok {
+			return ctx.NoContent(404)
+		}
+		return ctx.JSON(200, configContent)
+	}
+	return ctx.JSON(200, configContent)
+}

@@ -370,17 +370,17 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulnWithAnotherScanner_Cal
 	return _c
 }
 
-// UserDetectedDependencyVulns provides a mock function with given fields: tx, userID, scannerID, dependencyVulns, assetVersion, asset, doRiskManagement
-func (_m *DependencyVulnService) UserDetectedDependencyVulns(tx *gorm.DB, userID string, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
-	ret := _m.Called(tx, userID, scannerID, dependencyVulns, assetVersion, asset, doRiskManagement)
+// UserDetectedDependencyVulns provides a mock function with given fields: tx, userID, scannerID, dependencyVulns, assetVersion, asset
+func (_m *DependencyVulnService) UserDetectedDependencyVulns(tx *gorm.DB, userID string, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
+	ret := _m.Called(tx, userID, scannerID, dependencyVulns, assetVersion, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserDetectedDependencyVulns")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, string, []models.DependencyVuln, models.AssetVersion, models.Asset, bool) error); ok {
-		r0 = rf(tx, userID, scannerID, dependencyVulns, assetVersion, asset, doRiskManagement)
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, string, []models.DependencyVuln, models.AssetVersion, models.Asset) error); ok {
+		r0 = rf(tx, userID, scannerID, dependencyVulns, assetVersion, asset)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -400,14 +400,13 @@ type DependencyVulnService_UserDetectedDependencyVulns_Call struct {
 //   - dependencyVulns []models.DependencyVuln
 //   - assetVersion models.AssetVersion
 //   - asset models.Asset
-//   - doRiskManagement bool
-func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulns(tx interface{}, userID interface{}, scannerID interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}, doRiskManagement interface{}) *DependencyVulnService_UserDetectedDependencyVulns_Call {
-	return &DependencyVulnService_UserDetectedDependencyVulns_Call{Call: _e.mock.On("UserDetectedDependencyVulns", tx, userID, scannerID, dependencyVulns, assetVersion, asset, doRiskManagement)}
+func (_e *DependencyVulnService_Expecter) UserDetectedDependencyVulns(tx interface{}, userID interface{}, scannerID interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}) *DependencyVulnService_UserDetectedDependencyVulns_Call {
+	return &DependencyVulnService_UserDetectedDependencyVulns_Call{Call: _e.mock.On("UserDetectedDependencyVulns", tx, userID, scannerID, dependencyVulns, assetVersion, asset)}
 }
 
-func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Run(run func(tx *gorm.DB, userID string, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool)) *DependencyVulnService_UserDetectedDependencyVulns_Call {
+func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Run(run func(tx *gorm.DB, userID string, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset)) *DependencyVulnService_UserDetectedDependencyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].(string), args[3].([]models.DependencyVuln), args[4].(models.AssetVersion), args[5].(models.Asset), args[6].(bool))
+		run(args[0].(*gorm.DB), args[1].(string), args[2].(string), args[3].([]models.DependencyVuln), args[4].(models.AssetVersion), args[5].(models.Asset))
 	})
 	return _c
 }
@@ -417,7 +416,7 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) Return(_a0 err
 	return _c
 }
 
-func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) RunAndReturn(run func(*gorm.DB, string, string, []models.DependencyVuln, models.AssetVersion, models.Asset, bool) error) *DependencyVulnService_UserDetectedDependencyVulns_Call {
+func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) RunAndReturn(run func(*gorm.DB, string, string, []models.DependencyVuln, models.AssetVersion, models.Asset) error) *DependencyVulnService_UserDetectedDependencyVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -471,17 +470,17 @@ func (_c *DependencyVulnService_UserDidNotDetectDependencyVulnWithScannerAnymore
 	return _c
 }
 
-// UserFixedDependencyVulns provides a mock function with given fields: tx, userID, dependencyVulns, assetVersion, asset, doRiskManagement
-func (_m *DependencyVulnService) UserFixedDependencyVulns(tx *gorm.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool) error {
-	ret := _m.Called(tx, userID, dependencyVulns, assetVersion, asset, doRiskManagement)
+// UserFixedDependencyVulns provides a mock function with given fields: tx, userID, dependencyVulns, assetVersion, asset
+func (_m *DependencyVulnService) UserFixedDependencyVulns(tx *gorm.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
+	ret := _m.Called(tx, userID, dependencyVulns, assetVersion, asset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserFixedDependencyVulns")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*gorm.DB, string, []models.DependencyVuln, models.AssetVersion, models.Asset, bool) error); ok {
-		r0 = rf(tx, userID, dependencyVulns, assetVersion, asset, doRiskManagement)
+	if rf, ok := ret.Get(0).(func(*gorm.DB, string, []models.DependencyVuln, models.AssetVersion, models.Asset) error); ok {
+		r0 = rf(tx, userID, dependencyVulns, assetVersion, asset)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -500,14 +499,13 @@ type DependencyVulnService_UserFixedDependencyVulns_Call struct {
 //   - dependencyVulns []models.DependencyVuln
 //   - assetVersion models.AssetVersion
 //   - asset models.Asset
-//   - doRiskManagement bool
-func (_e *DependencyVulnService_Expecter) UserFixedDependencyVulns(tx interface{}, userID interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}, doRiskManagement interface{}) *DependencyVulnService_UserFixedDependencyVulns_Call {
-	return &DependencyVulnService_UserFixedDependencyVulns_Call{Call: _e.mock.On("UserFixedDependencyVulns", tx, userID, dependencyVulns, assetVersion, asset, doRiskManagement)}
+func (_e *DependencyVulnService_Expecter) UserFixedDependencyVulns(tx interface{}, userID interface{}, dependencyVulns interface{}, assetVersion interface{}, asset interface{}) *DependencyVulnService_UserFixedDependencyVulns_Call {
+	return &DependencyVulnService_UserFixedDependencyVulns_Call{Call: _e.mock.On("UserFixedDependencyVulns", tx, userID, dependencyVulns, assetVersion, asset)}
 }
 
-func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) Run(run func(tx *gorm.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset, doRiskManagement bool)) *DependencyVulnService_UserFixedDependencyVulns_Call {
+func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) Run(run func(tx *gorm.DB, userID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset)) *DependencyVulnService_UserFixedDependencyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*gorm.DB), args[1].(string), args[2].([]models.DependencyVuln), args[3].(models.AssetVersion), args[4].(models.Asset), args[5].(bool))
+		run(args[0].(*gorm.DB), args[1].(string), args[2].([]models.DependencyVuln), args[3].(models.AssetVersion), args[4].(models.Asset))
 	})
 	return _c
 }
@@ -517,7 +515,7 @@ func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) Return(_a0 error)
 	return _c
 }
 
-func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) RunAndReturn(run func(*gorm.DB, string, []models.DependencyVuln, models.AssetVersion, models.Asset, bool) error) *DependencyVulnService_UserFixedDependencyVulns_Call {
+func (_c *DependencyVulnService_UserFixedDependencyVulns_Call) RunAndReturn(run func(*gorm.DB, string, []models.DependencyVuln, models.AssetVersion, models.Asset) error) *DependencyVulnService_UserFixedDependencyVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }

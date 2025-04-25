@@ -76,7 +76,8 @@ type patchRequest struct {
 	Grundschutz            *bool   `json:"grundschutz"`
 	Description            *string `json:"description"`
 
-	IsPublic *bool `json:"isPublic"`
+	IsPublic    *bool           `json:"isPublic"`
+	ConfigFiles *map[string]any `json:"configFiles"`
 }
 
 func (p patchRequest) applyToModel(org *models.Org) bool {
@@ -138,6 +139,11 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 		org.IsPublic = *p.IsPublic
 	}
 
+	if p.ConfigFiles != nil {
+		updated = true
+		org.ConfigFiles = *p.ConfigFiles
+	}
+
 	return updated
 
 }
@@ -162,6 +168,8 @@ type OrgDTO struct {
 	GitLabIntegrations []common.GitlabIntegrationDTO `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
 
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
+
+	ConfigFiles map[string]any `json:"configFiles"`
 }
 
 func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.GitlabIntegrationDTO {
@@ -192,6 +200,7 @@ func fromModel(org models.Org) OrgDTO {
 		Projects:               org.Projects,
 		GithubAppInstallations: org.GithubAppInstallations,
 		GitLabIntegrations:     utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
+		ConfigFiles:            org.ConfigFiles,
 	}
 }
 

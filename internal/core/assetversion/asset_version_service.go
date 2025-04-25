@@ -83,9 +83,9 @@ func preferMarkdown(text common.Text) string {
 	return text.Text
 }
 
-func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVulnerability, error) {
+func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error) {
 
-	firstPartyVulnerabilities := []models.FirstPartyVulnerability{}
+	firstPartyVulnerabilities := []models.FirstPartyVuln{}
 
 	ruleMap := make(map[string]common.Rule)
 	for _, run := range sarifScan.Runs {
@@ -102,7 +102,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 
 			rule := ruleMap[result.RuleId]
 
-			firstPartyVulnerability := models.FirstPartyVulnerability{
+			firstPartyVulnerability := models.FirstPartyVuln{
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: assetVersion.Name,
 					AssetID:          asset.ID,
@@ -134,13 +134,13 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 		}
 	}
 
-	firstPartyVulnerabilities = utils.UniqBy(firstPartyVulnerabilities, func(f models.FirstPartyVulnerability) string {
+	firstPartyVulnerabilities = utils.UniqBy(firstPartyVulnerabilities, func(f models.FirstPartyVuln) string {
 		return f.CalculateHash()
 	})
 
 	amountOpened, amountClosed, amountExisting, err := s.handleFirstPartyVulnResult(userID, scannerID, assetVersion, firstPartyVulnerabilities, asset)
 	if err != nil {
-		return 0, 0, []models.FirstPartyVulnerability{}, err
+		return 0, 0, []models.FirstPartyVuln{}, err
 	}
 
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
@@ -158,20 +158,20 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
-func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVulnerability, asset models.Asset) (int, int, []models.FirstPartyVulnerability, error) {
+func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset) (int, int, []models.FirstPartyVuln, error) {
 	// get all existing vulns from the database - this is the old state
 	existingVulns, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		slog.Error("could not get existing vulns", "err", err)
-		return 0, 0, []models.FirstPartyVulnerability{}, err
+		return 0, 0, []models.FirstPartyVuln{}, err
 	}
 
 	// remove all fixed vulns from the existing vulns
-	existingVulns = utils.Filter(existingVulns, func(vuln models.FirstPartyVulnerability) bool {
+	existingVulns = utils.Filter(existingVulns, func(vuln models.FirstPartyVuln) bool {
 		return vuln.State != models.VulnStateFixed
 	})
 
-	comparison := utils.CompareSlices(existingVulns, vulns, func(vuln models.FirstPartyVulnerability) string {
+	comparison := utils.CompareSlices(existingVulns, vulns, func(vuln models.FirstPartyVuln) string {
 		return vuln.CalculateHash()
 	})
 
@@ -187,11 +187,11 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		return s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, fixedVulns)
 	}); err != nil {
 		slog.Error("could not save vulns", "err", err)
-		return 0, 0, []models.FirstPartyVulnerability{}, err
+		return 0, 0, []models.FirstPartyVuln{}, err
 	}
 
 	// the amount we actually fixed, is the amount that was open before
-	fixedVulns = utils.Filter(fixedVulns, func(vuln models.FirstPartyVulnerability) bool {
+	fixedVulns = utils.Filter(fixedVulns, func(vuln models.FirstPartyVuln) bool {
 		return vuln.State == models.VulnStateOpen
 	})
 

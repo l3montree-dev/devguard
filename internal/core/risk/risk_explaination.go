@@ -268,32 +268,13 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	str.WriteString(fmt.Sprintf("| CVSS-B | `%.1f` | %s | \n", e.BaseScore, e.cvssMessage))
 	str.WriteString("\n")
 	//TODO: change it
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/flaws/%s)", baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/vulns/%s)", baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
 	str.WriteString("\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
 	str.WriteString("\n")
 
-	str.WriteString("--- \n")
-
-	str.WriteString("### Interact with this vulnerability\n")
-	str.WriteString("You can use the following slash commands to interact with this vulnerability:\n")
-
-	str.WriteString("\n#### 👍   Reply with this to acknowledge and accept the identified risk.\n")
-	str.WriteString("```text\n")
-	str.WriteString("/accept I accept the risk of this vulnerability, because ...\n")
-	str.WriteString("```\n")
-
-	str.WriteString("\n#### ⚠️ Mark the risk as false positive: Use this command if you believe the reported vulnerability is not actually a valid issue.\n")
-	str.WriteString("```text\n")
-	str.WriteString("/false-positive We are not affected by this vulnerability, because ...\n")
-	str.WriteString("```\n")
-
-	str.WriteString("\n#### 🔁  Reopen the risk: Use this command to reopen a previously closed or accepted vulnerability.\n")
-	str.WriteString("```text\n")
-	str.WriteString("/reopen ... \n")
-	str.WriteString("```\n")
-
+	common.AddSlashCommands(&str)
 	return str.String()
 }
 

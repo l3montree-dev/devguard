@@ -20,10 +20,10 @@ type dependencyVulnsByPackage struct {
 	MaxRisk     float64 `json:"maxRisk"`
 	MaxCVSS     float64 `json:"maxCvss"`
 	//TODO: change the name to DependencyVulnCount
-	DependencyVulnCount int     `json:"flawCount"`
+	DependencyVulnCount int     `json:"vulnCount"`
 	TotalRisk           float64 `json:"totalRisk"`
 	//TODO: change the name to DependencyVulns
-	DependencyVulns []DependencyVulnDTO `json:"flaws"`
+	DependencyVulns []DependencyVulnDTO `json:"vulns"`
 }
 
 type dependencyVulnHttpController struct {
@@ -202,7 +202,7 @@ func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
 		slog.Error("could not bind justification", "err", err)
 	}
 
-	dependencyVulnId, err := core.GetVulnID(ctx)
+	dependencyVulnId, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
@@ -227,7 +227,7 @@ func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
 
 func (c dependencyVulnHttpController) Read(ctx core.Context) error {
 
-	dependencyVulnId, err := core.GetVulnID(ctx)
+	dependencyVulnId, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
@@ -249,7 +249,7 @@ func (c dependencyVulnHttpController) CreateEvent(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	dependencyVulnId, err := core.GetVulnID(ctx)
+	dependencyVulnId, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}

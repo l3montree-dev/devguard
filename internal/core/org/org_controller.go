@@ -470,3 +470,14 @@ func (o *httpController) Metrics(ctx core.Context) error {
 	}
 	return ctx.JSON(200, map[string]string{"ownerId": owner})
 }
+
+func (o *httpController) GetConfigFile(ctx core.Context) error {
+	organization := core.GetOrganization(ctx)
+	configID := ctx.Param("config-file")
+
+	configContent, ok := organization.ConfigFiles[configID]
+	if !ok {
+		return ctx.NoContent(404)
+	}
+	return ctx.JSON(200, configContent)
+}
