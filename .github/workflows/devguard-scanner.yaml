@@ -9,9 +9,28 @@ jobs:
   # Secret scanning job to detect secrets in codebase
   secret-scanning:
     uses: l3montree-dev/devguard-action/.github/workflows/secret-scanning.yml@main
+    with:
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      api-url: https://api.main.devguard.org
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
+
+    # Secret scanning job to detect secrets in codebase
+  iac:
+    uses: l3montree-dev/devguard-action/.github/workflows/iac.yml@main
+    with:
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      api-url: https://api.main.devguard.org
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
   
   sast:
     uses: l3montree-dev/devguard-action/.github/workflows/sast.yml@main
+    with:
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
+      api-url: https://api.main.devguard.org
+    secrets:
+      devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
   sca:
     uses: l3montree-dev/devguard-action/.github/workflows/software-composition-analysis.yml@main
