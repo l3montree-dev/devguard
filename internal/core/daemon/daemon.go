@@ -86,6 +86,19 @@ func Start(db core.DB) {
 			slog.Info("vulndb updated", "duration", time.Since(start))
 		}
 
+		if shouldMirror(configService, "vulndb.scan") {
+			start = time.Now()
+			// update the scan
+			if err := ScanAssetVersions(db); err != nil {
+				slog.Error("could not update scan", "err", err)
+				return nil
+			}
+			if err := markMirrored(configService, "vulndb.scan"); err != nil {
+				slog.Error("could not mark vulndb.scan as mirrored", "err", err)
+			}
+			slog.Info("scan updated", "duration", time.Since(start))
+		}
+
 		// after we have a fresh vulndb we can update the dependencyVulns.
 		// we save data inside the dependency_vulns table: ComponentDepth and ComponentFixedVersion
 		// those need to be updated before recalculating the risk
