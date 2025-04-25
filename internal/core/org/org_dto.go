@@ -16,12 +16,9 @@
 package org
 
 import (
-	"encoding/json"
-
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -79,8 +76,8 @@ type patchRequest struct {
 	Grundschutz            *bool   `json:"grundschutz"`
 	Description            *string `json:"description"`
 
-	IsPublic    *bool   `json:"isPublic"`
-	ConfigFiles *string `json:"configFiles"`
+	IsPublic    *bool           `json:"isPublic"`
+	ConfigFiles *map[string]any `json:"configFiles"`
 }
 
 func (p patchRequest) applyToModel(org *models.Org) bool {
@@ -143,12 +140,8 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 	}
 
 	if p.ConfigFiles != nil {
-		var convertedJSON database.JSONB
-		err := json.Unmarshal([]byte(*p.ConfigFiles), &convertedJSON)
-		if err == nil {
-			updated = true
-			org.ConfigFiles = convertedJSON
-		}
+		updated = true
+		org.ConfigFiles = *p.ConfigFiles
 	}
 
 	return updated
@@ -176,7 +169,7 @@ type OrgDTO struct {
 
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
-	ConfigFiles string `json:"configFiles"`
+	ConfigFiles map[string]any `json:"configFiles"`
 }
 
 func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.GitlabIntegrationDTO {
@@ -189,10 +182,6 @@ func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.Gi
 }
 
 func fromModel(org models.Org) OrgDTO {
-	configFiles, err := json.Marshal(org.ConfigFiles)
-	if err != nil {
-		configFiles = []byte{}
-	}
 	return OrgDTO{
 		Model:                  org.Model,
 		Name:                   org.Name,
@@ -211,7 +200,7 @@ func fromModel(org models.Org) OrgDTO {
 		Projects:               org.Projects,
 		GithubAppInstallations: org.GithubAppInstallations,
 		GitLabIntegrations:     utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
-		ConfigFiles:            string(configFiles),
+		ConfigFiles:            org.ConfigFiles,
 	}
 }
 

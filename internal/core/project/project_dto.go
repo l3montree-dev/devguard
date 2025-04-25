@@ -16,12 +16,9 @@
 package project
 
 import (
-	"encoding/json"
-
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -63,9 +60,9 @@ type patchRequest struct {
 
 	Type *models.ProjectType `json:"type"`
 
-	RepositoryID   *string `json:"repositoryId"`
-	RepositoryName *string `json:"repositoryName"`
-	ConfigFiles    *string `json:"configFiles"`
+	RepositoryID   *string         `json:"repositoryId"`
+	RepositoryName *string         `json:"repositoryName"`
+	ConfigFiles    *map[string]any `json:"configFiles"`
 }
 
 func (projectPatch *patchRequest) applyToModel(project *models.Project) bool {
@@ -101,12 +98,8 @@ func (projectPatch *patchRequest) applyToModel(project *models.Project) bool {
 	}
 
 	if projectPatch.ConfigFiles != nil {
-		var convertedJSON database.JSONB
-		err := json.Unmarshal([]byte(*projectPatch.ConfigFiles), &convertedJSON)
-		if err == nil {
-			updated = true
-			project.ConfigFiles = convertedJSON
-		}
+		updated = true
+		project.ConfigFiles = *projectPatch.ConfigFiles
 	}
 	return updated
 }
@@ -125,7 +118,7 @@ type ProjectDTO struct {
 	RepositoryName *string `json:"repositoryName"`
 
 	Assets      []models.Asset `json:"assets"`
-	ConfigFiles string         `json:"configFiles"`
+	ConfigFiles map[string]any `json:"configFiles"`
 }
 
 type projectDetailsDTO struct {
@@ -134,11 +127,6 @@ type projectDetailsDTO struct {
 }
 
 func fromModel(project models.Project) ProjectDTO {
-	configFiles, err := json.Marshal(project.ConfigFiles)
-	if err != nil {
-		configFiles = []byte{}
-	}
-
 	return ProjectDTO{
 		ID:          project.ID,
 		Name:        project.Name,
@@ -153,6 +141,6 @@ func fromModel(project models.Project) ProjectDTO {
 		RepositoryName: project.RepositoryName,
 
 		Assets:      project.Assets,
-		ConfigFiles: string(configFiles),
+		ConfigFiles: project.ConfigFiles,
 	}
 }

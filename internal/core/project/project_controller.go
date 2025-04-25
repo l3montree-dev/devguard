@@ -418,11 +418,11 @@ func (o *controller) GetConfigFile(ctx core.Context) error {
 	project := core.GetProject(ctx)
 	configID := ctx.Param("config-file")
 
-	configContent := project.ConfigFiles[configID].(string)
-	if configContent == "" { //if we have no config files in this project we want to look in the corresponding organization
-		configContent = organization.ConfigFiles[configID].(string)
-		if configContent == "" {
-			return ctx.JSON(404, configContent)
+	configContent, ok := project.ConfigFiles[configID]
+	if !ok { //if we have no config files in this project we want to look in the corresponding organization
+		configContent, ok = organization.ConfigFiles[configID]
+		if !ok {
+			return ctx.NoContent(404)
 		}
 		return ctx.JSON(200, configContent)
 	}

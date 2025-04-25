@@ -1,11 +1,8 @@
 package asset
 
 import (
-	"encoding/json"
-
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
@@ -79,7 +76,7 @@ type patchRequest struct {
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
 
-	ConfigFiles *string `json:"configFiles"`
+	ConfigFiles *map[string]any `json:"configFiles"`
 }
 
 func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
@@ -124,12 +121,8 @@ func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
 	}
 
 	if assetPatch.ConfigFiles != nil {
-		var convertedJSON database.JSONB
-		err := json.Unmarshal([]byte(*assetPatch.ConfigFiles), &convertedJSON)
-		if err == nil {
-			updated = true
-			asset.ConfigFiles = convertedJSON
-		}
+		updated = true
+		asset.ConfigFiles = *assetPatch.ConfigFiles
 	}
 
 	return updated
