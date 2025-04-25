@@ -59,6 +59,7 @@ func (c *componentRepository) CreateComponents(tx core.DB, components []models.C
 	return c.GetDB(tx).Create(&components).Error
 }
 
+// returns all component dependencies of the assetVersion  found by scannerID use "" to return all no matter who found it
 func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error

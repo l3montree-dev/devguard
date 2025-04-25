@@ -105,7 +105,6 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
-
 	return ScanNormalizedSBOM(s, asset, assetVersion, normalizedBom, scannerID, userID)
 }
 
