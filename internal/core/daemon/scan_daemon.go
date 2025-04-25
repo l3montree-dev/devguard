@@ -1,17 +1,16 @@
 package daemon
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -19,7 +18,7 @@ import (
 )
 
 func ScanAssetVersions(db core.DB) error {
-	fmt.Printf("----------------FUNCTION GOT CALLED-----------------------------")
+
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
@@ -38,8 +37,8 @@ func ScanAssetVersions(db core.DB) error {
 	githubIntegration := integrations.NewGithubIntegration(db)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
-	dependencyVulnService := dependency_vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
-	firstPartyVulnService := dependency_vuln.NewFirstPartyVulnService(firstPartyVulnerabilityRepository, vulnEventRepository, assetRepository)
+	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
+	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnerabilityRepository, vulnEventRepository, assetRepository)
 	depsDevService := vulndb.NewDepsDevService()
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository)
 
@@ -72,22 +71,28 @@ func ScanAssetVersions(db core.DB) error {
 		}
 		components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, "")
 		if err != nil {
-			slog.Error("Error in the loop 2")
 			continue
-		}
-		bom := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", org.Name, components)
-		normalizedBOM := normalize.FromCdxBom(bom, false)
-		if len(components) <= 0 {
-			_, err = scan.ScanNormalizedSBOM(s, assetVersions[i].Asset, assetVersions[i], normalizedBOM, "Automatic-Scan", "system")
-		} else {
-			_, err = scan.ScanNormalizedSBOM(s, assetVersions[i].Asset, assetVersions[i], normalizedBOM, components[0].ScannerIDs, "system")
 		}
 
-		if err != nil {
-			slog.Error("Error in the loop 3")
-			continue
+		// group the components by scannerID
+		scannerIDMap := make(map[string][]models.ComponentDependency)
+		for _, component := range components {
+			scannerIDMap[component.ScannerIDs] = append(scannerIDMap[component.ScannerIDs], component)
 		}
-		fmt.Printf("\nNO ERROR\n")
+
+		for scannerID, components := range scannerIDMap {
+			bom := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", org.Name, components)
+			normalizedBOM := normalize.FromCdxBom(bom, false)
+			if len(components) <= 0 {
+				continue
+			} else {
+				_, err = scan.ScanNormalizedSBOM(s, assetVersions[i].Asset, assetVersions[i], normalizedBOM, scannerID, "system")
+			}
+
+			if err != nil {
+				continue
+			}
+		}
 	}
 	return nil
 }
