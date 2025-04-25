@@ -1,6 +1,8 @@
 package daemon
 
 import (
+	"log/slog"
+
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
@@ -52,6 +54,7 @@ func ScanAssetVersions(db core.DB) error {
 	for i := range assetVersions {
 		components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, "")
 		if err != nil {
+			slog.Error("failed to load components", "error", err)
 			continue
 		}
 
@@ -71,9 +74,12 @@ func ScanAssetVersions(db core.DB) error {
 			}
 
 			if err != nil {
+				slog.Error("failed to scan normalized sbom", "error", err)
 				continue
 			}
 		}
+
+		slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 	}
 	return nil
 }
