@@ -1,11 +1,11 @@
-package dependency_vuln_test
+package vuln_test
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -23,7 +23,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
+		s := vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
 		asset := models.Asset{
 			CVSSAutomaticTicketThreshold: utils.Ptr(0.),
@@ -49,7 +49,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 	})
 	t.Run("No Thresholds set and both CVSS and risk values are provided should return no error because the user doesn't want automatic tickets", func(t *testing.T) {
 
-		s := dependency_vuln.NewService(nil, nil, nil, nil, nil, nil, nil, nil)
+		s := vuln.NewService(nil, nil, nil, nil, nil, nil, nil, nil)
 
 		asset := models.Asset{}
 
@@ -66,7 +66,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		projectRepository := mocks.NewProjectRepository(t)
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, fmt.Errorf("Something went wrong"))
 
-		s := dependency_vuln.NewService(nil, nil, nil, nil, nil, projectRepository, nil, nil)
+		s := vuln.NewService(nil, nil, nil, nil, nil, projectRepository, nil, nil)
 
 		asset := models.Asset{
 			RiskAutomaticTicketThreshold: utils.Ptr(0.),
@@ -87,7 +87,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		projectRepository := mocks.NewProjectRepository(t)
 		projectRepository.On("Read", mock.Anything).Return(models.Project{OrganizationID: uuid.MustParse("52cfdc4c-42ee-436f-9a56-66e441e37dcc"), Slug: "projecttest"}, nil)
 
-		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, nil, nil)
+		s := vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, nil, nil)
 
 		asset := models.Asset{
 			RiskAutomaticTicketThreshold: utils.Ptr(0.),
@@ -112,7 +112,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 
-		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
+		s := vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
 		asset := models.Asset{
 			CVSSAutomaticTicketThreshold: utils.Ptr(0.),
@@ -139,7 +139,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
-		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
+		s := vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
 		asset := models.Asset{
 			CVSSAutomaticTicketThreshold: utils.Ptr(0.),
@@ -172,7 +172,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
+		s := vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
 		asset := models.Asset{
 			CVSSAutomaticTicketThreshold: utils.Ptr(0.),
@@ -205,7 +205,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
-		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
+		s := vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
 		asset := models.Asset{
 			CVSSAutomaticTicketThreshold: utils.Ptr(0.),
@@ -237,7 +237,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 		thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
 		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("Something went wrong"))
 
-		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
+		s := vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
 		asset := models.Asset{
 			RiskAutomaticTicketThreshold: utils.Ptr(0.),
@@ -271,7 +271,7 @@ func TestCreateIssuesForVulnsIfThresholdExceeded(t *testing.T) {
 
 		thirdPartyIntegration.On("ReopenIssue", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-		s := dependency_vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
+		s := vuln.NewService(nil, nil, nil, nil, organizationRepository, projectRepository, thirdPartyIntegration, nil)
 
 		asset := models.Asset{
 			CVSSAutomaticTicketThreshold: utils.Ptr(0.),
@@ -303,7 +303,7 @@ func TestShouldCreateIssue(t *testing.T) {
 		assetVersion := models.AssetVersion{
 			DefaultBranch: false,
 		}
-		s := dependency_vuln.NewService(nil, nil, nil, nil, nil, nil, nil, nil)
+		s := vuln.NewService(nil, nil, nil, nil, nil, nil, nil, nil)
 
 		defaultBranch := s.ShouldCreateIssues(assetVersion)
 		if defaultBranch {
@@ -314,7 +314,7 @@ func TestShouldCreateIssue(t *testing.T) {
 		assetVersion := models.AssetVersion{
 			DefaultBranch: true,
 		}
-		s := dependency_vuln.NewService(nil, nil, nil, nil, nil, nil, nil, nil)
+		s := vuln.NewService(nil, nil, nil, nil, nil, nil, nil, nil)
 
 		defaultBranch := s.ShouldCreateIssues(assetVersion)
 		if !defaultBranch {

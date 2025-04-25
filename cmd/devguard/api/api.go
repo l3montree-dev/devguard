@@ -30,7 +30,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/attestation"
 	"github.com/l3montree-dev/devguard/internal/core/compliance"
 	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
@@ -38,6 +37,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/project"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -373,10 +373,10 @@ func BuildRouter(db core.DB) *echo.Echo {
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 	attestationRepository := repositories.NewAttestationRepository(db)
 
-	dependencyVulnService := dependency_vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
-	firstPartyVulnService := dependency_vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
+	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
+	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
 	projectService := project.NewService(projectRepository)
-	dependencyVulnController := dependency_vuln.NewHttpController(dependencyVulnRepository, dependencyVulnService, projectService)
+	dependencyVulnController := vuln.NewHttpController(dependencyVulnRepository, dependencyVulnService, projectService)
 
 	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
 

@@ -5,8 +5,8 @@ import (
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
@@ -78,8 +78,8 @@ func (a *assetVersionController) AffectedComponents(ctx core.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, utils.Map(dependencyVulns, func(m models.DependencyVuln) dependency_vuln.DependencyVulnDTO {
-		return dependency_vuln.DependencyVulnToDto(m)
+	return ctx.JSON(200, utils.Map(dependencyVulns, func(m models.DependencyVuln) vuln.DependencyVulnDTO {
+		return vuln.DependencyVulnToDto(m)
 	}))
 }
 
