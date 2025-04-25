@@ -131,6 +131,7 @@ jobs:
     - sast
     - golangci
     - tests
+    - iac
     uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     with:
@@ -148,6 +149,7 @@ jobs:
     - sast
     - golangci
     - tests
+    - iac
     uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
     with:
       artifact-suffix: "-scanner"
@@ -167,6 +169,7 @@ jobs:
     - sast
     - golangci
     - tests
+    - iac
     uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@main
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
@@ -184,6 +187,7 @@ jobs:
     - sast
     - golangci
     - tests
+    - iac
     uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@main
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-scanner
