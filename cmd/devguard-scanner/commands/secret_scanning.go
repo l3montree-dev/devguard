@@ -92,7 +92,7 @@ func printSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI stri
 			{"Author:", vuln.Author},
 			{"Email:", vuln.Email},
 			{"Date:", vuln.Date},
-			{"Link:", blue.Sprint(fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID))},
+			{"Link:", blue.Sprint(fmt.Sprintf("%s/%s/code-risks/%s", webUI, assetName, vuln.ID))},
 		}
 
 		tw.AppendRows(raw)

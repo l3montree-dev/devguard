@@ -33,7 +33,7 @@ func printSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, asset
 			tw.AppendRow(table.Row{"File", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))})
 			tw.AppendRow(table.Row{"Line", vuln.StartLine})
 		}
-		tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/first-party-vulns/%s", webUI, assetName, vuln.ID))})
+		tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/code-risks/%s", webUI, assetName, vuln.ID))})
 		tw.AppendSeparator()
 	}
 
