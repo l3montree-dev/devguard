@@ -1,13 +1,31 @@
 package common
 
 type SarifResult struct {
-	Runs []Run `json:"runs"`
+	Version string `json:"version"`
+	Schema  string `json:"$schema"`
+	Runs    []Run  `json:"runs"`
+}
+
+type Text struct {
+	Text     string `json:"text"`
+	Markdown string `json:"markdown"`
+}
+
+type Rule struct {
+	Id               string `json:"id"`
+	Name             string `json:"name"`
+	FullDescription  Text   `json:"fullDescription"`
+	Help             Text   `json:"help"`
+	HelpUri          string `json:"helpUri"`
+	ShortDescription Text   `json:"shortDescription"`
+	Properties       map[string]any
 }
 
 type Run struct {
 	Tool struct {
 		Driver struct {
-			Name string `json:"name"`
+			Name  string `json:"name"`
+			Rules []Rule `json:"rules"`
 		} `json:"driver"`
 	} `json:"tool"`
 	Results []Result `json:"results"`

@@ -2,8 +2,8 @@ package daemon
 
 import (
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 )
 
@@ -13,7 +13,7 @@ func RecalculateRisk(db core.DB) error {
 
 	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
-	dependencyVulnService := dependency_vuln.NewService(
+	dependencyVulnService := vuln.NewService(
 		repositories.NewDependencyVulnRepository(db),
 		repositories.NewVulnEventRepository(db),
 		repositories.NewAssetRepository(db),

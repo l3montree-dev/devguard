@@ -31,8 +31,8 @@ import (
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/common"
-	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -132,11 +132,23 @@ func expandAndObfuscateSnippet(sarifScan *common.SarifResult, path string) {
 				endLine := location.PhysicalLocation.Region.EndLine
 				original := location.PhysicalLocation.Region.Snippet.Text
 
-				// read the file from git
-				fileContent, err := utils.ReadFileFromGitRef(path, sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha, location.PhysicalLocation.ArtifactLocation.Uri)
-				if err != nil {
-					slog.Error("could not read file", "err", err)
-					continue
+				var fileContent []byte
+				var err error
+				// read the file from git - if there is a partial fingerprint which looks like a commit sha
+				// this is a bit of a hack, but we need to read the file from git to expand the snippet
+				if len(sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha) > 0 {
+					fileContent, err = utils.ReadFileFromGitRef(path, sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha, location.PhysicalLocation.ArtifactLocation.Uri)
+					if err != nil {
+						slog.Error("could not read file", "err", err)
+						continue
+					}
+				} else {
+					// read the file from the filesystem
+					fileContent, err = os.ReadFile(location.PhysicalLocation.ArtifactLocation.Uri)
+					if err != nil {
+						slog.Error("could not read file", "err", err)
+						continue
+					}
 				}
 				// expand the snippet
 				expandedSnippet, err := expandSnippet(fileContent, startLine, endLine, original)
@@ -250,7 +262,7 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 	}
 
 	// get all "open" vulns
-	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v dependency_vuln.FirstPartyVulnDTO) bool {
+	openVulns := utils.Filter(scanResponse.FirstPartyVulns, func(v vuln.FirstPartyVulnDTO) bool {
 		return v.State == models.VulnStateOpen
 	})
 

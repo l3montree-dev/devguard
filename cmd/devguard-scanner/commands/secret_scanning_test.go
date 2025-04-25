@@ -13,13 +13,16 @@ var exampleSarifResult = common.SarifResult{
 		{
 			Tool: struct {
 				Driver struct {
-					Name string `json:"name"`
+					Name  string        `json:"name"`
+					Rules []common.Rule `json:"rules"`
 				} `json:"driver"`
 			}{
 				Driver: struct {
-					Name string `json:"name"`
+					Name  string        `json:"name"`
+					Rules []common.Rule `json:"rules"`
 				}{
-					Name: "ExampleTool",
+					Name:  "ExampleTool",
+					Rules: []common.Rule{},
 				},
 			},
 			Results: []common.Result{

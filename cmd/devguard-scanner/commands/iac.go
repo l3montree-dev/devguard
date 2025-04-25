@@ -3,6 +3,7 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -26,13 +27,17 @@ func iacScan(p string) (*common.SarifResult, error) {
 	var scannerCmd *exec.Cmd
 	slog.Info("Starting iac scanning", "path", p)
 
-	scannerCmd = exec.Command("checkov", "-d", p, "--output", "sarif", "--output-file-path", dir) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself
+	scannerCmd = exec.Command("checkov", "-s", "-d", p, "--output", "sarif", "--output-file-path", dir) // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself
 	stderr := &bytes.Buffer{}
 	scannerCmd.Stderr = stderr
 	scannerCmd.Run() // nolint:errcheck
+	if scannerCmd.ProcessState.ExitCode() != 0 {
+		slog.Error("infrastructure as code scanning failed", "stderr", stderr.String())
+		return nil, fmt.Errorf("iac scan failed: %s", stderr.String())
+	}
 
 	// read the file in <dir>/results_sarif.sarif
-	b, err := os.ReadFile(dir + "/results_sarif.sarif")
+	b, err := os.ReadFile(path.Join(dir, "results_sarif.sarif"))
 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read file")
@@ -46,7 +51,7 @@ func iacScan(p string) (*common.SarifResult, error) {
 	}
 
 	// remove the file
-	err = os.Remove(dir + "/results_sarif.sarif")
+	err = os.Remove(path.Join(dir, "results_sarif.sarif"))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not remove file")
 	}

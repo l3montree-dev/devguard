@@ -33,8 +33,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
-	"github.com/l3montree-dev/devguard/internal/core/dependency_vuln"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
@@ -97,7 +97,7 @@ func generateSBOM(path string) (*os.File, error) {
 }
 
 // Function to dynamically change the format of the table row depending on the input parameters
-func dependencyVulnToTableRow(pURL packageurl.PackageURL, v dependency_vuln.DependencyVulnDTO, clickableLink string) table.Row {
+func dependencyVulnToTableRow(pURL packageurl.PackageURL, v vuln.DependencyVulnDTO, clickableLink string) table.Row {
 	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
 		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, clickableLink}
 	} else {
@@ -143,14 +143,14 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	}
 
 	// order the flaws by their risk
-	slices.SortFunc(scanResponse.DependencyVulns, func(a, b dependency_vuln.DependencyVulnDTO) int {
+	slices.SortFunc(scanResponse.DependencyVulns, func(a, b vuln.DependencyVulnDTO) int {
 		return int(utils.OrDefault(a.RawRiskAssessment, 0)*100) - int(utils.OrDefault(b.RawRiskAssessment, 0)*100)
 	})
 
 	// get the max risk of open!!! dependencyVulns
-	openRisks := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f dependency_vuln.DependencyVulnDTO) bool {
+	openRisks := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f vuln.DependencyVulnDTO) bool {
 		return f.State == "open"
-	}), func(f dependency_vuln.DependencyVulnDTO) float64 {
+	}), func(f vuln.DependencyVulnDTO) float64 {
 		return utils.OrDefault(f.RawRiskAssessment, 0)
 	})
 
@@ -165,7 +165,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status", "URL"})
 	tw.AppendRows(utils.Map(
 		scanResponse.DependencyVulns,
-		func(v dependency_vuln.DependencyVulnDTO) table.Row {
+		func(v vuln.DependencyVulnDTO) table.Row {
 			clickableLink := fmt.Sprintf("%s/%s/refs/%s/vulns/%s", webUI, assetName, v.AssetVersionName, v.ID)
 
 			// extract package name and version from purl
