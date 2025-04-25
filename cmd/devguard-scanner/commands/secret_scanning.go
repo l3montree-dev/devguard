@@ -30,7 +30,7 @@ func NewSecretScanningCommand() *cobra.Command {
 }
 
 func secretScan(path string) (*common.SarifResult, error) {
-	file, err := os.CreateTemp("", "*.sarif")
+	file, err := os.CreateTemp("", "secret-scanning.sarif")
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create temp file")
 	}
