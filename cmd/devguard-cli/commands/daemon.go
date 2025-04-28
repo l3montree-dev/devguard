@@ -68,6 +68,17 @@ func triggerDaemon(db core.DB, daemons []string) error {
 		}
 		slog.Info("deps dev information updated", "duration", time.Since(start))
 	}
+
+	if emptyOrContains(daemons, "scan") {
+		start = time.Now()
+		// update scan
+		err := daemon.ScanAssetVersions(db)
+		if err != nil {
+			slog.Error("could not scan asset versions", "err", err)
+			return nil
+		}
+		slog.Info("asset version scanned successfully", "duration", time.Since(start))
+	}
 	// first update the vulndb
 	// this will give us the latest cves, cwes, exploits and affected components
 	if emptyOrContains(daemons, "vulndb") {
