@@ -61,9 +61,6 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// print the signature
-	slog.Info("signature", "signature", out.String())
-
 	return nil
 }
 
