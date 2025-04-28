@@ -279,7 +279,6 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 
 func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 

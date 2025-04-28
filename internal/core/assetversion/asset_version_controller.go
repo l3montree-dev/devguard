@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/openvex/go-vex/pkg/vex"
 	"golang.org/x/exp/slog"
 )
 
@@ -180,6 +181,15 @@ func (a *assetVersionController) VEXJSON(ctx core.Context) error {
 	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom)
 }
 
+func (a *assetVersionController) OpenVEXJSON(ctx core.Context) error {
+	vex, err := a.buildOpenVeX(ctx)
+	if err != nil {
+		return err
+	}
+
+	return vex.ToJSON(ctx.Response().Writer)
+}
+
 func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 
 	assetVersion := core.GetAssetVersion(ctx)
@@ -208,6 +218,39 @@ func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 	return a.assetVersionService.BuildSBOM(assetVersion, version, org.Name, components), nil
 }
 
+func (a *assetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {
+	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
+	org := core.GetOrganization(ctx)
+	// check for version query param
+	version := ctx.QueryParam("version")
+	if version == "" {
+		version = models.NoVersion
+	} else {
+		var err error
+		version, err = normalize.SemverFix(version)
+		if err != nil {
+			return vex.VEX{}, err
+		}
+	}
+
+	scannerID := ctx.QueryParam("scanner")
+
+	// url decode the scanner
+	scannerID, err := url.QueryUnescape(scannerID)
+	if err != nil {
+		return vex.VEX{}, err
+	}
+
+	// get all associated dependencyVulns
+	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scannerID)
+	if err != nil {
+		return vex.VEX{}, err
+	}
+
+	return a.assetVersionService.BuildOpenVeX(asset, assetVersion, version, org.Slug, dependencyVulns), nil
+}
+
 func (a *assetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
@@ -225,9 +268,6 @@ func (a *assetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	}
 
 	scannerID := ctx.QueryParam("scanner")
-	if scannerID == "" {
-		return nil, echo.NewHTTPError(400, "scanner query param is required")
-	}
 
 	// url decode the scanner
 	scannerID, err := url.QueryUnescape(scannerID)
