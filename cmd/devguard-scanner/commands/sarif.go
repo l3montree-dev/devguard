@@ -286,8 +286,6 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
-		utils.GitLister.MarkAllPathsAsSafe()
-
 		sarifResult, err := executeCodeScan(scannerID, config.RuntimeBaseConfig.Path)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
