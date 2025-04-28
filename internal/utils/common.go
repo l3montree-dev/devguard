@@ -19,6 +19,7 @@ import (
 	"encoding/csv"
 	"log/slog"
 	"math"
+	"os"
 	"runtime/debug"
 	"slices"
 	"strings"
@@ -26,6 +27,13 @@ import (
 
 func Ptr[T any](t T) *T {
 	return &t
+}
+
+func RunsInCI() bool {
+	if val, ok := os.LookupEnv("CI"); ok {
+		return val == "true"
+	}
+	return false
 }
 
 func RemovePrefixInsensitive(input string, prefix string) string {

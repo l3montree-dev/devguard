@@ -98,7 +98,7 @@ func getCurrentBranchName(path string) (string, error) {
 }
 
 type gitLister interface {
-	MarkAsSafePath(path string) error
+	MarkAllPathsAsSafe() error
 	GetTags(path string) ([]string, error)
 	GitCommitCount(path string, tag *string) (int, error)
 	GetBranchName(path string) (string, error)
@@ -147,7 +147,7 @@ func (g commandLineGitLister) GetBranchName(path string) (string, error) {
 	return strings.TrimSpace(out.String()), nil
 }
 
-func (g commandLineGitLister) MarkAsSafePath(path string) error {
+func (g commandLineGitLister) MarkAllPathsAsSafe() error {
 	cmd := exec.Command("git", "config", "--global", "--add", "safe.directory", "*")
 	var out bytes.Buffer
 	var errOut bytes.Buffer
@@ -235,11 +235,6 @@ func filterAndSortValidSemverTags(tags []string) (string, string, error) {
 func getCurrentVersion(path string) (string, int, error) {
 	// mark the path as safe git directory
 	slog.Debug("marking path as safe", "path", getDirFromPath(path))
-	err := GitLister.MarkAsSafePath(path) // nolint:all
-	if err != nil {
-		slog.Info("could not mark path as safe", "err", err, "path", getDirFromPath(path), "msg", err.Error())
-		return "", 0, err
-	}
 
 	// get tags from the git repository
 	tags, err := GitLister.GetTags(path)

@@ -24,6 +24,7 @@ import (
 
 	intotocmd "github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/lmittmann/tint"
 
 	"github.com/spf13/cobra"
@@ -72,6 +73,11 @@ OWASP Incubating Project`,
 		err = initializeConfig(cmd)
 		if err != nil {
 			return err
+		}
+
+		if utils.RunsInCI() {
+			slog.Info("Running in CI")
+			return utils.GitLister.MarkAllPathsAsSafe()
 		}
 
 		return nil

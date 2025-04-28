@@ -54,7 +54,7 @@ func sastScan(p string) (*common.SarifResult, error) {
 
 	var scannerCmd *exec.Cmd
 
-	slog.Info("Starting sast scanning", "path", p)
+	slog.Info("Starting sast scanning", "path", p, "result-path", path.Join(dir, "result.sarif"))
 
 	scannerCmd = exec.Command("semgrep", "scan", p, "--sarif", "--sarif-output", path.Join(dir, "result.sarif"), "-v") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack
 
