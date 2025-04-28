@@ -244,17 +244,17 @@ func (_c *GitLister_GitCommitCount_Call) RunAndReturn(run func(string, *string) 
 	return _c
 }
 
-// MarkAsSafePath provides a mock function with given fields: path
-func (_m *GitLister) MarkAsSafePath(path string) error {
-	ret := _m.Called(path)
+// MarkAllPathsAsSafe provides a mock function with no fields
+func (_m *GitLister) MarkAllPathsAsSafe() error {
+	ret := _m.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for MarkAsSafePath")
+		panic("no return value specified for MarkAllPathsAsSafe")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
-		r0 = rf(path)
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -262,30 +262,29 @@ func (_m *GitLister) MarkAsSafePath(path string) error {
 	return r0
 }
 
-// GitLister_MarkAsSafePath_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkAsSafePath'
-type GitLister_MarkAsSafePath_Call struct {
+// GitLister_MarkAllPathsAsSafe_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkAllPathsAsSafe'
+type GitLister_MarkAllPathsAsSafe_Call struct {
 	*mock.Call
 }
 
-// MarkAsSafePath is a helper method to define mock.On call
-//   - path string
-func (_e *GitLister_Expecter) MarkAsSafePath(path interface{}) *GitLister_MarkAsSafePath_Call {
-	return &GitLister_MarkAsSafePath_Call{Call: _e.mock.On("MarkAsSafePath", path)}
+// MarkAllPathsAsSafe is a helper method to define mock.On call
+func (_e *GitLister_Expecter) MarkAllPathsAsSafe() *GitLister_MarkAllPathsAsSafe_Call {
+	return &GitLister_MarkAllPathsAsSafe_Call{Call: _e.mock.On("MarkAllPathsAsSafe")}
 }
 
-func (_c *GitLister_MarkAsSafePath_Call) Run(run func(path string)) *GitLister_MarkAsSafePath_Call {
+func (_c *GitLister_MarkAllPathsAsSafe_Call) Run(run func()) *GitLister_MarkAllPathsAsSafe_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		run()
 	})
 	return _c
 }
 
-func (_c *GitLister_MarkAsSafePath_Call) Return(_a0 error) *GitLister_MarkAsSafePath_Call {
+func (_c *GitLister_MarkAllPathsAsSafe_Call) Return(_a0 error) *GitLister_MarkAllPathsAsSafe_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *GitLister_MarkAsSafePath_Call) RunAndReturn(run func(string) error) *GitLister_MarkAsSafePath_Call {
+func (_c *GitLister_MarkAllPathsAsSafe_Call) RunAndReturn(run func() error) *GitLister_MarkAllPathsAsSafe_Call {
 	_c.Call.Return(run)
 	return _c
 }
