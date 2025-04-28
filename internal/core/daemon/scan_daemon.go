@@ -78,7 +78,7 @@ func ScanAssetVersions(db core.DB) error {
 			}
 
 			if err != nil {
-				slog.Error("failed to scan normalized sbom", "error", err)
+				slog.Error("failed to scan normalized sbom", "error", err, "scannerID", scannerID, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 				continue
 			}
 		}
