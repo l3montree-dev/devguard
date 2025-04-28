@@ -26,6 +26,7 @@ func NewPatService(repository core.PersonalAccessTokenRepository) *PatService {
 
 func hexPrivKeyToPubKey(hexPrivKey string) (ecdsa.PublicKey, error) {
 	privKeyD := new(big.Int)
+
 	_, err := privKeyD.SetString(hexPrivKey, 16)
 	if !err {
 		return ecdsa.PublicKey{}, fmt.Errorf("could not parse hexPrivKey")

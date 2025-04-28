@@ -211,8 +211,15 @@ func addDefaultFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("apiUrl", "https://api.devguard.dev", "The url of the API to send the scan request to")
 }
 
+func addAssetRefFlags(cmd *cobra.Command) {
+	cmd.Flags().String("ref", "main", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, main will be used")
+	cmd.Flags().String("defaultRef", "main", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, --ref will be used.")
+}
+
 func addScanFlags(cmd *cobra.Command) {
 	addDefaultFlags(cmd)
+	addAssetRefFlags(cmd)
+
 	err := cmd.MarkPersistentFlagRequired("assetName")
 	if err != nil {
 		slog.Error("could not mark flag as required", "err", err)
@@ -227,6 +234,7 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")
+
 }
 
 func getDirFromPath(path string) string {

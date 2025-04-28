@@ -115,9 +115,6 @@ func NewSarifCommand() *cobra.Command {
 
 	cmd.Flags().String("scannerId", "github.com/l3montree-dev/devguard-scanner/cmd/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerId.")
 
-	cmd.Flags().String("ref", "main", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, main will be used")
-	cmd.Flags().String("defaultRef", "main", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, --ref will be used.")
-
 	addScanFlags(cmd)
 	return cmd
 }

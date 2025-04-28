@@ -5,6 +5,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"gorm.io/gorm/clause"
 )
 
 type attestationRepository struct {
@@ -39,4 +40,17 @@ func (a *attestationRepository) GetByAssetVersionAndAssetID(assetID uuid.UUID, a
 		return attestationList, err
 	}
 	return attestationList, nil
+}
+
+func (a *attestationRepository) Create(db core.DB, attestation *models.Attestation) error {
+	// check if the attestation already exists
+
+	return a.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "attestation_name"},
+			{Name: "asset_version_name"},
+			{Name: "asset_id"},
+		},
+		DoUpdates: clause.AssignmentColumns([]string{"content"}),
+	}).Create(attestation).Error
 }
