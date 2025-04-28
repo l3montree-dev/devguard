@@ -64,7 +64,7 @@ func ScanAssetVersions(db core.DB) error {
 		for _, component := range components {
 			scanner := strings.Fields(component.ScannerIDs)
 			for _, scannerID := range scanner {
-				scannerIDMap[scannerID] = append(scannerIDMap[component.ScannerIDs], component)
+				scannerIDMap[scannerID] = append(scannerIDMap[scannerID], component)
 			}
 		}
 
