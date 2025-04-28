@@ -135,3 +135,13 @@ func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (mo
 		First(&asset).Error
 	return asset, err
 }
+
+func (g *assetRepository) DeleteAssetWithAssetVersions(tx core.DB, id uuid.UUID) error {
+
+	return g.db.Select("AssetVersions").Delete(models.Asset{
+		Model: models.Model{
+			ID: id,
+		},
+	}).Error
+
+}
