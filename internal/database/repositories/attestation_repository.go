@@ -43,8 +43,6 @@ func (a *attestationRepository) GetByAssetVersionAndAssetID(assetID uuid.UUID, a
 }
 
 func (a *attestationRepository) Create(db core.DB, attestation *models.Attestation) error {
-	// check if the attestation already exists
-
 	return a.db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{
 			{Name: "attestation_name"},

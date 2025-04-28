@@ -145,5 +145,6 @@ func NewAttestCommand() *cobra.Command {
 	addDefaultFlags(cmd)
 	addAssetRefFlags(cmd)
 	cmd.Flags().StringP("attestationName", "a", "", "The name of the attestation")
+	cmd.MarkFlagRequired("attestationName") //nolint:errcheck
 	return cmd
 }
