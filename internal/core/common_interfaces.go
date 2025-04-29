@@ -52,7 +52,7 @@ type AssetRepository interface {
 	Update(tx DB, asset *models.Asset) error
 	ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAllAssetsFromDB() ([]models.Asset, error)
-	DeleteAssetWithAssetVersions(tx DB, id uuid.UUID) error
+	Delete(tx DB, id uuid.UUID) error
 }
 
 type AttestationRepository interface {

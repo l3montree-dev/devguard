@@ -136,7 +136,7 @@ func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (mo
 	return asset, err
 }
 
-func (g *assetRepository) DeleteAssetWithAssetVersions(tx core.DB, id uuid.UUID) error {
+func (g *assetRepository) Delete(tx core.DB, id uuid.UUID) error {
 
 	return g.db.Select("AssetVersions").Delete(models.Asset{
 		Model: models.Model{

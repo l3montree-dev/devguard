@@ -61,7 +61,7 @@ func (a *httpController) AttachSigningKey(ctx core.Context) error {
 
 func (a *httpController) Delete(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
-	err := a.assetRepository.DeleteAssetWithAssetVersions(nil, asset.GetID())
+	err := a.assetRepository.Delete(nil, asset.GetID())
 	if err != nil {
 		return err
 	}
