@@ -325,14 +325,15 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 		},
 		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {
 			return events.VulnEventDTO{
-				ID:                ev.ID,
-				Type:              ev.Type,
-				VulnID:            ev.VulnID,
-				UserID:            ev.UserID,
-				Justification:     ev.Justification,
-				AssetVersionName:  dependencyVuln.AssetVersionName,
-				ArbitraryJsonData: ev.GetArbitraryJsonData(),
-				CreatedAt:         ev.CreatedAt,
+				ID:                      ev.ID,
+				Type:                    ev.Type,
+				VulnID:                  ev.VulnID,
+				UserID:                  ev.UserID,
+				Justification:           ev.Justification,
+				MechanicalJustification: ev.MechanicalJustification,
+				AssetVersionName:        dependencyVuln.AssetVersionName,
+				ArbitraryJsonData:       ev.GetArbitraryJsonData(),
+				CreatedAt:               ev.CreatedAt,
 			}
 		}),
 	}

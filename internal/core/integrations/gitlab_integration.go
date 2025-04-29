@@ -238,7 +238,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 		switch action {
 		case "close":
-			if vuln.GetState() == models.VulnStateAccepted {
+			if vuln.GetState() == models.VulnStateAccepted || vuln.GetState() == models.VulnStateFalsePositive {
 				return nil
 			}
 

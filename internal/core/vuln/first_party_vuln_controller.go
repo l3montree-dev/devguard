@@ -207,13 +207,14 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) de
 		FirstPartyVulnDTO: FirstPartyVulnToDto(firstPartyVuln),
 		Events: utils.Map(firstPartyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {
 			return events.VulnEventDTO{
-				ID:                ev.ID,
-				Type:              ev.Type,
-				VulnID:            ev.VulnID,
-				UserID:            ev.UserID,
-				Justification:     ev.Justification,
-				ArbitraryJsonData: ev.GetArbitraryJsonData(),
-				CreatedAt:         ev.CreatedAt,
+				ID:                      ev.ID,
+				Type:                    ev.Type,
+				VulnID:                  ev.VulnID,
+				UserID:                  ev.UserID,
+				Justification:           ev.Justification,
+				MechanicalJustification: ev.MechanicalJustification,
+				ArbitraryJsonData:       ev.GetArbitraryJsonData(),
+				CreatedAt:               ev.CreatedAt,
 			}
 		}),
 	}
