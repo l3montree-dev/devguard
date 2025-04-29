@@ -537,6 +537,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
 	assetRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
+	assetRouter.GET("/number-of-exploits/", statisticsController.GetNumberOfExploitableCVES)
 	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	assetRouter.GET("/config-files/:config-file/", assetController.GetConfigFile)
 
@@ -544,8 +545,6 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	//Api to scan manually using an uploaded SBOM provided by the user
 	assetRouter.POST("/sbom-file/", scanController.ScanSbomFile, neededScope([]string{"scan"}))
-
-	assetRouter.GET("/number-of-exploits/", statisticsController.GetNumberOfExploitableCVES)
 
 	//TODO: add the projectScopedRBAC middleware to the following routes
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))

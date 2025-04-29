@@ -269,6 +269,16 @@ func (c *httpController) getDependencyVulnAggregationStateAndChange(compareTo st
 }
 
 func (c *httpController) GetNumberOfExploitableCVES(ctx core.Context) error {
-	//Test test test
-	return nil
+	asset := core.GetAsset(ctx)
+	assetVersion, err := core.MaybeGetAssetVersion(ctx)
+	if err != nil {
+		// we need to get the default asset version
+		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		if err != nil {
+			slog.Error("Error getting default asset version", "error", err)
+			return ctx.JSON(404, nil)
+		}
+	}
+
+	return ctx.JSON(200, assetVersion)
 }
