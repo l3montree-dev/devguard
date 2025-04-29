@@ -40,11 +40,11 @@ const (
 type MechanicalJustificationType string
 
 const (
-	ComponentMissing   MechanicalJustificationType = "Component Missing"
-	CodeMissing        MechanicalJustificationType = "Code Missing"
-	CodeInaccessible   MechanicalJustificationType = "Code Inaccessible"
-	CodeUncontrollable MechanicalJustificationType = "Code Uncontrollable"
-	MitigationsExist   MechanicalJustificationType = "Mitigations Exist"
+	ComponentNotPresent                         MechanicalJustificationType = "component_not_present."
+	VulnerableCodeNotPresent                    MechanicalJustificationType = "vulnerable_code_not_present"
+	VulnerableCodeNotInExecutePath              MechanicalJustificationType = "vulnerable_code_not_in_execute_path"
+	VulnerableCodeCannotBeControlledByAdversary MechanicalJustificationType = "vulnerable_code_cannot_be_controlled_by_adversary"
+	InlineMitigationsAlreadyExist               MechanicalJustificationType = "inline_mitigations_already_exist"
 )
 
 type VulnEvent struct {

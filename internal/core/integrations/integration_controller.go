@@ -16,7 +16,6 @@
 package integrations
 
 import (
-	"fmt"
 	"log/slog"
 	"strings"
 
@@ -29,16 +28,16 @@ type integrationController struct {
 
 func commentTrimmedFalsePositivePrefix(comment string) (models.VulnEventType, models.MechanicalJustificationType, string) {
 
-	if strings.HasPrefix(comment, "/component-missing") {
-		return models.EventTypeFalsePositive, models.ComponentMissing, strings.TrimSpace(strings.TrimPrefix(comment, "/component-missing"))
-	} else if strings.HasPrefix(comment, "/code-missing") {
-		return models.EventTypeFalsePositive, models.CodeMissing, strings.TrimSpace(strings.TrimPrefix(comment, "/code-missing"))
-	} else if strings.HasPrefix(comment, "/code-inaccessible") {
-		return models.EventTypeFalsePositive, models.CodeInaccessible, strings.TrimSpace(strings.TrimPrefix(comment, "/code-inaccessible"))
-	} else if strings.HasPrefix(comment, "/mitigations-exist") {
-		return models.EventTypeFalsePositive, models.MitigationsExist, strings.TrimSpace(strings.TrimPrefix(comment, "/mitigations-exist"))
-	} else if strings.HasPrefix(comment, "/code-uncontrollable") {
-		return models.EventTypeFalsePositive, models.MitigationsExist, strings.TrimSpace(strings.TrimPrefix(comment, "/code-uncontrollable"))
+	if strings.HasPrefix(comment, "/component-not-present") {
+		return models.EventTypeFalsePositive, models.ComponentNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/component-not-present"))
+	} else if strings.HasPrefix(comment, "/vulnerable-code-not-present") {
+		return models.EventTypeFalsePositive, models.VulnerableCodeNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-present"))
+	} else if strings.HasPrefix(comment, "/vulnerable-code-not-in-execute-path") {
+		return models.EventTypeFalsePositive, models.VulnerableCodeNotInExecutePath, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-in-execute-path"))
+	} else if strings.HasPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary") {
+		return models.EventTypeFalsePositive, models.VulnerableCodeCannotBeControlledByAdversary, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary"))
+	} else if strings.HasPrefix(comment, "/inline-mitigations-already-exist") {
+		return models.EventTypeFalsePositive, models.InlineMitigationsAlreadyExist, strings.TrimSpace(strings.TrimPrefix(comment, "/inline-mitigations-already-exist"))
 	} else if strings.HasPrefix(comment, "/accept") {
 		return models.EventTypeAccepted, "", strings.TrimSpace(strings.TrimPrefix(comment, "/accept"))
 	} else if strings.HasPrefix(comment, "/reopen") {
@@ -52,10 +51,8 @@ func createNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, u
 	event, mechanicalJustification, justification := commentTrimmedFalsePositivePrefix(comment)
 
 	if event == models.EventTypeAccepted {
-		fmt.Println("NEIN accepted")
 		return models.NewAcceptedEvent(vulnId, vulnType, userId, justification)
 	} else if event == models.EventTypeFalsePositive {
-		fmt.Println("ja false positive")
 		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, justification, mechanicalJustification, scannerIds)
 	} else if event == models.EventTypeReopened {
 		return models.NewReopenedEvent(vulnId, vulnType, userId, justification)

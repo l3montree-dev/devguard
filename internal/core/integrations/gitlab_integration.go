@@ -1103,7 +1103,7 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		if err.Error() == "404 Not Found" {
 
 			// we can not reopen the issue - it is deleted
-			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This Vulnerability is marked as a false positive due to deletion", models.ComponentMissing, vuln.GetScannerIDs())
+			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "user", "This Vulnerability is marked as a false positive due to deletion", models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDs())
 			// save the event
 			err := g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
