@@ -267,3 +267,7 @@ func (c *httpController) getDependencyVulnAggregationStateAndChange(compareTo st
 
 	return c.statisticsService.GetDependencyVulnAggregationStateAndChangeSince(assetVersion.Name, assetVersion.AssetID, calculateChangeTo)
 }
+
+func (c *httpController) GetNumberOfExploitableCVES(ctx core.Context) error {
+	return nil
+}

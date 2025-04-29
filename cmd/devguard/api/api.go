@@ -545,6 +545,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	//Api to scan manually using an uploaded SBOM provided by the user
 	assetRouter.POST("/sbom-file/", scanController.ScanSbomFile, neededScope([]string{"scan"}))
 
+	assetRouter.GET("/number-of-exploits/", statisticsController.GetNumberOfExploitableCVES)
+
 	//TODO: add the projectScopedRBAC middleware to the following routes
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
