@@ -40,7 +40,7 @@ const (
 type MechanicalJustificationType string
 
 const (
-	ComponentNotPresent                         MechanicalJustificationType = "component_not_present."
+	ComponentNotPresent                         MechanicalJustificationType = "component_not_present"
 	VulnerableCodeNotPresent                    MechanicalJustificationType = "vulnerable_code_not_present"
 	VulnerableCodeNotInExecutePath              MechanicalJustificationType = "vulnerable_code_not_in_execute_path"
 	VulnerableCodeCannotBeControlledByAdversary MechanicalJustificationType = "vulnerable_code_cannot_be_controlled_by_adversary"
