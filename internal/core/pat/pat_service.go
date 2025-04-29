@@ -131,7 +131,6 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 	req.Header.Set("Signature", signature)
 
 	return nil
-
 }
 
 func (p *PatService) getPubKeyAndUserIdUsingFingerprint(fingerprint string) (ecdsa.PublicKey, uuid.UUID, string, error) {
