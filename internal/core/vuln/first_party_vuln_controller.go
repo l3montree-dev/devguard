@@ -19,8 +19,9 @@ type firstPartyVulnController struct {
 }
 
 type FirstPartyVulnStatus struct {
-	StatusType    string `json:"status"`
-	Justification string `json:"justification"`
+	StatusType              string                             `json:"status"`
+	Justification           string                             `json:"justification"`
+	MechanicalJustification models.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
 func NewFirstPartyVulnController(firstPartyVulnRepository core.FirstPartyVulnRepository, firstPartyVulnService core.FirstPartyVulnService, projectService core.ProjectService) *firstPartyVulnController {
@@ -152,8 +153,10 @@ func (c firstPartyVulnController) CreateEvent(ctx core.Context) error {
 	}
 	justification := status.Justification
 
+	mechanicalJustification := status.MechanicalJustification
+
 	err = c.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
-		ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(tx, userID, &firstPartyVuln, statusType, justification)
+		ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(tx, userID, &firstPartyVuln, statusType, justification, mechanicalJustification)
 		if err != nil {
 			return err
 		}

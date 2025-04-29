@@ -193,7 +193,7 @@ type DependencyVulnService interface {
 	UserDetectedDependencyVulns(tx DB, userID string, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnWithAnotherScanner(tx DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error
 	UserDidNotDetectDependencyVulnWithScannerAnymore(tx DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error
-	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, assetVersionName string) (models.VulnEvent, error)
+	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)
 	CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vulnList []models.DependencyVuln) error
 	CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error
 
@@ -227,7 +227,7 @@ type AssetVersionRepository interface {
 type FirstPartyVulnService interface {
 	UserFixedFirstPartyVulns(tx DB, userID string, firstPartyVulns []models.FirstPartyVuln) error
 	UserDetectedFirstPartyVulns(tx DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVuln) error
-	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string) (models.VulnEvent, error)
+	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error)
 }
 
 type ConfigRepository interface {

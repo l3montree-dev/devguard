@@ -32,7 +32,7 @@ func createNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, u
 		return models.NewAcceptedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
 	} else if strings.HasPrefix(comment, "/false-positive") {
 		// create a new dependencyVuln false positive event
-		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")), scannerIds)
+		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")), "", scannerIds)
 	} else if strings.HasPrefix(comment, "/reopen") {
 		// create a new dependencyVuln reopen event
 		return models.NewReopenedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
@@ -41,7 +41,7 @@ func createNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, u
 		return models.NewAcceptedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
 	} else if strings.HasPrefix(comment, "/fp") {
 		// create a new dependencyVuln false positive event
-		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")), scannerIds)
+		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")), "", scannerIds)
 	} else if strings.HasPrefix(comment, "/r") {
 		// create a new dependencyVuln reopen event
 		return models.NewReopenedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
