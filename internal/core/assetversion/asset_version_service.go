@@ -513,32 +513,30 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 
 		var p packageurl.PackageURL
 		var err error
-		if c.ComponentPurl != nil {
-			p, err = packageurl.FromString(*c.ComponentPurl)
-			if err == nil {
-				if _, ok := alreadyIncluded[*c.ComponentPurl]; !ok {
-					alreadyIncluded[*c.ComponentPurl] = true
-					bomComponents = append(bomComponents, cdx.Component{
-						BOMRef:     *c.ComponentPurl,
-						Type:       cdx.ComponentType(c.Component.ComponentType),
-						PackageURL: *c.ComponentPurl,
-						Version:    c.Component.Version,
-						Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
+
+		p, err = packageurl.FromString(c.DependencyPurl)
+		if err == nil {
+
+			if _, ok := alreadyIncluded[c.DependencyPurl]; !ok {
+				alreadyIncluded[c.DependencyPurl] = true
+
+				licenses := cdx.Licenses{}
+				if c.Dependency.ComponentProject != nil {
+					licenses = append(licenses, cdx.LicenseChoice{
+						License: &cdx.License{
+							ID:   c.Dependency.ComponentProject.License,
+							Name: c.Dependency.ComponentProject.License,
+						},
 					})
 				}
-			}
-		}
 
-		if c.DependencyPurl != "" {
-			p, err = packageurl.FromString(c.DependencyPurl)
-			if err == nil {
-				alreadyIncluded[c.DependencyPurl] = true
 				bomComponents = append(bomComponents, cdx.Component{
+					Licenses:   &licenses,
 					BOMRef:     c.DependencyPurl,
 					Type:       cdx.ComponentType(c.Dependency.ComponentType),
 					PackageURL: c.DependencyPurl,
-					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
 					Version:    c.Dependency.Version,
+					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
 				})
 			}
 		}

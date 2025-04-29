@@ -211,11 +211,15 @@ func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 		return nil, echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	components, err := a.componentRepository.LoadComponentsWithProject(nil, assetVersion.Name, assetVersion.AssetID, scannerID, core.PageInfo{
+		PageSize: 1000,
+		Page:     1,
+	}, "", nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return a.assetVersionService.BuildSBOM(assetVersion, version, org.Name, components), nil
+
+	return a.assetVersionService.BuildSBOM(assetVersion, version, org.Name, components.Data), nil
 }
 
 func (a *assetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {
