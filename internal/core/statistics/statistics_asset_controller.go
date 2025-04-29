@@ -269,5 +269,6 @@ func (c *httpController) getDependencyVulnAggregationStateAndChange(compareTo st
 }
 
 func (c *httpController) GetNumberOfExploitableCVES(ctx core.Context) error {
+	//Test
 	return nil
 }
