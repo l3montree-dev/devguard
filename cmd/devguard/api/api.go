@@ -540,6 +540,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	assetRouter.GET("/config-files/:config-file/", assetController.GetConfigFile)
 
+	assetRouter.GET("/webhook-secret/", assetController.RetrieveWebhookSecret)
+
 	assetRouter.GET("/refs/", assetVersionController.GetAssetVersionsByAssetID)
 
 	//Api to scan manually using an uploaded SBOM provided by the user

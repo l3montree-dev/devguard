@@ -242,3 +242,11 @@ func (a *httpController) GetConfigFile(ctx core.Context) error {
 	}
 	return ctx.JSON(200, configContent)
 }
+
+func (a *httpController) RetrieveWebhookSecret(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	if asset.WebhookSecret == "" {
+		return ctx.NoContent(404)
+	}
+	return ctx.JSON(200, asset.WebhookSecret)
+}
