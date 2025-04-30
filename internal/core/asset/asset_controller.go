@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -85,6 +86,7 @@ func (a *httpController) Create(ctx core.Context) error {
 	if newAsset.Name == "" || newAsset.Slug == "" {
 		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
 	}
+	newAsset.WebhookSecret = uuid.New().String()
 	err := a.assetRepository.Create(nil, &newAsset)
 
 	if err != nil {
