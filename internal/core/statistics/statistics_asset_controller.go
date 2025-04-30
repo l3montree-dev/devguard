@@ -277,13 +277,13 @@ func (c *httpController) GetNumberOfExploitableCVES(ctx core.Context) error {
 		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
 		if err != nil {
 			slog.Error("Error getting default asset version", "error", err)
-			return ctx.JSON(404, cves)
+			return ctx.JSON(404, nil)
 		}
 	}
 	//Query to find all CVE in the vulnerabilities for which an exploit exists
 	err = c.assetVersionRepository.GetDB(nil).Raw("SELECT c.* FROM dependency_vulns d JOIN cves c ON d.cve_id = c.cve WHERE  EXISTS (SELECT id FROM exploits e WHERE d.cve_id = e.cve_id) AND d.asset_version_name = ?  AND d.state = 'open'  AND d.asset_id = ?;", assetVersion.Name, assetVersion.AssetID).Find(&cves).Error
 	if err != nil {
-		return ctx.JSON(500, cves)
+		return ctx.JSON(500, nil)
 	}
 
 	return ctx.JSON(200, cves)
