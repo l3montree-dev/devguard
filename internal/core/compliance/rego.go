@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/open-policy-agent/opa/rego"
 	"gopkg.in/yaml.v2"
 )
@@ -16,9 +17,11 @@ type yamlPolicy struct {
 }
 
 type customYaml struct {
-	Description          string `yaml:"description"`
-	Priority             int    `yaml:"priority"`
-	Tags                 []string
+	Description string `yaml:"description"`
+	Priority    int    `yaml:"priority"`
+	Tags        []string
+	// used for mapping from policies to attestations
+	AttestationName      string   `yaml:"attestationName"`
 	RelatedResources     []string `yaml:"relatedResources"`
 	ComplianceFrameworks []string `yaml:"complianceFrameworks"`
 }
@@ -30,6 +33,9 @@ type PolicyMetadata struct {
 	Tags                 []string `yaml:"tags" json:"tags"`
 	RelatedResources     []string `yaml:"relatedResources" json:"relatedResources"`
 	ComplianceFrameworks []string `yaml:"complianceFrameworks" json:"complianceFrameworks"`
+	Filename             string   `json:"filename"`
+	Content              string   `json:"content"`
+	AttestationName      string   `yaml:"attestationName" json:"attestationName"`
 }
 type Policy struct {
 	PolicyMetadata
@@ -39,13 +45,14 @@ type Policy struct {
 
 type PolicyEvaluation struct {
 	PolicyMetadata
-	Result *bool `json:"result"`
+	Compliant  *bool    `json:"compliant"`
+	Violations []string `json:"violations"`
 }
 
 var packageRegexp = regexp.MustCompile(`(?m)^package compliance`)
 var metadataRegexp = regexp.MustCompile(`^\s*#\s*METADATA`)
 
-func parseMetadata(content string) (PolicyMetadata, error) {
+func parseMetadata(fileName string, content string) (PolicyMetadata, error) {
 	// split the content by first occurence of a line, that starts with "package compliance"
 	parts := packageRegexp.Split(content, 2)
 
@@ -89,12 +96,15 @@ func parseMetadata(content string) (PolicyMetadata, error) {
 		Tags:                 metadata.Custom.Tags,
 		RelatedResources:     metadata.Custom.RelatedResources,
 		ComplianceFrameworks: metadata.Custom.ComplianceFrameworks,
+		Filename:             fileName,
+		AttestationName:      metadata.Custom.AttestationName,
+		Content:              content,
 	}, nil
 }
 
-func NewPolicy(content string) (*Policy, error) {
+func NewPolicy(filename string, content string) (*Policy, error) {
 	r := rego.New(
-		rego.Query("data.compliance.allow"),
+		rego.Query("data.compliance"),
 		rego.Module("", content),
 	)
 
@@ -105,7 +115,7 @@ func NewPolicy(content string) (*Policy, error) {
 		return nil, err
 	}
 
-	metadata, err := parseMetadata(content)
+	metadata, err := parseMetadata(filename, content)
 	if err != nil {
 		return nil, err
 	}
@@ -122,13 +132,32 @@ func (p *Policy) Eval(input any) PolicyEvaluation {
 	if err != nil {
 		return PolicyEvaluation{
 			PolicyMetadata: p.PolicyMetadata,
-			Result:         nil,
+			Compliant:      nil,
 		}
 	}
 
-	result := rs.Allowed()
+	var violations []string = []string{}
+	var compliant *bool
+	if len(rs) > 0 {
+		value := rs[0].Expressions[0].Value
+		// cast value to map
+		if v, ok := value.(map[string]any); ok {
+			if v["compliant"] != nil {
+				compliant = utils.Ptr(v["compliant"].(bool))
+			}
+			if v["violations"] != nil {
+				for _, violation := range v["violations"].([]any) {
+					if s, ok := violation.(string); ok {
+						violations = append(violations, s)
+					}
+				}
+			}
+		}
+	}
+
 	return PolicyEvaluation{
 		PolicyMetadata: p.PolicyMetadata,
-		Result:         &result,
+		Compliant:      compliant,
+		Violations:     violations,
 	}
 }

@@ -16,6 +16,7 @@ import (
 type httpController struct {
 	policies               []Policy
 	assetVersionRepository core.AssetVersionRepository
+	attestationRepository  core.AttestationRepository
 }
 
 type deadSimpleSigningEnvelope struct {
@@ -23,14 +24,24 @@ type deadSimpleSigningEnvelope struct {
 	Signature string `json:"signature"`
 }
 
-func NewHTTPController(assetVersionRepository core.AssetVersionRepository) *httpController {
+func NewHTTPController(assetVersionRepository core.AssetVersionRepository, attestationRepository core.AttestationRepository) *httpController {
 	return &httpController{
 		assetVersionRepository: assetVersionRepository,
+		attestationRepository:  attestationRepository,
 		policies:               getPolicies(),
 	}
 }
 
 func ExtractAttestationPayload(content string) (any, error) {
+	// check if payload and signature are in content - then it is a dead simple signing envelope - otherwise it is already the payload
+	if !strings.Contains(content, "payload") || !strings.Contains(content, "signature") {
+		var input any
+		if err := json.Unmarshal([]byte(content), &input); err != nil {
+			return nil, err
+		}
+		return input, nil
+	}
+
 	var envelope deadSimpleSigningEnvelope
 	if err := json.Unmarshal([]byte(content), &envelope); err != nil {
 		return nil, err
@@ -72,7 +83,7 @@ func getPolicies() []Policy {
 			continue
 		}
 
-		policy, err := NewPolicy(string(content))
+		policy, err := NewPolicy(file.Name(), string(content))
 		if err != nil {
 			continue
 		}
@@ -88,26 +99,64 @@ func getPolicies() []Policy {
 	return policies
 }
 
-// embed the build provenance input in the binary - just until we have attestations ready
-//
-//go:embed testfiles/build-provenance-input.json
-var buildProvenanceInput []byte
-
 func (c *httpController) getAssetVersionCompliance(assetVersion models.AssetVersion) ([]PolicyEvaluation, error) {
+	// get the attestation
+	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(assetVersion.AssetID, assetVersion.Name)
 
-	// extract the policy
-	input, err := ExtractAttestationPayload(string(buildProvenanceInput))
 	if err != nil {
 		return nil, err
 	}
 
 	results := make([]PolicyEvaluation, 0, len(c.policies))
-	for _, policy := range c.policies {
-		results = append(results, policy.Eval(input))
+foundMatch:
+	for _, policy := range getPolicies() {
+		// check if we find an attestation that matches
+		for _, attestation := range attestations {
+			if attestation.AttestationName != policy.AttestationName {
+				continue
+			}
+			res := policy.Eval(attestation.Content)
+			if res.Compliant != nil && *res.Compliant {
+				// this matches - lets add it
+				results = append(results, res)
+				continue foundMatch
+			}
+		}
+		// we did not find any attestation that matches - lets add the policy with a nil result
+		results = append(results, policy.Eval(nil))
 	}
 
 	// evaluate the policy
 	return results, nil
+}
+
+func (c *httpController) Details(ctx core.Context) error {
+	assetVersion := core.GetAssetVersion(ctx)
+
+	p := ctx.Param("policy")
+	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(assetVersion.AssetID, assetVersion.Name)
+
+	if err != nil {
+		return ctx.JSON(500, nil)
+	}
+
+	for _, policy := range getPolicies() {
+		// check if we should have a look at those details
+		if strings.TrimSuffix(policy.Filename, ".rego") == p {
+			// look for the right attestations
+			for _, attestation := range attestations {
+				if attestation.AttestationName == policy.AttestationName {
+					res := policy.Eval(attestation.Content)
+					return ctx.JSON(200, res)
+				}
+
+				// we did not find any attestation that matches - lets add the policy with a nil result
+
+			}
+		}
+	}
+
+	return ctx.NoContent(404)
 }
 
 func (c *httpController) AssetCompliance(ctx core.Context) error {

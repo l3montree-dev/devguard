@@ -401,7 +401,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository)
-	complianceController := compliance.NewHTTPController(assetVersionRepository)
+	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository)
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
 	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)
@@ -537,6 +537,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
 
 	assetRouter.GET("/compliance/", complianceController.AssetCompliance)
+	assetRouter.GET("/compliance/:policy/", complianceController.Details)
 	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
 	assetRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
 	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
@@ -553,6 +554,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionRouter.GET("/", assetVersionController.Read)
 
 	assetVersionRouter.GET("/compliance/", complianceController.AssetCompliance)
+	assetVersionRouter.GET("/compliance/:policy/", complianceController.Details)
 	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"})) //Delete an asset version
 
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
