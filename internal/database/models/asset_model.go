@@ -60,6 +60,9 @@ type Asset struct {
 	SigningPubKey *string `json:"signingPubKey" gorm:"type:text;"`
 
 	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
+
+	BadgeSecret   uuid.UUID `json:"badgeSecret" gorm:"type:uuid;default:gen_random_uuid();"`
+	WebhookSecret uuid.UUID `json:"webhookSecret" gorm:"type:uuid;"`
 }
 
 func (m Asset) TableName() string {

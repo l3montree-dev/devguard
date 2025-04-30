@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -66,6 +67,38 @@ func (a *httpController) Delete(ctx core.Context) error {
 		return err
 	}
 	return ctx.NoContent(200)
+}
+
+func (a *httpController) GenerateBadgeSecret(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+
+	// generate a new secret
+	secret := uuid.New()
+
+	asset.BadgeSecret = secret
+
+	// save the asset
+	err := a.assetRepository.Update(nil, &asset)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not generate badge secret").WithInternal(err)
+	}
+	return ctx.JSON(200, secret)
+}
+
+func (a *httpController) GenerateWebhookSecret(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+
+	// generate a new secret
+	secret := uuid.New()
+
+	asset.WebhookSecret = secret
+
+	// save the asset
+	err := a.assetRepository.Update(nil, &asset)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not generate webhook secret").WithInternal(err)
+	}
+	return ctx.JSON(200, secret)
 }
 
 func (a *httpController) Create(ctx core.Context) error {
