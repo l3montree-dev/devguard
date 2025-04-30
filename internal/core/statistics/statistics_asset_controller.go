@@ -29,14 +29,16 @@ type statisticsService interface {
 
 type httpController struct {
 	statisticsService      statisticsService
+	statisticsRepository   core.StatisticsRepository
 	assetVersionRepository core.AssetVersionRepository
 	assetRepository        core.AssetRepository
 	projectService         core.ProjectService
 }
 
-func NewHttpController(statisticsService statisticsService, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, projectService core.ProjectService) *httpController {
+func NewHttpController(statisticsService statisticsService, statisticsRepository core.StatisticsRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, projectService core.ProjectService) *httpController {
 	return &httpController{
 		statisticsService:      statisticsService,
+		statisticsRepository:   statisticsRepository,
 		assetVersionRepository: assetVersionRepository,
 		projectService:         projectService,
 		assetRepository:        assetRepository,
@@ -280,10 +282,10 @@ func (c *httpController) GetNumberOfExploitableCVES(ctx core.Context) error {
 			return ctx.JSON(404, nil)
 		}
 	}
-	//Query to find all CVE in the vulnerabilities for which an exploit exists
-	err = c.assetVersionRepository.GetDB(nil).Raw("SELECT c.* FROM dependency_vulns d JOIN cves c ON d.cve_id = c.cve WHERE  EXISTS (SELECT id FROM exploits e WHERE d.cve_id = e.cve_id) AND d.asset_version_name = ?  AND d.state = 'open'  AND d.asset_id = ?;", assetVersion.Name, assetVersion.AssetID).Find(&cves).Error
+
+	cves, err = c.statisticsRepository.CVESWithKnownExploitsInAssetVersion(assetVersion)
 	if err != nil {
-		return ctx.JSON(500, nil)
+		return ctx.NoContent(500)
 	}
 
 	return ctx.JSON(200, cves)

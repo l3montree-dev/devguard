@@ -403,7 +403,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository)
 	complianceController := compliance.NewHTTPController(assetVersionRepository)
 
-	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
+	statisticsController := statistics.NewHttpController(statisticsService, statisticsRepository, assetRepository, assetVersionRepository, projectService)
 	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)
 
 	patService := pat.NewPatService(patRepository)
