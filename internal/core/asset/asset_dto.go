@@ -77,6 +77,8 @@ type patchRequest struct {
 	RepositoryName *string `json:"repositoryName"`
 
 	ConfigFiles *map[string]any `json:"configFiles"`
+
+	WebhookSecret *string `json:"webhookSecret"`
 }
 
 func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
@@ -123,6 +125,12 @@ func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
 	if assetPatch.ConfigFiles != nil {
 		updated = true
 		asset.ConfigFiles = *assetPatch.ConfigFiles
+	}
+
+	if assetPatch.WebhookSecret != nil {
+		if uuid.Validate(*assetPatch.WebhookSecret) != nil {
+			asset.WebhookSecret = *assetPatch.WebhookSecret
+		}
 	}
 
 	return updated
