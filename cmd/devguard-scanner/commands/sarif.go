@@ -222,11 +222,18 @@ func obfuscateString(str string) string {
 	els := reg.Split(str, -1)
 
 	for i, el := range els {
-		// 5 is a magic number!
-		entropy := utils.ShannonEntropy(el)
-		if entropy > 4 {
-			els[i] = el[:1+len(el)/2] + strings.Repeat("*", len(el)/2)
+		words := strings.Fields(el)
+		// split at whitespace
+		for i, word := range words {
+			// 5 is a magic number!
+			entropy := utils.ShannonEntropy(word)
+			if entropy > 4 {
+				words[i] = word[:1+len(word)/2] + strings.Repeat("*", len(word)/2)
+			}
 		}
+
+		// join the words back together
+		els[i] = strings.Join(words, " ")
 	}
 
 	return strings.Join(els, "\n")
