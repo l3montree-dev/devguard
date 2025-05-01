@@ -100,7 +100,7 @@ func uploadAttestation(ctx context.Context, predicate string) error {
 		return err
 	}
 
-	req.Header.Set("X-Attestation-Name", config.RuntimeAttestationConfig.AttestationName)
+	req.Header.Set("X-Attestation-Name", config.RuntimeAttestationConfig.PredicateType)
 	// set the headers
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
@@ -124,7 +124,7 @@ func uploadAttestation(ctx context.Context, predicate string) error {
 		return fmt.Errorf("could not upload attestation: %s %s", resp.Status, string(body))
 	}
 
-	slog.Info("attestation uploaded successfully", "predicate", predicate, "attestationName", config.RuntimeAttestationConfig.AttestationName)
+	slog.Info("attestation uploaded successfully", "predicate", predicate, "predicateType", config.RuntimeAttestationConfig.PredicateType)
 	return nil
 }
 
@@ -144,7 +144,7 @@ func NewAttestCommand() *cobra.Command {
 
 	addDefaultFlags(cmd)
 	addAssetRefFlags(cmd)
-	cmd.Flags().StringP("attestationName", "a", "", "The name of the attestation")
-	cmd.MarkFlagRequired("attestationName") //nolint:errcheck
+	cmd.Flags().StringP("predicateType", "a", "", "The name of the attestation")
+	cmd.MarkFlagRequired("predicateType") //nolint:errcheck
 	return cmd
 }

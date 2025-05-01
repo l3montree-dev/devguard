@@ -21,7 +21,7 @@ type customYaml struct {
 	Priority    int    `yaml:"priority"`
 	Tags        []string
 	// used for mapping from policies to attestations
-	AttestationName      string   `yaml:"attestationName"`
+	PredicateType        string   `yaml:"predicateType"`
 	RelatedResources     []string `yaml:"relatedResources"`
 	ComplianceFrameworks []string `yaml:"complianceFrameworks"`
 }
@@ -35,7 +35,7 @@ type PolicyMetadata struct {
 	ComplianceFrameworks []string `yaml:"complianceFrameworks" json:"complianceFrameworks"`
 	Filename             string   `json:"filename"`
 	Content              string   `json:"content"`
-	AttestationName      string   `yaml:"attestationName" json:"attestationName"`
+	PredicateType        string   `yaml:"predicateType" json:"predicateType"`
 }
 type Policy struct {
 	PolicyMetadata
@@ -97,7 +97,7 @@ func parseMetadata(fileName string, content string) (PolicyMetadata, error) {
 		RelatedResources:     metadata.Custom.RelatedResources,
 		ComplianceFrameworks: metadata.Custom.ComplianceFrameworks,
 		Filename:             fileName,
-		AttestationName:      metadata.Custom.AttestationName,
+		PredicateType:        metadata.Custom.PredicateType,
 		Content:              content,
 	}, nil
 }
@@ -128,6 +128,13 @@ func NewPolicy(filename string, content string) (*Policy, error) {
 }
 
 func (p *Policy) Eval(input any) PolicyEvaluation {
+	if input == nil {
+		return PolicyEvaluation{
+			PolicyMetadata: p.PolicyMetadata,
+			Compliant:      nil,
+		}
+	}
+
 	rs, err := p.query.Eval(context.TODO(), rego.EvalInput(input))
 	if err != nil {
 		return PolicyEvaluation{

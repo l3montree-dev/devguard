@@ -29,7 +29,7 @@ func TestList(t *testing.T) {
 		assetVersionNameRepository := mocks.NewAssetVersionRepository(t)
 		attestationRepository := mocks.NewAttestationRepository(t)
 		attestationRepository.On("GetByAssetVersionAndAssetID", mock.Anything, mock.Anything).Return([]models.Attestation{
-			{AttestationName: "not ocol name"},
+			{PredicateType: "not ocol name"},
 		}, nil)
 		attestationController := attestation.NewAttestationController(attestationRepository, assetVersionNameRepository)
 		result := attestationController.List(ctx)

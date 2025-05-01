@@ -62,7 +62,7 @@ type InTotoConfig struct {
 }
 
 type AttestationConfig struct {
-	AttestationName string `mapstructure:"attestationName"`
+	PredicateType string `mapstructure:"predicateType"`
 }
 
 var RuntimeBaseConfig baseConfig

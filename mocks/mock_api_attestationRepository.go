@@ -20,9 +20,9 @@ func (_m *ApiAttestationRepository) EXPECT() *ApiAttestationRepository_Expecter 
 	return &ApiAttestationRepository_Expecter{mock: &_m.Mock}
 }
 
-// ReadBySlug provides a mock function with given fields: attestationName, slug
-func (_m *ApiAttestationRepository) ReadBySlug(attestationName string, slug string) (models.Attestation, error) {
-	ret := _m.Called(attestationName, slug)
+// ReadBySlug provides a mock function with given fields: predicateType, slug
+func (_m *ApiAttestationRepository) ReadBySlug(predicateType string, slug string) (models.Attestation, error) {
+	ret := _m.Called(predicateType, slug)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReadBySlug")
@@ -31,16 +31,16 @@ func (_m *ApiAttestationRepository) ReadBySlug(attestationName string, slug stri
 	var r0 models.Attestation
 	var r1 error
 	if rf, ok := ret.Get(0).(func(string, string) (models.Attestation, error)); ok {
-		return rf(attestationName, slug)
+		return rf(predicateType, slug)
 	}
 	if rf, ok := ret.Get(0).(func(string, string) models.Attestation); ok {
-		r0 = rf(attestationName, slug)
+		r0 = rf(predicateType, slug)
 	} else {
 		r0 = ret.Get(0).(models.Attestation)
 	}
 
 	if rf, ok := ret.Get(1).(func(string, string) error); ok {
-		r1 = rf(attestationName, slug)
+		r1 = rf(predicateType, slug)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -54,13 +54,13 @@ type ApiAttestationRepository_ReadBySlug_Call struct {
 }
 
 // ReadBySlug is a helper method to define mock.On call
-//   - attestationName string
+//   - predicateType string
 //   - slug string
-func (_e *ApiAttestationRepository_Expecter) ReadBySlug(attestationName interface{}, slug interface{}) *ApiAttestationRepository_ReadBySlug_Call {
-	return &ApiAttestationRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", attestationName, slug)}
+func (_e *ApiAttestationRepository_Expecter) ReadBySlug(predicateType interface{}, slug interface{}) *ApiAttestationRepository_ReadBySlug_Call {
+	return &ApiAttestationRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", predicateType, slug)}
 }
 
-func (_c *ApiAttestationRepository_ReadBySlug_Call) Run(run func(attestationName string, slug string)) *ApiAttestationRepository_ReadBySlug_Call {
+func (_c *ApiAttestationRepository_ReadBySlug_Call) Run(run func(predicateType string, slug string)) *ApiAttestationRepository_ReadBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string), args[1].(string))
 	})

@@ -112,15 +112,14 @@ foundMatch:
 	for _, policy := range getPolicies() {
 		// check if we find an attestation that matches
 		for _, attestation := range attestations {
-			if attestation.AttestationName != policy.AttestationName {
+			if attestation.PredicateType != policy.PredicateType {
 				continue
 			}
 			res := policy.Eval(attestation.Content)
-			if res.Compliant != nil && *res.Compliant {
-				// this matches - lets add it
-				results = append(results, res)
-				continue foundMatch
-			}
+			// this matches - lets add it
+			results = append(results, res)
+			continue foundMatch
+
 		}
 		// we did not find any attestation that matches - lets add the policy with a nil result
 		results = append(results, policy.Eval(nil))
@@ -145,17 +144,15 @@ func (c *httpController) Details(ctx core.Context) error {
 		if strings.TrimSuffix(policy.Filename, ".rego") == p {
 			// look for the right attestations
 			for _, attestation := range attestations {
-				if attestation.AttestationName == policy.AttestationName {
+				if attestation.PredicateType == policy.PredicateType {
 					res := policy.Eval(attestation.Content)
 					return ctx.JSON(200, res)
 				}
-
-				// we did not find any attestation that matches - lets add the policy with a nil result
-
 			}
+			// we did not find any attestation that matches - lets add the policy with a nil result
+			return ctx.JSON(200, policy.Eval(nil))
 		}
 	}
-
 	return ctx.NoContent(404)
 }
 
