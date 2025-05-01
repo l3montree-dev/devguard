@@ -385,6 +385,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	componentProjectRepository := repositories.NewComponentProjectRepository(db)
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository)
 
+	complianceService := compliance.NewService()
+	policyVialotionRepository := repositories.NewPolicyViolationRepository(db)
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, &componentService)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 	invitationRepository := repositories.NewInvitationRepository(db)
@@ -398,10 +400,10 @@ func BuildRouter(db core.DB) *echo.Echo {
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository)
-	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
+	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository, policyVialotionRepository, complianceService)
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository)
-	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository)
+	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository, complianceService)
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
 	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)

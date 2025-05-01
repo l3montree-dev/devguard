@@ -27,6 +27,17 @@ import (
 	"github.com/openvex/go-vex/pkg/vex"
 )
 
+type PolicyViolationRepository interface {
+	Save(policyViolation *models.PolicyViolation) error
+	GetByAssetVersion(assetVersionName string, assetID uuid.UUID) ([]models.PolicyViolation, error)
+	GetByPolicyID(attestationName, policyID string, assetVersionName string, assetID uuid.UUID) ([]models.PolicyViolation, error)
+	GetByAttestationName(attestationName string, assetVersionName string, assetID uuid.UUID) ([]models.PolicyViolation, error)
+}
+
+type ComplianceService interface {
+	EvalPolicies(attestations []models.Attestation) ([]common.PolicyEvaluation, error)
+}
+
 type ProjectRepository interface {
 	Read(projectID uuid.UUID) (models.Project, error)
 	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)

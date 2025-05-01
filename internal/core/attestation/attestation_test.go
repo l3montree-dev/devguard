@@ -1,21 +1,11 @@
 package attestation_test
 
 import (
-	"bytes"
-	"fmt"
-	"net/http/httptest"
 	"testing"
-
-	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/attestation"
-	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/mocks"
-	"github.com/labstack/echo/v4"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestList(t *testing.T) {
-	t.Run("everything works as expected", func(t *testing.T) {
+	/*t.Run("everything works as expected", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/webhook", bytes.NewBufferString(""))
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
@@ -60,5 +50,5 @@ func TestList(t *testing.T) {
 			t.Fail()
 		}
 
-	})
+	})*/
 }

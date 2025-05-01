@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/open-policy-agent/opa/rego"
 	"gopkg.in/yaml.v2"
@@ -26,44 +27,27 @@ type customYaml struct {
 	ComplianceFrameworks []string `yaml:"complianceFrameworks"`
 }
 
-type PolicyMetadata struct {
-	Title                string   `yaml:"title" json:"title"`
-	Description          string   `yaml:"description" json:"description"`
-	Priority             int      `yaml:"priority" json:"priority"`
-	Tags                 []string `yaml:"tags" json:"tags"`
-	RelatedResources     []string `yaml:"relatedResources" json:"relatedResources"`
-	ComplianceFrameworks []string `yaml:"complianceFrameworks" json:"complianceFrameworks"`
-	Filename             string   `json:"filename"`
-	Content              string   `json:"content"`
-	AttestationName      string   `yaml:"attestationName" json:"attestationName"`
-}
 type Policy struct {
-	PolicyMetadata
+	common.PolicyMetadata
 	Content string
 	query   rego.PreparedEvalQuery
-}
-
-type PolicyEvaluation struct {
-	PolicyMetadata
-	Compliant  *bool    `json:"compliant"`
-	Violations []string `json:"violations"`
 }
 
 var packageRegexp = regexp.MustCompile(`(?m)^package compliance`)
 var metadataRegexp = regexp.MustCompile(`^\s*#\s*METADATA`)
 
-func parseMetadata(fileName string, content string) (PolicyMetadata, error) {
+func parseMetadata(fileName string, content string) (common.PolicyMetadata, error) {
 	// split the content by first occurence of a line, that starts with "package compliance"
 	parts := packageRegexp.Split(content, 2)
 
 	// do a sanity check. It should start with "METADATA"
 	if len(parts) < 2 {
-		return PolicyMetadata{}, fmt.Errorf("metadata not found")
+		return common.PolicyMetadata{}, fmt.Errorf("metadata not found")
 	}
 
 	yamlData := parts[0]
 	if yamlData == "" {
-		return PolicyMetadata{}, nil
+		return common.PolicyMetadata{}, nil
 	}
 
 	yamlLines := strings.Split(yamlData, "\n")
@@ -86,10 +70,10 @@ func parseMetadata(fileName string, content string) (PolicyMetadata, error) {
 	yamlData = strings.Join(collectedLines, "\n")
 	var metadata yamlPolicy
 	if err := yaml.Unmarshal([]byte(yamlData), &metadata); err != nil {
-		return PolicyMetadata{}, err
+		return common.PolicyMetadata{}, err
 	}
 
-	return PolicyMetadata{
+	return common.PolicyMetadata{
 		Title:                metadata.Title,
 		Description:          metadata.Custom.Description,
 		Priority:             metadata.Custom.Priority,
@@ -127,10 +111,10 @@ func NewPolicy(filename string, content string) (*Policy, error) {
 	}, nil
 }
 
-func (p *Policy) Eval(input any) PolicyEvaluation {
+func (p *Policy) Eval(input any) common.PolicyEvaluation {
 	rs, err := p.query.Eval(context.TODO(), rego.EvalInput(input))
 	if err != nil {
-		return PolicyEvaluation{
+		return common.PolicyEvaluation{
 			PolicyMetadata: p.PolicyMetadata,
 			Compliant:      nil,
 		}
@@ -155,7 +139,7 @@ func (p *Policy) Eval(input any) PolicyEvaluation {
 		}
 	}
 
-	return PolicyEvaluation{
+	return common.PolicyEvaluation{
 		PolicyMetadata: p.PolicyMetadata,
 		Compliant:      compliant,
 		Violations:     violations,

@@ -6,19 +6,25 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/compliance"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
 type attestationController struct {
-	attestationRepository  core.AttestationRepository
-	assetVersionRepository core.AssetVersionRepository
+	attestationRepository     core.AttestationRepository
+	assetVersionRepository    core.AssetVersionRepository
+	policyViolationRepository core.PolicyViolationRepository
+	complianceService         core.ComplianceService
 }
 
-func NewAttestationController(repository core.AttestationRepository, assetVersionRepository core.AssetVersionRepository) *attestationController {
+func NewAttestationController(repository core.AttestationRepository, assetVersionRepository core.AssetVersionRepository, policyViolationRepository core.PolicyViolationRepository, complianceService core.ComplianceService) *attestationController {
 	return &attestationController{
-		attestationRepository:  repository,
-		assetVersionRepository: assetVersionRepository,
+		attestationRepository:     repository,
+		assetVersionRepository:    assetVersionRepository,
+		policyViolationRepository: policyViolationRepository,
+		complianceService:         complianceService,
 	}
 }
 
@@ -73,10 +79,25 @@ func (a *attestationController) Create(ctx core.Context) error {
 		return echo.NewHTTPError(400, err.Error())
 	}
 	attestation.Content = jsonContent
+
 	err = a.attestationRepository.Create(nil, &attestation)
 	if err != nil {
 		return err
 	}
+
+	// validate the attestation against the policies
+	evals, err := a.complianceService.EvalPolicies([]models.Attestation{attestation})
+	foundViolations := compliance.ViolationsFromEvals(assetVersionName, asset.ID, evals)
+	// get the current policy state for this
+	existingPolicyViolations, err := a.policyViolationRepository.GetByAttestationName(attestation.AttestationName, assetVersionName, asset.ID)
+	if err != nil {
+		return err
+	}
+
+	// diff the existing policy violations with the new ones
+	comparison := utils.CompareSlices(existingPolicyViolations, foundViolations, func(el models.PolicyViolation) string {
+		return el.PolicyID
+	})
 
 	return nil
 }

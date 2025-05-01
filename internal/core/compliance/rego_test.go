@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core/compliance"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/stretchr/testify/assert"
@@ -87,7 +88,7 @@ func TestOnlyOsiApprovedLicensesPolicy(t *testing.T) {
 
 	result := policy.Eval(input)
 
-	expectedResult := &compliance.PolicyEvaluation{
+	expectedResult := &common.PolicyEvaluation{
 		PolicyMetadata: policy.PolicyMetadata,
 		Compliant:      utils.Ptr(false),
 		Violations: []string{

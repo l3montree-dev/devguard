@@ -9,14 +9,15 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type httpController struct {
-	policies               []Policy
 	assetVersionRepository core.AssetVersionRepository
 	attestationRepository  core.AttestationRepository
+	complianceService      core.ComplianceService
 }
 
 type deadSimpleSigningEnvelope struct {
@@ -24,11 +25,11 @@ type deadSimpleSigningEnvelope struct {
 	Signature string `json:"signature"`
 }
 
-func NewHTTPController(assetVersionRepository core.AssetVersionRepository, attestationRepository core.AttestationRepository) *httpController {
+func NewHTTPController(assetVersionRepository core.AssetVersionRepository, attestationRepository core.AttestationRepository, service core.ComplianceService) *httpController {
 	return &httpController{
 		assetVersionRepository: assetVersionRepository,
 		attestationRepository:  attestationRepository,
-		policies:               getPolicies(),
+		complianceService:      service,
 	}
 }
 
@@ -99,7 +100,7 @@ func getPolicies() []Policy {
 	return policies
 }
 
-func (c *httpController) getAssetVersionCompliance(assetVersion models.AssetVersion) ([]PolicyEvaluation, error) {
+func (c *httpController) getAssetVersionCompliance(assetVersion models.AssetVersion) ([]common.PolicyEvaluation, error) {
 	// get the attestation
 	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(assetVersion.AssetID, assetVersion.Name)
 
@@ -107,27 +108,8 @@ func (c *httpController) getAssetVersionCompliance(assetVersion models.AssetVers
 		return nil, err
 	}
 
-	results := make([]PolicyEvaluation, 0, len(c.policies))
-foundMatch:
-	for _, policy := range getPolicies() {
-		// check if we find an attestation that matches
-		for _, attestation := range attestations {
-			if attestation.AttestationName != policy.AttestationName {
-				continue
-			}
-			res := policy.Eval(attestation.Content)
-			if res.Compliant != nil && *res.Compliant {
-				// this matches - lets add it
-				results = append(results, res)
-				continue foundMatch
-			}
-		}
-		// we did not find any attestation that matches - lets add the policy with a nil result
-		results = append(results, policy.Eval(nil))
-	}
-
-	// evaluate the policy
-	return results, nil
+	evals, err := c.complianceService.EvalPolicies(attestations)
+	return evals, err
 }
 
 func (c *httpController) Details(ctx core.Context) error {
@@ -187,7 +169,7 @@ func (c *httpController) ProjectCompliance(ctx core.Context) error {
 		return ctx.JSON(500, nil)
 	}
 
-	results := make([][]PolicyEvaluation, 0, len(assetVersions))
+	results := make([][]common.PolicyEvaluation, 0, len(assetVersions))
 	for _, assetVersion := range assetVersions {
 		compliance, err := c.getAssetVersionCompliance(assetVersion)
 		if err != nil {
