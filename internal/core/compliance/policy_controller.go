@@ -60,9 +60,9 @@ func (c *policyController) migratePolicies() error {
 		return p.OpaqueID
 	})
 
-	toCreate := comp.OnlyInA
+	toCreate := comp.OnlyInB
 	toUpdate := comp.InBoth
-	toDelete := comp.OnlyInB
+	toDelete := comp.OnlyInA
 
 	// create the policies
 	if len(toCreate) > 0 {
