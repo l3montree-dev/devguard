@@ -103,12 +103,6 @@ func componentDepthMessages(depth int) string {
 	return fmt.Sprintf("The vulnerability is in a dependency of a dependency in your project. It is %d levels deep.", depth)
 }
 
-type AssetDTO struct {
-	AvailabilityRequirement    string
-	IntegrityRequirement       string
-	ConfidentialityRequirement string
-}
-
 const (
 	RequirementsLevelHigh = "High"
 )

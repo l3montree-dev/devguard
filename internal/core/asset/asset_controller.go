@@ -35,7 +35,7 @@ func (a *httpController) List(ctx core.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, apps)
+	return ctx.JSON(200, toDTOs(apps))
 }
 
 func (a *httpController) AttachSigningKey(ctx core.Context) error {
@@ -69,36 +69,15 @@ func (a *httpController) Delete(ctx core.Context) error {
 	return ctx.NoContent(200)
 }
 
-func (a *httpController) GenerateBadgeSecret(ctx core.Context) error {
+func (a *httpController) GetSecrets(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 
-	// generate a new secret
-	secret := uuid.New()
-
-	asset.BadgeSecret = secret
-
-	// save the asset
-	err := a.assetRepository.Update(nil, &asset)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not generate badge secret").WithInternal(err)
+	secrets := map[string]uuid.UUID{
+		"badgeSecret":   asset.BadgeSecret,
+		"webhookSecret": asset.WebhookSecret,
 	}
-	return ctx.JSON(200, secret)
-}
 
-func (a *httpController) GenerateWebhookSecret(ctx core.Context) error {
-	asset := core.GetAsset(ctx)
-
-	// generate a new secret
-	secret := uuid.New()
-
-	asset.WebhookSecret = secret
-
-	// save the asset
-	err := a.assetRepository.Update(nil, &asset)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not generate webhook secret").WithInternal(err)
-	}
-	return ctx.JSON(200, secret)
+	return ctx.JSON(200, secrets)
 }
 
 func (a *httpController) Create(ctx core.Context) error {
@@ -138,13 +117,13 @@ func (a *httpController) Create(ctx core.Context) error {
 		}
 	}
 
-	return ctx.JSON(200, newAsset)
+	return ctx.JSON(200, toDTO(newAsset))
 }
 
 func (a *httpController) Read(ctx core.Context) error {
 	app := core.GetAsset(ctx)
 
-	return ctx.JSON(200, app)
+	return ctx.JSON(200, toDTO(app))
 }
 
 func (a *httpController) Update(ctx core.Context) error {
@@ -252,7 +231,7 @@ func (a *httpController) Update(ctx core.Context) error {
 		}
 	}
 
-	return ctx.JSON(200, asset)
+	return ctx.JSON(200, toDTOWithSecrets(asset))
 }
 
 func (a *httpController) GetConfigFile(ctx core.Context) error {

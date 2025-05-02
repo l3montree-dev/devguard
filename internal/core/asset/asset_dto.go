@@ -1,10 +1,94 @@
 package asset
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
+
+type AssetDTO struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Slug        string    `json:"slug"`
+	Description string    `json:"description"`
+	ProjectID   uuid.UUID `json:"projectId"`
+
+	AvailabilityRequirement    models.RequirementLevel `json:"availabilityRequirement"`
+	IntegrityRequirement       models.RequirementLevel `json:"integrityRequirement"`
+	ConfidentialityRequirement models.RequirementLevel `json:"confidentialityRequirement"`
+	ReachableFromInternet      bool                    `json:"reachableFromInternet"`
+
+	RepositoryID   *string `json:"repositoryId"`
+	RepositoryName *string `json:"repositoryName"`
+
+	LastSecretScan    *time.Time `json:"lastSecretScan"`
+	LastSastScan      *time.Time `json:"lastSastScan"`
+	LastScaScan       *time.Time `json:"lastScaScan"`
+	LastIacScan       *time.Time `json:"lastIacScan"`
+	LastContainerScan *time.Time `json:"lastContainerScan"`
+	LastDastScan      *time.Time `json:"lastDastScan"`
+
+	SigningPubKey *string `json:"signingPubKey"`
+
+	EnableTicketRange            bool     `json:"enableTicketRange"`
+	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
+	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
+
+	BadgeSecret   uuid.UUID `json:"badgeSecret"`
+	WebhookSecret uuid.UUID `json:"webhookSecret"`
+
+	AssetVersions []models.AssetVersion `json:"refs"`
+}
+
+func toDTOs(assets []models.Asset) []AssetDTO {
+	assetDTOs := make([]AssetDTO, len(assets))
+	for i, asset := range assets {
+		assetDTOs[i] = toDTO(asset)
+	}
+	return assetDTOs
+}
+
+func toDTO(asset models.Asset) AssetDTO {
+	return AssetDTO{
+		ID:          asset.ID,
+		Name:        asset.Name,
+		Slug:        asset.Slug,
+		Description: asset.Description,
+		ProjectID:   asset.ProjectID,
+
+		AvailabilityRequirement:    asset.AvailabilityRequirement,
+		IntegrityRequirement:       asset.IntegrityRequirement,
+		ConfidentialityRequirement: asset.ConfidentialityRequirement,
+		ReachableFromInternet:      asset.ReachableFromInternet,
+
+		RepositoryID:   asset.RepositoryID,
+		RepositoryName: asset.RepositoryName,
+
+		LastSecretScan:    asset.LastSecretScan,
+		LastSastScan:      asset.LastSastScan,
+		LastScaScan:       asset.LastScaScan,
+		LastIacScan:       asset.LastIacScan,
+		LastContainerScan: asset.LastContainerScan,
+		LastDastScan:      asset.LastDastScan,
+
+		SigningPubKey: asset.SigningPubKey,
+
+		CVSSAutomaticTicketThreshold: asset.CVSSAutomaticTicketThreshold,
+		RiskAutomaticTicketThreshold: asset.RiskAutomaticTicketThreshold,
+
+		AssetVersions: asset.AssetVersions,
+	}
+}
+
+func toDTOWithSecrets(asset models.Asset) AssetDTO {
+	assetDTO := toDTO(asset)
+	assetDTO.BadgeSecret = asset.BadgeSecret
+	assetDTO.WebhookSecret = asset.WebhookSecret
+
+	return assetDTO
+}
 
 type createRequest struct {
 	Name        string `json:"name" validate:"required"`
@@ -77,6 +161,9 @@ type patchRequest struct {
 	RepositoryName *string `json:"repositoryName"`
 
 	ConfigFiles *map[string]any `json:"configFiles"`
+
+	WebhookSecretUpdate *bool `json:"webhookSecretUpdate"`
+	BadgeSecretUpdate   *bool `json:"badgeSecretUpdate"`
 }
 
 func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
@@ -123,6 +210,15 @@ func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
 	if assetPatch.ConfigFiles != nil {
 		updated = true
 		asset.ConfigFiles = *assetPatch.ConfigFiles
+	}
+
+	if assetPatch.WebhookSecretUpdate != nil && *assetPatch.WebhookSecretUpdate {
+		updated = true
+		asset.WebhookSecret = uuid.New()
+	}
+	if assetPatch.BadgeSecretUpdate != nil && *assetPatch.BadgeSecretUpdate {
+		updated = true
+		asset.BadgeSecret = uuid.New()
 	}
 
 	return updated
