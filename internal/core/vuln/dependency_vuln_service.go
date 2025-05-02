@@ -247,28 +247,28 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 	return nil
 }
 
-func (s *service) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, assetVersionName string) (models.VulnEvent, error) {
+func (s *service) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error) {
 	if tx == nil {
 
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.dependencyVulnRepository.Transaction(func(d core.DB) error {
-			ev, err = s.updateDependencyVulnState(tx, userID, dependencyVuln, statusType, justification)
+			ev, err = s.updateDependencyVulnState(tx, userID, dependencyVuln, statusType, justification, mechanicalJustification)
 			return err
 		})
 		return ev, err
 	}
-	return s.updateDependencyVulnState(tx, userID, dependencyVuln, statusType, justification)
+	return s.updateDependencyVulnState(tx, userID, dependencyVuln, statusType, justification, mechanicalJustification)
 }
 
-func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string) (models.VulnEvent, error) {
+func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch models.VulnEventType(statusType) {
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, dependencyVuln.ScannerIDs)
+		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.ScannerIDs)
 	case models.EventTypeReopened:
 		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
 	case models.EventTypeComment:
