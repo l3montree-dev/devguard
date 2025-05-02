@@ -1,11 +1,10 @@
-package compliance_test
+package compliance
 
 import (
 	"encoding/json"
 	"os"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/internal/core/compliance"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +16,7 @@ func TestEval(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	input, err := compliance.ExtractAttestationPayload(string(b))
+	input, err := ExtractAttestationPayload(string(b))
 
 	if err != nil {
 		t.Fatal(err)
@@ -30,14 +29,17 @@ func TestEval(t *testing.T) {
 	}
 
 	// create a new policy
-	policy, err := compliance.NewPolicy("", string(policyContent))
+	policy, err := NewPolicy("", string(policyContent))
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	model := convertPolicyFsToModel(*policy)
+
 	// evaluate the policy
-	if res := policy.Eval(input); !*res.Compliant {
-		t.Fatal(err)
+	res := Eval(model, input)
+	if res.Compliant == nil || *res.Compliant != true {
+		t.Fatal(res)
 	}
 }
 
@@ -50,7 +52,7 @@ func TestNewPolicy(t *testing.T) {
 		}
 
 		// create a new policy
-		policy, err := compliance.NewPolicy("", string(policyContent))
+		policy, err := NewPolicy("", string(policyContent))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -58,7 +60,6 @@ func TestNewPolicy(t *testing.T) {
 		assert.Equal(t, "Build from signed source", policy.Title)
 		assert.Equal(t, "This policy checks if the build was done from a signed commit.", policy.Description)
 		assert.Equal(t, []string{"iso27001", "A.8 Access Control"}, policy.Tags)
-
 	})
 }
 
@@ -73,7 +74,7 @@ func TestOnlyOsiApprovedLicensesPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	policy, err := compliance.NewPolicy("", string(policyContent))
+	policy, err := NewPolicy("", string(policyContent))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,11 +86,12 @@ func TestOnlyOsiApprovedLicensesPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := policy.Eval(input)
+	model := convertPolicyFsToModel(*policy)
+	result := Eval(model, input)
 
-	expectedResult := &compliance.PolicyEvaluation{
-		PolicyMetadata: policy.PolicyMetadata,
-		Compliant:      utils.Ptr(false),
+	expectedResult := &PolicyEvaluation{
+		Policy:    model,
+		Compliant: utils.Ptr(false),
 		Violations: []string{
 			"Component \"github.com/cloudflare/circl\" uses non-OSI approved license \"non-standard\"",
 			"Component \"github.com/dustin/go-humanize\" uses non-OSI approved license \"non-standard\"",

@@ -13,7 +13,7 @@ package compliance
 
 import rego.v1
 
-allow if {
+compliant if {
 	# make sure to look at the build definition to see if it was signed
 	input.predicateType == "https://slsa.dev/provenance/v1"
 

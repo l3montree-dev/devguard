@@ -130,6 +130,12 @@ func Eval(p models.Policy, input any) PolicyEvaluation {
 
 	ctx := context.TODO()
 	query, err := r.PrepareForEval(ctx)
+	if err != nil {
+		return PolicyEvaluation{
+			Policy:    p,
+			Compliant: nil,
+		}
+	}
 
 	rs, err := query.Eval(context.TODO(), rego.EvalInput(input))
 	if err != nil {
