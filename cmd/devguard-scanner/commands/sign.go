@@ -87,7 +87,7 @@ func tokenToKey(token string) (string, string, error) {
 		return "", "", err
 	}
 	// create a new temporary file to store the private key - the file needs to have minimum permissions
-	tempDir := uuid.New().String()
+	tempDir := path.Join(os.TempDir(), uuid.New().String())
 	err = os.Mkdir(
 		tempDir,
 		0700,

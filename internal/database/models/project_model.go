@@ -34,6 +34,8 @@ type Project struct {
 	RepositoryName *string `json:"repositoryName" gorm:"type:text;"`
 
 	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
+
+	EnabledPolicies []Policy `json:"enabledPolicies" gorm:"many2many:project_enabled_policies;"`
 }
 
 func (m Project) TableName() string {

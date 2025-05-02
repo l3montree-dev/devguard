@@ -17,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/openvex/go-vex/pkg/vex"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
 
@@ -512,32 +513,30 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 
 		var p packageurl.PackageURL
 		var err error
-		if c.ComponentPurl != nil {
-			p, err = packageurl.FromString(*c.ComponentPurl)
-			if err == nil {
-				if _, ok := alreadyIncluded[*c.ComponentPurl]; !ok {
-					alreadyIncluded[*c.ComponentPurl] = true
-					bomComponents = append(bomComponents, cdx.Component{
-						BOMRef:     *c.ComponentPurl,
-						Type:       cdx.ComponentType(c.Component.ComponentType),
-						PackageURL: *c.ComponentPurl,
-						Version:    c.Component.Version,
-						Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
+
+		p, err = packageurl.FromString(c.DependencyPurl)
+		if err == nil {
+
+			if _, ok := alreadyIncluded[c.DependencyPurl]; !ok {
+				alreadyIncluded[c.DependencyPurl] = true
+
+				licenses := cdx.Licenses{}
+				if c.Dependency.ComponentProject != nil {
+					licenses = append(licenses, cdx.LicenseChoice{
+						License: &cdx.License{
+							ID:   c.Dependency.ComponentProject.License,
+							Name: c.Dependency.ComponentProject.License,
+						},
 					})
 				}
-			}
-		}
 
-		if c.DependencyPurl != "" {
-			p, err = packageurl.FromString(c.DependencyPurl)
-			if err == nil {
-				alreadyIncluded[c.DependencyPurl] = true
 				bomComponents = append(bomComponents, cdx.Component{
+					Licenses:   &licenses,
 					BOMRef:     c.DependencyPurl,
 					Type:       cdx.ComponentType(c.Dependency.ComponentType),
 					PackageURL: c.DependencyPurl,
-					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
 					Version:    c.Dependency.Version,
+					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
 				})
 			}
 		}
@@ -574,6 +573,62 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
 	return &bom
+}
+
+func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {
+	switch dependencyVuln.State {
+	case models.VulnStateOpen:
+		return vex.StatusUnderInvestigation
+	case models.VulnStateFixed:
+		return vex.StatusFixed
+	case models.VulnStateFalsePositive:
+		return vex.StatusNotAffected
+	case models.VulnStateAccepted:
+		return vex.StatusAffected
+	case models.VulnStateMarkedForTransfer:
+		return vex.StatusAffected
+	default:
+		return vex.StatusUnderInvestigation
+	}
+}
+
+func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, version string, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX {
+	doc := vex.New()
+
+	doc.Author = organizationSlug
+	doc.Timestamp = utils.Ptr(time.Now())
+	doc.Statements = make([]vex.Statement, 0)
+
+	appPurl := fmt.Sprintf("pkg:oci/%s/%s@%s", organizationSlug, asset.Slug, assetVersion.Slug)
+	for _, dependencyVuln := range dependencyVulns {
+		if dependencyVuln.CVE == nil {
+			continue
+		}
+
+		statement := vex.Statement{
+			ID:              dependencyVuln.CVE.CVE,
+			Status:          dependencyVulnToOpenVexStatus(dependencyVuln),
+			ImpactStatement: utils.OrDefault(getJustification(dependencyVuln), ""),
+			Vulnerability: vex.Vulnerability{
+				ID:          fmt.Sprintf("https://nvd.nist.gov/vuln/detail/%s", dependencyVuln.CVE.CVE),
+				Name:        vex.VulnerabilityID(dependencyVuln.CVE.CVE),
+				Description: dependencyVuln.CVE.Description,
+			},
+			Products: []vex.Product{{
+				Component: vex.Component{
+					ID: appPurl,
+					Identifiers: map[vex.IdentifierType]string{
+						vex.PURL: appPurl,
+					},
+				},
+			}},
+		}
+
+		doc.Statements = append(doc.Statements, statement)
+	}
+
+	doc.GenerateCanonicalID() // nolint:errcheck
+	return doc
 }
 
 func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency, dependencyVulns []models.DependencyVuln) *cdx.BOM {

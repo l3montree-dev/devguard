@@ -177,6 +177,14 @@ func TestObfuscateString(t *testing.T) {
 		result := obfuscateString(input)
 		assert.Equal(t, expected, result)
 	})
+
+	t.Run("it should have a look at individual words", func(t *testing.T) {
+		input := "# COPY .badge-api.yaml /.badge-api.yaml"
+		expected := "# COPY .badge-api.yaml /.badge-api.yaml"
+		result := obfuscateString(input)
+
+		assert.Equal(t, expected, result)
+	})
 }
 func TestExpandSnippet(t *testing.T) {
 	t.Run("it should expand the snippet correctly", func(t *testing.T) {

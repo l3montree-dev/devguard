@@ -17,11 +17,16 @@ package commands
 
 import (
 	"bytes"
+	"context"
+	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/exec"
 
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/spf13/cobra"
 )
 
@@ -37,49 +42,109 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 	var out bytes.Buffer
 	var errOut bytes.Buffer
 
-	defer os.Remove(keyPath)
+	defer func() {
+		// even remove the key file if a panic occurs
+		err := recover()
+		slog.Info("removing key file", "keyPath", keyPath)
+		os.Remove(keyPath)
+
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	// check if the file does exist
 	predicate := args[0]
-	imageName := args[1]
+	// check if an image name is provided
+	if len(args) == 2 {
+		slog.Info("attesting image", "predicate", predicate, "image", args[1])
+		imageName := args[1]
+		if _, err := os.Stat(predicate); os.IsNotExist(err) {
+			// print an error message if the file does not exist
+			slog.Error("file does not exist", "file", predicate)
+			return err
+		}
 
-	if _, err := os.Stat(predicate); os.IsNotExist(err) {
-		// print an error message if the file does not exist
-		slog.Error("file does not exist", "file", predicate)
-		return err
+		// use the cosign cli to sign the file
+		attestCmd := exec.Command("cosign", "attest", "--tlog-upload=false", "--key", keyPath, "--predicate", predicate, imageName) // nolint:gosec
+		attestCmd.Stdout = &out
+		attestCmd.Stderr = &errOut
+		attestCmd.Env = []string{"COSIGN_PASSWORD="}
+
+		err = attestCmd.Run()
+		if err != nil {
+			slog.Error("could not attest predicate", "predicate", predicate, "image", imageName, "err", err, "out", out.String(), "errOut", errOut.String())
+		}
 	}
 
-	// use the cosign cli to sign the file
-	attestCmd := exec.Command("cosign", "attest", "--tlog-upload=false", "--key", keyPath, "--predicate", predicate, imageName) // nolint:gosec
-	attestCmd.Stdout = &out
-	attestCmd.Stderr = &errOut
-	attestCmd.Env = []string{"COSIGN_PASSWORD="}
+	// upload the attestation to the backend
+	return uploadAttestation(cmd.Context(), predicate)
+}
 
-	err = attestCmd.Run()
+func uploadAttestation(ctx context.Context, predicate string) error {
+	// read the file
+	file, err := os.ReadFile(predicate)
 	if err != nil {
-		slog.Error("could not attest predicate", "predicate", predicate, "image", imageName, "err", err, "out", out.String(), "errOut", errOut.String())
+		slog.Error("could not read file", "err", err)
 		return err
 	}
 
-	// print the signature
-	slog.Info("signature", "signature", out.String())
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/attestations", config.RuntimeBaseConfig.ApiUrl), bytes.NewReader(file))
+	if err != nil {
+		slog.Error("could not create request", "err", err)
+		return err
+	}
 
+	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("X-Attestation-Name", config.RuntimeAttestationConfig.PredicateType)
+	// set the headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
+	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
+	req.Header.Set("X-Asset-Ref", config.RuntimeBaseConfig.Ref)
+	req.Header.Set("X-Asset-Default-Branch", config.RuntimeBaseConfig.DefaultRef)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		slog.Error("could not upload attestation", "err", err)
+		return err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		// read the body
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("could not upload attestation: %s %s", resp.Status, string(body))
+		}
+		return fmt.Errorf("could not upload attestation: %s %s", resp.Status, string(body))
+	}
+
+	slog.Info("attestation uploaded successfully", "predicate", predicate, "predicateType", config.RuntimeAttestationConfig.PredicateType)
 	return nil
 }
 
 func NewAttestCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "attest <predicate> <image>",
+		Use:   "attest <predicate> [container-image]",
 		Short: "Add a new attestation to an image",
 		Long:  `Add a new attestation to an image`,
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return attestCmd(cmd, args)
 		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			config.ParseAttestationConfig()
+		},
 	}
 
-	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-	cmd.MarkPersistentFlagRequired("token") // nolint:errcheck
-
+	addDefaultFlags(cmd)
+	addAssetRefFlags(cmd)
+	cmd.Flags().StringP("predicateType", "a", "", "The name of the attestation")
+	cmd.MarkFlagRequired("predicateType") //nolint:errcheck
 	return cmd
 }

@@ -104,6 +104,7 @@ func init() {
 		NewLoginCommand(),
 		NewIaCCommand(),
 		NewSarifCommand(),
+		NewGetCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.
@@ -155,7 +156,7 @@ func initializeConfig(cmd *cobra.Command) error {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return err
 		} else {
-			slog.Warn("no config file found")
+			slog.Debug("no config file found")
 		}
 	}
 

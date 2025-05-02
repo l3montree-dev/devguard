@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/open-policy-agent/opa/rego"
 	"gopkg.in/yaml.v2"
 )
@@ -16,9 +18,11 @@ type yamlPolicy struct {
 }
 
 type customYaml struct {
-	Description          string `yaml:"description"`
-	Priority             int    `yaml:"priority"`
-	Tags                 []string
+	Description string `yaml:"description"`
+	Priority    int    `yaml:"priority"`
+	Tags        []string
+	// used for mapping from policies to attestations
+	PredicateType        string   `yaml:"predicateType"`
 	RelatedResources     []string `yaml:"relatedResources"`
 	ComplianceFrameworks []string `yaml:"complianceFrameworks"`
 }
@@ -30,22 +34,25 @@ type PolicyMetadata struct {
 	Tags                 []string `yaml:"tags" json:"tags"`
 	RelatedResources     []string `yaml:"relatedResources" json:"relatedResources"`
 	ComplianceFrameworks []string `yaml:"complianceFrameworks" json:"complianceFrameworks"`
+	Filename             string   `json:"filename"`
+	Content              string   `json:"content"`
+	PredicateType        string   `yaml:"predicateType" json:"predicateType"`
 }
-type Policy struct {
+type PolicyFS struct {
 	PolicyMetadata
 	Content string
-	query   rego.PreparedEvalQuery
 }
 
 type PolicyEvaluation struct {
-	PolicyMetadata
-	Result *bool `json:"result"`
+	models.Policy
+	Compliant  *bool    `json:"compliant"`
+	Violations []string `json:"violations"`
 }
 
 var packageRegexp = regexp.MustCompile(`(?m)^package compliance`)
 var metadataRegexp = regexp.MustCompile(`^\s*#\s*METADATA`)
 
-func parseMetadata(content string) (PolicyMetadata, error) {
+func parseMetadata(fileName string, content string) (PolicyMetadata, error) {
 	// split the content by first occurence of a line, that starts with "package compliance"
 	parts := packageRegexp.Split(content, 2)
 
@@ -89,46 +96,77 @@ func parseMetadata(content string) (PolicyMetadata, error) {
 		Tags:                 metadata.Custom.Tags,
 		RelatedResources:     metadata.Custom.RelatedResources,
 		ComplianceFrameworks: metadata.Custom.ComplianceFrameworks,
+		Filename:             fileName,
+		PredicateType:        metadata.Custom.PredicateType,
+		Content:              content,
 	}, nil
 }
 
-func NewPolicy(content string) (*Policy, error) {
+func NewPolicy(filename string, content string) (*PolicyFS, error) {
+	metadata, err := parseMetadata(filename, content)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PolicyFS{
+		PolicyMetadata: metadata,
+		Content:        content,
+	}, nil
+}
+
+func Eval(p models.Policy, input any) PolicyEvaluation {
+
+	if input == nil {
+		return PolicyEvaluation{
+			Policy:    p,
+			Compliant: nil,
+		}
+	}
+
 	r := rego.New(
-		rego.Query("data.compliance.allow"),
-		rego.Module("", content),
+		rego.Query("data.compliance"),
+		rego.Module("", p.Rego),
 	)
 
 	ctx := context.TODO()
 	query, err := r.PrepareForEval(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	metadata, err := parseMetadata(content)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Policy{
-		PolicyMetadata: metadata,
-		Content:        content,
-		query:          query,
-	}, nil
-}
-
-func (p *Policy) Eval(input any) PolicyEvaluation {
-	rs, err := p.query.Eval(context.TODO(), rego.EvalInput(input))
 	if err != nil {
 		return PolicyEvaluation{
-			PolicyMetadata: p.PolicyMetadata,
-			Result:         nil,
+			Policy:    p,
+			Compliant: nil,
 		}
 	}
 
-	result := rs.Allowed()
+	rs, err := query.Eval(context.TODO(), rego.EvalInput(input))
+	if err != nil {
+		return PolicyEvaluation{
+			Policy:    p,
+			Compliant: nil,
+		}
+	}
+
+	var violations []string = []string{}
+	var compliant *bool
+	if len(rs) > 0 {
+		value := rs[0].Expressions[0].Value
+		// cast value to map
+		if v, ok := value.(map[string]any); ok {
+			if v["compliant"] != nil {
+				compliant = utils.Ptr(v["compliant"].(bool))
+			}
+			if v["violations"] != nil {
+				for _, violation := range v["violations"].([]any) {
+					if s, ok := violation.(string); ok {
+						violations = append(violations, s)
+					}
+				}
+			}
+		}
+	}
+
 	return PolicyEvaluation{
-		PolicyMetadata: p.PolicyMetadata,
-		Result:         &result,
+		Policy:     p,
+		Compliant:  compliant,
+		Violations: violations,
 	}
 }
