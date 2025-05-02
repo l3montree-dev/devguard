@@ -1,22 +1,20 @@
 package compliance
 
 import (
-	"embed"
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
-	"path/filepath"
-	"sort"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type httpController struct {
-	policies               []Policy
 	assetVersionRepository core.AssetVersionRepository
 	attestationRepository  core.AttestationRepository
+	policyRepository       core.PolicyRepository
 }
 
 type deadSimpleSigningEnvelope struct {
@@ -24,11 +22,11 @@ type deadSimpleSigningEnvelope struct {
 	Signature string `json:"signature"`
 }
 
-func NewHTTPController(assetVersionRepository core.AssetVersionRepository, attestationRepository core.AttestationRepository) *httpController {
+func NewHTTPController(assetVersionRepository core.AssetVersionRepository, attestationRepository core.AttestationRepository, policyRepository core.PolicyRepository) *httpController {
 	return &httpController{
 		assetVersionRepository: assetVersionRepository,
+		policyRepository:       policyRepository,
 		attestationRepository:  attestationRepository,
-		policies:               getPolicies(),
 	}
 }
 
@@ -64,65 +62,30 @@ func ExtractAttestationPayload(content string) (any, error) {
 	return input, nil
 }
 
-// embed the policies in the binary
-//
-//go:embed attestation-compliance-policies/policies/*.rego
-var policiesFs embed.FS
-
-func getPolicies() []Policy {
-	// fetch all policies
-	policyFiles, err := policiesFs.ReadDir("attestation-compliance-policies/policies")
-	if err != nil {
-		return nil
-	}
-
-	var policies []Policy
-	for _, file := range policyFiles {
-		content, err := policiesFs.ReadFile(filepath.Join("attestation-compliance-policies/policies", file.Name()))
-		if err != nil {
-			continue
-		}
-
-		policy, err := NewPolicy(file.Name(), string(content))
-		if err != nil {
-			continue
-		}
-
-		policies = append(policies, *policy)
-	}
-
-	// sort the policies by priority - use a stable sort
-	sort.SliceStable(policies, func(i, j int) bool {
-		return policies[i].Priority < policies[j].Priority
-	})
-
-	return policies
-}
-
-func (c *httpController) getAssetVersionCompliance(assetVersion models.AssetVersion) ([]PolicyEvaluation, error) {
+func (c *httpController) getAssetVersionCompliance(projectID uuid.UUID, assetVersion models.AssetVersion) ([]PolicyEvaluation, error) {
 	// get the attestation
 	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(assetVersion.AssetID, assetVersion.Name)
-
+	policies, err := c.policyRepository.FindByProjectId(projectID)
 	if err != nil {
 		return nil, err
 	}
 
-	results := make([]PolicyEvaluation, 0, len(c.policies))
+	results := make([]PolicyEvaluation, 0, len(policies))
 foundMatch:
-	for _, policy := range getPolicies() {
+	for _, policy := range policies {
 		// check if we find an attestation that matches
 		for _, attestation := range attestations {
 			if attestation.PredicateType != policy.PredicateType {
 				continue
 			}
-			res := policy.Eval(attestation.Content)
+			res := Eval(policy, attestation.Content)
 			// this matches - lets add it
 			results = append(results, res)
 			continue foundMatch
 
 		}
 		// we did not find any attestation that matches - lets add the policy with a nil result
-		results = append(results, policy.Eval(nil))
+		results = append(results, Eval(policy, nil))
 	}
 
 	// evaluate the policy
@@ -133,27 +96,33 @@ func (c *httpController) Details(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 
 	p := ctx.Param("policy")
+	// parse the uuid
+	policyID, err := uuid.Parse(p)
+	if err != nil {
+		return ctx.JSON(400, nil)
+	}
+	// get all policies
+	policy, err := c.policyRepository.Read(policyID)
+	if err != nil {
+		return ctx.JSON(404, nil)
+	}
+
 	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(assetVersion.AssetID, assetVersion.Name)
 
 	if err != nil {
 		return ctx.JSON(500, nil)
 	}
 
-	for _, policy := range getPolicies() {
-		// check if we should have a look at those details
-		if strings.TrimSuffix(policy.Filename, ".rego") == p {
-			// look for the right attestations
-			for _, attestation := range attestations {
-				if attestation.PredicateType == policy.PredicateType {
-					res := policy.Eval(attestation.Content)
-					return ctx.JSON(200, res)
-				}
-			}
-			// we did not find any attestation that matches - lets add the policy with a nil result
-			return ctx.JSON(200, policy.Eval(nil))
+	// look for the right attestations
+	for _, attestation := range attestations {
+		if attestation.PredicateType == policy.PredicateType {
+			res := Eval(policy, attestation.Content)
+			return ctx.JSON(200, res)
 		}
 	}
-	return ctx.NoContent(404)
+	// we did not find any attestation that matches - lets add the policy with a nil result
+	return ctx.JSON(200, Eval(policy, nil))
+
 }
 
 func (c *httpController) AssetCompliance(ctx core.Context) error {
@@ -167,7 +136,9 @@ func (c *httpController) AssetCompliance(ctx core.Context) error {
 		}
 	}
 
-	results, err := c.getAssetVersionCompliance(assetVersion)
+	project := core.GetProject(ctx)
+
+	results, err := c.getAssetVersionCompliance(project.ID, assetVersion)
 	if err != nil {
 		return ctx.JSON(500, nil)
 	}
@@ -186,7 +157,7 @@ func (c *httpController) ProjectCompliance(ctx core.Context) error {
 
 	results := make([][]PolicyEvaluation, 0, len(assetVersions))
 	for _, assetVersion := range assetVersions {
-		compliance, err := c.getAssetVersionCompliance(assetVersion)
+		compliance, err := c.getAssetVersionCompliance(project.ID, assetVersion)
 		if err != nil {
 			return ctx.JSON(500, nil)
 		}

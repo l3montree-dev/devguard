@@ -404,7 +404,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository)
-	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository)
+	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository, policyRepository)
 
 	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
 	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)

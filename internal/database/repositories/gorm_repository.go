@@ -37,6 +37,15 @@ func (g *GormRepository[ID, T]) All() ([]T, error) {
 	return ts, err
 }
 
+func (g *GormRepository[ID, T]) DeleteBatch(tx *gorm.DB, m []T) error {
+
+	err := g.GetDB(tx).Delete(&m).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (g *GormRepository[ID, T]) Save(tx *gorm.DB, t *T) error {
 	return g.GetDB(tx).Save(t).Error
 }

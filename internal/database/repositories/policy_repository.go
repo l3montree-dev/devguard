@@ -34,6 +34,15 @@ func (r *policyRepository) FindByProjectId(projectId uuid.UUID) ([]models.Policy
 	return policies, nil
 }
 
+func (r *policyRepository) FindCommunityManagedPolicies() ([]models.Policy, error) {
+	// where organization id is nil
+	var policies []models.Policy
+	if err := r.db.Where("organization_id IS NULL").Find(&policies).Error; err != nil {
+		return nil, err
+	}
+	return policies, nil
+}
+
 func (r *policyRepository) FindByOrganizationId(organizationId uuid.UUID) ([]models.Policy, error) {
 	var policies []models.Policy
 	if err := r.db.Find(&policies, "organization_id = ?", organizationId).Error; err != nil {

@@ -313,6 +313,53 @@ func (_c *ComponentProjectRepository_Delete_Call) RunAndReturn(run func(*gorm.DB
 	return _c
 }
 
+// DeleteBatch provides a mock function with given fields: tx, ids
+func (_m *ComponentProjectRepository) DeleteBatch(tx *gorm.DB, ids []models.ComponentProject) error {
+	ret := _m.Called(tx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteBatch")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.ComponentProject) error); ok {
+		r0 = rf(tx, ids)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ComponentProjectRepository_DeleteBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBatch'
+type ComponentProjectRepository_DeleteBatch_Call struct {
+	*mock.Call
+}
+
+// DeleteBatch is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - ids []models.ComponentProject
+func (_e *ComponentProjectRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *ComponentProjectRepository_DeleteBatch_Call {
+	return &ComponentProjectRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
+}
+
+func (_c *ComponentProjectRepository_DeleteBatch_Call) Run(run func(tx *gorm.DB, ids []models.ComponentProject)) *ComponentProjectRepository_DeleteBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].([]models.ComponentProject))
+	})
+	return _c
+}
+
+func (_c *ComponentProjectRepository_DeleteBatch_Call) Return(_a0 error) *ComponentProjectRepository_DeleteBatch_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *ComponentProjectRepository_DeleteBatch_Call) RunAndReturn(run func(*gorm.DB, []models.ComponentProject) error) *ComponentProjectRepository_DeleteBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDB provides a mock function with given fields: tx
 func (_m *ComponentProjectRepository) GetDB(tx *gorm.DB) *gorm.DB {
 	ret := _m.Called(tx)

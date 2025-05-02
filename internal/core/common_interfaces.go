@@ -48,6 +48,7 @@ type PolicyRepository interface {
 	common.Repository[uuid.UUID, models.Policy, DB]
 	FindByProjectId(projectId uuid.UUID) ([]models.Policy, error)
 	FindByOrganizationId(organizationId uuid.UUID) ([]models.Policy, error)
+	FindCommunityManagedPolicies() ([]models.Policy, error)
 }
 
 type AssetRepository interface {

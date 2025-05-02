@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/open-policy-agent/opa/rego"
 	"gopkg.in/yaml.v2"
@@ -37,14 +38,13 @@ type PolicyMetadata struct {
 	Content              string   `json:"content"`
 	PredicateType        string   `yaml:"predicateType" json:"predicateType"`
 }
-type Policy struct {
+type PolicyFS struct {
 	PolicyMetadata
 	Content string
-	query   rego.PreparedEvalQuery
 }
 
 type PolicyEvaluation struct {
-	PolicyMetadata
+	models.Policy
 	Compliant  *bool    `json:"compliant"`
 	Violations []string `json:"violations"`
 }
@@ -102,44 +102,40 @@ func parseMetadata(fileName string, content string) (PolicyMetadata, error) {
 	}, nil
 }
 
-func NewPolicy(filename string, content string) (*Policy, error) {
-	r := rego.New(
-		rego.Query("data.compliance"),
-		rego.Module("", content),
-	)
-
-	ctx := context.TODO()
-	query, err := r.PrepareForEval(ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
+func NewPolicy(filename string, content string) (*PolicyFS, error) {
 	metadata, err := parseMetadata(filename, content)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Policy{
+	return &PolicyFS{
 		PolicyMetadata: metadata,
 		Content:        content,
-		query:          query,
 	}, nil
 }
 
-func (p *Policy) Eval(input any) PolicyEvaluation {
+func Eval(p models.Policy, input any) PolicyEvaluation {
+
 	if input == nil {
 		return PolicyEvaluation{
-			PolicyMetadata: p.PolicyMetadata,
-			Compliant:      nil,
+			Policy:    p,
+			Compliant: nil,
 		}
 	}
 
-	rs, err := p.query.Eval(context.TODO(), rego.EvalInput(input))
+	r := rego.New(
+		rego.Query("data.compliance"),
+		rego.Module("", p.Rego),
+	)
+
+	ctx := context.TODO()
+	query, err := r.PrepareForEval(ctx)
+
+	rs, err := query.Eval(context.TODO(), rego.EvalInput(input))
 	if err != nil {
 		return PolicyEvaluation{
-			PolicyMetadata: p.PolicyMetadata,
-			Compliant:      nil,
+			Policy:    p,
+			Compliant: nil,
 		}
 	}
 
@@ -163,8 +159,8 @@ func (p *Policy) Eval(input any) PolicyEvaluation {
 	}
 
 	return PolicyEvaluation{
-		PolicyMetadata: p.PolicyMetadata,
-		Compliant:      compliant,
-		Violations:     violations,
+		Policy:     p,
+		Compliant:  compliant,
+		Violations: violations,
 	}
 }

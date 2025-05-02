@@ -315,6 +315,53 @@ func (_c *PolicyRepository_Delete_Call) RunAndReturn(run func(*gorm.DB, uuid.UUI
 	return _c
 }
 
+// DeleteBatch provides a mock function with given fields: tx, ids
+func (_m *PolicyRepository) DeleteBatch(tx *gorm.DB, ids []models.Policy) error {
+	ret := _m.Called(tx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteBatch")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.Policy) error); ok {
+		r0 = rf(tx, ids)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// PolicyRepository_DeleteBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBatch'
+type PolicyRepository_DeleteBatch_Call struct {
+	*mock.Call
+}
+
+// DeleteBatch is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - ids []models.Policy
+func (_e *PolicyRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *PolicyRepository_DeleteBatch_Call {
+	return &PolicyRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
+}
+
+func (_c *PolicyRepository_DeleteBatch_Call) Run(run func(tx *gorm.DB, ids []models.Policy)) *PolicyRepository_DeleteBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].([]models.Policy))
+	})
+	return _c
+}
+
+func (_c *PolicyRepository_DeleteBatch_Call) Return(_a0 error) *PolicyRepository_DeleteBatch_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *PolicyRepository_DeleteBatch_Call) RunAndReturn(run func(*gorm.DB, []models.Policy) error) *PolicyRepository_DeleteBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByOrganizationId provides a mock function with given fields: organizationId
 func (_m *PolicyRepository) FindByOrganizationId(organizationId uuid.UUID) ([]models.Policy, error) {
 	ret := _m.Called(organizationId)
@@ -427,6 +474,63 @@ func (_c *PolicyRepository_FindByProjectId_Call) Return(_a0 []models.Policy, _a1
 }
 
 func (_c *PolicyRepository_FindByProjectId_Call) RunAndReturn(run func(uuid.UUID) ([]models.Policy, error)) *PolicyRepository_FindByProjectId_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindCommunityManagedPolicies provides a mock function with no fields
+func (_m *PolicyRepository) FindCommunityManagedPolicies() ([]models.Policy, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindCommunityManagedPolicies")
+	}
+
+	var r0 []models.Policy
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]models.Policy, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []models.Policy); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Policy)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PolicyRepository_FindCommunityManagedPolicies_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindCommunityManagedPolicies'
+type PolicyRepository_FindCommunityManagedPolicies_Call struct {
+	*mock.Call
+}
+
+// FindCommunityManagedPolicies is a helper method to define mock.On call
+func (_e *PolicyRepository_Expecter) FindCommunityManagedPolicies() *PolicyRepository_FindCommunityManagedPolicies_Call {
+	return &PolicyRepository_FindCommunityManagedPolicies_Call{Call: _e.mock.On("FindCommunityManagedPolicies")}
+}
+
+func (_c *PolicyRepository_FindCommunityManagedPolicies_Call) Run(run func()) *PolicyRepository_FindCommunityManagedPolicies_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *PolicyRepository_FindCommunityManagedPolicies_Call) Return(_a0 []models.Policy, _a1 error) *PolicyRepository_FindCommunityManagedPolicies_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *PolicyRepository_FindCommunityManagedPolicies_Call) RunAndReturn(run func() ([]models.Policy, error)) *PolicyRepository_FindCommunityManagedPolicies_Call {
 	_c.Call.Return(run)
 	return _c
 }
