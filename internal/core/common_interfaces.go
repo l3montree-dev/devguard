@@ -40,6 +40,13 @@ type ProjectRepository interface {
 	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
+	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
+}
+
+type PolicyRepository interface {
+	common.Repository[uuid.UUID, models.Policy, DB]
+	FindByProjectId(projectId uuid.UUID) ([]models.Policy, error)
+	FindByOrganizationId(organizationId uuid.UUID) ([]models.Policy, error)
 }
 
 type AssetRepository interface {

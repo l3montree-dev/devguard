@@ -140,3 +140,7 @@ func (g *projectRepository) GetDirectChildProjects(projectID uuid.UUID) ([]model
 	err := g.db.Where("parent_id = ?", projectID).Find(&projects).Error
 	return projects, err
 }
+
+func (g *projectRepository) EnablePolicyForProject(tx core.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+	return g.db.Model(&models.Project{}).Where("id = ?", projectID).Association("EnabledPolicies").Append(&models.Policy{ID: policyID})
+}

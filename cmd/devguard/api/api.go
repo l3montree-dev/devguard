@@ -372,6 +372,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	intotoLinkRepository := repositories.NewInTotoLinkRepository(db)
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 	attestationRepository := repositories.NewAttestationRepository(db)
+	policyRepository := repositories.NewPolicyRepository(db)
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
@@ -390,7 +391,9 @@ func BuildRouter(db core.DB) *echo.Echo {
 	invitationRepository := repositories.NewInvitationRepository(db)
 
 	intotoService := intoto.NewInTotoService(casbinRBACProvider, intotoLinkRepository, projectRepository, patRepository, supplyChainRepository)
+
 	// init all http controllers using the repositories
+	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
@@ -478,6 +481,12 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.GET("/dependency-vulns/", dependencyVulnController.ListByOrgPaged)
 	organizationRouter.GET("/first-party-vulns/", firstPartyVulnController.ListByOrgPaged)
 
+	organizationRouter.GET("/policies/", policyController.GetOrganizationPolicies)
+	organizationRouter.GET("/policies/:policyId/", policyController.GetPolicy)
+	organizationRouter.PUT("/policies/:policyId/", policyController.UpdatePolicy, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
+	organizationRouter.POST("/policies/", policyController.CreatePolicy, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
+	organizationRouter.DELETE("/policies/:policyId/", policyController.DeletePolicy, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
+
 	organizationRouter.GET("/members/", orgController.Members)
 	organizationRouter.POST("/members/", orgController.InviteMember, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
@@ -518,6 +527,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution)
 	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory)
 	projectRouter.GET("/compliance/", complianceController.ProjectCompliance)
+	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
 	//TODO: change it
 	//projectRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
 	projectRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
