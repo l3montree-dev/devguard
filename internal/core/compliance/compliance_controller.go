@@ -65,6 +65,10 @@ func ExtractAttestationPayload(content string) (any, error) {
 func (c *httpController) getAssetVersionCompliance(projectID uuid.UUID, assetVersion models.AssetVersion) ([]PolicyEvaluation, error) {
 	// get the attestation
 	attestations, err := c.attestationRepository.GetByAssetVersionAndAssetID(assetVersion.AssetID, assetVersion.Name)
+	if err != nil {
+		return nil, err
+	}
+
 	policies, err := c.policyRepository.FindByProjectId(projectID)
 	if err != nil {
 		return nil, err
