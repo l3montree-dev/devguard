@@ -513,6 +513,10 @@ func BuildRouter(db core.DB) *echo.Echo {
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)
+
+	projectRouter.PUT("/policies/:policyId/", policyController.EnablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
+	projectRouter.DELETE("/policies/:policyId/", policyController.DisablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
+
 	//TODO: change it
 	//projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
 	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
@@ -528,7 +532,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory)
 	projectRouter.GET("/compliance/", complianceController.ProjectCompliance)
 	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
-	//TODO: change it
+
 	//projectRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
 	projectRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
 	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime)

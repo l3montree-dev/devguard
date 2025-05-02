@@ -137,7 +137,8 @@ func (c *policyController) DeletePolicy(ctx core.Context) error {
 
 func (c *policyController) EnablePolicyForProject(ctx core.Context) error {
 	policyId := ctx.Param("policyId")
-	projectId := ctx.Param("projectId")
+
+	project := core.GetProject(ctx)
 
 	// parse the uuid
 	policyUuid, err := uuid.Parse(policyId)
@@ -145,13 +146,27 @@ func (c *policyController) EnablePolicyForProject(ctx core.Context) error {
 		return err
 	}
 
-	projectUuid, err := uuid.Parse(projectId)
+	// enable the policy for the project
+	if err := c.projectRepository.EnablePolicyForProject(nil, project.ID, policyUuid); err != nil {
+		return err
+	}
+
+	return ctx.NoContent(204)
+}
+
+func (c *policyController) DisablePolicyForProject(ctx core.Context) error {
+	policyId := ctx.Param("policyId")
+
+	// parse the uuid
+	policyUuid, err := uuid.Parse(policyId)
 	if err != nil {
 		return err
 	}
 
-	// enable the policy for the project
-	if err := c.projectRepository.EnablePolicyForProject(nil, projectUuid, policyUuid); err != nil {
+	project := core.GetProject(ctx)
+
+	// disable the policy for the project
+	if err := c.projectRepository.DisablePolicyForProject(nil, project.ID, policyUuid); err != nil {
 		return err
 	}
 

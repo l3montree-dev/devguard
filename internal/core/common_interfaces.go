@@ -41,6 +41,7 @@ type ProjectRepository interface {
 	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
+	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 }
 
 type PolicyRepository interface {

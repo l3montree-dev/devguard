@@ -142,5 +142,16 @@ func (g *projectRepository) GetDirectChildProjects(projectID uuid.UUID) ([]model
 }
 
 func (g *projectRepository) EnablePolicyForProject(tx core.DB, projectID uuid.UUID, policyID uuid.UUID) error {
-	return g.db.Model(&models.Project{}).Where("id = ?", projectID).Association("EnabledPolicies").Append(&models.Policy{ID: policyID})
+	return g.db.Model(&models.Project{
+		Model: models.Model{
+			ID: projectID,
+		},
+	}).Association("EnabledPolicies").Append(&models.Policy{ID: policyID})
+}
+func (g *projectRepository) DisablePolicyForProject(tx core.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+	return g.db.Model(&models.Project{
+		Model: models.Model{
+			ID: projectID,
+		},
+	}).Association("EnabledPolicies").Delete(&models.Policy{ID: policyID})
 }
