@@ -333,3 +333,10 @@ go run ../cmd/devguard-scanner intoto verify \
     --apiUrl="https://api.main.devguard.org" \
     --layoutKey=../intoto-public-key.pem ghcr.io/l3montree-dev/devguard-action:in-toto-c23783cd-1732437352  # extracts the commit hash from the image name which we use as "supply chain id"
 ```
+
+
+ go run ./cmd/devguard-scanner/main.go sca \
+--assetName="neworg/projects/newpro/assets/new" \
+--apiUrl="http://localhost:8080" \
+--token="168813166f6e7d9f25b02050b3cf6edf49305e2eca407041732dca0b6f0234fa" \
+  --path="../../myProject-gitlab/"

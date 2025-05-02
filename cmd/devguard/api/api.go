@@ -394,7 +394,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
-	assetController := asset.NewHttpController(assetRepository, assetService, dependencyVulnService)
+	assetController := asset.NewHttpController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository)
@@ -435,6 +435,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	apiV1Router.POST("/webhook/", integrationController.HandleWebhook)
 	// apply the health route without any session or multi organization middleware
 	apiV1Router.GET("/health/", health)
+
+	apiV1Router.GET("/badges/:badgeSecret", assetController.GetBadges)
 
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
