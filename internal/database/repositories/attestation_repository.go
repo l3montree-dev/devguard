@@ -45,7 +45,8 @@ func (a *attestationRepository) GetByAssetVersionAndAssetID(assetID uuid.UUID, a
 func (a *attestationRepository) Create(db core.DB, attestation *models.Attestation) error {
 	return a.db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{
-			{Name: "attestation_name"},
+			{Name: "predicate_type"},
+			{Name: "scanner_id"},
 			{Name: "asset_version_name"},
 			{Name: "asset_id"},
 		},

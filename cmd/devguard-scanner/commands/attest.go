@@ -144,7 +144,10 @@ func NewAttestCommand() *cobra.Command {
 
 	addDefaultFlags(cmd)
 	addAssetRefFlags(cmd)
-	cmd.Flags().StringP("predicateType", "a", "", "The name of the attestation")
+	cmd.Flags().StringP("predicateType", "a", "", "The type of the attestation")
 	cmd.MarkFlagRequired("predicateType") //nolint:errcheck
+
+	cmd.Flags().StringP("scannerId", "s", "", "The scanner id. A newer attestation from the same scanner will replace the old one.")
+	cmd.MarkFlagRequired("scannerId") //nolint:errcheck
 	return cmd
 }
