@@ -56,6 +56,7 @@ func convertToDetailedDTO(event []models.VulnEventDetail) []VulnEventDTO {
 			ID:                      e.ID,
 			Type:                    e.Type,
 			VulnID:                  e.VulnID,
+			VulnType:                e.VulnType,
 			UserID:                  e.UserID,
 			Justification:           e.Justification,
 			MechanicalJustification: e.MechanicalJustification,
