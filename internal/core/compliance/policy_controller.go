@@ -61,8 +61,18 @@ func (c *policyController) migratePolicies() error {
 	})
 
 	toCreate := comp.OnlyInB
-	toUpdate := comp.InBoth
+	toUpdate := comp.InBothB // use the B elements - those are the new policies read from disk
 	toDelete := comp.OnlyInA
+
+	// set the id for the policies to update
+	for i := range toUpdate {
+		for j := range dbPolicies {
+			if dbPolicies[j].OpaqueID == toUpdate[i].OpaqueID {
+				toUpdate[i].ID = dbPolicies[j].ID
+				break
+			}
+		}
+	}
 
 	// create the policies
 	if len(toCreate) > 0 {
