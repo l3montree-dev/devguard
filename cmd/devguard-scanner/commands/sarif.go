@@ -259,7 +259,6 @@ func obfuscateSecret(sarifScan *common.SarifResult) {
 }
 
 func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scannerID string) error {
-	slog.Info("First party scan results", "firstPartyVulnAmount", len(scanResponse.FirstPartyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.FirstPartyVulns) == 0 {
 		return nil
