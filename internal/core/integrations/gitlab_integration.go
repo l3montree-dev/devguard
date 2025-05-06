@@ -190,12 +190,31 @@ func parseWebhook(r *http.Request) (any, error) {
 	return gitlab.ParseWebhook(eventType, payload)
 }
 
+func (g *gitlabIntegration) checkWebhookSecretToken(gitlabSecretToken string, assetID uuid.UUID) error {
+
+	asset, err := g.assetRepository.GetByAssetID(assetID)
+	if err != nil {
+		slog.Error("could not read asset", "err", err)
+		return err
+	}
+
+	if asset.WebhookSecret != nil {
+		if asset.WebhookSecret.String() != gitlabSecretToken {
+			slog.Error("invalid webhook secret")
+			return errors.New("invalid webhook secret")
+		}
+	}
+
+	return nil
+}
 func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 	event, err := parseWebhook(ctx.Request())
 	if err != nil {
 		slog.Error("could not parse gitlab webhook", "err", err)
 		return err
 	}
+
+	gitlabSecretToken := ctx.Request().Header.Get("X-Gitlab-Token")
 
 	switch event := event.(type) {
 	case *gitlab.IssueEvent:
@@ -206,6 +225,11 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		if err != nil {
 			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
 			return nil
+		}
+
+		err = g.checkWebhookSecretToken(gitlabSecretToken, vuln.GetAssetID())
+		if err != nil {
+			return err
 		}
 
 		action := event.ObjectAttributes.Action
@@ -275,6 +299,11 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		if err != nil {
 			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
 			return nil
+		}
+
+		err = g.checkWebhookSecretToken(gitlabSecretToken, vuln.GetAssetID())
+		if err != nil {
+			return err
 		}
 
 		comment := event.ObjectAttributes.Note
