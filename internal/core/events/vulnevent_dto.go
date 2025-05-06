@@ -14,7 +14,8 @@ type VulnEventDTO struct {
 	VulnType models.VulnType      `json:"vulnType"`
 	UserID   string               `json:"userId"`
 
-	Justification *string `json:"justification"`
+	Justification           *string                            `json:"justification"`
+	MechanicalJustification models.MechanicalJustificationType `json:"mechanicalJustification"`
 
 	ArbitraryJsonData map[string]any `json:"arbitraryJsonData"`
 

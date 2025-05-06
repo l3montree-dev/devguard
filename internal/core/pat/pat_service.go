@@ -26,6 +26,7 @@ func NewPatService(repository core.PersonalAccessTokenRepository) *PatService {
 
 func hexPrivKeyToPubKey(hexPrivKey string) (ecdsa.PublicKey, error) {
 	privKeyD := new(big.Int)
+
 	_, err := privKeyD.SetString(hexPrivKey, 16)
 	if !err {
 		return ecdsa.PublicKey{}, fmt.Errorf("could not parse hexPrivKey")
@@ -130,7 +131,6 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 	req.Header.Set("Signature", signature)
 
 	return nil
-
 }
 
 func (p *PatService) getPubKeyAndUserIdUsingFingerprint(fingerprint string) (ecdsa.PublicKey, uuid.UUID, string, error) {

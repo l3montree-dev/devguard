@@ -24,6 +24,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/openvex/go-vex/pkg/vex"
 )
 
 type ProjectRepository interface {
@@ -39,6 +40,15 @@ type ProjectRepository interface {
 	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
+	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
+	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
+}
+
+type PolicyRepository interface {
+	common.Repository[uuid.UUID, models.Policy, DB]
+	FindByProjectId(projectId uuid.UUID) ([]models.Policy, error)
+	FindByOrganizationId(organizationId uuid.UUID) ([]models.Policy, error)
+	FindCommunityManagedPolicies() ([]models.Policy, error)
 }
 
 type AssetRepository interface {
@@ -197,7 +207,7 @@ type DependencyVulnService interface {
 	UserDetectedDependencyVulns(tx DB, userID string, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error
 	UserDetectedDependencyVulnWithAnotherScanner(tx DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error
 	UserDidNotDetectDependencyVulnWithScannerAnymore(tx DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error
-	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, assetVersionName string) (models.VulnEvent, error)
+	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)
 	CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vulnList []models.DependencyVuln) error
 	CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error
 
@@ -212,6 +222,7 @@ type AssetVersionService interface {
 	HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error)
 	UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error
 	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, version string, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
 }
 
 type AssetVersionRepository interface {
@@ -231,7 +242,7 @@ type AssetVersionRepository interface {
 type FirstPartyVulnService interface {
 	UserFixedFirstPartyVulns(tx DB, userID string, firstPartyVulns []models.FirstPartyVuln) error
 	UserDetectedFirstPartyVulns(tx DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVuln) error
-	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string) (models.VulnEvent, error)
+	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error)
 }
 
 type ConfigRepository interface {

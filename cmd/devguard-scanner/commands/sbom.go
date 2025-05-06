@@ -108,9 +108,7 @@ func NewSbomCommand() *cobra.Command {
 
 	cmd.Flags().String("scannerId", "github.com/l3montree-dev/devguard-scanner/cmd/sbom", "Name of the scanner. DevGuard will compare new and old results based on the scannerId.")
 
-	cmd.Flags().String("ref", "main", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, main will be used")
-	cmd.Flags().String("defaultRef", "main", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, --ref will be used.")
-
+	addAssetRefFlags(cmd)
 	addScanFlags(cmd)
 	return cmd
 }

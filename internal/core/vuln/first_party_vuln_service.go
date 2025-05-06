@@ -63,27 +63,27 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID, 
 	return s.vulnEventRepository.SaveBatch(tx, events)
 }
 
-func (s *firstPartyVulnService) UpdateFirstPartyVulnState(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) UpdateFirstPartyVulnState(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
 	if tx == nil {
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one
 		err = s.firstPartyVulnRepository.Transaction(func(d core.DB) error {
-			ev, err = s.updateFirstPartyVulnState(d, userID, firstPartyVuln, statusType, justification)
+			ev, err = s.updateFirstPartyVulnState(d, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
 			return err
 		})
 		return ev, err
 	}
-	return s.updateFirstPartyVulnState(tx, userID, firstPartyVuln, statusType, justification)
+	return s.updateFirstPartyVulnState(tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)
 }
 
-func (s *firstPartyVulnService) updateFirstPartyVulnState(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string) (models.VulnEvent, error) {
+func (s *firstPartyVulnService) updateFirstPartyVulnState(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
 	var ev models.VulnEvent
 	switch models.VulnEventType(statusType) {
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, firstPartyVuln.ScannerIDs)
+		ev = models.NewFalsePositiveEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification, mechanicalJustification, firstPartyVuln.ScannerIDs)
 	case models.EventTypeReopened:
 		ev = models.NewReopenedEvent(firstPartyVuln.CalculateHash(), models.VulnTypeFirstPartyVuln, userID, justification)
 	case models.EventTypeComment:

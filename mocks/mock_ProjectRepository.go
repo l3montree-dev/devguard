@@ -164,6 +164,102 @@ func (_c *ProjectRepository_Delete_Call) RunAndReturn(run func(*gorm.DB, uuid.UU
 	return _c
 }
 
+// DisablePolicyForProject provides a mock function with given fields: tx, projectID, policyID
+func (_m *ProjectRepository) DisablePolicyForProject(tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+	ret := _m.Called(tx, projectID, policyID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DisablePolicyForProject")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(tx, projectID, policyID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ProjectRepository_DisablePolicyForProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DisablePolicyForProject'
+type ProjectRepository_DisablePolicyForProject_Call struct {
+	*mock.Call
+}
+
+// DisablePolicyForProject is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - projectID uuid.UUID
+//   - policyID uuid.UUID
+func (_e *ProjectRepository_Expecter) DisablePolicyForProject(tx interface{}, projectID interface{}, policyID interface{}) *ProjectRepository_DisablePolicyForProject_Call {
+	return &ProjectRepository_DisablePolicyForProject_Call{Call: _e.mock.On("DisablePolicyForProject", tx, projectID, policyID)}
+}
+
+func (_c *ProjectRepository_DisablePolicyForProject_Call) Run(run func(tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID)) *ProjectRepository_DisablePolicyForProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(uuid.UUID), args[2].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *ProjectRepository_DisablePolicyForProject_Call) Return(_a0 error) *ProjectRepository_DisablePolicyForProject_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *ProjectRepository_DisablePolicyForProject_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID, uuid.UUID) error) *ProjectRepository_DisablePolicyForProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// EnablePolicyForProject provides a mock function with given fields: tx, projectID, policyID
+func (_m *ProjectRepository) EnablePolicyForProject(tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID) error {
+	ret := _m.Called(tx, projectID, policyID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EnablePolicyForProject")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(tx, projectID, policyID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ProjectRepository_EnablePolicyForProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EnablePolicyForProject'
+type ProjectRepository_EnablePolicyForProject_Call struct {
+	*mock.Call
+}
+
+// EnablePolicyForProject is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - projectID uuid.UUID
+//   - policyID uuid.UUID
+func (_e *ProjectRepository_Expecter) EnablePolicyForProject(tx interface{}, projectID interface{}, policyID interface{}) *ProjectRepository_EnablePolicyForProject_Call {
+	return &ProjectRepository_EnablePolicyForProject_Call{Call: _e.mock.On("EnablePolicyForProject", tx, projectID, policyID)}
+}
+
+func (_c *ProjectRepository_EnablePolicyForProject_Call) Run(run func(tx *gorm.DB, projectID uuid.UUID, policyID uuid.UUID)) *ProjectRepository_EnablePolicyForProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(uuid.UUID), args[2].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *ProjectRepository_EnablePolicyForProject_Call) Return(_a0 error) *ProjectRepository_EnablePolicyForProject_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *ProjectRepository_EnablePolicyForProject_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID, uuid.UUID) error) *ProjectRepository_EnablePolicyForProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetByOrgID provides a mock function with given fields: organizationID
 func (_m *ProjectRepository) GetByOrgID(organizationID uuid.UUID) ([]models.Project, error) {
 	ret := _m.Called(organizationID)

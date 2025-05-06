@@ -35,6 +35,7 @@ type ModelReader[ID any, T Tabler] interface {
 type BatchModelWriter[T Tabler, Tx any] interface {
 	CreateBatch(tx Tx, ts []T) error
 	SaveBatch(tx Tx, ts []T) error
+	DeleteBatch(tx Tx, ids []T) error
 }
 
 type Transactioner[Tx any] interface {

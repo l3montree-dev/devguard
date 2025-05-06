@@ -3,6 +3,7 @@ package attestation
 import (
 	"encoding/json"
 	"io"
+	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -10,12 +11,14 @@ import (
 )
 
 type attestationController struct {
-	attestationRepository core.AttestationRepository
+	attestationRepository  core.AttestationRepository
+	assetVersionRepository core.AssetVersionRepository
 }
 
-func NewAttestationController(repository core.AttestationRepository) *attestationController {
+func NewAttestationController(repository core.AttestationRepository, assetVersionRepository core.AssetVersionRepository) *attestationController {
 	return &attestationController{
-		attestationRepository: repository,
+		attestationRepository:  repository,
+		assetVersionRepository: assetVersionRepository,
 	}
 }
 
@@ -36,12 +39,25 @@ func (a *attestationController) Create(ctx core.Context) error {
 	var attestation models.Attestation
 	jsonContent := make(map[string]any)
 
-	assetVersion := core.GetAssetVersion(ctx)
-	attestation.AssetID = core.GetAsset(ctx).ID
+	asset := core.GetAsset(ctx)
+
+	defaultBranch := ctx.Request().Header.Get("X-Asset-Default-Branch")
+	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
+	if assetVersionName == "" {
+		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
+		assetVersionName = "main"
+	}
+
+	assetVersion, err := a.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, assetVersionName, defaultBranch)
+	if err != nil {
+		slog.Error("could not find or create asset version", "err", err)
+		return err
+	}
 
 	attestation.AssetVersionName = assetVersion.Name
-	attestation.AssetVersion = assetVersion
-	attestation.AttestationName = ctx.Request().Header.Get("X-Attestation-Name")
+	attestation.AssetID = asset.ID
+	attestation.PredicateType = ctx.Request().Header.Get("X-Attestation-Name")
+	attestation.ScannerID = ctx.Request().Header.Get("X-Scanner")
 
 	content, err := io.ReadAll(ctx.Request().Body)
 	if err != nil {
@@ -57,7 +73,7 @@ func (a *attestationController) Create(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(400, err.Error())
 	}
-
+	attestation.Content = jsonContent
 	err = a.attestationRepository.Create(nil, &attestation)
 	if err != nil {
 		return err
