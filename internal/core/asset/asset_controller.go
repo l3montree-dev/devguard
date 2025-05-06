@@ -77,9 +77,14 @@ func (a *httpController) Delete(ctx core.Context) error {
 func (a *httpController) GetSecrets(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 
-	secrets := map[string]uuid.UUID{
-		"badgeSecret":   asset.BadgeSecret,
-		"webhookSecret": asset.WebhookSecret,
+	secrets := map[string]string{}
+
+	if asset.BadgeSecret != nil {
+		secrets["badgeSecret"] = asset.BadgeSecret.String()
+	}
+
+	if asset.WebhookSecret != nil {
+		secrets["webhookSecret"] = asset.WebhookSecret.String()
 	}
 
 	return ctx.JSON(200, secrets)

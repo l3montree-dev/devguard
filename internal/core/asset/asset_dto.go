@@ -84,8 +84,8 @@ func toDTO(asset models.Asset) AssetDTO {
 
 func toDTOWithSecrets(asset models.Asset) AssetDTO {
 	assetDTO := toDTO(asset)
-	assetDTO.BadgeSecret = asset.BadgeSecret
-	assetDTO.WebhookSecret = asset.WebhookSecret
+	assetDTO.BadgeSecret = *asset.BadgeSecret
+	assetDTO.WebhookSecret = *asset.WebhookSecret
 
 	return assetDTO
 }
@@ -214,11 +214,13 @@ func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
 
 	if assetPatch.WebhookSecretUpdate != nil && *assetPatch.WebhookSecretUpdate {
 		updated = true
-		asset.WebhookSecret = uuid.New()
+		newUUID := uuid.New()
+		asset.WebhookSecret = &newUUID
 	}
 	if assetPatch.BadgeSecretUpdate != nil && *assetPatch.BadgeSecretUpdate {
 		updated = true
-		asset.BadgeSecret = uuid.New()
+		newUUID := uuid.New()
+		asset.BadgeSecret = &newUUID
 	}
 
 	return updated
