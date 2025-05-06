@@ -558,39 +558,37 @@ func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
 		return fmt.Errorf("could not list project hooks: %w", err)
 	}
 
-	token, err := createToken()
-	if err != nil {
-		return fmt.Errorf("could not create new token: %w", err)
+	webhookSecret := asset.WebhookSecret
+	if webhookSecret == nil {
+		token, err := createToken()
+		if err != nil {
+			return fmt.Errorf("could not create new token: %w", err)
+		}
+
+		asset.WebhookSecret = &token
+		err = g.assetRepository.Update(nil, &asset)
+		if err != nil {
+			return fmt.Errorf("could not update asset: %w", err)
+		}
+
+		webhookSecret = &token
 	}
 
-	projectOptions, err := createProjectHookOptions(token, hooks)
+	projectOptions, err := createProjectHookOptions(webhookSecret, hooks)
 	if err != nil { //Swallow error: If an error gets returned it means the hook already exists which means we don't have to do anything further and can return without errors
 		return nil
 	}
 
-	projectHook, _, err := client.AddProjectHook(ctx.Request().Context(), projectId, projectOptions)
+	_, _, err = client.AddProjectHook(ctx.Request().Context(), projectId, projectOptions)
 	if err != nil {
 		return fmt.Errorf("could not add project hook: %w", err)
-	}
-	projectHookID := projectHook.ID
-
-	err = g.saveToken(integrationUUID, token)
-	if err != nil {
-		//delete the hook
-		err = g.deleteProjectHook(ctx, integrationUUID, projectId, projectHookID)
-		if err != nil {
-			// we could not delete the hook
-			slog.Error("could not save token and delete hook", "err", err)
-			return fmt.Errorf("could not save token and delete hook: %w", err)
-		}
-		return fmt.Errorf("could not save token: %w", err)
 	}
 
 	return nil
 
 }
 
-func createProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
+func createProjectHookOptions(token *uuid.UUID, hooks []*gitlab.ProjectHook) (*gitlab.AddProjectHookOptions, error) {
 	projectOptions := &gitlab.AddProjectHookOptions{}
 
 	instanceDomain := os.Getenv("INSTANCE_DOMAIN")
@@ -615,22 +613,13 @@ func createProjectHookOptions(token uuid.UUID, hooks []*gitlab.ProjectHook) (*gi
 		constructedURL := instanceDomain + "/api/v1/webhook/"
 		projectOptions.URL = &constructedURL
 	}
-	projectOptions.Token = gitlab.Ptr(token.String())
+	if token != nil {
+		projectOptions.Token = gitlab.Ptr(token.String())
+	}
 
 	return projectOptions, nil
 }
 
-func (g *gitlabIntegration) deleteProjectHook(ctx core.Context, integrationUUID uuid.UUID, projectId int, hookId int) error {
-	client, err := g.gitlabClientFactory(integrationUUID)
-	if err != nil {
-		return fmt.Errorf("could not create new gitlab client: %w", err)
-	}
-	_, err = client.DeleteProjectHook(ctx.Request().Context(), projectId, hookId)
-	if err != nil {
-		return fmt.Errorf("could not delete project hook: %w", err)
-	}
-	return nil
-}
 func createToken() (uuid.UUID, error) {
 	// create a new token
 	token, err := uuid.NewUUID()
@@ -639,22 +628,6 @@ func createToken() (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("could not create new token: %w", err)
 	}
 	return token, nil
-}
-
-func (g *gitlabIntegration) saveToken(integrationUUID uuid.UUID, token uuid.UUID) error {
-	gitlabIntegration, err := g.gitlabIntegrationRepository.Read(integrationUUID)
-	if err != nil {
-		return fmt.Errorf("could not read gitlab integration: %w", err)
-	}
-
-	// save the token in the database
-	gitlabIntegration.WebhookSecretToken = token
-	err = g.gitlabIntegrationRepository.Save(nil, &gitlabIntegration)
-	if err != nil {
-		slog.Error("could not save token", "err", err)
-		return fmt.Errorf("could not save token: %w", err)
-	}
-	return nil
 }
 
 func (g *gitlabIntegration) addProjectVariables(ctx core.Context, devguardPrivateKey, assetName string) error {
