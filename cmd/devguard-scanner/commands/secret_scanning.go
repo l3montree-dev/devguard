@@ -90,8 +90,8 @@ func printSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI stri
 		raw := []table.Row{
 			{"RuleID:", vuln.RuleID},
 			{"File:", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))},
-			{"Snippet:", text.WrapText(vuln.Snippet, 170)},
-			{"Message:", text.WrapText(*vuln.Message, 170)},
+			{"Snippet:", text.WrapText(vuln.Snippet, 130)},
+			{"Message:", text.WrapText(*vuln.Message, 130)},
 			{"Line:", vuln.StartLine},
 			{"Commit:", vuln.Commit},
 			{"Author:", vuln.Author},
