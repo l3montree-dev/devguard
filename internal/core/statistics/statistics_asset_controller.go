@@ -270,7 +270,7 @@ func (c *httpController) getDependencyVulnAggregationStateAndChange(compareTo st
 	return c.statisticsService.GetDependencyVulnAggregationStateAndChangeSince(assetVersion.Name, assetVersion.AssetID, calculateChangeTo)
 }
 
-func (c *httpController) GetNumberOfExploitableCVES(ctx core.Context) error {
+func (c *httpController) GetCVESWithKnownExploits(ctx core.Context) error {
 	var cves []models.CVE
 	asset := core.GetAsset(ctx)
 	assetVersion, err := core.MaybeGetAssetVersion(ctx)
