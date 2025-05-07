@@ -63,7 +63,10 @@ func TestCalculateHash(t *testing.T) {
 func TestBeforeSave(t *testing.T) {
 	t.Run("Normal Vuln with a valid line", func(t *testing.T) {
 		first_party_vul := models.FirstPartyVuln{}
-		first_party_vul.BeforeSave(nil)
+		err := first_party_vul.BeforeSave(nil)
+		if err != nil {
+			t.Fail()
+		}
 		assert.Equal(t, first_party_vul.CalculateHash(), first_party_vul.ID)
 	})
 }
