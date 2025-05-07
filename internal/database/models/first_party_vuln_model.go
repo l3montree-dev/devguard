@@ -47,8 +47,8 @@ func (m *FirstPartyVuln) CalculateHash() string {
 	endLineStr := strconv.Itoa(m.EndLine)
 	startColumnStr := strconv.Itoa(m.StartColumn)
 	endColumnStr := strconv.Itoa(m.EndColumn)
-
-	hash := utils.HashString(startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + m.RuleID + "/" + m.Uri + "/" + m.ScannerIDs + "/" + m.AssetID.String() + "/" + m.AssetVersionName)
+	stringToHash := startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + m.RuleID + "/" + m.Uri + "/" + m.ScannerIDs + "/" + m.AssetID.String() + "/" + m.AssetVersionName
+	hash := utils.HashString(stringToHash)
 	m.ID = hash
 	return hash
 }
