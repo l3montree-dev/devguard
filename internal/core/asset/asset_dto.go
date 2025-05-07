@@ -162,8 +162,8 @@ type patchRequest struct {
 
 	ConfigFiles *map[string]any `json:"configFiles"`
 
-	WebhookSecretUpdate *bool `json:"webhookSecretUpdate"`
-	BadgeSecretUpdate   *bool `json:"badgeSecretUpdate"`
+	WebhookSecret *string `json:"webhookSecret"`
+	BadgeSecret   *string `json:"badgeSecret"`
 }
 
 func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
@@ -212,15 +212,30 @@ func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
 		asset.ConfigFiles = *assetPatch.ConfigFiles
 	}
 
-	if assetPatch.WebhookSecretUpdate != nil && *assetPatch.WebhookSecretUpdate {
+	if assetPatch.WebhookSecret != nil {
 		updated = true
-		newUUID := uuid.New()
-		asset.WebhookSecret = &newUUID
-	}
-	if assetPatch.BadgeSecretUpdate != nil && *assetPatch.BadgeSecretUpdate {
-		updated = true
-		newUUID := uuid.New()
-		asset.BadgeSecret = &newUUID
+
+		if *assetPatch.WebhookSecret == "" {
+			asset.WebhookSecret = nil
+		}
+
+		webhookUUID, err := uuid.Parse(*assetPatch.WebhookSecret)
+		if err != nil {
+			asset.WebhookSecret = &webhookUUID
+
+		}
+		if assetPatch.BadgeSecret != nil {
+			updated = true
+
+			if *assetPatch.BadgeSecret == "" {
+				asset.BadgeSecret = nil
+			}
+
+			badgeUUID, err := uuid.Parse(*assetPatch.BadgeSecret)
+			if err != nil {
+				asset.BadgeSecret = &badgeUUID
+			}
+		}
 	}
 
 	return updated
