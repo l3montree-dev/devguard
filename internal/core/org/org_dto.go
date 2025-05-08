@@ -62,6 +62,7 @@ func (c createRequest) toModel() models.Org {
 		NIST:                   c.NIST,
 		Grundschutz:            c.Grundschutz,
 		Slug:                   slug.Make(c.Name),
+		Language:               c.Language,
 	}
 }
 
@@ -177,6 +178,8 @@ type OrgDTO struct {
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
 	ConfigFiles map[string]any `json:"configFiles"`
+
+	Language string `json:"language"`
 }
 
 func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.GitlabIntegrationDTO {
@@ -208,6 +211,7 @@ func fromModel(org models.Org) OrgDTO {
 		GithubAppInstallations: org.GithubAppInstallations,
 		GitLabIntegrations:     utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
 		ConfigFiles:            org.ConfigFiles,
+		Language:               org.Language,
 	}
 }
 
