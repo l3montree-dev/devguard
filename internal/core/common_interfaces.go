@@ -63,6 +63,7 @@ type AssetRepository interface {
 	ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAllAssetsFromDB() ([]models.Asset, error)
 	Delete(tx DB, id uuid.UUID) error
+	GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error)
 }
 
 type AttestationRepository interface {
@@ -196,6 +197,7 @@ type InTotoVerifierService interface {
 
 type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
+	GetBadgeSVG(CVSS models.AssetRiskDistribution) string
 }
 
 type DependencyVulnService interface {
@@ -308,6 +310,7 @@ type ProjectRiskHistoryRepository interface {
 
 type StatisticsService interface {
 	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error
+	GetAssetVersionCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 }
 
 type DepsDevService interface {

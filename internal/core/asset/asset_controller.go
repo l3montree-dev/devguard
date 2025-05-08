@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -12,16 +14,20 @@ import (
 )
 
 type httpController struct {
-	assetRepository       core.AssetRepository
-	assetService          core.AssetService
-	dependencyVulnService core.DependencyVulnService
+	assetRepository        core.AssetRepository
+	assetVersionRepository core.AssetVersionRepository
+	assetService           core.AssetService
+	dependencyVulnService  core.DependencyVulnService
+	statisticsService      core.StatisticsService
 }
 
-func NewHttpController(repository core.AssetRepository, assetService core.AssetService, dependencyVulnService core.DependencyVulnService) *httpController {
+func NewHttpController(repository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetService core.AssetService, dependencyVulnService core.DependencyVulnService, statisticsService core.StatisticsService) *httpController {
 	return &httpController{
-		assetRepository:       repository,
-		assetService:          assetService,
-		dependencyVulnService: dependencyVulnService,
+		assetRepository:        repository,
+		assetVersionRepository: assetVersionRepository,
+		assetService:           assetService,
+		dependencyVulnService:  dependencyVulnService,
+		statisticsService:      statisticsService,
 	}
 }
 
@@ -34,7 +40,7 @@ func (a *httpController) List(ctx core.Context) error {
 		return err
 	}
 
-	return ctx.JSON(200, apps)
+	return ctx.JSON(200, toDTOs(apps))
 }
 
 func (a *httpController) AttachSigningKey(ctx core.Context) error {
@@ -66,6 +72,22 @@ func (a *httpController) Delete(ctx core.Context) error {
 		return err
 	}
 	return ctx.NoContent(200)
+}
+
+func (a *httpController) GetSecrets(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+
+	secrets := map[string]string{}
+
+	if asset.BadgeSecret != nil {
+		secrets["badgeSecret"] = asset.BadgeSecret.String()
+	}
+
+	if asset.WebhookSecret != nil {
+		secrets["webhookSecret"] = asset.WebhookSecret.String()
+	}
+
+	return ctx.JSON(200, secrets)
 }
 
 func (a *httpController) Create(ctx core.Context) error {
@@ -105,13 +127,13 @@ func (a *httpController) Create(ctx core.Context) error {
 		}
 	}
 
-	return ctx.JSON(200, newAsset)
+	return ctx.JSON(200, toDTO(newAsset))
 }
 
 func (a *httpController) Read(ctx core.Context) error {
 	app := core.GetAsset(ctx)
 
-	return ctx.JSON(200, app)
+	return ctx.JSON(200, toDTO(app))
 }
 
 func (a *httpController) Update(ctx core.Context) error {
@@ -219,7 +241,7 @@ func (a *httpController) Update(ctx core.Context) error {
 		}
 	}
 
-	return ctx.JSON(200, asset)
+	return ctx.JSON(200, toDTOWithSecrets(asset))
 }
 
 func (a *httpController) GetConfigFile(ctx core.Context) error {
@@ -241,4 +263,45 @@ func (a *httpController) GetConfigFile(ctx core.Context) error {
 		return ctx.JSON(200, configContent)
 	}
 	return ctx.JSON(200, configContent)
+}
+
+func (a *httpController) GetBadges(ctx core.Context) error {
+
+	badgeSecret := ctx.Param("badgeSecret")
+	if badgeSecret == "" {
+		return echo.NewHTTPError(400, "missing badge secret")
+	}
+
+	//delete the slashes from the badge secret
+	badgeSecret = strings.ReplaceAll(badgeSecret, "/", "")
+
+	badgeSecretUUID, err := uuid.Parse(badgeSecret)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid badge secret").WithInternal(err)
+	}
+
+	asset, err := a.assetRepository.GetAssetIDByBadgeSecret(badgeSecretUUID)
+	if err != nil {
+		return echo.NewHTTPError(404, "asset not found").WithInternal(err)
+	}
+
+	assetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+	if err != nil {
+		slog.Error("Error getting default asset version", "error", err)
+		return ctx.JSON(404, nil)
+	}
+
+	results, err := a.statisticsService.GetAssetVersionCvssDistribution(assetVersion.Name, assetVersion.AssetID, asset.Name)
+	if err != nil {
+		return err
+	}
+
+	svg := a.assetService.GetBadgeSVG(results)
+	if svg == "" {
+		return echo.NewHTTPError(404, "badge not found")
+	}
+
+	ctx.Response().Header().Set(echo.HeaderContentType, "image/svg+xml")
+
+	return ctx.String(200, svg)
 }

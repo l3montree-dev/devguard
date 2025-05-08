@@ -145,3 +145,12 @@ func (g *assetRepository) Delete(tx core.DB, id uuid.UUID) error {
 	}).Error
 
 }
+
+func (g *assetRepository) GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error) {
+	var asset models.Asset
+	err := g.db.Debug().Where("badge_secret = ?", badgeSecret).First(&asset).Error
+	if err != nil {
+		return models.Asset{}, err
+	}
+	return asset, nil
+}
