@@ -46,6 +46,7 @@ type createRequest struct {
 	NIST                   bool    `json:"nist"`
 	Grundschutz            bool    `json:"grundschutz"`
 	Description            string  `json:"description"`
+	Language               string  `json:"language"`
 }
 
 func (c createRequest) toModel() models.Org {
@@ -78,6 +79,7 @@ type patchRequest struct {
 
 	IsPublic    *bool           `json:"isPublic"`
 	ConfigFiles *map[string]any `json:"configFiles"`
+	Language    *string         `json:"language"`
 }
 
 func (p patchRequest) applyToModel(org *models.Org) bool {
@@ -142,6 +144,11 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 	if p.ConfigFiles != nil {
 		updated = true
 		org.ConfigFiles = *p.ConfigFiles
+	}
+
+	if p.Language != nil && utils.CheckForValidLanguageCode(*p.Language) {
+		updated = true
+		org.Language = *p.Language
 	}
 
 	return updated
