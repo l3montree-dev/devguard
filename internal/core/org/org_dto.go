@@ -46,6 +46,7 @@ type createRequest struct {
 	NIST                   bool    `json:"nist"`
 	Grundschutz            bool    `json:"grundschutz"`
 	Description            string  `json:"description"`
+	Language               string  `json:"language"`
 }
 
 func (c createRequest) toModel() models.Org {
@@ -61,6 +62,7 @@ func (c createRequest) toModel() models.Org {
 		NIST:                   c.NIST,
 		Grundschutz:            c.Grundschutz,
 		Slug:                   slug.Make(c.Name),
+		Language:               c.Language,
 	}
 }
 
@@ -78,6 +80,7 @@ type patchRequest struct {
 
 	IsPublic    *bool           `json:"isPublic"`
 	ConfigFiles *map[string]any `json:"configFiles"`
+	Language    *string         `json:"language"`
 }
 
 func (p patchRequest) applyToModel(org *models.Org) bool {
@@ -144,6 +147,11 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 		org.ConfigFiles = *p.ConfigFiles
 	}
 
+	if p.Language != nil && utils.CheckForValidLanguageCode(*p.Language) {
+		updated = true
+		org.Language = *p.Language
+	}
+
 	return updated
 
 }
@@ -170,6 +178,8 @@ type OrgDTO struct {
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
 	ConfigFiles map[string]any `json:"configFiles"`
+
+	Language string `json:"language"`
 }
 
 func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.GitlabIntegrationDTO {
@@ -201,6 +211,7 @@ func fromModel(org models.Org) OrgDTO {
 		GithubAppInstallations: org.GithubAppInstallations,
 		GitLabIntegrations:     utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
 		ConfigFiles:            org.ConfigFiles,
+		Language:               org.Language,
 	}
 }
 
