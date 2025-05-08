@@ -36,8 +36,8 @@ type AssetDTO struct {
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
 
-	BadgeSecret   uuid.UUID `json:"badgeSecret"`
-	WebhookSecret uuid.UUID `json:"webhookSecret"`
+	BadgeSecret   *uuid.UUID `json:"badgeSecret"`
+	WebhookSecret *uuid.UUID `json:"webhookSecret"`
 
 	AssetVersions []models.AssetVersion `json:"refs"`
 }
@@ -84,8 +84,8 @@ func toDTO(asset models.Asset) AssetDTO {
 
 func toDTOWithSecrets(asset models.Asset) AssetDTO {
 	assetDTO := toDTO(asset)
-	assetDTO.BadgeSecret = *asset.BadgeSecret
-	assetDTO.WebhookSecret = *asset.WebhookSecret
+	assetDTO.BadgeSecret = asset.BadgeSecret
+	assetDTO.WebhookSecret = asset.WebhookSecret
 
 	return assetDTO
 }
