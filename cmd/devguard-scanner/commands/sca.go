@@ -259,7 +259,7 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
-		// defer os.Remove(file.Name())
+		defer os.Remove(file.Name())
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
