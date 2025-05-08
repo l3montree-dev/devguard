@@ -36,8 +36,8 @@ type AssetDTO struct {
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
 
-	BadgeSecret   uuid.UUID `json:"badgeSecret"`
-	WebhookSecret uuid.UUID `json:"webhookSecret"`
+	BadgeSecret   *uuid.UUID `json:"badgeSecret"`
+	WebhookSecret *uuid.UUID `json:"webhookSecret"`
 
 	AssetVersions []models.AssetVersion `json:"refs"`
 }
@@ -84,8 +84,8 @@ func toDTO(asset models.Asset) AssetDTO {
 
 func toDTOWithSecrets(asset models.Asset) AssetDTO {
 	assetDTO := toDTO(asset)
-	assetDTO.BadgeSecret = *asset.BadgeSecret
-	assetDTO.WebhookSecret = *asset.WebhookSecret
+	assetDTO.BadgeSecret = asset.BadgeSecret
+	assetDTO.WebhookSecret = asset.WebhookSecret
 
 	return assetDTO
 }
@@ -220,21 +220,23 @@ func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
 		}
 
 		webhookUUID, err := uuid.Parse(*assetPatch.WebhookSecret)
-		if err != nil {
+		if err == nil {
 			asset.WebhookSecret = &webhookUUID
 
 		}
-		if assetPatch.BadgeSecret != nil {
-			updated = true
+	}
 
-			if *assetPatch.BadgeSecret == "" {
-				asset.BadgeSecret = nil
-			}
+	if assetPatch.BadgeSecret != nil {
+		updated = true
 
-			badgeUUID, err := uuid.Parse(*assetPatch.BadgeSecret)
-			if err != nil {
-				asset.BadgeSecret = &badgeUUID
-			}
+		if *assetPatch.BadgeSecret == "" {
+			asset.BadgeSecret = nil
+		}
+
+		badgeUUID, err := uuid.Parse(*assetPatch.BadgeSecret)
+
+		if err == nil {
+			asset.BadgeSecret = &badgeUUID
 		}
 	}
 
