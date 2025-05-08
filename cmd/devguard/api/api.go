@@ -406,7 +406,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository)
 	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository, policyRepository)
 
-	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
+	statisticsController := statistics.NewHttpController(statisticsService, statisticsRepository, assetRepository, assetVersionRepository, projectService)
 	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)
 
 	patService := pat.NewPatService(patRepository)
@@ -558,6 +558,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.GET("/compliance/:policy/", complianceController.Details)
 	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
 	assetRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
+	assetRouter.GET("/number-of-exploits/", statisticsController.GetCVESWithKnownExploits)
 	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	assetRouter.GET("/config-files/:config-file/", assetController.GetConfigFile)
 
