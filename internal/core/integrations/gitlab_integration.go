@@ -191,8 +191,7 @@ func parseWebhook(r *http.Request) (any, error) {
 }
 
 func (g *gitlabIntegration) checkWebhookSecretToken(gitlabSecretToken string, assetID uuid.UUID) error {
-
-	asset, err := g.assetRepository.GetByAssetID(assetID)
+	asset, err := g.assetRepository.Read(assetID)
 	if err != nil {
 		slog.Error("could not read asset", "err", err)
 		return err

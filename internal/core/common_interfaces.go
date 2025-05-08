@@ -64,7 +64,6 @@ type AssetRepository interface {
 	GetAllAssetsFromDB() ([]models.Asset, error)
 	Delete(tx DB, id uuid.UUID) error
 	GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error)
-	GetByAssetID(assetID uuid.UUID) (models.Asset, error)
 }
 
 type AttestationRepository interface {
