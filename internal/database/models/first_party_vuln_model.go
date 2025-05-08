@@ -47,8 +47,8 @@ func (m *FirstPartyVuln) CalculateHash() string {
 	endLineStr := strconv.Itoa(m.EndLine)
 	startColumnStr := strconv.Itoa(m.StartColumn)
 	endColumnStr := strconv.Itoa(m.EndColumn)
-
-	hash := utils.HashString(startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + m.RuleID + "/" + m.Uri + "/" + m.ScannerIDs + "/" + m.AssetID.String() + "/" + m.AssetVersionName)
+	stringToHash := startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + m.RuleID + "/" + m.Uri + "/" + m.ScannerIDs + "/" + m.AssetID.String() + "/" + m.AssetVersionName
+	hash := utils.HashString(stringToHash)
 	m.ID = hash
 	return hash
 }
@@ -75,11 +75,11 @@ func (f *FirstPartyVuln) RenderMarkdown() string {
 	if f.Uri != "" {
 		str.WriteString("\n\n")
 		str.WriteString("File: ")
-
-		link := fmt.Sprintf("[%s](%s)", f.Uri, strings.TrimPrefix(f.Uri, "/"))
-		// add the line number to the link
+		var link string
 		if f.StartLine != 0 {
-			link += fmt.Sprintf("#L%d", f.StartLine)
+			link = fmt.Sprintf("[%s](%s%s)", f.Uri, strings.TrimPrefix(f.Uri, "/"), fmt.Sprintf("#L%d", f.StartLine))
+		} else {
+			link = fmt.Sprintf("[%s](%s)", f.Uri, strings.TrimPrefix(f.Uri, "/"))
 		}
 
 		str.WriteString(link)
