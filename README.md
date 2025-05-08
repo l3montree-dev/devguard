@@ -333,4 +333,3 @@ go run ../cmd/devguard-scanner intoto verify \
     --apiUrl="https://api.main.devguard.org" \
     --layoutKey=../intoto-public-key.pem ghcr.io/l3montree-dev/devguard-action:in-toto-c23783cd-1732437352  # extracts the commit hash from the image name which we use as "supply chain id"
 ```
-

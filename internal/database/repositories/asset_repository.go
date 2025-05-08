@@ -60,15 +60,6 @@ func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, e
 	return app, nil
 }
 
-func (a *assetRepository) GetByAssetID(assetID uuid.UUID) (models.Asset, error) {
-	var app models.Asset
-	err := a.db.Where("id = ?", assetID).First(&app).Error
-	if err != nil {
-		return models.Asset{}, err
-	}
-	return app, nil
-}
-
 func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
 	err := a.db.Where("project_id = ?", projectID).Find(&apps).Error
