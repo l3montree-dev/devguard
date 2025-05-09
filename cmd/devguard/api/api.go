@@ -439,7 +439,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	// apply the health route without any session or multi organization middleware
 	apiV1Router.GET("/health/", health)
 
-	apiV1Router.GET("/badges/:badgeSecret", assetController.GetBadges)
+	apiV1Router.GET("/badges/:badge/:badgeSecret", assetController.GetBadges)
 
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
@@ -551,7 +551,6 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
-
 
 	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	assetRouter.GET("/compliance/", complianceController.AssetCompliance)

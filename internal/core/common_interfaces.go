@@ -197,7 +197,7 @@ type InTotoVerifierService interface {
 
 type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
-	GetBadgeSVG(CVSS models.AssetRiskDistribution) string
+	GetCVSSBadgeSVG(CVSS models.AssetRiskDistribution) string
 }
 
 type DependencyVulnService interface {

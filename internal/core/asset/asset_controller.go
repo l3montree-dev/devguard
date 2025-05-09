@@ -272,6 +272,11 @@ func (a *httpController) GetBadges(ctx core.Context) error {
 		return echo.NewHTTPError(400, "missing badge secret")
 	}
 
+	badge := ctx.Param("badge")
+	if badge == "" {
+		return echo.NewHTTPError(400, "missing badge")
+	}
+
 	//delete the slashes from the badge secret
 	badgeSecret = strings.ReplaceAll(badgeSecret, "/", "")
 
@@ -288,17 +293,22 @@ func (a *httpController) GetBadges(ctx core.Context) error {
 	assetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
 	if err != nil {
 		slog.Error("Error getting default asset version", "error", err)
-		return ctx.JSON(404, nil)
 	}
 
-	results, err := a.statisticsService.GetAssetVersionCvssDistribution(assetVersion.Name, assetVersion.AssetID, asset.Name)
-	if err != nil {
-		return err
-	}
+	svg := ""
 
-	svg := a.assetService.GetBadgeSVG(results)
-	if svg == "" {
-		return echo.NewHTTPError(404, "badge not found")
+	if badge == "cvss" {
+		results, err := a.statisticsService.GetAssetVersionCvssDistribution(assetVersion.Name, asset.ID, asset.Name)
+		if err != nil {
+			return err
+		}
+
+		svg = a.assetService.GetCVSSBadgeSVG(results)
+		if svg == "" {
+			return echo.NewHTTPError(404, "badge not found")
+		}
+	} else {
+		return echo.NewHTTPError(400, "invalid badge type")
 	}
 
 	ctx.Response().Header().Set(echo.HeaderContentType, "image/svg+xml")
