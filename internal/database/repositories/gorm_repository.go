@@ -95,6 +95,9 @@ func (g *GormRepository[ID, T]) Create(tx *gorm.DB, t *T) error {
 }
 
 func (g *GormRepository[ID, T]) CreateBatch(tx *gorm.DB, ts []T) error {
+	if len(ts) == 0 {
+		return nil
+	}
 	return g.GetDB(tx).Clauses(clause.OnConflict{DoNothing: true}).Create(ts).Error
 }
 
