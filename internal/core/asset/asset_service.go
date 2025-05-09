@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -76,69 +75,17 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 	return nil
 }
 
-func (s *service) GetBadgeSVG(CVSS models.AssetRiskDistribution) string {
-	labelWidth := 40
-	boxWidth := 25
-	boxHeight := 20
+func (s *service) GetCVSSBadgeSVG(CVSS models.AssetRiskDistribution) string {
 
-	// Define colors
-	colors := map[string]string{
-		"C": "#8B0000",
-		"H": "#B22222",
-		"M": "#CD5C5C",
-		"L": "#F08080",
+	if CVSS.AssetVersionName == "" {
+		return core.GetBadgeSVG("CVSS", []core.BadgeValues{})
 	}
 
-	totalWidth := labelWidth + 4*boxWidth
-
-	var sb strings.Builder
-
-	sb.WriteString(fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" role="img" aria-label="CVSS">`, totalWidth, boxHeight))
-
-	// Gradient and clip path
-	sb.WriteString(`<linearGradient id="s" x2="0" y2="100%">
-	<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
-	<stop offset="1" stop-opacity=".1"/>
-</linearGradient>
-<clipPath id="r"><rect width="` + fmt.Sprintf("%d", totalWidth) + `" height="20" rx="3" fill="#fff"/></clipPath>
-<g clip-path="url(#r)">`)
-
-	// Label background
-	sb.WriteString(fmt.Sprintf(`<rect width="%d" height="%d" fill="#000"/>`, labelWidth, boxHeight))
-
-	// Values
-	values := []struct {
-		Key   string
-		Value int
-	}{
-		{"C", CVSS.Critical},
-		{"H", CVSS.High},
-		{"M", CVSS.Medium},
-		{"L", CVSS.Low},
+	values := []core.BadgeValues{
+		{Key: "C", Value: CVSS.Critical, Color: "#8B0000"},
+		{Key: "H", Value: CVSS.High, Color: "#B22222"},
+		{Key: "M", Value: CVSS.Medium, Color: "#CD5C5C"},
+		{Key: "L", Value: CVSS.Low, Color: "#F08080"},
 	}
-
-	for i, val := range values {
-		x := labelWidth + i*boxWidth
-		color := colors[val.Key]
-		sb.WriteString(fmt.Sprintf(`<rect x="%d" width="%d" height="%d" fill="%s"/>`, x, boxWidth, boxHeight, color))
-	}
-
-	sb.WriteString(fmt.Sprintf(`<rect width="%d" height="%d" fill="url(#s)"/>`, totalWidth, boxHeight))
-	sb.WriteString(`</g>`)
-
-	// TEXT
-	sb.WriteString(`<g fill="#fff" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11" text-rendering="geometricPrecision">`)
-
-	// Label
-	sb.WriteString(fmt.Sprintf(`<text x="%d" y="%d">%s</text>`, 4, 14, "CVSS"))
-
-	// Values with padding
-	for i, val := range values {
-		x := labelWidth + i*boxWidth + 3 // 3px horizontal padding
-		sb.WriteString(fmt.Sprintf(`<text x="%d" y="%d">%s:%d</text>`, x, 14, val.Key, val.Value))
-	}
-
-	sb.WriteString(`</g></svg>`)
-
-	return sb.String()
+	return core.GetBadgeSVG("CVSS", values)
 }
