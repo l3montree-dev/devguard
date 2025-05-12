@@ -248,7 +248,7 @@ func assetNameMiddleware() core.MiddlewareFunc {
 			// asset name is <organization_slug>/<project_slug>/<asset_slug>
 			assetName := ctx.Request().Header.Get("X-Asset-Name")
 			if assetName == "" {
-				return echo.NewHTTPError(400, "no asset id provided")
+				return echo.NewHTTPError(400, "no X-Asset-Name header provided")
 			}
 			// split the asset name
 			assetParts := strings.Split(assetName, "/")
