@@ -54,6 +54,18 @@ func maybeGetFileName(path string) (string, bool) {
 	return filepath.Base(path), false
 }
 
+func prepareTrivyCommand(path string) {
+	var trivyCmd *exec.Cmd
+	trivyCmd = exec.Command("go", "mod", "tidy")
+	trivyCmd.Dir = getDirFromPath(path)
+	stderr := &bytes.Buffer{}
+	trivyCmd.Stderr = stderr
+	err := trivyCmd.Run()
+	if err != nil {
+		return
+	}
+}
+
 func generateSBOM(path string) (*os.File, error) {
 	// generate random name
 	filename := uuid.New().String() + ".json"
@@ -66,6 +78,12 @@ func generateSBOM(path string) (*os.File, error) {
 		slog.Info("scanning directory", "dir", path)
 		// scanning a dir
 		// cdxgenCmd = exec.Command("cdxgen", "-o", filename)
+
+		// we need to run go mod tidy before running trivy
+		// this is because trivy needs dependencies before it can scan a go project
+		//https://trivy.dev/latest/docs/coverage/language/golang/
+		prepareTrivyCommand(path)
+
 		trivyCmd = exec.Command("trivy", "fs", ".", "--format", "cyclonedx", "--output", filename)
 	} else {
 		slog.Info("scanning single file", "file", maybeFilename)
@@ -259,7 +277,7 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
-		defer os.Remove(file.Name())
+		//defer os.Remove(file.Name())
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
