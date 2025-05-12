@@ -54,9 +54,11 @@ func maybeGetFileName(path string) (string, bool) {
 	return filepath.Base(path), false
 }
 
+// we need to run go mod tidy before running trivy
+// this is because trivy needs dependencies before it can scan a go project
+// https://trivy.dev/latest/docs/coverage/language/golang/
 func prepareTrivyCommand(path string) {
-	var trivyCmd *exec.Cmd
-	trivyCmd = exec.Command("go", "mod", "tidy")
+	trivyCmd := exec.Command("go", "mod", "tidy")
 	trivyCmd.Dir = getDirFromPath(path)
 	stderr := &bytes.Buffer{}
 	trivyCmd.Stderr = stderr
@@ -79,9 +81,6 @@ func generateSBOM(path string) (*os.File, error) {
 		// scanning a dir
 		// cdxgenCmd = exec.Command("cdxgen", "-o", filename)
 
-		// we need to run go mod tidy before running trivy
-		// this is because trivy needs dependencies before it can scan a go project
-		//https://trivy.dev/latest/docs/coverage/language/golang/
 		prepareTrivyCommand(path)
 
 		trivyCmd = exec.Command("trivy", "fs", ".", "--format", "cyclonedx", "--output", filename)
@@ -277,7 +276,7 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 		if err != nil {
 			return errors.Wrap(err, "could not open file")
 		}
-		//defer os.Remove(file.Name())
+		defer os.Remove(file.Name())
 
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
