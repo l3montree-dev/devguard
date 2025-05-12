@@ -108,7 +108,6 @@ func NewSbomCommand() *cobra.Command {
 
 	cmd.Flags().String("scannerId", "github.com/l3montree-dev/devguard-scanner/cmd/sbom", "Name of the scanner. DevGuard will compare new and old results based on the scannerId.")
 
-	addAssetRefFlags(cmd)
 	addScanFlags(cmd)
 	return cmd
 }
