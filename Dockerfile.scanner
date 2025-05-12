@@ -13,7 +13,7 @@ RUN curl -sL "https://github.com/google/go-containerregistry/releases/download/$
     tar -zxvf go-containerregistry.tar.gz -C /usr/local/bin/ crane
 
 # install trivy   
-RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.58.1
+RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.62.1
 
 # install cosign
 RUN curl -O -L "https://github.com/sigstore/cosign/releases/latest/download/cosign-linux-amd64" && mv cosign-linux-amd64 /usr/local/bin/cosign && chmod +x /usr/local/bin/cosign
@@ -36,11 +36,15 @@ FROM alpine:3.21.3@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff45
 
 RUN apk add --no-cache git python3
 RUN python3 -m venv /usr/local/bin/venv && \
- /usr/local/bin/venv/bin/pip install --upgrade pip && \
- /usr/local/bin/venv/bin/pip install semgrep checkov
+    /usr/local/bin/venv/bin/pip install --upgrade pip && \
+    /usr/local/bin/venv/bin/pip install semgrep checkov
 
- # add venv bin to path
+# add venv bin to path
 ENV PATH="/usr/local/bin/venv/bin:$PATH"
+
+COPY --from=golang-builder /usr/local/go /usr/local/go
+# add go to path
+ENV PATH="/usr/local/go/bin:$PATH"
 
 COPY --from=golang-builder /app/devguard-scanner /usr/local/bin/devguard-scanner
 COPY --from=golang-builder /usr/local/bin/trivy /usr/local/bin/trivy
