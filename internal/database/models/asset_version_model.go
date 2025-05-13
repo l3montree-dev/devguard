@@ -15,7 +15,7 @@ const (
 	AssetVersionTag    AssetVersionType = "tag"
 )
 
-type ScanInformation struct {
+type ScannerInformation struct {
 	LastScan *time.Time
 }
 
@@ -37,15 +37,9 @@ type AssetVersion struct {
 	SupplyChains    []SupplyChain         `json:"supplyChains" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;"`
 
 	LastHistoryUpdate *time.Time
-	LastSecretScan    *time.Time `json:"lastSecretScan"`
-	LastSastScan      *time.Time `json:"lastSastScan"`
-	LastScaScan       *time.Time `json:"lastScaScan"`
-	LastIacScan       *time.Time `json:"lastIacScan"`
-	LastContainerScan *time.Time `json:"lastContainerScan"`
-	LastDastScan      *time.Time `json:"lastDastScan"`
-	SigningPubKey     *string    `json:"signingPubKey" gorm:"type:text;"`
+	SigningPubKey     *string `json:"signingPubKey" gorm:"type:text;"`
 
-	ScannerInformation database.JSONB `json:"scanInformation" gorm:"type:jsonb"`
+	Metadata database.JSONB `json:"metadata" gorm:"type:jsonb"`
 }
 
 func (m AssetVersion) TableName() string {
