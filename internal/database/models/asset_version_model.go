@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/database"
 	"gorm.io/gorm"
 )
 
@@ -39,6 +40,8 @@ type AssetVersion struct {
 	LastContainerScan *time.Time `json:"lastContainerScan"`
 	LastDastScan      *time.Time `json:"lastDastScan"`
 	SigningPubKey     *string    `json:"signingPubKey" gorm:"type:text;"`
+
+	ScannerInformation database.JSONB `json:"scanInformation" gorm:"type:jsonb"`
 }
 
 func (m AssetVersion) TableName() string {
