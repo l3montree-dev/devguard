@@ -32,7 +32,7 @@ func NewSecretScanningCommand() *cobra.Command {
 
 func secretScan(p string) (*common.SarifResult, error) {
 	dir := os.TempDir()
-	dir = path.Join(dir, "sast")
+	dir = path.Join(dir, "secret-scanning")
 
 	// create new directory
 	err := os.MkdirAll(dir, 0755)
@@ -42,7 +42,7 @@ func secretScan(p string) (*common.SarifResult, error) {
 
 	var scannerCmd *exec.Cmd
 
-	slog.Info("Starting secret scanning", "path", p)
+	slog.Info("Starting secret scanning", "path", p, "result-path", path.Join(dir, "result.sarif"))
 
 	scannerCmd = exec.Command("gitleaks", "git", "-v", p, "--report-path", path.Join(dir, "result.sarif"), "--report-format", "sarif") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack yourself.
 
@@ -53,7 +53,7 @@ func secretScan(p string) (*common.SarifResult, error) {
 	if err != nil {
 		exitErr, ok := err.(*exec.ExitError)
 		if ok && exitErr.ExitCode() == 1 {
-			slog.Warn("Leaks found, but continuing execution.")
+			slog.Warn("Leaks found, but continuing execution.", "stderr", stderr.String())
 		} else {
 			return nil, errors.Wrapf(err, "could not run scanner: %s", stderr.String())
 		}
@@ -90,8 +90,8 @@ func printSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI stri
 		raw := []table.Row{
 			{"RuleID:", vuln.RuleID},
 			{"File:", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))},
-			{"Snippet:", text.WrapText(vuln.Snippet, 170)},
-			{"Message:", text.WrapText(*vuln.Message, 170)},
+			{"Snippet:", text.WrapText(vuln.Snippet, 130)},
+			{"Message:", text.WrapText(*vuln.Message, 130)},
 			{"Line:", vuln.StartLine},
 			{"Commit:", vuln.Commit},
 			{"Author:", vuln.Author},

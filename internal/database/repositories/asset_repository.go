@@ -60,15 +60,6 @@ func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, e
 	return app, nil
 }
 
-func (a *assetRepository) GetByAssetID(assetID uuid.UUID) (models.Asset, error) {
-	var app models.Asset
-	err := a.db.Where("id = ?", assetID).First(&app).Error
-	if err != nil {
-		return models.Asset{}, err
-	}
-	return app, nil
-}
-
 func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
 	err := a.db.Where("project_id = ?", projectID).Find(&apps).Error
@@ -134,4 +125,23 @@ func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (mo
 		Where("asset_versions.id = ?", assetVersionID).
 		First(&asset).Error
 	return asset, err
+}
+
+func (g *assetRepository) Delete(tx core.DB, id uuid.UUID) error {
+
+	return g.db.Select("AssetVersions").Delete(models.Asset{
+		Model: models.Model{
+			ID: id,
+		},
+	}).Error
+
+}
+
+func (g *assetRepository) GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error) {
+	var asset models.Asset
+	err := g.db.Debug().Where("badge_secret = ?", badgeSecret).First(&asset).Error
+	if err != nil {
+		return models.Asset{}, err
+	}
+	return asset, nil
 }

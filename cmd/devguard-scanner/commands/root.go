@@ -24,6 +24,7 @@ import (
 
 	intotocmd "github.com/l3montree-dev/devguard/cmd/devguard-scanner/commands/intoto"
 	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/lmittmann/tint"
 
 	"github.com/spf13/cobra"
@@ -74,6 +75,11 @@ OWASP Incubating Project`,
 			return err
 		}
 
+		if utils.RunsInCI() {
+			slog.Info("Running in CI")
+			return utils.GitLister.MarkAllPathsAsSafe()
+		}
+
 		return nil
 	},
 }
@@ -98,6 +104,8 @@ func init() {
 		NewLoginCommand(),
 		NewIaCCommand(),
 		NewSarifCommand(),
+		NewGetCommand(),
+		NewSbomCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.
@@ -149,7 +157,7 @@ func initializeConfig(cmd *cobra.Command) error {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return err
 		} else {
-			slog.Warn("no config file found")
+			slog.Debug("no config file found")
 		}
 	}
 

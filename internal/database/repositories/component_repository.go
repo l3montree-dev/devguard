@@ -86,7 +86,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 	var err error
 
 	//Find all needed components  recursively until we hit the root component
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	// using postgresql CYCLE Keyword to detect possible loops

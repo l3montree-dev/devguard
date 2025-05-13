@@ -26,29 +26,41 @@ import (
 type integrationController struct {
 }
 
-func createNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, userId, comment string, scannerIds string) models.VulnEvent {
-	if strings.HasPrefix(comment, "/accept") {
-		// create a new dependencyVuln accept event
-		return models.NewAcceptedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/accept")))
-	} else if strings.HasPrefix(comment, "/false-positive") {
-		// create a new dependencyVuln false positive event
-		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/false-positive")), scannerIds)
+func commentTrimmedFalsePositivePrefix(comment string) (models.VulnEventType, models.MechanicalJustificationType, string) {
+
+	if strings.HasPrefix(comment, "/component-not-present") {
+		return models.EventTypeFalsePositive, models.ComponentNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/component-not-present"))
+	} else if strings.HasPrefix(comment, "/vulnerable-code-not-present") {
+		return models.EventTypeFalsePositive, models.VulnerableCodeNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-present"))
+	} else if strings.HasPrefix(comment, "/vulnerable-code-not-in-execute-path") {
+		return models.EventTypeFalsePositive, models.VulnerableCodeNotInExecutePath, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-in-execute-path"))
+	} else if strings.HasPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary") {
+		return models.EventTypeFalsePositive, models.VulnerableCodeCannotBeControlledByAdversary, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary"))
+	} else if strings.HasPrefix(comment, "/inline-mitigations-already-exist") {
+		return models.EventTypeFalsePositive, models.InlineMitigationsAlreadyExist, strings.TrimSpace(strings.TrimPrefix(comment, "/inline-mitigations-already-exist"))
+	} else if strings.HasPrefix(comment, "/accept") {
+		return models.EventTypeAccepted, "", strings.TrimSpace(strings.TrimPrefix(comment, "/accept"))
 	} else if strings.HasPrefix(comment, "/reopen") {
-		// create a new dependencyVuln reopen event
-		return models.NewReopenedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/reopen")))
-	} else if strings.HasPrefix(comment, "/a") {
-		// create a new dependencyVuln accept event
-		return models.NewAcceptedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/a")))
-	} else if strings.HasPrefix(comment, "/fp") {
-		// create a new dependencyVuln false positive event
-		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/fp")), scannerIds)
-	} else if strings.HasPrefix(comment, "/r") {
-		// create a new dependencyVuln reopen event
-		return models.NewReopenedEvent(vulnId, vulnType, userId, strings.TrimSpace(strings.TrimPrefix(comment, "/r")))
-	} else {
-		// create a new comment event
+		return models.EventTypeReopened, "", strings.TrimSpace(strings.TrimPrefix(comment, "/reopen"))
+	}
+	return models.EventTypeComment, "", comment
+}
+
+func createNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, userId, comment string, scannerIds string) models.VulnEvent {
+
+	event, mechanicalJustification, justification := commentTrimmedFalsePositivePrefix(comment)
+
+	if event == models.EventTypeAccepted {
+		return models.NewAcceptedEvent(vulnId, vulnType, userId, justification)
+	} else if event == models.EventTypeFalsePositive {
+		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, justification, mechanicalJustification, scannerIds)
+	} else if event == models.EventTypeReopened {
+		return models.NewReopenedEvent(vulnId, vulnType, userId, justification)
+	} else if event == models.EventTypeComment {
 		return models.NewCommentEvent(vulnId, vulnType, userId, comment)
 	}
+
+	return models.VulnEvent{}
 }
 
 func NewIntegrationController() *integrationController {

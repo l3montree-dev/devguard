@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"log/slog"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
@@ -61,7 +62,10 @@ func ScanAssetVersions(db core.DB) error {
 		// group the components by scannerID
 		scannerIDMap := make(map[string][]models.ComponentDependency)
 		for _, component := range components {
-			scannerIDMap[component.ScannerIDs] = append(scannerIDMap[component.ScannerIDs], component)
+			scanner := strings.Fields(component.ScannerIDs)
+			for _, scannerID := range scanner {
+				scannerIDMap[scannerID] = append(scannerIDMap[scannerID], component)
+			}
 		}
 
 		for scannerID, components := range scannerIDMap {
@@ -74,7 +78,7 @@ func ScanAssetVersions(db core.DB) error {
 			}
 
 			if err != nil {
-				slog.Error("failed to scan normalized sbom", "error", err)
+				slog.Error("failed to scan normalized sbom", "error", err, "scannerID", scannerID, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 				continue
 			}
 		}

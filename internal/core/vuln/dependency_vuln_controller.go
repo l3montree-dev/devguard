@@ -33,8 +33,9 @@ type dependencyVulnHttpController struct {
 }
 
 type DependencyVulnStatus struct {
-	StatusType    string `json:"status"`
-	Justification string `json:"justification"`
+	StatusType              string                             `json:"status"`
+	Justification           string                             `json:"justification"`
+	MechanicalJustification models.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
 func NewHttpController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService) *dependencyVulnHttpController {
@@ -272,9 +273,10 @@ func (c dependencyVulnHttpController) CreateEvent(ctx core.Context) error {
 		return echo.NewHTTPError(400, "invalid status type")
 	}
 	justification := status.Justification
+	mechanicalJustification := status.MechanicalJustification
 
 	err = c.dependencyVulnRepository.Transaction(func(tx core.DB) error {
-		ev, err := c.dependencyVulnService.UpdateDependencyVulnState(tx, asset.ID, userID, &dependencyVuln, statusType, justification, assetVersion.Name)
+		ev, err := c.dependencyVulnService.UpdateDependencyVulnState(tx, asset.ID, userID, &dependencyVuln, statusType, justification, mechanicalJustification, assetVersion.Name)
 		if err != nil {
 			return err
 		}
@@ -323,14 +325,15 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 		},
 		Events: utils.Map(dependencyVuln.Events, func(ev models.VulnEvent) events.VulnEventDTO {
 			return events.VulnEventDTO{
-				ID:                ev.ID,
-				Type:              ev.Type,
-				VulnID:            ev.VulnID,
-				UserID:            ev.UserID,
-				Justification:     ev.Justification,
-				AssetVersionName:  dependencyVuln.AssetVersionName,
-				ArbitraryJsonData: ev.GetArbitraryJsonData(),
-				CreatedAt:         ev.CreatedAt,
+				ID:                      ev.ID,
+				Type:                    ev.Type,
+				VulnID:                  ev.VulnID,
+				UserID:                  ev.UserID,
+				Justification:           ev.Justification,
+				MechanicalJustification: ev.MechanicalJustification,
+				AssetVersionName:        dependencyVuln.AssetVersionName,
+				ArbitraryJsonData:       ev.GetArbitraryJsonData(),
+				CreatedAt:               ev.CreatedAt,
 			}
 		}),
 	}

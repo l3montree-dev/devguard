@@ -37,6 +37,16 @@ const (
 	EventTypeRemovedScanner VulnEventType = "removedScanner"
 )
 
+type MechanicalJustificationType string
+
+const (
+	ComponentNotPresent                         MechanicalJustificationType = "component_not_present"
+	VulnerableCodeNotPresent                    MechanicalJustificationType = "vulnerable_code_not_present"
+	VulnerableCodeNotInExecutePath              MechanicalJustificationType = "vulnerable_code_not_in_execute_path"
+	VulnerableCodeCannotBeControlledByAdversary MechanicalJustificationType = "vulnerable_code_cannot_be_controlled_by_adversary"
+	InlineMitigationsAlreadyExist               MechanicalJustificationType = "inline_mitigations_already_exist"
+)
+
 type VulnEvent struct {
 	Model
 	Type     VulnEventType `json:"type" gorm:"type:text"`
@@ -45,6 +55,8 @@ type VulnEvent struct {
 	UserID   string        `json:"userId"`
 
 	Justification *string `json:"justification" gorm:"type:text;"`
+
+	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
 
 	ArbitraryJsonData string `json:"arbitraryJsonData" gorm:"type:text;"`
 	arbitraryJsonData map[string]any
@@ -163,13 +175,14 @@ func NewCommentEvent(vulnID string, vulnType VulnType, userID, justification str
 	}
 }
 
-func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justification string, scannerID string) VulnEvent {
+func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justification string, mechanicalJustification MechanicalJustificationType, scannerID string) VulnEvent {
 	ev := VulnEvent{
-		Type:          EventTypeFalsePositive,
-		VulnID:        vulnID,
-		VulnType:      vulnType,
-		UserID:        userID,
-		Justification: &justification,
+		Type:                    EventTypeFalsePositive,
+		VulnID:                  vulnID,
+		VulnType:                vulnType,
+		UserID:                  userID,
+		Justification:           &justification,
+		MechanicalJustification: mechanicalJustification,
 	}
 	ev.SetArbitraryJsonData(map[string]any{"scannerIds": scannerID})
 	return ev

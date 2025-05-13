@@ -61,8 +61,13 @@ type InTotoConfig struct {
 	LayoutKey toto.Key
 }
 
+type AttestationConfig struct {
+	PredicateType string `mapstructure:"predicateType"`
+}
+
 var RuntimeBaseConfig baseConfig
 var RuntimeInTotoConfig InTotoConfig
+var RuntimeAttestationConfig AttestationConfig
 
 func ParseBaseConfig() {
 	err := viper.Unmarshal(&RuntimeBaseConfig)
@@ -127,6 +132,13 @@ func tokenToInTotoKey(token string) (toto.Key, error) {
 	}
 
 	return key, nil
+}
+func ParseAttestationConfig() {
+	err := viper.Unmarshal(&RuntimeAttestationConfig)
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 func ParseInTotoConfig() {

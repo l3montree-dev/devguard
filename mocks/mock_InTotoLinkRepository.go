@@ -315,6 +315,53 @@ func (_c *InTotoLinkRepository_Delete_Call) RunAndReturn(run func(*gorm.DB, uuid
 	return _c
 }
 
+// DeleteBatch provides a mock function with given fields: tx, ids
+func (_m *InTotoLinkRepository) DeleteBatch(tx *gorm.DB, ids []models.InTotoLink) error {
+	ret := _m.Called(tx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteBatch")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, []models.InTotoLink) error); ok {
+		r0 = rf(tx, ids)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// InTotoLinkRepository_DeleteBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBatch'
+type InTotoLinkRepository_DeleteBatch_Call struct {
+	*mock.Call
+}
+
+// DeleteBatch is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - ids []models.InTotoLink
+func (_e *InTotoLinkRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *InTotoLinkRepository_DeleteBatch_Call {
+	return &InTotoLinkRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
+}
+
+func (_c *InTotoLinkRepository_DeleteBatch_Call) Run(run func(tx *gorm.DB, ids []models.InTotoLink)) *InTotoLinkRepository_DeleteBatch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].([]models.InTotoLink))
+	})
+	return _c
+}
+
+func (_c *InTotoLinkRepository_DeleteBatch_Call) Return(_a0 error) *InTotoLinkRepository_DeleteBatch_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *InTotoLinkRepository_DeleteBatch_Call) RunAndReturn(run func(*gorm.DB, []models.InTotoLink) error) *InTotoLinkRepository_DeleteBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByAssetAndSupplyChainId provides a mock function with given fields: assetID, supplyChainId
 func (_m *InTotoLinkRepository) FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainId string) ([]models.InTotoLink, error) {
 	ret := _m.Called(assetID, supplyChainId)

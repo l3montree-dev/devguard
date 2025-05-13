@@ -21,3 +21,5 @@ webwml-master
 repo.zip
 vulndb-tmp
 coverage.out
+
+!**/testfiles/**

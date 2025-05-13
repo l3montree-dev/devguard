@@ -53,15 +53,17 @@ func convertToDetailedDTO(event []models.VulnEventDetail) []VulnEventDTO {
 	var dtos []VulnEventDTO
 	for _, e := range event {
 		dtos = append(dtos, VulnEventDTO{
-			ID:                e.ID,
-			Type:              e.Type,
-			VulnID:            e.VulnID,
-			UserID:            e.UserID,
-			Justification:     e.Justification,
-			ArbitraryJsonData: e.GetArbitraryJsonData(),
-			CreatedAt:         e.CreatedAt,
-			AssetVersionName:  e.AssetVersionName,
-			AssetVersionSlug:  e.Slug,
+			ID:                      e.ID,
+			Type:                    e.Type,
+			VulnID:                  e.VulnID,
+			VulnType:                e.VulnType,
+			UserID:                  e.UserID,
+			Justification:           e.Justification,
+			MechanicalJustification: e.MechanicalJustification,
+			ArbitraryJsonData:       e.GetArbitraryJsonData(),
+			CreatedAt:               e.CreatedAt,
+			AssetVersionName:        e.AssetVersionName,
+			AssetVersionSlug:        e.Slug,
 		})
 
 	}

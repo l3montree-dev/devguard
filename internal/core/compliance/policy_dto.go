@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright (C) 2025 l3montree UG (haftungsbeschraenkt)
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -13,24 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package models
+package compliance
 
-import (
-	"github.com/google/uuid"
-)
-
-type GitLabIntegration struct {
-	Model
-
-	Name string `json:"name"`
-
-	AccessToken string `json:"accessToken"`
-	GitLabUrl   string `json:"gitLabUrl" gorm:"column:gitlab_url"`
-
-	Org   Org       `json:"org" gorm:"foreignKey:OrgID;constraint:OnDelete:CASCADE;"`
-	OrgID uuid.UUID `json:"orgId" gorm:"column:org_id"`
-}
-
-func (GitLabIntegration) TableName() string {
-	return "gitlab_integrations"
+type policyDTO struct {
+	Title         string `json:"title"`
+	Description   string `json:"description"`
+	Priority      int    `json:"priority"`
+	PredicateType string `json:"predicateType"`
+	Rego          string `json:"rego"`
 }

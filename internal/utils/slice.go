@@ -87,23 +87,26 @@ func Find[T any](s []T, f func(T) bool) (T, bool) {
 type CompareResult[T any] struct {
 	OnlyInA []T
 	OnlyInB []T
-	InBoth  []T
+	InBoth  []T // returns the elements in A
+
+	InBothB []T
 }
 
 func CompareSlices[T any, K comparable](a, b []T, serializer func(T) K) CompareResult[T] {
 	res := CompareResult[T]{}
-	inA := make(map[K]bool)
-	inB := make(map[K]bool)
+	inA := make(map[K]T)
+	inB := make(map[K]T)
 
 	for _, v := range b {
-		inB[serializer(v)] = true
+		inB[serializer(v)] = v
 	}
 
 	for _, v := range a {
-		inA[serializer(v)] = true
+		inA[serializer(v)] = v
 
 		if _, ok := inB[serializer(v)]; ok {
 			res.InBoth = append(res.InBoth, v)
+			res.InBothB = append(res.InBothB, inB[serializer(v)])
 		} else {
 			res.OnlyInA = append(res.OnlyInA, v)
 		}

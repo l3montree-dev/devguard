@@ -29,7 +29,7 @@ func printSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, asset
 		if vuln.Snippet != "" {
 			tw.AppendRow(table.Row{"Snippet", vuln.Snippet})
 		}
-		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 170)})
+		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 130)})
 		if vuln.Uri != "" {
 			tw.AppendRow(table.Row{"File", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))})
 			tw.AppendRow(table.Row{"Line", vuln.StartLine})
@@ -54,7 +54,7 @@ func sastScan(p string) (*common.SarifResult, error) {
 
 	var scannerCmd *exec.Cmd
 
-	slog.Info("Starting sast scanning", "path", p)
+	slog.Info("Starting sast scanning", "path", p, "result-path", path.Join(dir, "result.sarif"))
 
 	scannerCmd = exec.Command("semgrep", "scan", p, "--sarif", "--sarif-output", path.Join(dir, "result.sarif"), "-v") // nolint:all // 	There is no security issue right here. This runs on the client. You are free to attack
 

@@ -518,3 +518,65 @@ func SanitizeEnv(env Environmental) Environmental {
 
 	return env
 }
+
+type BadgeValues struct {
+	Key   string
+	Value int
+	Color string
+}
+
+func GetBadgeSVG(label string, values []BadgeValues) string {
+	labelWidth := 40
+	boxWidth := 25
+	boxHeight := 20
+
+	if len(values) == 0 {
+		values = []BadgeValues{
+			{"?", 0, "#808080"},
+		}
+		boxWidth = 60 // Adjusted width for the "unknown" box
+	}
+
+	totalWidth := labelWidth + len(values)*boxWidth
+
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf(
+		`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" role="img" aria-label="%s">`,
+		totalWidth, boxHeight, label,
+	))
+
+	sb.WriteString(fmt.Sprintf(`
+<linearGradient id="s" x2="0" y2="100%%">
+	<stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+	<stop offset="1" stop-opacity=".1"/>
+</linearGradient>
+<clipPath id="r"><rect width="%d" height="%d" rx="3" fill="#fff"/></clipPath>
+<g clip-path="url(#r)">`, totalWidth, boxHeight))
+
+	sb.WriteString(fmt.Sprintf(`<rect width="%d" height="%d" fill="#000"/>`, labelWidth, boxHeight))
+
+	for i, val := range values {
+		x := labelWidth + i*boxWidth
+		sb.WriteString(fmt.Sprintf(`<rect x="%d" width="%d" height="%d" fill="%s"/>`, x, boxWidth, boxHeight, val.Color))
+	}
+
+	sb.WriteString(fmt.Sprintf(`<rect width="%d" height="%d" fill="url(#s)"/>`, totalWidth, boxHeight))
+	sb.WriteString(`</g>`)
+
+	sb.WriteString(`<g fill="#fff" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11" text-rendering="geometricPrecision">`)
+	sb.WriteString(fmt.Sprintf(`<text x="4" y="14">%s</text>`, label))
+
+	for i, val := range values {
+		x := labelWidth + i*boxWidth + 3
+		content := fmt.Sprintf(`%s:%d`, val.Key, val.Value)
+		if val.Key == "?" {
+			content = "unknown"
+		}
+		sb.WriteString(fmt.Sprintf(`<text x="%d" y="14">%s</text>`, x, content))
+	}
+
+	sb.WriteString(`</g></svg>`)
+
+	return sb.String()
+}

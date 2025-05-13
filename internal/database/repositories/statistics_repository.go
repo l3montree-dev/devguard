@@ -229,3 +229,16 @@ FROM
 
 	return fixingTime, nil
 }
+
+func (r *statisticsRepository) CVESWithKnownExploitsInAssetVersion(assetVersion models.AssetVersion) ([]models.CVE, error) {
+	var cves []models.CVE
+
+	//Query to find all CVE in the vulnerabilities for which an exploit exists
+	err := r.db.Raw("SELECT c.* FROM dependency_vulns d JOIN cves c ON d.cve_id = c.cve WHERE  EXISTS (SELECT id FROM exploits e WHERE d.cve_id = e.cve_id) AND d.asset_version_name = ?  AND d.state = 'open'  AND d.asset_id = ?;", assetVersion.Name, assetVersion.AssetID).Find(&cves).Error
+	if err != nil {
+		return cves, err
+	}
+
+	return cves, nil
+
+}

@@ -25,7 +25,7 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error("error when trying to generate token")
 			return
 		}
-		results, err := createProjectHookOptions(token, hooks)
+		results, err := createProjectHookOptions(&token, hooks)
 		if err != nil {
 			slog.Error(err.Error())
 			return
@@ -43,7 +43,7 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error("error when trying to generate token")
 			return
 		}
-		results, err := createProjectHookOptions(token, hooks)
+		results, err := createProjectHookOptions(&token, hooks)
 		if err != nil {
 			slog.Error(err.Error())
 			return
@@ -61,7 +61,7 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error("error when trying to generate token")
 			return
 		}
-		results, err := createProjectHookOptions(token, hooks)
+		results, err := createProjectHookOptions(&token, hooks)
 		if err != nil {
 			slog.Error(err.Error())
 			return
@@ -77,7 +77,7 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error("error when trying to generate token")
 			return
 		}
-		results, err := createProjectHookOptions(token, hooks)
+		results, err := createProjectHookOptions(&token, hooks)
 		if err != nil {
 			slog.Error(err.Error())
 			return
@@ -96,7 +96,7 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error("error when trying to generate token")
 			return
 		}
-		results, err := createProjectHookOptions(token, hooks)
+		results, err := createProjectHookOptions(&token, hooks)
 		if err != nil {
 			slog.Error(err.Error())
 			return

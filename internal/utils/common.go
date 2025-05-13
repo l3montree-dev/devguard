@@ -19,13 +19,24 @@ import (
 	"encoding/csv"
 	"log/slog"
 	"math"
+	"os"
 	"runtime/debug"
 	"slices"
 	"strings"
 )
 
+// we use Set 1 of ISO 639 language codes to identify languages based on 2 letters
+var supportedLanguageCodes = []string{"de", "en"}
+
 func Ptr[T any](t T) *T {
 	return &t
+}
+
+func RunsInCI() bool {
+	if val, ok := os.LookupEnv("CI"); ok {
+		return val == "true"
+	}
+	return false
 }
 
 func RemovePrefixInsensitive(input string, prefix string) string {
@@ -174,4 +185,9 @@ func ShannonEntropy(str string) float64 {
 	}
 
 	return sum
+}
+
+// supported languages are declared in `supportedLanguageCodes` at the start of this file
+func CheckForValidLanguageCode(languageCode string) bool {
+	return slices.Contains(supportedLanguageCodes, languageCode)
 }
