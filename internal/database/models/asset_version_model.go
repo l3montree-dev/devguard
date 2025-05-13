@@ -15,6 +15,10 @@ const (
 	AssetVersionTag    AssetVersionType = "tag"
 )
 
+type ScanInformation struct {
+	LastScan *time.Time
+}
+
 type AssetVersion struct {
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`

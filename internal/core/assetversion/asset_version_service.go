@@ -147,13 +147,13 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
 	switch scannerID {
 	case devguardScanner + "sast":
-		assetVersion.LastSastScan = utils.Ptr(time.Now())
+		assetVersion.ScannerInformation["sast"] = models.ScanInformation{LastScan: utils.Ptr(time.Now())}
 	case devguardScanner + "dast":
-		assetVersion.LastDastScan = utils.Ptr(time.Now())
+		assetVersion.ScannerInformation["dast"] = models.ScanInformation{LastScan: utils.Ptr(time.Now())}
 	case devguardScanner + "secret-scanning":
-		assetVersion.LastSecretScan = utils.Ptr(time.Now())
+		assetVersion.ScannerInformation["secret"] = models.ScanInformation{LastScan: utils.Ptr(time.Now())}
 	case devguardScanner + "iac":
-		assetVersion.LastIacScan = utils.Ptr(time.Now())
+		assetVersion.ScannerInformation["iac"] = models.ScanInformation{LastScan: utils.Ptr(time.Now())}
 	}
 
 	return amountOpened, amountClosed, amountExisting, nil
@@ -252,9 +252,9 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 
 	switch scannerID {
 	case devguardScanner + "sca":
-		assetVersion.LastScaScan = utils.Ptr(time.Now())
+		assetVersion.ScannerInformation["sca"] = models.ScanInformation{LastScan: utils.Ptr(time.Now())}
 	case devguardScanner + "container-scanning":
-		assetVersion.LastContainerScan = utils.Ptr(time.Now())
+		assetVersion.ScannerInformation["container"] = models.ScanInformation{LastScan: utils.Ptr(time.Now())}
 	}
 
 	return opened, closed, newState, nil
