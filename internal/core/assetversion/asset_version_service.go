@@ -144,6 +144,10 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 		return 0, 0, []models.FirstPartyVuln{}, err
 	}
 
+	if assetVersion.Metadata == nil {
+		assetVersion.Metadata = make(map[string]any)
+	}
+
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
 	switch scannerID {
 	case devguardScanner + "sast":
@@ -246,6 +250,10 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	opened, closed, newState, err = s.handleScanResult(userID, scannerID, assetVersion, dependencyVulns, asset)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
+
+	if assetVersion.Metadata == nil {
+		assetVersion.Metadata = make(map[string]any)
 	}
 
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
