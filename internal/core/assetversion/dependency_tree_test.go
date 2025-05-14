@@ -167,3 +167,57 @@ func TestCalculateDepth(t *testing.T) {
 		}
 	})
 }
+
+func TestGetComponentDepth(t *testing.T) {
+	t.Run("should not use the SMALLEST DEPTH available approach, if devguard container scanning and sca is used. In this case: container-scanning is always wrong", func(t *testing.T) {
+		dependencies := []models.ComponentDependency{
+			{ComponentPurl: nil, DependencyPurl: "app", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
+			{ComponentPurl: utils.Ptr("app"), DependencyPurl: "pkg:golang/b@1.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
+			{ComponentPurl: utils.Ptr("pkg:golang/b@1.0.0"), DependencyPurl: "pkg:golang/c@1.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
+
+			// sca is much more reliable compared to container-scanning
+			// there we should use the depth of the sca dependency
+			{ComponentPurl: utils.Ptr("app"), DependencyPurl: "pkg:golang/c@1.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning"},
+			{ComponentPurl: nil, DependencyPurl: "app", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning"},
+		}
+
+		depthMap := GetComponentDepth(dependencies)
+		expectedDepths := map[string]int{
+			"pkg:golang/a@1.0.0": 0,
+			"pkg:golang/b@1.0.0": 1,
+			"pkg:golang/c@1.0.0": 2,
+		}
+
+		for node, expectedDepth := range expectedDepths {
+			if depthMap[node] != expectedDepth {
+				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, depthMap[node])
+			}
+		}
+	})
+
+	t.Run("should use the SMALLEST DEPTH available approach (i have no idea which scanner is better, your own or our sca)", func(t *testing.T) {
+		dependencies := []models.ComponentDependency{
+			{ComponentPurl: nil, DependencyPurl: "app", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
+			{ComponentPurl: utils.Ptr("app"), DependencyPurl: "pkg:golang/b@1.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
+			{ComponentPurl: utils.Ptr("pkg:golang/b@1.0.0"), DependencyPurl: "pkg:golang/c@1.0.0", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"},
+
+			// sca is much more reliable compared to container-scanning
+			// there we should use the depth of the sca dependency
+			{ComponentPurl: nil, DependencyPurl: "app", ScannerIDs: "my-own-scanner"},
+			{ComponentPurl: utils.Ptr("app"), DependencyPurl: "pkg:golang/c@1.0.0", ScannerIDs: "my-own-scanner"},
+		}
+
+		depthMap := GetComponentDepth(dependencies)
+		expectedDepths := map[string]int{
+			"pkg:golang/a@1.0.0": 0,
+			"pkg:golang/b@1.0.0": 1,
+			"pkg:golang/c@1.0.0": 1,
+		}
+
+		for node, expectedDepth := range expectedDepths {
+			if depthMap[node] != expectedDepth {
+				t.Errorf("expected depth of %s to be %d, got %d", node, expectedDepth, depthMap[node])
+			}
+		}
+	})
+}

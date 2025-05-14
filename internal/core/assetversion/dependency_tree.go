@@ -16,6 +16,8 @@
 package assetversion
 
 import (
+	"strings"
+
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/package-url/packageurl-go"
 )
@@ -125,10 +127,56 @@ func BuildDependencyTree(elements []models.ComponentDependency) tree {
 	return tree
 }
 
+func mergeDepthMaps(scannerIdDepthMap map[string]map[string]int) map[string]int {
+	finalMap := make(map[string]int)
+	for scannerId, depthMap := range scannerIdDepthMap {
+
+		for component, depth := range depthMap {
+			if scannerId == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning" {
+				// check, if an sca did find the same component
+				// if so, just skip it
+				if scannerIdDepthMap["github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"] != nil && scannerIdDepthMap["github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"][component] != 0 {
+					continue
+				}
+			}
+
+			if _, ok := finalMap[component]; !ok {
+				finalMap[component] = depth
+
+			} else if finalMap[component] > depth {
+				// SMALLEST DEPTH WINS APPROACH
+				finalMap[component] = depth
+			}
+		}
+	}
+	return finalMap
+}
+
 func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
-	depthMap := make(map[string]int)
-	tree := BuildDependencyTree(elements)
-	// first node will be the package name itself
-	CalculateDepth(tree.Root, 0, depthMap)
-	return depthMap
+	scannerDependencyMap := make(map[string][]models.ComponentDependency)
+	for _, element := range elements {
+		scannerIds := element.ScannerIDs
+		// split at whitespace
+		scannerIdsList := strings.Fields(scannerIds)
+		for _, scannerId := range scannerIdsList {
+			if _, ok := scannerDependencyMap[scannerId]; !ok {
+				scannerDependencyMap[scannerId] = make([]models.ComponentDependency, 0)
+			}
+			scannerDependencyMap[scannerId] = append(scannerDependencyMap[scannerId], element)
+		}
+	}
+	scannerIdDepthMap := make(map[string]map[string]int)
+	// build the dependency tree for each scanner id
+	for scannerId, elements := range scannerDependencyMap {
+		// check if the scanner id is empty
+		depthMap := make(map[string]int)
+		// group the elements by scanner id and build the dependency trees.
+		// for each scanner
+		tree := BuildDependencyTree(elements)
+		// first node will be the package name itself
+		CalculateDepth(tree.Root, 0, depthMap)
+		scannerIdDepthMap[scannerId] = depthMap
+	}
+
+	return mergeDepthMaps(scannerIdDepthMap)
 }
