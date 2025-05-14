@@ -18,6 +18,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
@@ -148,6 +149,7 @@ ORDER BY depth;
 	//Map the query results to the component model
 	err = query.Find(&components).Error
 	if err != nil {
+		fmt.Printf("Found error \n\n")
 		return nil, err
 	}
 
