@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -434,6 +435,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 			return next(ctx)
 		}
 	})
+
+	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
 
 	apiV1Router.POST("/webhook/", integrationController.HandleWebhook)
 	// apply the health route without any session or multi organization middleware

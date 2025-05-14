@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
 
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -106,8 +107,14 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, userID, scannerID stri
 }
 
 func (s *service) RecalculateAllRawRiskAssessments() error {
+
+	monitoring.RecalculateAllRawRiskAssessmentsAmount.Inc()
+
 	now := time.Now()
 	slog.Info("recalculating all raw risk assessments", "time", now)
+	defer func() {
+		monitoring.RecalculateAllRawRiskAssessmentsDuration.Observe(time.Since(now).Seconds())
+	}()
 
 	userID := "system"
 	justification := "System recalculated raw risk assessment"
@@ -118,6 +125,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	}
 
 	for _, assetVersion := range assetVersions {
+		monitoring.RecalculateAllRawRiskAssessmentsAssetVersionsAmount.Inc()
 		// get all dependencyVulns of the asset
 		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID)
 		if len(dependencyVulns) == 0 {
@@ -132,6 +140,8 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 		if err != nil {
 			return fmt.Errorf("could not recalculate raw risk assessment: %v", err)
 		}
+
+		monitoring.RecalculateAllRawRiskAssessmentsAssetVersionsUpdatedAmount.Inc()
 	}
 
 	return nil

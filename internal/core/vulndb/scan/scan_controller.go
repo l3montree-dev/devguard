@@ -25,6 +25,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -72,6 +73,13 @@ type FirstPartyScanResponse struct {
 }
 
 func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, error) {
+
+	monitoring.DependencyVulnScanAmount.Inc()
+	startTime := time.Now()
+	defer func() {
+		monitoring.DependencyVulnScanDuration.Observe(time.Since(startTime).Seconds())
+	}()
+
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	normalizedBom := bom
 	asset := core.GetAsset(c)
@@ -159,6 +167,13 @@ func ScanNormalizedSBOM(s *httpController, asset models.Asset, assetVersion mode
 }
 
 func (s *httpController) FirstPartyVulnScan(c core.Context) error {
+
+	monitoring.FirstPartyScanAmount.Inc()
+	startTime := time.Now()
+	defer func() {
+		monitoring.FirstPartyScanDuration.Observe(time.Since(startTime).Seconds())
+	}()
+
 	var sarifScan common.SarifResult
 
 	defer c.Request().Body.Close()
