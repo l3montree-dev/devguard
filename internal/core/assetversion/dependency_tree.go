@@ -129,6 +129,6 @@ func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
 	depthMap := make(map[string]int)
 	tree := BuildDependencyTree(elements)
 	// first node will be the package name itself
-	CalculateDepth(tree.Root, -1, depthMap)
+	CalculateDepth(tree.Root, 0, depthMap)
 	return depthMap
 }

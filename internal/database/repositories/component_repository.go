@@ -66,9 +66,18 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 
 	query := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
-	if scannerID != "" {
-		scannerID = "%" + scannerID + "%"
-		query = query.Where("scanner_ids LIKE ?", scannerID)
+	scannerIDs := strings.Split(scannerID, " ")
+	if len(scannerIDs) > 0 {
+		scannerIDsSubQuery := c.GetDB(tx)
+		for i, id := range scannerIDs {
+			like := "%" + id + "%"
+			if i == 0 {
+				scannerIDsSubQuery = scannerIDsSubQuery.Where("scanner_ids LIKE ?", like)
+			} else {
+				scannerIDsSubQuery = scannerIDsSubQuery.Or("scanner_ids LIKE ?", like)
+			}
+		}
+		query.Where(scannerIDsSubQuery)
 	}
 
 	err = query.Find(&components).Error
