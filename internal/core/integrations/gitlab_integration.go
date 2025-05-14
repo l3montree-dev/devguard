@@ -172,7 +172,7 @@ func parseWebhook(r *http.Request) (any, error) {
 }
 
 func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
-	fmt.Printf("Webhook Called\n\n")
+
 	event, err := parseWebhook(ctx.Request())
 	if err != nil {
 		slog.Error("could not parse gitlab webhook", "err", err)
@@ -358,7 +358,6 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		//Check if the user should be able to use commands
 		//TODO : Check member role ?
 		if isMember {
-
 			switch vulnEvent.Type {
 			case models.EventTypeAccepted:
 				labels := getLabels(vuln)
