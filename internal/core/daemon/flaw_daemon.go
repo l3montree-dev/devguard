@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -45,6 +46,11 @@ func UpdateComponentProperties(db core.DB) error {
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.
 
+	start := time.Now()
+	defer func() {
+		monitoring.UpdateComponentPropertiesDuration.Observe(time.Since(start).Seconds())
+	}()
+
 	assetRepository := repositories.NewAssetRepository(db)
 	purlComparer := scan.NewPurlComparer(db)
 	componentRepository := repositories.NewComponentRepository(db)
@@ -71,6 +77,7 @@ func UpdateComponentProperties(db core.DB) error {
 				return nil, err
 			}
 
+			monitoring.DependencyVulnsAmount.Set(float64(len(dependencyVulns)))
 			// group by scanner id
 			groups := make(map[string]map[string][]models.DependencyVuln)
 			for _, f := range dependencyVulns {
@@ -131,6 +138,8 @@ func UpdateComponentProperties(db core.DB) error {
 						if err := dependencyVulnRepository.Save(nil, &dependencyVuln); err != nil {
 							slog.Warn("could not save dependencyVuln", "dependencyVuln", dependencyVuln.ID, "err", err)
 						}
+
+						monitoring.DependencyVulnsUpdatedAmount.Inc()
 					}
 				}
 			}
@@ -143,6 +152,8 @@ func UpdateComponentProperties(db core.DB) error {
 		slog.Error("could not update component properties", "err", err)
 		return err
 	}
+
+	monitoring.UpdateComponentPropertiesDaemonAmount.Inc()
 
 	return nil
 }

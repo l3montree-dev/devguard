@@ -77,7 +77,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
-		monitoring.DependencyVulnScanDuration.Observe(time.Since(startTime).Seconds())
+		monitoring.DependencyVulnScanDuration.Observe(time.Since(startTime).Minutes())
 	}()
 
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
@@ -171,7 +171,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	monitoring.FirstPartyScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
-		monitoring.FirstPartyScanDuration.Observe(time.Since(startTime).Seconds())
+		monitoring.FirstPartyScanDuration.Observe(time.Since(startTime).Minutes())
 	}()
 
 	var sarifScan common.SarifResult

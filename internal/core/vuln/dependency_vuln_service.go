@@ -108,13 +108,8 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, userID, scannerID stri
 
 func (s *service) RecalculateAllRawRiskAssessments() error {
 
-	monitoring.RecalculateAllRawRiskAssessmentsAmount.Inc()
-
 	now := time.Now()
 	slog.Info("recalculating all raw risk assessments", "time", now)
-	defer func() {
-		monitoring.RecalculateAllRawRiskAssessmentsDuration.Observe(time.Since(now).Seconds())
-	}()
 
 	userID := "system"
 	justification := "System recalculated raw risk assessment"
@@ -389,6 +384,7 @@ func (s *service) SyncTickets(asset models.Asset) error {
 		_, err = errgroup.WaitAndCollect()
 		return err
 	}
+
 	return nil
 }
 
@@ -454,14 +450,24 @@ func (s *service) updateIssue(asset models.Asset, vulnerability models.Dependenc
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.UpdateIssue(ctx, asset, repoId, &vulnerability)
+	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, repoId, &vulnerability)
+	if err != nil {
+		return err
+	}
+	monitoring.TicketUpdatedAmount.Inc()
+	return nil
 }
 
 func (s *service) reopenIssue(vulnerability models.DependencyVuln, repoId string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.ReopenIssue(ctx, repoId, &vulnerability)
+	err := s.thirdPartyIntegration.ReopenIssue(ctx, repoId, &vulnerability)
+	if err != nil {
+		return err
+	}
+	monitoring.TicketReopenedAmount.Inc()
+	return nil
 }
 
 func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error {
@@ -487,6 +493,7 @@ func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.Depen
 					slog.Error("could not close issue", "err", err, "ticketUrl", vulnerability.GetTicketURL())
 					return nil, err
 				}
+				monitoring.TicketClosedAmount.Inc()
 				slog.Info("closed issue", "vulnerability", vulnerability, "ticketUrl", vulnerability.GetTicketURL())
 				return nil, nil
 			})
@@ -501,7 +508,12 @@ func (s *service) closeIssue(vulnerability models.DependencyVuln, repoId string)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.thirdPartyIntegration.CloseIssue(ctx, "fixed", repoId, &vulnerability)
+	err := s.thirdPartyIntegration.CloseIssue(ctx, "fixed", repoId, &vulnerability)
+	if err != nil {
+		return err
+	}
+	monitoring.TicketClosedAmount.Inc()
+	return nil
 }
 
 func (s *service) ShouldCreateIssues(assetVersion models.AssetVersion) bool {

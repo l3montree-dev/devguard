@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
 	"gorm.io/gorm"
 )
 
@@ -56,6 +57,11 @@ func markMirrored(configService config.Service, key string) error {
 }
 
 func Start(db core.DB) {
+	monitoring.DaemonStartedAmount.Inc()
+	start := time.Now()
+	defer func() {
+		monitoring.DaemonStartedDuration.Observe(time.Since(start).Minutes())
+	}()
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 	// only run this function if leader

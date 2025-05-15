@@ -1,13 +1,21 @@
 package daemon
 
 import (
+	"time"
+
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
 )
 
 func SyncTickets(db core.DB) error {
+	start := time.Now()
+	defer func() {
+		monitoring.SyncTicketsDuration.Observe(time.Since(start).Minutes())
+	}()
+
 	githubIntegration := integrations.NewGithubIntegration(db)
 	gitlabIntegration := integrations.NewGitLabIntegration(db)
 
@@ -24,6 +32,13 @@ func SyncTickets(db core.DB) error {
 		repositories.NewAssetVersionRepository(db),
 	)
 
-	return dependencyVulnService.SyncTicketsForAllAssets()
+	err := dependencyVulnService.SyncTicketsForAllAssets()
+	if err != nil {
+		return err
+	}
+
+	monitoring.SyncTicketsDaemonAmount.Inc()
+
+	return nil
 
 }

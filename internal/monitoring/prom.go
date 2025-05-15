@@ -8,33 +8,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-var RecalculateAllRawRiskAssessmentsAmount = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "devguard_recalculate_all_raw_risk_assessments_amount",
-	Help: "The total number of recalculating all raw risk assessments",
+var DaemonStartedAmount = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "devguard_daemon_started_amount",
+	Help: "The total number of daemon started",
 })
-
-var RecalculateAllRawRiskAssessmentsDuration = promauto.NewHistogram(prometheus.HistogramOpts{
-	Name:    "devguard_recalculate_all_raw_risk_assessments_duration_seconds",
-	Help:    "Duration of recalculating all raw risk assessments in seconds",
-	Buckets: prometheus.DefBuckets,
-})
-
-var RecalculateAllRawRiskAssessmentsAssetVersionsAmount = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "devguard_recalculate_all_raw_risk_assessments_asset_versions_amount",
-	Help: "The total number of recalculating all raw risk assessments for asset versions",
-})
-
-var RecalculateAllRawRiskAssessmentsAssetVersionsUpdatedAmount = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "devguard_recalculate_all_raw_risk_assessments_asset_versions_updated_amount",
-	Help: "The total number of recalculating all raw risk assessments for asset versions updated",
-})
-
-var ComponentProjectRepositoryUpdateAmount = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "devguard_component_project_repository_update_amount",
-	Help: "The total number of component project repositories updated",
-})
-var ComponentProjectRepositoryUpdateDuration = promauto.NewHistogram(prometheus.HistogramOpts{
-	Name:    "devguard_component_project_repository_update_duration_seconds",
-	Help:    "Duration of component project repository updates in seconds",
+var DaemonStartedDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+	Name:    "devguard_daemon_started_duration_minutes",
+	Help:    "Duration of daemon started in minutes",
 	Buckets: prometheus.DefBuckets,
 })
