@@ -96,7 +96,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		githubIntegration := githubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
-			githubClientFactory: func(repoId string) (githubClientFacade, error) {
+			githubClientFactory: func(repoId string) (core.GithubClientFacade, error) {
 				return mocks.NewGithubClientFacade(t), nil
 			},
 			frontendUrl: "http://localhost:3000",
@@ -155,7 +155,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}, nil)
 		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
 
-		githubClientFactory := func(repoId string) (githubClientFacade, error) {
+		githubClientFactory := func(repoId string) (core.GithubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
@@ -243,7 +243,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}
 		expectedEvent.GetArbitraryJsonData()
 
-		githubClientFactory := func(repoId string) (githubClientFacade, error) {
+		githubClientFactory := func(repoId string) (core.GithubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
