@@ -377,31 +377,35 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			slog.Error("could not get owner and repo from repository id", "err", err)
 			return err
 		}
-
-		switch vulnEvent.Type {
-		case models.EventTypeAccepted:
-			labels := getLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
-				State:  github.String("closed"),
-				Labels: &labels,
-			})
-			return err
-		case models.EventTypeFalsePositive:
-			labels := getLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
-				State:  github.String("closed"),
-				Labels: &labels,
-			})
-			return err
-		case models.EventTypeReopened:
-			labels := getLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
-				State:  github.String("open"),
-				Labels: &labels,
-			})
+		isCollaborator, _, err := client.IsCollaboratorInRepository(context.TODO(), owner, repo, *event.Issue.User.ID, nil)
+		if err != nil {
 			return err
 		}
-
+		if isCollaborator {
+			switch vulnEvent.Type {
+			case models.EventTypeAccepted:
+				labels := getLabels(vuln)
+				_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
+					State:  github.String("closed"),
+					Labels: &labels,
+				})
+				return err
+			case models.EventTypeFalsePositive:
+				labels := getLabels(vuln)
+				_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
+					State:  github.String("closed"),
+					Labels: &labels,
+				})
+				return err
+			case models.EventTypeReopened:
+				labels := getLabels(vuln)
+				_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
+					State:  github.String("open"),
+					Labels: &labels,
+				})
+				return err
+			}
+		}
 	case *github.InstallationEvent:
 		// check what type of action is being performed
 		switch *event.Action {
