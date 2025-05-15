@@ -25,6 +25,7 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v62/github"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -119,7 +120,7 @@ func (githubOrgClient *githubBatchClient) ListRepositories(
 	return utils.Flat(results), nil
 }
 
-var _ githubClientFacade = &githubClient{}
+var _ core.GithubClientFacade = &githubClient{}
 
 func (client githubClient) CreateIssue(ctx context.Context, owner string, repo string, issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
 	return client.Issues.Create(ctx, owner, repo, issue)
@@ -166,9 +167,7 @@ func NewGithubClient(installationID int) (githubClient, error) {
 }
 
 func (client githubClient) GetRepositoryCollaborators(ctx context.Context, owner string, repoId string, opts *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error) {
-
 	return client.Repositories.ListCollaborators(ctx, owner, repoId, opts)
-
 }
 
 func (client githubClient) IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userId int64, opts *github.ListCollaboratorsOptions) (bool, *github.Response, error) {
@@ -182,5 +181,4 @@ func (client githubClient) IsCollaboratorInRepository(ctx context.Context, owner
 		}
 	}
 	return false, resp, nil
-
 }

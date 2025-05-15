@@ -46,15 +46,6 @@ func (g githubRepository) toRepository() core.Repository {
 	}
 }
 
-// wrapper around the github package - which provides only the methods
-// we need
-type githubClientFacade interface {
-	CreateIssue(ctx context.Context, owner string, repo string, issue *github.IssueRequest) (*github.Issue, *github.Response, error)
-	CreateIssueComment(ctx context.Context, owner string, repo string, number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error)
-	EditIssue(ctx context.Context, owner string, repo string, number int, issue *github.IssueRequest) (*github.Issue, *github.Response, error)
-	EditIssueLabel(ctx context.Context, owner string, repo string, name string, label *github.Label) (*github.Label, *github.Response, error)
-}
-
 type githubIntegration struct {
 	githubAppInstallationRepository core.GithubAppInstallationRepository
 	externalUserRepository          core.ExternalUserRepository
@@ -69,7 +60,7 @@ type githubIntegration struct {
 
 	orgRepository       core.OrganizationRepository
 	projectRepository   core.ProjectRepository
-	githubClientFactory func(repoId string) (githubClientFacade, error)
+	githubClientFactory func(repoId string) (core.GithubClientFacade, error)
 }
 
 var _ core.ThirdPartyIntegration = &githubIntegration{}
@@ -106,7 +97,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 		projectRepository:               projectRepository,
 		orgRepository:                   orgRepository,
 
-		githubClientFactory: func(repoId string) (githubClientFacade, error) {
+		githubClientFactory: func(repoId string) (core.GithubClientFacade, error) {
 			return NewGithubClient(installationIdFromRepositoryID(repoId))
 		},
 	}
@@ -744,7 +735,7 @@ func (g *githubIntegration) CloseIssue(ctx context.Context, state string, repoId
 	return nil
 }
 
-func (g *githubIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *models.DependencyVuln, asset models.Asset, client githubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
+func (g *githubIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *models.DependencyVuln, asset models.Asset, client core.GithubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
 	riskMetrics, vector := risk.RiskCalculation(*vuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*vuln, asset, vector, riskMetrics)
@@ -767,7 +758,7 @@ func (g *githubIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 	return err
 }
 
-func (g *githubIntegration) closeFirstPartyVulnIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client githubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
+func (g *githubIntegration) closeFirstPartyVulnIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client core.GithubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
 	_, ticketNumber := githubTicketIdToIdAndNumber(*vuln.TicketID)
 	lables := getLabels(vuln)
 	_, _, err := client.EditIssue(ctx, owner, repo, ticketNumber, &github.IssueRequest{
@@ -861,7 +852,7 @@ func (g *githubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	return nil
 }
 
-func (g *githubIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client githubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
+func (g *githubIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client core.GithubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
 	_, ticketNumber := githubTicketIdToIdAndNumber(*firstPartyVuln.TicketID)
 
 	expectedIssueState := "closed"
@@ -881,7 +872,7 @@ func (g *githubIntegration) updateFirstPartyVulnTicket(ctx context.Context, firs
 	return err
 }
 
-func (g *githubIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client githubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
+func (g *githubIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client core.GithubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
 
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
@@ -970,7 +961,7 @@ func (g *githubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	return nil
 }
 
-func (g *githubIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client githubClientFacade, assetVersionName, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
+func (g *githubIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client core.GithubClientFacade, assetVersionName, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
 	labels := getLabels(firstPartyVuln)
 	issue := &github.IssueRequest{
 		Title:  github.String(firstPartyVuln.Title()),
@@ -1002,7 +993,7 @@ func (g *githubIntegration) createFirstPartyVulnIssue(ctx context.Context, first
 	return createdIssue, nil
 }
 
-func (g *githubIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client githubClientFacade, assetVersionName, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
+func (g *githubIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client core.GithubClientFacade, assetVersionName, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
