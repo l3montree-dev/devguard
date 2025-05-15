@@ -8,6 +8,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
 )
@@ -66,6 +67,7 @@ func (s *service) RefreshComponentProjectInformation(project models.ComponentPro
 		slog.Warn("could not save project", "err", err)
 	} else {
 		slog.Info("updated project", "projectKey", projectKey)
+		monitoring.DepsDevProjectUpdatedAmount.Inc()
 	}
 }
 

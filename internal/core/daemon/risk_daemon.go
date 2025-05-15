@@ -1,13 +1,20 @@
 package daemon
 
 import (
+	"time"
+
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
 )
 
 func RecalculateRisk(db core.DB) error {
+	start := time.Now()
+	defer func() {
+		monitoring.RecalculateAllRawRiskAssessmentsDuration.Observe(time.Since(start).Minutes())
+	}()
 	githubIntegration := integrations.NewGithubIntegration(db)
 	gitlabIntegration := integrations.NewGitLabIntegration(db)
 
@@ -24,5 +31,10 @@ func RecalculateRisk(db core.DB) error {
 		repositories.NewAssetVersionRepository(db),
 	)
 
-	return dependencyVulnService.RecalculateAllRawRiskAssessments()
+	err := dependencyVulnService.RecalculateAllRawRiskAssessments()
+	if err != nil {
+		return err
+	}
+	monitoring.RecalculateRiskDaemonAmount.Inc()
+	return nil
 }
