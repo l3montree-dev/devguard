@@ -16,9 +16,11 @@
 package assetversion
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
 )
 
@@ -28,9 +30,8 @@ type treeNode struct {
 }
 
 type tree struct {
-	Root           *treeNode `json:"root"`
-	cursors        map[string]*treeNode
-	insertionOrder []string
+	Root    *treeNode `json:"root"`
+	cursors map[string]*treeNode
 }
 
 func newNode(name string) *treeNode {
@@ -44,12 +45,10 @@ func (tree *tree) addNode(source string, dep string) {
 	// check if source does exist
 	if _, ok := tree.cursors[source]; !ok {
 		tree.cursors[source] = newNode(source)
-		tree.insertionOrder = append(tree.insertionOrder, source)
 	}
 	// check if dep does already exist
 	if _, ok := tree.cursors[dep]; !ok {
 		tree.cursors[dep] = newNode(dep)
-		tree.insertionOrder = append(tree.insertionOrder, source)
 	}
 
 	// check if connection does already exist
@@ -104,19 +103,18 @@ func CalculateDepth(node *treeNode, currentDepth int, depthMap map[string]int) {
 	}
 }
 
-func BuildDependencyTree(elements []models.ComponentDependency) tree {
+func buildDependencyTree(treeName string, elements []models.ComponentDependency) tree {
 	// create a new tree
 	tree := tree{
-		Root:           &treeNode{Name: "root"},
-		cursors:        make(map[string]*treeNode),
-		insertionOrder: make([]string, 0),
+		Root:    &treeNode{Name: treeName},
+		cursors: make(map[string]*treeNode),
 	}
 
-	tree.cursors["root"] = tree.Root
+	tree.cursors[treeName] = tree.Root
 
 	for _, element := range elements {
 		if element.ComponentPurl == nil {
-			tree.addNode("root", element.DependencyPurl)
+			tree.addNode(treeName, element.DependencyPurl)
 		} else {
 			tree.addNode(*element.ComponentPurl, element.DependencyPurl)
 		}
@@ -127,32 +125,72 @@ func BuildDependencyTree(elements []models.ComponentDependency) tree {
 	return tree
 }
 
-func mergeDepthMaps(scannerIdDepthMap map[string]map[string]int) map[string]int {
-	finalMap := make(map[string]int)
-	for scannerId, depthMap := range scannerIdDepthMap {
+func escapeNodeID(s string) string {
+	// Creates a safe Mermaid node ID by removing special characters
+	return strings.NewReplacer("@", "_", ":", "_", "/", "_", ".", "_", "-", "_").Replace(s)
+}
 
-		for component, depth := range depthMap {
-			if scannerId == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning" {
-				// check, if an sca did find the same component
-				// if so, just skip it
-				if scannerIdDepthMap["github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"] != nil && scannerIdDepthMap["github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"][component] != 0 {
-					continue
-				}
+func escapeAtSign(pURL string) string {
+	// escape @ sign in purl
+	return strings.ReplaceAll(pURL, "@", "\\@")
+}
+
+func (t *tree) RenderToMermaid() string {
+	//basic string to tell markdown that we have a mermaid flow chart with given parameters
+	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart TD\n"
+
+	var builder strings.Builder
+	builder.WriteString(mermaidFlowChart)
+
+	var renderPaths func(node *treeNode)
+
+	var existingPaths = make(map[string]bool)
+
+	renderPaths = func(node *treeNode) {
+		if node == nil {
+			return
+		}
+		for _, child := range node.Children {
+
+			fromLabel, err := utils.BeautifyPURL(node.Name)
+			if err != nil {
+				fromLabel = node.Name
 			}
-
-			if _, ok := finalMap[component]; !ok {
-				finalMap[component] = depth
-
-			} else if finalMap[component] > depth {
-				// SMALLEST DEPTH WINS APPROACH
-				finalMap[component] = depth
+			toLabel, err := utils.BeautifyPURL(child.Name)
+			if err != nil {
+				toLabel = child.Name
 			}
+			path := fmt.Sprintf("%s[\"%s\"] --> %s[\"%s\"]\n",
+				escapeNodeID(fromLabel), escapeAtSign(fromLabel), escapeNodeID(toLabel), escapeAtSign(toLabel))
+			if existingPaths[path] {
+				// skip if path already exists
+				continue
+			}
+			existingPaths[path] = true
+
+			builder.WriteString(path)
+
+			renderPaths(child)
 		}
 	}
-	return finalMap
+
+	renderPaths(t.Root)
+
+	return "```" + builder.String() + "\n```\n"
 }
 
 func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
+	tree := BuildDependencyTree(elements)
+	// calculate the depth for each node
+	depthMap := make(map[string]int)
+	CalculateDepth(tree.Root, -1, depthMap) // first purl will be the application itself. whenever calculate depth sees a purl, it increments the depth.
+	// so the application itself will be at depth 0, the first dependency at depth 1, and so on.
+	return depthMap
+}
+
+func buildDependencyTreePerScanner(elements []models.ComponentDependency) map[string]tree {
+	// create a new tree
+	res := make(map[string]tree)
 	scannerDependencyMap := make(map[string][]models.ComponentDependency)
 	for _, element := range elements {
 		scannerIds := element.ScannerIDs
@@ -165,18 +203,62 @@ func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
 			scannerDependencyMap[scannerId] = append(scannerDependencyMap[scannerId], element)
 		}
 	}
-	scannerIdDepthMap := make(map[string]map[string]int)
-	// build the dependency tree for each scanner id
+
 	for scannerId, elements := range scannerDependencyMap {
-		// check if the scanner id is empty
-		depthMap := make(map[string]int)
 		// group the elements by scanner id and build the dependency trees.
 		// for each scanner
-		tree := BuildDependencyTree(elements)
-		// first node will be the package name itself
-		CalculateDepth(tree.Root, 0, depthMap)
-		scannerIdDepthMap[scannerId] = depthMap
+		tree := buildDependencyTree(scannerId, elements)
+		res[scannerId] = tree
 	}
 
-	return mergeDepthMaps(scannerIdDepthMap)
+	return res
+}
+
+func mergeDependencyTrees(trees map[string]tree) tree {
+	// create a new tree
+	tree := tree{
+		Root:    &treeNode{Name: "root"},
+		cursors: make(map[string]*treeNode),
+	}
+
+	tree.cursors["root"] = tree.Root
+	// if we have the sca and container scanning tree, remove the container scanning tree: For most applications the sca tree is much more detailed.
+	if _, ok := trees["github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning"]; ok {
+		// check if the sca tree exists
+		if _, ok := trees["github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"]; ok {
+			// remove the container scanning tree
+			delete(trees, "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning")
+		}
+	}
+
+	for _, t := range trees {
+		// merge the trees
+		tree.Root.Children = append(tree.Root.Children, t.Root)
+		// merge the cursors
+		for k, v := range t.cursors {
+			if _, ok := tree.cursors[k]; !ok {
+				tree.cursors[k] = v
+			}
+		}
+	}
+
+	// check if the root node only has a single child (single scanner)
+	// if so, remove the root node.
+	if len(tree.Root.Children) == 1 {
+		tree.Root = tree.Root.Children[0]
+	}
+	// check if the root node still has a single child (single inspected meta file by the scanner) - if so, lets keep the single metafile (like go.mod) as root
+	if len(tree.Root.Children) == 1 {
+		tree.Root = tree.Root.Children[0]
+	}
+
+	return tree
+}
+
+func BuildDependencyTree(elements []models.ComponentDependency) tree {
+	// create a new tree
+	treeMap := buildDependencyTreePerScanner(elements)
+
+	// merge the trees
+	return mergeDependencyTrees(treeMap)
 }

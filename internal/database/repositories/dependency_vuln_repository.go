@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -15,8 +17,10 @@ type dependencyVulnRepository struct {
 }
 
 func NewDependencyVulnRepository(db core.DB) *dependencyVulnRepository {
-	if err := db.AutoMigrate(&models.DependencyVuln{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.DependencyVuln{}); err != nil {
+			panic(err)
+		}
 	}
 	return &dependencyVulnRepository{
 		db:                      db,

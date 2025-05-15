@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -19,8 +20,10 @@ type cveRepository struct {
 }
 
 func NewCVERepository(db core.DB) *cveRepository {
-	if err := db.AutoMigrate(&models.CVE{}, &models.Weakness{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.CVE{}, &models.Weakness{}); err != nil {
+			panic(err)
+		}
 	}
 
 	return &cveRepository{

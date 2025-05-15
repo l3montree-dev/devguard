@@ -243,7 +243,11 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	str.WriteString(e.cveDescription)
 	str.WriteString("\n")
 	str.WriteString("### Affected component \n")
-	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.AffectedComponentName, e.scannerIDs))
+	scanners := strings.Fields(e.scannerIDs)
+	for i, s := range scanners {
+		scanners[i] = fmt.Sprintf("`%s`", s)
+	}
+	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by %s.\n", e.AffectedComponentName, strings.Join(scanners, ", ")))
 	str.WriteString("### Recommended fix\n")
 	if e.fixedVersion != nil {
 		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))

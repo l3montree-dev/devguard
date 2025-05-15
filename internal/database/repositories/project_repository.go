@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -15,8 +17,10 @@ type projectRepository struct {
 }
 
 func NewProjectRepository(db core.DB) *projectRepository {
-	if err := db.AutoMigrate(&models.Project{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.Project{}); err != nil {
+			panic(err)
+		}
 	}
 	return &projectRepository{
 		db:         db,

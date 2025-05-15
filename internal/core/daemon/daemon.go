@@ -36,15 +36,7 @@ func shouldMirror(configService config.Service, key string) bool {
 		return false
 	}
 
-	if time.Since(lastTime) > 12*time.Hour {
-		// and it should be nighttime
-		now := time.Now()
-		// try out of business hours
-		if now.Hour() < 6 || now.Hour() > 20 {
-			return true
-		}
-	}
-	return false
+	return time.Since(lastTime) > 12*time.Hour
 }
 
 func markMirrored(configService config.Service, key string) error {

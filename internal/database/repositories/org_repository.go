@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"os"
 	"slices"
 
 	"github.com/google/uuid"
@@ -30,8 +31,10 @@ type orgRepository struct {
 }
 
 func NewOrgRepository(db core.DB) *orgRepository {
-	if err := db.AutoMigrate(&models.Org{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.Org{}); err != nil {
+			panic(err)
+		}
 	}
 	return &orgRepository{
 		db:         db,

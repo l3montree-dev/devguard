@@ -18,6 +18,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"os"
 	"strings"
 	"time"
 
@@ -35,8 +36,10 @@ type componentRepository struct {
 }
 
 func NewComponentRepository(db core.DB) *componentRepository {
-	if err := db.AutoMigrate(&models.Component{}, &models.ComponentDependency{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.Component{}, &models.ComponentDependency{}); err != nil {
+			panic(err)
+		}
 	}
 
 	return &componentRepository{
@@ -112,7 +115,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
     component_purl IS NULL AND
     asset_id = @assetID AND
     asset_version_name = @assetVersionName AND
-    scanner_ids LIKE @scannerID
+    scanner_ids = ANY(string_to_array(@scannerID, ' '))
 
   UNION ALL
 
@@ -129,14 +132,13 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
   WHERE
     co.asset_id = @assetID AND
     co.asset_version_name = @assetVersionName AND
-    co.scanner_ids LIKE @scannerID AND
+    co.scanner_ids = ANY(string_to_array(@scannerID, ' ')) AND
     NOT co.dependency_purl = ANY(cte.path)
 ),
 target_path AS (
   SELECT * FROM components_cte
   WHERE dependency_purl = @pURL
   ORDER BY depth ASC
-  LIMIT 1
 ),
 path_edges AS (
   SELECT
@@ -152,7 +154,7 @@ path_edges AS (
 SELECT * FROM path_edges
 ORDER BY depth;
 `, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
-		sql.Named("assetVersionName", assetVersionName), sql.Named("scannerID", "%"+scannerID+"%"))
+		sql.Named("assetVersionName", assetVersionName), sql.Named("scannerID", scannerID))
 
 	//Map the query results to the component model
 	err = query.Find(&components).Error
