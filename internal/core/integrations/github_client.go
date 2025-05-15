@@ -164,3 +164,23 @@ func NewGithubClient(installationID int) (githubClient, error) {
 		githubAppInstallationID: installationID,
 	}, nil
 }
+
+func (client githubClient) GetRepositoryCollaborators(ctx context.Context, owner string, repoId string, opts *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error) {
+
+	return client.Repositories.ListCollaborators(ctx, owner, repoId, opts)
+
+}
+
+func (client githubClient) IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userId int64, opts *github.ListCollaboratorsOptions) (bool, *github.Response, error) {
+	collaborators, resp, err := client.GetRepositoryCollaborators(ctx, owner, repoId, opts)
+	if err != nil {
+		return false, resp, err
+	}
+	for _, user := range collaborators {
+		if userId == *user.ID {
+			return true, resp, nil
+		}
+	}
+	return false, resp, nil
+
+}
