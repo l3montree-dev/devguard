@@ -280,8 +280,8 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 
 		//Next step is adding the scanner id to all existing component dependencies we just found
 		for i := range needToBeChanged {
-			if !strings.Contains(needToBeChanged[i].ScannerIDs, scannerID) {
-				needToBeChanged[i].ScannerIDs = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID)
+			if !strings.Contains(needToBeChanged[i].ScannerID, scannerID) {
+				needToBeChanged[i].ScannerID = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerID, scannerID)
 			}
 		}
 		//We also need to update these changes in the database
@@ -333,10 +333,10 @@ func diffComponents(tx core.DB, c *componentRepository, components []models.Comp
 	var componentsToSave []models.ComponentDependency
 
 	for i := range components {
-		if strings.TrimSpace(components[i].ScannerIDs) == scannerID {
+		if strings.TrimSpace(components[i].ScannerID) == scannerID {
 			componentsToDelete = append(componentsToDelete, components[i])
 		} else {
-			components[i].ScannerIDs = utils.RemoveFromWhitespaceSeparatedStringList(components[i].ScannerIDs, scannerID)
+			components[i].ScannerID = utils.RemoveFromWhitespaceSeparatedStringList(components[i].ScannerID, scannerID)
 			componentsToSave = append(componentsToSave, components[i])
 		}
 	}

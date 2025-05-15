@@ -193,7 +193,7 @@ func buildDependencyTreePerScanner(elements []models.ComponentDependency) map[st
 	res := make(map[string]tree)
 	scannerDependencyMap := make(map[string][]models.ComponentDependency)
 	for _, element := range elements {
-		scannerIds := element.ScannerIDs
+		scannerIds := element.ScannerID
 		// split at whitespace
 		scannerIdsList := strings.Fields(scannerIds)
 		for _, scannerId := range scannerIdsList {

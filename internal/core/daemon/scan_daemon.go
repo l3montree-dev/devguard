@@ -62,7 +62,7 @@ func ScanAssetVersions(db core.DB) error {
 		// group the components by scannerID
 		scannerIDMap := make(map[string][]models.ComponentDependency)
 		for _, component := range components {
-			scanner := strings.Fields(component.ScannerIDs)
+			scanner := strings.Fields(component.ScannerID)
 			for _, scannerID := range scanner {
 				scannerIDMap[scannerID] = append(scannerIDMap[scannerID], component)
 			}
