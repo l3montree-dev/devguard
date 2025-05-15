@@ -98,7 +98,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 		orgRepository:                   orgRepository,
 
 		githubClientFactory: func(repoId string) (core.GithubClientFacade, error) {
-			return NewGithubClient(installationIdFromRepositoryID(repoId))
+			return NewGithubClient(66953634)
 		},
 	}
 }
@@ -287,6 +287,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			}
 		}
 	case *github.IssueCommentEvent:
+
 		// check if the issue is a devguard issues
 		issueNumber := event.Issue.GetNumber()
 		issueID := event.Issue.GetID()
@@ -365,41 +366,40 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
-		// make sure to update the github issue accordingly
+		repo := event.Repo.Name
+		owner := event.Repo.Owner.Login
+
 		client, err := githubIntegration.githubClientFactory(utils.SafeDereference(asset.RepositoryID))
 		if err != nil {
 			slog.Error("could not create github client", "err", err)
 			return err
 		}
 
-		owner, repo, err := ownerAndRepoFromRepositoryID(utils.SafeDereference(asset.RepositoryID))
+		isCollaborator, _, err := client.IsCollaboratorInRepository(context.TODO(), *owner, *repo, *event.Sender.ID, nil)
 		if err != nil {
-			slog.Error("could not get owner and repo from repository id", "err", err)
+			slog.Error("could not determine if the commenter is a collaborator of the repository", "err", err)
 			return err
 		}
-		isCollaborator, _, err := client.IsCollaboratorInRepository(context.TODO(), owner, repo, *event.Issue.User.ID, nil)
-		if err != nil {
-			return err
-		}
+
 		if isCollaborator {
 			switch vulnEvent.Type {
 			case models.EventTypeAccepted:
 				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
+				_, _, err = client.EditIssue(ctx.Request().Context(), *owner, *repo, issueNumber, &github.IssueRequest{
 					State:  github.String("closed"),
 					Labels: &labels,
 				})
 				return err
 			case models.EventTypeFalsePositive:
 				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
+				_, _, err = client.EditIssue(ctx.Request().Context(), *owner, *repo, issueNumber, &github.IssueRequest{
 					State:  github.String("closed"),
 					Labels: &labels,
 				})
 				return err
 			case models.EventTypeReopened:
 				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
+				_, _, err = client.EditIssue(ctx.Request().Context(), *owner, *repo, issueNumber, &github.IssueRequest{
 					State:  github.String("open"),
 					Labels: &labels,
 				})
