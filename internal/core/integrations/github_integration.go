@@ -98,7 +98,7 @@ func NewGithubIntegration(db core.DB) *githubIntegration {
 		orgRepository:                   orgRepository,
 
 		githubClientFactory: func(repoId string) (core.GithubClientFacade, error) {
-			return NewGithubClient(66953634)
+			return NewGithubClient(installationIdFromRepositoryID(repoId))
 		},
 	}
 }
