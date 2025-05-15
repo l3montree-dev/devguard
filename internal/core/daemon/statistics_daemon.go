@@ -36,7 +36,7 @@ func UpdateStatistics(db core.DB) error {
 		return err
 	}
 
-	monitoring.AssetVersionsStatisticsAmount.Set(float64(len(assetVersions)))
+	monitoring.AssetVersionsStatisticsAmount.Inc()
 	for _, version := range assetVersions {
 		a := version
 		t := time.Now()

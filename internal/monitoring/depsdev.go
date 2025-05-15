@@ -9,16 +9,16 @@ import (
 )
 
 var UpdateDepsDevInformationDaemonAmount = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "devguard_update_deps_dev_information_daemon_amount",
+	Name: "devguard_daemon_update_deps_dev_information_amount",
 	Help: "The total number of update deps.dev information daemon operations",
 })
 var UpdateDepsDevInformationDuration = promauto.NewHistogram(prometheus.HistogramOpts{
-	Name:    "devguard_update_deps_dev_information_duration_minutes",
-	Help:    "Duration of update deps.dev information in minutes",
+	Name:    "devguard_daemon_update_deps_dev_information_duration_minutes",
+	Help:    "Duration of update deps.dev information daemon operations in minutes",
 	Buckets: prometheus.DefBuckets,
 })
 
-var DepsDevProjectAmount = promauto.NewGauge(prometheus.GaugeOpts{
+var DepsDevProjectAmount = promauto.NewCounter(prometheus.CounterOpts{
 	Name: "devguard_deps_dev_project_amount",
 	Help: "The total number of deps.dev projects",
 })

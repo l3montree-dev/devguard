@@ -30,22 +30,22 @@ var FirstPartyScanDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 })
 
 var ScansDaemonAmount = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "devguard_scans_daemon_amount",
+	Name: "devguard_daemon_scans_asset_version_amount",
 	Help: "The total number of scans daemon",
 })
 
 var ScansDaemonDuration = promauto.NewHistogram(prometheus.HistogramOpts{
-	Name:    "devguard_asset_version_scan_duration_minutes",
+	Name:    "devguard_daemon_asset_version_scan_duration_minutes",
 	Help:    "Duration of asset version scans in minutes",
 	Buckets: prometheus.DefBuckets,
 })
 
-var AssetVersionScanAmount = promauto.NewGauge(prometheus.GaugeOpts{
-	Name: "devguard_asset_version_scan_amount",
+var AssetVersionScanAmount = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "devguard_daemon_asset_version_scan_amount",
 	Help: "The total number of asset version",
 })
 
 var AssetVersionScanSuccess = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "devguard_asset_version_scan_success",
+	Name: "devguard_daemon_asset_version_scan_success",
 	Help: "The total number of successful asset version scans",
 })

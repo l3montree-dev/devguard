@@ -48,7 +48,7 @@ func UpdateComponentProperties(db core.DB) error {
 
 	start := time.Now()
 	defer func() {
-		monitoring.UpdateComponentPropertiesDuration.Observe(time.Since(start).Seconds())
+		monitoring.UpdateComponentPropertiesDuration.Observe(time.Since(start).Minutes())
 	}()
 
 	assetRepository := repositories.NewAssetRepository(db)
@@ -77,7 +77,7 @@ func UpdateComponentProperties(db core.DB) error {
 				return nil, err
 			}
 
-			monitoring.DependencyVulnsAmount.Set(float64(len(dependencyVulns)))
+			monitoring.DependencyVulnsAmount.Inc()
 			// group by scanner id
 			groups := make(map[string]map[string][]models.DependencyVuln)
 			for _, f := range dependencyVulns {

@@ -98,7 +98,8 @@ func (e *databaseLeaderElector) IfLeader(ctx context.Context, fn func() error) {
 			case <-ctx.Done():
 				return
 			default:
-				if e.IsLeader() {
+				if e.IsLeader() || true {
+
 					slog.Debug("is leader, running leader function")
 					err := fn()
 					if err != nil {

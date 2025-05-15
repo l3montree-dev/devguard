@@ -59,7 +59,7 @@ func ScanAssetVersions(db core.DB) error {
 		return err
 	}
 
-	monitoring.AssetVersionScanAmount.Set(float64(len(assetVersions)))
+	monitoring.AssetVersionScanAmount.Inc()
 
 	for i := range assetVersions {
 		components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, "")

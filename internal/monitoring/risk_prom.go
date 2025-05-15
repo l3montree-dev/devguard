@@ -9,12 +9,12 @@ import (
 )
 
 var RecalculateRiskDaemonAmount = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "devguard_recalculate_risk_daemon_amount",
+	Name: "devguard_daemon_recalculate_risk_amount",
 	Help: "The total number of recalculating risk daemon operations",
 })
 
 var RecalculateAllRawRiskAssessmentsDuration = promauto.NewHistogram(prometheus.HistogramOpts{
-	Name:    "devguard_recalculate_all_raw_risk_assessments_duration_minutes",
+	Name:    "devguard_daemon_recalculate_all_raw_risk_assessments_duration_minutes",
 	Help:    "Duration of recalculating all raw risk assessments in minutes",
 	Buckets: prometheus.DefBuckets,
 })
