@@ -198,7 +198,6 @@ func CheckForValidLanguageCode(languageCode string) bool {
 func BeautifyPURL(pURL string) (string, error) {
 	p, err := packageurl.FromString(pURL)
 	if err != nil {
-		slog.Error("cannot convert to purl struct")
 		return pURL, err
 	}
 	//if the namespace is empty we don't want any leading slashes

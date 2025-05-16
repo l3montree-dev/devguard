@@ -57,12 +57,17 @@ func Start(db core.DB) {
 		slog.Info("starting background jobs", "time", time.Now())
 		var start time.Time = time.Now()
 		// update deps dev
-		err := UpdateDepsDevInformation(db)
-		if err != nil {
-			slog.Error("could not update deps dev information", "err", err)
-			return nil
+		if shouldMirror(configService, "vulndb.depsdev") {
+			err := UpdateDepsDevInformation(db)
+			if err != nil {
+				slog.Error("could not update deps dev information", "err", err)
+				return nil
+			}
+			if err := markMirrored(configService, "vulndb.depsdev"); err != nil {
+				slog.Error("could not mark deps dev as mirrored", "err", err)
+			}
+			slog.Info("deps dev information updated", "duration", time.Since(start))
 		}
-		slog.Info("deps dev information updated", "duration", time.Since(start))
 
 		// first update the vulndb
 		// this will give us the latest cves, cwes, exploits and affected components
