@@ -42,7 +42,7 @@
 Get in touch with the developers directly via 
   <a href="https://matrix.to/#/#devguard:matrix.org">Matrix-Chat</a>
 </p>
-Visit the Documentation at: [https://devguard.org](https://devguard.org)
+Visit the Documentation at: https://devguard.org
 
 <!-- ABOUT THE PROJECT -->
 ## Mission
