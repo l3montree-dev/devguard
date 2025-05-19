@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -14,9 +16,11 @@ type attestationRepository struct {
 }
 
 func NewAttestationRepository(db core.DB) *attestationRepository {
-	err := db.AutoMigrate(&models.Attestation{})
-	if err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		err := db.AutoMigrate(&models.Attestation{})
+		if err != nil {
+			panic(err)
+		}
 	}
 	return &attestationRepository{
 		db:         db,

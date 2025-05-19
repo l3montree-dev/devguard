@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -28,8 +30,10 @@ type githubAppInstallationRepository struct {
 }
 
 func NewGithubAppInstallationRepository(db core.DB) *githubAppInstallationRepository {
-	if err := db.AutoMigrate(&models.GithubAppInstallation{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.GithubAppInstallation{}); err != nil {
+			panic(err)
+		}
 	}
 	return &githubAppInstallationRepository{
 		db:         db,

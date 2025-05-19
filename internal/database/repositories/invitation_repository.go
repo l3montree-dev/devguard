@@ -15,6 +15,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -28,8 +30,10 @@ type InvitationRepository struct {
 }
 
 func NewInvitationRepository(db core.DB) *InvitationRepository {
-	if err := db.AutoMigrate(&models.Invitation{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.Invitation{}); err != nil {
+			panic(err)
+		}
 	}
 	return &InvitationRepository{
 		db:         db,

@@ -7,6 +7,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -43,10 +44,17 @@ func newDependencyVulnHashMigration() *cobra.Command {
 				return
 			}
 
+			pb := progressbar.Default(int64(len(dependencyVulns)))
+
 			for _, dependencyVuln := range dependencyVulns {
+				pb.Add(1) //nolint:errcheck
 				oldHash := dependencyVuln.ID
 				newHash := dependencyVuln.CalculateHash()
 
+				if oldHash == newHash {
+					// no need to update
+					continue
+				}
 				// update the hash in the database
 				err = dependencyVulnRepository.GetDB(nil).Model(&models.DependencyVuln{}).Where("id = ?", oldHash).UpdateColumn("id", newHash).Error
 				if err != nil {

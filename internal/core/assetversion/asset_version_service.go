@@ -144,16 +144,20 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 		return 0, 0, []models.FirstPartyVuln{}, err
 	}
 
+	if assetVersion.Metadata == nil {
+		assetVersion.Metadata = make(map[string]any)
+	}
+
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
 	switch scannerID {
 	case devguardScanner + "sast":
-		assetVersion.LastSastScan = utils.Ptr(time.Now())
+		assetVersion.Metadata["sast"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 	case devguardScanner + "dast":
-		assetVersion.LastDastScan = utils.Ptr(time.Now())
+		assetVersion.Metadata["dast"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 	case devguardScanner + "secret-scanning":
-		assetVersion.LastSecretScan = utils.Ptr(time.Now())
+		assetVersion.Metadata["secret"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 	case devguardScanner + "iac":
-		assetVersion.LastIacScan = utils.Ptr(time.Now())
+		assetVersion.Metadata["iac"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 	}
 
 	return amountOpened, amountClosed, amountExisting, nil
@@ -248,13 +252,17 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
+	if assetVersion.Metadata == nil {
+		assetVersion.Metadata = make(map[string]any)
+	}
+
 	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
 
 	switch scannerID {
 	case devguardScanner + "sca":
-		assetVersion.LastScaScan = utils.Ptr(time.Now())
+		assetVersion.Metadata["sca"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 	case devguardScanner + "container-scanning":
-		assetVersion.LastContainerScan = utils.Ptr(time.Now())
+		assetVersion.Metadata["container"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 	}
 
 	return opened, closed, newState, nil
@@ -405,7 +413,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  nil, // direct dependency - therefore set it to nil
-					ScannerIDs:     scannerID,
+					ScannerID:      scannerID,
 					DependencyPurl: componentPackageUrl,
 				},
 			)
@@ -431,7 +439,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  utils.EmptyThenNil(compPackageUrl),
-					ScannerIDs:     scannerID,
+					ScannerID:      scannerID,
 					DependencyPurl: depPurlOrName,
 				},
 			)

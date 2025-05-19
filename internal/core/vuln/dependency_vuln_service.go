@@ -316,11 +316,12 @@ func (s *service) SyncTickets(asset models.Asset) error {
 
 		vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID)
 		if err != nil {
-			return err
+			slog.Error("could not get dependencyVulns by asset version", "err", err, "assetVersionName", assetVersion.Name)
+			continue
 		}
 
 		if len(vulnList) == 0 {
-			return nil
+			continue
 		}
 
 		riskThreshold := asset.RiskAutomaticTicketThreshold
@@ -377,7 +378,10 @@ func (s *service) SyncTickets(asset models.Asset) error {
 			}
 		}
 		_, err = errgroup.WaitAndCollect()
-		return err
+		if err != nil {
+			slog.Error("could not sync tickets", "err", err, "assetID", asset.ID)
+			continue
+		}
 	}
 	return nil
 }
