@@ -90,11 +90,7 @@ func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 		return nil, nil, err
 	}
 
-	purls := utils.Map(components, func(ctx models.ComponentDependency) string {
-		return ctx.DependencyPurl
-	})
-
-	dependencyVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByPurl(nil, purls)
+	dependencyVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -280,12 +276,12 @@ func (a *assetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	}
 
 	// get all associated dependencyVulns
-	components, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scannerID)
+	dependencyVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildVeX(asset, assetVersion, version, org.Name, components, dependencyVulns), nil
+	return a.assetVersionService.BuildVeX(asset, assetVersion, version, org.Name, dependencyVulns), nil
 }
 
 func (a *assetVersionController) Metrics(ctx core.Context) error {

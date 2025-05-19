@@ -340,7 +340,7 @@ func (s *service) GetDependencyVulnAggregationStateAndChangeSince(assetVersionNa
 
 	results := utils.Concurrently(
 		func() (any, error) {
-			return s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersionName, assetID)
+			return s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersionName, assetID, "")
 		},
 		func() (any, error) {
 			return s.statisticsRepository.TimeTravelDependencyVulnState(assetVersionName, assetID, calculateChangeTo)

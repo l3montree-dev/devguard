@@ -639,7 +639,7 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 	return doc
 }
 
-func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency, dependencyVulns []models.DependencyVuln) *cdx.BOM {
+func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version string, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
 	if version == models.NoVersion {
 		version = "latest"
 	}

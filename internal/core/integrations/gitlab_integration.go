@@ -61,7 +61,9 @@ func (g gitlabRepository) toRepository() core.Repository {
 
 type gitlabIntegration struct {
 	gitlabIntegrationRepository core.GitlabIntegrationRepository
-	externalUserRepository      core.ExternalUserRepository
+	gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
+
+	externalUserRepository core.ExternalUserRepository
 
 	firstPartyVulnRepository core.FirstPartyVulnRepository
 	aggregatedVulnRepository core.VulnRepository
@@ -1382,4 +1384,8 @@ func (g *gitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	return createdIssue, err
+}
+
+func (c *gitlabIntegration) Oauth2Callback(ctx core.Context) error {
+	return nil
 }

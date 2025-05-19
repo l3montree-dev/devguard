@@ -122,7 +122,7 @@ type DependencyVulnRepository interface {
 
 	GetAllVulnsByAssetID(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetVersionNameAndAssetId(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], map[string]int, error)
 	GetDefaultDependencyVulnsByOrgIdPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDefaultDependencyVulnsByProjectIdPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
@@ -217,7 +217,7 @@ type DependencyVulnService interface {
 
 type AssetVersionService interface {
 	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) *cdx.BOM
-	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency, dependencyVulns []models.DependencyVuln) *cdx.BOM
+	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version, orgName string, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error)
 	UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error
@@ -283,6 +283,10 @@ type GitlabIntegrationRepository interface {
 	Read(id uuid.UUID) (models.GitLabIntegration, error)
 	FindByOrganizationId(orgID uuid.UUID) ([]models.GitLabIntegration, error)
 	Delete(tx DB, id uuid.UUID) error
+}
+
+type GitLabOauth2TokenRepository interface {
+	common.Repository[uuid.UUID, models.GitLabOauth2Token, DB]
 }
 
 type ConfigService interface {

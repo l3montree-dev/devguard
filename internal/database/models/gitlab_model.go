@@ -19,6 +19,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type GitLabOauth2Token struct {
+	// oauth2 token using GitLab Applications feature
+	Model
+	AccessToken  string `json:"accessToken" gorm:"column:access_token"`
+	RefreshToken string `json:"refreshToken" gorm:"column:refresh_token"`
+	ExpiresAt    int64  `json:"expiresAt" gorm:"column:expires_at"`
+	Scopes       string `json:"scopes" gorm:"column:scopes"`
+	UserID       string `json:"userId" gorm:"column:user_id"` // the gitlab user id
+}
+
 type GitLabIntegration struct {
 	Model
 

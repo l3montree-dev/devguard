@@ -57,10 +57,18 @@ func (r *dependencyVulnRepository) applyAndSave(tx core.DB, dependencyVuln *mode
 	return *ev, nil
 }
 
-func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
 
 	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
-	if err := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
+
+	q := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+
+	if scannerID != "" {
+		// scanner ids is a string array separated by whitespaces
+		q = q.Where("scanner_ids = ANY(string_to_array(?, ' '))", scannerID)
+	}
+
+	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil

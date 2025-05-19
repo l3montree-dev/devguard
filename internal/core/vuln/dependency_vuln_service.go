@@ -119,7 +119,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 
 	for _, assetVersion := range assetVersions {
 		// get all dependencyVulns of the asset
-		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID)
+		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, "")
 		if len(dependencyVulns) == 0 {
 			continue
 		}
@@ -314,7 +314,7 @@ func (s *service) SyncTickets(asset models.Asset) error {
 	for _, assetVersion := range asset.AssetVersions {
 		slog.Info("syncing tickets", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
 
-		vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID)
+		vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID, "")
 		if err != nil {
 			slog.Error("could not get dependencyVulns by asset version", "err", err, "assetVersionName", assetVersion.Name)
 			continue
