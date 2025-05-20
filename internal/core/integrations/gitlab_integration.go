@@ -399,10 +399,12 @@ func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 	}), nil
 }
 
+// Check if the user who comments on a ticket is authorized to use commands like /accept
 func IsUserAuthorized(event *gitlab.IssueCommentEvent, client core.GitlabClientFacade) (bool, error) {
 	if event == nil || event.User == nil {
 		slog.Error("missing event data")
 		return false, fmt.Errorf("missing event data")
+
 	}
 	return client.IsProjectMember(context.TODO(), event.ProjectID, event.User.ID)
 }
