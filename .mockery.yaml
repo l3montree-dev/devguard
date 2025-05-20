@@ -18,22 +18,30 @@ packages:
       recursive: true
       all: true
       filename: "mock_{{.InterfaceName}}.go"
+      structname: "{{.InterfaceName | firstUpper}}"
       dir: "mocks"
+      pkgname: "mocks"
   github.com/l3montree-dev/devguard/internal/accesscontrol:
     config:
       recursive: true
       all: true
       filename: "mock_{{.InterfaceName}}.go"
+      structname: "{{.InterfaceName | firstUpper}}"
       dir: "mocks"
+      pkgname: "mocks"
   github.com/l3montree-dev/devguard/cmd/devguard/api:
     config:
       recursive: true
       all: true
       filename: "mock_{{.InterfaceName}}.go"
+      structname: "{{.InterfaceName | firstUpper}}"
       dir: "mocks"
+      pkgname: "mocks"
   github.com/l3montree-dev/devguard/internal/utils:
     config:
       recursive: true
       all: true
       filename: "mock_{{.InterfaceName}}.go"
+      structname: "{{.InterfaceName | firstUpper}}"
       dir: "mocks"
+      pkgname: "mocks"
