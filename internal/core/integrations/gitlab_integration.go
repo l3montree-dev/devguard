@@ -335,15 +335,6 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
-		// get the project id based on the asset
-		/*gitlabProjectId, err := extractProjectIdFromRepoId(utils.SafeDereference(asset.RepositoryID))
-		if err != nil {
-			slog.Error("could not extract project id from repo id", "err", err)
-			return err
-		}*/
-
-		gitlabProjectId := event.ProjectID
-
 		// make sure to update the github issue accordingly
 		client, err := g.gitlabClientFactory(integrationId)
 		if err != nil {
@@ -351,31 +342,32 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
-		isMember, err := client.IsProjectMember(context.TODO(), gitlabProjectId, event.User.ID)
+		isMember, err := IsUserAuthorized(event, client)
 		if err != nil {
 			return err
 		}
 		//Check if the user should be able to use commands
 		//TODO : Check member role ?
 		if isMember {
+			gitlabProjectID := event.ProjectID
 			switch vulnEvent.Type {
 			case models.EventTypeAccepted:
 				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectId, issueId, &gitlab.UpdateIssueOptions{
+				_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
 					StateEvent: gitlab.Ptr("close"),
 					Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 				})
 				return err
 			case models.EventTypeFalsePositive:
 				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectId, issueId, &gitlab.UpdateIssueOptions{
+				_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
 					StateEvent: gitlab.Ptr("close"),
 					Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 				})
 				return err
 			case models.EventTypeReopened:
 				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectId, issueId, &gitlab.UpdateIssueOptions{
+				_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
 					StateEvent: gitlab.Ptr("reopen"),
 					Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 				})
@@ -405,6 +397,14 @@ func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 	return utils.Map(repos, func(r gitlabRepository) core.Repository {
 		return r.toRepository()
 	}), nil
+}
+
+func IsUserAuthorized(event *gitlab.IssueCommentEvent, client core.GitlabClientFacade) (bool, error) {
+	if event == nil || event.User == nil {
+		slog.Error("missing event data")
+		return false, fmt.Errorf("missing event data")
+	}
+	return client.IsProjectMember(context.TODO(), event.ProjectID, event.User.ID)
 }
 
 func extractIntegrationIdFromRepoId(repoId string) (uuid.UUID, error) {
