@@ -366,18 +366,14 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
-		repo := event.Repo.Name
-		owner := event.Repo.Owner.Login
-
 		client, err := githubIntegration.githubClientFactory(utils.SafeDereference(asset.RepositoryID))
 		if err != nil {
 			slog.Error("could not create github client", "err", err)
 			return err
 		}
 
-		isCollaborator, _, err := client.IsCollaboratorInRepository(context.TODO(), *owner, *repo, *event.Sender.ID, nil)
+		isCollaborator, err := isGithubUserAuthorized(event, client)
 		if err != nil {
-			slog.Error("could not determine if the commenter is a collaborator of the repository", "err", err)
 			return err
 		}
 
@@ -385,21 +381,21 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			switch vulnEvent.Type {
 			case models.EventTypeAccepted:
 				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), *owner, *repo, issueNumber, &github.IssueRequest{
+				_, _, err = client.EditIssue(ctx.Request().Context(), *event.Repo.Owner.Login, *event.Repo.Name, issueNumber, &github.IssueRequest{
 					State:  github.String("closed"),
 					Labels: &labels,
 				})
 				return err
 			case models.EventTypeFalsePositive:
 				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), *owner, *repo, issueNumber, &github.IssueRequest{
+				_, _, err = client.EditIssue(ctx.Request().Context(), *event.Repo.Owner.Login, *event.Repo.Name, issueNumber, &github.IssueRequest{
 					State:  github.String("closed"),
 					Labels: &labels,
 				})
 				return err
 			case models.EventTypeReopened:
 				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), *owner, *repo, issueNumber, &github.IssueRequest{
+				_, _, err = client.EditIssue(ctx.Request().Context(), *event.Repo.Owner.Login, *event.Repo.Name, issueNumber, &github.IssueRequest{
 					State:  github.String("open"),
 					Labels: &labels,
 				})
@@ -439,6 +435,14 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 	}
 
 	return ctx.JSON(200, "ok")
+}
+
+func isGithubUserAuthorized(event *github.IssueCommentEvent, client core.GithubClientFacade) (bool, error) {
+	if event == nil || event.Sender == nil || event.Repo == nil || event.Repo.Owner == nil {
+		slog.Error("missing event data, could not resolve if user is authorized")
+		return false, fmt.Errorf("missing event data, could not resolve if user is authorized")
+	}
+	return client.IsCollaboratorInRepository(context.TODO(), *event.Repo.Owner.Login, *event.Repo.Name, *event.Sender.ID, nil)
 }
 
 func (githubIntegration *githubIntegration) WantsToFinishInstallation(ctx core.Context) bool {

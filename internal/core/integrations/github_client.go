@@ -170,15 +170,15 @@ func (client githubClient) GetRepositoryCollaborators(ctx context.Context, owner
 	return client.Repositories.ListCollaborators(ctx, owner, repoId, opts)
 }
 
-func (client githubClient) IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userId int64, opts *github.ListCollaboratorsOptions) (bool, *github.Response, error) {
-	collaborators, resp, err := client.GetRepositoryCollaborators(ctx, owner, repoId, opts)
+func (client githubClient) IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userId int64, opts *github.ListCollaboratorsOptions) (bool, error) {
+	collaborators, _, err := client.GetRepositoryCollaborators(ctx, owner, repoId, opts)
 	if err != nil {
-		return false, resp, err
+		return false, err
 	}
 	for _, user := range collaborators {
 		if userId == *user.ID {
-			return true, resp, nil
+			return true, nil
 		}
 	}
-	return false, resp, nil
+	return false, nil
 }

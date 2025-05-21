@@ -131,7 +131,7 @@ func TestIsUserAuthorized(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 73573, User: &gitlab.User{ID: 487535}}
 		client := mocks.NewGitlabClientFacade(t)
 		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
-		isAuthorized, err := isUserAuthorized(&event, client)
+		isAuthorized, err := isGitlabUserAuthorized(&event, client)
 		assert.Nil(t, err)
 		assert.True(t, isAuthorized)
 	})
@@ -139,7 +139,7 @@ func TestIsUserAuthorized(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 7353, User: &gitlab.User{ID: 487535}}
 		client := mocks.NewGitlabClientFacade(t)
 		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
-		isAuthorized, err := isUserAuthorized(&event, client)
+		isAuthorized, err := isGitlabUserAuthorized(&event, client)
 		assert.Nil(t, err)
 		assert.False(t, isAuthorized)
 	})
@@ -147,19 +147,19 @@ func TestIsUserAuthorized(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 7353, User: &gitlab.User{ID: 487535}}
 		client := mocks.NewGitlabClientFacade(t)
 		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything).Return(false, fmt.Errorf("the gitlab api was blown up"))
-		isAuthorized, err := isUserAuthorized(&event, client)
+		isAuthorized, err := isGitlabUserAuthorized(&event, client)
 		assert.Equal(t, "the gitlab api was blown up", err.Error())
 		assert.False(t, isAuthorized)
 	})
 	t.Run("If the provided user is nil we want to abort", func(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 7353}
 		client := mocks.NewGitlabClientFacade(t)
-		isAuthorized, err := isUserAuthorized(&event, client)
+		isAuthorized, err := isGitlabUserAuthorized(&event, client)
 		assert.Equal(t, "missing event data", err.Error())
 		assert.False(t, isAuthorized)
 	})
 	t.Run("If the passed event is nil we also want to abort", func(t *testing.T) {
-		isAuthorized, err := isUserAuthorized(nil, nil)
+		isAuthorized, err := isGitlabUserAuthorized(nil, nil)
 		assert.Equal(t, "missing event data", err.Error())
 		assert.False(t, isAuthorized)
 	})

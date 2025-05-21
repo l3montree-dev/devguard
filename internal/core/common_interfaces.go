@@ -360,5 +360,5 @@ type GithubClientFacade interface {
 	EditIssue(ctx context.Context, owner string, repo string, number int, issue *github.IssueRequest) (*github.Issue, *github.Response, error)
 	EditIssueLabel(ctx context.Context, owner string, repo string, name string, label *github.Label) (*github.Label, *github.Response, error)
 	GetRepositoryCollaborators(ctx context.Context, owner string, repoId string, opts *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error)
-	IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userId int64, opts *github.ListCollaboratorsOptions) (bool, *github.Response, error)
+	IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userId int64, opts *github.ListCollaboratorsOptions) (bool, error)
 }

@@ -342,7 +342,7 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
-		isMember, err := isUserAuthorized(event, client)
+		isMember, err := isGitlabUserAuthorized(event, client)
 		if err != nil {
 			return err
 		}
@@ -400,10 +400,10 @@ func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 }
 
 // Check if the user who comments on a ticket is authorized to use commands like /accept
-func isUserAuthorized(event *gitlab.IssueCommentEvent, client core.GitlabClientFacade) (bool, error) {
+func isGitlabUserAuthorized(event *gitlab.IssueCommentEvent, client core.GitlabClientFacade) (bool, error) {
 	if event == nil || event.User == nil {
-		slog.Error("missing event data")
-		return false, fmt.Errorf("missing event data")
+		slog.Error("missing event data, could not resolve if user is authorized")
+		return false, fmt.Errorf("missing event data, could not resolve if user is authorized")
 	}
 	return client.IsProjectMember(context.TODO(), event.ProjectID, event.User.ID)
 }
