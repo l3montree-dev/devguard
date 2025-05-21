@@ -401,6 +401,8 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 				})
 				return err
 			}
+		} else {
+			slog.Info("user not authorized for commands")
 		}
 	case *github.InstallationEvent:
 		// check what type of action is being performed

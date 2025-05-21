@@ -373,6 +373,8 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 				})
 				return err
 			}
+		} else {
+			slog.Info("user not authorized for commands")
 		}
 	}
 
