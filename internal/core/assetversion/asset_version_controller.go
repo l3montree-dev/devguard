@@ -222,52 +222,24 @@ func (a *assetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrganization(ctx)
-	// check for version query param
-	version := ctx.QueryParam("version")
-	if version == "" {
-		version = models.NoVersion
-	} else {
+
+	scannerID := ctx.QueryParam("scanner")
+	if scannerID != "" {
 		var err error
-		version, err = normalize.SemverFix(version)
+		scannerID, err = url.QueryUnescape(scannerID)
 		if err != nil {
 			return vex.VEX{}, err
 		}
 	}
-
-	scannerID := ctx.QueryParam("scanner")
-
-	// url decode the scanner
-	scannerID, err := url.QueryUnescape(scannerID)
+	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, scannerID)
 	if err != nil {
 		return vex.VEX{}, err
 	}
 
-	// get all associated dependencyVulns
-	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scannerID)
-	if err != nil {
-		return vex.VEX{}, err
-	}
-
-	return a.assetVersionService.BuildOpenVeX(asset, assetVersion, version, org.Slug, dependencyVulns), nil
+	return a.assetVersionService.BuildOpenVeX(asset, assetVersion, org.Slug, dependencyVulns), nil
 }
 
-func (a *assetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
-	asset := core.GetAsset(ctx)
-	assetVersion := core.GetAssetVersion(ctx)
-	org := core.GetOrganization(ctx)
-	// check for version query param
-	version := ctx.QueryParam("version")
-	if version == "" {
-		version = models.NoVersion
-	} else {
-		var err error
-		version, err = normalize.SemverFix(version)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	scannerID := ctx.QueryParam("scanner")
+func (a *assetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, scannerID string) ([]models.DependencyVuln, error) {
 
 	// url decode the scanner
 	scannerID, err := url.QueryUnescape(scannerID)
@@ -281,7 +253,53 @@ func (a *assetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildVeX(asset, assetVersion, version, org.Name, dependencyVulns), nil
+	var defaultVulns []models.DependencyVuln
+	if assetVersion.DefaultBranch {
+		return dependencyVulns, nil
+	}
+
+	// get the dependency vulns for the default asset version to check if any are resolved already
+	defaultVulns, err = a.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(nil, assetVersion.AssetID, scannerID)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a map to mark all defaultFixed vulns as fixed in the dependency vulns slice - this will lead to the vex containing a resolved key
+	m := make(map[string]bool)
+	for _, v := range defaultVulns {
+		if v.State == models.VulnStateFixed {
+			m[v.ID] = true
+		}
+	}
+
+	// mark all vulns as fixed if they are in the map
+	for i := range dependencyVulns {
+		if _, ok := m[dependencyVulns[i].ID]; ok {
+			dependencyVulns[i].State = models.VulnStateFixed
+		}
+	}
+	return dependencyVulns, nil
+}
+
+func (a *assetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
+	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
+	org := core.GetOrganization(ctx)
+	scannerID := ctx.QueryParam("scanner")
+	if scannerID != "" {
+		var err error
+		scannerID, err = url.QueryUnescape(scannerID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, scannerID)
+	if err != nil {
+		return nil, err
+	}
+
+	return a.assetVersionService.BuildVeX(asset, assetVersion, org.Name, dependencyVulns), nil
 }
 
 func (a *assetVersionController) Metrics(ctx core.Context) error {
