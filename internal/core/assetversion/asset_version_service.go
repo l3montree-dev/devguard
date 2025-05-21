@@ -600,7 +600,7 @@ func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Sta
 	}
 }
 
-func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, version string, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX {
+func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX {
 	doc := vex.New()
 
 	doc.Author = organizationSlug
@@ -639,10 +639,7 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 	return doc
 }
 
-func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version string, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
-	if version == models.NoVersion {
-		version = "latest"
-	}
+func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
 
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
@@ -653,8 +650,8 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 			Component: &cdx.Component{
 				BOMRef:    assetVersion.Slug,
 				Type:      cdx.ComponentTypeApplication,
-				Name:      assetVersion.Name,
-				Version:   version,
+				Name:      asset.Name,
+				Version:   assetVersion.Name,
 				Author:    organizationName,
 				Publisher: "github.com/l3montree-dev/devguard",
 			},
