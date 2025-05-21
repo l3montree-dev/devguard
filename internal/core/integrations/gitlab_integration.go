@@ -61,7 +61,7 @@ func (g gitlabRepository) toRepository() core.Repository {
 
 type gitlabIntegration struct {
 	gitlabIntegrationRepository core.GitlabIntegrationRepository
-	gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
+	// gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
 
 	externalUserRepository core.ExternalUserRepository
 
