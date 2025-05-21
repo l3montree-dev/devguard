@@ -50,6 +50,26 @@ func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSe
 		return "", err
 	}
 
+	/*cred, _, err := oryApiClient.IdentityAPI.GetIdentity(ctx, session.Identity.Id).IncludeCredential([]string{"oidc"}).Execute()
+	if err != nil {
+		panic(err)
+	}
+
+	if cred.Credentials != nil {
+		// check if oidc creds exist
+		creds, ok := (*cred.Credentials)["oidc"]
+		if ok {
+			// check if we find opencode in the providers
+			for _, provider := range creds.Config["providers"].([]interface{}) {
+				if provider.(map[string]interface{})["provider"] == "opencode" {
+					// print initial_refresh_token and initial_access_token
+					fmt.Println(provider.(map[string]interface{})["initial_refresh_token"])
+					fmt.Println(provider.(map[string]interface{})["initial_access_token"])
+				}
+			}
+		}
+	}*/
+
 	return session.Identity.Id, nil
 }
 

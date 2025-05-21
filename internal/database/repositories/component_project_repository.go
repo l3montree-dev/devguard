@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"os"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -14,9 +15,11 @@ type componentProjectRepository struct {
 }
 
 func NewComponentProjectRepository(db core.DB) *componentProjectRepository {
-	err := db.AutoMigrate(&models.ComponentProject{})
-	if err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		err := db.AutoMigrate(&models.ComponentProject{})
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return &componentProjectRepository{

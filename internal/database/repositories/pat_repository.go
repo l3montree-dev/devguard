@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,9 +31,11 @@ type gormPatRepository struct {
 }
 
 func NewPATRepository(db core.DB) *gormPatRepository {
-	err := db.AutoMigrate(&models.PAT{})
-	if err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		err := db.AutoMigrate(&models.PAT{})
+		if err != nil {
+			panic(err)
+		}
 	}
 	return &gormPatRepository{
 		db:         db,

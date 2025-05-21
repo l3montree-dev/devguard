@@ -122,7 +122,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 	for _, assetVersion := range assetVersions {
 		monitoring.RecalculateAllRawRiskAssessmentsAssetVersionsAmount.Inc()
 		// get all dependencyVulns of the asset
-		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID)
+		dependencyVulns, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, "")
 		if len(dependencyVulns) == 0 {
 			continue
 		}
@@ -319,13 +319,14 @@ func (s *service) SyncTickets(asset models.Asset) error {
 	for _, assetVersion := range asset.AssetVersions {
 		slog.Info("syncing tickets", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
 
-		vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID)
+		vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID, "")
 		if err != nil {
-			return err
+			slog.Error("could not get dependencyVulns by asset version", "err", err, "assetVersionName", assetVersion.Name)
+			continue
 		}
 
 		if len(vulnList) == 0 {
-			return nil
+			continue
 		}
 
 		riskThreshold := asset.RiskAutomaticTicketThreshold
@@ -382,7 +383,10 @@ func (s *service) SyncTickets(asset models.Asset) error {
 			}
 		}
 		_, err = errgroup.WaitAndCollect()
-		return err
+		if err != nil {
+			slog.Error("could not sync tickets", "err", err, "assetID", asset.ID)
+			continue
+		}
 	}
 	return nil
 }

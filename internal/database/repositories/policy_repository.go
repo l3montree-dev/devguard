@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -13,8 +15,10 @@ type policyRepository struct {
 }
 
 func NewPolicyRepository(db core.DB) *policyRepository {
-	if err := db.AutoMigrate(&models.Policy{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.Policy{}); err != nil {
+			panic(err)
+		}
 	}
 	return &policyRepository{
 		db:         db,

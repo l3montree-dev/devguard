@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -29,8 +31,10 @@ type inTotoLinkRepository struct {
 }
 
 func NewInTotoLinkRepository(db core.DB) *inTotoLinkRepository {
-	if err := db.AutoMigrate(&models.InTotoLink{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.InTotoLink{}); err != nil {
+			panic(err)
+		}
 	}
 
 	return &inTotoLinkRepository{

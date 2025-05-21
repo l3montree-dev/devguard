@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -15,8 +17,10 @@ type dependencyVulnRepository struct {
 }
 
 func NewDependencyVulnRepository(db core.DB) *dependencyVulnRepository {
-	if err := db.AutoMigrate(&models.DependencyVuln{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.DependencyVuln{}); err != nil {
+			panic(err)
+		}
 	}
 	return &dependencyVulnRepository{
 		db:                      db,
@@ -53,12 +57,37 @@ func (r *dependencyVulnRepository) applyAndSave(tx core.DB, dependencyVuln *mode
 	return *ev, nil
 }
 
-func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
 
 	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
-	if err := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
+
+	q := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+
+	if scannerID != "" {
+		// scanner ids is a string array separated by whitespaces
+		q = q.Where("scanner_ids = ANY(string_to_array(?, ' '))", scannerID)
+	}
+
+	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
+	return dependencyVulns, nil
+}
+
+func (r *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx core.DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
+	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", assetID, true)
+
+	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
+	q := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name IN (?) AND asset_id = ?", subQuery, assetID)
+
+	if scannerID != "" {
+		// scanner ids is a string array separated by whitespaces
+		q = q.Where("scanner_ids = ANY(string_to_array(?, ' '))", scannerID)
+	}
+	if err := q.Find(&dependencyVulns).Error; err != nil {
+		return nil, err
+	}
+
 	return dependencyVulns, nil
 }
 

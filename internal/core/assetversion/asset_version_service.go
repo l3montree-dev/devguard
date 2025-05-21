@@ -342,7 +342,13 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	return append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), fixedVulns, append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), nil
+	v, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
+	if err != nil {
+		slog.Error("could not get existing dependencyVulns", "err", err)
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
+
+	return append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), fixedVulns, v, nil
 }
 
 func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
@@ -413,7 +419,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  nil, // direct dependency - therefore set it to nil
-					ScannerIDs:     scannerID,
+					ScannerID:      scannerID,
 					DependencyPurl: componentPackageUrl,
 				},
 			)
@@ -439,7 +445,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  utils.EmptyThenNil(compPackageUrl),
-					ScannerIDs:     scannerID,
+					ScannerID:      scannerID,
 					DependencyPurl: depPurlOrName,
 				},
 			)
@@ -600,7 +606,7 @@ func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Sta
 	}
 }
 
-func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, version string, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX {
+func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX {
 	doc := vex.New()
 
 	doc.Author = organizationSlug
@@ -639,10 +645,7 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 	return doc
 }
 
-func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency, dependencyVulns []models.DependencyVuln) *cdx.BOM {
-	if version == models.NoVersion {
-		version = "latest"
-	}
+func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
 
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
@@ -653,8 +656,8 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 			Component: &cdx.Component{
 				BOMRef:    assetVersion.Slug,
 				Type:      cdx.ComponentTypeApplication,
-				Name:      assetVersion.Name,
-				Version:   version,
+				Name:      asset.Name,
+				Version:   assetVersion.Name,
 				Author:    organizationName,
 				Publisher: "github.com/l3montree-dev/devguard",
 			},
