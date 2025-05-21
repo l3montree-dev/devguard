@@ -3,6 +3,7 @@ package daemon
 import (
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
@@ -15,9 +16,15 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
 )
 
 func ScanAssetVersions(db core.DB) error {
+
+	start := time.Now()
+	defer func() {
+		monitoring.ScanDaemonDuration.Observe(time.Since(start).Minutes())
+	}()
 
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
@@ -52,6 +59,8 @@ func ScanAssetVersions(db core.DB) error {
 		return err
 	}
 
+	monitoring.AssetVersionScanAmount.Inc()
+
 	for i := range assetVersions {
 		components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, "")
 		if err != nil {
@@ -83,7 +92,10 @@ func ScanAssetVersions(db core.DB) error {
 			}
 		}
 
+		monitoring.AssetVersionScanSuccess.Inc()
 		slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 	}
+
+	monitoring.ScanDaemonAmount.Inc()
 	return nil
 }
