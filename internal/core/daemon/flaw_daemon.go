@@ -77,7 +77,6 @@ func UpdateComponentProperties(db core.DB) error {
 				return nil, err
 			}
 
-			monitoring.DependencyVulnsAmount.Inc()
 			// group by scanner id
 			groups := make(map[string]map[string][]models.DependencyVuln)
 			for _, f := range dependencyVulns {

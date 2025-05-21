@@ -29,12 +29,12 @@ var FirstPartyScanDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 	Buckets: prometheus.DefBuckets,
 })
 
-var ScansDaemonAmount = promauto.NewCounter(prometheus.CounterOpts{
+var ScanDaemonAmount = promauto.NewCounter(prometheus.CounterOpts{
 	Name: "devguard_daemon_scans_asset_version_amount",
 	Help: "The total number of scans daemon",
 })
 
-var ScansDaemonDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+var ScanDaemonDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 	Name:    "devguard_daemon_asset_version_scan_duration_minutes",
 	Help:    "Duration of asset version scans in minutes",
 	Buckets: prometheus.DefBuckets,

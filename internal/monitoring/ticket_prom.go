@@ -8,12 +8,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-var SyncTicketsDaemonAmount = promauto.NewCounter(prometheus.CounterOpts{
+var SyncTicketDaemonAmount = promauto.NewCounter(prometheus.CounterOpts{
 	Name: "devguard_daemon_assets_sync_tickets_amount",
 	Help: "The total number of asset sync tickets operations",
 })
 
-var SyncTicketsDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+var SyncTicketDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 	Name:    "devguard_daemon_assets_sync_tickets_duration_minutes",
 	Help:    "Duration of asset sync tickets in minutes",
 	Buckets: prometheus.DefBuckets,

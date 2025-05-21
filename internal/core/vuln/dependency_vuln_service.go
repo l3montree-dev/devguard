@@ -384,7 +384,6 @@ func (s *service) SyncTickets(asset models.Asset) error {
 		_, err = errgroup.WaitAndCollect()
 		return err
 	}
-
 	return nil
 }
 

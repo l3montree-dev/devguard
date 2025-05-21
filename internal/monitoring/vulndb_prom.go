@@ -30,11 +30,6 @@ var UpdateComponentPropertiesDuration = promauto.NewHistogram(prometheus.Histogr
 	Buckets: prometheus.DefBuckets,
 })
 
-var DependencyVulnsAmount = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "devguard_daemon_dependency_vulns_amount",
-	Help: "The total number of dependency vulnerabilities",
-})
-
 var DependencyVulnsUpdatedAmount = promauto.NewCounter(prometheus.CounterOpts{
 	Name: "devguard_daemon_dependency_vulns_updated_amount",
 	Help: "The total number of updated dependency vulnerabilities",

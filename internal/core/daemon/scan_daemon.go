@@ -23,7 +23,7 @@ func ScanAssetVersions(db core.DB) error {
 
 	start := time.Now()
 	defer func() {
-		monitoring.ScansDaemonDuration.Observe(time.Since(start).Minutes())
+		monitoring.ScanDaemonDuration.Observe(time.Since(start).Minutes())
 	}()
 
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
@@ -96,6 +96,6 @@ func ScanAssetVersions(db core.DB) error {
 		slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 	}
 
-	monitoring.ScansDaemonAmount.Inc()
+	monitoring.ScanDaemonAmount.Inc()
 	return nil
 }

@@ -13,7 +13,7 @@ import (
 func SyncTickets(db core.DB) error {
 	start := time.Now()
 	defer func() {
-		monitoring.SyncTicketsDuration.Observe(time.Since(start).Minutes())
+		monitoring.SyncTicketDuration.Observe(time.Since(start).Minutes())
 	}()
 
 	githubIntegration := integrations.NewGithubIntegration(db)
@@ -37,7 +37,7 @@ func SyncTickets(db core.DB) error {
 		return err
 	}
 
-	monitoring.SyncTicketsDaemonAmount.Inc()
+	monitoring.SyncTicketDaemonAmount.Inc()
 
 	return nil
 
