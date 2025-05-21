@@ -412,3 +412,72 @@ func TestGetLabels(t *testing.T) {
 		assert.Contains(t, labels, "state:false-positive")
 	})
 }
+
+func TestIsGithubUserAuthorized(t *testing.T) {
+	t.Run("If the provided user is a member of the project we want to return true", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Repo:   &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
+			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Nil(t, err)
+		assert.True(t, isAuthorized)
+	})
+	t.Run("If the provided user is not a member of the project we want to return false", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Repo:   &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
+			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Nil(t, err)
+		assert.False(t, isAuthorized)
+	})
+	t.Run("If the participation check of the user in the project runs into an error we also want to return that error", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Repo:   &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
+			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, fmt.Errorf("the github api was blown into pieces"))
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Equal(t, "the github api was blown into pieces", err.Error())
+		assert.False(t, isAuthorized)
+	})
+	t.Run("If the provided user is nil we want to abort", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Repo: &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
+		assert.False(t, isAuthorized)
+	})
+	t.Run("If the provided repo is nil we want to abort", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
+		assert.False(t, isAuthorized)
+	})
+	t.Run("If the provided owner is nil we want to abort", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Repo:   &github.Repository{},
+			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
+		assert.False(t, isAuthorized)
+	})
+	t.Run("If the passed event is nil we also want to abort", func(t *testing.T) {
+		isAuthorized, err := isGithubUserAuthorized(nil, nil)
+		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
+		assert.False(t, isAuthorized)
+	})
+}

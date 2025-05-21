@@ -111,8 +111,8 @@ func (client gitlabClient) ListProjectMembers(ctx context.Context, projectId int
 	return client.ProjectMembers.ListAllProjectMembers(projectId, memberOptions, requestOptions...)
 }
 
-func (client gitlabClient) IsProjectMember(ctx context.Context, projectId int, userId int) (bool, error) {
-	members, _, err := client.ListProjectMembers(ctx, projectId, nil, nil)
+func (client gitlabClient) IsProjectMember(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions) (bool, error) {
+	members, _, err := client.ListProjectMembers(ctx, projectId, options, nil)
 	if err != nil {
 		return false, err
 	}

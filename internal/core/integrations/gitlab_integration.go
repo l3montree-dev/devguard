@@ -405,7 +405,7 @@ func isGitlabUserAuthorized(event *gitlab.IssueCommentEvent, client core.GitlabC
 		slog.Error("missing event data, could not resolve if user is authorized")
 		return false, fmt.Errorf("missing event data, could not resolve if user is authorized")
 	}
-	return client.IsProjectMember(context.TODO(), event.ProjectID, event.User.ID)
+	return client.IsProjectMember(context.TODO(), event.ProjectID, event.User.ID, nil)
 }
 
 func extractIntegrationIdFromRepoId(repoId string) (uuid.UUID, error) {

@@ -126,11 +126,11 @@ func TestTestAndSave(t *testing.T) {
 	})
 }
 
-func TestIsUserAuthorized(t *testing.T) {
+func TestIsGitlabUserAuthorized(t *testing.T) {
 	t.Run("If the provided user is a member of the project we want to return true", func(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 73573, User: &gitlab.User{ID: 487535}}
 		client := mocks.NewGitlabClientFacade(t)
-		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 		isAuthorized, err := isGitlabUserAuthorized(&event, client)
 		assert.Nil(t, err)
 		assert.True(t, isAuthorized)
@@ -138,7 +138,7 @@ func TestIsUserAuthorized(t *testing.T) {
 	t.Run("If the provided user is not a member of the project we want to return false", func(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 7353, User: &gitlab.User{ID: 487535}}
 		client := mocks.NewGitlabClientFacade(t)
-		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
+		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
 		isAuthorized, err := isGitlabUserAuthorized(&event, client)
 		assert.Nil(t, err)
 		assert.False(t, isAuthorized)
@@ -146,7 +146,7 @@ func TestIsUserAuthorized(t *testing.T) {
 	t.Run("If the participation check of the user in the project runs into an error we also want to return that error", func(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 7353, User: &gitlab.User{ID: 487535}}
 		client := mocks.NewGitlabClientFacade(t)
-		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything).Return(false, fmt.Errorf("the gitlab api was blown up"))
+		client.On("IsProjectMember", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, fmt.Errorf("the gitlab api was blown up"))
 		isAuthorized, err := isGitlabUserAuthorized(&event, client)
 		assert.Equal(t, "the gitlab api was blown up", err.Error())
 		assert.False(t, isAuthorized)
@@ -155,12 +155,12 @@ func TestIsUserAuthorized(t *testing.T) {
 		event := gitlab.IssueCommentEvent{ProjectID: 7353}
 		client := mocks.NewGitlabClientFacade(t)
 		isAuthorized, err := isGitlabUserAuthorized(&event, client)
-		assert.Equal(t, "missing event data", err.Error())
+		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})
 	t.Run("If the passed event is nil we also want to abort", func(t *testing.T) {
 		isAuthorized, err := isGitlabUserAuthorized(nil, nil)
-		assert.Equal(t, "missing event data", err.Error())
+		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
 		assert.False(t, isAuthorized)
 	})
 }

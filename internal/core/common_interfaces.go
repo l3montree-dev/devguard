@@ -349,7 +349,7 @@ type GitlabClientFacade interface {
 	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
 
 	ListProjectMembers(ctx context.Context, projectId int, memberOptions *gitlab.ListProjectMembersOptions, requestOptions ...gitlab.RequestOptionFunc) ([]*gitlab.ProjectMember, *gitlab.Response, error)
-	IsProjectMember(ctx context.Context, projectId int, userId int) (bool, error)
+	IsProjectMember(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions) (bool, error)
 }
 
 // wrapper around the github package - which provides only the methods
