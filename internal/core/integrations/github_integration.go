@@ -437,6 +437,7 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 	return ctx.JSON(200, "ok")
 }
 
+// function to check if a user is allowed to use commands like /accept, more checks can be added later
 func isGithubUserAuthorized(event *github.IssueCommentEvent, client core.GithubClientFacade) (bool, error) {
 	if event == nil || event.Sender == nil || event.Repo == nil || event.Repo.Owner == nil {
 		slog.Error("missing event data, could not resolve if user is authorized")

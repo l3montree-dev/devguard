@@ -399,7 +399,7 @@ func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 	}), nil
 }
 
-// Check if the user who comments on a ticket is authorized to use commands like /accept
+// Check if the user who comments on a ticket is authorized to use commands like /accept, more checks can be added later
 func isGitlabUserAuthorized(event *gitlab.IssueCommentEvent, client core.GitlabClientFacade) (bool, error) {
 	if event == nil || event.User == nil {
 		slog.Error("missing event data, could not resolve if user is authorized")
