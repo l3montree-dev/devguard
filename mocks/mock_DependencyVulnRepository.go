@@ -896,6 +896,66 @@ func (_c *DependencyVulnRepository_GetDependencyVulnsByAssetVersionPagedAndFlat_
 	return _c
 }
 
+// GetDependencyVulnsByDefaultAssetVersion provides a mock function with given fields: tx, assetID, scannerID
+func (_m *DependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx *gorm.DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
+	ret := _m.Called(tx, assetID, scannerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDependencyVulnsByDefaultAssetVersion")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, string) ([]models.DependencyVuln, error)); ok {
+		return rf(tx, assetID, scannerID)
+	}
+	if rf, ok := ret.Get(0).(func(*gorm.DB, uuid.UUID, string) []models.DependencyVuln); ok {
+		r0 = rf(tx, assetID, scannerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(*gorm.DB, uuid.UUID, string) error); ok {
+		r1 = rf(tx, assetID, scannerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyVulnsByDefaultAssetVersion'
+type DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call struct {
+	*mock.Call
+}
+
+// GetDependencyVulnsByDefaultAssetVersion is a helper method to define mock.On call
+//   - tx *gorm.DB
+//   - assetID uuid.UUID
+//   - scannerID string
+func (_e *DependencyVulnRepository_Expecter) GetDependencyVulnsByDefaultAssetVersion(tx interface{}, assetID interface{}, scannerID interface{}) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
+	return &DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call{Call: _e.mock.On("GetDependencyVulnsByDefaultAssetVersion", tx, assetID, scannerID)}
+}
+
+func (_c *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call) Run(run func(tx *gorm.DB, assetID uuid.UUID, scannerID string)) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*gorm.DB), args[1].(uuid.UUID), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call) Return(_a0 []models.DependencyVuln, _a1 error) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call) RunAndReturn(run func(*gorm.DB, uuid.UUID, string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetDependencyVulnsByDefaultAssetVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDependencyVulnsByPurl provides a mock function with given fields: tx, purls
 func (_m *DependencyVulnRepository) GetDependencyVulnsByPurl(tx *gorm.DB, purls []string) ([]models.DependencyVuln, error) {
 	ret := _m.Called(tx, purls)
