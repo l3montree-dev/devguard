@@ -22,6 +22,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"gorm.io/gorm/clause"
 )
 
 type gitlabIntegrationRepository struct {
@@ -71,10 +72,27 @@ func (r *gitlabOauth2TokenRepository) Save(tx core.DB, token *models.GitLabOauth
 	return nil
 }
 
+func (r *gitlabOauth2TokenRepository) Upsert(tx core.DB, token *models.GitLabOauth2Token) error {
+	if err := r.db.Clauses(clause.OnConflict{
+		UpdateAll: true,
+	}).Create(token).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *gitlabOauth2TokenRepository) FindByUserIdAndBaseURL(userId string, baseURL string) (*models.GitLabOauth2Token, error) {
 	var token models.GitLabOauth2Token
 	if err := r.db.Where("user_id = ? AND base_url = ?", userId, baseURL).First(&token).Error; err != nil {
 		return nil, err
 	}
 	return &token, nil
+}
+
+func (r *gitlabOauth2TokenRepository) FindByUserId(userId string) ([]models.GitLabOauth2Token, error) {
+	var tokens []models.GitLabOauth2Token
+	if err := r.db.Where("user_id = ?", userId).Find(&tokens).Error; err != nil {
+		return nil, err
+	}
+	return tokens, nil
 }

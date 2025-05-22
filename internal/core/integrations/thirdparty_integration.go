@@ -33,29 +33,19 @@ func (t *thirdPartyIntegrations) GetID() core.IntegrationID {
 	return core.AggregateID
 }
 
-func (t *thirdPartyIntegrations) IntegrationEnabled(ctx core.Context) bool {
-	return utils.Any(t.integrations, func(i core.ThirdPartyIntegration) bool {
-		return i.IntegrationEnabled(ctx)
-	})
-}
-
 func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	wg := utils.ErrGroup[[]core.Repository](-1)
 
 	for _, i := range t.integrations {
-		if i.IntegrationEnabled(ctx) {
-			wg.Go(func() ([]core.Repository, error) {
-				repos, err := i.ListRepositories(ctx)
-				if err != nil {
-					slog.Error("error while listing repositories", "err", err)
-					// swallow error
-					return nil, nil
-				}
-				return repos, err
-			})
-		} else {
-			slog.Debug("integration not enabled", "integration", i.GetID())
-		}
+		wg.Go(func() ([]core.Repository, error) {
+			repos, err := i.ListRepositories(ctx)
+			if err != nil {
+				slog.Error("error while listing repositories", "err", err)
+				// swallow error
+				return nil, nil
+			}
+			return repos, err
+		})
 	}
 
 	results, err := wg.WaitAndCollect()

@@ -27,26 +27,42 @@ import (
 )
 
 type gitlabClient struct {
-	models.GitLabIntegration
 	*gitlab.Client
+	// the id of the client - we need to use this client to connect to any gitlab projects again.
+	// might be a gitlab_integration id or a gitlab oauth2 token id.
+	clientID string
 }
+
 type gitlabBatchClient struct {
-	clients []gitlabClient
+	clients []gitlabClientFacade
 }
 
 var NoGitlabIntegrationError = fmt.Errorf("no gitlab app installations found")
 
 // groups multiple gitlab clients - since an org can have multiple installations
-func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration) (*gitlabBatchClient, error) {
-	if len(gitlabIntegrations) == 0 {
-		slog.Error("no gitlab app installations found")
-		return nil, NoGitlabIntegrationError
-	}
-
-	clients := make([]gitlabClient, 0)
+func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration, oauth2Config map[string]*gitlabOauth2Integration, oauth2Tokens []models.GitLabOauth2Token) (*gitlabBatchClient, error) {
+	clients := make([]gitlabClientFacade, 0)
 	for _, integration := range gitlabIntegrations {
 		client, _ := NewGitlabClient(integration)
 		clients = append(clients, client)
+	}
+
+	// create oauth2 clients
+	for _, token := range oauth2Tokens {
+		// check if there is a matching oauth2 config
+		for _, oauth2 := range oauth2Config {
+			if oauth2.gitlabBaseURL == token.BaseURL {
+				// great we can use the config to generate a token
+				client, err := buildOauth2GitlabClient(token, oauth2)
+				if err != nil {
+					slog.Error("error while creating oauth2 client", "err", err)
+					continue
+				}
+
+				clients = append(clients, client)
+				break
+			}
+		}
 	}
 
 	return &gitlabBatchClient{
@@ -66,13 +82,13 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]git
 
 	for _, client := range gitlabOrgClient.clients {
 		wg.Go(func() ([]gitlabRepository, error) {
-			result, _, err := client.Projects.ListProjects(options)
+			result, _, err := client.ListProjects(context.TODO(), options)
 			if err != nil {
 				return nil, err
 			}
 
 			return utils.Map(result, func(el *gitlab.Project) gitlabRepository {
-				return gitlabRepository{Project: el, gitlabIntegrationId: client.GitLabIntegration.ID.String()}
+				return gitlabRepository{Project: el, gitlabIntegrationId: client.GetClientID()}
 			}), nil
 		})
 	}
@@ -105,6 +121,14 @@ func (client gitlabClient) CreateMergeRequest(ctx context.Context, project strin
 
 func (client gitlabClient) GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error) {
 	return client.Projects.GetProject(projectId, nil, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) GetClientID() string {
+	return client.clientID
+}
+
+func (client gitlabClient) ListProjects(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error) {
+	return client.Projects.ListProjects(opt, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) ListProjectHooks(ctx context.Context, projectId int, opt *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error) {
@@ -176,7 +200,7 @@ func NewGitlabClient(integration models.GitLabIntegration) (gitlabClient, error)
 	}
 
 	return gitlabClient{
-		Client:            client,
-		GitLabIntegration: integration,
+		Client:   client,
+		clientID: integration.ID.String(),
 	}, nil
 }

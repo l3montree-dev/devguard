@@ -22,15 +22,17 @@ import (
 )
 
 type GitLabOauth2Token struct {
+	ID uuid.UUID `json:"id" gorm:"column:id;primaryKey;default:gen_random_uuid()"` // the id of the token
 	// oauth2 token using GitLab Applications feature
 	AccessToken  string    `json:"accessToken" gorm:"column:access_token"`
 	RefreshToken string    `json:"refreshToken" gorm:"column:refresh_token"`
 	ExpiresAt    int64     `json:"expiresAt" gorm:"column:expires_at"`
 	Scopes       string    `json:"scopes" gorm:"column:scopes"`
-	UserID       string    `json:"userId" gorm:"column:user_id;primaryKey"` // the gitlab user id
+	UserID       string    `json:"userId" gorm:"column:user_id;uniqueIndex:single-api-scope-token"` // the gitlab user id
+	GitLabUserID int       `json:"gitLabUserId" gorm:"column:gitlab_user_id"`                       // the gitlab user id
 	Expiry       time.Time `json:"expiry" gorm:"column:expiry"`
-	Verifier     *string   `json:"verifier" gorm:"column:verifier"`           // used for the PKCE to protect against CSRF attacks during doing oauth2
-	BaseURL      string    `json:"baseUrl" gorm:"column:base_url;primaryKey"` // the base url of the gitlab instance
+	Verifier     *string   `json:"verifier" gorm:"column:verifier"`                                   // used for the PKCE to protect against CSRF attacks during doing oauth2
+	BaseURL      string    `json:"baseUrl" gorm:"column:base_url;uniqueIndex:single-api-scope-token"` // the base url of the gitlab instance
 	CreatedAt    time.Time `json:"createdAt" gorm:"column:created_at"`
 	UpdatedAt    time.Time `json:"updatedAt" gorm:"column:updated_at"`
 }

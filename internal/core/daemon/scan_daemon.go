@@ -40,7 +40,9 @@ func ScanAssetVersions(db core.DB) error {
 	assetRiskHistoryRepository := repositories.NewAssetRiskHistoryRepository(db)
 	projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(db)
 
-	gitlabIntegration := integrations.NewGitLabIntegration(db)
+	gitlabOauth2Integrations := integrations.NewGitLabOauth2Integrations(db)
+	gitlabIntegration := integrations.NewGitLabIntegration(gitlabOauth2Integrations, db)
+
 	githubIntegration := integrations.NewGithubIntegration(db)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 

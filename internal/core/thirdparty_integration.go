@@ -28,8 +28,6 @@ const (
 )
 
 type ThirdPartyIntegration interface {
-	IntegrationEnabled(ctx Context) bool
-
 	WantsToHandleWebhook(ctx Context) bool
 	HandleWebhook(ctx Context) error
 

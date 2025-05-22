@@ -352,9 +352,11 @@ func BuildRouter(db core.DB) *echo.Echo {
 	if err != nil {
 		panic(err)
 	}
+
 	githubIntegration := integrations.NewGithubIntegration(db)
-	gitlabIntegrations := integrations.NewGitLabIntegration(db)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegrations, githubIntegration)
+	gitlabOauth2Integrations := integrations.NewGitLabOauth2Integrations(db)
+	gitlabIntegration := integrations.NewGitLabIntegration(gitlabOauth2Integrations, db)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration)
 
 	// init all repositories using the provided database
 	patRepository := repositories.NewPATRepository(db)
@@ -416,7 +418,6 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	server := echohttp.Server()
 
-	gitlabOauth2Integrations := integrations.NewGitLabOauth2Integrations(db)
 	integrationController := integrations.NewIntegrationController(gitlabOauth2Integrations)
 
 	apiV1Router := server.Group("/api/v1")
@@ -460,6 +461,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
 	sessionRouter.POST("/attestations/", attestationController.Create, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+
+	sessionRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
 	patRouter := sessionRouter.Group("/pats")
 	patRouter.POST("/", patController.Create, neededScope([]string{"manage"}))

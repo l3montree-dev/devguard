@@ -106,6 +106,11 @@ func GetOrganization(c Context) models.Org {
 	return c.Get("organization").(models.Org)
 }
 
+func HasOrganization(c Context) bool {
+	_, ok := c.Get("organization").(models.Org)
+	return ok
+}
+
 func SetOrganization(c Context, org models.Org) {
 	c.Set("organization", org)
 }

@@ -82,10 +82,6 @@ func (c *integrationController) AutoSetup(ctx core.Context) error {
 func (c *integrationController) ListRepositories(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 
-	if !thirdPartyIntegration.IntegrationEnabled(ctx) {
-		return ctx.JSON(404, "no integration enabled")
-	}
-
 	repos, err := thirdPartyIntegration.ListRepositories(ctx)
 	if err != nil {
 		return ctx.JSON(500, "could not list repositories")

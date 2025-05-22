@@ -31,6 +31,8 @@ import (
 )
 
 type gitlabClientFacade interface {
+	GetClientID() string
+	ListProjects(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)
 	CreateIssue(ctx context.Context, pid int, opt *gitlab.CreateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
 	CreateIssueComment(ctx context.Context, pid int, issue int, opt *gitlab.CreateIssueNoteOptions) (*gitlab.Note, *gitlab.Response, error)
 	EditIssue(ctx context.Context, pid int, issue int, opt *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
@@ -62,6 +64,9 @@ func (g gitlabRepository) toRepository() core.Repository {
 }
 
 type gitlabIntegration struct {
+	oauth2Endpoints             map[string]*gitlabOauth2Integration
+	gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
+
 	gitlabIntegrationRepository core.GitlabIntegrationRepository
 	externalUserRepository      core.ExternalUserRepository
 	firstPartyVulnRepository    core.FirstPartyVulnRepository
@@ -75,6 +80,7 @@ type gitlabIntegration struct {
 	assetVersionRepository      core.AssetVersionRepository
 	componentRepository         core.ComponentRepository
 	gitlabClientFactory         func(id uuid.UUID) (gitlabClientFacade, error)
+	gitlabOauth2ClientFactory   func(token models.GitLabOauth2Token) (gitlabClientFacade, error)
 }
 
 var _ core.ThirdPartyIntegration = &gitlabIntegration{}
@@ -83,7 +89,7 @@ func messageWasCreatedByDevguard(message string) bool {
 	return strings.Contains(message, "<devguard>")
 }
 
-func NewGitLabIntegration(db core.DB) *gitlabIntegration {
+func NewGitLabIntegration(oauth2GitlabIntegration map[string]*gitlabOauth2Integration, db core.DB) *gitlabIntegration {
 	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
 
 	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
@@ -95,6 +101,7 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	projectRepository := repositories.NewProjectRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
+	gitlabOauth2TokenRepository := repositories.NewGitlabOauth2TokenRepository(db)
 
 	orgRepository := repositories.NewOrgRepository(db)
 
@@ -104,6 +111,8 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	}
 
 	return &gitlabIntegration{
+		oauth2Endpoints:             oauth2GitlabIntegration,
+		gitlabOauth2TokenRepository: gitlabOauth2TokenRepository,
 		frontendUrl:                 frontendUrl,
 		aggregatedVulnRepository:    aggregatedVulnRepository,
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
@@ -128,13 +137,19 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 				return nil, err
 			}
 
-			return gitlabClient{Client: client, GitLabIntegration: integration}, nil
+			return gitlabClient{Client: client, clientID: integration.ID.String()}, nil
+		},
+
+		gitlabOauth2ClientFactory: func(token models.GitLabOauth2Token) (gitlabClientFacade, error) {
+			// get the correct gitlab oauth2 integration configuration
+			for _, integration := range oauth2GitlabIntegration {
+				if integration.gitlabBaseURL == token.BaseURL {
+					return buildOauth2GitlabClient(token, integration)
+				}
+			}
+			return nil, errors.New("could not find gitlab oauth2 integration")
 		},
 	}
-}
-
-func (g *gitlabIntegration) IntegrationEnabled(ctx core.Context) bool {
-	return len(core.GetOrganization(ctx).GitLabIntegrations) > 0
 }
 
 func (g *gitlabIntegration) WantsToHandleWebhook(ctx core.Context) bool {
@@ -413,9 +428,21 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 }
 
 func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
-	org := core.GetOrganization(ctx)
+	var organizationGitlabIntegrations []models.GitLabIntegration
+	if core.HasOrganization(ctx) {
+		org := core.GetOrganization(ctx)
+		organizationGitlabIntegrations = org.GitLabIntegrations
+	}
+
+	// get the oauth2 tokens for this user
+	tokens, err := g.gitlabOauth2TokenRepository.FindByUserId(core.GetSession(ctx).GetUserID())
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return nil, err
+	}
+
 	// create a new gitlab batch client
-	gitlabBatchClient, err := newGitLabBatchClient(org.GitLabIntegrations)
+	gitlabBatchClient, err := newGitLabBatchClient(organizationGitlabIntegrations, g.oauth2Endpoints, tokens)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return nil, err

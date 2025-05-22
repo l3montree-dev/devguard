@@ -289,6 +289,7 @@ type GitlabIntegrationRepository interface {
 type GitLabOauth2TokenRepository interface {
 	Save(tx DB, model *models.GitLabOauth2Token) error
 	FindByUserIdAndBaseURL(userId string, baseURL string) (*models.GitLabOauth2Token, error)
+	FindByUserId(userId string) ([]models.GitLabOauth2Token, error)
 }
 
 type ConfigService interface {

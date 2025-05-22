@@ -16,7 +16,9 @@ func RecalculateRisk(db core.DB) error {
 		monitoring.RecalculateAllRawRiskAssessmentsDuration.Observe(time.Since(start).Minutes())
 	}()
 	githubIntegration := integrations.NewGithubIntegration(db)
-	gitlabIntegration := integrations.NewGitLabIntegration(db)
+
+	gitlabOauth2Integrations := integrations.NewGitLabOauth2Integrations(db)
+	gitlabIntegration := integrations.NewGitLabIntegration(gitlabOauth2Integrations, db)
 
 	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 

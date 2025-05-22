@@ -17,7 +17,8 @@ func SyncTickets(db core.DB) error {
 	}()
 
 	githubIntegration := integrations.NewGithubIntegration(db)
-	gitlabIntegration := integrations.NewGitLabIntegration(db)
+	gitlabOauth2Integrations := integrations.NewGitLabOauth2Integrations(db)
+	gitlabIntegration := integrations.NewGitLabIntegration(gitlabOauth2Integrations, db)
 
 	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 

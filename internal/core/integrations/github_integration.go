@@ -155,16 +155,11 @@ func (githubIntegration *githubIntegration) GetID() core.IntegrationID {
 	return core.GitHubIntegrationID
 }
 
-func (githubIntegration *githubIntegration) IntegrationEnabled(ctx core.Context) bool {
-	// check if the github app installation exists in the database
-	organization := core.GetOrganization(ctx)
-	return len(organization.GithubAppInstallations) > 0
-}
-
 func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
-	// check if we have integrations
-	if !githubIntegration.IntegrationEnabled(ctx) {
-		return nil, NoGithubAppInstallationError
+	if !core.HasOrganization(ctx) {
+		// github integration is connected to an organization not a user
+		// thus we NEED an organization for this
+		return []core.Repository{}, nil
 	}
 
 	organization := core.GetOrganization(ctx)
