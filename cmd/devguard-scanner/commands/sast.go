@@ -18,9 +18,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func printSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, assetName string) {
+func printSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, assetName string, assetVersionName string) {
 	tw := table.NewWriter()
-	tw.SetAllowedRowLength(180)
+	tw.SetAllowedRowLength(155)
 
 	blue := text.FgBlue
 	green := text.FgGreen
@@ -29,12 +29,12 @@ func printSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, asset
 		if vuln.Snippet != "" {
 			tw.AppendRow(table.Row{"Snippet", vuln.Snippet})
 		}
-		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 130)})
+		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 105)})
 		if vuln.Uri != "" {
 			tw.AppendRow(table.Row{"File", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))})
 			tw.AppendRow(table.Row{"Line", vuln.StartLine})
 		}
-		tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/code-risks/%s", webUI, assetName, vuln.ID))})
+		tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/%s", webUI, assetName, assetVersionName, vuln.ID))})
 		tw.AppendSeparator()
 	}
 
