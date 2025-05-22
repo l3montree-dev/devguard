@@ -281,6 +281,30 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
+		// get the integration id based on the asset
+		integrationId, err := extractIntegrationIdFromRepoId(utils.SafeDereference(asset.RepositoryID))
+		if err != nil {
+			slog.Error("could not extract integration id from repo id", "err", err)
+			return err
+		}
+
+		// make sure to update the github issue accordingly
+		client, err := g.gitlabClientFactory(integrationId)
+		if err != nil {
+			slog.Error("could not create github client", "err", err)
+			return err
+		}
+
+		isAuthorized, err := isGitlabUserAuthorized(event, client)
+		if err != nil {
+			return err
+		}
+		//if the user is not authorized we are done here
+		if !isAuthorized {
+			slog.Info("user not authorized for commands")
+			return ctx.JSON(200, "ok")
+		}
+
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
@@ -325,59 +349,27 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		})
 		if err != nil {
 			slog.Error("could not save dependencyVuln and event", "err", err)
-			return err
+
 		}
 
-		// get the integration id based on the asset
-		integrationId, err := extractIntegrationIdFromRepoId(utils.SafeDereference(asset.RepositoryID))
-		if err != nil {
-			slog.Error("could not extract integration id from repo id", "err", err)
+		gitlabProjectID := event.ProjectID
+		switch vulnEvent.Type {
+		case models.EventTypeAccepted, models.EventTypeFalsePositive:
+			labels := getLabels(vuln)
+			_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
+				StateEvent: gitlab.Ptr("close"),
+				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
+			})
 			return err
-		}
-
-		// make sure to update the github issue accordingly
-		client, err := g.gitlabClientFactory(integrationId)
-		if err != nil {
-			slog.Error("could not create github client", "err", err)
+		case models.EventTypeReopened:
+			labels := getLabels(vuln)
+			_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
+				StateEvent: gitlab.Ptr("reopen"),
+				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
+			})
 			return err
-		}
-
-		isMember, err := isGitlabUserAuthorized(event, client)
-		if err != nil {
-			return err
-		}
-		//Check if the user should be able to use commands
-		//TODO : Check member role ?
-		if isMember {
-			gitlabProjectID := event.ProjectID
-			switch vulnEvent.Type {
-			case models.EventTypeAccepted:
-				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
-					StateEvent: gitlab.Ptr("close"),
-					Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
-				})
-				return err
-			case models.EventTypeFalsePositive:
-				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
-					StateEvent: gitlab.Ptr("close"),
-					Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
-				})
-				return err
-			case models.EventTypeReopened:
-				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
-					StateEvent: gitlab.Ptr("reopen"),
-					Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
-				})
-				return err
-			}
-		} else {
-			slog.Info("user not authorized for commands")
 		}
 	}
-
 	return ctx.JSON(200, "ok")
 }
 

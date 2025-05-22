@@ -315,9 +315,20 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
-		// the issue is a devguard issue.
-		// lets check what the comment is about
-		comment := event.Comment.GetBody()
+		client, err := githubIntegration.githubClientFactory(utils.SafeDereference(asset.RepositoryID))
+		if err != nil {
+			slog.Error("could not create github client", "err", err)
+			return err
+		}
+
+		isAuthorized, err := isGithubUserAuthorized(event, client)
+		if err != nil {
+			return err
+		}
+		if !isAuthorized {
+			slog.Info("user not authorized for commands")
+			return ctx.JSON(200, "ok")
+		}
 
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
@@ -345,6 +356,10 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			}
 		}()
 
+		// the issue is a devguard issue.
+		// lets check what the comment is about
+		comment := event.Comment.GetBody()
+
 		// create a new event based on the comment
 		vulnEvent := createNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment, vuln.GetScannerIDs())
 
@@ -366,44 +381,26 @@ func (githubIntegration *githubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
-		client, err := githubIntegration.githubClientFactory(utils.SafeDereference(asset.RepositoryID))
-		if err != nil {
-			slog.Error("could not create github client", "err", err)
+		ownerName := *event.Repo.Owner.Login
+		repoName := *event.Repo.Name
+
+		switch vulnEvent.Type {
+		case models.EventTypeAccepted, models.EventTypeFalsePositive:
+			labels := getLabels(vuln)
+			_, _, err = client.EditIssue(ctx.Request().Context(), ownerName, repoName, issueNumber, &github.IssueRequest{
+				State:  github.String("closed"),
+				Labels: &labels,
+			})
+			return err
+		case models.EventTypeReopened:
+			labels := getLabels(vuln)
+			_, _, err = client.EditIssue(ctx.Request().Context(), ownerName, repoName, issueNumber, &github.IssueRequest{
+				State:  github.String("open"),
+				Labels: &labels,
+			})
 			return err
 		}
 
-		isCollaborator, err := isGithubUserAuthorized(event, client)
-		if err != nil {
-			return err
-		}
-
-		if isCollaborator {
-			switch vulnEvent.Type {
-			case models.EventTypeAccepted:
-				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), *event.Repo.Owner.Login, *event.Repo.Name, issueNumber, &github.IssueRequest{
-					State:  github.String("closed"),
-					Labels: &labels,
-				})
-				return err
-			case models.EventTypeFalsePositive:
-				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), *event.Repo.Owner.Login, *event.Repo.Name, issueNumber, &github.IssueRequest{
-					State:  github.String("closed"),
-					Labels: &labels,
-				})
-				return err
-			case models.EventTypeReopened:
-				labels := getLabels(vuln)
-				_, _, err = client.EditIssue(ctx.Request().Context(), *event.Repo.Owner.Login, *event.Repo.Name, issueNumber, &github.IssueRequest{
-					State:  github.String("open"),
-					Labels: &labels,
-				})
-				return err
-			}
-		} else {
-			slog.Info("user not authorized for commands")
-		}
 	case *github.InstallationEvent:
 		// check what type of action is being performed
 		switch *event.Action {
