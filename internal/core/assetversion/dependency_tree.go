@@ -137,7 +137,7 @@ func escapeAtSign(pURL string) string {
 
 func (t *tree) RenderToMermaid() string {
 	//basic string to tell markdown that we have a mermaid flow chart with given parameters
-	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart TD\n"
+	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'dark', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n"
 
 	var builder strings.Builder
 	builder.WriteString(mermaidFlowChart)
@@ -160,7 +160,7 @@ func (t *tree) RenderToMermaid() string {
 			if err != nil {
 				toLabel = child.Name
 			}
-			path := fmt.Sprintf("%s[\"%s\"] --> %s[\"%s\"]\n",
+			path := fmt.Sprintf("%s([\"%s\"]) --- %s([\"%s\"])\n",
 				escapeNodeID(fromLabel), escapeAtSign(fromLabel), escapeNodeID(toLabel), escapeAtSign(toLabel))
 			if existingPaths[path] {
 				// skip if path already exists
@@ -176,7 +176,7 @@ func (t *tree) RenderToMermaid() string {
 
 	renderPaths(t.Root)
 
-	return "```" + builder.String() + "\n```\n"
+	return "```" + builder.String() + "\nclassDef default stroke-width:2px\n```\n"
 }
 
 func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
