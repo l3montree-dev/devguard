@@ -287,7 +287,8 @@ type GitlabIntegrationRepository interface {
 }
 
 type GitLabOauth2TokenRepository interface {
-	common.Repository[uuid.UUID, models.GitLabOauth2Token, DB]
+	Save(tx DB, model *models.GitLabOauth2Token) error
+	FindByUserIdAndBaseURL(userId string, baseURL string) (*models.GitLabOauth2Token, error)
 }
 
 type ConfigService interface {

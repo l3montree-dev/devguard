@@ -24,6 +24,7 @@ import (
 )
 
 type integrationController struct {
+	gitlabOauth2Integration map[string]*gitlabOauth2Integration
 }
 
 func commentTrimmedFalsePositivePrefix(comment string) (models.VulnEventType, models.MechanicalJustificationType, string) {
@@ -62,8 +63,10 @@ func createNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, u
 	return models.VulnEvent{}
 }
 
-func NewIntegrationController() *integrationController {
-	return &integrationController{}
+func NewIntegrationController(gitlabOauth2Integration map[string]*gitlabOauth2Integration) *integrationController {
+	return &integrationController{
+		gitlabOauth2Integration: gitlabOauth2Integration,
+	}
 }
 
 func (c *integrationController) AutoSetup(ctx core.Context) error {
@@ -130,18 +133,38 @@ func (c *integrationController) TestAndSaveGitLabIntegration(ctx core.Context) e
 }
 
 func (c *integrationController) GitLabOauth2Callback(ctx core.Context) error {
-	// this function will be called by the gitlab oauth2 callback.
-	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
-	if gl == nil {
-		return ctx.JSON(404, "GitLab integration not enabled")
+	integrationName := core.GetParam(ctx, "integrationName")
+	if integrationName == "" {
+		return ctx.JSON(400, "integrationName is missing")
 	}
 
-	if err := gl.(*gitlabIntegration).Oauth2Callback(ctx); err != nil {
+	oauth2Integration := c.gitlabOauth2Integration[integrationName]
+	if oauth2Integration == nil {
+		return ctx.JSON(404, "GitLab integration not found")
+	}
+
+	if err := oauth2Integration.Oauth2Callback(ctx); err != nil {
 		slog.Error("could not handle GitLab oauth2 callback", "err", err)
 		return err
 	}
+	return nil
+}
 
+func (c *integrationController) GitLabOauth2Login(ctx core.Context) error {
+	integrationName := core.GetParam(ctx, "integrationName")
+	if integrationName == "" {
+		return ctx.JSON(400, "integrationName is missing")
+	}
+
+	oauth2Integration := c.gitlabOauth2Integration[integrationName]
+	if oauth2Integration == nil {
+		return ctx.JSON(404, "GitLab integration not found")
+	}
+
+	if err := oauth2Integration.Oauth2Login(ctx); err != nil {
+		slog.Error("could not handle GitLab oauth2 login", "err", err)
+		return err
+	}
 	return nil
 }
 

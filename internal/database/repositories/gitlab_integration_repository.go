@@ -51,7 +51,6 @@ func (r *gitlabIntegrationRepository) FindByOrganizationId(orgId uuid.UUID) ([]m
 
 type gitlabOauth2TokenRepository struct {
 	db core.DB
-	common.Repository[uuid.UUID, models.GitLabOauth2Token, core.DB]
 }
 
 func NewGitlabOauth2TokenRepository(db core.DB) *gitlabOauth2TokenRepository {
@@ -61,7 +60,21 @@ func NewGitlabOauth2TokenRepository(db core.DB) *gitlabOauth2TokenRepository {
 		}
 	}
 	return &gitlabOauth2TokenRepository{
-		db:         db,
-		Repository: newGormRepository[uuid.UUID, models.GitLabOauth2Token](db),
+		db: db,
 	}
+}
+
+func (r *gitlabOauth2TokenRepository) Save(tx core.DB, token *models.GitLabOauth2Token) error {
+	if err := r.db.Save(token).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *gitlabOauth2TokenRepository) FindByUserIdAndBaseURL(userId string, baseURL string) (*models.GitLabOauth2Token, error) {
+	var token models.GitLabOauth2Token
+	if err := r.db.Where("user_id = ? AND base_url = ?", userId, baseURL).First(&token).Error; err != nil {
+		return nil, err
+	}
+	return &token, nil
 }

@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 
+	"slices"
+
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -61,32 +63,24 @@ func (g gitlabRepository) toRepository() core.Repository {
 
 type gitlabIntegration struct {
 	gitlabIntegrationRepository core.GitlabIntegrationRepository
-	// gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
-
-	externalUserRepository core.ExternalUserRepository
-
-	firstPartyVulnRepository core.FirstPartyVulnRepository
-	aggregatedVulnRepository core.VulnRepository
-	//TODO: remove this
-	dependencyVulnRepository core.DependencyVulnRepository
-	vulnEventRepository      core.VulnEventRepository
-	frontendUrl              string
-	orgRepository            core.OrganizationRepository
-
-	projectRepository      core.ProjectRepository
-	assetRepository        core.AssetRepository
-	assetVersionRepository core.AssetVersionRepository
-	componentRepository    core.ComponentRepository
-
-	gitlabClientFactory func(id uuid.UUID) (gitlabClientFacade, error)
+	externalUserRepository      core.ExternalUserRepository
+	firstPartyVulnRepository    core.FirstPartyVulnRepository
+	aggregatedVulnRepository    core.VulnRepository
+	dependencyVulnRepository    core.DependencyVulnRepository
+	vulnEventRepository         core.VulnEventRepository
+	frontendUrl                 string
+	orgRepository               core.OrganizationRepository
+	projectRepository           core.ProjectRepository
+	assetRepository             core.AssetRepository
+	assetVersionRepository      core.AssetVersionRepository
+	componentRepository         core.ComponentRepository
+	gitlabClientFactory         func(id uuid.UUID) (gitlabClientFacade, error)
 }
 
 var _ core.ThirdPartyIntegration = &gitlabIntegration{}
 
 func messageWasCreatedByDevguard(message string) bool {
-
 	return strings.Contains(message, "<devguard>")
-
 }
 
 func NewGitLabIntegration(db core.DB) *gitlabIntegration {
@@ -149,15 +143,10 @@ func (g *gitlabIntegration) WantsToHandleWebhook(ctx core.Context) bool {
 }
 
 func isEventSubscribed(event gitlab.EventType) bool {
-	for _, e := range []gitlab.EventType{
+	return slices.Contains([]gitlab.EventType{
 		gitlab.EventTypeNote,
 		gitlab.EventTypeIssue,
-	} {
-		if event == e {
-			return true
-		}
-	}
-	return false
+	}, event)
 }
 
 func parseWebhook(r *http.Request) (any, error) {
@@ -1384,8 +1373,4 @@ func (g *gitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	return createdIssue, err
-}
-
-func (c *gitlabIntegration) Oauth2Callback(ctx core.Context) error {
-	return nil
 }

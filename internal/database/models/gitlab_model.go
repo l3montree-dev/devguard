@@ -16,17 +16,27 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
 type GitLabOauth2Token struct {
 	// oauth2 token using GitLab Applications feature
-	Model
-	AccessToken  string `json:"accessToken" gorm:"column:access_token"`
-	RefreshToken string `json:"refreshToken" gorm:"column:refresh_token"`
-	ExpiresAt    int64  `json:"expiresAt" gorm:"column:expires_at"`
-	Scopes       string `json:"scopes" gorm:"column:scopes"`
-	UserID       string `json:"userId" gorm:"column:user_id"` // the gitlab user id
+	AccessToken  string    `json:"accessToken" gorm:"column:access_token"`
+	RefreshToken string    `json:"refreshToken" gorm:"column:refresh_token"`
+	ExpiresAt    int64     `json:"expiresAt" gorm:"column:expires_at"`
+	Scopes       string    `json:"scopes" gorm:"column:scopes"`
+	UserID       string    `json:"userId" gorm:"column:user_id;primaryKey"` // the gitlab user id
+	Expiry       time.Time `json:"expiry" gorm:"column:expiry"`
+	Verifier     *string   `json:"verifier" gorm:"column:verifier"`           // used for the PKCE to protect against CSRF attacks during doing oauth2
+	BaseURL      string    `json:"baseUrl" gorm:"column:base_url;primaryKey"` // the base url of the gitlab instance
+	CreatedAt    time.Time `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt    time.Time `json:"updatedAt" gorm:"column:updated_at"`
+}
+
+func (GitLabOauth2Token) TableName() string {
+	return "gitlab_oauth2_tokens"
 }
 
 type GitLabIntegration struct {

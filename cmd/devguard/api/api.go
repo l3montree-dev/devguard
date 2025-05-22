@@ -353,8 +353,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 		panic(err)
 	}
 	githubIntegration := integrations.NewGithubIntegration(db)
-	gitlabIntegration := integrations.NewGitLabIntegration(db)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
+	gitlabIntegrations := integrations.NewGitLabIntegration(db)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegrations, githubIntegration)
 
 	// init all repositories using the provided database
 	patRepository := repositories.NewPATRepository(db)
@@ -416,7 +416,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	server := echohttp.Server()
 
-	integrationController := integrations.NewIntegrationController()
+	gitlabOauth2Integrations := integrations.NewGitLabOauth2Integrations(db)
+	integrationController := integrations.NewIntegrationController(gitlabOauth2Integrations)
 
 	apiV1Router := server.Group("/api/v1")
 
@@ -438,14 +439,17 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
 
-	apiV1Router.POST("/webhook/", integrationController.HandleWebhook)
+	apiV1Router.POST("/webhook/", githubIntegration.HandleWebhook)
+
 	// apply the health route without any session or multi organization middleware
 	apiV1Router.GET("/health/", health)
 
-	apiV1Router.GET("/badges/:badge/:badgeSecret", assetController.GetBadges)
+	apiV1Router.GET("/badges/:badge/:badgeSecret/", assetController.GetBadges)
 
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
+	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
+	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)
 	// register a simple whoami route for testing purposes
 	sessionRouter.GET("/whoami/", whoami)
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, neededScope([]string{"manage"}))
