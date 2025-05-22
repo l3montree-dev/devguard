@@ -254,6 +254,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	} else {
 		str.WriteString("No fix is available.\n")
 	}
+	str.WriteString("\n<details>\n\n<summary>See more details...</summary>\n")
 	str.WriteString("\n### Path to component\n")
 	str.WriteString(mermaidPathToComponent)
 
@@ -267,7 +268,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	str.WriteString("\n")
 	//TODO: change it
 	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
-	str.WriteString("\n")
+	str.WriteString("\n\n</details>\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
 	str.WriteString("\n")
