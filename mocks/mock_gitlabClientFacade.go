@@ -553,6 +553,50 @@ func (_c *GitlabClientFacade_EditIssueLabel_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// GetClientID provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) GetClientID() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetClientID")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// GitlabClientFacade_GetClientID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetClientID'
+type GitlabClientFacade_GetClientID_Call struct {
+	*mock.Call
+}
+
+// GetClientID is a helper method to define mock.On call
+func (_e *GitlabClientFacade_Expecter) GetClientID() *GitlabClientFacade_GetClientID_Call {
+	return &GitlabClientFacade_GetClientID_Call{Call: _e.mock.On("GetClientID")}
+}
+
+func (_c *GitlabClientFacade_GetClientID_Call) Run(run func()) *GitlabClientFacade_GetClientID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetClientID_Call) Return(s string) *GitlabClientFacade_GetClientID_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetClientID_Call) RunAndReturn(run func() string) *GitlabClientFacade_GetClientID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetProject provides a mock function for the type GitlabClientFacade
 func (_mock *GitlabClientFacade) GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error) {
 	ret := _mock.Called(ctx, projectId)
@@ -680,6 +724,71 @@ func (_c *GitlabClientFacade_ListProjectHooks_Call) Return(projectHooks []*gitla
 }
 
 func (_c *GitlabClientFacade_ListProjectHooks_Call) RunAndReturn(run func(ctx context.Context, projectId int, options *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error)) *GitlabClientFacade_ListProjectHooks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListProjects provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) ListProjects(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error) {
+	ret := _mock.Called(ctx, opt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListProjects")
+	}
+
+	var r0 []*gitlab.Project
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)); ok {
+		return returnFunc(ctx, opt)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *gitlab.ListProjectsOptions) []*gitlab.Project); ok {
+		r0 = returnFunc(ctx, opt)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*gitlab.Project)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *gitlab.ListProjectsOptions) *gitlab.Response); ok {
+		r1 = returnFunc(ctx, opt)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, *gitlab.ListProjectsOptions) error); ok {
+		r2 = returnFunc(ctx, opt)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_ListProjects_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListProjects'
+type GitlabClientFacade_ListProjects_Call struct {
+	*mock.Call
+}
+
+// ListProjects is a helper method to define mock.On call
+//   - ctx
+//   - opt
+func (_e *GitlabClientFacade_Expecter) ListProjects(ctx interface{}, opt interface{}) *GitlabClientFacade_ListProjects_Call {
+	return &GitlabClientFacade_ListProjects_Call{Call: _e.mock.On("ListProjects", ctx, opt)}
+}
+
+func (_c *GitlabClientFacade_ListProjects_Call) Run(run func(ctx context.Context, opt *gitlab.ListProjectsOptions)) *GitlabClientFacade_ListProjects_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*gitlab.ListProjectsOptions))
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_ListProjects_Call) Return(projects []*gitlab.Project, response *gitlab.Response, err error) *GitlabClientFacade_ListProjects_Call {
+	_c.Call.Return(projects, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_ListProjects_Call) RunAndReturn(run func(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)) *GitlabClientFacade_ListProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }

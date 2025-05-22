@@ -368,51 +368,6 @@ func (_c *IntegrationAggregate_HandleWebhook_Call) RunAndReturn(run func(ctx cor
 	return _c
 }
 
-// IntegrationEnabled provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) IntegrationEnabled(ctx core.Context) bool {
-	ret := _mock.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for IntegrationEnabled")
-	}
-
-	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(core.Context) bool); ok {
-		r0 = returnFunc(ctx)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	return r0
-}
-
-// IntegrationAggregate_IntegrationEnabled_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IntegrationEnabled'
-type IntegrationAggregate_IntegrationEnabled_Call struct {
-	*mock.Call
-}
-
-// IntegrationEnabled is a helper method to define mock.On call
-//   - ctx
-func (_e *IntegrationAggregate_Expecter) IntegrationEnabled(ctx interface{}) *IntegrationAggregate_IntegrationEnabled_Call {
-	return &IntegrationAggregate_IntegrationEnabled_Call{Call: _e.mock.On("IntegrationEnabled", ctx)}
-}
-
-func (_c *IntegrationAggregate_IntegrationEnabled_Call) Run(run func(ctx core.Context)) *IntegrationAggregate_IntegrationEnabled_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.Context))
-	})
-	return _c
-}
-
-func (_c *IntegrationAggregate_IntegrationEnabled_Call) Return(b bool) *IntegrationAggregate_IntegrationEnabled_Call {
-	_c.Call.Return(b)
-	return _c
-}
-
-func (_c *IntegrationAggregate_IntegrationEnabled_Call) RunAndReturn(run func(ctx core.Context) bool) *IntegrationAggregate_IntegrationEnabled_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // ListRepositories provides a mock function for the type IntegrationAggregate
 func (_mock *IntegrationAggregate) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	ret := _mock.Called(ctx)

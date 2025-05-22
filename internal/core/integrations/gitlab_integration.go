@@ -441,6 +441,46 @@ func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 		return nil, err
 	}
 
+	if len(tokens) == 0 {
+		// check if the user has a gitlab login
+		// we can even improve the response by checking if the user has a gitlab login
+		// todo this, fetch the kratos user and check if the user has a gitlab login
+		adminClient := core.GetAuthAdminClient(ctx)
+
+		identity, err := adminClient.GetIdentityWithCredentials(ctx.Request().Context(), core.GetSession(ctx).GetUserID())
+		if err != nil {
+			slog.Error("failed to get identity", "err", err)
+			return nil, err
+		}
+
+		tokens, err := getGitlabAccessTokenFromOryIdentity(g.oauth2Endpoints, identity)
+		if err != nil {
+			slog.Error("failed to get gitlab access token from ory identity", "err", err)
+			return nil, err
+		}
+
+		tokenSlice := make([]models.GitLabOauth2Token, 0, len(tokens))
+		for providerId, token := range tokens {
+			tokenSlice = append(tokenSlice, models.GitLabOauth2Token{
+				AccessToken:  token.AccessToken,
+				RefreshToken: token.RefreshToken,
+				BaseURL:      token.BaseURL,
+				GitLabUserID: token.GitLabUserID,
+				UserID:       core.GetSession(ctx).GetUserID(),
+				ProviderID:   providerId,
+			})
+		}
+
+		if len(tokenSlice) != 0 {
+			// save the tokens in the database
+			err = g.gitlabOauth2TokenRepository.Save(nil, utils.SlicePtr(tokenSlice)...)
+			if err != nil {
+				slog.Error("failed to save gitlab oauth2 tokens", "err", err)
+				return nil, err
+			}
+		}
+	}
+
 	// create a new gitlab batch client
 	gitlabBatchClient, err := newGitLabBatchClient(organizationGitlabIntegrations, g.oauth2Endpoints, tokens)
 	if err != nil {

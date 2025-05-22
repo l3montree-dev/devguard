@@ -44,6 +44,7 @@ func SetThirdPartyIntegration(ctx Context, i IntegrationAggregate) {
 type AdminClient interface {
 	ListUser(client client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error)
 	GetIdentity(ctx context.Context, userID string) (client.Identity, error)
+	GetIdentityWithCredentials(ctx context.Context, userID string) (client.Identity, error)
 }
 
 type adminClientImplementation struct {
@@ -58,6 +59,14 @@ func NewAdminClient(client *client.APIClient) adminClientImplementation {
 func (a adminClientImplementation) ListUser(request client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error) {
 	clients, _, err := a.apiClient.IdentityAPI.ListIdentitiesExecute(request)
 	return clients, err
+}
+
+func (a adminClientImplementation) GetIdentityWithCredentials(ctx context.Context, userID string) (client.Identity, error) {
+	resp, _, err := a.apiClient.IdentityAPI.GetIdentity(ctx, userID).IncludeCredential([]string{"oidc"}).Execute()
+	if err != nil {
+		return client.Identity{}, err
+	}
+	return *resp, nil
 }
 
 func (a adminClientImplementation) GetIdentity(ctx context.Context, userID string) (client.Identity, error) {

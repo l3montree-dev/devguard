@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,12 +16,14 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/ory/client-go"
+	"github.com/pkg/errors"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"golang.org/x/oauth2"
 )
 
 type gitlabOauth2Integration struct {
-	id            string
+	providerID    string
 	gitlabBaseURL string
 
 	gitlabIntegrationRepository core.GitlabIntegrationRepository
@@ -147,7 +150,7 @@ func NewGitLabOauth2Integration(db core.DB, id, gitlabBaseURL, gitlabOauth2Clien
 
 	return &gitlabOauth2Integration{
 		gitlabBaseURL: gitlabBaseURL,
-		id:            id,
+		providerID:    id,
 		oauth2Conf: &oauth2.Config{
 			ClientID:     gitlabOauth2ClientID,
 			ClientSecret: gitlabOauth2ClientSecret,
@@ -245,7 +248,7 @@ func (c *gitlabOauth2Integration) Oauth2Callback(ctx core.Context) error {
 	}
 
 	// fetch the token model from the database
-	tokenModel, err := c.gitlabOauth2TokenRepository.FindByUserIdAndBaseURL(userID, c.gitlabBaseURL)
+	tokenModel, err := c.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, c.providerID)
 	if err != nil {
 		return ctx.JSON(404, map[string]any{
 			"message": "token model not found",
@@ -322,7 +325,7 @@ func (c *gitlabOauth2Integration) Oauth2Login(ctx core.Context) error {
 	url := c.oauth2Conf.AuthCodeURL("", oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(verifier))
 
 	// check if a token model already exists
-	tokenModel, err := c.gitlabOauth2TokenRepository.FindByUserIdAndBaseURL(userID, c.gitlabBaseURL)
+	tokenModel, err := c.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, c.providerID)
 	if err == nil {
 		// it does exist - update the verifier
 		tokenModel.Verifier = utils.Ptr(verifier)
@@ -337,10 +340,11 @@ func (c *gitlabOauth2Integration) Oauth2Login(ctx core.Context) error {
 
 	// save the verifier in the database
 	tokenModel = &models.GitLabOauth2Token{
-		Verifier:  utils.Ptr(verifier),
-		UserID:    userID,
-		BaseURL:   c.gitlabBaseURL,
-		CreatedAt: time.Now(),
+		Verifier:   utils.Ptr(verifier),
+		UserID:     userID,
+		BaseURL:    c.gitlabBaseURL,
+		CreatedAt:  time.Now(),
+		ProviderID: c.providerID,
 	}
 
 	err = c.gitlabOauth2TokenRepository.Save(nil, tokenModel)
@@ -351,4 +355,55 @@ func (c *gitlabOauth2Integration) Oauth2Login(ctx core.Context) error {
 
 	// redirect the user to the oauth2 url
 	return ctx.Redirect(302, url)
+}
+
+func getGitlabAccessTokenFromOryIdentity(oauth2Endpoints map[string]*gitlabOauth2Integration, identity client.Identity) (map[string]models.GitLabOauth2Token, error) {
+	mapProviderToken := make(map[string]models.GitLabOauth2Token)
+	// check if the user has a gitlab login
+	// we can even improve the response by checking if the user has a gitlab login
+	// todo this, fetch the kratos user and check if the user has a gitlab login
+	if identity.Credentials == nil {
+		return mapProviderToken, errors.New("no credentials found")
+	}
+
+	creds, ok := (*identity.Credentials)["oidc"]
+	if !ok {
+		return mapProviderToken, errors.New("no oidc credentials found")
+	}
+
+	// check if oidc creds exist
+	for _, provider := range creds.Config["providers"].([]any) {
+		// cast to map[string]interface{}
+		provider, ok := provider.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		providerName, ok := provider["provider"].(string)
+		// check if the providerName is in the oauth2Endpoints
+		if !ok || providerName == "" {
+			continue
+		}
+
+		conf, ok := oauth2Endpoints[providerName]
+		if !ok {
+			continue
+		}
+
+		gitlabUserIdInt, err := strconv.Atoi(provider["subject"].(string))
+		if err != nil {
+			slog.Error("could not convert gitlab user id to int", "err", err)
+			continue
+		}
+
+		mapProviderToken[providerName] = models.GitLabOauth2Token{
+			AccessToken:  provider["initial_access_token"].(string),
+			RefreshToken: provider["initial_refresh_token"].(string),
+			BaseURL:      conf.gitlabBaseURL,
+			GitLabUserID: gitlabUserIdInt,
+			Scopes:       "read_api", // I know that!
+		}
+	}
+
+	return mapProviderToken, nil
 }

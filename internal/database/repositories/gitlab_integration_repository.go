@@ -65,7 +65,7 @@ func NewGitlabOauth2TokenRepository(db core.DB) *gitlabOauth2TokenRepository {
 	}
 }
 
-func (r *gitlabOauth2TokenRepository) Save(tx core.DB, token *models.GitLabOauth2Token) error {
+func (r *gitlabOauth2TokenRepository) Save(tx core.DB, token ...*models.GitLabOauth2Token) error {
 	if err := r.db.Save(token).Error; err != nil {
 		return err
 	}
@@ -81,9 +81,9 @@ func (r *gitlabOauth2TokenRepository) Upsert(tx core.DB, token *models.GitLabOau
 	return nil
 }
 
-func (r *gitlabOauth2TokenRepository) FindByUserIdAndBaseURL(userId string, baseURL string) (*models.GitLabOauth2Token, error) {
+func (r *gitlabOauth2TokenRepository) FindByUserIdAndProviderId(userId string, providerId string) (*models.GitLabOauth2Token, error) {
 	var token models.GitLabOauth2Token
-	if err := r.db.Where("user_id = ? AND base_url = ?", userId, baseURL).First(&token).Error; err != nil {
+	if err := r.db.Where("user_id = ? AND provider_id = ?", userId, providerId).First(&token).Error; err != nil {
 		return nil, err
 	}
 	return &token, nil
