@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package risk_test
+package risk
 
 import (
 	"math"
@@ -21,8 +21,8 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/stretchr/testify/assert"
 )
 
 type tableTest struct {
@@ -51,7 +51,7 @@ func TestCalculateRawRisk(t *testing.T) {
 			AvailabilityRequirements:    "L",
 		}
 		affectedComponentDepth := 0
-		riskReport := risk.RawRisk(sut, env, affectedComponentDepth)
+		riskReport := RawRisk(sut, env, affectedComponentDepth)
 
 		if riskReport.Risk != 1.7 {
 			t.Errorf("Expected risk to be 1.7, got %f", riskReport.Risk)
@@ -66,7 +66,7 @@ func TestCalculateRisk(t *testing.T) {
 			Vector: "",
 		}
 		env := core.Environmental{}
-		riskMetrics, vector := risk.RiskCalculation(sut, env)
+		riskMetrics, vector := RiskCalculation(sut, env)
 
 		if riskMetrics.BaseScore != 0 {
 			t.Errorf("Expected base score to be 5, got %f", riskMetrics.BaseScore)
@@ -326,7 +326,7 @@ func TestCalculateRisk(t *testing.T) {
 			}
 			env := tableTest.env
 			expectedRiskMetrics := tableTest.metrics
-			riskMetrics, vector := risk.RiskCalculation(sut, env)
+			riskMetrics, vector := RiskCalculation(sut, env)
 
 			if !floatsEqual(riskMetrics.BaseScore, expectedRiskMetrics.BaseScore) {
 				t.Errorf("Expected base score to be %f, got %f", expectedRiskMetrics.BaseScore, riskMetrics.BaseScore)
@@ -349,6 +349,46 @@ func TestCalculateRisk(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGenerateCommandsToFixPackage(t *testing.T) {
+	t.Run("invalid package URL should result in an empty string", func(t *testing.T) {
+		result := generateCommandsToFixPackage("pk:golang/crypto@0.0.32")
+		assert.Equal(t, result, "")
+	})
+	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
+		result := generateCommandsToFixPackage("pk:golang/crypto@0.0.32")
+		assert.Equal(t, result, "")
+	})
+	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
+		result := generateCommandsToFixPackage("pkg:golang/crypto@0.0.32")
+		assert.Equal(t, "```\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get crypto@0.0.32 \n```", result)
+	})
+	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
+		result := generateCommandsToFixPackage("pkg:npm/crypto@0.0.32")
+		assert.Equal(t, "```\n# Update all vulnerable npm packages\nnpm audit fix\n# Update only this package\nnpm install crypto@0.0.32 \n```", result)
+	})
+	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
+		result := generateCommandsToFixPackage("pkg:crates.io/crypto@0.0.32")
+		assert.Equal(t, "```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# crypto = \"=0.0.32\"\n```", result)
+	})
+	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
+		result := generateCommandsToFixPackage("pkg:pypi/crypto@0.0.32")
+		assert.Equal(t, "```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install crypto==0.0.32\n```", result)
+	})
+	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
+		result := generateCommandsToFixPackage("pkg:apk/crypto@0.0.32")
+		assert.Equal(t, "```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add crypto=0.0.32\n```", result)
+	})
+	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
+		result := generateCommandsToFixPackage("pkg:deb/crypto@0.0.32")
+		assert.Equal(t, "```\n# Update all debian packages\napt Update && apt upgrade\n# Update only this package\napt install crypto=0.0.32\n```", result)
+	})
+	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
+		result := generateCommandsToFixPackage("pkg:NuGet/crypto@0.0.32")
+		assert.Equal(t, "```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package crypto --version 0.0.32\n```", result)
+	})
+
 }
 
 func floatsEqual(a, b float64) bool {

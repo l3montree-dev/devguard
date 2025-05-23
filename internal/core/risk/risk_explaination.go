@@ -331,7 +331,7 @@ func generateCommandsToFixPackage(pURL string) string {
 		return fmt.Sprintf("```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install %s==%s\n```", parsedPurl.Name, parsedPurl.Version)
 	case "crates.io":
 		return fmt.Sprintf("```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# %s = \"=%s\"\n```", parsedPurl.Name, parsedPurl.Version)
-	case "NuGet":
+	case "nuget":
 		return fmt.Sprintf("```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package %s --version %s\n```", parsedPurl.Name, parsedPurl.Version)
 	case "apk":
 		return fmt.Sprintf("```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add %s=%s\n```", parsedPurl.Name, parsedPurl.Version)
