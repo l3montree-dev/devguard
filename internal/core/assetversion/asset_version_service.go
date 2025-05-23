@@ -799,7 +799,7 @@ func getDatesForVulnerabilityEvent(s *service, dependencyVulnId string) (time.Ti
 	firstIssued := time.Time{}
 	lastUpdated := time.Time{}
 	if err != nil {
-		slog.Error("Failed to read vulnerability events from database:", err)
+		slog.Error("Failed to read vulnerability events from database:", err.Error())
 	} else if len(events) > 0 {
 		firstIssued = time.Now()
 		for _, event := range events {
