@@ -41,9 +41,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		v.ComponentFixedVersion = &componentFixedVersion
 		v.State = models.VulnState("Example State")
 
-		clickableLink := "Example Link"
-
-		output := dependencyVulnToTableRow(pURL, v, clickableLink)
+		output := dependencyVulnToTableRow(pURL, v)
 		firstValue := fmt.Sprintln(output[0])
 		count := strings.Count(firstValue, "/")
 		assert.Equal(t, 2, count, "should be equal")
@@ -65,9 +63,7 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 		v.ComponentFixedVersion = &componentFixedVersion
 		v.State = models.VulnState("Example State")
 
-		clickableLink := "Example Link"
-
-		output := dependencyVulnToTableRow(pURL, v, clickableLink)
+		output := dependencyVulnToTableRow(pURL, v)
 		firstValue := fmt.Sprintln(output[0])
 		count := strings.Count(firstValue, "/")
 

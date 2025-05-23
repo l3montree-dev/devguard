@@ -101,7 +101,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not parse response")
 	}
 
-	return printFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.ScannerID)
+	return printFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref, config.RuntimeBaseConfig.ScannerID)
 }
 
 func NewSarifCommand() *cobra.Command {
@@ -258,7 +258,7 @@ func obfuscateSecret(sarifScan *common.SarifResult) {
 	}
 }
 
-func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, scannerID string) error {
+func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetName string, webUI string, assetVersionName string, scannerID string) error {
 
 	if len(scanResponse.FirstPartyVulns) == 0 {
 		return nil
@@ -271,9 +271,9 @@ func printFirstPartyScanResults(scanResponse scan.FirstPartyScanResponse, assetN
 
 	switch scannerID {
 	case "secret-scanning":
-		printSecretScanResults(openVulns, webUI, assetName)
+		printSecretScanResults(openVulns, webUI, assetName, assetVersionName)
 	default:
-		printSastScanResults(openVulns, webUI, assetName)
+		printSastScanResults(openVulns, webUI, assetName, assetVersionName)
 	}
 
 	if len(openVulns) > 0 {
@@ -342,7 +342,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return errors.Wrap(err, "could not parse response")
 		}
 
-		return printFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.AssetName, scannerID)
+		return printFirstPartyScanResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI, config.RuntimeBaseConfig.Ref, scannerID)
 	}
 }
 
