@@ -111,7 +111,7 @@ func TestHandleProject(t *testing.T) {
 			ProjectKey: "github/test/project",
 		}
 
-		var scoreCard common.Scorecard = common.Scorecard{
+		var scoreCard = common.Scorecard{
 			Date: time.Now(),
 			Repository: struct {
 				Name   string "json:\"name\""

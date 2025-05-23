@@ -55,7 +55,7 @@ func Start(db core.DB) {
 		// we only update the vulnerability database each 6 hours.
 		// thus there is no need to recalculate the risk or anything earlier
 		slog.Info("starting background jobs", "time", time.Now())
-		var start time.Time = time.Now()
+		var start = time.Now()
 		// update deps dev
 		if shouldMirror(configService, "vulndb.depsdev") {
 			err := UpdateDepsDevInformation(db)

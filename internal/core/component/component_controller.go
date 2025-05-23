@@ -40,7 +40,7 @@ func (httpController httpController) LicenseDistribution(c core.Context) error {
 		scannerId,
 	)
 
-	var res []licenseResponse = make([]licenseResponse, 0, len(licenses))
+	var res = make([]licenseResponse, 0, len(licenses))
 	for id, count := range licenses {
 		// get the license from the license repository
 		l, ok := licenseMap[id]
@@ -86,7 +86,7 @@ func (httpController httpController) ListPaged(c core.Context) error {
 		return err
 	}
 
-	var componentsDTO []componentDTO = make([]componentDTO, 0, len(components.Data))
+	var componentsDTO = make([]componentDTO, 0, len(components.Data))
 
 	for _, component := range components.Data {
 		componentsDTO = append(componentsDTO, toDTO(component))

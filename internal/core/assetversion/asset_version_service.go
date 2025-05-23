@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -505,7 +504,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
-		SpecVersion: cyclonedx.SpecVersion1_5,
+		SpecVersion: cdx.SpecVersion1_5,
 		Version:     1,
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
@@ -649,7 +648,7 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
-		SpecVersion: cyclonedx.SpecVersion1_5,
+		SpecVersion: cdx.SpecVersion1_5,
 		Version:     1,
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),

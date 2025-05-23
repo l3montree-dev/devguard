@@ -95,7 +95,7 @@ func generateSlsaProvenance(link toto.Link) (toto.Envelope, error) {
 		})
 	}
 
-	var attestors []attestation.Attestor = []attestation.Attestor{
+	var attestors = []attestation.Attestor{
 		gitlabAttestor.New(),
 		githubAttestor.New(),
 		envAttestor.New(),

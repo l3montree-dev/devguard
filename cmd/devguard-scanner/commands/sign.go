@@ -39,7 +39,7 @@ import (
 func uploadPublicKey(ctx context.Context, token, apiUrl, publicKeyPath, assetName string) error {
 	devGuardClient := devguard.NewHTTPClient(token, apiUrl)
 
-	var body map[string]string = make(map[string]string)
+	var body = make(map[string]string)
 
 	// read the public key from file
 	publicKey, err := os.ReadFile(publicKeyPath)
