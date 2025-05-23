@@ -196,10 +196,8 @@ func (nvdService NVDService) fetchAndSaveAllPages(url url.URL, startIndex int) e
 
 	totalResults := -1
 
-	for {
-		if totalResults != -1 && startIndex >= totalResults {
-			break
-		}
+	for totalResults == -1 || startIndex < totalResults {
+
 		start := time.Now()
 
 		q := u.Query()

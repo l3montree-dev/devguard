@@ -60,17 +60,18 @@ func (s *depsDevService) GetProject(ctx context.Context, projectID string) (comm
 
 func translateEcosystem(ecosystem string) (string, error) {
 	ecosystem = strings.ToLower(ecosystem)
-	if ecosystem == "golang" {
+	switch ecosystem {
+	case "golang":
 		return "go", nil
-	} else if ecosystem == "npm" {
+	case "npm":
 		return "npm", nil
-	} else if ecosystem == "maven" {
+	case "maven":
 		return "maven", nil
-	} else if ecosystem == "pypi" {
+	case "pypi":
 		return "pypi", nil
-	} else if ecosystem == "nuget" {
+	case "nuget":
 		return "nuget", nil
-	} else if ecosystem == "cargo" {
+	case "cargo":
 		return "cargo", nil
 	}
 

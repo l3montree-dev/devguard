@@ -55,22 +55,23 @@ func parseCvssVector(vector string) map[string]string {
 
 // exploitMessage generates a short and long message based on the exploitability.
 func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string) (short string, long string) {
-	if obj["E"] == "POC" || obj["E"] == "P" {
+	switch obj["E"] {
+	case "POC", "P":
 		short = "Proof of Concept"
 		long = "A proof of concept is available for this vulnerability:<br>"
 		for _, exploit := range dependencyVuln.CVE.Exploits {
 			long += exploit.SourceURL + "<br>"
 		}
-	} else if obj["E"] == "F" {
+	case "F":
 		short = "Functional"
 		long = "A functional exploit is available for this vulnerability:<br>"
 		for _, exploit := range dependencyVuln.CVE.Exploits {
 			long += exploit.SourceURL + "<br>"
 		}
-	} else if obj["E"] == "A" {
+	case "A":
 		short = "Attacked"
 		long = "This vulnerability is actively being exploited in the wild. Please take immediate action to mitigate the risk."
-	} else {
+	default:
 		short = "Not available"
 		long = "We did not find any exploit available. Neither in GitHub repositories nor in the Exploit-Database. There are no script kiddies exploiting this vulnerability."
 	}

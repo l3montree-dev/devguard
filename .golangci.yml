@@ -12,14 +12,26 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+version: "2"
 linters:
-  # https://golangci-lint.run/usage/linters/#enabled-by-default
   enable:
     - gosec
-    - staticcheck
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - unused
-
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

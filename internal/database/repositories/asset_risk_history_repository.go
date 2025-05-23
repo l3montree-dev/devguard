@@ -29,7 +29,7 @@ func NewAssetRiskHistoryRepository(db core.DB) *assetRiskHistoryRepository {
 }
 
 func (r *assetRiskHistoryRepository) GetRiskHistory(assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error) {
-	var assetRisk []models.AssetRiskHistory = []models.AssetRiskHistory{}
+	var assetRisk = []models.AssetRiskHistory{}
 	// get all assetRisk of the asset
 	if err := r.Repository.GetDB(r.db).Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Where(
 		"day >= ? AND day <= ?", start, end,
@@ -45,7 +45,7 @@ func (r *assetRiskHistoryRepository) UpdateRiskAggregation(assetRisk *models.Ass
 }
 
 func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectId uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error) {
-	var assetRisk []models.AssetRiskHistory = []models.AssetRiskHistory{}
+	var assetRisk = []models.AssetRiskHistory{}
 
 	projectAndChildProjectsQuery := r.Repository.GetDB(r.db).Raw(`
 		WITH RECURSIVE project_tree AS (
@@ -62,7 +62,7 @@ func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectId uuid.UUID
 	`, projectId)
 
 	// get all assetRisk of the project
-	db := r.Repository.GetDB(r.db)
+	db := r.GetDB(r.db)
 
 	subQueryAssets := db.Table("assets").
 		Select("id::uuid").

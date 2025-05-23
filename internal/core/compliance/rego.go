@@ -145,7 +145,7 @@ func Eval(p models.Policy, input any) PolicyEvaluation {
 		}
 	}
 
-	var violations []string = []string{}
+	var violations = []string{}
 	var compliant *bool
 	if len(rs) > 0 {
 		value := rs[0].Expressions[0].Value
