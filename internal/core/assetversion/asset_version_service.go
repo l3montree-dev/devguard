@@ -806,6 +806,9 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 			}
 		}
 
+		// in case no manual events are available we need to set the default to the firstIssued date
+		lastUpdated = firstIssued
+
 		// find the newest/latest event that was triggered through a human / manual interaction
 		for _, event := range vulnEvents {
 			// only manual events
