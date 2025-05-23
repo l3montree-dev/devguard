@@ -40,7 +40,7 @@ func hexPrivKeyToPubKey(hexPrivKey string) (ecdsa.PublicKey, error) {
 		},
 		D: privKeyD,
 	}
-	privKey.PublicKey.X, privKey.PublicKey.Y = privKey.PublicKey.Curve.ScalarBaseMult(privKey.D.Bytes())
+	privKey.X, privKey.Y = privKey.ScalarBaseMult(privKey.D.Bytes())
 
 	pubKey := &privKey.PublicKey
 	return *pubKey, nil
@@ -68,7 +68,7 @@ func hexPrivKeyToPrivKeyECDSA(hexPrivKey string) ecdsa.PrivateKey {
 		},
 		D: privKeyD,
 	}
-	privKeyECDSA.PublicKey.X, privKeyECDSA.PublicKey.Y = privKeyECDSA.PublicKey.Curve.ScalarBaseMult(privKeyECDSA.D.Bytes())
+	privKeyECDSA.X, privKeyECDSA.Y = privKeyECDSA.ScalarBaseMult(privKeyECDSA.D.Bytes())
 
 	return *privKeyECDSA
 }

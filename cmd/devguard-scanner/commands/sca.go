@@ -201,21 +201,21 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	switch failOnRisk {
 	case "low":
 		if maxRisk > 0.1 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 	case "medium":
 		if maxRisk >= 4 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 
 	case "high":
 		if maxRisk >= 7 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 
 	case "critical":
 		if maxRisk >= 9 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 	}
 
