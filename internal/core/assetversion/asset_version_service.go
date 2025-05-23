@@ -33,11 +33,12 @@ type service struct {
 	firstPartyVulnService    core.FirstPartyVulnService
 	assetVersionRepository   core.AssetVersionRepository
 	assetRepository          core.AssetRepository
+	vulnEventsRepository     core.VulnEventRepository
 	componentService         core.ComponentService
 	httpClient               *http.Client
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, componentService core.ComponentService) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, vulnEventsRepository core.VulnEventRepository, componentService core.ComponentService) *service {
 	return &service{
 		assetVersionRepository:   assetVersionRepository,
 		componentRepository:      componentRepository,
@@ -45,6 +46,7 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 		firstPartyVulnService:    firstPartyVulnService,
+		vulnEventsRepository:     vulnEventsRepository,
 		componentService:         componentService,
 		assetRepository:          assetRepository,
 		httpClient:               &http.Client{},
@@ -645,7 +647,6 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 }
 
 func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
-
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
 		SpecVersion: cdx.SpecVersion1_5,
@@ -667,6 +668,8 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 		// check if cve
 		cve := dependencyVuln.CVE
 		if cve != nil {
+			firstIssued, lastUpdated := getDatesForVulnerabilityEvent(dependencyVuln.Events)
+
 			vuln := cdx.Vulnerability{
 				ID: cve.CVE,
 				Source: &cdx.Source{
@@ -677,7 +680,9 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 					Ref: *dependencyVuln.ComponentPurl,
 				}},
 				Analysis: &cdx.VulnerabilityAnalysis{
-					State: dependencyVulnStateToImpactAnalysisState(dependencyVuln.State),
+					State:       dependencyVulnStateToImpactAnalysisState(dependencyVuln.State),
+					FirstIssued: firstIssued.UTC().Format(time.RFC3339),
+					LastUpdated: lastUpdated.UTC().Format(time.RFC3339),
 				},
 			}
 
@@ -786,4 +791,39 @@ func dependencyVulnStateToResponseStatus(state models.VulnState) cdx.ImpactAnaly
 	default:
 		return ""
 	}
+}
+
+func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time) {
+	firstIssued := time.Time{}
+	lastUpdated := time.Time{}
+	if len(vulnEvents) > 0 {
+		firstIssued = time.Now()
+		// find the date when the vulnerability was detected/created in the database
+		for _, event := range vulnEvents {
+			if event.Type == models.EventTypeDetected {
+				firstIssued = event.CreatedAt
+				break
+			}
+		}
+
+		// in case no manual events are available we need to set the default to the firstIssued date
+		lastUpdated = firstIssued
+
+		// find the newest/latest event that was triggered through a human / manual interaction
+		for _, event := range vulnEvents {
+			// only manual events
+			if event.Type == models.EventTypeFixed ||
+				event.Type == models.EventTypeReopened ||
+				event.Type == models.EventTypeAccepted ||
+				event.Type == models.EventTypeMitigate ||
+				event.Type == models.EventTypeFalsePositive ||
+				event.Type == models.EventTypeMarkedForTransfer ||
+				event.Type == models.EventTypeComment {
+				if event.UpdatedAt.After(lastUpdated) {
+					lastUpdated = event.UpdatedAt
+				}
+			}
+		}
+	}
+	return firstIssued, lastUpdated
 }
