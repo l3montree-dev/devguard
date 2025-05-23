@@ -74,7 +74,7 @@ type githubIntegration struct {
 
 var _ core.ThirdPartyIntegration = &githubIntegration{}
 
-var NoGithubAppInstallationError = fmt.Errorf("no github app installations found")
+var ErrNoGithubAppInstallation = fmt.Errorf("no github app installations found")
 
 func NewGithubIntegration(db core.DB) *githubIntegration {
 	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
@@ -164,7 +164,7 @@ func (githubIntegration *githubIntegration) IntegrationEnabled(ctx core.Context)
 func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	// check if we have integrations
 	if !githubIntegration.IntegrationEnabled(ctx) {
-		return nil, NoGithubAppInstallationError
+		return nil, ErrNoGithubAppInstallation
 	}
 
 	organization := core.GetOrganization(ctx)

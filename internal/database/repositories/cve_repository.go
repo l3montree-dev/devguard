@@ -191,7 +191,7 @@ func (g *cveRepository) SaveBatchCPEMatch(tx core.DB, matches []models.CPEMatch)
 
 func (g *cveRepository) FindAllListPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error) {
 	var count int64
-	var cves []models.CVE = []models.CVE{}
+	var cves = []models.CVE{}
 
 	q := g.GetDB(tx).Model(&models.CVE{})
 

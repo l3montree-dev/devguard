@@ -41,7 +41,7 @@ type githubBatchClient struct {
 func newGithubBatchClient(appInstallations []models.GithubAppInstallation) (*githubBatchClient, error) {
 	if len(appInstallations) == 0 {
 		slog.Error("no github app installations found")
-		return nil, NoGithubAppInstallationError
+		return nil, ErrNoGithubAppInstallation
 	}
 
 	clients := make([]githubClient, 0)
