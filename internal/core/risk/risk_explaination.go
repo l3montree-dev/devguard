@@ -252,7 +252,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	str.WriteString("### Recommended fix\n")
 	if e.fixedVersion != nil {
 		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))
-		str.WriteString(generateCommandsToFixPackage(e.ComponentPurl))
+		str.WriteString(generateCommandsToFixPackage(e.ComponentPurl, *e.fixedVersion))
 	} else {
 		str.WriteString("No fix is available.\n")
 	}
@@ -316,7 +316,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 	}
 }
 
-func generateCommandsToFixPackage(pURL string) string {
+func generateCommandsToFixPackage(pURL string, fixedVersion string) string {
 	parsedPurl, err := packageurl.FromString(pURL)
 	if err != nil {
 		return ""
@@ -324,19 +324,19 @@ func generateCommandsToFixPackage(pURL string) string {
 	ecosystem := parsedPurl.Type
 	switch ecosystem {
 	case "golang":
-		return fmt.Sprintf("```\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get %s@%s \n```", parsedPurl.Name, parsedPurl.Version)
+		return fmt.Sprintf("```\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get %s@%s \n```", parsedPurl.Name, fixedVersion)
 	case "npm":
-		return fmt.Sprintf("```\n# Update all vulnerable npm packages\nnpm audit fix\n# Update only this package\nnpm install %s@%s \n```", parsedPurl.Name, parsedPurl.Version)
+		return fmt.Sprintf("```\n# Update all vulnerable npm packages\nnpm audit fix\n# Update only this package\nnpm install %s@%s \n```", parsedPurl.Name, fixedVersion)
 	case "pypi":
-		return fmt.Sprintf("```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install %s==%s\n```", parsedPurl.Name, parsedPurl.Version)
+		return fmt.Sprintf("```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install %s==%s\n```", parsedPurl.Name, fixedVersion)
 	case "crates.io":
-		return fmt.Sprintf("```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# %s = \"=%s\"\n```", parsedPurl.Name, parsedPurl.Version)
+		return fmt.Sprintf("```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# %s = \"=%s\"\n```", parsedPurl.Name, fixedVersion)
 	case "nuget":
-		return fmt.Sprintf("```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package %s --version %s\n```", parsedPurl.Name, parsedPurl.Version)
+		return fmt.Sprintf("```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package %s --version %s\n```", parsedPurl.Name, fixedVersion)
 	case "apk":
-		return fmt.Sprintf("```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add %s=%s\n```", parsedPurl.Name, parsedPurl.Version)
+		return fmt.Sprintf("```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add %s=%s\n```", parsedPurl.Name, fixedVersion)
 	case "deb":
-		return fmt.Sprintf("```\n# Update all debian packages\napt Update && apt upgrade\n# Update only this package\napt install %s=%s\n```", parsedPurl.Name, parsedPurl.Version)
+		return fmt.Sprintf("```\n# Update all debian packages\napt Update && apt upgrade\n# Update only this package\napt install %s=%s\n```", parsedPurl.Name, fixedVersion)
 	}
 	return ""
 }

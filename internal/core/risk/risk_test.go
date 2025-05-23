@@ -353,40 +353,40 @@ func TestCalculateRisk(t *testing.T) {
 
 func TestGenerateCommandsToFixPackage(t *testing.T) {
 	t.Run("invalid package URL should result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pk:golang/crypto@0.0.32")
+		result := generateCommandsToFixPackage("pk:golang/crypto@0.0.32", "0")
 		assert.Equal(t, result, "")
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pk:golang/crypto@0.0.32")
+		result := generateCommandsToFixPackage("pk:golang/crypto@0.0.32", "0")
 		assert.Equal(t, result, "")
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:golang/crypto@0.0.32")
-		assert.Equal(t, "```\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get crypto@0.0.32 \n```", result)
+		result := generateCommandsToFixPackage("pkg:golang/crypto@0.0.32", "0")
+		assert.Equal(t, "```\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get crypto@0 \n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:npm/crypto@0.0.32")
-		assert.Equal(t, "```\n# Update all vulnerable npm packages\nnpm audit fix\n# Update only this package\nnpm install crypto@0.0.32 \n```", result)
+		result := generateCommandsToFixPackage("pkg:npm/crypto@0.0.32", "0")
+		assert.Equal(t, "```\n# Update all vulnerable npm packages\nnpm audit fix\n# Update only this package\nnpm install crypto@0 \n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:crates.io/crypto@0.0.32")
-		assert.Equal(t, "```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# crypto = \"=0.0.32\"\n```", result)
+		result := generateCommandsToFixPackage("pkg:crates.io/crypto@0.0.32", "0")
+		assert.Equal(t, "```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# crypto = \"=0\"\n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:pypi/crypto@0.0.32")
-		assert.Equal(t, "```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install crypto==0.0.32\n```", result)
+		result := generateCommandsToFixPackage("pkg:pypi/crypto@0.0.32", "0")
+		assert.Equal(t, "```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install crypto==0\n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:apk/crypto@0.0.32")
-		assert.Equal(t, "```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add crypto=0.0.32\n```", result)
+		result := generateCommandsToFixPackage("pkg:apk/crypto@0.0.32", "0")
+		assert.Equal(t, "```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add crypto=0\n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:deb/crypto@0.0.32")
-		assert.Equal(t, "```\n# Update all debian packages\napt Update && apt upgrade\n# Update only this package\napt install crypto=0.0.32\n```", result)
+		result := generateCommandsToFixPackage("pkg:deb/crypto@0.0.32", "0")
+		assert.Equal(t, "```\n# Update all debian packages\napt Update && apt upgrade\n# Update only this package\napt install crypto=0\n```", result)
 	})
 	t.Run("unknown namespace should also result in an empty string", func(t *testing.T) {
-		result := generateCommandsToFixPackage("pkg:NuGet/crypto@0.0.32")
-		assert.Equal(t, "```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package crypto --version 0.0.32\n```", result)
+		result := generateCommandsToFixPackage("pkg:NuGet/crypto@0.0.32", "0")
+		assert.Equal(t, "```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package crypto --version 0\n```", result)
 	})
 
 }
