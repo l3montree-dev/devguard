@@ -137,7 +137,7 @@ func escapeAtSign(pURL string) string {
 
 func (t *tree) RenderToMermaid() string {
 	//basic string to tell markdown that we have a mermaid flow chart with given parameters
-	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'dark', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n"
+	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n"
 
 	var builder strings.Builder
 	builder.WriteString(mermaidFlowChart)
