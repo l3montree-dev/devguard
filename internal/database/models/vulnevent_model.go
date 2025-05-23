@@ -19,19 +19,21 @@ const (
 )
 
 const (
-	EventTypeDetected VulnEventType = "detected"
+	// Manual Events (Events that required User Interaction) (see asset_version_service.go @ getDatesForVulnerabilityEvent)
 	EventTypeFixed    VulnEventType = "fixed"
 	EventTypeReopened VulnEventType = "reopened"
 
-	//EventTypeRiskAssessmentUpdated VulnEventType = "riskAssessmentUpdated"
 	EventTypeAccepted          VulnEventType = "accepted"
 	EventTypeMitigate          VulnEventType = "mitigate"
 	EventTypeFalsePositive     VulnEventType = "falsePositive"
 	EventTypeMarkedForTransfer VulnEventType = "markedForTransfer"
+	EventTypeComment           VulnEventType = "comment"
 
+	// Automated Events (Events that are triggered by automation's on the server)
+	EventTypeDetected VulnEventType = "detected"
+
+	// EventTypeRiskAssessmentUpdated VulnEventType = "riskAssessmentUpdated"
 	EventTypeRawRiskAssessmentUpdated VulnEventType = "rawRiskAssessmentUpdated"
-
-	EventTypeComment VulnEventType = "comment"
 
 	EventTypeAddedScanner   VulnEventType = "addedScanner"
 	EventTypeRemovedScanner VulnEventType = "removedScanner"

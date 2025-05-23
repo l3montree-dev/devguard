@@ -798,12 +798,27 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 	lastUpdated := time.Time{}
 	if len(vulnEvents) > 0 {
 		firstIssued = time.Now()
+		// find the date when the vulnerability was detected/created in the database
 		for _, event := range vulnEvents {
-			if event.UpdatedAt.After(lastUpdated) {
-				lastUpdated = event.UpdatedAt
-			}
-			if event.CreatedAt.Before(firstIssued) {
+			if event.Type == models.EventTypeDetected {
 				firstIssued = event.CreatedAt
+				break
+			}
+		}
+
+		// find the newest/latest event that was triggered through a human / manual interaction
+		for _, event := range vulnEvents {
+			// only manual events
+			if event.Type == models.EventTypeFixed ||
+				event.Type == models.EventTypeReopened ||
+				event.Type == models.EventTypeAccepted ||
+				event.Type == models.EventTypeMitigate ||
+				event.Type == models.EventTypeFalsePositive ||
+				event.Type == models.EventTypeMarkedForTransfer ||
+				event.Type == models.EventTypeComment {
+				if event.UpdatedAt.After(lastUpdated) {
+					lastUpdated = event.UpdatedAt
+				}
 			}
 		}
 	}
