@@ -749,7 +749,7 @@ func (g *githubIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 
 	exp := risk.Explain(*vuln, asset, vector, riskMetrics)
 
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -887,7 +887,7 @@ func (g *githubIntegration) updateDependencyVulnTicket(ctx context.Context, depe
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1009,7 +1009,7 @@ func (g *githubIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := getLabels(dependencyVuln)
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
