@@ -61,7 +61,7 @@ func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB,
 
 	var dependencyVulns = []models.DependencyVuln{}
 
-	q := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+	q := r.Repository.GetDB(tx).Preload("Events").Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces

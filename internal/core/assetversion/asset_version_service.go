@@ -668,7 +668,7 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 		// check if cve
 		cve := dependencyVuln.CVE
 		if cve != nil {
-			firstIssued, lastUpdated := getDatesForVulnerabilityEvent(s, dependencyVuln.ID) // todo.. we also need to look at first party here..
+			firstIssued, lastUpdated := getDatesForVulnerabilityEvent(dependencyVuln.Events)
 
 			vuln := cdx.Vulnerability{
 				ID: cve.CVE,
@@ -793,15 +793,12 @@ func dependencyVulnStateToResponseStatus(state models.VulnState) cdx.ImpactAnaly
 	}
 }
 
-func getDatesForVulnerabilityEvent(s *service, dependencyVulnId string) (time.Time, time.Time) {
-	events, err := s.vulnEventsRepository.ReadAssetEventsByVulnID(dependencyVulnId, models.VulnTypeDependencyVuln) // TODO!.. we also need to look at first party here..
+func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time) {
 	firstIssued := time.Time{}
 	lastUpdated := time.Time{}
-	if err != nil {
-		slog.Error("Failed to read vulnerability events from database:", err.Error())
-	} else if len(events) > 0 {
+	if len(vulnEvents) > 0 {
 		firstIssued = time.Now()
-		for _, event := range events {
+		for _, event := range vulnEvents {
 			if event.UpdatedAt.After(lastUpdated) {
 				lastUpdated = event.UpdatedAt
 			}
