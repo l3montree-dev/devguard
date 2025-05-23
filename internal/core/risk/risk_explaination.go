@@ -324,13 +324,13 @@ func generateCommandsToFixPackage(pURL string) string {
 	ecosystem := parsedPurl.Type
 	switch ecosystem {
 	case "golang":
-		return fmt.Sprintf("````\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get %s@%s \n```", parsedPurl.Name, parsedPurl.Version)
+		return fmt.Sprintf("```\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get %s@%s \n```", parsedPurl.Name, parsedPurl.Version)
 	case "npm":
 		return fmt.Sprintf("```\n# Update all vulnerable npm packages\nnpm audit fix\n# Update only this package\nnpm install %s@%s \n```", parsedPurl.Name, parsedPurl.Version)
 	case "pypi":
 		return fmt.Sprintf("```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install %s==%s\n```", parsedPurl.Name, parsedPurl.Version)
 	case "crates.io":
-		return fmt.Sprintf("```\n# Update all crates packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# %s = \"=%s\"\n```", parsedPurl.Name, parsedPurl.Version)
+		return fmt.Sprintf("```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# %s = \"=%s\"\n```", parsedPurl.Name, parsedPurl.Version)
 	case "NuGet":
 		return fmt.Sprintf("```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package %s --version %s\n```", parsedPurl.Name, parsedPurl.Version)
 	case "apk":
