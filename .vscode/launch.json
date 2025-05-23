@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run Program",
+            "name": "Launch Server",
             "type": "go",
             "request": "launch",
             "cwd": "${workspaceRoot}",

@@ -49,7 +49,7 @@ func ScanAssetVersions(db core.DB) error {
 	depsDevService := vulndb.NewDepsDevService()
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository)
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, &componentService)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, vulnEventRepository, &componentService)
 
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, projectRiskHistoryRepository)
 
