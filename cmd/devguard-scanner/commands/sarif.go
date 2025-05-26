@@ -312,8 +312,6 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return errors.Wrap(err, "could not sign request")
 		}
 
-		err = utils.SetGitVersionHeader(config.RuntimeBaseConfig.Path, req)
-
 		if err != nil {
 			printGitHelp(err)
 			return errors.Wrap(err, "could not get version info")
@@ -323,6 +321,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 		req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
 		req.Header.Set("X-Asset-Ref", config.RuntimeBaseConfig.Ref)
+		req.Header.Set("X-Asset-Default-Branch", config.RuntimeBaseConfig.DefaultRef)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {

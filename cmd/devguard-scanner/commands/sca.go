@@ -232,8 +232,8 @@ func addDefaultFlags(cmd *cobra.Command) {
 }
 
 func addAssetRefFlags(cmd *cobra.Command) {
-	cmd.Flags().String("ref", "main", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, main will be used")
-	cmd.Flags().String("defaultRef", "main", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, --ref will be used.")
+	cmd.Flags().String("ref", "", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, it will first check for a git repository in the current directory. If not found, it will just use main.")
+	cmd.Flags().String("defaultRef", "", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, it will check, if the current directory is a git repo. If it isn't, --ref will be used.")
 }
 
 func addScanFlags(cmd *cobra.Command) {
@@ -294,16 +294,11 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 			return errors.Wrap(err, "could not sign request")
 		}
 
-		err = utils.SetGitVersionHeader(config.RuntimeBaseConfig.Path, req)
-
-		if err != nil {
-			printGitHelp(err)
-			return errors.Wrap(err, "could not get version info")
-		}
-
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
+		req.Header.Set("X-Asset-Ref", config.RuntimeBaseConfig.Ref)
+		req.Header.Set("X-Asset-Default-Branch", config.RuntimeBaseConfig.DefaultRef)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
