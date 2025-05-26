@@ -180,7 +180,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 
 	tw := table.NewWriter()
 	//tw.SetAllowedRowLength(155)
-	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status", "URL"})
+	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status"})
 	tw.AppendRows(utils.Map(
 		scanResponse.DependencyVulns,
 		func(v vuln.DependencyVulnDTO) table.Row {
