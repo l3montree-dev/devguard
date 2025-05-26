@@ -7,8 +7,14 @@ import (
 )
 
 type Repository struct {
-	ID    string `json:"id"`
-	Label string `json:"label"`
+	ID          string `json:"id"`
+	Label       string `json:"label"`
+	Image       string `json:"image"`
+	Description string `json:"description"`
+
+	IsDeveloper  bool `json:"isDeveloper"`
+	IsMaintainer bool `json:"isMaintainer"`
+	IsOwner      bool `json:"isOwner"`
 }
 
 type User struct {

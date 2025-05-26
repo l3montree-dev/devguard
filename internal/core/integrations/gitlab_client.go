@@ -74,6 +74,7 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]git
 	wg := utils.ErrGroup[[]gitlabRepository](10)
 	options := &gitlab.ListProjectsOptions{
 		MinAccessLevel: gitlab.Ptr(gitlab.ReporterPermissions),
+		Membership:     gitlab.Ptr(true),
 	}
 
 	if search != "" {

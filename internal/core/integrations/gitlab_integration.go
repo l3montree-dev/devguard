@@ -57,9 +57,57 @@ type gitlabRepository struct {
 }
 
 func (g gitlabRepository) toRepository() core.Repository {
+	// check for group and project access
+	if g.Permissions == nil || (g.Permissions.GroupAccess == nil && g.Permissions.ProjectAccess == nil) {
+		return core.Repository{
+			ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+			Label:        g.NameWithNamespace,
+			IsDeveloper:  false,
+			IsOwner:      false,
+			IsMaintainer: false,
+			Description:  g.Description,
+			Image:        g.AvatarURL,
+		}
+	}
+
+	// check for project access
+	if g.Permissions.ProjectAccess == nil {
+		// group access has to be defined
+		return core.Repository{
+			ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+			Label:        g.NameWithNamespace,
+			IsDeveloper:  g.Permissions.GroupAccess.AccessLevel >= gitlab.DeveloperPermissions,
+			IsOwner:      g.Permissions.GroupAccess.AccessLevel >= gitlab.OwnerPermissions,
+			IsMaintainer: g.Permissions.GroupAccess.AccessLevel >= gitlab.MaintainerPermissions,
+			Description:  g.Description,
+			Image:        g.AvatarURL,
+		}
+	}
+
+	if g.Permissions.GroupAccess == nil {
+
+		return core.Repository{
+			ID:          fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+			Label:       g.NameWithNamespace,
+			Description: g.Description,
+			Image:       g.AvatarURL,
+
+			// check for project access
+			IsDeveloper:  g.Permissions.ProjectAccess.AccessLevel >= gitlab.DeveloperPermissions,
+			IsOwner:      g.Permissions.ProjectAccess.AccessLevel >= gitlab.OwnerPermissions,
+			IsMaintainer: g.Permissions.ProjectAccess.AccessLevel >= gitlab.MaintainerPermissions,
+		}
+	}
+
+	// both is defined - check for the highest access level
 	return core.Repository{
-		ID:    fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
-		Label: g.NameWithNamespace,
+		ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+		Label:        g.NameWithNamespace,
+		IsDeveloper:  g.Permissions.GroupAccess.AccessLevel >= gitlab.DeveloperPermissions || g.Permissions.ProjectAccess.AccessLevel >= gitlab.DeveloperPermissions,
+		IsOwner:      g.Permissions.GroupAccess.AccessLevel >= gitlab.OwnerPermissions || g.Permissions.ProjectAccess.AccessLevel >= gitlab.OwnerPermissions,
+		IsMaintainer: g.Permissions.GroupAccess.AccessLevel >= gitlab.MaintainerPermissions || g.Permissions.ProjectAccess.AccessLevel >= gitlab.MaintainerPermissions,
+		Description:  g.Description,
+		Image:        g.AvatarURL,
 	}
 }
 

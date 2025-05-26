@@ -41,8 +41,10 @@ type githubRepository struct {
 
 func (g githubRepository) toRepository() core.Repository {
 	return core.Repository{
-		ID:    fmt.Sprintf("github:%d:%s", g.GithubAppInstallationID, *g.FullName),
-		Label: *g.FullName,
+		ID:          fmt.Sprintf("github:%d:%s", g.GithubAppInstallationID, *g.FullName),
+		Label:       *g.FullName,
+		Image:       *g.Organization.AvatarURL,
+		Description: *g.Description,
 	}
 }
 

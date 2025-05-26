@@ -401,7 +401,8 @@ func getGitlabAccessTokenFromOryIdentity(oauth2Endpoints map[string]*gitlabOauth
 			RefreshToken: provider["initial_refresh_token"].(string),
 			BaseURL:      conf.gitlabBaseURL,
 			GitLabUserID: gitlabUserIdInt,
-			Scopes:       "read_api", // I know that!
+			Scopes:       "read_api",                    // I know that!
+			Expiry:       time.Now().Add(2 * time.Hour), // this is a guess, we don't know the expiry time
 		}
 	}
 
