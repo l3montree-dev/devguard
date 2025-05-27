@@ -49,3 +49,15 @@ func (controller LicenseOverwriteController) Create(ctx core.Context) error {
 	}
 	return ctx.JSON(200, newLicenseOverwrite)
 }
+
+func (controller LicenseOverwriteController) Delete(ctx core.Context) error {
+	license_id := ctx.Param("license_id")
+	if license_id == "" {
+		return echo.NewHTTPError(400, "could not retrieve a valid license id")
+	}
+	err := controller.LicenseOverwriteRepository.Delete(nil, license_id)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not delete license overwrite")
+	}
+	return ctx.NoContent(200)
+}
