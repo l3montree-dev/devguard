@@ -57,7 +57,7 @@ func (controller LicenseOverwriteController) Delete(ctx core.Context) error {
 	}
 	err := controller.LicenseOverwriteRepository.Delete(nil, license_id)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not delete license overwrite")
+		return echo.NewHTTPError(500, err.Error())
 	}
 	return ctx.NoContent(200)
 }

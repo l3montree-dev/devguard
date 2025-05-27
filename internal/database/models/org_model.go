@@ -28,6 +28,6 @@ type Org struct {
 	Language string `json:"language" gorm:"type:text;size:2"`
 }
 
-func (m Model) TableName() string {
+func (m Org) TableName() string {
 	return "organizations"
 }

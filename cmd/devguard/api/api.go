@@ -374,6 +374,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 	attestationRepository := repositories.NewAttestationRepository(db)
 	policyRepository := repositories.NewPolicyRepository(db)
+	licenseOverwriteRepository := repositories.NewLicenseOverwriteRepository(db)
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
@@ -409,6 +410,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	statisticsController := statistics.NewHttpController(statisticsService, statisticsRepository, assetRepository, assetVersionRepository, projectService)
 	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)
+	licenseOverwriteController := component.NewLicenseOverwriteController(licenseOverwriteRepository)
 
 	patService := pat.NewPatService(patRepository)
 
@@ -515,6 +517,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
+	organizationRouter.POST("/license-overwrite/", licenseOverwriteController.Create)
+	organizationRouter.DELETE("/license-overwrite/", licenseOverwriteController.Delete)
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)

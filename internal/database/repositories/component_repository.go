@@ -174,7 +174,7 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 	var err error
 
 	query := c.GetDB(tx).Table("components").Select("components.license as license, COUNT(components.license) as count").Joins("RIGHT JOIN component_dependencies ON components.purl = component_dependencies.dependency_purl").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Group("components.license")
-
+	c.GetDB(tx).Raw("SELECT c.license, COUNT(c.license) as count FROM components as c RIGHT JOIN component_dependencies as cd ON c.purl = cd.dependency_purl WHERE asset_version_name = ? AND asset_id = ? GROUP BY c.licenses")
 	if scannerID != "" {
 		scannerID = "%" + scannerID + "%"
 		query = query.Where("scanner_ids LIKE ?", scannerID)

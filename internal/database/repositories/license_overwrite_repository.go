@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -12,6 +14,18 @@ import (
 type LicenseOverwriteRepository struct {
 	common.Repository[string, models.LicenseOverwrite, core.DB]
 	db *gorm.DB
+}
+
+func NewLicenseOverwriteRepository(db core.DB) *LicenseOverwriteRepository {
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.LicenseOverwrite{}); err != nil {
+			panic(err)
+		}
+	}
+	return &LicenseOverwriteRepository{
+		db:         db,
+		Repository: newGormRepository[string, models.LicenseOverwrite](db),
+	}
 }
 
 func (repository *LicenseOverwriteRepository) GetAllOverwritesForOrganization(orgID uuid.UUID) ([]models.LicenseOverwrite, error) {
