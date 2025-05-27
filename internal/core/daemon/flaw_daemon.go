@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
@@ -44,6 +45,11 @@ func UpdateComponentProperties(db core.DB) error {
 	// we need to update component depth and fixedVersion for each dependencyVuln.
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.
+
+	start := time.Now()
+	defer func() {
+		monitoring.UpdateComponentPropertiesDuration.Observe(time.Since(start).Minutes())
+	}()
 
 	assetRepository := repositories.NewAssetRepository(db)
 	purlComparer := scan.NewPurlComparer(db)
@@ -131,6 +137,8 @@ func UpdateComponentProperties(db core.DB) error {
 						if err := dependencyVulnRepository.Save(nil, &dependencyVuln); err != nil {
 							slog.Warn("could not save dependencyVuln", "dependencyVuln", dependencyVuln.ID, "err", err)
 						}
+
+						monitoring.DependencyVulnsUpdatedAmount.Inc()
 					}
 				}
 			}
@@ -143,6 +151,8 @@ func UpdateComponentProperties(db core.DB) error {
 		slog.Error("could not update component properties", "err", err)
 		return err
 	}
+
+	monitoring.UpdateComponentPropertiesDaemonAmount.Inc()
 
 	return nil
 }

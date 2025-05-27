@@ -61,7 +61,9 @@ func (g gitlabRepository) toRepository() core.Repository {
 
 type gitlabIntegration struct {
 	gitlabIntegrationRepository core.GitlabIntegrationRepository
-	externalUserRepository      core.ExternalUserRepository
+	// gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
+
+	externalUserRepository core.ExternalUserRepository
 
 	firstPartyVulnRepository core.FirstPartyVulnRepository
 	aggregatedVulnRepository core.VulnRepository
@@ -1148,7 +1150,7 @@ func (g *gitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1249,7 +1251,7 @@ func (g *gitlabIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 
 	exp := risk.Explain(*vuln, asset, vector, riskMetrics)
 
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1361,7 +1363,7 @@ func (g *gitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := getLabels(dependencyVuln)
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
@@ -1382,4 +1384,8 @@ func (g *gitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	return createdIssue, err
+}
+
+func (c *gitlabIntegration) Oauth2Callback(ctx core.Context) error {
+	return nil
 }

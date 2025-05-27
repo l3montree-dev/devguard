@@ -28,7 +28,7 @@ func NewProjectRiskHistoryRepository(db core.DB) *projectRiskHistoryRepository {
 }
 
 func (r *projectRiskHistoryRepository) GetRiskHistory(projectId uuid.UUID, start, end time.Time) ([]models.ProjectRiskHistory, error) {
-	var projectRisk []models.ProjectRiskHistory = []models.ProjectRiskHistory{}
+	var projectRisk = []models.ProjectRiskHistory{}
 	// get all projectRisk of the project
 	if err := r.Repository.GetDB(r.db).Where("project_id = ?", projectId).Where(
 		"day >= ? AND day <= ?", start, end,

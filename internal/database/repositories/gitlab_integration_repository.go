@@ -48,3 +48,20 @@ func (r *gitlabIntegrationRepository) FindByOrganizationId(orgId uuid.UUID) ([]m
 	}
 	return integrations, nil
 }
+
+type gitlabOauth2TokenRepository struct {
+	db core.DB
+	common.Repository[uuid.UUID, models.GitLabOauth2Token, core.DB]
+}
+
+func NewGitlabOauth2TokenRepository(db core.DB) *gitlabOauth2TokenRepository {
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.GitLabOauth2Token{}); err != nil {
+			panic(err)
+		}
+	}
+	return &gitlabOauth2TokenRepository{
+		db:         db,
+		Repository: newGormRepository[uuid.UUID, models.GitLabOauth2Token](db),
+	}
+}

@@ -12,37 +12,36 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-with-expecter: true
 packages:
   github.com/l3montree-dev/devguard/internal/core:
     config:
       recursive: true
       all: true
       filename: "mock_{{.InterfaceName}}.go"
-      mockName: "{{.InterfaceName | firstUpper}}"
-      outpkg: "mocks"
+      structname: "{{.InterfaceName | firstUpper}}"
       dir: "mocks"
+      pkgname: "mocks"
   github.com/l3montree-dev/devguard/internal/accesscontrol:
     config:
       recursive: true
       all: true
       filename: "mock_{{.InterfaceName}}.go"
-      mockName: "{{.InterfaceName | firstUpper}}"
-      outpkg: "mocks"
+      structname: "{{.InterfaceName | firstUpper}}"
       dir: "mocks"
+      pkgname: "mocks"
   github.com/l3montree-dev/devguard/cmd/devguard/api:
     config:
       recursive: true
       all: true
       filename: "mock_{{.InterfaceName}}.go"
-      mockName: "{{.InterfaceName | firstUpper}}"
-      outpkg: "mocks"
+      structname: "{{.InterfaceName | firstUpper}}"
       dir: "mocks"
+      pkgname: "mocks"
   github.com/l3montree-dev/devguard/internal/utils:
     config:
       recursive: true
       all: true
       filename: "mock_{{.InterfaceName}}.go"
-      mockName: "{{.InterfaceName | firstUpper}}"
-      outpkg: "mocks"
+      structname: "{{.InterfaceName | firstUpper}}"
       dir: "mocks"
+      pkgname: "mocks"

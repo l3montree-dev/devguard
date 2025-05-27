@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -34,11 +33,12 @@ type service struct {
 	firstPartyVulnService    core.FirstPartyVulnService
 	assetVersionRepository   core.AssetVersionRepository
 	assetRepository          core.AssetRepository
+	vulnEventsRepository     core.VulnEventRepository
 	componentService         core.ComponentService
 	httpClient               *http.Client
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, componentService core.ComponentService) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, vulnEventsRepository core.VulnEventRepository, componentService core.ComponentService) *service {
 	return &service{
 		assetVersionRepository:   assetVersionRepository,
 		componentRepository:      componentRepository,
@@ -46,6 +46,7 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 		firstPartyVulnService:    firstPartyVulnService,
+		vulnEventsRepository:     vulnEventsRepository,
 		componentService:         componentService,
 		assetRepository:          assetRepository,
 		httpClient:               &http.Client{},
@@ -342,7 +343,13 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	return append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), fixedVulns, append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), nil
+	v, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
+	if err != nil {
+		slog.Error("could not get existing dependencyVulns", "err", err)
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
+
+	return append(newDetectedVulns, firstTimeDetectedByCurrentScanner...), fixedVulns, v, nil
 }
 
 func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
@@ -499,7 +506,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
-		SpecVersion: cyclonedx.SpecVersion1_5,
+		SpecVersion: cdx.SpecVersion1_5,
 		Version:     1,
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
@@ -600,7 +607,7 @@ func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Sta
 	}
 }
 
-func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, version string, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX {
+func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX {
 	doc := vex.New()
 
 	doc.Author = organizationSlug
@@ -639,22 +646,18 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 	return doc
 }
 
-func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency, dependencyVulns []models.DependencyVuln) *cdx.BOM {
-	if version == models.NoVersion {
-		version = "latest"
-	}
-
+func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
-		SpecVersion: cyclonedx.SpecVersion1_5,
+		SpecVersion: cdx.SpecVersion1_5,
 		Version:     1,
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
 			Component: &cdx.Component{
 				BOMRef:    assetVersion.Slug,
 				Type:      cdx.ComponentTypeApplication,
-				Name:      assetVersion.Name,
-				Version:   version,
+				Name:      asset.Name,
+				Version:   assetVersion.Name,
 				Author:    organizationName,
 				Publisher: "github.com/l3montree-dev/devguard",
 			},
@@ -665,6 +668,8 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 		// check if cve
 		cve := dependencyVuln.CVE
 		if cve != nil {
+			firstIssued, lastUpdated := getDatesForVulnerabilityEvent(dependencyVuln.Events)
+
 			vuln := cdx.Vulnerability{
 				ID: cve.CVE,
 				Source: &cdx.Source{
@@ -675,7 +680,9 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 					Ref: *dependencyVuln.ComponentPurl,
 				}},
 				Analysis: &cdx.VulnerabilityAnalysis{
-					State: dependencyVulnStateToImpactAnalysisState(dependencyVuln.State),
+					State:       dependencyVulnStateToImpactAnalysisState(dependencyVuln.State),
+					FirstIssued: firstIssued.UTC().Format(time.RFC3339),
+					LastUpdated: lastUpdated.UTC().Format(time.RFC3339),
 				},
 			}
 
@@ -784,4 +791,39 @@ func dependencyVulnStateToResponseStatus(state models.VulnState) cdx.ImpactAnaly
 	default:
 		return ""
 	}
+}
+
+func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time) {
+	firstIssued := time.Time{}
+	lastUpdated := time.Time{}
+	if len(vulnEvents) > 0 {
+		firstIssued = time.Now()
+		// find the date when the vulnerability was detected/created in the database
+		for _, event := range vulnEvents {
+			if event.Type == models.EventTypeDetected {
+				firstIssued = event.CreatedAt
+				break
+			}
+		}
+
+		// in case no manual events are available we need to set the default to the firstIssued date
+		lastUpdated = firstIssued
+
+		// find the newest/latest event that was triggered through a human / manual interaction
+		for _, event := range vulnEvents {
+			// only manual events
+			if event.Type == models.EventTypeFixed ||
+				event.Type == models.EventTypeReopened ||
+				event.Type == models.EventTypeAccepted ||
+				event.Type == models.EventTypeMitigate ||
+				event.Type == models.EventTypeFalsePositive ||
+				event.Type == models.EventTypeMarkedForTransfer ||
+				event.Type == models.EventTypeComment {
+				if event.UpdatedAt.After(lastUpdated) {
+					lastUpdated = event.UpdatedAt
+				}
+			}
+		}
+	}
+	return firstIssued, lastUpdated
 }

@@ -77,9 +77,10 @@ func TestDependencyTree(t *testing.T) {
 		// get b and c
 		var b, c *treeNode
 		for _, child := range tree.Root.Children {
-			if child.Name == "b" {
+			switch child.Name {
+			case "b":
 				b = child
-			} else if child.Name == "c" {
+			case "c":
 				c = child
 			}
 		}

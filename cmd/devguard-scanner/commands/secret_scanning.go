@@ -80,9 +80,9 @@ func secretScan(p string) (*common.SarifResult, error) {
 	return &sarifScan, nil
 }
 
-func printSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI string, assetName string) {
+func printSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string) {
 	tw := table.NewWriter()
-	tw.SetAllowedRowLength(180)
+	tw.SetAllowedRowLength(155)
 
 	blue := text.FgBlue
 	green := text.FgGreen
@@ -90,14 +90,14 @@ func printSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI stri
 		raw := []table.Row{
 			{"RuleID:", vuln.RuleID},
 			{"File:", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))},
-			{"Snippet:", text.WrapText(vuln.Snippet, 130)},
-			{"Message:", text.WrapText(*vuln.Message, 130)},
+			{"Snippet:", text.WrapText(vuln.Snippet, 105)},
+			{"Message:", text.WrapText(*vuln.Message, 105)},
 			{"Line:", vuln.StartLine},
 			{"Commit:", vuln.Commit},
 			{"Author:", vuln.Author},
 			{"Email:", vuln.Email},
 			{"Date:", vuln.Date},
-			{"Link:", blue.Sprint(fmt.Sprintf("%s/%s/code-risks/%s", webUI, assetName, vuln.ID))},
+			{"Link:", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/%s", webUI, assetName, assetVersionName, vuln.ID))},
 		}
 
 		tw.AppendRows(raw)

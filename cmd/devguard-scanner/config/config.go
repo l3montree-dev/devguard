@@ -19,9 +19,11 @@ import (
 	"bytes"
 	"crypto/x509"
 	"encoding/pem"
+	"log/slog"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/zalando/go-keyring"
@@ -82,6 +84,30 @@ func ParseBaseConfig() {
 	if RuntimeBaseConfig.Path != "" {
 		if err := isValidPath(RuntimeBaseConfig.Path); err != nil {
 			panic(err)
+		}
+	}
+	gitVersionInfo, err := utils.GetAssetVersionInfoFromGit(RuntimeBaseConfig.Path)
+
+	if RuntimeBaseConfig.Ref == "" {
+		// check if we have a git version info
+		if err == nil {
+			RuntimeBaseConfig.Ref = gitVersionInfo.BranchOrTag
+		} else {
+			// if we don't have a git version info, we use the current time as ref
+			slog.Info("could not get git version info, using current 'main' as ref", "err", err)
+			RuntimeBaseConfig.Ref = "main"
+		}
+	}
+
+	if RuntimeBaseConfig.DefaultRef == "" {
+
+		// check if we have a git version info
+		if err == nil {
+			RuntimeBaseConfig.DefaultRef = gitVersionInfo.DefaultBranch
+		} else {
+			// if we don't have a git version info, we use the current time as default ref
+			slog.Info("could not get git version info, using current '--ref' as default ref", "err", err)
+			RuntimeBaseConfig.DefaultRef = RuntimeBaseConfig.Ref
 		}
 	}
 }

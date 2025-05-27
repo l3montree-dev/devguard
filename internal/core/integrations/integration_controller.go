@@ -27,7 +27,6 @@ type integrationController struct {
 }
 
 func commentTrimmedFalsePositivePrefix(comment string) (models.VulnEventType, models.MechanicalJustificationType, string) {
-
 	if strings.HasPrefix(comment, "/component-not-present") {
 		return models.EventTypeFalsePositive, models.ComponentNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/component-not-present"))
 	} else if strings.HasPrefix(comment, "/vulnerable-code-not-present") {
@@ -50,13 +49,14 @@ func createNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, u
 
 	event, mechanicalJustification, justification := commentTrimmedFalsePositivePrefix(comment)
 
-	if event == models.EventTypeAccepted {
+	switch event {
+	case models.EventTypeAccepted:
 		return models.NewAcceptedEvent(vulnId, vulnType, userId, justification)
-	} else if event == models.EventTypeFalsePositive {
+	case models.EventTypeFalsePositive:
 		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, justification, mechanicalJustification, scannerIds)
-	} else if event == models.EventTypeReopened {
+	case models.EventTypeReopened:
 		return models.NewReopenedEvent(vulnId, vulnType, userId, justification)
-	} else if event == models.EventTypeComment {
+	case models.EventTypeComment:
 		return models.NewCommentEvent(vulnId, vulnType, userId, comment)
 	}
 
@@ -124,6 +124,22 @@ func (c *integrationController) TestAndSaveGitLabIntegration(ctx core.Context) e
 
 	if err := gl.(*gitlabIntegration).TestAndSave(ctx); err != nil {
 		slog.Error("could not test GitLab integration", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *integrationController) GitLabOauth2Callback(ctx core.Context) error {
+	// this function will be called by the gitlab oauth2 callback.
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
+	if gl == nil {
+		return ctx.JSON(404, "GitLab integration not enabled")
+	}
+
+	if err := gl.(*gitlabIntegration).Oauth2Callback(ctx); err != nil {
+		slog.Error("could not handle GitLab oauth2 callback", "err", err)
 		return err
 	}
 
