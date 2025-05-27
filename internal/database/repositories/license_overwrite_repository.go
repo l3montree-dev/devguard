@@ -24,7 +24,7 @@ func (r *LicenseOverwriteRepository) GetAllOverwritesForOrganization(orgID uuid.
 
 func (r *LicenseOverwriteRepository) MaybeGetOverwriteForComponent(orgID uuid.UUID, pURL string) (models.LicenseOverwrite, error) {
 	var result models.LicenseOverwrite
-	err := r.db.Where("organization_id = ? AND component_purl = ?", orgID, pURL).Find(&result).Error
+	err := r.db.Where("organization_id = ? AND component_purl = ?", orgID, pURL).First(&result).Error
 	if err != nil {
 		return result, err
 	}
