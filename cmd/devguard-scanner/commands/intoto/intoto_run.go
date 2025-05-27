@@ -84,10 +84,10 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	err = utils.SetGitVersionHeader(".", req)
-	if err != nil {
-		return errors.Wrap(err, "failed to set git version header")
-	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
+	req.Header.Set("X-Asset-Ref", config.RuntimeBaseConfig.Ref)
+	req.Header.Set("X-Asset-Default-Branch", config.RuntimeBaseConfig.DefaultRef)
 
 	// send the request
 	resp, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.ApiUrl).Do(req)

@@ -1,8 +1,6 @@
 package utils_test
 
 import (
-	"fmt"
-	"net/http"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -220,66 +218,4 @@ func TestGetAssetVersionInfo(t *testing.T) {
 
 	})
 
-}
-
-func TestSetGitVersionHeader(t *testing.T) {
-	setEmptyEnvVars(t)
-
-	t.Run("it should set headers correctly when GitVersionInfo is retrieved successfully", func(t *testing.T) {
-
-		mocksgitLister := mocks.NewGitLister(t)
-		utils.GitLister = mocksgitLister
-
-		mocksgitLister.On("GetTags", mock.Anything).Return([]string{"v1.0.0"}, nil)
-		mocksgitLister.On("GitCommitCount", mock.Anything, mock.Anything).Return(5, nil)
-		mocksgitLister.On("GetBranchName", mock.Anything).Return("main", nil)
-		mocksgitLister.On("GetDefaultBranchName", mock.Anything).Return("main", nil)
-
-		req, err := http.NewRequest("GET", "http://example.com", nil)
-		assert.NoError(t, err)
-
-		err = utils.SetGitVersionHeader(".", req)
-		assert.NoError(t, err)
-
-		assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
-		assert.Equal(t, "main", req.Header.Get("X-Asset-Ref"))
-		assert.Equal(t, "main", req.Header.Get("X-Asset-Default-Branch"))
-	})
-
-	// The error message "could not get current version" occurs if an error happens in the getCurrentVersion function.
-	// This can be triggered by failures in any of the following internal functions: MarkAsSafePath, GetTags,filterAndSortValidSemverTags, or GitCommitCount.
-
-	t.Run("it should return an error if GetAssetVersionInfo fails", func(t *testing.T) {
-		mocksgitLister := mocks.NewGitLister(t)
-		utils.GitLister = mocksgitLister
-
-		mocksgitLister.On("GetTags", ".").Return([]string{"v1.0.0"}, nil)
-		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(5, nil)
-		mocksgitLister.On("GetBranchName", ".").Return("main", errors.New("cannot get branch name"))
-
-		req, err := http.NewRequest("GET", "http://example.com", nil)
-		assert.NoError(t, err)
-
-		err = utils.SetGitVersionHeader(".", req)
-		assert.Error(t, err)
-
-		assert.Empty(t, req.Header.Get("X-Asset-Ref"))
-		assert.Empty(t, req.Header.Get("X-Asset-Default-Branch"))
-	})
-
-	t.Run("it should not return an error if GetAssetVersionInfo fails with 'could not get current version'", func(t *testing.T) {
-		mocksgitLister := mocks.NewGitLister(t)
-		utils.GitLister = mocksgitLister
-
-		mocksgitLister.On("GetTags", ".").Return(nil, fmt.Errorf("could not get current version"))
-
-		req, err := http.NewRequest("GET", "http://example.com", nil)
-		assert.NoError(t, err)
-
-		err = utils.SetGitVersionHeader(".", req)
-		assert.NoError(t, err)
-
-		assert.Empty(t, req.Header.Get("X-Asset-Ref"))
-		assert.Empty(t, req.Header.Get("X-Asset-Default-Branch"))
-	})
 }

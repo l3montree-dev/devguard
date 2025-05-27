@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,23 +36,6 @@ func getDirFromPath(path string) string {
 }
 
 var GitLister gitLister = commandLineGitLister{}
-
-func SetGitVersionHeader(path string, req *http.Request) error {
-	gitVersionInfo, err := GetAssetVersionInfo(path)
-	if err != nil {
-		if err.Error() == "could not get current version" {
-		} else {
-			return err
-		}
-	}
-
-	slog.Info("git version info", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", gitVersionInfo.DefaultBranch)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Asset-Ref", gitVersionInfo.BranchOrTag)
-	req.Header.Set("X-Asset-Default-Branch", gitVersionInfo.DefaultBranch)
-
-	return nil
-}
 
 func getAssetVersionInfoFromPipeline() (GitVersionInfo, error) {
 	var gitVersionInfo GitVersionInfo
