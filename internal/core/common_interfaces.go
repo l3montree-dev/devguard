@@ -25,6 +25,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/openvex/go-vex/pkg/vex"
+	"github.com/package-url/packageurl-go"
 )
 
 type ProjectRepository interface {
@@ -275,7 +276,7 @@ type VulnRepository interface {
 
 type LicenseOverwriteRepository interface {
 	GetAllOverwritesFromOrganization(orgID uuid.UUID) ([]models.LicenseOverwrite, error)
-	MaybeGetOverwriteForComponent(orgID uuid.UUID, pURL string) (models.LicenseOverwrite, error)
+	MaybeGetOverwriteForComponent(orgID uuid.UUID, pURL packageurl.PackageURL) (models.LicenseOverwrite, error)
 }
 
 type ExternalUserRepository interface {
