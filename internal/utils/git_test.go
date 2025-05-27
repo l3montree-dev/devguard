@@ -12,7 +12,17 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+func setEmptyEnvVars(t *testing.T) {
+	// Clear the environment variables to avoid conflicts
+	t.Setenv("CI_COMMIT_REF_NAME", "")
+	t.Setenv("CI_DEFAULT_BRANCH", "")
+	t.Setenv("CI_COMMIT_TAG", "")
+	t.Setenv("GITHUB_REF_NAME", "")
+	t.Setenv("GITHUB_BASE_REF", "")
+}
+
 func TestGetAssetVersionInfo(t *testing.T) {
+	setEmptyEnvVars(t)
 
 	t.Run("it should return error if cannot get tags", func(t *testing.T) {
 		mocksgitLister := mocks.GitLister{}
@@ -211,7 +221,10 @@ func TestGetAssetVersionInfo(t *testing.T) {
 	})
 
 }
+
 func TestSetGitVersionHeader(t *testing.T) {
+	setEmptyEnvVars(t)
+
 	t.Run("it should set headers correctly when GitVersionInfo is retrieved successfully", func(t *testing.T) {
 
 		mocksgitLister := mocks.NewGitLister(t)
