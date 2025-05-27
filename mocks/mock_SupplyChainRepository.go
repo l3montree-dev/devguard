@@ -61,15 +61,26 @@ type SupplyChainRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *SupplyChainRepository_Expecter) Activate(tx interface{}, id interface{}) *SupplyChainRepository_Activate_Call {
 	return &SupplyChainRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *SupplyChainRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *SupplyChainRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -208,15 +219,26 @@ type SupplyChainRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.SupplyChain
 func (_e *SupplyChainRepository_Expecter) Create(tx interface{}, t interface{}) *SupplyChainRepository_Create_Call {
 	return &SupplyChainRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *SupplyChainRepository_Create_Call) Run(run func(tx core.DB, t *models.SupplyChain)) *SupplyChainRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.SupplyChain))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.SupplyChain
+		if args[1] != nil {
+			arg1 = args[1].(*models.SupplyChain)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -254,15 +276,26 @@ type SupplyChainRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.SupplyChain
 func (_e *SupplyChainRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *SupplyChainRepository_CreateBatch_Call {
 	return &SupplyChainRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *SupplyChainRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.SupplyChain)) *SupplyChainRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.SupplyChain))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.SupplyChain
+		if args[1] != nil {
+			arg1 = args[1].([]models.SupplyChain)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -300,15 +333,26 @@ type SupplyChainRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *SupplyChainRepository_Expecter) Delete(tx interface{}, id interface{}) *SupplyChainRepository_Delete_Call {
 	return &SupplyChainRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *SupplyChainRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *SupplyChainRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -346,15 +390,26 @@ type SupplyChainRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx
-//   - ids
+//   - tx core.DB
+//   - ids []models.SupplyChain
 func (_e *SupplyChainRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *SupplyChainRepository_DeleteBatch_Call {
 	return &SupplyChainRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *SupplyChainRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.SupplyChain)) *SupplyChainRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.SupplyChain))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.SupplyChain
+		if args[1] != nil {
+			arg1 = args[1].([]models.SupplyChain)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -403,14 +458,20 @@ type SupplyChainRepository_FindByDigest_Call struct {
 }
 
 // FindByDigest is a helper method to define mock.On call
-//   - digest
+//   - digest string
 func (_e *SupplyChainRepository_Expecter) FindByDigest(digest interface{}) *SupplyChainRepository_FindByDigest_Call {
 	return &SupplyChainRepository_FindByDigest_Call{Call: _e.mock.On("FindByDigest", digest)}
 }
 
 func (_c *SupplyChainRepository_FindByDigest_Call) Run(run func(digest string)) *SupplyChainRepository_FindByDigest_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -459,14 +520,20 @@ type SupplyChainRepository_FindBySupplyChainID_Call struct {
 }
 
 // FindBySupplyChainID is a helper method to define mock.On call
-//   - supplyChainID
+//   - supplyChainID string
 func (_e *SupplyChainRepository_Expecter) FindBySupplyChainID(supplyChainID interface{}) *SupplyChainRepository_FindBySupplyChainID_Call {
 	return &SupplyChainRepository_FindBySupplyChainID_Call{Call: _e.mock.On("FindBySupplyChainID", supplyChainID)}
 }
 
 func (_c *SupplyChainRepository_FindBySupplyChainID_Call) Run(run func(supplyChainID string)) *SupplyChainRepository_FindBySupplyChainID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -506,14 +573,20 @@ type SupplyChainRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx
+//   - tx core.DB
 func (_e *SupplyChainRepository_Expecter) GetDB(tx interface{}) *SupplyChainRepository_GetDB_Call {
 	return &SupplyChainRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *SupplyChainRepository_GetDB_Call) Run(run func(tx core.DB)) *SupplyChainRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -562,14 +635,20 @@ type SupplyChainRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids
+//   - ids []uuid.UUID
 func (_e *SupplyChainRepository_Expecter) List(ids interface{}) *SupplyChainRepository_List_Call {
 	return &SupplyChainRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *SupplyChainRepository_List_Call) Run(run func(ids []uuid.UUID)) *SupplyChainRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]uuid.UUID))
+		var arg0 []uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].([]uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -616,15 +695,26 @@ type SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call struct {
 }
 
 // PercentageOfVerifiedSupplyChains is a helper method to define mock.On call
-//   - assetVersionName
-//   - assetID
+//   - assetVersionName string
+//   - assetID uuid.UUID
 func (_e *SupplyChainRepository_Expecter) PercentageOfVerifiedSupplyChains(assetVersionName interface{}, assetID interface{}) *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
 	return &SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call{Call: _e.mock.On("PercentageOfVerifiedSupplyChains", assetVersionName, assetID)}
 }
 
 func (_c *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *SupplyChainRepository_PercentageOfVerifiedSupplyChains_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(uuid.UUID))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -671,14 +761,20 @@ type SupplyChainRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id uuid.UUID
 func (_e *SupplyChainRepository_Expecter) Read(id interface{}) *SupplyChainRepository_Read_Call {
 	return &SupplyChainRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *SupplyChainRepository_Read_Call) Run(run func(id uuid.UUID)) *SupplyChainRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -716,15 +812,26 @@ type SupplyChainRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.SupplyChain
 func (_e *SupplyChainRepository_Expecter) Save(tx interface{}, t interface{}) *SupplyChainRepository_Save_Call {
 	return &SupplyChainRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *SupplyChainRepository_Save_Call) Run(run func(tx core.DB, t *models.SupplyChain)) *SupplyChainRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.SupplyChain))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.SupplyChain
+		if args[1] != nil {
+			arg1 = args[1].(*models.SupplyChain)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -762,15 +869,26 @@ type SupplyChainRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.SupplyChain
 func (_e *SupplyChainRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *SupplyChainRepository_SaveBatch_Call {
 	return &SupplyChainRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *SupplyChainRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.SupplyChain)) *SupplyChainRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.SupplyChain))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.SupplyChain
+		if args[1] != nil {
+			arg1 = args[1].([]models.SupplyChain)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -808,14 +926,20 @@ type SupplyChainRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn
+//   - fn func(tx core.DB) error
 func (_e *SupplyChainRepository_Expecter) Transaction(fn interface{}) *SupplyChainRepository_Transaction_Call {
 	return &SupplyChainRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *SupplyChainRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *SupplyChainRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(tx core.DB) error))
+		var arg0 func(tx core.DB) error
+		if args[0] != nil {
+			arg0 = args[0].(func(tx core.DB) error)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }

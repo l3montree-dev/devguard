@@ -61,15 +61,26 @@ type GitLabOauth2TokenRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *GitLabOauth2TokenRepository_Expecter) Activate(tx interface{}, id interface{}) *GitLabOauth2TokenRepository_Activate_Call {
 	return &GitLabOauth2TokenRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *GitLabOauth2TokenRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *GitLabOauth2TokenRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -208,15 +219,26 @@ type GitLabOauth2TokenRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.GitLabOauth2Token
 func (_e *GitLabOauth2TokenRepository_Expecter) Create(tx interface{}, t interface{}) *GitLabOauth2TokenRepository_Create_Call {
 	return &GitLabOauth2TokenRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *GitLabOauth2TokenRepository_Create_Call) Run(run func(tx core.DB, t *models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.GitLabOauth2Token))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.GitLabOauth2Token
+		if args[1] != nil {
+			arg1 = args[1].(*models.GitLabOauth2Token)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -254,15 +276,26 @@ type GitLabOauth2TokenRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.GitLabOauth2Token
 func (_e *GitLabOauth2TokenRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *GitLabOauth2TokenRepository_CreateBatch_Call {
 	return &GitLabOauth2TokenRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *GitLabOauth2TokenRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.GitLabOauth2Token))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.GitLabOauth2Token
+		if args[1] != nil {
+			arg1 = args[1].([]models.GitLabOauth2Token)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -300,15 +333,26 @@ type GitLabOauth2TokenRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *GitLabOauth2TokenRepository_Expecter) Delete(tx interface{}, id interface{}) *GitLabOauth2TokenRepository_Delete_Call {
 	return &GitLabOauth2TokenRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *GitLabOauth2TokenRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *GitLabOauth2TokenRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -346,15 +390,26 @@ type GitLabOauth2TokenRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx
-//   - ids
+//   - tx core.DB
+//   - ids []models.GitLabOauth2Token
 func (_e *GitLabOauth2TokenRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *GitLabOauth2TokenRepository_DeleteBatch_Call {
 	return &GitLabOauth2TokenRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *GitLabOauth2TokenRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.GitLabOauth2Token))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.GitLabOauth2Token
+		if args[1] != nil {
+			arg1 = args[1].([]models.GitLabOauth2Token)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -394,14 +449,20 @@ type GitLabOauth2TokenRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx
+//   - tx core.DB
 func (_e *GitLabOauth2TokenRepository_Expecter) GetDB(tx interface{}) *GitLabOauth2TokenRepository_GetDB_Call {
 	return &GitLabOauth2TokenRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *GitLabOauth2TokenRepository_GetDB_Call) Run(run func(tx core.DB)) *GitLabOauth2TokenRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -450,14 +511,20 @@ type GitLabOauth2TokenRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids
+//   - ids []uuid.UUID
 func (_e *GitLabOauth2TokenRepository_Expecter) List(ids interface{}) *GitLabOauth2TokenRepository_List_Call {
 	return &GitLabOauth2TokenRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *GitLabOauth2TokenRepository_List_Call) Run(run func(ids []uuid.UUID)) *GitLabOauth2TokenRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]uuid.UUID))
+		var arg0 []uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].([]uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -504,14 +571,20 @@ type GitLabOauth2TokenRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id uuid.UUID
 func (_e *GitLabOauth2TokenRepository_Expecter) Read(id interface{}) *GitLabOauth2TokenRepository_Read_Call {
 	return &GitLabOauth2TokenRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *GitLabOauth2TokenRepository_Read_Call) Run(run func(id uuid.UUID)) *GitLabOauth2TokenRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -549,15 +622,26 @@ type GitLabOauth2TokenRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.GitLabOauth2Token
 func (_e *GitLabOauth2TokenRepository_Expecter) Save(tx interface{}, t interface{}) *GitLabOauth2TokenRepository_Save_Call {
 	return &GitLabOauth2TokenRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *GitLabOauth2TokenRepository_Save_Call) Run(run func(tx core.DB, t *models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.GitLabOauth2Token))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.GitLabOauth2Token
+		if args[1] != nil {
+			arg1 = args[1].(*models.GitLabOauth2Token)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -595,15 +679,26 @@ type GitLabOauth2TokenRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.GitLabOauth2Token
 func (_e *GitLabOauth2TokenRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *GitLabOauth2TokenRepository_SaveBatch_Call {
 	return &GitLabOauth2TokenRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *GitLabOauth2TokenRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.GitLabOauth2Token))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.GitLabOauth2Token
+		if args[1] != nil {
+			arg1 = args[1].([]models.GitLabOauth2Token)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -641,14 +736,20 @@ type GitLabOauth2TokenRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn
+//   - fn func(tx core.DB) error
 func (_e *GitLabOauth2TokenRepository_Expecter) Transaction(fn interface{}) *GitLabOauth2TokenRepository_Transaction_Call {
 	return &GitLabOauth2TokenRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *GitLabOauth2TokenRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *GitLabOauth2TokenRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(tx core.DB) error))
+		var arg0 func(tx core.DB) error
+		if args[0] != nil {
+			arg0 = args[0].(func(tx core.DB) error)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }

@@ -72,14 +72,20 @@ type ProjectService_GetDirectChildProjects_Call struct {
 }
 
 // GetDirectChildProjects is a helper method to define mock.On call
-//   - projectID
+//   - projectID uuid.UUID
 func (_e *ProjectService_Expecter) GetDirectChildProjects(projectID interface{}) *ProjectService_GetDirectChildProjects_Call {
 	return &ProjectService_GetDirectChildProjects_Call{Call: _e.mock.On("GetDirectChildProjects", projectID)}
 }
 
 func (_c *ProjectService_GetDirectChildProjects_Call) Run(run func(projectID uuid.UUID)) *ProjectService_GetDirectChildProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -128,14 +134,20 @@ type ProjectService_ListAllowedProjects_Call struct {
 }
 
 // ListAllowedProjects is a helper method to define mock.On call
-//   - ctx
+//   - ctx core.Context
 func (_e *ProjectService_Expecter) ListAllowedProjects(ctx interface{}) *ProjectService_ListAllowedProjects_Call {
 	return &ProjectService_ListAllowedProjects_Call{Call: _e.mock.On("ListAllowedProjects", ctx)}
 }
 
 func (_c *ProjectService_ListAllowedProjects_Call) Run(run func(ctx core.Context)) *ProjectService_ListAllowedProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.Context))
+		var arg0 core.Context
+		if args[0] != nil {
+			arg0 = args[0].(core.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -184,14 +196,20 @@ type ProjectService_ListProjectsByOrganizationID_Call struct {
 }
 
 // ListProjectsByOrganizationID is a helper method to define mock.On call
-//   - organizationID
+//   - organizationID uuid.UUID
 func (_e *ProjectService_Expecter) ListProjectsByOrganizationID(organizationID interface{}) *ProjectService_ListProjectsByOrganizationID_Call {
 	return &ProjectService_ListProjectsByOrganizationID_Call{Call: _e.mock.On("ListProjectsByOrganizationID", organizationID)}
 }
 
 func (_c *ProjectService_ListProjectsByOrganizationID_Call) Run(run func(organizationID uuid.UUID)) *ProjectService_ListProjectsByOrganizationID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -240,14 +258,20 @@ type ProjectService_RecursivelyGetChildProjects_Call struct {
 }
 
 // RecursivelyGetChildProjects is a helper method to define mock.On call
-//   - projectID
+//   - projectID uuid.UUID
 func (_e *ProjectService_Expecter) RecursivelyGetChildProjects(projectID interface{}) *ProjectService_RecursivelyGetChildProjects_Call {
 	return &ProjectService_RecursivelyGetChildProjects_Call{Call: _e.mock.On("RecursivelyGetChildProjects", projectID)}
 }
 
 func (_c *ProjectService_RecursivelyGetChildProjects_Call) Run(run func(projectID uuid.UUID)) *ProjectService_RecursivelyGetChildProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
