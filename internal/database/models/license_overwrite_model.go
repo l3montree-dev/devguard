@@ -10,5 +10,5 @@ type LicenseOverwrite struct {
 }
 
 func (m LicenseOverwrite) TableName() string {
-	return "licenseOverwrite"
+	return "license_overwrite"
 }
