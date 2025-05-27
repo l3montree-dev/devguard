@@ -223,6 +223,7 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 	return otherLicensesMap, nil
 }
 
+// this function maps a list of license structs to, well...  a map
 func licensesToMap(licenses []struct {
 	License string
 	Count   int
