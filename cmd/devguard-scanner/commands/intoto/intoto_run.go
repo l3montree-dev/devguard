@@ -84,7 +84,6 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
 	req.Header.Set("X-Asset-Ref", config.RuntimeBaseConfig.Ref)
 	req.Header.Set("X-Asset-Default-Branch", config.RuntimeBaseConfig.DefaultRef)
