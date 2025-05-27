@@ -21,18 +21,18 @@ type licenseResponse struct {
 	Count   int     `json:"count"`
 }
 
-func (httpController httpController) LicenseDistribution(c core.Context) error {
-	asset := core.GetAsset(c)
-	assetVersion, err := core.MaybeGetAssetVersion(c)
+func (httpController httpController) LicenseDistribution(ctx core.Context) error {
+	asset := core.GetAsset(ctx)
+	assetVersion, err := core.MaybeGetAssetVersion(ctx)
 	if err != nil {
 		// we need to get the default asset version
 		assetVersion, err = httpController.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
 		if err != nil {
-			return c.JSON(404, nil)
+			return ctx.JSON(404, nil)
 		}
 	}
 
-	scannerId := c.QueryParam("scannerId")
+	scannerId := ctx.QueryParam("scannerId")
 
 	licenses, err := httpController.componentRepository.GetLicenseDistribution(nil,
 		assetVersion.Name,
@@ -60,17 +60,17 @@ func (httpController httpController) LicenseDistribution(c core.Context) error {
 		return err
 	}
 
-	return c.JSON(200, res)
+	return ctx.JSON(200, res)
 }
 
-func (httpController httpController) ListPaged(c core.Context) error {
-	assetVersion := core.GetAssetVersion(c)
-	scannerId := c.QueryParam("scannerId")
+func (httpController httpController) ListPaged(ctx core.Context) error {
+	assetVersion := core.GetAssetVersion(ctx)
+	scannerId := ctx.QueryParam("scannerId")
 
-	pageInfo := core.GetPageInfo(c)
-	filter := core.GetFilterQuery(c)
-	search := c.QueryParam("search")
-	sort := core.GetSortQuery(c)
+	pageInfo := core.GetPageInfo(ctx)
+	filter := core.GetFilterQuery(ctx)
+	search := ctx.QueryParam("search")
+	sort := core.GetSortQuery(ctx)
 
 	components, err := httpController.componentRepository.LoadComponentsWithProject(nil,
 		assetVersion.Name,
@@ -92,5 +92,5 @@ func (httpController httpController) ListPaged(c core.Context) error {
 		componentsDTO = append(componentsDTO, toDTO(component))
 	}
 
-	return c.JSON(200, core.NewPaged(pageInfo, components.Total, componentsDTO))
+	return ctx.JSON(200, core.NewPaged(pageInfo, components.Total, componentsDTO))
 }
