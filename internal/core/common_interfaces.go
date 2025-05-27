@@ -273,6 +273,10 @@ type VulnRepository interface {
 	ApplyAndSave(tx DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent) error
 }
 
+type LicenseOverwriteRepository interface {
+	GetAllOverwritesFromOrganization(orgID uuid.UUID) ([]models.LicenseOverwrite, error)
+}
+
 type ExternalUserRepository interface {
 	Save(db DB, user *models.ExternalUser) error
 	GetDB(tx DB) DB
