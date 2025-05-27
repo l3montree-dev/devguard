@@ -8,3 +8,7 @@ type LicenseOverwrite struct {
 	ComponentPurl  string    `json:"componentPurl" gorm:"type:text"`
 	Justification  string    `json:"justification" gorm:"type:text"`
 }
+
+func (m LicenseOverwrite) TableName() string {
+	return "licenseOverwrite"
+}

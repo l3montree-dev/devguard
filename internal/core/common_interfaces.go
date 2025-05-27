@@ -275,6 +275,7 @@ type VulnRepository interface {
 
 type LicenseOverwriteRepository interface {
 	GetAllOverwritesFromOrganization(orgID uuid.UUID) ([]models.LicenseOverwrite, error)
+	MaybeGetOverwriteForComponent(orgID uuid.UUID, pURL string) (models.LicenseOverwrite, error)
 }
 
 type ExternalUserRepository interface {
