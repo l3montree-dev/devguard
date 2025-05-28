@@ -95,7 +95,7 @@ func ParseBaseConfig() {
 			RuntimeBaseConfig.Ref = gitVersionInfo.BranchOrTag
 		} else {
 			// if we don't have a git version info, we use the current time as ref
-			slog.Info("could not get git version info, using current 'main' as ref", "err", err)
+			slog.Info("could not get git version info, using current 'main' as ref")
 			RuntimeBaseConfig.Ref = "main"
 		}
 	}
@@ -107,7 +107,7 @@ func ParseBaseConfig() {
 			RuntimeBaseConfig.DefaultRef = gitVersionInfo.DefaultBranch
 		} else {
 			// if we don't have a git version info, we use the current time as default ref
-			slog.Info("could not get git version info, using current '--ref' as default ref", "err", err)
+			slog.Info("could not get git version info, using current '--ref' as default ref")
 			RuntimeBaseConfig.DefaultRef = RuntimeBaseConfig.Ref
 		}
 	}

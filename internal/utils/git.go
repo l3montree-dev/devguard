@@ -82,7 +82,7 @@ func GetAssetVersionInfo(path string) (GitVersionInfo, error) {
 	slog.Info("could not get git version info from pipeline, falling back to git")
 	gitVersionInfo, err = getAssetVersionInfoFromGit(path)
 	if err != nil {
-		slog.Error("could not get git version info from git", "err", err)
+		slog.Error("could not get git version info from git")
 		return GitVersionInfo{}, errors.Wrap(err, "could not get git version info from git")
 	}
 	slog.Info("got git version info from git", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", gitVersionInfo.DefaultBranch)
