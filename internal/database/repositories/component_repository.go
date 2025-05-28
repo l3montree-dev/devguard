@@ -244,26 +244,8 @@ func licensesToMap(licenses []struct {
 	return licensesMap
 }
 
-type componentWithOverwrittenLicense struct {
-	models.Component
-	IsLicenseOverwritten bool
-}
-
-type componentDependencyWithOverwrittenLicense struct {
-	ID               uuid.UUID                       `gorm:"primarykey;type:uuid;default:gen_random_uuid()" json:"id"`
-	ComponentPurl    *string                         `json:"componentPurl" gorm:"column:component_purl;"` // will be nil, for direct dependencies
-	DependencyPurl   string                          `json:"dependencyPurl" gorm:"column:dependency_purl;"`
-	AssetID          uuid.UUID                       `json:"assetVersionId"`
-	AssetVersionName string                          `json:"assetVersionName"`
-	AssetVersion     models.AssetVersion             `json:"assetVersion" gorm:"foreignKey:AssetID,AssetVersionName;references:AssetID,Name;constraint:OnDelete:CASCADE;"`
-	ScannerID        string                          `json:"scannerIds" gorm:"column:scanner_ids"` // the name of the column is wrong! Only a single scanner id is stored here.
-	Depth            int                             `json:"depth" gorm:"column:depth"`
-	Component        componentWithOverwrittenLicense `json:"component"`
-	Dependency       componentWithOverwrittenLicense `json:"dependency"`
-}
-
 func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
-	var components []models.ComponentDependency
+	var componentDependencies []models.ComponentDependency
 
 	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
@@ -298,35 +280,24 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersion
 	var total int64
 	query.Session(&gorm.Session{}).Distinct("dependency_purl").Count(&total)
 
-	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Debug().Scan(&components).Error
+	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Debug().Scan(&componentDependencies).Error
 
 	// map with license overwrites
 	m := make(map[string]string)
 
-	resultWithAttentationToOverwrittenLicenses := make([]componentDependencyWithOverwrittenLicense, len(components))
+	for i, component := range componentDependencies {
+		if license, ok := m[componentDependencies[i].DependencyPurl]; ok {
+			componentDependencies[i].Dependency.License = &license
+			componentDependencies[i].Dependency.IsLicenseOverwritten = true
 
-	for i, component := range components {
-		if license, ok := m[component.DependencyPurl]; ok {
-			// check component.ComponentPurl
-			// there is an overwritten license right here
-			component.Component.License = &license
-			component.Dependency.License = &license
-			resultWithAttentationToOverwrittenLicenses[i] = componentDependencyWithOverwrittenLicense{
-				ID: component.ID,
-				Dependency: componentWithOverwrittenLicense{
-					Component:            component.Dependency,
-					IsLicenseOverwritten: true,
-				},
-				Component: componentWithOverwrittenLicense{
-					Component:            component.Component,
-					IsLicenseOverwritten: false,
-				},
-			}
-			components[i] = component
+		}
+		if license, ok := m[*component.ComponentPurl]; ok {
+			componentDependencies[i].Component.License = &license
+			componentDependencies[i].Component.IsLicenseOverwritten = true
 		}
 	}
 
-	return core.NewPaged(pageInfo, total, components), err
+	return core.NewPaged(pageInfo, total, componentDependencies), err
 }
 
 func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Component, error) {
