@@ -501,14 +501,14 @@ func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 			return nil, err
 		}
 
-		tokens, err := getGitlabAccessTokenFromOryIdentity(g.oauth2Endpoints, identity)
+		t, err := getGitlabAccessTokenFromOryIdentity(g.oauth2Endpoints, identity)
 		if err != nil {
 			slog.Error("failed to get gitlab access token from ory identity", "err", err)
 			return nil, err
 		}
 
-		tokenSlice := make([]models.GitLabOauth2Token, 0, len(tokens))
-		for providerId, token := range tokens {
+		tokenSlice := make([]models.GitLabOauth2Token, 0, len(t))
+		for providerId, token := range t {
 			tokenSlice = append(tokenSlice, models.GitLabOauth2Token{
 				AccessToken:  token.AccessToken,
 				RefreshToken: token.RefreshToken,
@@ -527,6 +527,7 @@ func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 				return nil, err
 			}
 		}
+		tokens = tokenSlice
 	}
 
 	// create a new gitlab batch client
@@ -559,6 +560,31 @@ func extractProjectIdFromRepoId(repoId string) (int, error) {
 	return strconv.Atoi(strings.Split(repoId, ":")[2])
 }
 
+func (g *gitlabIntegration) FullAutosetup(ctx core.Context) error {
+	// this integration does not have a single id, but rather multiple ids based on the gitlab integration
+	// REPO Id comes from context
+	ids := ctx.GetRequest().Header.Values("X-Repo-Id")
+
+	// 1. Check if the user has a gitlab oauth2 token
+	// TODO: Read provider id from the request
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(core.GetSession(ctx).GetUserID(), "opencode-autosetup")
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return err
+	}
+
+	// 2. Construct the client
+	client, err := g.gitlabOauth2ClientFactory(*token)
+	if err != nil {
+		slog.Error("failed to create gitlab oauth2 client", "err", err)
+		return err
+	}
+
+	// do autosetup
+
+	return nil
+}
+
 func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	repoId := utils.SafeDereference(asset.RepositoryID)
@@ -571,6 +597,7 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not extract integration id from repo id")
 	}
+
 	client, err := g.gitlabClientFactory(integrationUUID)
 	if err != nil {
 		return errors.Wrap(err, "could not create new gitlab client")
