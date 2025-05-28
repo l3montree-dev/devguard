@@ -61,15 +61,26 @@ type PersonalAccessTokenRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *PersonalAccessTokenRepository_Expecter) Activate(tx interface{}, id interface{}) *PersonalAccessTokenRepository_Activate_Call {
 	return &PersonalAccessTokenRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *PersonalAccessTokenRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *PersonalAccessTokenRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -208,15 +219,26 @@ type PersonalAccessTokenRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.PAT
 func (_e *PersonalAccessTokenRepository_Expecter) Create(tx interface{}, t interface{}) *PersonalAccessTokenRepository_Create_Call {
 	return &PersonalAccessTokenRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *PersonalAccessTokenRepository_Create_Call) Run(run func(tx core.DB, t *models.PAT)) *PersonalAccessTokenRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.PAT))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.PAT
+		if args[1] != nil {
+			arg1 = args[1].(*models.PAT)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -254,15 +276,26 @@ type PersonalAccessTokenRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.PAT
 func (_e *PersonalAccessTokenRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *PersonalAccessTokenRepository_CreateBatch_Call {
 	return &PersonalAccessTokenRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *PersonalAccessTokenRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.PAT)) *PersonalAccessTokenRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.PAT))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.PAT
+		if args[1] != nil {
+			arg1 = args[1].([]models.PAT)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -300,15 +333,26 @@ type PersonalAccessTokenRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *PersonalAccessTokenRepository_Expecter) Delete(tx interface{}, id interface{}) *PersonalAccessTokenRepository_Delete_Call {
 	return &PersonalAccessTokenRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *PersonalAccessTokenRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *PersonalAccessTokenRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -346,15 +390,26 @@ type PersonalAccessTokenRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx
-//   - ids
+//   - tx core.DB
+//   - ids []models.PAT
 func (_e *PersonalAccessTokenRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *PersonalAccessTokenRepository_DeleteBatch_Call {
 	return &PersonalAccessTokenRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *PersonalAccessTokenRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.PAT)) *PersonalAccessTokenRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.PAT))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.PAT
+		if args[1] != nil {
+			arg1 = args[1].([]models.PAT)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -392,14 +447,20 @@ type PersonalAccessTokenRepository_DeleteByFingerprint_Call struct {
 }
 
 // DeleteByFingerprint is a helper method to define mock.On call
-//   - fingerprint
+//   - fingerprint string
 func (_e *PersonalAccessTokenRepository_Expecter) DeleteByFingerprint(fingerprint interface{}) *PersonalAccessTokenRepository_DeleteByFingerprint_Call {
 	return &PersonalAccessTokenRepository_DeleteByFingerprint_Call{Call: _e.mock.On("DeleteByFingerprint", fingerprint)}
 }
 
 func (_c *PersonalAccessTokenRepository_DeleteByFingerprint_Call) Run(run func(fingerprint string)) *PersonalAccessTokenRepository_DeleteByFingerprint_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -448,14 +509,20 @@ type PersonalAccessTokenRepository_FindByUserIDs_Call struct {
 }
 
 // FindByUserIDs is a helper method to define mock.On call
-//   - userID
+//   - userID []uuid.UUID
 func (_e *PersonalAccessTokenRepository_Expecter) FindByUserIDs(userID interface{}) *PersonalAccessTokenRepository_FindByUserIDs_Call {
 	return &PersonalAccessTokenRepository_FindByUserIDs_Call{Call: _e.mock.On("FindByUserIDs", userID)}
 }
 
 func (_c *PersonalAccessTokenRepository_FindByUserIDs_Call) Run(run func(userID []uuid.UUID)) *PersonalAccessTokenRepository_FindByUserIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]uuid.UUID))
+		var arg0 []uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].([]uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -502,14 +569,20 @@ type PersonalAccessTokenRepository_GetByFingerprint_Call struct {
 }
 
 // GetByFingerprint is a helper method to define mock.On call
-//   - fingerprint
+//   - fingerprint string
 func (_e *PersonalAccessTokenRepository_Expecter) GetByFingerprint(fingerprint interface{}) *PersonalAccessTokenRepository_GetByFingerprint_Call {
 	return &PersonalAccessTokenRepository_GetByFingerprint_Call{Call: _e.mock.On("GetByFingerprint", fingerprint)}
 }
 
 func (_c *PersonalAccessTokenRepository_GetByFingerprint_Call) Run(run func(fingerprint string)) *PersonalAccessTokenRepository_GetByFingerprint_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -549,14 +622,20 @@ type PersonalAccessTokenRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx
+//   - tx core.DB
 func (_e *PersonalAccessTokenRepository_Expecter) GetDB(tx interface{}) *PersonalAccessTokenRepository_GetDB_Call {
 	return &PersonalAccessTokenRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *PersonalAccessTokenRepository_GetDB_Call) Run(run func(tx core.DB)) *PersonalAccessTokenRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -605,14 +684,20 @@ type PersonalAccessTokenRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids
+//   - ids []uuid.UUID
 func (_e *PersonalAccessTokenRepository_Expecter) List(ids interface{}) *PersonalAccessTokenRepository_List_Call {
 	return &PersonalAccessTokenRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *PersonalAccessTokenRepository_List_Call) Run(run func(ids []uuid.UUID)) *PersonalAccessTokenRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]uuid.UUID))
+		var arg0 []uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].([]uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -661,14 +746,20 @@ type PersonalAccessTokenRepository_ListByUserID_Call struct {
 }
 
 // ListByUserID is a helper method to define mock.On call
-//   - userID
+//   - userID string
 func (_e *PersonalAccessTokenRepository_Expecter) ListByUserID(userID interface{}) *PersonalAccessTokenRepository_ListByUserID_Call {
 	return &PersonalAccessTokenRepository_ListByUserID_Call{Call: _e.mock.On("ListByUserID", userID)}
 }
 
 func (_c *PersonalAccessTokenRepository_ListByUserID_Call) Run(run func(userID string)) *PersonalAccessTokenRepository_ListByUserID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -706,14 +797,20 @@ type PersonalAccessTokenRepository_MarkAsLastUsedNow_Call struct {
 }
 
 // MarkAsLastUsedNow is a helper method to define mock.On call
-//   - fingerprint
+//   - fingerprint string
 func (_e *PersonalAccessTokenRepository_Expecter) MarkAsLastUsedNow(fingerprint interface{}) *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call {
 	return &PersonalAccessTokenRepository_MarkAsLastUsedNow_Call{Call: _e.mock.On("MarkAsLastUsedNow", fingerprint)}
 }
 
 func (_c *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call) Run(run func(fingerprint string)) *PersonalAccessTokenRepository_MarkAsLastUsedNow_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -760,14 +857,20 @@ type PersonalAccessTokenRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id uuid.UUID
 func (_e *PersonalAccessTokenRepository_Expecter) Read(id interface{}) *PersonalAccessTokenRepository_Read_Call {
 	return &PersonalAccessTokenRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *PersonalAccessTokenRepository_Read_Call) Run(run func(id uuid.UUID)) *PersonalAccessTokenRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -805,15 +908,26 @@ type PersonalAccessTokenRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.PAT
 func (_e *PersonalAccessTokenRepository_Expecter) Save(tx interface{}, t interface{}) *PersonalAccessTokenRepository_Save_Call {
 	return &PersonalAccessTokenRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *PersonalAccessTokenRepository_Save_Call) Run(run func(tx core.DB, t *models.PAT)) *PersonalAccessTokenRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.PAT))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.PAT
+		if args[1] != nil {
+			arg1 = args[1].(*models.PAT)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -851,15 +965,26 @@ type PersonalAccessTokenRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.PAT
 func (_e *PersonalAccessTokenRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *PersonalAccessTokenRepository_SaveBatch_Call {
 	return &PersonalAccessTokenRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *PersonalAccessTokenRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.PAT)) *PersonalAccessTokenRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.PAT))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.PAT
+		if args[1] != nil {
+			arg1 = args[1].([]models.PAT)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -897,14 +1022,20 @@ type PersonalAccessTokenRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn
+//   - fn func(tx core.DB) error
 func (_e *PersonalAccessTokenRepository_Expecter) Transaction(fn interface{}) *PersonalAccessTokenRepository_Transaction_Call {
 	return &PersonalAccessTokenRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *PersonalAccessTokenRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *PersonalAccessTokenRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(tx core.DB) error))
+		var arg0 func(tx core.DB) error
+		if args[0] != nil {
+			arg0 = args[0].(func(tx core.DB) error)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }

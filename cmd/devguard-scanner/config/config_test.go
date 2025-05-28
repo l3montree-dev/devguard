@@ -25,7 +25,17 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+func setEmptyEnvVars(t *testing.T) {
+	// Clear the environment variables to avoid conflicts
+	t.Setenv("CI_COMMIT_REF_NAME", "")
+	t.Setenv("CI_DEFAULT_BRANCH", "")
+	t.Setenv("CI_COMMIT_TAG", "")
+	t.Setenv("GITHUB_REF_NAME", "")
+	t.Setenv("GITHUB_BASE_REF", "")
+}
+
 func TestParseBaseConfig(t *testing.T) {
+	setEmptyEnvVars(t)
 	t.Run("should use the provided config values if passed directly", func(t *testing.T) {
 		viper.Set("apiUrl", "http://example.com")
 		viper.Set("path", ".")

@@ -115,15 +115,26 @@ type CweRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - cwes
+//   - tx core.DB
+//   - cwes []models.CWE
 func (_e *CweRepository_Expecter) SaveBatch(tx interface{}, cwes interface{}) *CweRepository_SaveBatch_Call {
 	return &CweRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, cwes)}
 }
 
 func (_c *CweRepository_SaveBatch_Call) Run(run func(tx core.DB, cwes []models.CWE)) *CweRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.CWE))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.CWE
+		if args[1] != nil {
+			arg1 = args[1].([]models.CWE)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

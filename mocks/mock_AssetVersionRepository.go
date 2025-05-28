@@ -116,15 +116,26 @@ type AssetVersionRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - assetVersion
+//   - tx core.DB
+//   - assetVersion *models.AssetVersion
 func (_e *AssetVersionRepository_Expecter) Delete(tx interface{}, assetVersion interface{}) *AssetVersionRepository_Delete_Call {
 	return &AssetVersionRepository_Delete_Call{Call: _e.mock.On("Delete", tx, assetVersion)}
 }
 
 func (_c *AssetVersionRepository_Delete_Call) Run(run func(tx core.DB, assetVersion *models.AssetVersion)) *AssetVersionRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.AssetVersion))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.AssetVersion
+		if args[1] != nil {
+			arg1 = args[1].(*models.AssetVersion)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -171,17 +182,38 @@ type AssetVersionRepository_FindOrCreate_Call struct {
 }
 
 // FindOrCreate is a helper method to define mock.On call
-//   - assetVersionName
-//   - assetID
-//   - tag
-//   - defaultBranchName
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - tag string
+//   - defaultBranchName string
 func (_e *AssetVersionRepository_Expecter) FindOrCreate(assetVersionName interface{}, assetID interface{}, tag interface{}, defaultBranchName interface{}) *AssetVersionRepository_FindOrCreate_Call {
 	return &AssetVersionRepository_FindOrCreate_Call{Call: _e.mock.On("FindOrCreate", assetVersionName, assetID, tag, defaultBranchName)}
 }
 
 func (_c *AssetVersionRepository_FindOrCreate_Call) Run(run func(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string)) *AssetVersionRepository_FindOrCreate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(uuid.UUID), args[2].(string), args[3].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -230,15 +262,26 @@ type AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call struct {
 }
 
 // GetAllAssetsVersionFromDBByAssetID is a helper method to define mock.On call
-//   - tx
-//   - assetID
+//   - tx core.DB
+//   - assetID uuid.UUID
 func (_e *AssetVersionRepository_Expecter) GetAllAssetsVersionFromDBByAssetID(tx interface{}, assetID interface{}) *AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call {
 	return &AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call{Call: _e.mock.On("GetAllAssetsVersionFromDBByAssetID", tx, assetID)}
 }
 
 func (_c *AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call) Run(run func(tx core.DB, assetID uuid.UUID)) *AssetVersionRepository_GetAllAssetsVersionFromDBByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -278,14 +321,20 @@ type AssetVersionRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - v
+//   - v core.DB
 func (_e *AssetVersionRepository_Expecter) GetDB(v interface{}) *AssetVersionRepository_GetDB_Call {
 	return &AssetVersionRepository_GetDB_Call{Call: _e.mock.On("GetDB", v)}
 }
 
 func (_c *AssetVersionRepository_GetDB_Call) Run(run func(v core.DB)) *AssetVersionRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -332,14 +381,20 @@ type AssetVersionRepository_GetDefaultAssetVersion_Call struct {
 }
 
 // GetDefaultAssetVersion is a helper method to define mock.On call
-//   - assetID
+//   - assetID uuid.UUID
 func (_e *AssetVersionRepository_Expecter) GetDefaultAssetVersion(assetID interface{}) *AssetVersionRepository_GetDefaultAssetVersion_Call {
 	return &AssetVersionRepository_GetDefaultAssetVersion_Call{Call: _e.mock.On("GetDefaultAssetVersion", assetID)}
 }
 
 func (_c *AssetVersionRepository_GetDefaultAssetVersion_Call) Run(run func(assetID uuid.UUID)) *AssetVersionRepository_GetDefaultAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -388,14 +443,20 @@ type AssetVersionRepository_GetDefaultAssetVersionsByProjectID_Call struct {
 }
 
 // GetDefaultAssetVersionsByProjectID is a helper method to define mock.On call
-//   - projectID
+//   - projectID uuid.UUID
 func (_e *AssetVersionRepository_Expecter) GetDefaultAssetVersionsByProjectID(projectID interface{}) *AssetVersionRepository_GetDefaultAssetVersionsByProjectID_Call {
 	return &AssetVersionRepository_GetDefaultAssetVersionsByProjectID_Call{Call: _e.mock.On("GetDefaultAssetVersionsByProjectID", projectID)}
 }
 
 func (_c *AssetVersionRepository_GetDefaultAssetVersionsByProjectID_Call) Run(run func(projectID uuid.UUID)) *AssetVersionRepository_GetDefaultAssetVersionsByProjectID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -444,14 +505,20 @@ type AssetVersionRepository_GetDefaultAssetVersionsByProjectIDs_Call struct {
 }
 
 // GetDefaultAssetVersionsByProjectIDs is a helper method to define mock.On call
-//   - projectIDs
+//   - projectIDs []uuid.UUID
 func (_e *AssetVersionRepository_Expecter) GetDefaultAssetVersionsByProjectIDs(projectIDs interface{}) *AssetVersionRepository_GetDefaultAssetVersionsByProjectIDs_Call {
 	return &AssetVersionRepository_GetDefaultAssetVersionsByProjectIDs_Call{Call: _e.mock.On("GetDefaultAssetVersionsByProjectIDs", projectIDs)}
 }
 
 func (_c *AssetVersionRepository_GetDefaultAssetVersionsByProjectIDs_Call) Run(run func(projectIDs []uuid.UUID)) *AssetVersionRepository_GetDefaultAssetVersionsByProjectIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]uuid.UUID))
+		var arg0 []uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].([]uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -498,15 +565,26 @@ type AssetVersionRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - assetVersionName
-//   - assetID
+//   - assetVersionName string
+//   - assetID uuid.UUID
 func (_e *AssetVersionRepository_Expecter) Read(assetVersionName interface{}, assetID interface{}) *AssetVersionRepository_Read_Call {
 	return &AssetVersionRepository_Read_Call{Call: _e.mock.On("Read", assetVersionName, assetID)}
 }
 
 func (_c *AssetVersionRepository_Read_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *AssetVersionRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(uuid.UUID))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -553,15 +631,26 @@ type AssetVersionRepository_ReadBySlug_Call struct {
 }
 
 // ReadBySlug is a helper method to define mock.On call
-//   - assetID
-//   - slug
+//   - assetID uuid.UUID
+//   - slug string
 func (_e *AssetVersionRepository_Expecter) ReadBySlug(assetID interface{}, slug interface{}) *AssetVersionRepository_ReadBySlug_Call {
 	return &AssetVersionRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", assetID, slug)}
 }
 
 func (_c *AssetVersionRepository_ReadBySlug_Call) Run(run func(assetID uuid.UUID, slug string)) *AssetVersionRepository_ReadBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(string))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -599,15 +688,26 @@ type AssetVersionRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - assetVersion
+//   - tx core.DB
+//   - assetVersion *models.AssetVersion
 func (_e *AssetVersionRepository_Expecter) Save(tx interface{}, assetVersion interface{}) *AssetVersionRepository_Save_Call {
 	return &AssetVersionRepository_Save_Call{Call: _e.mock.On("Save", tx, assetVersion)}
 }
 
 func (_c *AssetVersionRepository_Save_Call) Run(run func(tx core.DB, assetVersion *models.AssetVersion)) *AssetVersionRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.AssetVersion))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.AssetVersion
+		if args[1] != nil {
+			arg1 = args[1].(*models.AssetVersion)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

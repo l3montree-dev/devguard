@@ -61,15 +61,26 @@ type ComponentRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id string
 func (_e *ComponentRepository_Expecter) Activate(tx interface{}, id interface{}) *ComponentRepository_Activate_Call {
 	return &ComponentRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *ComponentRepository_Activate_Call) Run(run func(tx core.DB, id string)) *ComponentRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -208,15 +219,26 @@ type ComponentRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.Component
 func (_e *ComponentRepository_Expecter) Create(tx interface{}, t interface{}) *ComponentRepository_Create_Call {
 	return &ComponentRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *ComponentRepository_Create_Call) Run(run func(tx core.DB, t *models.Component)) *ComponentRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.Component))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.Component
+		if args[1] != nil {
+			arg1 = args[1].(*models.Component)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -254,15 +276,26 @@ type ComponentRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.Component
 func (_e *ComponentRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *ComponentRepository_CreateBatch_Call {
 	return &ComponentRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *ComponentRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.Component)) *ComponentRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.Component))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.Component
+		if args[1] != nil {
+			arg1 = args[1].([]models.Component)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -300,15 +333,26 @@ type ComponentRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id string
 func (_e *ComponentRepository_Expecter) Delete(tx interface{}, id interface{}) *ComponentRepository_Delete_Call {
 	return &ComponentRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *ComponentRepository_Delete_Call) Run(run func(tx core.DB, id string)) *ComponentRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -346,15 +390,26 @@ type ComponentRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx
-//   - ids
+//   - tx core.DB
+//   - ids []models.Component
 func (_e *ComponentRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *ComponentRepository_DeleteBatch_Call {
 	return &ComponentRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *ComponentRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.Component)) *ComponentRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.Component))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.Component
+		if args[1] != nil {
+			arg1 = args[1].([]models.Component)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -401,15 +456,26 @@ type ComponentRepository_FindByPurl_Call struct {
 }
 
 // FindByPurl is a helper method to define mock.On call
-//   - tx
-//   - purl
+//   - tx core.DB
+//   - purl string
 func (_e *ComponentRepository_Expecter) FindByPurl(tx interface{}, purl interface{}) *ComponentRepository_FindByPurl_Call {
 	return &ComponentRepository_FindByPurl_Call{Call: _e.mock.On("FindByPurl", tx, purl)}
 }
 
 func (_c *ComponentRepository_FindByPurl_Call) Run(run func(tx core.DB, purl string)) *ComponentRepository_FindByPurl_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -449,14 +515,20 @@ type ComponentRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx
+//   - tx core.DB
 func (_e *ComponentRepository_Expecter) GetDB(tx interface{}) *ComponentRepository_GetDB_Call {
 	return &ComponentRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *ComponentRepository_GetDB_Call) Run(run func(tx core.DB)) *ComponentRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -505,15 +577,26 @@ type ComponentRepository_GetDependencyCountPerScanner_Call struct {
 }
 
 // GetDependencyCountPerScanner is a helper method to define mock.On call
-//   - assetVersionName
-//   - assetID
+//   - assetVersionName string
+//   - assetID uuid.UUID
 func (_e *ComponentRepository_Expecter) GetDependencyCountPerScanner(assetVersionName interface{}, assetID interface{}) *ComponentRepository_GetDependencyCountPerScanner_Call {
 	return &ComponentRepository_GetDependencyCountPerScanner_Call{Call: _e.mock.On("GetDependencyCountPerScanner", assetVersionName, assetID)}
 }
 
 func (_c *ComponentRepository_GetDependencyCountPerScanner_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *ComponentRepository_GetDependencyCountPerScanner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(uuid.UUID))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -562,17 +645,38 @@ type ComponentRepository_GetLicenseDistribution_Call struct {
 }
 
 // GetLicenseDistribution is a helper method to define mock.On call
-//   - tx
-//   - assetVersionName
-//   - assetID
-//   - scannerID
+//   - tx core.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scannerID string
 func (_e *ComponentRepository_Expecter) GetLicenseDistribution(tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *ComponentRepository_GetLicenseDistribution_Call {
 	return &ComponentRepository_GetLicenseDistribution_Call{Call: _e.mock.On("GetLicenseDistribution", tx, assetVersionName, assetID, scannerID)}
 }
 
 func (_c *ComponentRepository_GetLicenseDistribution_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *ComponentRepository_GetLicenseDistribution_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].(uuid.UUID), args[3].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -610,19 +714,50 @@ type ComponentRepository_HandleStateDiff_Call struct {
 }
 
 // HandleStateDiff is a helper method to define mock.On call
-//   - tx
-//   - assetVersionName
-//   - assetID
-//   - oldState
-//   - newState
-//   - scannerID
+//   - tx core.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - oldState []models.ComponentDependency
+//   - newState []models.ComponentDependency
+//   - scannerID string
 func (_e *ComponentRepository_Expecter) HandleStateDiff(tx interface{}, assetVersionName interface{}, assetID interface{}, oldState interface{}, newState interface{}, scannerID interface{}) *ComponentRepository_HandleStateDiff_Call {
 	return &ComponentRepository_HandleStateDiff_Call{Call: _e.mock.On("HandleStateDiff", tx, assetVersionName, assetID, oldState, newState, scannerID)}
 }
 
 func (_c *ComponentRepository_HandleStateDiff_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string)) *ComponentRepository_HandleStateDiff_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].(uuid.UUID), args[3].([]models.ComponentDependency), args[4].([]models.ComponentDependency), args[5].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 []models.ComponentDependency
+		if args[3] != nil {
+			arg3 = args[3].([]models.ComponentDependency)
+		}
+		var arg4 []models.ComponentDependency
+		if args[4] != nil {
+			arg4 = args[4].([]models.ComponentDependency)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
 	})
 	return _c
 }
@@ -671,14 +806,20 @@ type ComponentRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids
+//   - ids []string
 func (_e *ComponentRepository_Expecter) List(ids interface{}) *ComponentRepository_List_Call {
 	return &ComponentRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *ComponentRepository_List_Call) Run(run func(ids []string)) *ComponentRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]string))
+		var arg0 []string
+		if args[0] != nil {
+			arg0 = args[0].([]string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -727,17 +868,38 @@ type ComponentRepository_LoadComponents_Call struct {
 }
 
 // LoadComponents is a helper method to define mock.On call
-//   - tx
-//   - assetVersionName
-//   - assetID
-//   - scannerID
+//   - tx core.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scannerID string
 func (_e *ComponentRepository_Expecter) LoadComponents(tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *ComponentRepository_LoadComponents_Call {
 	return &ComponentRepository_LoadComponents_Call{Call: _e.mock.On("LoadComponents", tx, assetVersionName, assetID, scannerID)}
 }
 
 func (_c *ComponentRepository_LoadComponents_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *ComponentRepository_LoadComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].(uuid.UUID), args[3].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -784,21 +946,62 @@ type ComponentRepository_LoadComponentsWithProject_Call struct {
 }
 
 // LoadComponentsWithProject is a helper method to define mock.On call
-//   - tx
-//   - assetVersionName
-//   - assetID
-//   - scannerID
-//   - pageInfo
-//   - search
-//   - filter
-//   - sort
+//   - tx core.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scannerID string
+//   - pageInfo core.PageInfo
+//   - search string
+//   - filter []core.FilterQuery
+//   - sort []core.SortQuery
 func (_e *ComponentRepository_Expecter) LoadComponentsWithProject(tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ComponentRepository_LoadComponentsWithProject_Call {
 	return &ComponentRepository_LoadComponentsWithProject_Call{Call: _e.mock.On("LoadComponentsWithProject", tx, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)}
 }
 
 func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *ComponentRepository_LoadComponentsWithProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].(uuid.UUID), args[3].(string), args[4].(core.PageInfo), args[5].(string), args[6].([]core.FilterQuery), args[7].([]core.SortQuery))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 core.PageInfo
+		if args[4] != nil {
+			arg4 = args[4].(core.PageInfo)
+		}
+		var arg5 string
+		if args[5] != nil {
+			arg5 = args[5].(string)
+		}
+		var arg6 []core.FilterQuery
+		if args[6] != nil {
+			arg6 = args[6].([]core.FilterQuery)
+		}
+		var arg7 []core.SortQuery
+		if args[7] != nil {
+			arg7 = args[7].([]core.SortQuery)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+			arg7,
+		)
 	})
 	return _c
 }
@@ -847,18 +1050,44 @@ type ComponentRepository_LoadPathToComponent_Call struct {
 }
 
 // LoadPathToComponent is a helper method to define mock.On call
-//   - tx
-//   - assetVersionName
-//   - assetID
-//   - pURL
-//   - scannerID
+//   - tx core.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - pURL string
+//   - scannerID string
 func (_e *ComponentRepository_Expecter) LoadPathToComponent(tx interface{}, assetVersionName interface{}, assetID interface{}, pURL interface{}, scannerID interface{}) *ComponentRepository_LoadPathToComponent_Call {
 	return &ComponentRepository_LoadPathToComponent_Call{Call: _e.mock.On("LoadPathToComponent", tx, assetVersionName, assetID, pURL, scannerID)}
 }
 
 func (_c *ComponentRepository_LoadPathToComponent_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string)) *ComponentRepository_LoadPathToComponent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].(uuid.UUID), args[3].(string), args[4].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
 	})
 	return _c
 }
@@ -905,14 +1134,20 @@ type ComponentRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id string
 func (_e *ComponentRepository_Expecter) Read(id interface{}) *ComponentRepository_Read_Call {
 	return &ComponentRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *ComponentRepository_Read_Call) Run(run func(id string)) *ComponentRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -950,15 +1185,26 @@ type ComponentRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.Component
 func (_e *ComponentRepository_Expecter) Save(tx interface{}, t interface{}) *ComponentRepository_Save_Call {
 	return &ComponentRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *ComponentRepository_Save_Call) Run(run func(tx core.DB, t *models.Component)) *ComponentRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.Component))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.Component
+		if args[1] != nil {
+			arg1 = args[1].(*models.Component)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -996,15 +1242,26 @@ type ComponentRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - components
+//   - tx core.DB
+//   - components []models.Component
 func (_e *ComponentRepository_Expecter) SaveBatch(tx interface{}, components interface{}) *ComponentRepository_SaveBatch_Call {
 	return &ComponentRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, components)}
 }
 
 func (_c *ComponentRepository_SaveBatch_Call) Run(run func(tx core.DB, components []models.Component)) *ComponentRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.Component))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.Component
+		if args[1] != nil {
+			arg1 = args[1].([]models.Component)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -1042,14 +1299,20 @@ type ComponentRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn
+//   - fn func(tx core.DB) error
 func (_e *ComponentRepository_Expecter) Transaction(fn interface{}) *ComponentRepository_Transaction_Call {
 	return &ComponentRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *ComponentRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *ComponentRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(tx core.DB) error))
+		var arg0 func(tx core.DB) error
+		if args[0] != nil {
+			arg0 = args[0].(func(tx core.DB) error)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
