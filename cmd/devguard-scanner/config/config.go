@@ -86,7 +86,8 @@ func ParseBaseConfig() {
 			panic(err)
 		}
 	}
-	gitVersionInfo, err := utils.GetAssetVersionInfoFromGit(RuntimeBaseConfig.Path)
+
+	gitVersionInfo, err := utils.GetAssetVersionInfo(RuntimeBaseConfig.Path)
 
 	if RuntimeBaseConfig.Ref == "" {
 		// check if we have a git version info
