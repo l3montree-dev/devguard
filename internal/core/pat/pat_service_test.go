@@ -15,7 +15,7 @@ import (
 func TestGetPubKeyUsingFingerprint(t *testing.T) {
 	t.Run("test getPubKey Using Fingerprint", func(t *testing.T) {
 
-		var pat models.PAT = models.PAT{
+		var pat = models.PAT{
 			PubKey: "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5",
 		}
 
@@ -77,7 +77,7 @@ func TestPubKeyToFingerprint(t *testing.T) {
 func TestSignRequest(t *testing.T) {
 	t.Run("test signing and verifying", func(t *testing.T) {
 
-		var pat models.PAT = models.PAT{
+		var pat = models.PAT{
 			PubKey: "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5",
 		}
 
@@ -108,7 +108,7 @@ func TestSignRequest(t *testing.T) {
 
 	})
 	t.Run("test signing and verifying fails, after having tampered with the request", func(t *testing.T) {
-		var pat models.PAT = models.PAT{
+		var pat = models.PAT{
 			PubKey: "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5",
 		}
 
@@ -137,7 +137,7 @@ func TestSignRequest(t *testing.T) {
 	})
 
 	t.Run("test signing and verifying fails, after having tampered with the method header", func(t *testing.T) {
-		var pat models.PAT = models.PAT{
+		var pat = models.PAT{
 			PubKey: "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5",
 		}
 

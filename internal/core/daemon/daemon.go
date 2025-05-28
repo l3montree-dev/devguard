@@ -36,15 +36,7 @@ func shouldMirror(configService config.Service, key string) bool {
 		return false
 	}
 
-	if time.Since(lastTime) > 12*time.Hour {
-		// and it should be nighttime
-		now := time.Now()
-		// try out of business hours
-		if now.Hour() < 6 || now.Hour() > 20 {
-			return true
-		}
-	}
-	return false
+	return time.Since(lastTime) > 12*time.Hour
 }
 
 func markMirrored(configService config.Service, key string) error {
@@ -63,14 +55,19 @@ func Start(db core.DB) {
 		// we only update the vulnerability database each 6 hours.
 		// thus there is no need to recalculate the risk or anything earlier
 		slog.Info("starting background jobs", "time", time.Now())
-		var start time.Time = time.Now()
+		var start = time.Now()
 		// update deps dev
-		err := UpdateDepsDevInformation(db)
-		if err != nil {
-			slog.Error("could not update deps dev information", "err", err)
-			return nil
+		if shouldMirror(configService, "vulndb.depsdev") {
+			err := UpdateDepsDevInformation(db)
+			if err != nil {
+				slog.Error("could not update deps dev information", "err", err)
+				return nil
+			}
+			if err := markMirrored(configService, "vulndb.depsdev"); err != nil {
+				slog.Error("could not mark deps dev as mirrored", "err", err)
+			}
+			slog.Info("deps dev information updated", "duration", time.Since(start))
 		}
-		slog.Info("deps dev information updated", "duration", time.Since(start))
 
 		// first update the vulndb
 		// this will give us the latest cves, cwes, exploits and affected components

@@ -42,7 +42,9 @@ func (g gitlabRepository) toRepository() core.Repository {
 
 type gitlabIntegration struct {
 	gitlabIntegrationRepository core.GitlabIntegrationRepository
-	externalUserRepository      core.ExternalUserRepository
+	// gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
+
+	externalUserRepository core.ExternalUserRepository
 
 	firstPartyVulnRepository core.FirstPartyVulnRepository
 	aggregatedVulnRepository core.VulnRepository
@@ -171,6 +173,22 @@ func parseWebhook(r *http.Request) (any, error) {
 	return gitlab.ParseWebhook(eventType, payload)
 }
 
+func (g *gitlabIntegration) checkWebhookSecretToken(gitlabSecretToken string, assetID uuid.UUID) error {
+	asset, err := g.assetRepository.Read(assetID)
+	if err != nil {
+		slog.Error("could not read asset", "err", err)
+		return err
+	}
+
+	if asset.WebhookSecret != nil {
+		if asset.WebhookSecret.String() != gitlabSecretToken {
+			slog.Error("invalid webhook secret")
+			return errors.New("invalid webhook secret")
+		}
+	}
+
+	return nil
+}
 func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 	event, err := parseWebhook(ctx.Request())
@@ -178,6 +196,8 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		slog.Error("could not parse gitlab webhook", "err", err)
 		return err
 	}
+
+	gitlabSecretToken := ctx.Request().Header.Get("X-Gitlab-Token")
 
 	switch event := event.(type) {
 	case *gitlab.IssueEvent:
@@ -189,6 +209,11 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		if err != nil {
 			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
 			return nil
+		}
+
+		err = g.checkWebhookSecretToken(gitlabSecretToken, vuln.GetAssetID())
+		if err != nil {
+			return err
 		}
 
 		action := event.ObjectAttributes.Action
@@ -260,6 +285,11 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 		if err != nil {
 			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
 			return nil
+		}
+
+		err = g.checkWebhookSecretToken(gitlabSecretToken, vuln.GetAssetID())
+		if err != nil {
+			return err
 		}
 
 		comment := event.ObjectAttributes.Note
@@ -1109,7 +1139,7 @@ func (g *gitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1210,7 +1240,7 @@ func (g *gitlabIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 
 	exp := risk.Explain(*vuln, asset, vector, riskMetrics)
 
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1322,7 +1352,7 @@ func (g *gitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := getLabels(dependencyVuln)
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
@@ -1343,4 +1373,8 @@ func (g *gitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	return createdIssue, err
+}
+
+func (c *gitlabIntegration) Oauth2Callback(ctx core.Context) error {
+	return nil
 }

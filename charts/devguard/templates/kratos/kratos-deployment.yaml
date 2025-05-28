@@ -50,13 +50,12 @@ spec:
               key: uri
               optional: true
         {{- end }}
-        {{- if .Values.oidc.github.enabled }}
-        - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_SECRET"
+        {{- range $index, $provider := .Values.oidc.providers }}
+        - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_{{ $index }}_CLIENT_SECRET"
           valueFrom:
             secretKeyRef:
-              name: "{{ .Values.oidc.github.existingClientSecret }}"
-              key: "secret"
-              optional: true
+                name: "{{ $provider.existingClientSecret }}"
+                key: "secret"
         {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
@@ -128,13 +127,12 @@ spec:
               key: uri
               optional: true
         {{- end }}
-        {{- if .Values.oidc.github.enabled }}
-        - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_0_CLIENT_SECRET"
+        {{- range $index, $provider := .Values.oidc.providers }}
+        - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_{{ $index }}_CLIENT_SECRET"
           valueFrom:
             secretKeyRef:
-              name: "{{ .Values.oidc.github.existingClientSecret }}"
-              key: "secret"
-              optional: true
+                name: "{{ $provider.existingClientSecret }}"
+                key: "secret"
         {{- end }}
         ports:
         - name: http-admin

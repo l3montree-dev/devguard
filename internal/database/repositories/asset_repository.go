@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -28,9 +30,11 @@ type assetRepository struct {
 }
 
 func NewAssetRepository(db core.DB) *assetRepository {
-	err := db.AutoMigrate(&models.Asset{})
-	if err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		err := db.AutoMigrate(&models.Asset{})
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return &assetRepository{
@@ -56,15 +60,6 @@ func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, e
 		if err != nil {
 			return app, err
 		}
-	}
-	return app, nil
-}
-
-func (a *assetRepository) GetByAssetID(assetID uuid.UUID) (models.Asset, error) {
-	var app models.Asset
-	err := a.db.Where("id = ?", assetID).First(&app).Error
-	if err != nil {
-		return models.Asset{}, err
 	}
 	return app, nil
 }
@@ -149,6 +144,15 @@ func (g *assetRepository) Delete(tx core.DB, id uuid.UUID) error {
 func (g *assetRepository) GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error) {
 	var asset models.Asset
 	err := g.db.Debug().Where("badge_secret = ?", badgeSecret).First(&asset).Error
+	if err != nil {
+		return models.Asset{}, err
+	}
+	return asset, nil
+}
+
+func (g *assetRepository) ReadWithAssetVersions(assetID uuid.UUID) (models.Asset, error) {
+	var asset models.Asset
+	err := g.db.Preload("AssetVersions").Where("id = ?", assetID).First(&asset).Error
 	if err != nil {
 		return models.Asset{}, err
 	}

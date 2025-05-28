@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,8 +16,10 @@ type projectRiskHistoryRepository struct {
 }
 
 func NewProjectRiskHistoryRepository(db core.DB) *projectRiskHistoryRepository {
-	if err := db.AutoMigrate(&models.ProjectRiskHistory{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.ProjectRiskHistory{}); err != nil {
+			panic(err)
+		}
 	}
 	return &projectRiskHistoryRepository{
 		db:         db,
@@ -25,7 +28,7 @@ func NewProjectRiskHistoryRepository(db core.DB) *projectRiskHistoryRepository {
 }
 
 func (r *projectRiskHistoryRepository) GetRiskHistory(projectId uuid.UUID, start, end time.Time) ([]models.ProjectRiskHistory, error) {
-	var projectRisk []models.ProjectRiskHistory = []models.ProjectRiskHistory{}
+	var projectRisk = []models.ProjectRiskHistory{}
 	// get all projectRisk of the project
 	if err := r.Repository.GetDB(r.db).Where("project_id = ?", projectId).Where(
 		"day >= ? AND day <= ?", start, end,

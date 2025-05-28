@@ -3,12 +3,17 @@ package asset
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestApplyToModel(t *testing.T) {
+
+	webhookSecret := uuid.New()
+	badgeSecret := uuid.New()
+
 	tests := []struct {
 		name     string
 		patch    patchRequest
@@ -87,6 +92,58 @@ func TestApplyToModel(t *testing.T) {
 				Description: "Old Description",
 			},
 			updated: false,
+		},
+		{
+			name: "Update nil Badge Secret",
+			patch: patchRequest{
+				WebhookSecret: utils.Ptr(webhookSecret.String()),
+			},
+			initial: models.Asset{
+				WebhookSecret: nil,
+			},
+			expected: models.Asset{
+				WebhookSecret: &webhookSecret,
+			},
+			updated: true,
+		},
+		{
+			name: "Update nil Webhook Secret",
+			patch: patchRequest{
+				BadgeSecret: utils.Ptr(badgeSecret.String()),
+			},
+			initial: models.Asset{
+				BadgeSecret: nil,
+			},
+			expected: models.Asset{
+				BadgeSecret: &badgeSecret,
+			},
+			updated: true,
+		},
+		{
+			name: "Update Webhook Secret",
+			patch: patchRequest{
+				WebhookSecret: utils.Ptr(webhookSecret.String()),
+			},
+			initial: models.Asset{
+				WebhookSecret: utils.Ptr(uuid.New()),
+			},
+			expected: models.Asset{
+				WebhookSecret: &webhookSecret,
+			},
+			updated: true,
+		},
+		{
+			name: "Update Badge Secret",
+			patch: patchRequest{
+				BadgeSecret: utils.Ptr(badgeSecret.String()),
+			},
+			initial: models.Asset{
+				BadgeSecret: utils.Ptr(uuid.New()),
+			},
+			expected: models.Asset{
+				BadgeSecret: &badgeSecret,
+			},
+			updated: true,
 		},
 	}
 

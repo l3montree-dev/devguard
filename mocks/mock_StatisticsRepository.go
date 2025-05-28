@@ -96,6 +96,62 @@ func (_c *StatisticsRepository_AverageFixingTime_Call) RunAndReturn(run func(ass
 	return _c
 }
 
+// CVESWithKnownExploitsInAssetVersion provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) CVESWithKnownExploitsInAssetVersion(assetVersion models.AssetVersion) ([]models.CVE, error) {
+	ret := _mock.Called(assetVersion)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CVESWithKnownExploitsInAssetVersion")
+	}
+
+	var r0 []models.CVE
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion) ([]models.CVE, error)); ok {
+		return returnFunc(assetVersion)
+	}
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion) []models.CVE); ok {
+		r0 = returnFunc(assetVersion)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.CVE)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion) error); ok {
+		r1 = returnFunc(assetVersion)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CVESWithKnownExploitsInAssetVersion'
+type StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call struct {
+	*mock.Call
+}
+
+// CVESWithKnownExploitsInAssetVersion is a helper method to define mock.On call
+//   - assetVersion
+func (_e *StatisticsRepository_Expecter) CVESWithKnownExploitsInAssetVersion(assetVersion interface{}) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
+	return &StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call{Call: _e.mock.On("CVESWithKnownExploitsInAssetVersion", assetVersion)}
+}
+
+func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) Run(run func(assetVersion models.AssetVersion)) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(models.AssetVersion))
+	})
+	return _c
+}
+
+func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) Return(cVEs []models.CVE, err error) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
+	_c.Call.Return(cVEs, err)
+	return _c
+}
+
+func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) RunAndReturn(run func(assetVersion models.AssetVersion) ([]models.CVE, error)) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAssetCvssDistribution provides a mock function for the type StatisticsRepository
 func (_mock *StatisticsRepository) GetAssetCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
 	ret := _mock.Called(assetVersionName, assetID, assetName)

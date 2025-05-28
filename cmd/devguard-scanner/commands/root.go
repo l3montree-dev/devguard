@@ -105,6 +105,7 @@ func init() {
 		NewIaCCommand(),
 		NewSarifCommand(),
 		NewGetCommand(),
+		NewSbomCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.

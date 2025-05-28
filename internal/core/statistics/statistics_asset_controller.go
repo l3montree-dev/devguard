@@ -29,14 +29,16 @@ type statisticsService interface {
 
 type httpController struct {
 	statisticsService      statisticsService
+	statisticsRepository   core.StatisticsRepository
 	assetVersionRepository core.AssetVersionRepository
 	assetRepository        core.AssetRepository
 	projectService         core.ProjectService
 }
 
-func NewHttpController(statisticsService statisticsService, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, projectService core.ProjectService) *httpController {
+func NewHttpController(statisticsService statisticsService, statisticsRepository core.StatisticsRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, projectService core.ProjectService) *httpController {
 	return &httpController{
 		statisticsService:      statisticsService,
+		statisticsRepository:   statisticsRepository,
 		assetVersionRepository: assetVersionRepository,
 		projectService:         projectService,
 		assetRepository:        assetRepository,
@@ -266,4 +268,25 @@ func (c *httpController) getDependencyVulnAggregationStateAndChange(compareTo st
 	}
 
 	return c.statisticsService.GetDependencyVulnAggregationStateAndChangeSince(assetVersion.Name, assetVersion.AssetID, calculateChangeTo)
+}
+
+func (c *httpController) GetCVESWithKnownExploits(ctx core.Context) error {
+	var cves []models.CVE
+	asset := core.GetAsset(ctx)
+	assetVersion, err := core.MaybeGetAssetVersion(ctx)
+	if err != nil {
+		// we need to get the default asset version
+		assetVersion, err = c.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+		if err != nil {
+			slog.Error("Error getting default asset version", "error", err)
+			return ctx.JSON(404, nil)
+		}
+	}
+
+	cves, err = c.statisticsRepository.CVESWithKnownExploitsInAssetVersion(assetVersion)
+	if err != nil {
+		return ctx.NoContent(500)
+	}
+
+	return ctx.JSON(200, cves)
 }

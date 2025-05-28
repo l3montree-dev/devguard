@@ -23,6 +23,6 @@ func toDTO(m models.ComponentDependency) componentDTO {
 		Dependency:     m.Dependency,
 		DependencyPurl: m.DependencyPurl,
 		AssetID:        m.AssetID,
-		ScannerIDs:     m.ScannerIDs,
+		ScannerIDs:     m.ScannerID,
 	}
 }

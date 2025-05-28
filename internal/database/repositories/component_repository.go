@@ -18,6 +18,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"os"
 	"strings"
 	"time"
 
@@ -35,8 +36,10 @@ type componentRepository struct {
 }
 
 func NewComponentRepository(db core.DB) *componentRepository {
-	if err := db.AutoMigrate(&models.Component{}, &models.ComponentDependency{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.Component{}, &models.ComponentDependency{}); err != nil {
+			panic(err)
+		}
 	}
 
 	return &componentRepository{
@@ -66,9 +69,18 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 
 	query := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
-	if scannerID != "" {
-		scannerID = "%" + scannerID + "%"
-		query = query.Where("scanner_ids LIKE ?", scannerID)
+	scannerIDs := strings.Split(scannerID, " ")
+	if len(scannerIDs) > 0 {
+		scannerIDsSubQuery := c.GetDB(tx)
+		for i, id := range scannerIDs {
+			like := "%" + id + "%"
+			if i == 0 {
+				scannerIDsSubQuery = scannerIDsSubQuery.Where("scanner_ids LIKE ?", like)
+			} else {
+				scannerIDsSubQuery = scannerIDsSubQuery.Or("scanner_ids LIKE ?", like)
+			}
+		}
+		query.Where(scannerIDsSubQuery)
 	}
 
 	err = query.Find(&components).Error
@@ -103,7 +115,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
     component_purl IS NULL AND
     asset_id = @assetID AND
     asset_version_name = @assetVersionName AND
-    scanner_ids LIKE @scannerID
+    scanner_ids = ANY(string_to_array(@scannerID, ' '))
 
   UNION ALL
 
@@ -120,14 +132,13 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
   WHERE
     co.asset_id = @assetID AND
     co.asset_version_name = @assetVersionName AND
-    co.scanner_ids LIKE @scannerID AND
+    co.scanner_ids = ANY(string_to_array(@scannerID, ' ')) AND
     NOT co.dependency_purl = ANY(cte.path)
 ),
 target_path AS (
   SELECT * FROM components_cte
   WHERE dependency_purl = @pURL
   ORDER BY depth ASC
-  LIMIT 1
 ),
 path_edges AS (
   SELECT
@@ -143,7 +154,7 @@ path_edges AS (
 SELECT * FROM path_edges
 ORDER BY depth;
 `, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
-		sql.Named("assetVersionName", assetVersionName), sql.Named("scannerID", "%"+scannerID+"%"))
+		sql.Named("assetVersionName", assetVersionName), sql.Named("scannerID", scannerID))
 
 	//Map the query results to the component model
 	err = query.Find(&components).Error
@@ -269,8 +280,8 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 
 		//Next step is adding the scanner id to all existing component dependencies we just found
 		for i := range needToBeChanged {
-			if !strings.Contains(needToBeChanged[i].ScannerIDs, scannerID) {
-				needToBeChanged[i].ScannerIDs = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID)
+			if !strings.Contains(needToBeChanged[i].ScannerID, scannerID) {
+				needToBeChanged[i].ScannerID = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerID, scannerID)
 			}
 		}
 		//We also need to update these changes in the database
@@ -322,10 +333,10 @@ func diffComponents(tx core.DB, c *componentRepository, components []models.Comp
 	var componentsToSave []models.ComponentDependency
 
 	for i := range components {
-		if strings.TrimSpace(components[i].ScannerIDs) == scannerID {
+		if strings.TrimSpace(components[i].ScannerID) == scannerID {
 			componentsToDelete = append(componentsToDelete, components[i])
 		} else {
-			components[i].ScannerIDs = utils.RemoveFromWhitespaceSeparatedStringList(components[i].ScannerIDs, scannerID)
+			components[i].ScannerID = utils.RemoveFromWhitespaceSeparatedStringList(components[i].ScannerID, scannerID)
 			componentsToSave = append(componentsToSave, components[i])
 		}
 	}

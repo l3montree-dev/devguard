@@ -1,8 +1,6 @@
 package utils_test
 
 import (
-	"fmt"
-	"net/http"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -12,7 +10,17 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestGetAssetVersionInfoFromGit(t *testing.T) {
+func setEmptyEnvVars(t *testing.T) {
+	// Clear the environment variables to avoid conflicts
+	t.Setenv("CI_COMMIT_REF_NAME", "")
+	t.Setenv("CI_DEFAULT_BRANCH", "")
+	t.Setenv("CI_COMMIT_TAG", "")
+	t.Setenv("GITHUB_REF_NAME", "")
+	t.Setenv("GITHUB_BASE_REF", "")
+}
+
+func TestGetAssetVersionInfo(t *testing.T) {
+	setEmptyEnvVars(t)
 
 	t.Run("it should return error if cannot get tags", func(t *testing.T) {
 		mocksgitLister := mocks.GitLister{}
@@ -21,7 +29,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		_, err := utils.GetAssetVersionInfoFromGit(".")
+		_, err := utils.GetAssetVersionInfo(".")
 		assert.Error(t, err)
 	})
 
@@ -33,7 +41,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
+		versionInfo, err := utils.GetAssetVersionInfo(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "1.0.0", versionInfo.BranchOrTag)
@@ -49,7 +57,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
+		versionInfo, err := utils.GetAssetVersionInfo(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "2.0.9", versionInfo.BranchOrTag)
@@ -65,7 +73,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
+		versionInfo, err := utils.GetAssetVersionInfo(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "2.0.9", versionInfo.BranchOrTag)
@@ -80,7 +88,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 		mocksgitLister.On("GetBranchName", ".").Return("", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
+		versionInfo, err := utils.GetAssetVersionInfo(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "1.0.5", versionInfo.BranchOrTag)
@@ -95,7 +103,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 		mocksgitLister.On("GetBranchName", ".").Return("main", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("main", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
+		versionInfo, err := utils.GetAssetVersionInfo(".")
 
 		assert.NoError(t, err)
 
@@ -112,7 +120,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 		mocksgitLister.On("GetBranchName", ".").Return("main", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("main", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
+		versionInfo, err := utils.GetAssetVersionInfo(".")
 
 		assert.NoError(t, err)
 
@@ -130,7 +138,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 		mocksgitLister.On("GetBranchName", ".").Return("main", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("main", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
+		versionInfo, err := utils.GetAssetVersionInfo(".")
 
 		assert.NoError(t, err)
 
@@ -148,7 +156,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 		mocksgitLister.On("GetBranchName", ".").Return("main", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return("NOTmain", nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
+		versionInfo, err := utils.GetAssetVersionInfo(".")
 
 		assert.NoError(t, err)
 
@@ -166,7 +174,7 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 		mocksgitLister.On("GetBranchName", ".").Return("main", nil)
 		mocksgitLister.On("GetDefaultBranchName", ".").Return(`NOTmain`, nil)
 
-		versionInfo, err := utils.GetAssetVersionInfoFromGit(".")
+		versionInfo, err := utils.GetAssetVersionInfo(".")
 
 		assert.NoError(t, err)
 		assert.Equal(t, "0.0.0", versionInfo.BranchOrTag)
@@ -174,63 +182,40 @@ func TestGetAssetVersionInfoFromGit(t *testing.T) {
 
 	})
 
-}
-func TestSetGitVersionHeader(t *testing.T) {
-	t.Run("it should set headers correctly when GitVersionInfo is retrieved successfully", func(t *testing.T) {
+	t.Run("it should read the branch name from the environment variable CI_COMMIT_REF_NAME", func(t *testing.T) {
+		mocksgitLister := mocks.GitLister{}
+		utils.GitLister = &mocksgitLister
 
-		mocksgitLister := mocks.NewGitLister(t)
-		utils.GitLister = mocksgitLister
-
-		mocksgitLister.On("GetTags", mock.Anything).Return([]string{"v1.0.0"}, nil)
-		mocksgitLister.On("GitCommitCount", mock.Anything, mock.Anything).Return(5, nil)
-		mocksgitLister.On("GetBranchName", mock.Anything).Return("main", nil)
-		mocksgitLister.On("GetDefaultBranchName", mock.Anything).Return("main", nil)
-
-		req, err := http.NewRequest("GET", "http://example.com", nil)
-		assert.NoError(t, err)
-
-		err = utils.SetGitVersionHeader(".", req)
-		assert.NoError(t, err)
-
-		assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
-		assert.Equal(t, "main", req.Header.Get("X-Asset-Ref"))
-		assert.Equal(t, "main", req.Header.Get("X-Asset-Default-Branch"))
-	})
-
-	// The error message "could not get current version" occurs if an error happens in the getCurrentVersion function.
-	// This can be triggered by failures in any of the following internal functions: MarkAsSafePath, GetTags,filterAndSortValidSemverTags, or GitCommitCount.
-
-	t.Run("it should return an error if GetAssetVersionInfoFromGit fails", func(t *testing.T) {
-		mocksgitLister := mocks.NewGitLister(t)
-		utils.GitLister = mocksgitLister
-
-		mocksgitLister.On("GetTags", ".").Return([]string{"v1.0.0"}, nil)
+		mocksgitLister.On("GetTags", ".").Return([]string{}, nil)
 		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(5, nil)
-		mocksgitLister.On("GetBranchName", ".").Return("main", errors.New("cannot get branch name"))
+		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		req, err := http.NewRequest("GET", "http://example.com", nil)
+		// Set the environment variable for the default branch name
+		t.Setenv("CI_COMMIT_REF_NAME", "test")
+
+		versionInfo, err := utils.GetAssetVersionInfo(".")
+
 		assert.NoError(t, err)
+		assert.Equal(t, "test", versionInfo.BranchOrTag)
 
-		err = utils.SetGitVersionHeader(".", req)
-		assert.Error(t, err)
-
-		assert.Empty(t, req.Header.Get("X-Asset-Ref"))
-		assert.Empty(t, req.Header.Get("X-Asset-Default-Branch"))
 	})
 
-	t.Run("it should not return an error if GetAssetVersionInfoFromGit fails with 'could not get current version'", func(t *testing.T) {
-		mocksgitLister := mocks.NewGitLister(t)
-		utils.GitLister = mocksgitLister
+	t.Run("it should read the branch name from the environment variable GITHUB_REF_NAME", func(t *testing.T) {
+		mocksgitLister := mocks.GitLister{}
+		utils.GitLister = &mocksgitLister
 
-		mocksgitLister.On("GetTags", ".").Return(nil, fmt.Errorf("could not get current version"))
+		mocksgitLister.On("GetTags", ".").Return([]string{}, nil)
+		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(5, nil)
+		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
 
-		req, err := http.NewRequest("GET", "http://example.com", nil)
+		// Set the environment variable for the default branch name
+		t.Setenv("GITHUB_REF_NAME", "test")
+
+		versionInfo, err := utils.GetAssetVersionInfo(".")
+
 		assert.NoError(t, err)
+		assert.Equal(t, "test", versionInfo.BranchOrTag)
 
-		err = utils.SetGitVersionHeader(".", req)
-		assert.NoError(t, err)
-
-		assert.Empty(t, req.Header.Get("X-Asset-Ref"))
-		assert.Empty(t, req.Header.Get("X-Asset-Default-Branch"))
 	})
+
 }

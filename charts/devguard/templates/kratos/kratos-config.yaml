@@ -84,20 +84,29 @@ data:
         oidc:
           enabled: {{ .Values.oidc.enabled }}
           config:
-            {{- if .Values.oidc.github.enabled }}
+          {{- if .Values.oidc.enabled }}
             providers:
-            - id: github
-              provider: github-app
-              client_id: {{ .Values.oidc.github.clientId }}
-              # set the client secret using env variables.
-              client_secret: "get set as env - will be overriden"
+            {{- range .Values.oidc.providers }}
+            - id: {{ .id }}
+              provider: {{ .provider }}
+              client_id: {{ .clientId }}
+              client_secret: "will be overwritten with env variable"
+              {{- if .issuerUrl }}
+              issuer_url: {{ .issuerUrl | default "" | quote }}
+              {{- end }}
               mapper_url: "base64://bG9jYWwgY2xhaW1zID0gewogIGVtYWlsX3ZlcmlmaWVkOiBmYWxzZSwKfSArIHN0ZC5leHRWYXIoJ2NsYWltcycpOwp7CiAgaWRlbnRpdHk6IHsKICAgIHRyYWl0czogewogICAgICAvLyBBbGxvd2luZyB1bnZlcmlmaWVkIGVtYWlsIGFkZHJlc3NlcyBlbmFibGVzIGFjY291bnQKICAgICAgLy8gZW51bWVyYXRpb24gYXR0YWNrcywgZXNwZWNpYWxseSBpZiB0aGUgdmFsdWUgaXMgdXNlZCBmb3IKICAgICAgLy8gZS5nLiB2ZXJpZmljYXRpb24gb3IgYXMgYSBwYXNzd29yZCBsb2dpbiBpZGVudGlmaWVyLgogICAgICAvLwogICAgICAvLyBUaGVyZWZvcmUgd2Ugb25seSByZXR1cm4gdGhlIGVtYWlsIGlmIGl0IChhKSBleGlzdHMgYW5kIChiKSBpcyBtYXJrZWQgdmVyaWZpZWQKICAgICAgLy8gYnkgR2l0SHViLgogICAgICBbaWYgJ2VtYWlsJyBpbiBjbGFpbXMgJiYgY2xhaW1zLmVtYWlsX3ZlcmlmaWVkIHRoZW4gJ2VtYWlsJyBlbHNlIG51bGxdOiBjbGFpbXMuZW1haWwsCiAgICAgIG5hbWU6IHsKICAgICAgICBmaXJzdDogY2xhaW1zLm5hbWUsCiAgICAgIH0sCiAgICB9LAogIH0sCn0="
+            {{- if .scope }}
               scope:
-              - user:email
-              - read:user
-            {{- else}}
-            providers: []
+              {{- range .scope }}
+              - {{ . }}
+              {{- end }}
             {{- end }}
+                
+            {{- end }}
+          {{- else }}
+            providers: []
+          {{- end }}
+            
         webauthn:
           enabled: true
           config:

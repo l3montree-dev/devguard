@@ -24,6 +24,8 @@ type Org struct {
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
 	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
+
+	Language string `json:"language" gorm:"type:text;size:2"`
 }
 
 func (m Model) TableName() string {

@@ -54,6 +54,20 @@ func maybeGetFileName(path string) (string, bool) {
 	return filepath.Base(path), false
 }
 
+// we need to run go mod tidy before running trivy
+// this is because trivy needs dependencies before it can scan a go project
+// https://trivy.dev/latest/docs/coverage/language/golang/
+func prepareTrivyCommand(path string) {
+	trivyCmd := exec.Command("go", "mod", "tidy")
+	trivyCmd.Dir = getDirFromPath(path)
+	stderr := &bytes.Buffer{}
+	trivyCmd.Stderr = stderr
+	err := trivyCmd.Run()
+	if err != nil {
+		return
+	}
+}
+
 func generateSBOM(path string) (*os.File, error) {
 	// generate random name
 	filename := uuid.New().String() + ".json"
@@ -66,6 +80,9 @@ func generateSBOM(path string) (*os.File, error) {
 		slog.Info("scanning directory", "dir", path)
 		// scanning a dir
 		// cdxgenCmd = exec.Command("cdxgen", "-o", filename)
+
+		prepareTrivyCommand(path)
+
 		trivyCmd = exec.Command("trivy", "fs", ".", "--format", "cyclonedx", "--output", filename)
 	} else {
 		slog.Info("scanning single file", "file", maybeFilename)
@@ -97,11 +114,11 @@ func generateSBOM(path string) (*os.File, error) {
 }
 
 // Function to dynamically change the format of the table row depending on the input parameters
-func dependencyVulnToTableRow(pURL packageurl.PackageURL, v vuln.DependencyVulnDTO, clickableLink string) table.Row {
+func dependencyVulnToTableRow(pURL packageurl.PackageURL, v vuln.DependencyVulnDTO) table.Row {
 	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
-		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, clickableLink}
+		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
 	} else {
-		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, clickableLink}
+		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
 	}
 }
 
@@ -162,12 +179,11 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	}
 
 	tw := table.NewWriter()
-	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status", "URL"})
+	//tw.SetAllowedRowLength(155)
+	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status"})
 	tw.AppendRows(utils.Map(
 		scanResponse.DependencyVulns,
 		func(v vuln.DependencyVulnDTO) table.Row {
-			clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/%s", webUI, assetName, v.AssetVersionName, v.ID)
-
 			// extract package name and version from purl
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
 			pURL, err := packageurl.FromString(*v.ComponentPurl)
@@ -175,30 +191,34 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 				slog.Error("could not parse purl", "err", err)
 			}
 
-			return dependencyVulnToTableRow(pURL, v, clickableLink)
+			return dependencyVulnToTableRow(pURL, v)
 		},
 	))
 
 	fmt.Println(tw.Render())
+	if len(scanResponse.DependencyVulns) > 0 {
+		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, scanResponse.DependencyVulns[0].AssetVersionName)
+		fmt.Printf("See all dependency risks at:\n%s\n", clickableLink)
+	}
 
 	switch failOnRisk {
 	case "low":
 		if maxRisk > 0.1 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 	case "medium":
 		if maxRisk >= 4 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 
 	case "high":
 		if maxRisk >= 7 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 
 	case "critical":
 		if maxRisk >= 9 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 	}
 
@@ -212,8 +232,8 @@ func addDefaultFlags(cmd *cobra.Command) {
 }
 
 func addAssetRefFlags(cmd *cobra.Command) {
-	cmd.Flags().String("ref", "main", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, main will be used")
-	cmd.Flags().String("defaultRef", "main", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, --ref will be used.")
+	cmd.Flags().String("ref", "", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, it will first check for a git repository in the current directory. If not found, it will just use main.")
+	cmd.Flags().String("defaultRef", "", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, it will check, if the current directory is a git repo. If it isn't, --ref will be used.")
 }
 
 func addScanFlags(cmd *cobra.Command) {
@@ -233,7 +253,7 @@ func addScanFlags(cmd *cobra.Command) {
 
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
-	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")
+	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://main.devguard.org'.")
 
 }
 
@@ -274,16 +294,11 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 			return errors.Wrap(err, "could not sign request")
 		}
 
-		err = utils.SetGitVersionHeader(config.RuntimeBaseConfig.Path, req)
-
-		if err != nil {
-			printGitHelp(err)
-			return errors.Wrap(err, "could not get version info")
-		}
-
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
+		req.Header.Set("X-Asset-Ref", config.RuntimeBaseConfig.Ref)
+		req.Header.Set("X-Asset-Default-Branch", config.RuntimeBaseConfig.DefaultRef)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {

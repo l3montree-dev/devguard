@@ -7,10 +7,16 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 func UpdateStatistics(db core.DB) error {
+	start := time.Now()
+	defer func() {
+		monitoring.StatisticsUpdateDuration.Observe(time.Since(start).Minutes())
+	}()
+
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 
 	statisticsService := statistics.NewService(
@@ -30,6 +36,7 @@ func UpdateStatistics(db core.DB) error {
 		return err
 	}
 
+	monitoring.AssetVersionsStatisticsAmount.Inc()
 	for _, version := range assetVersions {
 		a := version
 		t := time.Now()
@@ -46,8 +53,9 @@ func UpdateStatistics(db core.DB) error {
 			// continue with the next asset - just log the error
 			continue
 		}
-
+		monitoring.AssetVersionsStatisticsSuccess.Inc()
 	}
 
+	monitoring.StatisticsUpdateDaemonAmount.Inc()
 	return nil
 }

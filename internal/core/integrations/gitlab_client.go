@@ -34,13 +34,13 @@ type gitlabBatchClient struct {
 	clients []gitlabClient
 }
 
-var NoGitlabIntegrationError = fmt.Errorf("no gitlab app installations found")
+var ErrNoGitlabIntegration = fmt.Errorf("no gitlab app installations found")
 
 // groups multiple gitlab clients - since an org can have multiple installations
 func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration) (*gitlabBatchClient, error) {
 	if len(gitlabIntegrations) == 0 {
 		slog.Error("no gitlab app installations found")
-		return nil, NoGitlabIntegrationError
+		return nil, ErrNoGitlabIntegration
 	}
 
 	clients := make([]gitlabClient, 0)
@@ -72,7 +72,7 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]git
 			}
 
 			return utils.Map(result, func(el *gitlab.Project) gitlabRepository {
-				return gitlabRepository{Project: el, gitlabIntegrationId: client.GitLabIntegration.ID.String()}
+				return gitlabRepository{Project: el, gitlabIntegrationId: client.ID.String()}
 			}), nil
 		})
 	}

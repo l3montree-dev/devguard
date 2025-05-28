@@ -7,6 +7,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/package-url/packageurl-go"
 )
 
 func RiskToSeverity(risk float64) (string, error) {
@@ -55,22 +56,23 @@ func parseCvssVector(vector string) map[string]string {
 
 // exploitMessage generates a short and long message based on the exploitability.
 func exploitMessage(dependencyVuln models.DependencyVuln, obj map[string]string) (short string, long string) {
-	if obj["E"] == "POC" || obj["E"] == "P" {
+	switch obj["E"] {
+	case "POC", "P":
 		short = "Proof of Concept"
 		long = "A proof of concept is available for this vulnerability:<br>"
 		for _, exploit := range dependencyVuln.CVE.Exploits {
 			long += exploit.SourceURL + "<br>"
 		}
-	} else if obj["E"] == "F" {
+	case "F":
 		short = "Functional"
 		long = "A functional exploit is available for this vulnerability:<br>"
 		for _, exploit := range dependencyVuln.CVE.Exploits {
 			long += exploit.SourceURL + "<br>"
 		}
-	} else if obj["E"] == "A" {
+	case "A":
 		short = "Attacked"
 		long = "This vulnerability is actively being exploited in the wild. Please take immediate action to mitigate the risk."
-	} else {
+	default:
 		short = "Not available"
 		long = "We did not find any exploit available. Neither in GitHub repositories nor in the Exploit-Database. There are no script kiddies exploiting this vulnerability."
 	}
@@ -217,16 +219,16 @@ type Explanation struct {
 	cveId          string
 	cveDescription string
 
-	AffectedComponentName string
-	scannerIDs            string
-	fixedVersion          *string
+	ComponentPurl string
+	scannerIDs    string
+	fixedVersion  *string
 
-	ComponentPurl string `json:"componentPurl" gorm:"type:text;default:null;"`
+	ShortenedComponentPurl string `json:"componentPurl" gorm:"type:text;default:null;"`
 }
 
 func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) string {
 	var str strings.Builder
-	str.WriteString(fmt.Sprintf("## %s found in %s \n", e.cveId, e.ComponentPurl))
+	str.WriteString(fmt.Sprintf("## %s found in %s \n", e.cveId, e.ShortenedComponentPurl))
 
 	str.WriteString("> [!important] \n")
 
@@ -243,13 +245,19 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	str.WriteString(e.cveDescription)
 	str.WriteString("\n")
 	str.WriteString("### Affected component \n")
-	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by the `%s` scan.\n", e.AffectedComponentName, e.scannerIDs))
+	scanners := strings.Fields(e.scannerIDs)
+	for i, s := range scanners {
+		scanners[i] = fmt.Sprintf("`%s`", s)
+	}
+	str.WriteString(fmt.Sprintf("The vulnerability is in `%s`, detected by %s.\n", e.ComponentPurl, strings.Join(scanners, ", ")))
 	str.WriteString("### Recommended fix\n")
 	if e.fixedVersion != nil {
 		str.WriteString(fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion))
+		str.WriteString(generateCommandsToFixPackage(e.ComponentPurl, *e.fixedVersion))
 	} else {
 		str.WriteString("No fix is available.\n")
 	}
+	str.WriteString("\n<details>\n\n<summary>See more details...</summary>\n")
 	str.WriteString("\n### Path to component\n")
 	str.WriteString(mermaidPathToComponent)
 
@@ -262,8 +270,8 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	str.WriteString(fmt.Sprintf("| CVSS-B | `%.1f` | %s | \n", e.BaseScore, e.cvssMessage))
 	str.WriteString("\n")
 	//TODO: change it
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/vulns/%s)", baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
-	str.WriteString("\n")
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
+	str.WriteString("\n\n</details>\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
 	str.WriteString("\n")
@@ -301,10 +309,35 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		cveId:          *dependencyVuln.CVEID,
 		cveDescription: dependencyVuln.CVE.Description,
 
-		AffectedComponentName: utils.SafeDereference(dependencyVuln.ComponentPurl),
-		scannerIDs:            dependencyVuln.ScannerIDs,
-		fixedVersion:          dependencyVuln.ComponentFixedVersion,
+		ComponentPurl: utils.SafeDereference(dependencyVuln.ComponentPurl),
+		scannerIDs:    dependencyVuln.ScannerIDs,
+		fixedVersion:  dependencyVuln.ComponentFixedVersion,
 
-		ComponentPurl: componentPurl,
+		ShortenedComponentPurl: componentPurl,
 	}
+}
+
+func generateCommandsToFixPackage(pURL string, fixedVersion string) string {
+	parsedPurl, err := packageurl.FromString(pURL)
+	if err != nil {
+		return ""
+	}
+	ecosystem := parsedPurl.Type
+	switch ecosystem {
+	case "golang":
+		return fmt.Sprintf("```\n# Update all golang packages\ngo get -u ./... \n# Update only this package\ngo get %s@%s \n```", parsedPurl.Name, fixedVersion)
+	case "npm":
+		return fmt.Sprintf("```\n# Update all vulnerable npm packages\nnpm audit fix\n# Update only this package\nnpm install %s@%s \n```", parsedPurl.Name, fixedVersion)
+	case "pypi":
+		return fmt.Sprintf("```\n# Update all vulnerable python packages\npip install pip-audit\npip-audit\n # Update only this package\npip install %s==%s\n```", parsedPurl.Name, fixedVersion)
+	case "crates.io":
+		return fmt.Sprintf("```\n# Update all rust packages\ncargo Update\n# Update only this package\n# insert into Cargo.toml:\n# %s = \"=%s\"\n```", parsedPurl.Name, fixedVersion)
+	case "nuget":
+		return fmt.Sprintf("```\n# Update all vulnerable NuGet packages\ndotnet list package --vulnerable\n dotnet outdated\n# Update only this package dotnet add package %s --version %s\n```", parsedPurl.Name, fixedVersion)
+	case "apk":
+		return fmt.Sprintf("```\n# Update all apk packages\napk Update && apk upgrade\n# Update only this package\napk add %s=%s\n```", parsedPurl.Name, fixedVersion)
+	case "deb":
+		return fmt.Sprintf("```\n# Update all debian packages\napt Update && apt upgrade\n# Update only this package\napt install %s=%s\n```", parsedPurl.Name, fixedVersion)
+	}
+	return ""
 }

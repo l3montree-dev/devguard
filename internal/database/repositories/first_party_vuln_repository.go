@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -12,8 +14,10 @@ type firstPartyVulnerabilityRepository struct {
 }
 
 func NewFirstPartyVulnerabilityRepository(db core.DB) *firstPartyVulnerabilityRepository {
-	if err := db.AutoMigrate(&models.FirstPartyVuln{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.FirstPartyVuln{}); err != nil {
+			panic(err)
+		}
 	}
 	return &firstPartyVulnerabilityRepository{
 		db:                      db,
@@ -22,7 +26,7 @@ func NewFirstPartyVulnerabilityRepository(db core.DB) *firstPartyVulnerabilityRe
 }
 
 func (r *firstPartyVulnerabilityRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
-	var vulns []models.FirstPartyVuln = []models.FirstPartyVuln{}
+	var vulns = []models.FirstPartyVuln{}
 	scannerID = "%" + scannerID + "%"
 	if err := r.Repository.GetDB(r.db).Where("asset_version_name = ? AND asset_id = ? AND scanner_ids LIKE ?", assetVersionName, assetID, scannerID).Find(&vulns).Error; err != nil {
 		return nil, err
@@ -33,7 +37,7 @@ func (r *firstPartyVulnerabilityRepository) ListByScanner(assetVersionName strin
 func (r *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], map[string]int, error) {
 
 	var count int64
-	var firstPartyVulns []models.FirstPartyVuln = []models.FirstPartyVuln{}
+	var firstPartyVulns = []models.FirstPartyVuln{}
 
 	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).Where("first_party_vulnerabilities.asset_id = ?", assetID)
 
@@ -70,7 +74,7 @@ func (g firstPartyVulnerabilityRepository) Read(id string) (models.FirstPartyVul
 
 // TODO: change it
 func (r *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(tx core.DB, assetVersionNamesSubquery any, assetVersionAssetIdSubquery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
-	var firstPartyVulns []models.FirstPartyVuln = []models.FirstPartyVuln{}
+	var firstPartyVulns = []models.FirstPartyVuln{}
 
 	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name IN (?) AND first_party_vulnerabilities.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIdSubquery)
 
@@ -132,7 +136,7 @@ func (r *firstPartyVulnerabilityRepository) applyAndSave(tx core.DB, firstPartyV
 	// apply the event on the dependencyVuln
 	ev.Apply(firstPartyVuln)
 	// save the event
-	if err := r.VulnerabilityRepository.Save(tx, firstPartyVuln); err != nil {
+	if err := r.Save(tx, firstPartyVuln); err != nil {
 		return models.VulnEvent{}, err
 	}
 	if err := r.GetDB(tx).Save(ev).Error; err != nil {

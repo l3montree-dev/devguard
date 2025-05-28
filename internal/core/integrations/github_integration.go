@@ -65,7 +65,7 @@ type githubIntegration struct {
 
 var _ core.ThirdPartyIntegration = &githubIntegration{}
 
-var NoGithubAppInstallationError = fmt.Errorf("no github app installations found")
+var ErrNoGithubAppInstallation = fmt.Errorf("no github app installations found")
 
 func NewGithubIntegration(db core.DB) *githubIntegration {
 	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
@@ -155,7 +155,7 @@ func (githubIntegration *githubIntegration) IntegrationEnabled(ctx core.Context)
 func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	// check if we have integrations
 	if !githubIntegration.IntegrationEnabled(ctx) {
-		return nil, NoGithubAppInstallationError
+		return nil, ErrNoGithubAppInstallation
 	}
 
 	organization := core.GetOrganization(ctx)
@@ -748,7 +748,7 @@ func (g *githubIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 
 	exp := risk.Explain(*vuln, asset, vector, riskMetrics)
 
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -886,7 +886,7 @@ func (g *githubIntegration) updateDependencyVulnTicket(ctx context.Context, depe
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1008,7 +1008,7 @@ func (g *githubIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := getLabels(dependencyVuln)
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}

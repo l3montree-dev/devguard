@@ -3,6 +3,7 @@ package daemon
 import (
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
@@ -15,9 +16,15 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
 )
 
 func ScanAssetVersions(db core.DB) error {
+
+	start := time.Now()
+	defer func() {
+		monitoring.ScanDaemonDuration.Observe(time.Since(start).Minutes())
+	}()
 
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
@@ -42,7 +49,7 @@ func ScanAssetVersions(db core.DB) error {
 	depsDevService := vulndb.NewDepsDevService()
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository)
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, &componentService)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, vulnEventRepository, &componentService)
 
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, projectRiskHistoryRepository)
 
@@ -51,6 +58,8 @@ func ScanAssetVersions(db core.DB) error {
 	if err != nil {
 		return err
 	}
+
+	monitoring.AssetVersionScanAmount.Inc()
 
 	for i := range assetVersions {
 		components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, "")
@@ -62,7 +71,7 @@ func ScanAssetVersions(db core.DB) error {
 		// group the components by scannerID
 		scannerIDMap := make(map[string][]models.ComponentDependency)
 		for _, component := range components {
-			scanner := strings.Fields(component.ScannerIDs)
+			scanner := strings.Fields(component.ScannerID)
 			for _, scannerID := range scanner {
 				scannerIDMap[scannerID] = append(scannerIDMap[scannerID], component)
 			}
@@ -83,7 +92,10 @@ func ScanAssetVersions(db core.DB) error {
 			}
 		}
 
+		monitoring.AssetVersionScanSuccess.Inc()
 		slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 	}
+
+	monitoring.ScanDaemonAmount.Inc()
 	return nil
 }

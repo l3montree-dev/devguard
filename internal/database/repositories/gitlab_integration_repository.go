@@ -16,6 +16,8 @@
 package repositories
 
 import (
+	"os"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -28,8 +30,10 @@ type gitlabIntegrationRepository struct {
 }
 
 func NewGitLabIntegrationRepository(db core.DB) *gitlabIntegrationRepository {
-	if err := db.AutoMigrate(&models.GitLabIntegration{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.GitLabIntegration{}); err != nil {
+			panic(err)
+		}
 	}
 	return &gitlabIntegrationRepository{
 		db:         db,
@@ -43,4 +47,21 @@ func (r *gitlabIntegrationRepository) FindByOrganizationId(orgId uuid.UUID) ([]m
 		return nil, err
 	}
 	return integrations, nil
+}
+
+type gitlabOauth2TokenRepository struct {
+	db core.DB
+	common.Repository[uuid.UUID, models.GitLabOauth2Token, core.DB]
+}
+
+func NewGitlabOauth2TokenRepository(db core.DB) *gitlabOauth2TokenRepository {
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.GitLabOauth2Token{}); err != nil {
+			panic(err)
+		}
+	}
+	return &gitlabOauth2TokenRepository{
+		db:         db,
+		Repository: newGormRepository[uuid.UUID, models.GitLabOauth2Token](db),
+	}
 }

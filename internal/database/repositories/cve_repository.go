@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -19,8 +20,10 @@ type cveRepository struct {
 }
 
 func NewCVERepository(db core.DB) *cveRepository {
-	if err := db.AutoMigrate(&models.CVE{}, &models.Weakness{}); err != nil {
-		panic(err)
+	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
+		if err := db.AutoMigrate(&models.CVE{}, &models.Weakness{}); err != nil {
+			panic(err)
+		}
 	}
 
 	return &cveRepository{
@@ -188,7 +191,7 @@ func (g *cveRepository) SaveBatchCPEMatch(tx core.DB, matches []models.CPEMatch)
 
 func (g *cveRepository) FindAllListPaged(tx core.DB, pageInfo core.PageInfo, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.CVE], error) {
 	var count int64
-	var cves []models.CVE = []models.CVE{}
+	var cves = []models.CVE{}
 
 	q := g.GetDB(tx).Model(&models.CVE{})
 

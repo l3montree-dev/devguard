@@ -1023,6 +1023,60 @@ func (_c *AssetRepository_ReadBySlugUnscoped_Call) RunAndReturn(run func(project
 	return _c
 }
 
+// ReadWithAssetVersions provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) ReadWithAssetVersions(assetID uuid.UUID) (models.Asset, error) {
+	ret := _mock.Called(assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadWithAssetVersions")
+	}
+
+	var r0 models.Asset
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.Asset, error)); ok {
+		return returnFunc(assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.Asset); ok {
+		r0 = returnFunc(assetID)
+	} else {
+		r0 = ret.Get(0).(models.Asset)
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
+		r1 = returnFunc(assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetRepository_ReadWithAssetVersions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadWithAssetVersions'
+type AssetRepository_ReadWithAssetVersions_Call struct {
+	*mock.Call
+}
+
+// ReadWithAssetVersions is a helper method to define mock.On call
+//   - assetID
+func (_e *AssetRepository_Expecter) ReadWithAssetVersions(assetID interface{}) *AssetRepository_ReadWithAssetVersions_Call {
+	return &AssetRepository_ReadWithAssetVersions_Call{Call: _e.mock.On("ReadWithAssetVersions", assetID)}
+}
+
+func (_c *AssetRepository_ReadWithAssetVersions_Call) Run(run func(assetID uuid.UUID)) *AssetRepository_ReadWithAssetVersions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *AssetRepository_ReadWithAssetVersions_Call) Return(asset models.Asset, err error) *AssetRepository_ReadWithAssetVersions_Call {
+	_c.Call.Return(asset, err)
+	return _c
+}
+
+func (_c *AssetRepository_ReadWithAssetVersions_Call) RunAndReturn(run func(assetID uuid.UUID) (models.Asset, error)) *AssetRepository_ReadWithAssetVersions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Save provides a mock function for the type AssetRepository
 func (_mock *AssetRepository) Save(tx core.DB, t *models.Asset) error {
 	ret := _mock.Called(tx, t)

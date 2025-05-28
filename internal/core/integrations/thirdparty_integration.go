@@ -5,15 +5,12 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"strconv"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
-	"github.com/package-url/packageurl-go"
 )
 
 // batches multiple third party integrations
@@ -174,62 +171,11 @@ func NewThirdPartyIntegrations(integrations ...core.ThirdPartyIntegration) *thir
 // this function returns a string containing a mermaids js flow chart to the given pURL
 func renderPathToComponent(componentRepository core.ComponentRepository, assetID uuid.UUID, assetVersionName string, scannerID string, pURL string) (string, error) {
 
-	//basic string to tell markdown that we have a mermaid flow chart with given parameters
-	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'dark' } }%%\n flowchart TD\n"
-
 	components, err := componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, scannerID)
 	if err != nil {
-		return mermaidFlowChart, err
+		return "", err
 	}
 
 	tree := assetversion.BuildDependencyTree(components)
-
-	//we get the path to the component as an array of package names
-	componentList := []string{}
-	current := tree.Root
-	for current != nil {
-		componentList = append(componentList, current.Name)
-		if len(current.Children) > 0 {
-			current = current.Children[0]
-		} else {
-			break
-		}
-	}
-
-	//now we build the string using this list, every new node need prefix and suffix to work with mermaid. [] are used to prohibit mermaid from interpreting some symbols from the package names as mermaid syntax
-	mermaidFlowChart += componentList[0]
-	var nodeContent string
-
-	for i, componentName := range componentList[1:] {
-
-		nodeContent, err = beautifyPURL(componentName)
-		if err != nil {
-			nodeContent = componentName
-		}
-		mermaidFlowChart = mermaidFlowChart + " --> \n" + "node" + strconv.Itoa(i) + "[\"" + escapeAtSign(nodeContent) + "\"]"
-	}
-
-	mermaidFlowChart = "```" + mermaidFlowChart + "\n```\n"
-
-	return mermaidFlowChart, nil
-}
-
-func escapeAtSign(pURL string) string {
-	// escape @ sign in purl
-	return strings.ReplaceAll(pURL, "@", "\\@")
-}
-
-// function to make purl look more visually appealing
-func beautifyPURL(pURL string) (string, error) {
-	p, err := packageurl.FromString(pURL)
-	if err != nil {
-		slog.Error("cannot convert to purl struct")
-		return pURL, err
-	}
-	//if the namespace is empty we don't want any leading slashes
-	if p.Namespace == "" {
-		return p.Name, nil
-	} else {
-		return p.Namespace + "/" + p.Name, nil
-	}
+	return tree.RenderToMermaid(), nil
 }

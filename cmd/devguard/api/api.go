@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -248,7 +249,7 @@ func assetNameMiddleware() core.MiddlewareFunc {
 			// asset name is <organization_slug>/<project_slug>/<asset_slug>
 			assetName := ctx.Request().Header.Get("X-Asset-Name")
 			if assetName == "" {
-				return echo.NewHTTPError(400, "no asset id provided")
+				return echo.NewHTTPError(400, "no X-Asset-Name header provided")
 			}
 			// split the asset name
 			assetParts := strings.Split(assetName, "/")
@@ -386,7 +387,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	componentProjectRepository := repositories.NewComponentProjectRepository(db)
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository)
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, &componentService)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, vulnEventRepository, &componentService)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 	invitationRepository := repositories.NewInvitationRepository(db)
 
@@ -406,7 +407,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository)
 	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository, policyRepository)
 
-	statisticsController := statistics.NewHttpController(statisticsService, assetRepository, assetVersionRepository, projectService)
+	statisticsController := statistics.NewHttpController(statisticsService, statisticsRepository, assetRepository, assetVersionRepository, projectService)
 	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)
 
 	patService := pat.NewPatService(patRepository)
@@ -435,11 +436,13 @@ func BuildRouter(db core.DB) *echo.Echo {
 		}
 	})
 
+	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
+
 	apiV1Router.POST("/webhook/", integrationController.HandleWebhook)
 	// apply the health route without any session or multi organization middleware
 	apiV1Router.GET("/health/", health)
 
-	apiV1Router.GET("/badges/:badgeSecret", assetController.GetBadges)
+	apiV1Router.GET("/badges/:badge/:badgeSecret", assetController.GetBadges)
 
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
@@ -553,11 +556,11 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
 
 	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
-
 	assetRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetRouter.GET("/compliance/:policy/", complianceController.Details)
 	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
 	assetRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
+	assetRouter.GET("/number-of-exploits/", statisticsController.GetCVESWithKnownExploits)
 	assetRouter.GET("/components/licenses/", componentController.LicenseDistribution)
 	assetRouter.GET("/config-files/:config-file/", assetController.GetConfigFile)
 
