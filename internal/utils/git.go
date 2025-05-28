@@ -17,6 +17,7 @@ import (
 )
 
 type GitVersionInfo struct {
+	IsTag         bool
 	BranchOrTag   string
 	DefaultBranch *string
 }
@@ -51,19 +52,19 @@ func getAssetVersionInfoFromPipeline() (GitVersionInfo, error) {
 		}
 		gitVersionInfo = GitVersionInfo{
 			BranchOrTag:   branchName,
+			IsTag:         tagName != "",
 			DefaultBranch: EmptyThenNil(defaultBranch),
 		}
 		return gitVersionInfo, nil
 	} else {
 		// check if we are in a GitHub Action
-
 		branchName = os.Getenv("GITHUB_REF_NAME")
 		//This returns the short ref name of the branch or tag that triggered the workflow run.
 		if branchName != "" {
-			defaultBranch := os.Getenv("GITHUB_BASE_REF")
 			gitVersionInfo = GitVersionInfo{
+				IsTag:         strings.HasPrefix(os.Getenv("GITHUB_REF"), "refs/tags/"),
 				BranchOrTag:   branchName,
-				DefaultBranch: EmptyThenNil(defaultBranch),
+				DefaultBranch: nil, // there is no environment variable for the default branch in GitHub Actions
 			}
 			return gitVersionInfo, nil
 		} else {
@@ -116,12 +117,14 @@ func getAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 		return GitVersionInfo{
 			BranchOrTag:   branchOrTag,
 			DefaultBranch: nil,
+			IsTag:         commitAfterTag == 0,
 		}, nil
 	}
 
 	return GitVersionInfo{
 		BranchOrTag:   branchOrTag,
 		DefaultBranch: &defaultBranch,
+		IsTag:         commitAfterTag == 0,
 	}, nil
 }
 

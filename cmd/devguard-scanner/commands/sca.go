@@ -234,6 +234,7 @@ func addDefaultFlags(cmd *cobra.Command) {
 func addAssetRefFlags(cmd *cobra.Command) {
 	cmd.Flags().String("ref", "", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, it will first check for a git repository in the current directory. If not found, it will just use main.")
 	cmd.Flags().String("defaultRef", "", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, it will check, if the current directory is a git repo. If it isn't, --ref will be used.")
+	cmd.Flags().Bool("isTag", false, "If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.")
 }
 
 func addScanFlags(cmd *cobra.Command) {

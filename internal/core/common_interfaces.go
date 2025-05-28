@@ -29,6 +29,9 @@ import (
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
+type SBOMScanner interface {
+	Scan(bom normalize.SBOM) ([]models.VulnInPackage, error)
+}
 type ProjectRepository interface {
 	Read(projectID uuid.UUID) (models.Project, error)
 	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
@@ -237,7 +240,7 @@ type AssetVersionRepository interface {
 	GetAllAssetsVersionFromDBByAssetID(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
-	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error)
+	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error)
 	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
 	GetDefaultAssetVersion(assetID uuid.UUID) (models.AssetVersion, error)
 }

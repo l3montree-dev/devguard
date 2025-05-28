@@ -31,7 +31,7 @@ import (
 
 type httpController struct {
 	db                     core.DB
-	sbomScanner            *sbomScanner
+	sbomScanner            core.SBOMScanner
 	cveRepository          core.CveRepository
 	componentRepository    core.ComponentRepository
 	assetRepository        core.AssetRepository
@@ -72,8 +72,7 @@ type FirstPartyScanResponse struct {
 	FirstPartyVulns []vuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
 }
 
-func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, error) {
-
+func (s *httpController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {
 	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
@@ -87,16 +86,14 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	userID := core.GetSession(c).GetUserID()
 
 	tag := c.Request().Header.Get("X-Tag")
-
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
 	assetVersionName := c.Request().Header.Get("X-Asset-Ref")
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
-		defaultBranch = "main"
 	}
 
-	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		return scanResults, err
@@ -113,10 +110,10 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
-	return ScanNormalizedSBOM(s, asset, assetVersion, normalizedBom, scannerID, userID)
+	return s.ScanNormalizedSBOM(asset, assetVersion, normalizedBom, scannerID, userID)
 }
 
-func ScanNormalizedSBOM(s *httpController, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
+func (s *httpController) ScanNormalizedSBOM(asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
@@ -161,7 +158,9 @@ func ScanNormalizedSBOM(s *httpController, asset models.Asset, assetVersion mode
 
 	scanResults.AmountOpened = len(opened) //Fill in the results
 	scanResults.AmountClosed = len(closed)
-	scanResults.DependencyVulns = utils.Map(newState, vuln.DependencyVulnToDto)
+	scanResults.DependencyVulns = utils.Map(utils.Filter(newState, func(v models.DependencyVuln) bool {
+		return v.State != models.VulnStateFixed
+	}), vuln.DependencyVulnToDto)
 
 	return scanResults, nil
 }
@@ -195,7 +194,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 		defaultBranch = "main"
 	}
 
-	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
@@ -236,7 +235,7 @@ func (s *httpController) ScanDependencyVulnFromProject(c core.Context) error {
 		return err
 	}
 
-	scanResults, err := DependencyVulnScan(c, normalize.FromCdxBom(bom, true), s)
+	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
 	if err != nil {
 		return err
 	}
@@ -265,7 +264,7 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 		return err
 	}
 
-	scanResults, err := DependencyVulnScan(c, normalize.FromCdxBom(bom, true), s)
+	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
 	if err != nil {
 		return err
 	}

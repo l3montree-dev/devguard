@@ -122,7 +122,7 @@ func TestSetXAssetHeaders(t *testing.T) {
 	t.Run("should set the X-Asset headers based on the RuntimeBaseConfig", func(t *testing.T) {
 		RuntimeBaseConfig.AssetName = "my-asset"
 		RuntimeBaseConfig.Ref = "1.0.0"
-		RuntimeBaseConfig.DefaultBranch = utils.Ptr("main")
+		RuntimeBaseConfig.DefaultBranch = "main"
 
 		req := httptest.NewRequest("GET", "http://example.com", nil)
 
@@ -136,7 +136,7 @@ func TestSetXAssetHeaders(t *testing.T) {
 	t.Run("should not set the X-Asset-Default-Branch header if DefaultBranch is nil", func(t *testing.T) {
 		RuntimeBaseConfig.AssetName = "my-asset"
 		RuntimeBaseConfig.Ref = "1.0.0"
-		RuntimeBaseConfig.DefaultBranch = nil
+		RuntimeBaseConfig.DefaultBranch = ""
 
 		req := httptest.NewRequest("GET", "http://example.com", nil)
 
@@ -145,5 +145,36 @@ func TestSetXAssetHeaders(t *testing.T) {
 		assert.Equal(t, "my-asset", req.Header.Get("X-Asset-Name"))
 		assert.Equal(t, "1.0.0", req.Header.Get("X-Asset-Ref"))
 		assert.Empty(t, req.Header.Get("X-Asset-Default-Branch"))
+	})
+
+	t.Run("should set the X-Tag header to 1 if IsTag is true", func(t *testing.T) {
+		RuntimeBaseConfig.AssetName = "my-asset"
+		RuntimeBaseConfig.Ref = "1.0.0"
+		RuntimeBaseConfig.DefaultBranch = "main"
+		RuntimeBaseConfig.IsTag = true
+
+		req := httptest.NewRequest("GET", "http://example.com", nil)
+
+		SetXAssetHeaders(req)
+
+		assert.Equal(t, "my-asset", req.Header.Get("X-Asset-Name"))
+		assert.Equal(t, "1.0.0", req.Header.Get("X-Asset-Ref"))
+		assert.Equal(t, "main", req.Header.Get("X-Asset-Default-Branch"))
+		assert.Equal(t, "1", req.Header.Get("X-Tag"))
+	})
+	t.Run("should set the X-Tag header to 0 if IsTag is false", func(t *testing.T) {
+		RuntimeBaseConfig.AssetName = "my-asset"
+		RuntimeBaseConfig.Ref = "1.0.0"
+		RuntimeBaseConfig.DefaultBranch = "main"
+		RuntimeBaseConfig.IsTag = false
+
+		req := httptest.NewRequest("GET", "http://example.com", nil)
+
+		SetXAssetHeaders(req)
+
+		assert.Equal(t, "my-asset", req.Header.Get("X-Asset-Name"))
+		assert.Equal(t, "1.0.0", req.Header.Get("X-Asset-Ref"))
+		assert.Equal(t, "main", req.Header.Get("X-Asset-Default-Branch"))
+		assert.Equal(t, "0", req.Header.Get("X-Tag"))
 	})
 }

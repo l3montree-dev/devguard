@@ -125,7 +125,7 @@ func TestGetAssetVersionInfo(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "main", versionInfo.BranchOrTag)
-		assert.Equal(t, "main", versionInfo.DefaultBranch)
+		assert.Equal(t, utils.Ptr("main"), versionInfo.DefaultBranch)
 
 	})
 
@@ -143,7 +143,7 @@ func TestGetAssetVersionInfo(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "0.0.0", versionInfo.BranchOrTag)
-		assert.Equal(t, "main", versionInfo.DefaultBranch)
+		assert.Equal(t, utils.Ptr("main"), versionInfo.DefaultBranch)
 
 	})
 
@@ -161,7 +161,7 @@ func TestGetAssetVersionInfo(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "0.0.0", versionInfo.BranchOrTag)
-		assert.Equal(t, "NOTmain", versionInfo.DefaultBranch)
+		assert.Equal(t, utils.Ptr("NOTmain"), versionInfo.DefaultBranch)
 
 	})
 
@@ -178,7 +178,7 @@ func TestGetAssetVersionInfo(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, "0.0.0", versionInfo.BranchOrTag)
-		assert.Equal(t, "NOTmain", versionInfo.DefaultBranch)
+		assert.Equal(t, utils.Ptr("NOTmain"), versionInfo.DefaultBranch)
 
 	})
 

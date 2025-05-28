@@ -44,9 +44,10 @@ type baseConfig struct {
 	Registry string `json:"registry" mapstructure:"registry"`
 
 	// used in SbomCMD
-	ScannerID     string  `json:"scannerId" mapstructure:"scannerId"`
-	Ref           string  `json:"ref" mapstructure:"ref"`
-	DefaultBranch *string `json:"defaultRef" mapstructure:"defaultRef"`
+	ScannerID     string `json:"scannerId" mapstructure:"scannerId"`
+	Ref           string `json:"ref" mapstructure:"ref"`
+	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
+	IsTag         bool   `json:"isTag" mapstructure:"isTag"`
 }
 
 type InTotoConfig struct {
@@ -101,13 +102,20 @@ func ParseBaseConfig() {
 		}
 	}
 
-	if RuntimeBaseConfig.DefaultBranch == nil {
+	if RuntimeBaseConfig.DefaultBranch == "" {
 		// check if we have a git version info
 		if gitVersionInfo.DefaultBranch != nil {
-			RuntimeBaseConfig.DefaultBranch = gitVersionInfo.DefaultBranch
+			RuntimeBaseConfig.DefaultBranch = *gitVersionInfo.DefaultBranch
 		} else {
 			// if we don't have a git version info, we use the current time as default ref
 			slog.Info("could not get git default ref. Not updating anything default branch information")
+		}
+	}
+
+	if !RuntimeBaseConfig.IsTag {
+		// check if we have a git version info
+		if gitVersionInfo.IsTag {
+			RuntimeBaseConfig.IsTag = true
 		}
 	}
 }
@@ -197,7 +205,14 @@ func ParseInTotoConfig() {
 func SetXAssetHeaders(req *http.Request) {
 	req.Header.Set("X-Asset-Name", RuntimeBaseConfig.AssetName)
 	req.Header.Set("X-Asset-Ref", RuntimeBaseConfig.Ref)
-	if RuntimeBaseConfig.DefaultBranch != nil {
-		req.Header.Set("X-Asset-Default-Branch", *RuntimeBaseConfig.DefaultBranch)
+
+	if RuntimeBaseConfig.IsTag {
+		req.Header.Set("X-Tag", "1")
+	} else {
+		req.Header.Set("X-Tag", "0")
+	}
+
+	if RuntimeBaseConfig.DefaultBranch != "" {
+		req.Header.Set("X-Asset-Default-Branch", RuntimeBaseConfig.DefaultBranch)
 	}
 }

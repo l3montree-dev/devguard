@@ -83,7 +83,7 @@ func ScanAssetVersions(db core.DB) error {
 			if len(components) <= 0 {
 				continue
 			} else {
-				_, err = scan.ScanNormalizedSBOM(s, assetVersions[i].Asset, assetVersions[i], normalizedBOM, scannerID, "system")
+				_, err = s.ScanNormalizedSBOM(assetVersions[i].Asset, assetVersions[i], normalizedBOM, scannerID, "system")
 			}
 
 			if err != nil {

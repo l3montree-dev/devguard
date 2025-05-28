@@ -94,15 +94,15 @@ func (a *assetVersionRepository) assetVersionFactory(assetVersionName string, as
 	return app
 }
 
-func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error) {
+func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, isTag bool, defaultBranchName *string) (models.AssetVersion, error) {
 	var assetVersion models.AssetVersion
 	assetVersion, err := a.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
 	if err != nil {
 		var assetVersionType models.AssetVersionType
-		if tag == "" {
-			assetVersionType = "branch"
-		} else {
+		if isTag {
 			assetVersionType = "tag"
+		} else {
+			assetVersionType = "branch"
 		}
 
 		assetVersion = a.assetVersionFactory(assetVersionName, assetID, assetVersionType)
@@ -123,9 +123,9 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 	}
 
 	// check if defaultBranchName is defined
-	if defaultBranchName != "" {
+	if defaultBranchName != nil {
 		// update the asset version with this branch name and set defaultBranch to true - if there is no asset version with this name just ignore
-		if err := a.updateAssetDefaultBranch(assetID, defaultBranchName); err != nil {
+		if err := a.updateAssetDefaultBranch(assetID, *defaultBranchName); err != nil {
 			slog.Error("error updating asset default branch", "err", err, "assetID", assetID, "defaultBranchName", defaultBranchName)
 			// just swallow the error here - we don't want to fail the whole operation if we can't set the default branch
 		}
