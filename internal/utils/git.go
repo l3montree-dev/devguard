@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
-	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/pkg/errors"
 )
@@ -64,7 +63,7 @@ func getAssetVersionInfoFromPipeline() (GitVersionInfo, error) {
 			defaultBranch := os.Getenv("GITHUB_BASE_REF")
 			gitVersionInfo = GitVersionInfo{
 				BranchOrTag:   branchName,
-				DefaultBranch: utils.EmptyThenNil(defaultBranch),
+				DefaultBranch: EmptyThenNil(defaultBranch),
 			}
 			return gitVersionInfo, nil
 		} else {
