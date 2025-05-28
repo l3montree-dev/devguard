@@ -22,7 +22,7 @@ RUN go mod download
 RUN CGO_ENABLED=0 make devguard
 RUN CGO_ENABLED=0 make devguard-cli
 
-FROM alpine:3.21.3@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c
+FROM gcr.io/distroless/static-debian12@sha256:d9f9472a8f4541368192d714a995eb1a99bab1f7071fc8bde261d7eda3b667d8
 
 WORKDIR /
 
