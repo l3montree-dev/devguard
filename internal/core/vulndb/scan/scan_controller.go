@@ -192,6 +192,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
+		defaultBranch = "main"
 	}
 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)

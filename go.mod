@@ -44,6 +44,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/datatypes v1.2.5
 	gorm.io/driver/postgres v1.6.0
+	gorm.io/driver/sqlite v1.4.3
 	gorm.io/gorm v1.30.0
 	oras.land/oras-go/v2 v2.6.0
 )

@@ -18,7 +18,7 @@ import (
 
 type GitVersionInfo struct {
 	BranchOrTag   string
-	DefaultBranch string
+	DefaultBranch *string
 }
 
 func getDirFromPath(path string) string {
@@ -51,7 +51,7 @@ func getAssetVersionInfoFromPipeline() (GitVersionInfo, error) {
 		}
 		gitVersionInfo = GitVersionInfo{
 			BranchOrTag:   branchName,
-			DefaultBranch: defaultBranch,
+			DefaultBranch: &defaultBranch,
 		}
 		return gitVersionInfo, nil
 	} else {
@@ -63,7 +63,7 @@ func getAssetVersionInfoFromPipeline() (GitVersionInfo, error) {
 			defaultBranch := os.Getenv("GITHUB_BASE_REF")
 			gitVersionInfo = GitVersionInfo{
 				BranchOrTag:   branchName,
-				DefaultBranch: defaultBranch,
+				DefaultBranch: &defaultBranch,
 			}
 			return gitVersionInfo, nil
 		} else {
@@ -94,7 +94,6 @@ func getAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 	// v1.0.0 - . . . . . . . . . . - v1.0.1
 	// all commits after v1.0.0 are part of v1.0.1
 	// if there are no commits after the tag, we are on a clean tag
-
 	version, commitAfterTag, err := getCurrentVersion(path)
 	if err != nil {
 		slog.Error("could not get current version", "err", err)
@@ -113,12 +112,16 @@ func getAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 
 	defaultBranch, err := GitLister.GetDefaultBranchName(path)
 	if err != nil {
-		return GitVersionInfo{}, errors.Wrap(err, "could not get default branch name")
+		slog.Info("could not get default branch name", "err", err, "path", getDirFromPath(path), "msg", err.Error())
+		return GitVersionInfo{
+			BranchOrTag:   branchOrTag,
+			DefaultBranch: nil,
+		}, nil
 	}
 
 	return GitVersionInfo{
 		BranchOrTag:   branchOrTag,
-		DefaultBranch: defaultBranch,
+		DefaultBranch: &defaultBranch,
 	}, nil
 }
 

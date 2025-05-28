@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"log/slog"
+	"net/http"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
@@ -43,9 +44,9 @@ type baseConfig struct {
 	Registry string `json:"registry" mapstructure:"registry"`
 
 	// used in SbomCMD
-	ScannerID  string `json:"scannerId" mapstructure:"scannerId"`
-	Ref        string `json:"ref" mapstructure:"ref"`
-	DefaultRef string `json:"defaultRef" mapstructure:"defaultRef"`
+	ScannerID     string  `json:"scannerId" mapstructure:"scannerId"`
+	Ref           string  `json:"ref" mapstructure:"ref"`
+	DefaultBranch *string `json:"defaultRef" mapstructure:"defaultRef"`
 }
 
 type InTotoConfig struct {
@@ -100,15 +101,13 @@ func ParseBaseConfig() {
 		}
 	}
 
-	if RuntimeBaseConfig.DefaultRef == "" {
-
+	if RuntimeBaseConfig.DefaultBranch == nil {
 		// check if we have a git version info
-		if err == nil {
-			RuntimeBaseConfig.DefaultRef = gitVersionInfo.DefaultBranch
+		if gitVersionInfo.DefaultBranch != nil {
+			RuntimeBaseConfig.DefaultBranch = gitVersionInfo.DefaultBranch
 		} else {
 			// if we don't have a git version info, we use the current time as default ref
-			slog.Info("could not get git version info, using current '--ref' as default ref")
-			RuntimeBaseConfig.DefaultRef = RuntimeBaseConfig.Ref
+			slog.Info("could not get git default ref. Not updating anything default branch information")
 		}
 	}
 }
@@ -192,5 +191,13 @@ func ParseInTotoConfig() {
 		if err != nil {
 			panic(err)
 		}
+	}
+}
+
+func SetXAssetHeaders(req *http.Request) {
+	req.Header.Set("X-Asset-Name", RuntimeBaseConfig.AssetName)
+	req.Header.Set("X-Asset-Ref", RuntimeBaseConfig.Ref)
+	if RuntimeBaseConfig.DefaultBranch != nil {
+		req.Header.Set("X-Asset-Default-Branch", *RuntimeBaseConfig.DefaultBranch)
 	}
 }

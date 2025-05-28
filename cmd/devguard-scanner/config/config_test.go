@@ -16,6 +16,7 @@
 package config
 
 import (
+	"net/http/httptest"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -46,7 +47,7 @@ func TestParseBaseConfig(t *testing.T) {
 		assert.Equal(t, "http://example.com", RuntimeBaseConfig.ApiUrl)
 		assert.Equal(t, ".", RuntimeBaseConfig.Path)
 		assert.Equal(t, "myref", RuntimeBaseConfig.Ref)
-		assert.Equal(t, "mydefaultref", RuntimeBaseConfig.DefaultRef)
+		assert.Equal(t, "mydefaultref", RuntimeBaseConfig.DefaultBranch)
 	})
 
 	t.Run("should panic if the path is invalid", func(t *testing.T) {
@@ -90,7 +91,7 @@ func TestParseBaseConfig(t *testing.T) {
 		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.ApiUrl)
 		assert.Equal(t, ".", RuntimeBaseConfig.Path)
 		assert.Equal(t, "2.0.9", RuntimeBaseConfig.Ref)
-		assert.Equal(t, "main", RuntimeBaseConfig.DefaultRef)
+		assert.Equal(t, "main", RuntimeBaseConfig.DefaultBranch)
 	})
 
 	t.Run("should use the git version info if defaultRef is NOT set", func(t *testing.T) {
@@ -113,6 +114,36 @@ func TestParseBaseConfig(t *testing.T) {
 		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.ApiUrl)
 		assert.Equal(t, ".", RuntimeBaseConfig.Path)
 		assert.Equal(t, "v1.0.0", RuntimeBaseConfig.Ref)
-		assert.Equal(t, "main", RuntimeBaseConfig.DefaultRef)
+		assert.Equal(t, "main", RuntimeBaseConfig.DefaultBranch)
+	})
+}
+
+func TestSetXAssetHeaders(t *testing.T) {
+	t.Run("should set the X-Asset headers based on the RuntimeBaseConfig", func(t *testing.T) {
+		RuntimeBaseConfig.AssetName = "my-asset"
+		RuntimeBaseConfig.Ref = "1.0.0"
+		RuntimeBaseConfig.DefaultBranch = utils.Ptr("main")
+
+		req := httptest.NewRequest("GET", "http://example.com", nil)
+
+		SetXAssetHeaders(req)
+
+		assert.Equal(t, "my-asset", req.Header.Get("X-Asset-Name"))
+		assert.Equal(t, "1.0.0", req.Header.Get("X-Asset-Ref"))
+		assert.Equal(t, "main", req.Header.Get("X-Asset-Default-Branch"))
+	})
+
+	t.Run("should not set the X-Asset-Default-Branch header if DefaultBranch is nil", func(t *testing.T) {
+		RuntimeBaseConfig.AssetName = "my-asset"
+		RuntimeBaseConfig.Ref = "1.0.0"
+		RuntimeBaseConfig.DefaultBranch = nil
+
+		req := httptest.NewRequest("GET", "http://example.com", nil)
+
+		SetXAssetHeaders(req)
+
+		assert.Equal(t, "my-asset", req.Header.Get("X-Asset-Name"))
+		assert.Equal(t, "1.0.0", req.Header.Get("X-Asset-Ref"))
+		assert.Empty(t, req.Header.Get("X-Asset-Default-Branch"))
 	})
 }

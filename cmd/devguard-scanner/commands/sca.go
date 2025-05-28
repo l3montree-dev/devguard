@@ -295,10 +295,8 @@ func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string)
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
 		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
-		req.Header.Set("X-Asset-Ref", config.RuntimeBaseConfig.Ref)
-		req.Header.Set("X-Asset-Default-Branch", config.RuntimeBaseConfig.DefaultRef)
+		config.SetXAssetHeaders(req)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
