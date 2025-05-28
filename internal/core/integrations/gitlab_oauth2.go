@@ -26,23 +26,7 @@ type gitlabOauth2Integration struct {
 	providerID    string
 	gitlabBaseURL string
 
-	gitlabIntegrationRepository core.GitlabIntegrationRepository
 	gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
-
-	externalUserRepository core.ExternalUserRepository
-
-	firstPartyVulnRepository core.FirstPartyVulnRepository
-	aggregatedVulnRepository core.VulnRepository
-	//TODO: remove this
-	dependencyVulnRepository core.DependencyVulnRepository
-	vulnEventRepository      core.VulnEventRepository
-	frontendUrl              string
-	orgRepository            core.OrganizationRepository
-
-	projectRepository      core.ProjectRepository
-	assetRepository        core.AssetRepository
-	assetVersionRepository core.AssetVersionRepository
-	componentRepository    core.ComponentRepository
 
 	oauth2Conf *oauth2.Config
 }
@@ -124,19 +108,6 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 }
 
 func NewGitLabOauth2Integration(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret string) *gitlabOauth2Integration {
-	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
-
-	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	vulnEventRepository := repositories.NewVulnEventRepository(db)
-	externalUserRepository := repositories.NewExternalUserRepository(db)
-	assetRepository := repositories.NewAssetRepository(db)
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	projectRepository := repositories.NewProjectRepository(db)
-	componentRepository := repositories.NewComponentRepository(db)
-	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
-
-	orgRepository := repositories.NewOrgRepository(db)
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -162,19 +133,6 @@ func NewGitLabOauth2Integration(db core.DB, id, gitlabBaseURL, gitlabOauth2Clien
 			Scopes: []string{"api"},
 		},
 		gitlabOauth2TokenRepository: repositories.NewGitlabOauth2TokenRepository(db),
-
-		frontendUrl:                 frontendUrl,
-		aggregatedVulnRepository:    aggregatedVulnRepository,
-		gitlabIntegrationRepository: gitlabIntegrationRepository,
-		dependencyVulnRepository:    dependencyVulnRepository,
-		vulnEventRepository:         vulnEventRepository,
-		assetRepository:             assetRepository,
-		assetVersionRepository:      assetVersionRepository,
-		externalUserRepository:      externalUserRepository,
-		firstPartyVulnRepository:    firstPartyVulnRepository,
-		projectRepository:           projectRepository,
-		componentRepository:         componentRepository,
-		orgRepository:               orgRepository,
 	}
 }
 
