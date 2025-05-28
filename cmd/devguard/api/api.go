@@ -451,6 +451,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
 	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
 	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)
+	sessionRouter.POST("/integrations/fullautosetup/", integrationController.FullAutosetup, neededScope([]string{"manage"}))
 	// register a simple whoami route for testing purposes
 	sessionRouter.GET("/whoami/", whoami)
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, neededScope([]string{"manage"}))
@@ -616,6 +617,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionRouter.GET("/attestations/", attestationController.List)
 
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+
 	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, neededScope([]string{"scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
 

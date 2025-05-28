@@ -79,6 +79,20 @@ func (c *integrationController) AutoSetup(ctx core.Context) error {
 	return nil
 }
 
+func (c *integrationController) FullAutosetup(ctx core.Context) error {
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+
+	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
+	if gl != nil {
+		if err := gl.(*gitlabIntegration).FullAutosetup(ctx); err != nil {
+			slog.Error("could not finish full auto setup for GitLab", "err", err)
+			return err
+		}
+	}
+
+	return ctx.JSON(200, "Full auto setup completed")
+}
+
 func (c *integrationController) ListRepositories(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 

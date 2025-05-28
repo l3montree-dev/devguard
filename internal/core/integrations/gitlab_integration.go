@@ -563,11 +563,10 @@ func extractProjectIdFromRepoId(repoId string) (int, error) {
 func (g *gitlabIntegration) FullAutosetup(ctx core.Context) error {
 	// this integration does not have a single id, but rather multiple ids based on the gitlab integration
 	// REPO Id comes from context
-	ids := ctx.GetRequest().Header.Values("X-Repo-Id")
 
 	// 1. Check if the user has a gitlab oauth2 token
 	// TODO: Read provider id from the request
-	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(core.GetSession(ctx).GetUserID(), "opencode-autosetup")
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(core.GetSession(ctx).GetUserID(), "opencodeautosetup")
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
 		return err
@@ -580,9 +579,85 @@ func (g *gitlabIntegration) FullAutosetup(ctx core.Context) error {
 		return err
 	}
 
-	// do autosetup
+	var body struct {
+		RepositoryID string `json:"repositoryId"`
+	}
+
+	err = ctx.Bind(&body)
+	if err != nil {
+		slog.Error("could not bind request body", "err", err)
+		return errors.Wrap(err, "could not bind request body")
+	}
+
+	fmt.Println("Repository ID:", body.RepositoryID)
+
+	gitlabProjectID, err := extractProjectIdFromRepoId(body.RepositoryID)
+	if err != nil {
+		slog.Error("could not extract project id from repo id", "err", err)
+		return errors.Wrap(err, "could not extract project id from repo id")
+	}
+
+	p, _, err := client.GetProject(ctx.Request().Context(), gitlabProjectID)
+	if err != nil {
+		slog.Error("could not get project", "err", err)
+		return errors.Wrap(err, "could not get project")
+	}
+
+	err = setupDevGuardProject(p)
+
+	//fmt.Println("User ID:", p.Owner.Name)
 
 	return nil
+}
+
+func setupDevGuardProject(project *gitlab.Project) error {
+	nameSpaces := strings.Split(project.PathWithNamespace, "/")
+	if len(nameSpaces) > 2 {
+	}
+
+	orgName := nameSpaces[0]
+	fmt.Println("Setting up organization:", orgName)
+	nameSpaces = nameSpaces[1:]
+
+	var projectSetup bool
+	for nameSpaces != nil && len(nameSpaces) > 0 {
+		if len(nameSpaces) == 1 {
+			if !projectSetup {
+				// set up a project with the name of the namespace
+				fmt.Println("Setting up project:", nameSpaces[0])
+				projectSetup = true
+			}
+			// this is the last namespace, set up a repo with the name of the namespace
+			fmt.Println("Setting up repo with name:", nameSpaces[0])
+			nameSpaces = nameSpaces[1:]
+			continue
+		}
+		if !projectSetup {
+			//set up a project with the name of the namespace
+			fmt.Println("Setting up project with name:", nameSpaces[0])
+			nameSpaces = nameSpaces[1:]
+			projectSetup = true
+		} else {
+			// set up a sub-project with the name of the namespace
+			fmt.Println("Setting up sub-project with name:", nameSpaces[0])
+			nameSpaces = nameSpaces[1:]
+		}
+
+	}
+
+	return nil
+}
+
+func extractNameSpacesFromProjectPath(projectPath string, projectNamespace *gitlab.ProjectNamespace) []string {
+	nameSpaces := strings.Split(projectPath, "/")
+	if len(nameSpaces) <= 2 {
+		//check if the first part of the namespace is the username
+		if projectNamespace.Kind == "user" {
+			// this is a user namespace
+			nameSpaces = nameSpaces[1:]
+		}
+	}
+	return nameSpaces
 }
 
 func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
