@@ -8,7 +8,7 @@ import (
 	"context"
 
 	mock "github.com/stretchr/testify/mock"
-	"gitlab.com/gitlab-org/api/client-go"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 // NewGitlabClientFacade creates a new instance of GitlabClientFacade. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
