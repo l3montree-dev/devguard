@@ -244,7 +244,7 @@ func licensesToMap(licenses []struct {
 	return licensesMap
 }
 
-func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseOverwrite, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
 	var componentDependencies []models.ComponentDependency
 
 	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
@@ -283,13 +283,15 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersion
 	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Debug().Scan(&componentDependencies).Error
 
 	// map with license overwrites
-	m := make(map[string]string)
+	isPurlOverwrittenMap := make(map[string]string, len(overwrittenLicenses))
+	for i := range overwrittenLicenses {
+		isPurlOverwrittenMap[overwrittenLicenses[i].ComponentPurl] = overwrittenLicenses[i].License_id
+	}
 
 	for i, component := range componentDependencies {
 		if license, ok := m[componentDependencies[i].DependencyPurl]; ok {
 			componentDependencies[i].Dependency.License = &license
 			componentDependencies[i].Dependency.IsLicenseOverwritten = true
-
 		}
 		if license, ok := m[*component.ComponentPurl]; ok {
 			componentDependencies[i].Component.License = &license

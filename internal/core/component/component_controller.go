@@ -5,14 +5,16 @@ import (
 )
 
 type httpController struct {
-	componentRepository    core.ComponentRepository
-	assetVersionRepository core.AssetVersionRepository
+	componentRepository        core.ComponentRepository
+	assetVersionRepository     core.AssetVersionRepository
+	licenseOverwriteRepository core.LicenseOverwriteRepository
 }
 
-func NewHTTPController(componentRepository core.ComponentRepository, assetVersionRepository core.AssetVersionRepository) *httpController {
+func NewHTTPController(componentRepository core.ComponentRepository, assetVersionRepository core.AssetVersionRepository, licenseOverwriteRepository core.LicenseOverwriteRepository) *httpController {
 	return &httpController{
-		componentRepository:    componentRepository,
-		assetVersionRepository: assetVersionRepository,
+		componentRepository:        componentRepository,
+		assetVersionRepository:     assetVersionRepository,
+		licenseOverwriteRepository: licenseOverwriteRepository,
 	}
 }
 
@@ -72,7 +74,15 @@ func (httpController httpController) ListPaged(ctx core.Context) error {
 	search := ctx.QueryParam("search")
 	sort := core.GetSortQuery(ctx)
 
+	orgID := core.GetOrganization(ctx).ID
+
+	overwrittenLicense, err := httpController.licenseOverwriteRepository.GetAllOverwritesForOrganization(orgID)
+	if err != nil {
+		return err
+	}
+
 	components, err := httpController.componentRepository.LoadComponentsWithProject(nil,
+		overwrittenLicense,
 		assetVersion.Name,
 		assetVersion.AssetID,
 		scannerId,
