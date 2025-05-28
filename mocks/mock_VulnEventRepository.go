@@ -72,26 +72,15 @@ type VulnEventRepository_ReadAssetEventsByVulnID_Call struct {
 }
 
 // ReadAssetEventsByVulnID is a helper method to define mock.On call
-//   - vulnID string
-//   - vulnType models.VulnType
+//   - vulnID
+//   - vulnType
 func (_e *VulnEventRepository_Expecter) ReadAssetEventsByVulnID(vulnID interface{}, vulnType interface{}) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
 	return &VulnEventRepository_ReadAssetEventsByVulnID_Call{Call: _e.mock.On("ReadAssetEventsByVulnID", vulnID, vulnType)}
 }
 
 func (_c *VulnEventRepository_ReadAssetEventsByVulnID_Call) Run(run func(vulnID string, vulnType models.VulnType)) *VulnEventRepository_ReadAssetEventsByVulnID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 models.VulnType
-		if args[1] != nil {
-			arg1 = args[1].(models.VulnType)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(string), args[1].(models.VulnType))
 	})
 	return _c
 }
@@ -138,38 +127,17 @@ type VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call struct {
 }
 
 // ReadEventsByAssetIDAndAssetVersionName is a helper method to define mock.On call
-//   - assetID uuid.UUID
-//   - assetVersionName string
-//   - pageInfo core.PageInfo
-//   - filter []core.FilterQuery
+//   - assetID
+//   - assetVersionName
+//   - pageInfo
+//   - filter
 func (_e *VulnEventRepository_Expecter) ReadEventsByAssetIDAndAssetVersionName(assetID interface{}, assetVersionName interface{}, pageInfo interface{}, filter interface{}) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
 	return &VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call{Call: _e.mock.On("ReadEventsByAssetIDAndAssetVersionName", assetID, assetVersionName, pageInfo, filter)}
 }
 
 func (_c *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call) Run(run func(assetID uuid.UUID, assetVersionName string, pageInfo core.PageInfo, filter []core.FilterQuery)) *VulnEventRepository_ReadEventsByAssetIDAndAssetVersionName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 core.PageInfo
-		if args[2] != nil {
-			arg2 = args[2].(core.PageInfo)
-		}
-		var arg3 []core.FilterQuery
-		if args[3] != nil {
-			arg3 = args[3].([]core.FilterQuery)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
+		run(args[0].(uuid.UUID), args[1].(string), args[2].(core.PageInfo), args[3].([]core.FilterQuery))
 	})
 	return _c
 }
@@ -207,26 +175,15 @@ type VulnEventRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - db core.DB
-//   - event *models.VulnEvent
+//   - db
+//   - event
 func (_e *VulnEventRepository_Expecter) Save(db interface{}, event interface{}) *VulnEventRepository_Save_Call {
 	return &VulnEventRepository_Save_Call{Call: _e.mock.On("Save", db, event)}
 }
 
 func (_c *VulnEventRepository_Save_Call) Run(run func(db core.DB, event *models.VulnEvent)) *VulnEventRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.VulnEvent
-		if args[1] != nil {
-			arg1 = args[1].(*models.VulnEvent)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.VulnEvent))
 	})
 	return _c
 }
@@ -264,26 +221,15 @@ type VulnEventRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - db core.DB
-//   - events []models.VulnEvent
+//   - db
+//   - events
 func (_e *VulnEventRepository_Expecter) SaveBatch(db interface{}, events interface{}) *VulnEventRepository_SaveBatch_Call {
 	return &VulnEventRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", db, events)}
 }
 
 func (_c *VulnEventRepository_SaveBatch_Call) Run(run func(db core.DB, events []models.VulnEvent)) *VulnEventRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.VulnEvent
-		if args[1] != nil {
-			arg1 = args[1].([]models.VulnEvent)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.VulnEvent))
 	})
 	return _c
 }

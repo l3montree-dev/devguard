@@ -61,26 +61,15 @@ type InvitationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
-//   - id uuid.UUID
+//   - tx
+//   - id
 func (_e *InvitationRepository_Expecter) Delete(tx interface{}, id interface{}) *InvitationRepository_Delete_Call {
 	return &InvitationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *InvitationRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *InvitationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -127,20 +116,14 @@ type InvitationRepository_FindByCode_Call struct {
 }
 
 // FindByCode is a helper method to define mock.On call
-//   - code string
+//   - code
 func (_e *InvitationRepository_Expecter) FindByCode(code interface{}) *InvitationRepository_FindByCode_Call {
 	return &InvitationRepository_FindByCode_Call{Call: _e.mock.On("FindByCode", code)}
 }
 
 func (_c *InvitationRepository_FindByCode_Call) Run(run func(code string)) *InvitationRepository_FindByCode_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(string))
 	})
 	return _c
 }
@@ -178,26 +161,15 @@ type InvitationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
-//   - invitation *models.Invitation
+//   - tx
+//   - invitation
 func (_e *InvitationRepository_Expecter) Save(tx interface{}, invitation interface{}) *InvitationRepository_Save_Call {
 	return &InvitationRepository_Save_Call{Call: _e.mock.On("Save", tx, invitation)}
 }
 
 func (_c *InvitationRepository_Save_Call) Run(run func(tx core.DB, invitation *models.Invitation)) *InvitationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Invitation
-		if args[1] != nil {
-			arg1 = args[1].(*models.Invitation)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Invitation))
 	})
 	return _c
 }

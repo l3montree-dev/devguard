@@ -107,6 +107,24 @@ func (client gitlabClient) GetProject(ctx context.Context, projectId int) (*gitl
 	return client.Projects.GetProject(projectId, nil, gitlab.WithContext(ctx))
 }
 
+func (client gitlabClient) ListProjectMembers(ctx context.Context, projectId int, memberOptions *gitlab.ListProjectMembersOptions, requestOptions ...gitlab.RequestOptionFunc) ([]*gitlab.ProjectMember, *gitlab.Response, error) {
+	return client.ProjectMembers.ListAllProjectMembers(projectId, memberOptions, requestOptions...)
+}
+
+func (client gitlabClient) IsProjectMember(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions) (bool, error) {
+	members, _, err := client.ListProjectMembers(ctx, projectId, options, nil)
+	if err != nil {
+		return false, err
+	}
+	for _, member := range members {
+		if member.ID == userId {
+			return true, nil
+		}
+	}
+	return false, nil
+
+}
+
 func (client gitlabClient) ListProjectHooks(ctx context.Context, projectId int, opt *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error) {
 	return client.Projects.ListProjectHooks(projectId, opt, gitlab.WithContext(ctx))
 }

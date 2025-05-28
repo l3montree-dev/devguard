@@ -61,26 +61,15 @@ type ProjectRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
-//   - projectID uuid.UUID
+//   - tx
+//   - projectID
 func (_e *ProjectRepository_Expecter) Activate(tx interface{}, projectID interface{}) *ProjectRepository_Activate_Call {
 	return &ProjectRepository_Activate_Call{Call: _e.mock.On("Activate", tx, projectID)}
 }
 
 func (_c *ProjectRepository_Activate_Call) Run(run func(tx core.DB, projectID uuid.UUID)) *ProjectRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -118,26 +107,15 @@ type ProjectRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
-//   - project *models.Project
+//   - tx
+//   - project
 func (_e *ProjectRepository_Expecter) Create(tx interface{}, project interface{}) *ProjectRepository_Create_Call {
 	return &ProjectRepository_Create_Call{Call: _e.mock.On("Create", tx, project)}
 }
 
 func (_c *ProjectRepository_Create_Call) Run(run func(tx core.DB, project *models.Project)) *ProjectRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Project
-		if args[1] != nil {
-			arg1 = args[1].(*models.Project)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Project))
 	})
 	return _c
 }
@@ -175,26 +153,15 @@ type ProjectRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
-//   - projectID uuid.UUID
+//   - tx
+//   - projectID
 func (_e *ProjectRepository_Expecter) Delete(tx interface{}, projectID interface{}) *ProjectRepository_Delete_Call {
 	return &ProjectRepository_Delete_Call{Call: _e.mock.On("Delete", tx, projectID)}
 }
 
 func (_c *ProjectRepository_Delete_Call) Run(run func(tx core.DB, projectID uuid.UUID)) *ProjectRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -232,32 +199,16 @@ type ProjectRepository_DisablePolicyForProject_Call struct {
 }
 
 // DisablePolicyForProject is a helper method to define mock.On call
-//   - tx core.DB
-//   - projectID uuid.UUID
-//   - policyID uuid.UUID
+//   - tx
+//   - projectID
+//   - policyID
 func (_e *ProjectRepository_Expecter) DisablePolicyForProject(tx interface{}, projectID interface{}, policyID interface{}) *ProjectRepository_DisablePolicyForProject_Call {
 	return &ProjectRepository_DisablePolicyForProject_Call{Call: _e.mock.On("DisablePolicyForProject", tx, projectID, policyID)}
 }
 
 func (_c *ProjectRepository_DisablePolicyForProject_Call) Run(run func(tx core.DB, projectID uuid.UUID, policyID uuid.UUID)) *ProjectRepository_DisablePolicyForProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID), args[2].(uuid.UUID))
 	})
 	return _c
 }
@@ -295,32 +246,16 @@ type ProjectRepository_EnablePolicyForProject_Call struct {
 }
 
 // EnablePolicyForProject is a helper method to define mock.On call
-//   - tx core.DB
-//   - projectID uuid.UUID
-//   - policyID uuid.UUID
+//   - tx
+//   - projectID
+//   - policyID
 func (_e *ProjectRepository_Expecter) EnablePolicyForProject(tx interface{}, projectID interface{}, policyID interface{}) *ProjectRepository_EnablePolicyForProject_Call {
 	return &ProjectRepository_EnablePolicyForProject_Call{Call: _e.mock.On("EnablePolicyForProject", tx, projectID, policyID)}
 }
 
 func (_c *ProjectRepository_EnablePolicyForProject_Call) Run(run func(tx core.DB, projectID uuid.UUID, policyID uuid.UUID)) *ProjectRepository_EnablePolicyForProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID), args[2].(uuid.UUID))
 	})
 	return _c
 }
@@ -369,20 +304,14 @@ type ProjectRepository_GetByOrgID_Call struct {
 }
 
 // GetByOrgID is a helper method to define mock.On call
-//   - organizationID uuid.UUID
+//   - organizationID
 func (_e *ProjectRepository_Expecter) GetByOrgID(organizationID interface{}) *ProjectRepository_GetByOrgID_Call {
 	return &ProjectRepository_GetByOrgID_Call{Call: _e.mock.On("GetByOrgID", organizationID)}
 }
 
 func (_c *ProjectRepository_GetByOrgID_Call) Run(run func(organizationID uuid.UUID)) *ProjectRepository_GetByOrgID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -431,20 +360,14 @@ type ProjectRepository_GetDirectChildProjects_Call struct {
 }
 
 // GetDirectChildProjects is a helper method to define mock.On call
-//   - projectID uuid.UUID
+//   - projectID
 func (_e *ProjectRepository_Expecter) GetDirectChildProjects(projectID interface{}) *ProjectRepository_GetDirectChildProjects_Call {
 	return &ProjectRepository_GetDirectChildProjects_Call{Call: _e.mock.On("GetDirectChildProjects", projectID)}
 }
 
 func (_c *ProjectRepository_GetDirectChildProjects_Call) Run(run func(projectID uuid.UUID)) *ProjectRepository_GetDirectChildProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -491,20 +414,14 @@ type ProjectRepository_GetProjectByAssetID_Call struct {
 }
 
 // GetProjectByAssetID is a helper method to define mock.On call
-//   - assetID uuid.UUID
+//   - assetID
 func (_e *ProjectRepository_Expecter) GetProjectByAssetID(assetID interface{}) *ProjectRepository_GetProjectByAssetID_Call {
 	return &ProjectRepository_GetProjectByAssetID_Call{Call: _e.mock.On("GetProjectByAssetID", assetID)}
 }
 
 func (_c *ProjectRepository_GetProjectByAssetID_Call) Run(run func(assetID uuid.UUID)) *ProjectRepository_GetProjectByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -553,32 +470,16 @@ type ProjectRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - idSlice []uuid.UUID
-//   - parentID *uuid.UUID
-//   - organizationID uuid.UUID
+//   - idSlice
+//   - parentID
+//   - organizationID
 func (_e *ProjectRepository_Expecter) List(idSlice interface{}, parentID interface{}, organizationID interface{}) *ProjectRepository_List_Call {
 	return &ProjectRepository_List_Call{Call: _e.mock.On("List", idSlice, parentID, organizationID)}
 }
 
 func (_c *ProjectRepository_List_Call) Run(run func(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID)) *ProjectRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].([]uuid.UUID)
-		}
-		var arg1 *uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(*uuid.UUID)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].([]uuid.UUID), args[1].(*uuid.UUID), args[2].(uuid.UUID))
 	})
 	return _c
 }
@@ -625,20 +526,14 @@ type ProjectRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - projectID uuid.UUID
+//   - projectID
 func (_e *ProjectRepository_Expecter) Read(projectID interface{}) *ProjectRepository_Read_Call {
 	return &ProjectRepository_Read_Call{Call: _e.mock.On("Read", projectID)}
 }
 
 func (_c *ProjectRepository_Read_Call) Run(run func(projectID uuid.UUID)) *ProjectRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -685,26 +580,15 @@ type ProjectRepository_ReadBySlug_Call struct {
 }
 
 // ReadBySlug is a helper method to define mock.On call
-//   - organizationID uuid.UUID
-//   - slug string
+//   - organizationID
+//   - slug
 func (_e *ProjectRepository_Expecter) ReadBySlug(organizationID interface{}, slug interface{}) *ProjectRepository_ReadBySlug_Call {
 	return &ProjectRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", organizationID, slug)}
 }
 
 func (_c *ProjectRepository_ReadBySlug_Call) Run(run func(organizationID uuid.UUID, slug string)) *ProjectRepository_ReadBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(uuid.UUID), args[1].(string))
 	})
 	return _c
 }
@@ -751,26 +635,15 @@ type ProjectRepository_ReadBySlugUnscoped_Call struct {
 }
 
 // ReadBySlugUnscoped is a helper method to define mock.On call
-//   - organizationId uuid.UUID
-//   - slug string
+//   - organizationId
+//   - slug
 func (_e *ProjectRepository_Expecter) ReadBySlugUnscoped(organizationId interface{}, slug interface{}) *ProjectRepository_ReadBySlugUnscoped_Call {
 	return &ProjectRepository_ReadBySlugUnscoped_Call{Call: _e.mock.On("ReadBySlugUnscoped", organizationId, slug)}
 }
 
 func (_c *ProjectRepository_ReadBySlugUnscoped_Call) Run(run func(organizationId uuid.UUID, slug string)) *ProjectRepository_ReadBySlugUnscoped_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(uuid.UUID), args[1].(string))
 	})
 	return _c
 }
@@ -819,20 +692,14 @@ type ProjectRepository_RecursivelyGetChildProjects_Call struct {
 }
 
 // RecursivelyGetChildProjects is a helper method to define mock.On call
-//   - projectID uuid.UUID
+//   - projectID
 func (_e *ProjectRepository_Expecter) RecursivelyGetChildProjects(projectID interface{}) *ProjectRepository_RecursivelyGetChildProjects_Call {
 	return &ProjectRepository_RecursivelyGetChildProjects_Call{Call: _e.mock.On("RecursivelyGetChildProjects", projectID)}
 }
 
 func (_c *ProjectRepository_RecursivelyGetChildProjects_Call) Run(run func(projectID uuid.UUID)) *ProjectRepository_RecursivelyGetChildProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -870,26 +737,15 @@ type ProjectRepository_Update_Call struct {
 }
 
 // Update is a helper method to define mock.On call
-//   - tx core.DB
-//   - project *models.Project
+//   - tx
+//   - project
 func (_e *ProjectRepository_Expecter) Update(tx interface{}, project interface{}) *ProjectRepository_Update_Call {
 	return &ProjectRepository_Update_Call{Call: _e.mock.On("Update", tx, project)}
 }
 
 func (_c *ProjectRepository_Update_Call) Run(run func(tx core.DB, project *models.Project)) *ProjectRepository_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Project
-		if args[1] != nil {
-			arg1 = args[1].(*models.Project)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Project))
 	})
 	return _c
 }

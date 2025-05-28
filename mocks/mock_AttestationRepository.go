@@ -61,26 +61,15 @@ type AttestationRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
-//   - id string
+//   - tx
+//   - id
 func (_e *AttestationRepository_Expecter) Activate(tx interface{}, id interface{}) *AttestationRepository_Activate_Call {
 	return &AttestationRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *AttestationRepository_Activate_Call) Run(run func(tx core.DB, id string)) *AttestationRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(string))
 	})
 	return _c
 }
@@ -219,26 +208,15 @@ type AttestationRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
-//   - t *models.Attestation
+//   - tx
+//   - t
 func (_e *AttestationRepository_Expecter) Create(tx interface{}, t interface{}) *AttestationRepository_Create_Call {
 	return &AttestationRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *AttestationRepository_Create_Call) Run(run func(tx core.DB, t *models.Attestation)) *AttestationRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Attestation
-		if args[1] != nil {
-			arg1 = args[1].(*models.Attestation)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Attestation))
 	})
 	return _c
 }
@@ -276,26 +254,15 @@ type AttestationRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ts []models.Attestation
+//   - tx
+//   - ts
 func (_e *AttestationRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *AttestationRepository_CreateBatch_Call {
 	return &AttestationRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *AttestationRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.Attestation)) *AttestationRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Attestation
-		if args[1] != nil {
-			arg1 = args[1].([]models.Attestation)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Attestation))
 	})
 	return _c
 }
@@ -333,26 +300,15 @@ type AttestationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
-//   - id string
+//   - tx
+//   - id
 func (_e *AttestationRepository_Expecter) Delete(tx interface{}, id interface{}) *AttestationRepository_Delete_Call {
 	return &AttestationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *AttestationRepository_Delete_Call) Run(run func(tx core.DB, id string)) *AttestationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(string))
 	})
 	return _c
 }
@@ -390,26 +346,15 @@ type AttestationRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ids []models.Attestation
+//   - tx
+//   - ids
 func (_e *AttestationRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *AttestationRepository_DeleteBatch_Call {
 	return &AttestationRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *AttestationRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.Attestation)) *AttestationRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Attestation
-		if args[1] != nil {
-			arg1 = args[1].([]models.Attestation)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Attestation))
 	})
 	return _c
 }
@@ -458,20 +403,14 @@ type AttestationRepository_GetByAssetID_Call struct {
 }
 
 // GetByAssetID is a helper method to define mock.On call
-//   - assetID uuid.UUID
+//   - assetID
 func (_e *AttestationRepository_Expecter) GetByAssetID(assetID interface{}) *AttestationRepository_GetByAssetID_Call {
 	return &AttestationRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", assetID)}
 }
 
 func (_c *AttestationRepository_GetByAssetID_Call) Run(run func(assetID uuid.UUID)) *AttestationRepository_GetByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -520,26 +459,15 @@ type AttestationRepository_GetByAssetVersionAndAssetID_Call struct {
 }
 
 // GetByAssetVersionAndAssetID is a helper method to define mock.On call
-//   - assetID uuid.UUID
-//   - assetVersion string
+//   - assetID
+//   - assetVersion
 func (_e *AttestationRepository_Expecter) GetByAssetVersionAndAssetID(assetID interface{}, assetVersion interface{}) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
 	return &AttestationRepository_GetByAssetVersionAndAssetID_Call{Call: _e.mock.On("GetByAssetVersionAndAssetID", assetID, assetVersion)}
 }
 
 func (_c *AttestationRepository_GetByAssetVersionAndAssetID_Call) Run(run func(assetID uuid.UUID, assetVersion string)) *AttestationRepository_GetByAssetVersionAndAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(uuid.UUID), args[1].(string))
 	})
 	return _c
 }
@@ -579,20 +507,14 @@ type AttestationRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx
 func (_e *AttestationRepository_Expecter) GetDB(tx interface{}) *AttestationRepository_GetDB_Call {
 	return &AttestationRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *AttestationRepository_GetDB_Call) Run(run func(tx core.DB)) *AttestationRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(core.DB))
 	})
 	return _c
 }
@@ -641,20 +563,14 @@ type AttestationRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids []string
+//   - ids
 func (_e *AttestationRepository_Expecter) List(ids interface{}) *AttestationRepository_List_Call {
 	return &AttestationRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *AttestationRepository_List_Call) Run(run func(ids []string)) *AttestationRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []string
-		if args[0] != nil {
-			arg0 = args[0].([]string)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].([]string))
 	})
 	return _c
 }
@@ -701,20 +617,14 @@ type AttestationRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id string
+//   - id
 func (_e *AttestationRepository_Expecter) Read(id interface{}) *AttestationRepository_Read_Call {
 	return &AttestationRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *AttestationRepository_Read_Call) Run(run func(id string)) *AttestationRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(string))
 	})
 	return _c
 }
@@ -752,26 +662,15 @@ type AttestationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
-//   - t *models.Attestation
+//   - tx
+//   - t
 func (_e *AttestationRepository_Expecter) Save(tx interface{}, t interface{}) *AttestationRepository_Save_Call {
 	return &AttestationRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *AttestationRepository_Save_Call) Run(run func(tx core.DB, t *models.Attestation)) *AttestationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Attestation
-		if args[1] != nil {
-			arg1 = args[1].(*models.Attestation)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Attestation))
 	})
 	return _c
 }
@@ -809,26 +708,15 @@ type AttestationRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ts []models.Attestation
+//   - tx
+//   - ts
 func (_e *AttestationRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *AttestationRepository_SaveBatch_Call {
 	return &AttestationRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *AttestationRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.Attestation)) *AttestationRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Attestation
-		if args[1] != nil {
-			arg1 = args[1].([]models.Attestation)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Attestation))
 	})
 	return _c
 }
@@ -866,20 +754,14 @@ type AttestationRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn func(tx core.DB) error
+//   - fn
 func (_e *AttestationRepository_Expecter) Transaction(fn interface{}) *AttestationRepository_Transaction_Call {
 	return &AttestationRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *AttestationRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *AttestationRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx core.DB) error
-		if args[0] != nil {
-			arg0 = args[0].(func(tx core.DB) error)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(func(tx core.DB) error))
 	})
 	return _c
 }
