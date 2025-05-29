@@ -18,8 +18,6 @@ package scan
 import (
 	"fmt"
 	"log/slog"
-	"slices"
-	"strings"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -165,9 +163,7 @@ func (s *HttpController) ScanNormalizedSBOM(asset models.Asset, assetVersion mod
 
 	scanResults.AmountOpened = len(opened) //Fill in the results
 	scanResults.AmountClosed = len(closed)
-	scanResults.DependencyVulns = utils.Map(utils.Filter(newState, func(v models.DependencyVuln) bool {
-		return v.State != models.VulnStateFixed && slices.Contains(strings.Fields(v.ScannerIDs), scannerID)
-	}), vuln.DependencyVulnToDto)
+	scanResults.DependencyVulns = utils.Map(newState, vuln.DependencyVulnToDto)
 
 	return scanResults, nil
 }
