@@ -19,7 +19,7 @@ type controllerMocks struct {
 	StatisticsService      *mocks.StatisticsService
 }
 
-func newMockedHttpController(t *testing.T) (httpController, *controllerMocks) {
+func newMockedHttpController(t *testing.T) (HttpController, *controllerMocks) {
 	m := &controllerMocks{
 		AssetVersionRepository: mocks.NewAssetVersionRepository(t),
 		AssetVersionService:    mocks.NewAssetVersionService(t),
@@ -27,7 +27,7 @@ func newMockedHttpController(t *testing.T) (httpController, *controllerMocks) {
 		DependencyVulnService:  mocks.NewDependencyVulnService(t),
 		StatisticsService:      mocks.NewStatisticsService(t),
 	}
-	return httpController{
+	return HttpController{
 		assetVersionRepository: m.AssetVersionRepository,
 		assetVersionService:    m.AssetVersionService,
 		sbomScanner:            m.SBOMScanner,

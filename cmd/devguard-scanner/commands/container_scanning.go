@@ -34,10 +34,11 @@ func NewContainerScanningCommand() *cobra.Command {
 				return fmt.Errorf("path must be a tar file")
 			}
 
-			return scaCommandFactory("container-scanning")(cmd, args)
+			return scaCommand(cmd, args)
 		},
 	}
 
 	addScanFlags(containerScanningCommand)
+	containerScanningCommand.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning", "The scanner ID to use for the scan")
 	return containerScanningCommand
 }
