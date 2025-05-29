@@ -272,60 +272,58 @@ func getDirFromPath(path string) string {
 	return path
 }
 
-func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		// read the sbom file and post it to the scan endpoint
-		// get the dependencyVulns and print them to the console
-		file, err := generateSBOM(config.RuntimeBaseConfig.Path)
-		if err != nil {
-			return errors.Wrap(err, "could not open file")
-		}
-		defer os.Remove(file.Name())
-
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.ApiUrl), file)
-		if err != nil {
-			return errors.Wrap(err, "could not create request")
-		}
-
-		err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
-		if err != nil {
-			return errors.Wrap(err, "could not sign request")
-		}
-
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
-		config.SetXAssetHeaders(req)
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return errors.Wrap(err, "could not send request")
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			// read the body
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return errors.Wrap(err, "could not scan file")
-			}
-
-			return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
-		}
-
-		// read and parse the body - it should be an array of dependencyVulns
-		// print the dependencyVulns to the console
-		var scanResponse scan.ScanResponse
-
-		err = json.NewDecoder(resp.Body).Decode(&scanResponse)
-		if err != nil {
-			return errors.Wrap(err, "could not parse response")
-		}
-
-		return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+func scaCommand(cmd *cobra.Command, args []string) error {
+	// read the sbom file and post it to the scan endpoint
+	// get the dependencyVulns and print them to the console
+	file, err := generateSBOM(config.RuntimeBaseConfig.Path)
+	if err != nil {
+		return errors.Wrap(err, "could not open file")
 	}
+	defer os.Remove(file.Name())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.ApiUrl), file)
+	if err != nil {
+		return errors.Wrap(err, "could not create request")
+	}
+
+	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+	if err != nil {
+		return errors.Wrap(err, "could not sign request")
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
+	config.SetXAssetHeaders(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "could not send request")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// read the body
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return errors.Wrap(err, "could not scan file")
+		}
+
+		return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
+	}
+
+	// read and parse the body - it should be an array of dependencyVulns
+	// print the dependencyVulns to the console
+	var scanResponse scan.ScanResponse
+
+	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
+	if err != nil {
+		return errors.Wrap(err, "could not parse response")
+	}
+
+	return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
 }
 
 func NewSCACommand() *cobra.Command {
@@ -334,9 +332,10 @@ func NewSCACommand() *cobra.Command {
 		Short: "Start a Software composition analysis",
 		Long:  `Scan an application for vulnerabilities. This command will generate a sbom, upload it to devguard and scan it for vulnerabilities.`,
 		// Args:  cobra.ExactArgs(0),
-		RunE: scaCommandFactory("sca"),
+		RunE: scaCommand,
 	}
 
 	addScanFlags(scaCommand)
+	scaCommand.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca", "The ID of the scanner. This is used to identify the scanner in the scan results. Defaults to 'devguard-scanner'.")
 	return scaCommand
 }

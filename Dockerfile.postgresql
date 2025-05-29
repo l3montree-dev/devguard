@@ -16,9 +16,6 @@
 # Use the official PostgreSQL image as a base
 FROM postgres:17.4-bookworm6@sha256:304ab813518754228f9f792f79d6da36359b82d8ecf418096c636725f8c930ad
 
-# Set the maintainer
-MAINTAINER Tim Bastin <tim.bastin@l3montree.com>
-
 # Install the build dependencies
 RUN apt-get update && apt-get install -y \
     git \
@@ -28,9 +25,9 @@ RUN apt-get update && apt-get install -y \
     locale-gen en_US.UTF-8
 
 # Set environment variables for locale
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
 # Clone the pg-semver repository
 RUN git clone https://github.com/theory/pg-semver.git /pg-semver

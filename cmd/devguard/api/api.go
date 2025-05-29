@@ -652,7 +652,6 @@ func BuildRouter(db core.DB) *echo.Echo {
 		}
 	}
 	return server
-
 }
 
 func Start(db core.DB) {

@@ -16,7 +16,10 @@
 package scan
 
 import (
+	"fmt"
 	"log/slog"
+	"slices"
+	"strings"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -29,7 +32,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-type httpController struct {
+type HttpController struct {
 	db                     core.DB
 	sbomScanner            core.SBOMScanner
 	cveRepository          core.CveRepository
@@ -42,12 +45,12 @@ type httpController struct {
 	dependencyVulnService core.DependencyVulnService
 }
 
-func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *httpController {
+func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *HttpController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
 	scanner := NewSBOMScanner(cpeComparer, purlComparer, cveRepository)
-	return &httpController{
+	return &HttpController{
 		db:                     db,
 		sbomScanner:            scanner,
 		cveRepository:          cveRepository,
@@ -72,7 +75,7 @@ type FirstPartyScanResponse struct {
 	FirstPartyVulns []vuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
 }
 
-func (s *httpController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {
+func (s *HttpController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {
 	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
@@ -102,7 +105,7 @@ func (s *httpController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
-		return scanResults, err
+		return scanResults, fmt.Errorf("no X-Scanner header found")
 	}
 
 	// update the sbom in the database in parallel
@@ -113,7 +116,7 @@ func (s *httpController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	return s.ScanNormalizedSBOM(asset, assetVersion, normalizedBom, scannerID, userID)
 }
 
-func (s *httpController) ScanNormalizedSBOM(asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
+func (s *HttpController) ScanNormalizedSBOM(asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
@@ -159,13 +162,13 @@ func (s *httpController) ScanNormalizedSBOM(asset models.Asset, assetVersion mod
 	scanResults.AmountOpened = len(opened) //Fill in the results
 	scanResults.AmountClosed = len(closed)
 	scanResults.DependencyVulns = utils.Map(utils.Filter(newState, func(v models.DependencyVuln) bool {
-		return v.State != models.VulnStateFixed
+		return v.State != models.VulnStateFixed && slices.Contains(strings.Fields(v.ScannerIDs), scannerID)
 	}), vuln.DependencyVulnToDto)
 
 	return scanResults, nil
 }
 
-func (s *httpController) FirstPartyVulnScan(c core.Context) error {
+func (s *HttpController) FirstPartyVulnScan(c core.Context) error {
 
 	monitoring.FirstPartyScanAmount.Inc()
 	startTime := time.Now()
@@ -227,7 +230,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	})
 }
 
-func (s *httpController) ScanDependencyVulnFromProject(c core.Context) error {
+func (s *HttpController) ScanDependencyVulnFromProject(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
 	defer c.Request().Body.Close()
@@ -240,10 +243,9 @@ func (s *httpController) ScanDependencyVulnFromProject(c core.Context) error {
 		return err
 	}
 	return c.JSON(200, scanResults)
-
 }
 
-func (s *httpController) ScanSbomFile(c core.Context) error {
+func (s *HttpController) ScanSbomFile(c core.Context) error {
 
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(maxSize)
