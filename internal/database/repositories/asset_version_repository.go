@@ -88,12 +88,6 @@ func (a *assetVersionRepository) findByAssetVersionNameAndAssetID(name string, a
 	return app, nil
 }
 
-func (a *assetVersionRepository) assetVersionFactory(assetVersionName string, assetID uuid.UUID, assetVersionType models.AssetVersionType) models.AssetVersion {
-	app := models.AssetVersion{Name: assetVersionName, AssetID: assetID, Slug: slug.Make(assetVersionName), Type: assetVersionType, DefaultBranch: false}
-
-	return app
-}
-
 func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, isTag bool, defaultBranchName *string) (models.AssetVersion, error) {
 	var assetVersion models.AssetVersion
 	assetVersion, err := a.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
@@ -105,7 +99,12 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 			assetVersionType = "branch"
 		}
 
-		assetVersion = a.assetVersionFactory(assetVersionName, assetID, assetVersionType)
+		assetVersion = models.AssetVersion{
+			Name:    assetVersionName,
+			AssetID: assetID,
+			Slug:    slug.Make(assetVersionName),
+			Type:    assetVersionType,
+		}
 
 		if assetVersion.Name == "" || assetVersion.Slug == "" {
 			return assetVersion, fmt.Errorf("assetVersions with an empty name or an empty slug are not allowed")
@@ -115,15 +114,14 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 		//Check if the given assetVersion already exists if thats the case don't want to add a new entry to the db but instead update the existing one
 		if err != nil && strings.Contains(err.Error(), "duplicate key value violates") {
 			a.db.Unscoped().Model(&assetVersion).Where("name", assetVersionName).Update("deleted_at", nil) //Update 'deleted_at' to NULL to revert the previous soft delete
-			return assetVersion, nil
 		} else if err != nil {
 			return models.AssetVersion{}, err
 		}
-		return assetVersion, nil
 	}
 
 	// check if defaultBranchName is defined
 	if defaultBranchName != nil {
+		assetVersion.DefaultBranch = *defaultBranchName == assetVersion.Name
 		// update the asset version with this branch name and set defaultBranch to true - if there is no asset version with this name just ignore
 		if err := a.updateAssetDefaultBranch(assetID, *defaultBranchName); err != nil {
 			slog.Error("error updating asset default branch", "err", err, "assetID", assetID, "defaultBranchName", defaultBranchName)

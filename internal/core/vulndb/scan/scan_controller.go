@@ -43,6 +43,9 @@ type HttpController struct {
 	statisticsService      core.StatisticsService
 
 	dependencyVulnService core.DependencyVulnService
+
+	// mark public to let it be overridden in tests
+	core.FireAndForgetSynchronizer
 }
 
 func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *HttpController {
@@ -51,15 +54,16 @@ func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRe
 
 	scanner := NewSBOMScanner(cpeComparer, purlComparer, cveRepository)
 	return &HttpController{
-		db:                     db,
-		sbomScanner:            scanner,
-		cveRepository:          cveRepository,
-		componentRepository:    componentRepository,
-		assetVersionService:    assetVersionService,
-		assetRepository:        assetRepository,
-		assetVersionRepository: assetVersionRepository,
-		statisticsService:      statisticsService,
-		dependencyVulnService:  dependencyVulnService,
+		db:                        db,
+		sbomScanner:               scanner,
+		cveRepository:             cveRepository,
+		componentRepository:       componentRepository,
+		assetVersionService:       assetVersionService,
+		assetRepository:           assetRepository,
+		assetVersionRepository:    assetVersionRepository,
+		statisticsService:         statisticsService,
+		dependencyVulnService:     dependencyVulnService,
+		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
 
@@ -134,7 +138,7 @@ func (s *HttpController) ScanNormalizedSBOM(asset models.Asset, assetVersion mod
 
 	//Check if we want to create an issue for this assetVersion
 	if s.dependencyVulnService.ShouldCreateIssues(assetVersion) {
-		go func() {
+		s.FireAndForget(func() {
 			err := s.dependencyVulnService.CreateIssuesForVulnsIfThresholdExceeded(asset, opened)
 			if err != nil {
 				slog.Error("could not create issues for vulnerabilities", "err", err)
@@ -144,7 +148,7 @@ func (s *HttpController) ScanNormalizedSBOM(asset models.Asset, assetVersion mod
 			if err != nil {
 				slog.Error("could not close issues for vulnerabilities", "err", err)
 			}
-		}()
+		})
 	}
 
 	slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
@@ -246,7 +250,6 @@ func (s *HttpController) ScanDependencyVulnFromProject(c core.Context) error {
 }
 
 func (s *HttpController) ScanSbomFile(c core.Context) error {
-
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(maxSize)
 	if err != nil {
