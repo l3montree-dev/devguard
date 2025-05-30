@@ -50,7 +50,7 @@ func (r *assetRepository) FindAssetByGitLabIntegrationAndId(repoId string, provi
 			SELECT * FROM (
 				SELECT 	*, 
 						split_part(repository_id, ':', 1) AS integration, 
-						split_part("assets".repository_id, ':', 2) as integration_id, 
+						split_part(repository_id, ':', 2) as integration_id, 
 						split_part(repository_id, ':', 3) as repo_id 
 				FROM "assets" 
 				WHERE "assets"."deleted_at" IS NULL
