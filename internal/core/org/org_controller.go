@@ -18,7 +18,6 @@ package org
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
@@ -32,14 +31,16 @@ import (
 
 type httpController struct {
 	organizationRepository core.OrganizationRepository
+	orgService             core.OrgService
 	rbacProvider           accesscontrol.RBACProvider
 	projectService         core.ProjectService
 	invitationRepository   core.InvitationRepository
 }
 
-func NewHttpController(repository core.OrganizationRepository, rbacProvider accesscontrol.RBACProvider, projectService core.ProjectService, invitationRepository core.InvitationRepository) *httpController {
+func NewHttpController(repository core.OrganizationRepository, orgService core.OrgService, rbacProvider accesscontrol.RBACProvider, projectService core.ProjectService, invitationRepository core.InvitationRepository) *httpController {
 	return &httpController{
 		organizationRepository: repository,
+		orgService:             orgService,
 		rbacProvider:           rbacProvider,
 		projectService:         projectService,
 		invitationRepository:   invitationRepository,
@@ -59,69 +60,12 @@ func (o *httpController) Create(ctx core.Context) error {
 
 	organization := req.toModel()
 
-	if organization.Name == "" || organization.Slug == "" {
-		return echo.NewHTTPError(409, "organizations with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("organizations with an empty name or an empty slug are not allowed"))
-	}
-
-	err := o.organizationRepository.Create(nil, &organization)
+	err := o.orgService.CreateOrganization(ctx, organization)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key value") { //Check the returned error of Create Function
-			return echo.NewHTTPError(409, "organization with that name already exists").WithInternal(err) //Error Code 409: conflict in current state of the resource
-		}
-		return echo.NewHTTPError(500, "could not create organization").WithInternal(err)
-	}
-
-	if err = o.bootstrapOrg(ctx, organization); err != nil {
-		return echo.NewHTTPError(500, "could not bootstrap organization").WithInternal(err)
+		return err
 	}
 
 	return ctx.JSON(200, organization)
-}
-
-func (o *httpController) bootstrapOrg(ctx core.Context, organization models.Org) error {
-	// create the permissions for the organization
-	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
-	userId := core.GetSession(ctx).GetUserID()
-
-	if err := rbac.GrantRole(userId, "owner"); err != nil {
-		return err
-	}
-	if err := rbac.InheritRole("owner", "admin"); err != nil { // an owner is an admin
-		return err
-	}
-	if err := rbac.InheritRole("admin", "member"); err != nil { // an admin is a member
-		return err
-	}
-
-	if err := rbac.AllowRole("owner", "organization", []accesscontrol.Action{
-		accesscontrol.ActionDelete,
-	}); err != nil {
-		return err
-	}
-
-	if err := rbac.AllowRole("admin", "organization", []accesscontrol.Action{
-		accesscontrol.ActionUpdate,
-	}); err != nil {
-		return err
-	}
-
-	if err := rbac.AllowRole("admin", "project", []accesscontrol.Action{
-		accesscontrol.ActionCreate,
-		accesscontrol.ActionRead, // listing all projects
-		accesscontrol.ActionUpdate,
-		accesscontrol.ActionDelete,
-	}); err != nil {
-		return err
-	}
-
-	if err := rbac.AllowRole("member", "organization", []accesscontrol.Action{
-		accesscontrol.ActionRead,
-	}); err != nil {
-		return err
-	}
-
-	ctx.Set("rbac", rbac)
-	return nil
 }
 
 func (o *httpController) Update(ctx core.Context) error {

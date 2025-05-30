@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/gosimple/slug"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
@@ -21,9 +22,12 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/org"
+	"github.com/l3montree-dev/devguard/internal/core/project"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -123,12 +127,16 @@ type gitlabIntegration struct {
 	vulnEventRepository         core.VulnEventRepository
 	frontendUrl                 string
 	orgRepository               core.OrganizationRepository
+	orgSevice                   core.OrgService
 	projectRepository           core.ProjectRepository
+	projectService              core.ProjectService
 	assetRepository             core.AssetRepository
 	assetVersionRepository      core.AssetVersionRepository
+	assetService                core.AssetService
 	componentRepository         core.ComponentRepository
 	gitlabClientFactory         func(id uuid.UUID) (gitlabClientFacade, error)
 	gitlabOauth2ClientFactory   func(token models.GitLabOauth2Token) (gitlabClientFacade, error)
+	casbinRBACProvider          accesscontrol.RBACProvider
 }
 
 var _ core.ThirdPartyIntegration = &gitlabIntegration{}
@@ -138,6 +146,12 @@ func messageWasCreatedByDevguard(message string) bool {
 }
 
 func NewGitLabIntegration(oauth2GitlabIntegration map[string]*gitlabOauth2Integration, db core.DB) *gitlabIntegration {
+
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+	if err != nil {
+		panic(err)
+	}
+
 	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
 
 	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
@@ -152,6 +166,10 @@ func NewGitLabIntegration(oauth2GitlabIntegration map[string]*gitlabOauth2Integr
 	gitlabOauth2TokenRepository := repositories.NewGitlabOauth2TokenRepository(db)
 
 	orgRepository := repositories.NewOrgRepository(db)
+
+	orgService := org.NewService(orgRepository, casbinRBACProvider)
+	projectService := project.NewService(projectRepository)
+	assetService := asset.NewService(assetRepository, dependencyVulnRepository, nil)
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -173,6 +191,10 @@ func NewGitLabIntegration(oauth2GitlabIntegration map[string]*gitlabOauth2Integr
 		projectRepository:           projectRepository,
 		componentRepository:         componentRepository,
 		orgRepository:               orgRepository,
+		orgSevice:                   orgService,
+		projectService:              projectService,
+		assetService:                assetService,
+		casbinRBACProvider:          casbinRBACProvider,
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -516,6 +538,7 @@ func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 				GitLabUserID: token.GitLabUserID,
 				UserID:       core.GetSession(ctx).GetUserID(),
 				ProviderID:   providerId,
+				Expiry:       token.Expiry,
 			})
 		}
 
@@ -589,8 +612,6 @@ func (g *gitlabIntegration) FullAutosetup(ctx core.Context) error {
 		return errors.Wrap(err, "could not bind request body")
 	}
 
-	fmt.Println("Repository ID:", body.RepositoryID)
-
 	gitlabProjectID, err := extractProjectIdFromRepoId(body.RepositoryID)
 	if err != nil {
 		slog.Error("could not extract project id from repo id", "err", err)
@@ -603,49 +624,108 @@ func (g *gitlabIntegration) FullAutosetup(ctx core.Context) error {
 		return errors.Wrap(err, "could not get project")
 	}
 
-	err = setupDevGuardProject(p)
+	asset, err := g.setupDevGuardProject(ctx, p)
+	if err != nil {
+		slog.Error("could not setup devguard project", "err", err)
+		return errors.Wrap(err, "could not setup devguard project")
+	}
 
-	//fmt.Println("User ID:", p.Owner.Name)
+	fmt.Println("Asset created:", asset)
 
 	return nil
 }
 
-func setupDevGuardProject(project *gitlab.Project) error {
-	nameSpaces := strings.Split(project.PathWithNamespace, "/")
+func (g *gitlabIntegration) setupDevGuardProject(ctx core.Context, gitlabProject *gitlab.Project) (*models.Asset, error) {
+	nameSpaces := strings.Split(gitlabProject.PathWithNamespace, "/")
 	if len(nameSpaces) > 2 {
 	}
 
 	orgName := nameSpaces[0]
-	fmt.Println("Setting up organization:", orgName)
+	organization := models.Org{
+		Name: orgName,
+		Slug: slug.Make(orgName),
+	}
+
+	err := g.orgSevice.CreateOrganization(ctx, organization)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value") {
+			// organization already exists, we can continue
+		} else {
+			slog.Error("could not create organization", "err", err)
+			return nil, errors.Wrap(err, "could not create organization")
+		}
+	}
+
 	nameSpaces = nameSpaces[1:]
 
-	var projectSetup bool
+	organization, err = g.orgRepository.ReadBySlug(organization.Slug)
+	if err != nil {
+		slog.Error("could not read organization by slug", "err", err)
+		return nil, errors.Wrap(err, "could not read organization by slug")
+	}
+
+	domainRBAC := g.casbinRBACProvider.GetDomainRBAC(organization.GetID().String())
+	ctx.Set("rbac", domainRBAC)
+
+	var project *models.Project
+	var subProject *models.Project
+	var asset *models.Asset
 	for nameSpaces != nil && len(nameSpaces) > 0 {
-		if len(nameSpaces) == 1 {
-			if !projectSetup {
-				// set up a project with the name of the namespace
-				fmt.Println("Setting up project:", nameSpaces[0])
-				projectSetup = true
+		if project == nil {
+			pro := models.Project{
+				Name:           nameSpaces[0],
+				Slug:           slug.Make(nameSpaces[0]),
+				OrganizationID: organization.GetID(),
 			}
-			// this is the last namespace, set up a repo with the name of the namespace
-			fmt.Println("Setting up repo with name:", nameSpaces[0])
-			nameSpaces = nameSpaces[1:]
+			project, err = g.projectService.CreateProject(ctx, pro)
+			if err != nil {
+			}
+			if len(nameSpaces) > 1 {
+				nameSpaces = nameSpaces[1:]
+			}
 			continue
 		}
-		if !projectSetup {
-			//set up a project with the name of the namespace
-			fmt.Println("Setting up project with name:", nameSpaces[0])
-			nameSpaces = nameSpaces[1:]
-			projectSetup = true
-		} else {
-			// set up a sub-project with the name of the namespace
-			fmt.Println("Setting up sub-project with name:", nameSpaces[0])
+		if len(nameSpaces) > 1 {
+			// create sub-project
+			parentID := project.GetID()
+			if subProject != nil {
+				parentID = subProject.GetID()
+			}
+			subPro := models.Project{
+				Name:           nameSpaces[0],
+				Slug:           slug.Make(nameSpaces[0]),
+				OrganizationID: organization.GetID(),
+				ParentID:       &parentID,
+			}
+			subProject, err = g.projectService.CreateProject(ctx, subPro)
+			if err != nil {
+				slog.Error("could not create sub-project", "err", err)
+				return nil, errors.Wrap(err, "could not create sub-project")
+			}
 			nameSpaces = nameSpaces[1:]
 		}
+
+		projectID := project.GetID()
+		if subProject != nil {
+			projectID = subProject.GetID()
+		}
+		// create asset
+		a := models.Asset{
+			Name:      nameSpaces[0],
+			Slug:      slug.Make(nameSpaces[0]),
+			ProjectID: projectID,
+		}
+		asset, err = g.assetService.CreateAsset(a)
+		if err != nil {
+			slog.Error("could not create asset", "err", err)
+			return nil, errors.Wrap(err, "could not create asset")
+		}
+
+		nameSpaces = nameSpaces[1:]
 
 	}
 
-	return nil
+	return asset, nil
 }
 
 func extractNameSpacesFromProjectPath(projectPath string, projectNamespace *gitlab.ProjectNamespace) []string {

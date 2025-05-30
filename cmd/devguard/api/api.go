@@ -395,10 +395,12 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	intotoService := intoto.NewInTotoService(casbinRBACProvider, intotoLinkRepository, projectRepository, patRepository, supplyChainRepository)
 
+	orgService := org.NewService(orgRepository, casbinRBACProvider)
+
 	// init all http controllers using the repositories
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
 	patController := pat.NewHttpController(patRepository)
-	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService, invitationRepository)
+	orgController := org.NewHttpController(orgRepository, orgService, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
 	assetController := asset.NewHttpController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)

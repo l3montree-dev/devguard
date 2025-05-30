@@ -178,6 +178,11 @@ type OrganizationRepository interface {
 	GetOrgByID(id uuid.UUID) (models.Org, error)
 }
 
+type OrgService interface {
+	CreateOrganization(ctx Context, organization models.Org) error
+	ReadBySlug(ctx Context, slug string) (*models.Org, error)
+}
+
 type InvitationRepository interface {
 	Save(tx DB, invitation *models.Invitation) error
 	FindByCode(code string) (models.Invitation, error)
@@ -189,6 +194,7 @@ type ProjectService interface {
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
+	CreateProject(ctx Context, project models.Project) (*models.Project, error)
 }
 
 type InTotoVerifierService interface {
@@ -200,6 +206,7 @@ type InTotoVerifierService interface {
 type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 	GetCVSSBadgeSVG(CVSS models.AssetRiskDistribution) string
+	CreateAsset(asset models.Asset) (*models.Asset, error)
 }
 
 type DependencyVulnService interface {
