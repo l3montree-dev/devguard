@@ -43,6 +43,27 @@ func NewAssetRepository(db core.DB) *assetRepository {
 	}
 }
 
+func (r *assetRepository) FindAssetByGitLabIntegrationAndId(repoId string, providerUrl string) (*models.Asset, error) {
+	var asset models.Asset
+	if err := r.db.Raw(`
+		SELECT * FROM (
+			SELECT * FROM (
+				SELECT 	*, 
+						split_part(repository_id, ':', 1) AS integration, 
+						split_part("assets".repository_id, ':', 2) as integration_id, 
+						split_part(repository_id, ':', 3) as repo_id 
+				FROM "assets" 
+				WHERE "assets"."deleted_at" IS NULL
+			) 
+			WHERE integration = ? AND repo_id = ?
+		)
+		JOIN gitlab_integrations gi ON integration_id = gi.id::text
+		WHERE gitlab_url = ?`, "gitlab", repoId, providerUrl).First(&asset).Error; err != nil {
+		return nil, err
+	}
+	return &asset, nil
+}
+
 func (a *assetRepository) FindByName(name string) (models.Asset, error) {
 	var app models.Asset
 	err := a.db.Where("name = ?", name).First(&app).Error

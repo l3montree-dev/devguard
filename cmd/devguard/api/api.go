@@ -27,6 +27,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
+	"github.com/l3montree-dev/devguard/internal/core/asset_lookup"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/attestation"
 	"github.com/l3montree-dev/devguard/internal/core/compliance"
@@ -399,6 +400,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	orgController := org.NewHttpController(orgRepository, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
 	assetController := asset.NewHttpController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
+	assetLookupController := asset_lookup.NewHttpController(assetRepository, projectRepository, orgRepository)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository)
@@ -443,6 +445,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	apiV1Router.GET("/health/", health)
 
 	apiV1Router.GET("/badges/:badge/:badgeSecret", assetController.GetBadges)
+
+	apiV1Router.GET("/lookup/", assetLookupController.HandleLookup)
 
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
