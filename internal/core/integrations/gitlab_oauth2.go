@@ -22,13 +22,21 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type gitlabOauth2Integration struct {
-	providerID    string
-	gitlabBaseURL string
+type GitlabOauth2Config struct {
+	ProviderID    string
+	GitlabBaseURL string
 
-	gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
+	GitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
 
-	oauth2Conf *oauth2.Config
+	Oauth2Conf *oauth2.Config
+}
+
+func (c *GitlabOauth2Config) GetProviderID() string {
+	return c.ProviderID
+}
+
+func (c *GitlabOauth2Config) GetBaseURL() string {
+	return c.GitlabBaseURL
 }
 
 type gitlabEnvConfig struct {
@@ -42,15 +50,15 @@ type gitlabOauth2Client struct {
 	gitlabClient
 }
 
-func buildOauth2GitlabClient(token models.GitLabOauth2Token, integration *gitlabOauth2Integration) (gitlabClientFacade, error) {
-	client, err := gitlab.NewClient(token.AccessToken, gitlab.WithHTTPClient(integration.client(token)), gitlab.WithBaseURL(integration.gitlabBaseURL))
+func buildOauth2GitlabClient(token models.GitLabOauth2Token, integration *GitlabOauth2Config) (gitlabClientFacade, error) {
+	client, err := gitlab.NewClient(token.AccessToken, gitlab.WithHTTPClient(integration.client(token)), gitlab.WithBaseURL(integration.GitlabBaseURL))
 	if err != nil {
 		return gitlabOauth2Client{}, err
 	}
 
 	return gitlabOauth2Client{
 		gitlabUserID: token.GitLabUserID,
-		gitlabClient: gitlabClient{Client: client, clientID: fmt.Sprintf("oauth2-%s", token.ID.String())}}, nil
+		gitlabClient: gitlabClient{Client: client, clientID: fmt.Sprintf("oauth2-%s", token.ID.String()), gitProviderID: utils.Ptr(integration.ProviderID)}}, nil
 }
 
 func parseGitlabEnvs() map[string]gitlabEnvConfig {
@@ -107,7 +115,7 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 	return urls
 }
 
-func NewGitLabOauth2Integration(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret string) *gitlabOauth2Integration {
+func NewGitLabOauth2Integration(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret string) *GitlabOauth2Config {
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -119,10 +127,10 @@ func NewGitLabOauth2Integration(db core.DB, id, gitlabBaseURL, gitlabOauth2Clien
 		panic("API_URL is not set")
 	}
 
-	return &gitlabOauth2Integration{
-		gitlabBaseURL: gitlabBaseURL,
-		providerID:    id,
-		oauth2Conf: &oauth2.Config{
+	return &GitlabOauth2Config{
+		GitlabBaseURL: gitlabBaseURL,
+		ProviderID:    id,
+		Oauth2Conf: &oauth2.Config{
 			ClientID:     gitlabOauth2ClientID,
 			ClientSecret: gitlabOauth2ClientSecret,
 			RedirectURL:  fmt.Sprintf("%s/api/v1/oauth2/gitlab/callback/%s", apiUrl, id),
@@ -132,7 +140,7 @@ func NewGitLabOauth2Integration(db core.DB, id, gitlabBaseURL, gitlabOauth2Clien
 			},
 			Scopes: []string{"api"},
 		},
-		gitlabOauth2TokenRepository: repositories.NewGitlabOauth2TokenRepository(db),
+		GitlabOauth2TokenRepository: repositories.NewGitlabOauth2TokenRepository(db),
 	}
 }
 
@@ -174,19 +182,19 @@ func (t *tokenPersister) Token() (*oauth2.Token, error) {
 	return token, nil
 }
 
-func (c *gitlabOauth2Integration) client(token models.GitLabOauth2Token) *http.Client {
-	tokenSource := c.oauth2Conf.TokenSource(context.TODO(), &oauth2.Token{
+func (c *GitlabOauth2Config) client(token models.GitLabOauth2Token) *http.Client {
+	tokenSource := c.Oauth2Conf.TokenSource(context.TODO(), &oauth2.Token{
 		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
 		Expiry:       token.Expiry,
 	})
 
-	return oauth2.NewClient(context.TODO(), newTokenPersister(c.gitlabOauth2TokenRepository, token, tokenSource))
+	return oauth2.NewClient(context.TODO(), newTokenPersister(c.GitlabOauth2TokenRepository, token, tokenSource))
 }
 
-func NewGitLabOauth2Integrations(db core.DB) map[string]*gitlabOauth2Integration {
+func NewGitLabOauth2Integrations(db core.DB) map[string]*GitlabOauth2Config {
 	envs := parseGitlabEnvs()
-	gitlabIntegrations := make(map[string]*gitlabOauth2Integration)
+	gitlabIntegrations := make(map[string]*GitlabOauth2Config)
 	for id, env := range envs {
 		gitlabIntegration := NewGitLabOauth2Integration(db, id, env.baseURL, env.appID, env.appSecret)
 		gitlabIntegrations[id] = gitlabIntegration
@@ -195,7 +203,7 @@ func NewGitLabOauth2Integrations(db core.DB) map[string]*gitlabOauth2Integration
 	return gitlabIntegrations
 }
 
-func (c *gitlabOauth2Integration) Oauth2Callback(ctx core.Context) error {
+func (c *GitlabOauth2Config) Oauth2Callback(ctx core.Context) error {
 	// get the user
 	userID := core.GetSession(ctx).GetUserID()
 	code := ctx.QueryParam("code")
@@ -206,14 +214,14 @@ func (c *gitlabOauth2Integration) Oauth2Callback(ctx core.Context) error {
 	}
 
 	// fetch the token model from the database
-	tokenModel, err := c.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, c.providerID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, c.ProviderID)
 	if err != nil {
 		return ctx.JSON(404, map[string]any{
 			"message": "token model not found",
 		})
 	}
 
-	token, err := c.oauth2Conf.Exchange(ctx.Request().Context(), code, oauth2.VerifierOption(*tokenModel.Verifier))
+	token, err := c.Oauth2Conf.Exchange(ctx.Request().Context(), code, oauth2.VerifierOption(*tokenModel.Verifier))
 	if err != nil {
 		return ctx.JSON(400, map[string]any{
 			"message": "could not exchange code for token",
@@ -229,7 +237,7 @@ func (c *gitlabOauth2Integration) Oauth2Callback(ctx core.Context) error {
 
 	// get the gitlab user id by doing a request to the gitlab api
 	client := c.client(*tokenModel)
-	resp, err := client.Get(fmt.Sprintf("%s/api/v4/user", c.gitlabBaseURL))
+	resp, err := client.Get(fmt.Sprintf("%s/api/v4/user", c.GitlabBaseURL))
 	if err != nil {
 		return ctx.JSON(400, map[string]any{
 			"message": "could not get user",
@@ -261,7 +269,7 @@ func (c *gitlabOauth2Integration) Oauth2Callback(ctx core.Context) error {
 
 	tokenModel.GitLabUserID = gitlabUser.ID
 
-	err = c.gitlabOauth2TokenRepository.Save(nil, tokenModel)
+	err = c.GitlabOauth2TokenRepository.Save(nil, tokenModel)
 	if err != nil {
 		return ctx.JSON(500, map[string]any{
 			"message": "could not save token",
@@ -273,21 +281,21 @@ func (c *gitlabOauth2Integration) Oauth2Callback(ctx core.Context) error {
 	})
 }
 
-func (c *gitlabOauth2Integration) Oauth2Login(ctx core.Context) error {
+func (c *GitlabOauth2Config) Oauth2Login(ctx core.Context) error {
 	// use PKCE to protect against CSRF attacks
 	// https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-22.html#name-countermeasures-6
 	verifier := oauth2.GenerateVerifier()
 	// get the user
 	userID := core.GetSession(ctx).GetUserID()
 
-	url := c.oauth2Conf.AuthCodeURL("", oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(verifier))
+	url := c.Oauth2Conf.AuthCodeURL("", oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(verifier))
 
 	// check if a token model already exists
-	tokenModel, err := c.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, c.providerID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, c.ProviderID)
 	if err == nil {
 		// it does exist - update the verifier
 		tokenModel.Verifier = utils.Ptr(verifier)
-		err = c.gitlabOauth2TokenRepository.Save(nil, tokenModel)
+		err = c.GitlabOauth2TokenRepository.Save(nil, tokenModel)
 		if err != nil {
 			return ctx.JSON(500, map[string]any{
 				"message": "could not save token",
@@ -300,12 +308,12 @@ func (c *gitlabOauth2Integration) Oauth2Login(ctx core.Context) error {
 	tokenModel = &models.GitLabOauth2Token{
 		Verifier:   utils.Ptr(verifier),
 		UserID:     userID,
-		BaseURL:    c.gitlabBaseURL,
+		BaseURL:    c.GitlabBaseURL,
 		CreatedAt:  time.Now(),
-		ProviderID: c.providerID,
+		ProviderID: c.ProviderID,
 	}
 
-	err = c.gitlabOauth2TokenRepository.Save(nil, tokenModel)
+	err = c.GitlabOauth2TokenRepository.Save(nil, tokenModel)
 
 	if err != nil {
 		return err
@@ -315,7 +323,7 @@ func (c *gitlabOauth2Integration) Oauth2Login(ctx core.Context) error {
 	return ctx.Redirect(302, url)
 }
 
-func getGitlabAccessTokenFromOryIdentity(oauth2Endpoints map[string]*gitlabOauth2Integration, identity client.Identity) (map[string]models.GitLabOauth2Token, error) {
+func getGitlabAccessTokenFromOryIdentity(oauth2Endpoints map[string]*GitlabOauth2Config, identity client.Identity) (map[string]models.GitLabOauth2Token, error) {
 	mapProviderToken := make(map[string]models.GitLabOauth2Token)
 	// check if the user has a gitlab login
 	// we can even improve the response by checking if the user has a gitlab login
@@ -357,7 +365,7 @@ func getGitlabAccessTokenFromOryIdentity(oauth2Endpoints map[string]*gitlabOauth
 		mapProviderToken[providerName] = models.GitLabOauth2Token{
 			AccessToken:  provider["initial_access_token"].(string),
 			RefreshToken: provider["initial_refresh_token"].(string),
-			BaseURL:      conf.gitlabBaseURL,
+			BaseURL:      conf.GitlabBaseURL,
 			GitLabUserID: gitlabUserIdInt,
 			Scopes:       "read_api",                    // I know that!
 			Expiry:       time.Now().Add(2 * time.Hour), // this is a guess, we don't know the expiry time

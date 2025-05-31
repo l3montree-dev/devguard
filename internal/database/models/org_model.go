@@ -26,8 +26,14 @@ type Org struct {
 	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
 
 	Language string `json:"language" gorm:"type:text;size:2"`
+
+	GitProviderID *string `json:"gitProviderId" gorm:"unique"`
 }
 
-func (m Model) TableName() string {
+func (m Org) TableName() string {
 	return "organizations"
+}
+
+func (m Org) IsExternalEntity() bool {
+	return m.GitProviderID != nil && *m.GitProviderID != ""
 }

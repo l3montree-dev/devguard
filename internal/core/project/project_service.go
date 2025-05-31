@@ -167,7 +167,7 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 		projectIDsSlice = append(projectIDsSlice, projectID)
 	}
 
-	projects, err := s.projectRepository.List(projectIDsSlice, parentID, core.GetOrganization(c).GetID())
+	projects, err := s.projectRepository.List(projectIDsSlice, parentID, core.GetOrg(c).GetID())
 
 	if err != nil {
 		return nil, err

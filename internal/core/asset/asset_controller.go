@@ -227,7 +227,7 @@ func (a *httpController) Update(ctx core.Context) error {
 }
 
 func (a *httpController) GetConfigFile(ctx core.Context) error {
-	organization := core.GetOrganization(ctx)
+	organization := core.GetOrg(ctx)
 	project := core.GetProject(ctx)
 	asset := core.GetAsset(ctx)
 	configID := ctx.Param("config-file")

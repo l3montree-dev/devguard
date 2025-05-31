@@ -34,27 +34,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-type gitlabClientFacade interface {
-	GetClientID() string
-	ListProjects(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)
-	CreateIssue(ctx context.Context, pid int, opt *gitlab.CreateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
-	CreateIssueComment(ctx context.Context, pid int, issue int, opt *gitlab.CreateIssueNoteOptions) (*gitlab.Note, *gitlab.Response, error)
-	EditIssue(ctx context.Context, pid int, issue int, opt *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
-	EditIssueLabel(ctx context.Context, pid int, issue int, labels []*gitlab.CreateLabelOptions) (*gitlab.Response, error)
-
-	ListProjectHooks(ctx context.Context, projectId int, options *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error)
-	AddProjectHook(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error)
-	DeleteProjectHook(ctx context.Context, projectId int, hookId int) (*gitlab.Response, error)
-
-	ListVariables(ctx context.Context, projectId int, options *gitlab.ListProjectVariablesOptions) ([]*gitlab.ProjectVariable, *gitlab.Response, error)
-	CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
-	UpdateVariable(ctx context.Context, projectId int, key string, opt *gitlab.UpdateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
-	RemoveVariable(ctx context.Context, projectId int, key string) (*gitlab.Response, error)
-
-	CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error)
-	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
-}
-
 type gitlabRepository struct {
 	*gitlab.Project
 	gitlabIntegrationId string
@@ -116,7 +95,7 @@ func (g gitlabRepository) toRepository() core.Repository {
 }
 
 type gitlabIntegration struct {
-	oauth2Endpoints             map[string]*gitlabOauth2Integration
+	oauth2Endpoints             map[string]*GitlabOauth2Config
 	gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
 
 	gitlabIntegrationRepository core.GitlabIntegrationRepository
@@ -145,7 +124,7 @@ func messageWasCreatedByDevguard(message string) bool {
 	return strings.Contains(message, "<devguard>")
 }
 
-func NewGitLabIntegration(oauth2GitlabIntegration map[string]*gitlabOauth2Integration, db core.DB) *gitlabIntegration {
+func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config, db core.DB) *gitlabIntegration {
 
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
 	if err != nil {
@@ -213,7 +192,7 @@ func NewGitLabIntegration(oauth2GitlabIntegration map[string]*gitlabOauth2Integr
 		gitlabOauth2ClientFactory: func(token models.GitLabOauth2Token) (gitlabClientFacade, error) {
 			// get the correct gitlab oauth2 integration configuration
 			for _, integration := range oauth2GitlabIntegration {
-				if integration.gitlabBaseURL == token.BaseURL {
+				if integration.GitlabBaseURL == token.BaseURL {
 					return buildOauth2GitlabClient(token, integration)
 				}
 			}
@@ -497,10 +476,69 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 	return ctx.JSON(200, "ok")
 }
 
+func (g *gitlabIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
+	// get the oauth2 tokens for this user
+	tokens, err := g.gitlabOauth2TokenRepository.FindByUserId(core.GetSession(ctx).GetUserID())
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return nil, err
+	}
+
+	if len(tokens) == 0 {
+		slog.Debug("no gitlab oauth2 tokens found for user")
+		return nil, nil
+	}
+
+	// create a new gitlab batch client
+	gitlabBatchClient, err := newGitLabBatchClient(nil, g.oauth2Endpoints, tokens)
+	if err != nil {
+		slog.Error("failed to create gitlab batch client", "err", err)
+		return nil, err
+	}
+
+	orgs, err := gitlabBatchClient.ListGroups()
+	if err != nil {
+		slog.Error("failed to list organizations", "err", err)
+		return nil, err
+	}
+
+	return orgs, nil
+}
+
+func (g *gitlabIntegration) GetOrg(ctx context.Context, userID string, providerID string, groupID string) (models.Org, error) {
+	// get the oauth2 tokens for this user
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, providerID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return models.Org{}, err
+	}
+
+	// create a new gitlab batch client
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	if err != nil {
+		slog.Error("failed to create gitlab batch client", "err", err)
+		return models.Org{}, err
+	}
+
+	// convert the groupID to an int
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		slog.Error("failed to convert groupID to int", "err", err)
+		return models.Org{}, errors.Wrap(err, "failed to convert groupID to int")
+	}
+
+	group, _, err := gitlabClient.GetGroup(ctx, groupIDInt)
+	if err != nil {
+		slog.Error("failed to get organization", "err", err)
+		return models.Org{}, err
+	}
+	return groupToOrg(group, providerID), nil
+}
+
 func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	var organizationGitlabIntegrations []models.GitLabIntegration
 	if core.HasOrganization(ctx) {
-		org := core.GetOrganization(ctx)
+		org := core.GetOrg(ctx)
 		organizationGitlabIntegrations = org.GitLabIntegrations
 	}
 
@@ -1287,7 +1325,7 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 		GitLabUrl:   data.Url,
 		AccessToken: data.Token,
 		Name:        data.Name,
-		OrgID:       (core.GetOrganization(ctx).GetID()),
+		OrgID:       (core.GetOrg(ctx).GetID()),
 	}
 
 	if err := g.gitlabIntegrationRepository.Save(nil, &integration); err != nil {

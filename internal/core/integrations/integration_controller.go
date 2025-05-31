@@ -24,7 +24,7 @@ import (
 )
 
 type integrationController struct {
-	gitlabOauth2Integration map[string]*gitlabOauth2Integration
+	gitlabOauth2Integration map[string]*GitlabOauth2Config
 }
 
 func commentTrimmedFalsePositivePrefix(comment string) (models.VulnEventType, models.MechanicalJustificationType, string) {
@@ -63,7 +63,7 @@ func createNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, u
 	return models.VulnEvent{}
 }
 
-func NewIntegrationController(gitlabOauth2Integration map[string]*gitlabOauth2Integration) *integrationController {
+func NewIntegrationController(gitlabOauth2Integration map[string]*GitlabOauth2Config) *integrationController {
 	return &integrationController{
 		gitlabOauth2Integration: gitlabOauth2Integration,
 	}

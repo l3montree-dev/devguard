@@ -52,7 +52,7 @@ func (p *controller) Create(ctx core.Context) error {
 	newProject := req.ToModel()
 
 	// add the organization id
-	newProject.OrganizationID = core.GetOrganization(ctx).GetID()
+	newProject.OrganizationID = core.GetOrg(ctx).GetID()
 
 	p.projectService.CreateProject(ctx, newProject)
 
@@ -303,7 +303,7 @@ func (p *controller) Update(c core.Context) error {
 }
 
 func (o *controller) GetConfigFile(ctx core.Context) error {
-	organization := core.GetOrganization(ctx)
+	organization := core.GetOrg(ctx)
 	project := core.GetProject(ctx)
 	configID := ctx.Param("config-file")
 

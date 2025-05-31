@@ -189,7 +189,7 @@ func (a *assetVersionController) OpenVEXJSON(ctx core.Context) error {
 func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 
 	assetVersion := core.GetAssetVersion(ctx)
-	org := core.GetOrganization(ctx)
+	org := core.GetOrg(ctx)
 	// check for version query param
 	version := ctx.QueryParam("version")
 	if version == "" {
@@ -221,7 +221,7 @@ func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 func (a *assetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
-	org := core.GetOrganization(ctx)
+	org := core.GetOrg(ctx)
 
 	scannerID := ctx.QueryParam("scanner")
 	if scannerID != "" {
@@ -284,7 +284,7 @@ func (a *assetVersionController) gatherVexInformationIncludingResolvedMarking(as
 func (a *assetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
-	org := core.GetOrganization(ctx)
+	org := core.GetOrg(ctx)
 	scannerID := ctx.QueryParam("scanner")
 	if scannerID != "" {
 		var err error

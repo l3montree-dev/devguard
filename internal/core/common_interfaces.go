@@ -180,7 +180,8 @@ type OrganizationRepository interface {
 
 type OrgService interface {
 	CreateOrganization(ctx Context, organization models.Org) error
-	ReadBySlug(ctx Context, slug string) (*models.Org, error)
+	CreateExternalEntityOrganization(ctx Context, externalEntitySlug ExternalEntitySlug) (*models.Org, error)
+	ReadBySlug(slug string) (*models.Org, error)
 }
 
 type InvitationRepository interface {

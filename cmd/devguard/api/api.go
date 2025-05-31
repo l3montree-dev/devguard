@@ -53,7 +53,7 @@ func accessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action)
 		return func(ctx echo.Context) error {
 			// get the rbac
 			rbac := core.GetRBAC(ctx)
-			org := core.GetOrganization(ctx)
+			org := core.GetOrg(ctx)
 			// get the user
 			user := core.GetSession(ctx).GetUserID()
 
@@ -149,7 +149,7 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) acces
 				}
 
 				// get the project by slug and organization.
-				project, err := projectRepository.ReadBySlug(core.GetOrganization(ctx).GetID(), projectSlug)
+				project, err := projectRepository.ReadBySlug(core.GetOrg(ctx).GetID(), projectSlug)
 
 				if err != nil {
 					return echo.NewHTTPError(404, "could not get project")
@@ -195,7 +195,7 @@ func projectAccessControl(projectRepository core.ProjectRepository, obj accessco
 			}
 
 			// get the project by slug and organization.
-			project, err := projectRepository.ReadBySlug(core.GetOrganization(ctx).GetID(), projectSlug)
+			project, err := projectRepository.ReadBySlug(core.GetOrg(ctx).GetID(), projectSlug)
 
 			if err != nil {
 				return echo.NewHTTPError(404, "could not get project")
@@ -273,7 +273,7 @@ func assetNameMiddleware() core.MiddlewareFunc {
 	}
 }
 
-func multiOrganizationMiddleware(rbacProvider accesscontrol.RBACProvider, organizationRepo core.OrganizationRepository) core.MiddlewareFunc {
+func multiOrganizationMiddleware(rbacProvider accesscontrol.RBACProvider, organizationService core.OrgService) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) (err error) {
 
@@ -286,11 +286,20 @@ func multiOrganizationMiddleware(rbacProvider accesscontrol.RBACProvider, organi
 			}
 
 			// get the organization
-			org, err := organizationRepo.ReadBySlug(organization)
+			org, err := organizationService.ReadBySlug(organization)
 
 			if err != nil {
-				slog.Error("organization not found")
-				return ctx.JSON(400, map[string]string{"error": "no organization"})
+				externalEntitySlug, err := core.FromStringToExternalEntitySlug(organization)
+				if err != nil || !externalEntitySlug.IsValid() {
+					return ctx.JSON(400, map[string]string{"error": "invalid organization slug"})
+				}
+
+				// create the organization with the provided slug
+				org, err = organizationService.CreateExternalEntityOrganization(ctx, externalEntitySlug)
+				if err != nil {
+					slog.Error("could not create organization", "err", err)
+					return ctx.JSON(500, map[string]string{"error": "could not create organization"})
+				}
 			}
 
 			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
@@ -309,12 +318,9 @@ func multiOrganizationMiddleware(rbacProvider accesscontrol.RBACProvider, organi
 				}
 			}
 
-			// set the organization in the context
-			ctx.Set("organization", org)
-			// set the RBAC in the context
-			ctx.Set("rbac", domainRBAC)
-
-			ctx.Set("orgSlug", organization)
+			core.SetOrg(ctx, *org)
+			core.SetRBAC(ctx, domainRBAC)
+			core.SetOrgSlug(ctx, organization)
 			// continue to the request
 			return next(ctx)
 		}
@@ -459,11 +465,11 @@ func BuildRouter(db core.DB) *echo.Echo {
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, neededScope([]string{"manage"}))
 
 	//TODO: change "/scan/" to "/sbom-scan/"
-	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
-	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
-	sessionRouter.POST("/attestations/", attestationController.Create, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgRepository), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/attestations/", attestationController.Create, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
 
 	sessionRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
@@ -483,7 +489,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	orgRouter.GET("/", orgController.List)
 
 	//Api functions for interacting with an organization  ->  .../organizations/<organization-name>/...
-	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgRepository))
+	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService))
 	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
 	organizationRouter.GET("/", orgController.Read, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
 

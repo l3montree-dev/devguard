@@ -157,6 +157,16 @@ func (githubIntegration *githubIntegration) GetID() core.IntegrationID {
 	return core.GitHubIntegrationID
 }
 
+func (githubIntegration *githubIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
+	// currently not supported.
+	return nil, nil
+}
+
+func (githubIntegration *githubIntegration) GetOrg(ctx context.Context, userID string, providerID string, groupID string) (models.Org, error) {
+	// currently not supported.
+	return models.Org{}, fmt.Errorf("not implemented")
+}
+
 func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	if !core.HasOrganization(ctx) {
 		// github integration is connected to an organization not a user
@@ -164,7 +174,7 @@ func (githubIntegration *githubIntegration) ListRepositories(ctx core.Context) (
 		return []core.Repository{}, nil
 	}
 
-	organization := core.GetOrganization(ctx)
+	organization := core.GetOrg(ctx)
 
 	repos := []core.Repository{}
 	// check if a github integration exists on that org
@@ -456,7 +466,7 @@ func (githubIntegration *githubIntegration) FinishInstallation(ctx core.Context)
 	}
 
 	// check if the org id does match the current organization id, thus the user has access to the organization
-	organization := core.GetOrganization(ctx)
+	organization := core.GetOrg(ctx)
 	// convert the installation id to an integer
 	installationIDInt, err := strconv.Atoi(installationID)
 	if err != nil {

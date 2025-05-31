@@ -30,7 +30,34 @@ type gitlabClient struct {
 	*gitlab.Client
 	// the id of the client - we need to use this client to connect to any gitlab projects again.
 	// might be a gitlab_integration id or a gitlab oauth2 token id.
-	clientID string
+	clientID      string
+	gitProviderID *string
+}
+
+type gitlabClientFacade interface {
+	GetClientID() string
+	GetProviderID() *string
+
+	ListProjects(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)
+	ListGroups(ctx context.Context, opt *gitlab.ListGroupsOptions) ([]*gitlab.Group, *gitlab.Response, error)
+	GetGroup(ctx context.Context, groupId int) (*gitlab.Group, *gitlab.Response, error)
+
+	CreateIssue(ctx context.Context, pid int, opt *gitlab.CreateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
+	CreateIssueComment(ctx context.Context, pid int, issue int, opt *gitlab.CreateIssueNoteOptions) (*gitlab.Note, *gitlab.Response, error)
+	EditIssue(ctx context.Context, pid int, issue int, opt *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
+	EditIssueLabel(ctx context.Context, pid int, issue int, labels []*gitlab.CreateLabelOptions) (*gitlab.Response, error)
+
+	ListProjectHooks(ctx context.Context, projectId int, options *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error)
+	AddProjectHook(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error)
+	DeleteProjectHook(ctx context.Context, projectId int, hookId int) (*gitlab.Response, error)
+
+	ListVariables(ctx context.Context, projectId int, options *gitlab.ListProjectVariablesOptions) ([]*gitlab.ProjectVariable, *gitlab.Response, error)
+	CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
+	UpdateVariable(ctx context.Context, projectId int, key string, opt *gitlab.UpdateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
+	RemoveVariable(ctx context.Context, projectId int, key string) (*gitlab.Response, error)
+
+	CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error)
+	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
 }
 
 type gitlabBatchClient struct {
@@ -40,7 +67,7 @@ type gitlabBatchClient struct {
 var NoGitlabIntegrationError = fmt.Errorf("no gitlab app installations found")
 
 // groups multiple gitlab clients - since an org can have multiple installations
-func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration, oauth2Config map[string]*gitlabOauth2Integration, oauth2Tokens []models.GitLabOauth2Token) (*gitlabBatchClient, error) {
+func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration, oauth2Config map[string]*GitlabOauth2Config, oauth2Tokens []models.GitLabOauth2Token) (*gitlabBatchClient, error) {
 	clients := make([]gitlabClientFacade, 0)
 	for _, integration := range gitlabIntegrations {
 		client, _ := NewGitlabClient(integration)
@@ -51,7 +78,7 @@ func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration, oauth2C
 	for _, token := range oauth2Tokens {
 		// check if there is a matching oauth2 config
 		for _, oauth2 := range oauth2Config {
-			if oauth2.gitlabBaseURL == token.BaseURL {
+			if oauth2.ProviderID == token.ProviderID {
 				// great we can use the config to generate a token
 				client, err := buildOauth2GitlabClient(token, oauth2)
 				if err != nil {
@@ -68,6 +95,44 @@ func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration, oauth2C
 	return &gitlabBatchClient{
 		clients: clients,
 	}, nil
+}
+
+func groupToOrg(group *gitlab.Group, providerID string) models.Org {
+	return models.Org{
+		Name:          group.Name,
+		Description:   group.Description,
+		Slug:          fmt.Sprintf("%d@%s", group.ID, providerID),
+		GitProviderID: utils.Ptr(providerID),
+	}
+}
+
+func (gitlabBatchClient *gitlabBatchClient) ListGroups() ([]models.Org, error) {
+	wg := utils.ErrGroup[[]models.Org](10)
+	for _, client := range gitlabBatchClient.clients {
+		wg.Go(func() ([]models.Org, error) {
+			if client.GetProviderID() == nil {
+				// just skip - we wont find any orgs for this client if the provider ID is nil
+				// this can only happen for "non oa"
+				return nil, nil
+			}
+			orgs, _, err := client.ListGroups(context.TODO(), &gitlab.ListGroupsOptions{
+				MinAccessLevel: gitlab.Ptr(gitlab.ReporterPermissions),
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			return utils.Map(orgs, func(el *gitlab.Group) models.Org {
+				return groupToOrg(el, *client.GetProviderID())
+			}), nil
+		})
+	}
+
+	results, err := wg.WaitAndCollect()
+	if err != nil {
+		return nil, err
+	}
+	return utils.Flat(results), nil
 }
 
 func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]gitlabRepository, error) {
@@ -99,6 +164,14 @@ func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]git
 		return nil, err
 	}
 	return utils.Flat(results), nil
+}
+
+func (client gitlabClient) GetProviderID() *string {
+	return client.gitProviderID
+}
+
+func (client gitlabClient) GetGroup(ctx context.Context, groupId int) (*gitlab.Group, *gitlab.Response, error) {
+	return client.Groups.GetGroup(groupId, nil, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) UpdateVariable(ctx context.Context, projectId int, key string, opt *gitlab.UpdateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error) {
@@ -138,6 +211,10 @@ func (client gitlabClient) ListProjectHooks(ctx context.Context, projectId int, 
 
 func (client gitlabClient) ListVariables(ctx context.Context, projectId int, opt *gitlab.ListProjectVariablesOptions) ([]*gitlab.ProjectVariable, *gitlab.Response, error) {
 	return client.ProjectVariables.ListVariables(projectId, opt, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) ListGroups(ctx context.Context, opt *gitlab.ListGroupsOptions) ([]*gitlab.Group, *gitlab.Response, error) {
+	return client.Groups.ListGroups(opt, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error) {

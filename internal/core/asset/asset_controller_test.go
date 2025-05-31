@@ -37,7 +37,7 @@ func TestHttpController_GetConfigFile(t *testing.T) {
 		ctx.SetParamNames("config-file")
 		ctx.SetParamValues("config1")
 
-		core.SetOrganization(ctx, models.Org{
+		core.SetOrg(ctx, models.Org{
 			ConfigFiles: map[string]any{
 				"config1": map[string]any{
 					"value": "organization-config-content",
@@ -76,7 +76,7 @@ func TestHttpController_GetConfigFile(t *testing.T) {
 		ctx.SetParamNames("config-file")
 		ctx.SetParamValues("config1")
 
-		core.SetOrganization(ctx, models.Org{
+		core.SetOrg(ctx, models.Org{
 			ConfigFiles: map[string]any{
 				"config1": map[string]any{
 					"value": "organization-config-content",
@@ -110,7 +110,7 @@ func TestHttpController_GetConfigFile(t *testing.T) {
 		ctx.SetParamNames("config-file")
 		ctx.SetParamValues("config1")
 
-		core.SetOrganization(ctx, models.Org{
+		core.SetOrg(ctx, models.Org{
 			ConfigFiles: map[string]any{
 				"config1": map[string]any{
 					"value": "organization-config-content",

@@ -23,6 +23,25 @@ func NewService(organizationRepository core.OrganizationRepository, rbacProvider
 		rbacProvider:           rbacProvider,
 	}
 }
+func (o *orgService) CreateExternalEntityOrganization(ctx core.Context, externalEntitySlug core.ExternalEntitySlug) (*models.Org, error) {
+	// try to create the organization on the fly
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+
+	org, err := thirdPartyIntegration.GetOrg(ctx.Request().Context(), core.GetSession(ctx).GetUserID(), externalEntitySlug.ProviderID(), externalEntitySlug.EntityID())
+	if err != nil {
+		return nil, echo.NewHTTPError(500, "could not get organization from third party integration").WithInternal(err)
+	}
+
+	// create the organization in the database
+	// but DO NOT BOOTSTRAP IT
+	if err := o.organizationRepository.Create(nil, &org); err != nil {
+		if strings.Contains(err.Error(), "duplicate key value") {
+			return nil, echo.NewHTTPError(409, "organization with that slug already exists").WithInternal(err)
+		}
+		return nil, echo.NewHTTPError(500, "could not create organization").WithInternal(err)
+	}
+	return &org, nil
+}
 
 func (o *orgService) CreateOrganization(ctx core.Context, organization models.Org) error {
 	if organization.Name == "" || organization.Slug == "" {
@@ -89,7 +108,7 @@ func (o *orgService) bootstrapOrg(ctx core.Context, organization models.Org) err
 	return nil
 }
 
-func (o *orgService) ReadBySlug(ctx core.Context, slug string) (*models.Org, error) {
+func (o *orgService) ReadBySlug(slug string) (*models.Org, error) {
 	if slug == "" {
 		return nil, echo.NewHTTPError(400, "slug is required")
 	}

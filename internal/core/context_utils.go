@@ -111,17 +111,21 @@ func SetRBAC(ctx Context, rbac accesscontrol.AccessControl) {
 	ctx.Set("rbac", rbac)
 }
 
-func GetOrganization(c Context) models.Org {
+func SetOrg(c Context, org models.Org) {
+	c.Set("organization", org)
+}
+
+func SetOrgSlug(ctx Context, orgSlug string) {
+	ctx.Set("orgSlug", orgSlug)
+}
+
+func GetOrg(c Context) models.Org {
 	return c.Get("organization").(models.Org)
 }
 
 func HasOrganization(c Context) bool {
 	_, ok := c.Get("organization").(models.Org)
 	return ok
-}
-
-func SetOrganization(c Context, org models.Org) {
-	c.Set("organization", org)
 }
 
 func GetRBAC(ctx Context) accesscontrol.AccessControl {
@@ -174,14 +178,6 @@ func GetOrgSlug(ctx Context) (string, error) {
 		return "", fmt.Errorf("could not get org slug")
 	}
 	return orgSlug, nil
-}
-
-func SetOrg(c Context, org models.Org) {
-	c.Set("org", org)
-}
-
-func SetOrgSlug(ctx Context, orgSlug string) {
-	ctx.Set("orgSlug", orgSlug)
 }
 
 func SetProjectSlug(ctx Context, projectSlug string) {

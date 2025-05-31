@@ -69,7 +69,7 @@ func (o *httpController) Create(ctx core.Context) error {
 }
 
 func (o *httpController) Update(ctx core.Context) error {
-	organization := core.GetOrganization(ctx)
+	organization := core.GetOrg(ctx)
 	members, err := FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
@@ -108,7 +108,7 @@ func (o *httpController) Update(ctx core.Context) error {
 
 func (o *httpController) Delete(ctx core.Context) error {
 	// get the id of the organization
-	organizationID := core.GetOrganization(ctx).GetID()
+	organizationID := core.GetOrg(ctx).GetID()
 
 	// delete the organization
 	err := o.organizationRepository.Delete(nil, organizationID)
@@ -124,7 +124,7 @@ func (c *httpController) ContentTree(ctx core.Context) error {
 	// this means all projects and their corresponding assets
 
 	// get the organization from the context
-	organization := core.GetOrganization(ctx)
+	organization := core.GetOrg(ctx)
 
 	ps, err := c.projectService.ListAllowedProjects(ctx)
 	if err != nil {
@@ -205,7 +205,7 @@ func (c *httpController) InviteMember(ctx core.Context) error {
 	}
 
 	// get the organization from the context
-	organization := core.GetOrganization(ctx)
+	organization := core.GetOrg(ctx)
 
 	model := models.Invitation{
 		OrganizationID: organization.GetID(),
@@ -265,7 +265,7 @@ func (c *httpController) RemoveMember(ctx core.Context) error {
 	rbac.RevokeRole(userId, "admin")  // nolint:errcheck// we do not care if the user is not an admin
 
 	// remove member from all projects
-	projects, err := c.projectService.ListProjectsByOrganizationID(core.GetOrganization(ctx).GetID())
+	projects, err := c.projectService.ListProjectsByOrganizationID(core.GetOrg(ctx).GetID())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
@@ -280,7 +280,7 @@ func (c *httpController) RemoveMember(ctx core.Context) error {
 
 func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	// get all members from the organization
-	organization := core.GetOrganization(ctx)
+	organization := core.GetOrg(ctx)
 	accessControl := core.GetRBAC(ctx)
 
 	members, err := accessControl.GetAllMembersOfOrganization()
@@ -361,7 +361,7 @@ func (o *httpController) Members(ctx core.Context) error {
 
 func (o *httpController) Read(ctx core.Context) error {
 	// get the organization from the context
-	organization := core.GetOrganization(ctx)
+	organization := core.GetOrg(ctx)
 	// fetch the regular members of the current organization
 	members, err := FetchMembersOfOrganization(ctx)
 
@@ -399,12 +399,17 @@ func (o *httpController) List(ctx core.Context) error {
 
 	// get the organizations from the database
 	organizations, err := o.organizationRepository.List(organizationIDs)
-
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read organizations").WithInternal(err)
 	}
+	// return the enabled git providers as well
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	orgs, err := thirdPartyIntegration.ListOrgs(ctx)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get organizations from third party integrations").WithInternal(err)
+	}
 
-	return ctx.JSON(200, organizations)
+	return ctx.JSON(200, append(organizations, orgs...))
 }
 
 func (o *httpController) Metrics(ctx core.Context) error {
@@ -416,7 +421,7 @@ func (o *httpController) Metrics(ctx core.Context) error {
 }
 
 func (o *httpController) GetConfigFile(ctx core.Context) error {
-	organization := core.GetOrganization(ctx)
+	organization := core.GetOrg(ctx)
 	configID := ctx.Param("config-file")
 
 	configContent, ok := organization.ConfigFiles[configID]

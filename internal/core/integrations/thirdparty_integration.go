@@ -3,6 +3,7 @@ package integrations
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 
@@ -54,6 +55,41 @@ func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repo
 	}
 
 	return utils.Flat(results), nil
+}
+
+func (t *thirdPartyIntegrations) ListOrgs(ctx core.Context) ([]models.Org, error) {
+	wg := utils.ErrGroup[[]models.Org](-1)
+
+	for _, i := range t.integrations {
+		wg.Go(func() ([]models.Org, error) {
+			orgs, err := i.ListOrgs(ctx)
+			if err != nil {
+				slog.Error("error while listing orgs", "err", err)
+				// swallow error
+				return nil, nil
+			}
+			return orgs, err
+		})
+	}
+
+	results, err := wg.WaitAndCollect()
+	if err != nil {
+		slog.Error("error while listing orgs", "err", err)
+	}
+
+	return utils.Flat(results), nil
+}
+
+func (t *thirdPartyIntegrations) GetOrg(ctx context.Context, userID string, providerID string, orgID string) (models.Org, error) {
+	for _, i := range t.integrations {
+		org, err := i.GetOrg(ctx, userID, providerID, orgID)
+		if err != nil {
+			continue
+		}
+		return org, nil
+	}
+
+	return models.Org{}, fmt.Errorf("no organization found with providerID: %s", providerID)
 }
 
 func (t *thirdPartyIntegrations) WantsToHandleWebhook(ctx core.Context) bool {
