@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
@@ -41,6 +42,9 @@ type gitlabClientFacade interface {
 	ListProjects(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)
 	ListGroups(ctx context.Context, opt *gitlab.ListGroupsOptions) ([]*gitlab.Group, *gitlab.Response, error)
 	GetGroup(ctx context.Context, groupId int) (*gitlab.Group, *gitlab.Response, error)
+	GetMemberInGroup(ctx context.Context, userId int, groupId int) (*gitlab.GroupMember, *gitlab.Response, error)
+	GetMemberInProject(ctx context.Context, userId int, projectId int) (*gitlab.ProjectMember, *gitlab.Response, error)
+	ListProjectsInGroup(ctx context.Context, groupId int, opt *gitlab.ListGroupProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)
 
 	CreateIssue(ctx context.Context, pid int, opt *gitlab.CreateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
 	CreateIssueComment(ctx context.Context, pid int, issue int, opt *gitlab.CreateIssueNoteOptions) (*gitlab.Note, *gitlab.Response, error)
@@ -97,42 +101,24 @@ func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration, oauth2C
 	}, nil
 }
 
-func groupToOrg(group *gitlab.Group, providerID string) models.Org {
-	return models.Org{
-		Name:          group.Name,
-		Description:   group.Description,
-		Slug:          fmt.Sprintf("%d@%s", group.ID, providerID),
-		GitProviderID: utils.Ptr(providerID),
+func groupToProject(group *gitlab.Group, providerID string) models.Project {
+	return models.Project{
+		Name:                     group.FullName,
+		Description:              group.Description,
+		Slug:                     slug.Make(group.Path),
+		ExternalEntityProviderID: &providerID,
+		ExternalEntityID:         utils.Ptr(fmt.Sprintf("%d", group.ID)),
 	}
 }
 
-func (gitlabBatchClient *gitlabBatchClient) ListGroups() ([]models.Org, error) {
-	wg := utils.ErrGroup[[]models.Org](10)
-	for _, client := range gitlabBatchClient.clients {
-		wg.Go(func() ([]models.Org, error) {
-			if client.GetProviderID() == nil {
-				// just skip - we wont find any orgs for this client if the provider ID is nil
-				// this can only happen for "non oa"
-				return nil, nil
-			}
-			orgs, _, err := client.ListGroups(context.TODO(), &gitlab.ListGroupsOptions{
-				MinAccessLevel: gitlab.Ptr(gitlab.ReporterPermissions),
-			})
-			if err != nil {
-				return nil, err
-			}
-
-			return utils.Map(orgs, func(el *gitlab.Group) models.Org {
-				return groupToOrg(el, *client.GetProviderID())
-			}), nil
-		})
+func projectToAsset(project *gitlab.Project, providerID string) models.Asset {
+	return models.Asset{
+		Name:                     project.Name,
+		Description:              project.Description,
+		Slug:                     slug.Make(project.Path),
+		ExternalEntityProviderID: &providerID,
+		ExternalEntityID:         utils.Ptr(fmt.Sprintf("%d", project.ID)),
 	}
-
-	results, err := wg.WaitAndCollect()
-	if err != nil {
-		return nil, err
-	}
-	return utils.Flat(results), nil
 }
 
 func (gitlabOrgClient *gitlabBatchClient) ListRepositories(search string) ([]gitlabRepository, error) {
@@ -172,6 +158,18 @@ func (client gitlabClient) GetProviderID() *string {
 
 func (client gitlabClient) GetGroup(ctx context.Context, groupId int) (*gitlab.Group, *gitlab.Response, error) {
 	return client.Groups.GetGroup(groupId, nil, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) GetMemberInGroup(ctx context.Context, userId int, groupId int) (*gitlab.GroupMember, *gitlab.Response, error) {
+	return client.GroupMembers.GetInheritedGroupMember(groupId, userId, nil, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) GetMemberInProject(ctx context.Context, userId int, projectId int) (*gitlab.ProjectMember, *gitlab.Response, error) {
+	return client.ProjectMembers.GetInheritedProjectMember(projectId, userId, nil, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) ListProjectsInGroup(ctx context.Context, groupId int, opt *gitlab.ListGroupProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error) {
+	return client.Groups.ListGroupProjects(groupId, opt, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) UpdateVariable(ctx context.Context, projectId int, key string, opt *gitlab.UpdateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error) {

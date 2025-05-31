@@ -184,23 +184,23 @@ func (_c *ThirdPartyIntegration_GetID_Call) RunAndReturn(run func() core.Integra
 	return _c
 }
 
-// GetOrg provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) GetOrg(ctx context.Context, userID string, providerID string, groupID string) (models.Org, error) {
+// GetRoleInGroup provides a mock function for the type ThirdPartyIntegration
+func (_mock *ThirdPartyIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
 	ret := _mock.Called(ctx, userID, providerID, groupID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetOrg")
+		panic("no return value specified for GetRoleInGroup")
 	}
 
-	var r0 models.Org
+	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) (models.Org, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) (string, error)); ok {
 		return returnFunc(ctx, userID, providerID, groupID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) models.Org); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) string); ok {
 		r0 = returnFunc(ctx, userID, providerID, groupID)
 	} else {
-		r0 = ret.Get(0).(models.Org)
+		r0 = ret.Get(0).(string)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
 		r1 = returnFunc(ctx, userID, providerID, groupID)
@@ -210,33 +210,90 @@ func (_mock *ThirdPartyIntegration) GetOrg(ctx context.Context, userID string, p
 	return r0, r1
 }
 
-// ThirdPartyIntegration_GetOrg_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetOrg'
-type ThirdPartyIntegration_GetOrg_Call struct {
+// ThirdPartyIntegration_GetRoleInGroup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRoleInGroup'
+type ThirdPartyIntegration_GetRoleInGroup_Call struct {
 	*mock.Call
 }
 
-// GetOrg is a helper method to define mock.On call
+// GetRoleInGroup is a helper method to define mock.On call
 //   - ctx
 //   - userID
 //   - providerID
 //   - groupID
-func (_e *ThirdPartyIntegration_Expecter) GetOrg(ctx interface{}, userID interface{}, providerID interface{}, groupID interface{}) *ThirdPartyIntegration_GetOrg_Call {
-	return &ThirdPartyIntegration_GetOrg_Call{Call: _e.mock.On("GetOrg", ctx, userID, providerID, groupID)}
+func (_e *ThirdPartyIntegration_Expecter) GetRoleInGroup(ctx interface{}, userID interface{}, providerID interface{}, groupID interface{}) *ThirdPartyIntegration_GetRoleInGroup_Call {
+	return &ThirdPartyIntegration_GetRoleInGroup_Call{Call: _e.mock.On("GetRoleInGroup", ctx, userID, providerID, groupID)}
 }
 
-func (_c *ThirdPartyIntegration_GetOrg_Call) Run(run func(ctx context.Context, userID string, providerID string, groupID string)) *ThirdPartyIntegration_GetOrg_Call {
+func (_c *ThirdPartyIntegration_GetRoleInGroup_Call) Run(run func(ctx context.Context, userID string, providerID string, groupID string)) *ThirdPartyIntegration_GetRoleInGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
 	})
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_GetOrg_Call) Return(org models.Org, err error) *ThirdPartyIntegration_GetOrg_Call {
-	_c.Call.Return(org, err)
+func (_c *ThirdPartyIntegration_GetRoleInGroup_Call) Return(s string, err error) *ThirdPartyIntegration_GetRoleInGroup_Call {
+	_c.Call.Return(s, err)
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_GetOrg_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, groupID string) (models.Org, error)) *ThirdPartyIntegration_GetOrg_Call {
+func (_c *ThirdPartyIntegration_GetRoleInGroup_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, groupID string) (string, error)) *ThirdPartyIntegration_GetRoleInGroup_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetRoleInProject provides a mock function for the type ThirdPartyIntegration
+func (_mock *ThirdPartyIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
+	ret := _mock.Called(ctx, userID, providerID, projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRoleInProject")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) (string, error)); ok {
+		return returnFunc(ctx, userID, providerID, projectID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) string); ok {
+		r0 = returnFunc(ctx, userID, providerID, projectID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+		r1 = returnFunc(ctx, userID, providerID, projectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ThirdPartyIntegration_GetRoleInProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRoleInProject'
+type ThirdPartyIntegration_GetRoleInProject_Call struct {
+	*mock.Call
+}
+
+// GetRoleInProject is a helper method to define mock.On call
+//   - ctx
+//   - userID
+//   - providerID
+//   - projectID
+func (_e *ThirdPartyIntegration_Expecter) GetRoleInProject(ctx interface{}, userID interface{}, providerID interface{}, projectID interface{}) *ThirdPartyIntegration_GetRoleInProject_Call {
+	return &ThirdPartyIntegration_GetRoleInProject_Call{Call: _e.mock.On("GetRoleInProject", ctx, userID, providerID, projectID)}
+}
+
+func (_c *ThirdPartyIntegration_GetRoleInProject_Call) Run(run func(ctx context.Context, userID string, providerID string, projectID string)) *ThirdPartyIntegration_GetRoleInProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_GetRoleInProject_Call) Return(s string, err error) *ThirdPartyIntegration_GetRoleInProject_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_GetRoleInProject_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, projectID string) (string, error)) *ThirdPartyIntegration_GetRoleInProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -378,6 +435,110 @@ func (_c *ThirdPartyIntegration_HandleWebhook_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// HasAccessToExternalEntityProvider provides a mock function for the type ThirdPartyIntegration
+func (_mock *ThirdPartyIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+	ret := _mock.Called(ctx, externalEntityProviderID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HasAccessToExternalEntityProvider")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string) bool); ok {
+		r0 = returnFunc(ctx, externalEntityProviderID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
+}
+
+// ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasAccessToExternalEntityProvider'
+type ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call struct {
+	*mock.Call
+}
+
+// HasAccessToExternalEntityProvider is a helper method to define mock.On call
+//   - ctx
+//   - externalEntityProviderID
+func (_e *ThirdPartyIntegration_Expecter) HasAccessToExternalEntityProvider(ctx interface{}, externalEntityProviderID interface{}) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
+	return &ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call{Call: _e.mock.On("HasAccessToExternalEntityProvider", ctx, externalEntityProviderID)}
+}
+
+func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) Run(run func(ctx core.Context, externalEntityProviderID string)) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) Return(b bool) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx core.Context, externalEntityProviderID string) bool) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListGroups provides a mock function for the type ThirdPartyIntegration
+func (_mock *ThirdPartyIntegration) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
+	ret := _mock.Called(ctx, userID, providerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListGroups")
+	}
+
+	var r0 []models.Project
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string) ([]models.Project, error)); ok {
+		return returnFunc(ctx, userID, providerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string) []models.Project); ok {
+		r0 = returnFunc(ctx, userID, providerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Project)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, userID, providerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ThirdPartyIntegration_ListGroups_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListGroups'
+type ThirdPartyIntegration_ListGroups_Call struct {
+	*mock.Call
+}
+
+// ListGroups is a helper method to define mock.On call
+//   - ctx
+//   - userID
+//   - providerID
+func (_e *ThirdPartyIntegration_Expecter) ListGroups(ctx interface{}, userID interface{}, providerID interface{}) *ThirdPartyIntegration_ListGroups_Call {
+	return &ThirdPartyIntegration_ListGroups_Call{Call: _e.mock.On("ListGroups", ctx, userID, providerID)}
+}
+
+func (_c *ThirdPartyIntegration_ListGroups_Call) Run(run func(ctx core.Context, userID string, providerID string)) *ThirdPartyIntegration_ListGroups_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_ListGroups_Call) Return(projects []models.Project, err error) *ThirdPartyIntegration_ListGroups_Call {
+	_c.Call.Return(projects, err)
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_ListGroups_Call) RunAndReturn(run func(ctx core.Context, userID string, providerID string) ([]models.Project, error)) *ThirdPartyIntegration_ListGroups_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListOrgs provides a mock function for the type ThirdPartyIntegration
 func (_mock *ThirdPartyIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 	ret := _mock.Called(ctx)
@@ -430,6 +591,65 @@ func (_c *ThirdPartyIntegration_ListOrgs_Call) Return(orgs []models.Org, err err
 }
 
 func (_c *ThirdPartyIntegration_ListOrgs_Call) RunAndReturn(run func(ctx core.Context) ([]models.Org, error)) *ThirdPartyIntegration_ListOrgs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListProjects provides a mock function for the type ThirdPartyIntegration
+func (_mock *ThirdPartyIntegration) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
+	ret := _mock.Called(ctx, userID, providerID, groupID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListProjects")
+	}
+
+	var r0 []models.Asset
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string, string) ([]models.Asset, error)); ok {
+		return returnFunc(ctx, userID, providerID, groupID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string, string) []models.Asset); ok {
+		r0 = returnFunc(ctx, userID, providerID, groupID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Asset)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.Context, string, string, string) error); ok {
+		r1 = returnFunc(ctx, userID, providerID, groupID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ThirdPartyIntegration_ListProjects_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListProjects'
+type ThirdPartyIntegration_ListProjects_Call struct {
+	*mock.Call
+}
+
+// ListProjects is a helper method to define mock.On call
+//   - ctx
+//   - userID
+//   - providerID
+//   - groupID
+func (_e *ThirdPartyIntegration_Expecter) ListProjects(ctx interface{}, userID interface{}, providerID interface{}, groupID interface{}) *ThirdPartyIntegration_ListProjects_Call {
+	return &ThirdPartyIntegration_ListProjects_Call{Call: _e.mock.On("ListProjects", ctx, userID, providerID, groupID)}
+}
+
+func (_c *ThirdPartyIntegration_ListProjects_Call) Run(run func(ctx core.Context, userID string, providerID string, groupID string)) *ThirdPartyIntegration_ListProjects_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.Context), args[1].(string), args[2].(string), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_ListProjects_Call) Return(assets []models.Asset, err error) *ThirdPartyIntegration_ListProjects_Call {
+	_c.Call.Return(assets, err)
+	return _c
+}
+
+func (_c *ThirdPartyIntegration_ListProjects_Call) RunAndReturn(run func(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error)) *ThirdPartyIntegration_ListProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }

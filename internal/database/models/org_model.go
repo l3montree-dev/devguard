@@ -27,7 +27,7 @@ type Org struct {
 
 	Language string `json:"language" gorm:"type:text;size:2"`
 
-	GitProviderID *string `json:"gitProviderId" gorm:"unique"`
+	ExternalEntityProviderID *string `json:"externalEntityProvider" gorm:"unique;type:text"`
 }
 
 func (m Org) TableName() string {
@@ -35,5 +35,5 @@ func (m Org) TableName() string {
 }
 
 func (m Org) IsExternalEntity() bool {
-	return m.GitProviderID != nil && *m.GitProviderID != ""
+	return m.ExternalEntityProviderID != nil && *m.ExternalEntityProviderID != ""
 }

@@ -20,11 +20,11 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/ory/client-go"
+	"gorm.io/gorm/clause"
 
 	"github.com/labstack/echo/v4"
 )
@@ -32,12 +32,12 @@ import (
 type httpController struct {
 	organizationRepository core.OrganizationRepository
 	orgService             core.OrgService
-	rbacProvider           accesscontrol.RBACProvider
+	rbacProvider           core.RBACProvider
 	projectService         core.ProjectService
 	invitationRepository   core.InvitationRepository
 }
 
-func NewHttpController(repository core.OrganizationRepository, orgService core.OrgService, rbacProvider accesscontrol.RBACProvider, projectService core.ProjectService, invitationRepository core.InvitationRepository) *httpController {
+func NewHttpController(repository core.OrganizationRepository, orgService core.OrgService, rbacProvider core.RBACProvider, projectService core.ProjectService, invitationRepository core.InvitationRepository) *httpController {
 	return &httpController{
 		organizationRepository: repository,
 		orgService:             orgService,
@@ -407,6 +407,12 @@ func (o *httpController) List(ctx core.Context) error {
 	orgs, err := thirdPartyIntegration.ListOrgs(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get organizations from third party integrations").WithInternal(err)
+	}
+	// make sure, that the third party organizations exists inside the database
+	if err := o.organizationRepository.Upsert(utils.Ptr(utils.Map(orgs, utils.Ptr)), &[]clause.Column{
+		{Name: "external_entity_provider_id"},
+	}); err != nil {
+		return echo.NewHTTPError(500, "could not ensure third party organizations exist").WithInternal(err)
 	}
 
 	return ctx.JSON(200, append(organizations, orgs...))

@@ -41,9 +41,17 @@ type ThirdPartyIntegration interface {
 	WantsToHandleWebhook(ctx Context) bool
 	HandleWebhook(ctx Context) error
 
+	ListOrgs(ctx Context) ([]models.Org, error) // maps identity providers to orgs
+
+	ListGroups(ctx Context, userID string, providerID string) ([]models.Project, error)                 // maps groups to projects
+	ListProjects(ctx Context, userID string, providerID string, groupID string) ([]models.Asset, error) // maps projects to assets
+
 	ListRepositories(ctx Context) ([]Repository, error)
-	ListOrgs(ctx Context) ([]models.Org, error)
-	GetOrg(ctx context.Context, userID string, providerID string, groupID string) (models.Org, error)
+
+	HasAccessToExternalEntityProvider(ctx Context, externalEntityProviderID string) bool
+
+	GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error)
+	GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error)
 
 	HandleEvent(event any) error
 	CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error
@@ -81,13 +89,22 @@ func (e ExternalEntitySlug) ProviderID() string {
 	return parts[1]
 }
 
-func (e ExternalEntitySlug) EntityID() string {
+func (e ExternalEntitySlug) Slug() string {
 	// everything before the @ is the entity ID
 	parts := strings.SplitN(string(e), "@", 2)
 	if len(parts) != 2 {
 		return ""
 	}
 	return parts[0]
+}
+
+func (e ExternalEntitySlug) SameAs(slug string) bool {
+	// convert
+	otherSlug, err := FromStringToExternalEntitySlug(slug)
+	if err != nil {
+		return false
+	}
+	return e.Slug() == otherSlug.Slug() && e.ProviderID() == otherSlug.ProviderID()
 }
 
 func FromStringToExternalEntitySlug(s string) (ExternalEntitySlug, error) {

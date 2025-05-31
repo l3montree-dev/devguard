@@ -157,9 +157,32 @@ func (githubIntegration *githubIntegration) GetID() core.IntegrationID {
 	return core.GitHubIntegrationID
 }
 
-func (githubIntegration *githubIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
+func (githubIntegration *githubIntegration) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
 	// currently not supported.
 	return nil, nil
+}
+
+func (githubIntegration *githubIntegration) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (githubIntegration *githubIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
+	// currently not supported.
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (githubIntegration *githubIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+	return false
+}
+
+func (githubIntegration *githubIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
+	// currently not supported.
+	return "", fmt.Errorf("not implemented")
+}
+
+func (githubIntegration *githubIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
+	// currently not supported.
+	return "", fmt.Errorf("not implemented")
 }
 
 func (githubIntegration *githubIntegration) GetOrg(ctx context.Context, userID string, providerID string, groupID string) (models.Org, error) {

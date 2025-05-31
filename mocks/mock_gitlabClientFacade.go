@@ -662,6 +662,138 @@ func (_c *GitlabClientFacade_GetGroup_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// GetMemberInGroup provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) GetMemberInGroup(ctx context.Context, userId int, groupId int) (*gitlab.GroupMember, *gitlab.Response, error) {
+	ret := _mock.Called(ctx, userId, groupId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetMemberInGroup")
+	}
+
+	var r0 *gitlab.GroupMember
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) (*gitlab.GroupMember, *gitlab.Response, error)); ok {
+		return returnFunc(ctx, userId, groupId)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) *gitlab.GroupMember); ok {
+		r0 = returnFunc(ctx, userId, groupId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gitlab.GroupMember)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int) *gitlab.Response); ok {
+		r1 = returnFunc(ctx, userId, groupId)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, int) error); ok {
+		r2 = returnFunc(ctx, userId, groupId)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_GetMemberInGroup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMemberInGroup'
+type GitlabClientFacade_GetMemberInGroup_Call struct {
+	*mock.Call
+}
+
+// GetMemberInGroup is a helper method to define mock.On call
+//   - ctx
+//   - userId
+//   - groupId
+func (_e *GitlabClientFacade_Expecter) GetMemberInGroup(ctx interface{}, userId interface{}, groupId interface{}) *GitlabClientFacade_GetMemberInGroup_Call {
+	return &GitlabClientFacade_GetMemberInGroup_Call{Call: _e.mock.On("GetMemberInGroup", ctx, userId, groupId)}
+}
+
+func (_c *GitlabClientFacade_GetMemberInGroup_Call) Run(run func(ctx context.Context, userId int, groupId int)) *GitlabClientFacade_GetMemberInGroup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetMemberInGroup_Call) Return(groupMember *gitlab.GroupMember, response *gitlab.Response, err error) *GitlabClientFacade_GetMemberInGroup_Call {
+	_c.Call.Return(groupMember, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetMemberInGroup_Call) RunAndReturn(run func(ctx context.Context, userId int, groupId int) (*gitlab.GroupMember, *gitlab.Response, error)) *GitlabClientFacade_GetMemberInGroup_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetMemberInProject provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) GetMemberInProject(ctx context.Context, userId int, projectId int) (*gitlab.ProjectMember, *gitlab.Response, error) {
+	ret := _mock.Called(ctx, userId, projectId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetMemberInProject")
+	}
+
+	var r0 *gitlab.ProjectMember
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) (*gitlab.ProjectMember, *gitlab.Response, error)); ok {
+		return returnFunc(ctx, userId, projectId)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) *gitlab.ProjectMember); ok {
+		r0 = returnFunc(ctx, userId, projectId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gitlab.ProjectMember)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int) *gitlab.Response); ok {
+		r1 = returnFunc(ctx, userId, projectId)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, int) error); ok {
+		r2 = returnFunc(ctx, userId, projectId)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_GetMemberInProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMemberInProject'
+type GitlabClientFacade_GetMemberInProject_Call struct {
+	*mock.Call
+}
+
+// GetMemberInProject is a helper method to define mock.On call
+//   - ctx
+//   - userId
+//   - projectId
+func (_e *GitlabClientFacade_Expecter) GetMemberInProject(ctx interface{}, userId interface{}, projectId interface{}) *GitlabClientFacade_GetMemberInProject_Call {
+	return &GitlabClientFacade_GetMemberInProject_Call{Call: _e.mock.On("GetMemberInProject", ctx, userId, projectId)}
+}
+
+func (_c *GitlabClientFacade_GetMemberInProject_Call) Run(run func(ctx context.Context, userId int, projectId int)) *GitlabClientFacade_GetMemberInProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetMemberInProject_Call) Return(projectMember *gitlab.ProjectMember, response *gitlab.Response, err error) *GitlabClientFacade_GetMemberInProject_Call {
+	_c.Call.Return(projectMember, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetMemberInProject_Call) RunAndReturn(run func(ctx context.Context, userId int, projectId int) (*gitlab.ProjectMember, *gitlab.Response, error)) *GitlabClientFacade_GetMemberInProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetProject provides a mock function for the type GitlabClientFacade
 func (_mock *GitlabClientFacade) GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error) {
 	ret := _mock.Called(ctx, projectId)
@@ -965,6 +1097,72 @@ func (_c *GitlabClientFacade_ListProjects_Call) Return(projects []*gitlab.Projec
 }
 
 func (_c *GitlabClientFacade_ListProjects_Call) RunAndReturn(run func(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)) *GitlabClientFacade_ListProjects_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListProjectsInGroup provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) ListProjectsInGroup(ctx context.Context, groupId int, opt *gitlab.ListGroupProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error) {
+	ret := _mock.Called(ctx, groupId, opt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListProjectsInGroup")
+	}
+
+	var r0 []*gitlab.Project
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *gitlab.ListGroupProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)); ok {
+		return returnFunc(ctx, groupId, opt)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, *gitlab.ListGroupProjectsOptions) []*gitlab.Project); ok {
+		r0 = returnFunc(ctx, groupId, opt)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*gitlab.Project)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, *gitlab.ListGroupProjectsOptions) *gitlab.Response); ok {
+		r1 = returnFunc(ctx, groupId, opt)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, *gitlab.ListGroupProjectsOptions) error); ok {
+		r2 = returnFunc(ctx, groupId, opt)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_ListProjectsInGroup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListProjectsInGroup'
+type GitlabClientFacade_ListProjectsInGroup_Call struct {
+	*mock.Call
+}
+
+// ListProjectsInGroup is a helper method to define mock.On call
+//   - ctx
+//   - groupId
+//   - opt
+func (_e *GitlabClientFacade_Expecter) ListProjectsInGroup(ctx interface{}, groupId interface{}, opt interface{}) *GitlabClientFacade_ListProjectsInGroup_Call {
+	return &GitlabClientFacade_ListProjectsInGroup_Call{Call: _e.mock.On("ListProjectsInGroup", ctx, groupId, opt)}
+}
+
+func (_c *GitlabClientFacade_ListProjectsInGroup_Call) Run(run func(ctx context.Context, groupId int, opt *gitlab.ListGroupProjectsOptions)) *GitlabClientFacade_ListProjectsInGroup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(*gitlab.ListGroupProjectsOptions))
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_ListProjectsInGroup_Call) Return(projects []*gitlab.Project, response *gitlab.Response, err error) *GitlabClientFacade_ListProjectsInGroup_Call {
+	_c.Call.Return(projects, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_ListProjectsInGroup_Call) RunAndReturn(run func(ctx context.Context, groupId int, opt *gitlab.ListGroupProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)) *GitlabClientFacade_ListProjectsInGroup_Call {
 	_c.Call.Return(run)
 	return _c
 }

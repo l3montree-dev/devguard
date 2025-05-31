@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 
@@ -107,7 +106,7 @@ func GetVulnID(ctx Context) (string, models.VulnType, error) {
 	return "", "", fmt.Errorf("could not get vuln id")
 }
 
-func SetRBAC(ctx Context, rbac accesscontrol.AccessControl) {
+func SetRBAC(ctx Context, rbac AccessControl) {
 	ctx.Set("rbac", rbac)
 }
 
@@ -128,8 +127,8 @@ func HasOrganization(c Context) bool {
 	return ok
 }
 
-func GetRBAC(ctx Context) accesscontrol.AccessControl {
-	return ctx.Get("rbac").(accesscontrol.AccessControl)
+func GetRBAC(ctx Context) AccessControl {
+	return ctx.Get("rbac").(AccessControl)
 }
 
 func SetIsPublicRequest(ctx Context) {

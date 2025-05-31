@@ -16,7 +16,7 @@
 package testutils
 
 import (
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
+	"github.com/l3montree-dev/devguard/internal/core"
 )
 
 type RBACProviderMock struct {
@@ -69,7 +69,7 @@ func (r *RBACMock) RevokeRoleInProject(subject string, role string, project stri
 	return r.RevokeRole(subject, project+"|"+role)
 }
 
-func (r *RBACMock) AllowRole(role string, object string, action []accesscontrol.Action) error {
+func (r *RBACMock) AllowRole(role string, object string, action []core.Action) error {
 	if _, ok := r.rules[string(role)]; !ok {
 		r.rules[string(role)] = []string{}
 	}
@@ -94,7 +94,7 @@ func (r *RBACMock) getRolesOf(subject string) []string {
 	return roles
 }
 
-func (r *RBACMock) IsAllowed(subject, object string, action accesscontrol.Action) (bool, error) {
+func (r *RBACMock) IsAllowed(subject, object string, action core.Action) (bool, error) {
 	// recursively gather all roles
 	roles := r.getRolesOf(subject)
 	// get all permissions for roles
@@ -111,11 +111,11 @@ func (r *RBACMock) IsAllowed(subject, object string, action accesscontrol.Action
 	return false, nil
 }
 
-func (r *RBACMock) IsAllowedInProject(project, user, object string, action accesscontrol.Action) (bool, error) {
+func (r *RBACMock) IsAllowedInProject(project, user, object string, action core.Action) (bool, error) {
 	return r.IsAllowed(user, project+"|"+object, action)
 }
 
-func (r *RBACMock) AllowRoleInProject(project, role string, object string, action []accesscontrol.Action) error {
+func (r *RBACMock) AllowRoleInProject(project, role string, object string, action []core.Action) error {
 	return r.AllowRole(project+"|"+role, project+"|"+object, action)
 }
 
@@ -135,13 +135,13 @@ func (r *RBACMock) GetOwnerOfOrganization() (string, error) {
 	return "", nil
 }
 
-func (r RBACProviderMock) GetDomainRBAC(domain string) accesscontrol.AccessControl {
+func (r RBACProviderMock) GetDomainRBAC(domain string) core.AccessControl {
 	return &RBACMock{
 		roles: map[string][]string{}, rules: map[string][]string{},
 	}
 }
 
-func (r RBACMock) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions accesscontrol.ProjectRole) error {
+func (r RBACMock) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions core.ProjectRole) error {
 	return nil
 }
 
@@ -169,6 +169,6 @@ func (r RBACProviderMock) DomainsOfUser(user string) ([]string, error) {
 	return []string{"domain::" + user}, nil
 }
 
-func NewRBACProviderMock() accesscontrol.RBACProvider {
+func NewRBACProviderMock() core.RBACProvider {
 	return &RBACProviderMock{}
 }

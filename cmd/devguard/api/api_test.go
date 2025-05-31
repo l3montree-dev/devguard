@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/auth"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
@@ -151,8 +151,8 @@ func TestAccessControlMiddleware(t *testing.T) {
 		mockOrganization := models.Org{}
 
 		userID := "user-id"
-		obj := accesscontrol.Object("test-object")
-		act := accesscontrol.Action("read")
+		obj := core.Object("test-object")
+		act := core.Action("read")
 
 		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(true, nil)
 
@@ -185,8 +185,8 @@ func TestAccessControlMiddleware(t *testing.T) {
 		mockOrganization := models.Org{}
 
 		userID := "user-id"
-		obj := accesscontrol.Object("test-object")
-		act := accesscontrol.Action("read")
+		obj := core.Object("test-object")
+		act := core.Action("read")
 
 		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(false, nil)
 
@@ -221,8 +221,8 @@ func TestAccessControlMiddleware(t *testing.T) {
 		}
 
 		userID := "user-id"
-		obj := accesscontrol.Object("test-object")
-		act := accesscontrol.Action("read")
+		obj := core.Object("test-object")
+		act := core.Action("read")
 
 		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(false, nil)
 
@@ -255,8 +255,8 @@ func TestAccessControlMiddleware(t *testing.T) {
 		mockOrganization := models.Org{}
 
 		userID := "user-id"
-		obj := accesscontrol.Object("test-object")
-		act := accesscontrol.Action("read")
+		obj := core.Object("test-object")
+		act := core.Action("read")
 
 		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(false, errors.New("error"))
 

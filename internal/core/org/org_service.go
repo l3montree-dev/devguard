@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
@@ -14,10 +13,10 @@ import (
 
 type orgService struct {
 	organizationRepository core.OrganizationRepository
-	rbacProvider           accesscontrol.RBACProvider
+	rbacProvider           core.RBACProvider
 }
 
-func NewService(organizationRepository core.OrganizationRepository, rbacProvider accesscontrol.RBACProvider) *orgService {
+func NewService(organizationRepository core.OrganizationRepository, rbacProvider core.RBACProvider) *orgService {
 	return &orgService{
 		organizationRepository: organizationRepository,
 		rbacProvider:           rbacProvider,
@@ -27,20 +26,32 @@ func (o *orgService) CreateExternalEntityOrganization(ctx core.Context, external
 	// try to create the organization on the fly
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 
-	org, err := thirdPartyIntegration.GetOrg(ctx.Request().Context(), core.GetSession(ctx).GetUserID(), externalEntitySlug.ProviderID(), externalEntitySlug.EntityID())
+	orgs, err := thirdPartyIntegration.ListOrgs(ctx)
 	if err != nil {
-		return nil, echo.NewHTTPError(500, "could not get organization from third party integration").WithInternal(err)
+		return nil, echo.NewHTTPError(500, "could not list organizations from third party integration").WithInternal(err)
+	}
+	// find the correct one - slug needs to match
+	var orgToCreate models.Org
+	for _, org := range orgs {
+		if externalEntitySlug.SameAs(org.Slug) {
+			// we found the organization
+			orgToCreate = org
+			break
+		}
+	}
+	if orgToCreate.Slug == "" {
+		return nil, echo.NewHTTPError(404, "organization not found in third party integration").WithInternal(fmt.Errorf("organization with slug %s not found", externalEntitySlug.Slug()))
 	}
 
 	// create the organization in the database
 	// but DO NOT BOOTSTRAP IT
-	if err := o.organizationRepository.Create(nil, &org); err != nil {
+	if err := o.organizationRepository.Create(nil, &orgToCreate); err != nil {
 		if strings.Contains(err.Error(), "duplicate key value") {
 			return nil, echo.NewHTTPError(409, "organization with that slug already exists").WithInternal(err)
 		}
 		return nil, echo.NewHTTPError(500, "could not create organization").WithInternal(err)
 	}
-	return &org, nil
+	return &orgToCreate, nil
 }
 
 func (o *orgService) CreateOrganization(ctx core.Context, organization models.Org) error {
@@ -77,29 +88,29 @@ func (o *orgService) bootstrapOrg(ctx core.Context, organization models.Org) err
 		return err
 	}
 
-	if err := rbac.AllowRole("owner", "organization", []accesscontrol.Action{
-		accesscontrol.ActionDelete,
+	if err := rbac.AllowRole("owner", "organization", []core.Action{
+		core.ActionDelete,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRole("admin", "organization", []accesscontrol.Action{
-		accesscontrol.ActionUpdate,
+	if err := rbac.AllowRole("admin", "organization", []core.Action{
+		core.ActionUpdate,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRole("admin", "project", []accesscontrol.Action{
-		accesscontrol.ActionCreate,
-		accesscontrol.ActionRead, // listing all projects
-		accesscontrol.ActionUpdate,
-		accesscontrol.ActionDelete,
+	if err := rbac.AllowRole("admin", "project", []core.Action{
+		core.ActionCreate,
+		core.ActionRead, // listing all projects
+		core.ActionUpdate,
+		core.ActionDelete,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRole("member", "organization", []accesscontrol.Action{
-		accesscontrol.ActionRead,
+	if err := rbac.AllowRole("member", "organization", []core.Action{
+		core.ActionRead,
 	}); err != nil {
 		return err
 	}

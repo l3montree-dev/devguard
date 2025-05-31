@@ -34,6 +34,88 @@ func (t *thirdPartyIntegrations) GetID() core.IntegrationID {
 	return core.AggregateID
 }
 
+func (t *thirdPartyIntegrations) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
+	wg := utils.ErrGroup[[]models.Project](-1)
+
+	for _, i := range t.integrations {
+		wg.Go(func() ([]models.Project, error) {
+			groups, err := i.ListGroups(ctx, userID, providerID)
+			if err != nil {
+				slog.Error("error while listing groups", "err", err)
+				// swallow error
+				return nil, nil
+			}
+			return groups, err
+		})
+	}
+
+	results, err := wg.WaitAndCollect()
+	if err != nil {
+		slog.Error("error while listing groups", "err", err)
+	}
+
+	return utils.Flat(results), nil
+}
+
+func (t *thirdPartyIntegrations) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
+	wg := utils.ErrGroup[[]models.Asset](-1)
+	for _, i := range t.integrations {
+		wg.Go(func() ([]models.Asset, error) {
+			projects, err := i.ListProjects(ctx, userID, providerID, groupID)
+			if err != nil {
+				slog.Error("error while listing projects", "err", err)
+				// swallow error
+				return nil, nil
+			}
+			return projects, err
+		})
+	}
+	results, err := wg.WaitAndCollect()
+	if err != nil {
+		slog.Error("error while listing projects", "err", err)
+	}
+	return utils.Flat(results), nil
+}
+
+func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+	for _, i := range t.integrations {
+		if i.HasAccessToExternalEntityProvider(ctx, externalEntityProviderID) {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *thirdPartyIntegrations) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupId string) (string, error) {
+	for _, i := range t.integrations {
+		role, err := i.GetRoleInGroup(ctx, userID, providerID, groupId)
+		if err != nil {
+			slog.Error("error while getting role in org", "err", err, "providerID", providerID, "orgID", groupId)
+			// swallow error
+			continue
+		}
+		if role != "" {
+			return role, nil
+		}
+	}
+	return "", fmt.Errorf("no role found for user %s in org %s with providerID %s", userID, groupId, providerID)
+}
+
+func (t *thirdPartyIntegrations) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
+	for _, i := range t.integrations {
+		role, err := i.GetRoleInProject(ctx, userID, providerID, projectID)
+		if err != nil {
+			slog.Error("error while getting role in project", "err", err, "providerID", providerID, "projectID", projectID)
+			// swallow error
+			continue
+		}
+		if role != "" {
+			return role, nil
+		}
+	}
+	return "", fmt.Errorf("no role found for user %s in project %s with providerID %s", userID, projectID, providerID)
+}
+
 func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	wg := utils.ErrGroup[[]core.Repository](-1)
 
@@ -78,18 +160,6 @@ func (t *thirdPartyIntegrations) ListOrgs(ctx core.Context) ([]models.Org, error
 	}
 
 	return utils.Flat(results), nil
-}
-
-func (t *thirdPartyIntegrations) GetOrg(ctx context.Context, userID string, providerID string, orgID string) (models.Org, error) {
-	for _, i := range t.integrations {
-		org, err := i.GetOrg(ctx, userID, providerID, orgID)
-		if err != nil {
-			continue
-		}
-		return org, nil
-	}
-
-	return models.Org{}, fmt.Errorf("no organization found with providerID: %s", providerID)
 }
 
 func (t *thirdPartyIntegrations) WantsToHandleWebhook(ctx core.Context) bool {

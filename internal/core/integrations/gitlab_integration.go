@@ -115,7 +115,7 @@ type gitlabIntegration struct {
 	componentRepository         core.ComponentRepository
 	gitlabClientFactory         func(id uuid.UUID) (gitlabClientFacade, error)
 	gitlabOauth2ClientFactory   func(token models.GitLabOauth2Token) (gitlabClientFacade, error)
-	casbinRBACProvider          accesscontrol.RBACProvider
+	casbinRBACProvider          core.RBACProvider
 }
 
 var _ core.ThirdPartyIntegration = &gitlabIntegration{}
@@ -476,6 +476,25 @@ func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
 	return ctx.JSON(200, "ok")
 }
 
+func oauth2TokenToOrg(token models.GitLabOauth2Token) models.Org {
+	return models.Org{
+		Name:                     token.ProviderID,
+		Slug:                     fmt.Sprintf("@%s", token.ProviderID),
+		ExternalEntityProviderID: &token.ProviderID,
+	}
+}
+
+func (g *gitlabIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+	// get the oauth2 tokens for this user
+	_, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(core.GetSession(ctx).GetUserID(), externalEntityProviderID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return false
+	}
+
+	return err == nil
+}
+
 func (g *gitlabIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 	// get the oauth2 tokens for this user
 	tokens, err := g.gitlabOauth2TokenRepository.FindByUserId(core.GetSession(ctx).GetUserID())
@@ -489,50 +508,182 @@ func (g *gitlabIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 		return nil, nil
 	}
 
-	// create a new gitlab batch client
-	gitlabBatchClient, err := newGitLabBatchClient(nil, g.oauth2Endpoints, tokens)
-	if err != nil {
-		slog.Error("failed to create gitlab batch client", "err", err)
-		return nil, err
-	}
+	return utils.Map(tokens, oauth2TokenToOrg), nil
 
-	orgs, err := gitlabBatchClient.ListGroups()
-	if err != nil {
-		slog.Error("failed to list organizations", "err", err)
-		return nil, err
-	}
-
-	return orgs, nil
 }
 
-func (g *gitlabIntegration) GetOrg(ctx context.Context, userID string, providerID string, groupID string) (models.Org, error) {
+func (g *gitlabIntegration) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
 	// get the oauth2 tokens for this user
 	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, providerID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
-		return models.Org{}, err
+		return nil, err
+	}
+	// create a new gitlab batch client
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	if err != nil {
+		slog.Error("failed to create gitlab batch client", "err", err)
+		return nil, err
+	}
+	// get the groups for this user
+	groups, _, err := gitlabClient.ListGroups(ctx.Request().Context(), &gitlab.ListGroupsOptions{
+		MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions), // only list groups where the user has at least owner permissions
+	})
+
+	if err != nil {
+		slog.Error("failed to list groups", "err", err)
+		return nil, err
+	}
+
+	return utils.Map(groups, func(el *gitlab.Group) models.Project {
+		return groupToProject(el, providerID)
+	}), nil
+}
+
+func (g *gitlabIntegration) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
+	// get the oauth2 tokens for this user
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, providerID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return nil, err
+	}
+	// create a new gitlab batch client
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	if err != nil {
+		slog.Error("failed to create gitlab batch client", "err", err)
+		return nil, err
+	}
+	// convert the groupID to an int
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		slog.Error("failed to convert groupID to int", "err", err)
+		return nil, errors.Wrap(err, "failed to convert groupID to int")
+	}
+	// get the projects in the group
+	projects, _, err := gitlabClient.ListProjectsInGroup(ctx.Request().Context(), groupIDInt, nil)
+	if err != nil {
+		slog.Error("failed to list projects in group", "err", err)
+		return nil, err
+	}
+
+	// convert the projects to assets
+	result := make([]models.Asset, 0, len(projects))
+	for _, project := range projects {
+		result = append(result, projectToAsset(project, providerID))
+	}
+
+	return result, nil
+}
+
+func gitlabAccessLevelToRole(accessLevel gitlab.AccessLevelValue) string {
+	switch accessLevel {
+	case gitlab.OwnerPermissions:
+		return "owner"
+	case gitlab.MaintainerPermissions:
+		return "admin"
+	default:
+		return "member"
+	}
+}
+
+func (g *gitlabIntegration) GetGroup(ctx context.Context, userID string, providerID string, groupID string) (models.Project, error) {
+	// get the oauth2 tokens for this user
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, providerID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return models.Project{}, err
 	}
 
 	// create a new gitlab batch client
 	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
-		return models.Org{}, err
+		return models.Project{}, err
 	}
 
 	// convert the groupID to an int
 	groupIDInt, err := strconv.Atoi(groupID)
 	if err != nil {
 		slog.Error("failed to convert groupID to int", "err", err)
-		return models.Org{}, errors.Wrap(err, "failed to convert groupID to int")
+		return models.Project{}, errors.Wrap(err, "failed to convert groupID to int")
 	}
 
 	group, _, err := gitlabClient.GetGroup(ctx, groupIDInt)
 	if err != nil {
 		slog.Error("failed to get organization", "err", err)
-		return models.Org{}, err
+		return models.Project{}, err
 	}
-	return groupToOrg(group, providerID), nil
+	return groupToProject(group, providerID), nil
+}
+
+func (g *gitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
+	// get the oauth2 tokens for this user
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, providerID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return "", err
+	}
+	// create a new gitlab batch client
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+
+	if err != nil {
+		slog.Error("failed to create gitlab batch client", "err", err)
+		return "", err
+	}
+	// convert the groupID to an int
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		slog.Error("failed to convert groupID to int", "err", err)
+		return "", errors.Wrap(err, "failed to convert groupID to int")
+	}
+	// get the group members
+	member, _, err := gitlabClient.GetMemberInGroup(ctx, token.GitLabUserID, groupIDInt)
+	if err != nil {
+		slog.Error("failed to get member in group", "err", err)
+		if strings.Contains(err.Error(), "404 Not Found") {
+			// user is not a member of the group
+			return "", nil
+		}
+		return "", err
+	}
+
+	// return the role of the user in the group
+	return gitlabAccessLevelToRole(member.AccessLevel), nil
+}
+
+func (g *gitlabIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
+	// get the oauth2 tokens for this user
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, providerID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return "", err
+	}
+
+	// create a new gitlab batch client
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	if err != nil {
+		slog.Error("failed to create gitlab batch client", "err", err)
+		return "", err
+	}
+
+	// convert the projectID to an int
+	projectIDInt, err := strconv.Atoi(projectID)
+	if err != nil {
+		slog.Error("failed to convert projectID to int", "err", err)
+		return "", errors.Wrap(err, "failed to convert projectID to int")
+	}
+
+	member, _, err := gitlabClient.GetMemberInProject(ctx, token.GitLabUserID, projectIDInt)
+	if err != nil {
+		slog.Error("failed to get member in project", "err", err)
+		if strings.Contains(err.Error(), "404 Not Found") {
+			// user is not a member of the project
+			return "", nil
+		}
+		return "", err
+	}
+
+	return gitlabAccessLevelToRole(member.AccessLevel), nil
 }
 
 func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {

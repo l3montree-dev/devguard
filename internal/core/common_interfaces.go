@@ -24,7 +24,9 @@ import (
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
+	"gorm.io/gorm/clause"
 )
 
 type ProjectRepository interface {
@@ -42,6 +44,7 @@ type ProjectRepository interface {
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
+	Upsert(projects *[]*models.Project, conflictingColumns *[]clause.Column) error
 }
 
 type PolicyRepository interface {
@@ -343,4 +346,76 @@ type ComponentService interface {
 	GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Component, error)
 	RefreshComponentProjectInformation(project models.ComponentProject)
 	GetLicense(component models.Component) (models.Component, error)
+}
+
+type AccessControl interface {
+	HasAccess(subject string) bool
+
+	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error
+
+	GetAllRoles(user string) []string
+
+	GrantRole(subject string, role string) error
+	RevokeRole(subject string, role string) error
+
+	GrantRoleInProject(subject string, role string, project string) error
+	RevokeRoleInProject(subject string, role string, project string) error
+	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string, project string) error
+
+	InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error
+
+	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions string, project string) error
+
+	AllowRole(role string, object Object, action []Action) error
+	IsAllowed(subject string, object Object, action Action) (bool, error)
+
+	IsAllowedInProject(project *models.Project, user string, object Object, action Action) (bool, error)
+	AllowRoleInProject(project string, role string, object Object, action []Action) error
+
+	GetAllProjectsForUser(user string) (any, error) // return is either a slice of strings or projects
+
+	GetOwnerOfOrganization() (string, error)
+
+	GetAllMembersOfOrganization() ([]string, error)
+
+	GetAllMembersOfProject(projectID string) ([]string, error)
+
+	GetDomainRole(user string) (string, error)
+	GetProjectRole(user string, project string) (string, error)
+}
+
+type RBACProvider interface {
+	GetDomainRBAC(domain string) AccessControl
+	DomainsOfUser(user string) ([]string, error)
+}
+
+type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
+
+const (
+	RoleOwner  = "owner"
+	RoleAdmin  = "admin"
+	RoleMember = "member"
+)
+
+type Action string
+
+const (
+	ActionCreate Action = "create"
+	ActionRead   Action = "read"
+	ActionUpdate Action = "update"
+	ActionDelete Action = "delete"
+)
+
+type Object string
+
+const (
+	ObjectProject      Object = "project"
+	ObjectAsset        Object = "asset"
+	ObjectUser         Object = "user"
+	ObjectOrganization Object = "organization"
+)
+
+type ProjectRole struct {
+	Project string
+	Role    string
 }

@@ -5,11 +5,11 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm/clause"
 )
 
 type service struct {
@@ -70,37 +70,37 @@ func (s *service) bootstrapProject(c core.Context, project models.Project) error
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "user", []accesscontrol.Action{
-		accesscontrol.ActionCreate,
-		accesscontrol.ActionDelete,
-		accesscontrol.ActionUpdate,
+	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "user", []core.Action{
+		core.ActionCreate,
+		core.ActionDelete,
+		core.ActionUpdate,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "asset", []accesscontrol.Action{
-		accesscontrol.ActionCreate,
-		accesscontrol.ActionDelete,
-		accesscontrol.ActionUpdate,
+	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "asset", []core.Action{
+		core.ActionCreate,
+		core.ActionDelete,
+		core.ActionUpdate,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "project", []accesscontrol.Action{
-		accesscontrol.ActionDelete,
-		accesscontrol.ActionUpdate,
+	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "project", []core.Action{
+		core.ActionDelete,
+		core.ActionUpdate,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), "member", "project", []accesscontrol.Action{
-		accesscontrol.ActionRead,
+	if err := rbac.AllowRoleInProject(project.ID.String(), "member", "project", []core.Action{
+		core.ActionRead,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), "member", "asset", []accesscontrol.Action{
-		accesscontrol.ActionRead,
+	if err := rbac.AllowRoleInProject(project.ID.String(), "member", "asset", []core.Action{
+		core.ActionRead,
 	}); err != nil {
 		return err
 	}
@@ -108,10 +108,10 @@ func (s *service) bootstrapProject(c core.Context, project models.Project) error
 	// check if there is a parent project - if so, we need to further inherit the roles
 	if project.ParentID != nil {
 		// make a parent project admin an admin of the child project
-		if err := rbac.InheritProjectRolesAcrossProjects(accesscontrol.ProjectRole{
+		if err := rbac.InheritProjectRolesAcrossProjects(core.ProjectRole{
 			Role:    "admin",
 			Project: (*project.ParentID).String(),
-		}, accesscontrol.ProjectRole{
+		}, core.ProjectRole{
 			Role:    "admin",
 			Project: project.ID.String(),
 		}); err != nil {
@@ -119,10 +119,10 @@ func (s *service) bootstrapProject(c core.Context, project models.Project) error
 		}
 
 		// make a parent project member a member of the child project
-		if err := rbac.InheritProjectRolesAcrossProjects(accesscontrol.ProjectRole{
+		if err := rbac.InheritProjectRolesAcrossProjects(core.ProjectRole{
 			Role:    "member",
 			Project: (*project.ParentID).String(),
-		}, accesscontrol.ProjectRole{
+		}, core.ProjectRole{
 			Role:    "member",
 			Project: project.ID.String(),
 		}); err != nil {
@@ -140,7 +140,29 @@ func (s *service) ListProjectsByOrganizationID(organizationID uuid.UUID) ([]mode
 func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) {
 	// get all projects the user has at least read access to
 	rbac := core.GetRBAC(c)
-	projectsIdsStr := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
+	projectSliceOrProjectIdSlice, err := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
+	if err != nil {
+		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
+	}
+
+	if slice, ok := projectSliceOrProjectIdSlice.([]models.Project); ok {
+		// make sure the projects exist inside the database
+		toUpsert := make([]*models.Project, 0, len(slice))
+		for i := range slice {
+			toUpsert = append(toUpsert, &slice[i])
+			slice[i].OrganizationID = core.GetOrg(c).GetID() // ensure the organization ID is set
+		}
+		err = s.projectRepository.Upsert(&toUpsert, &[]clause.Column{
+			{Name: "external_entity_provider_id"},
+			{Name: "external_entity_id"},
+		})
+
+		return slice, err
+	}
+	projectsIdsStr, ok := projectSliceOrProjectIdSlice.([]string)
+	if !ok {
+		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(fmt.Errorf("expected []string but got %T", projectSliceOrProjectIdSlice))
+	}
 
 	// extract the project ids from the roles
 	projectIDs := make(map[uuid.UUID]struct{})

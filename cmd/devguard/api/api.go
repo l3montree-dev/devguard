@@ -21,9 +21,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
@@ -48,7 +48,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func accessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action) echo.MiddlewareFunc {
+func accessControlMiddleware(obj core.Object, act core.Action) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			// get the rbac
@@ -57,7 +57,7 @@ func accessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action)
 			// get the user
 			user := core.GetSession(ctx).GetUserID()
 
-			allowed, err := rbac.IsAllowed(user, string(obj), act)
+			allowed, err := rbac.IsAllowed(user, obj, act)
 			if err != nil {
 				ctx.Response().WriteHeader(500)
 				return echo.NewHTTPError(500, "could not determine if the user has access")
@@ -65,7 +65,7 @@ func accessControlMiddleware(obj accesscontrol.Object, act accesscontrol.Action)
 
 			// check if the user has the required role
 			if !allowed {
-				if org.IsPublic && act == accesscontrol.ActionRead {
+				if org.IsPublic && act == core.ActionRead {
 					core.SetIsPublicRequest(ctx)
 				} else {
 					ctx.Response().WriteHeader(403)
@@ -132,8 +132,8 @@ func assetVersionMiddleware(repository core.AssetVersionRepository) func(next ec
 	}
 }
 
-func projectAccessControlFactory(projectRepository core.ProjectRepository) accesscontrol.RBACMiddleware {
-	return func(obj accesscontrol.Object, act accesscontrol.Action) core.MiddlewareFunc {
+func projectAccessControlFactory(projectRepository core.ProjectRepository) core.RBACMiddleware {
+	return func(obj core.Object, act core.Action) core.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(ctx core.Context) error {
 				// get the rbac
@@ -155,7 +155,7 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) acces
 					return echo.NewHTTPError(404, "could not get project")
 				}
 
-				allowed, err := rbac.IsAllowedInProject(project.ID.String(), user, string(obj), act)
+				allowed, err := rbac.IsAllowedInProject(&project, user, obj, act)
 
 				if err != nil {
 					return echo.NewHTTPError(500, "could not determine if the user has access")
@@ -163,7 +163,7 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) acces
 
 				// check if the user has the required role
 				if !allowed {
-					if project.IsPublic && act == accesscontrol.ActionRead {
+					if project.IsPublic && act == core.ActionRead {
 						// allow READ on all objects in the project - if access is public
 						core.SetIsPublicRequest(ctx)
 					} else {
@@ -179,7 +179,7 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) acces
 	}
 }
 
-func projectAccessControl(projectRepository core.ProjectRepository, obj accesscontrol.Object, act accesscontrol.Action) core.MiddlewareFunc {
+func projectAccessControl(projectRepository core.ProjectRepository, obj core.Object, act core.Action) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) error {
 			// get the rbac
@@ -198,10 +198,15 @@ func projectAccessControl(projectRepository core.ProjectRepository, obj accessco
 			project, err := projectRepository.ReadBySlug(core.GetOrg(ctx).GetID(), projectSlug)
 
 			if err != nil {
+				// check if we are in an external entity provider context
+				org := core.GetOrg(ctx)
+				if org.IsExternalEntity() {
+					// create the project on the fly if it does exist
+				}
 				return echo.NewHTTPError(404, "could not get project")
 			}
 
-			allowed, err := rbac.IsAllowedInProject(project.ID.String(), user, string(obj), act)
+			allowed, err := rbac.IsAllowedInProject(&project, user, obj, act)
 
 			if err != nil {
 				return echo.NewHTTPError(500, "could not determine if the user has access")
@@ -210,7 +215,7 @@ func projectAccessControl(projectRepository core.ProjectRepository, obj accessco
 			// check if the user has the required role
 			if !allowed {
 				// check if public
-				if project.IsPublic && act == accesscontrol.ActionRead {
+				if project.IsPublic && act == core.ActionRead {
 					core.SetIsPublicRequest(ctx)
 				} else {
 					return echo.NewHTTPError(403, "forbidden")
@@ -273,7 +278,7 @@ func assetNameMiddleware() core.MiddlewareFunc {
 	}
 }
 
-func multiOrganizationMiddleware(rbacProvider accesscontrol.RBACProvider, organizationService core.OrgService) core.MiddlewareFunc {
+func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationService core.OrgService) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) (err error) {
 
@@ -302,7 +307,13 @@ func multiOrganizationMiddleware(rbacProvider accesscontrol.RBACProvider, organi
 				}
 			}
 
-			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
+			// check what kind of RBAC we need
+			var domainRBAC core.AccessControl
+			if org.IsExternalEntity() {
+				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, core.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID)
+			} else {
+				domainRBAC = rbacProvider.GetDomainRBAC(org.ID.String())
+			}
 
 			// check if the user is allowed to access the organization
 			session := core.GetSession(ctx)
@@ -465,11 +476,11 @@ func BuildRouter(db core.DB) *echo.Echo {
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, neededScope([]string{"manage"}))
 
 	//TODO: change "/scan/" to "/sbom-scan/"
-	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate), assetMiddleware(assetRepository))
 
-	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate), assetMiddleware(assetRepository))
 
-	sessionRouter.POST("/attestations/", attestationController.Create, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/attestations/", attestationController.Create, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate), assetMiddleware(assetRepository))
 
 	sessionRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
@@ -490,10 +501,10 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	//Api functions for interacting with an organization  ->  .../organizations/<organization-name>/...
 	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService))
-	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
-	organizationRouter.GET("/", orgController.Read, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
+	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
+	organizationRouter.GET("/", orgController.Read, accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
 
-	organizationRouter.PATCH("/", orgController.Update, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
+	organizationRouter.PATCH("/", orgController.Update, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
 
 	organizationRouter.GET("/metrics/", orgController.Metrics)
 	organizationRouter.GET("/content-tree/", orgController.ContentTree)
@@ -504,16 +515,16 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	organizationRouter.GET("/policies/", policyController.GetOrganizationPolicies)
 	organizationRouter.GET("/policies/:policyId/", policyController.GetPolicy)
-	organizationRouter.PUT("/policies/:policyId/", policyController.UpdatePolicy, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
-	organizationRouter.POST("/policies/", policyController.CreatePolicy, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
-	organizationRouter.DELETE("/policies/:policyId/", policyController.DeletePolicy, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
+	organizationRouter.PUT("/policies/:policyId/", policyController.UpdatePolicy, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
+	organizationRouter.POST("/policies/", policyController.CreatePolicy, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
+	organizationRouter.DELETE("/policies/:policyId/", policyController.DeletePolicy, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
 
 	organizationRouter.GET("/members/", orgController.Members)
-	organizationRouter.POST("/members/", orgController.InviteMember, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
+	organizationRouter.POST("/members/", orgController.InviteMember, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
 
-	organizationRouter.DELETE("/members/:userId/", orgController.RemoveMember, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionDelete))
+	organizationRouter.DELETE("/members/:userId/", orgController.RemoveMember, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
 
-	organizationRouter.PUT("/members/:userId/", orgController.ChangeRole, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
+	organizationRouter.PUT("/members/:userId/", orgController.ChangeRole, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
 
 	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 
@@ -527,25 +538,25 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
 	organizationRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution)
 
-	organizationRouter.GET("/projects/", projectController.List, accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionRead))
-	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
+	organizationRouter.GET("/projects/", projectController.List, accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
+	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
-	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
+	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", core.ActionRead))
 	projectRouter.GET("/", projectController.Read)
 
-	projectRouter.PUT("/policies/:policyId/", policyController.EnablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
-	projectRouter.DELETE("/policies/:policyId/", policyController.DisablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
+	projectRouter.PUT("/policies/:policyId/", policyController.EnablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectRouter.DELETE("/policies/:policyId/", policyController.DisablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionDelete))
 
 	//TODO: change it
 	//projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
 	projectRouter.GET("/dependency-vulns/", dependencyVulnController.ListByProjectPaged)
 
-	projectRouter.PATCH("/", projectController.Update, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
-	projectRouter.DELETE("/", projectController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
+	projectRouter.PATCH("/", projectController.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectRouter.DELETE("/", projectController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionDelete))
 
-	projectRouter.POST("/assets/", assetController.Create, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionCreate))
+	projectRouter.POST("/assets/", assetController.Create, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionCreate))
 
 	projectRouter.GET("/assets/", assetController.List)
 
@@ -559,19 +570,19 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime)
 
 	projectRouter.GET("/members/", projectController.Members)
-	projectRouter.POST("/members/", projectController.InviteMembers, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
-	projectRouter.DELETE("/members/:userId/", projectController.RemoveMember, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionDelete))
+	projectRouter.POST("/members/", projectController.InviteMembers, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectRouter.DELETE("/members/:userId/", projectController.RemoveMember, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionDelete))
 
 	projectRouter.GET("/config-files/:config-file/", projectController.GetConfigFile)
 
-	projectRouter.PUT("/members/:userId/", projectController.ChangeRole, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectProject, accesscontrol.ActionUpdate))
+	projectRouter.PUT("/members/:userId/", projectController.ChangeRole, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 
 	//Api functions for interacting with an asset inside a project  ->  .../projects/<project-name>/assets/<asset-name>/...
-	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionRead), assetMiddleware(assetRepository))
+	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC(core.ObjectAsset, core.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
-	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionDelete))
+	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionDelete))
 
-	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	assetRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetRouter.GET("/compliance/:policy/", complianceController.Details)
 	assetRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
@@ -619,17 +630,17 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
 	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetVersionFixingTime)
 
-	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
-	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	assetVersionRouter.GET("/attestations/", attestationController.List)
 
-	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
-	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
-	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, neededScope([]string{"scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	assetRouter.PATCH("/", assetController.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	assetRouter.POST("/signing-key/", assetController.AttachSigningKey, neededScope([]string{"scan"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
-	assetRouter.POST("/in-toto/", intotoController.Create, neededScope([]string{"scan"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	assetRouter.POST("/in-toto/", intotoController.Create, neededScope([]string{"scan"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	assetRouter.GET("/in-toto/root.layout.json/", intotoController.RootLayout)
 
@@ -646,16 +657,16 @@ func BuildRouter(db core.DB) *echo.Echo {
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnId/", dependencyVulnController.Read)
 
-	dependencyVulnRouter.POST("/:dependencyVulnId/", dependencyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
-	dependencyVulnRouter.POST("/:dependencyVulnId/mitigate/", dependencyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	dependencyVulnRouter.POST("/:dependencyVulnId/", dependencyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	dependencyVulnRouter.POST("/:dependencyVulnId/mitigate/", dependencyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	dependencyVulnRouter.GET("/:dependencyVulnId/events/", vulnEventController.ReadAssetEventsByVulnID)
 
 	firstPartyVulnRouter := assetVersionRouter.Group("/first-party-vulns")
 	firstPartyVulnRouter.GET("/", firstPartyVulnController.ListPaged)
 	firstPartyVulnRouter.GET("/:firstPartyVulnId/", firstPartyVulnController.Read)
-	firstPartyVulnRouter.POST("/:firstPartyVulnId/", firstPartyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
-	firstPartyVulnRouter.POST("/:firstPartyVulnId/mitigate/", firstPartyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(accesscontrol.ObjectAsset, accesscontrol.ActionUpdate))
+	firstPartyVulnRouter.POST("/:firstPartyVulnId/", firstPartyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	firstPartyVulnRouter.POST("/:firstPartyVulnId/mitigate/", firstPartyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	firstPartyVulnRouter.GET("/:firstPartyVulnId/events/", vulnEventController.ReadAssetEventsByVulnID)
 
 	routes := server.Routes()
