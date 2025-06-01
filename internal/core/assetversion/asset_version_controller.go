@@ -312,9 +312,9 @@ func (a *assetVersionController) Metrics(ctx core.Context) error {
 		return err
 	}
 
-	var enabledSca bool = false
-	var enabledContainerScanning bool = false
-	var enabledImageSigning bool = assetVersion.SigningPubKey != nil
+	var enabledSca = false
+	var enabledContainerScanning = false
+	var enabledImageSigning = assetVersion.SigningPubKey != nil
 
 	for _, scannerId := range scannerIds {
 		if scannerId == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca" {

@@ -97,7 +97,7 @@ func (c *casbinRBAC) GetAllProjectsForUser(user string) (any, error) {
 	roles, _ := c.enforcer.GetImplicitRolesForUser("user::"+user, "domain::"+c.domain)
 
 	for _, role := range roles {
-		if !(strings.HasPrefix(role, "project::") && strings.Contains(role, "role::")) {
+		if !strings.HasPrefix(role, "project::") || !strings.Contains(role, "role::") {
 			continue // not a project role
 		}
 		// extract everything between the prefix and a "|"

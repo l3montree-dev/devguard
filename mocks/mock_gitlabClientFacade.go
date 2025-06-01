@@ -905,6 +905,63 @@ func (_c *GitlabClientFacade_GetProviderID_Call) RunAndReturn(run func() *string
 	return _c
 }
 
+// IsProjectMember provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) IsProjectMember(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions) (bool, error) {
+	ret := _mock.Called(ctx, projectId, userId, options)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsProjectMember")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, *gitlab.ListProjectMembersOptions) (bool, error)); ok {
+		return returnFunc(ctx, projectId, userId, options)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int, *gitlab.ListProjectMembersOptions) bool); ok {
+		r0 = returnFunc(ctx, projectId, userId, options)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int, *gitlab.ListProjectMembersOptions) error); ok {
+		r1 = returnFunc(ctx, projectId, userId, options)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// GitlabClientFacade_IsProjectMember_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsProjectMember'
+type GitlabClientFacade_IsProjectMember_Call struct {
+	*mock.Call
+}
+
+// IsProjectMember is a helper method to define mock.On call
+//   - ctx
+//   - projectId
+//   - userId
+//   - options
+func (_e *GitlabClientFacade_Expecter) IsProjectMember(ctx interface{}, projectId interface{}, userId interface{}, options interface{}) *GitlabClientFacade_IsProjectMember_Call {
+	return &GitlabClientFacade_IsProjectMember_Call{Call: _e.mock.On("IsProjectMember", ctx, projectId, userId, options)}
+}
+
+func (_c *GitlabClientFacade_IsProjectMember_Call) Run(run func(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions)) *GitlabClientFacade_IsProjectMember_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(*gitlab.ListProjectMembersOptions))
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_IsProjectMember_Call) Return(b bool, err error) *GitlabClientFacade_IsProjectMember_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_IsProjectMember_Call) RunAndReturn(run func(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions) (bool, error)) *GitlabClientFacade_IsProjectMember_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListGroups provides a mock function for the type GitlabClientFacade
 func (_mock *GitlabClientFacade) ListGroups(ctx context.Context, opt *gitlab.ListGroupsOptions) ([]*gitlab.Group, *gitlab.Response, error) {
 	ret := _mock.Called(ctx, opt)

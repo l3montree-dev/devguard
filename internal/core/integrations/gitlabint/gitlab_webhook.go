@@ -31,6 +31,7 @@ func (g *GitlabIntegration) checkWebhookSecretToken(gitlabSecretToken string, as
 }
 
 func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
+
 	event, err := parseWebhook(ctx.Request())
 	if err != nil {
 		slog.Error("could not parse gitlab webhook", "err", err)
@@ -41,6 +42,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 	switch event := event.(type) {
 	case *gitlab.IssueEvent:
+
 		issueId := event.ObjectAttributes.IID
 
 		// look for a dependencyVuln with such a github ticket id
@@ -85,6 +87,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 		switch action {
 		case "close":
+
 			if vuln.GetState() == models.VulnStateAccepted || vuln.GetState() == models.VulnStateFalsePositive {
 				return nil
 			}
@@ -92,11 +95,12 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
 			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the github ticket.", event.User.Name))
 
-			err := g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
+			err = g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
 		case "reopen":
+
 			if vuln.GetState() == models.VulnStateOpen {
 				return nil
 			}
@@ -148,6 +152,30 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
+		// get the integration id based on the asset
+		integrationId, err := extractIntegrationIdFromRepoId(utils.SafeDereference(asset.RepositoryID))
+		if err != nil {
+			slog.Error("could not extract integration id from repo id", "err", err)
+			return err
+		}
+
+		// make sure to update the github issue accordingly
+		client, err := g.gitlabClientFactory(integrationId)
+		if err != nil {
+			slog.Error("could not create github client", "err", err)
+			return err
+		}
+
+		isAuthorized, err := isGitlabUserAuthorized(event, client)
+		if err != nil {
+			return err
+		}
+		//if the user is not authorized we are done here
+		if !isAuthorized {
+			slog.Info("user not authorized for commands")
+			return ctx.JSON(200, "ok")
+		}
+
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
 		go func() {
@@ -192,55 +220,26 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 		})
 		if err != nil {
 			slog.Error("could not save dependencyVuln and event", "err", err)
-			return err
+
 		}
 
-		// get the integration id based on the asset
-		integrationId, err := extractIntegrationIdFromRepoId(utils.SafeDereference(asset.RepositoryID))
-		if err != nil {
-			slog.Error("could not extract integration id from repo id", "err", err)
-			return err
-		}
-
-		// get the project id based on the asset
-		projectId, err := extractProjectIdFromRepoId(utils.SafeDereference(asset.RepositoryID))
-		if err != nil {
-			slog.Error("could not extract project id from repo id", "err", err)
-			return err
-		}
-
-		// make sure to update the github issue accordingly
-		client, err := g.gitlabClientFactory(integrationId)
-		if err != nil {
-			slog.Error("could not create github client", "err", err)
-			return err
-		}
-
+		gitlabProjectID := event.ProjectID
 		switch vulnEvent.Type {
-		case models.EventTypeAccepted:
+		case models.EventTypeAccepted, models.EventTypeFalsePositive:
 			labels := commonint.GetLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
-				StateEvent: gitlab.Ptr("close"),
-				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
-			})
-			return err
-		case models.EventTypeFalsePositive:
-			labels := commonint.GetLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("close"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 		case models.EventTypeReopened:
 			labels := commonint.GetLabels(vuln)
-
-			_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
+			_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
 				StateEvent: gitlab.Ptr("reopen"),
 				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 			})
 			return err
 		}
 	}
-
 	return ctx.JSON(200, "ok")
 }

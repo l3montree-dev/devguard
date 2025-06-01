@@ -23,13 +23,14 @@ func CreateNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, u
 
 	event, mechanicalJustification, justification := commentTrimmedFalsePositivePrefix(comment)
 
-	if event == models.EventTypeAccepted {
+	switch event {
+	case models.EventTypeAccepted:
 		return models.NewAcceptedEvent(vulnId, vulnType, userId, justification)
-	} else if event == models.EventTypeFalsePositive {
+	case models.EventTypeFalsePositive:
 		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, justification, mechanicalJustification, scannerIds)
-	} else if event == models.EventTypeReopened {
+	case models.EventTypeReopened:
 		return models.NewReopenedEvent(vulnId, vulnType, userId, justification)
-	} else if event == models.EventTypeComment {
+	case models.EventTypeComment:
 		return models.NewCommentEvent(vulnId, vulnType, userId, comment)
 	}
 

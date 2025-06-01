@@ -41,7 +41,7 @@ type githubBatchClient struct {
 func newGithubBatchClient(appInstallations []models.GithubAppInstallation) (*githubBatchClient, error) {
 	if len(appInstallations) == 0 {
 		slog.Error("no github app installations found")
-		return nil, NoGithubAppInstallationError
+		return nil, ErrNoGithubAppInstallation
 	}
 
 	clients := make([]githubClient, 0)
@@ -163,4 +163,21 @@ func NewGithubClient(installationID int) (githubClient, error) {
 		Client:                  client,
 		githubAppInstallationID: installationID,
 	}, nil
+}
+
+func (client githubClient) GetRepositoryCollaborators(ctx context.Context, owner string, repoId string, opts *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error) {
+	return client.Repositories.ListCollaborators(ctx, owner, repoId, opts)
+}
+
+func (client githubClient) IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userId int64, opts *github.ListCollaboratorsOptions) (bool, error) {
+	collaborators, _, err := client.GetRepositoryCollaborators(ctx, owner, repoId, opts)
+	if err != nil {
+		return false, err
+	}
+	for _, user := range collaborators {
+		if userId == *user.ID {
+			return true, nil
+		}
+	}
+	return false, nil
 }

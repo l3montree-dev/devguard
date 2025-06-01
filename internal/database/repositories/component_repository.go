@@ -115,7 +115,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
     component_purl IS NULL AND
     asset_id = @assetID AND
     asset_version_name = @assetVersionName AND
-    scanner_ids = ANY(string_to_array(@scannerID, ' '))
+    @scannerID = ANY(string_to_array(scanner_ids, ' '))
 
   UNION ALL
 
@@ -132,7 +132,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
   WHERE
     co.asset_id = @assetID AND
     co.asset_version_name = @assetVersionName AND
-    co.scanner_ids = ANY(string_to_array(@scannerID, ' ')) AND
+    @scannerID = ANY(string_to_array(co.scanner_ids, ' ')) AND
     NOT co.dependency_purl = ANY(cte.path)
 ),
 target_path AS (

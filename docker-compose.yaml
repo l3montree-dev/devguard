@@ -14,6 +14,8 @@ services:
     volumes:
     - postgres:/var/lib/postgresql/data
     - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
+    # command: ["postgres", "-c", "log_statement=all"] # enable to log all queries into the log
+
 
   kratos-migrate:
     image: oryd/kratos:v1.3.1

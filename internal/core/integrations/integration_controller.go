@@ -31,6 +31,7 @@ func NewIntegrationController(gitlabOauth2Integration map[string]*gitlabint.Gitl
 	return &integrationController{
 		gitlabOauth2Integration: gitlabOauth2Integration,
 	}
+
 }
 
 func (c *integrationController) AutoSetup(ctx core.Context) error {

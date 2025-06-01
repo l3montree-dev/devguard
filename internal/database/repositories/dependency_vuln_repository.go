@@ -59,13 +59,13 @@ func (r *dependencyVulnRepository) applyAndSave(tx core.DB, dependencyVuln *mode
 
 func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
 
-	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
+	var dependencyVulns = []models.DependencyVuln{}
 
-	q := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+	q := r.Repository.GetDB(tx).Preload("Events").Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces
-		q = q.Where("scanner_ids = ANY(string_to_array(?, ' '))", scannerID)
+		q = q.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
 	}
 
 	if err := q.Find(&dependencyVulns).Error; err != nil {
@@ -77,12 +77,12 @@ func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB,
 func (r *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx core.DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
 	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", assetID, true)
 
-	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
+	var dependencyVulns = []models.DependencyVuln{}
 	q := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name IN (?) AND asset_id = ?", subQuery, assetID)
 
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces
-		q = q.Where("scanner_ids = ANY(string_to_array(?, ' '))", scannerID)
+		q = q.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
 	}
 	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err
@@ -92,8 +92,23 @@ func (r *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx co
 }
 
 func (r *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
-	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
+	var dependencyVulns = []models.DependencyVuln{}
 	if err := r.Repository.GetDB(r.db).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
+		return nil, err
+	}
+	return dependencyVulns, nil
+}
+
+func (r *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
+	var dependencyVulns = []models.DependencyVuln{}
+	q := r.Repository.GetDB(r.db).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ? AND state != 'fixed'", assetVersionName, assetID)
+
+	if scannerID != "" {
+		// scanner ids is a string array separated by whitespaces
+		q = q.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
+	}
+
+	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil
@@ -110,7 +125,7 @@ type riskStats struct {
 
 func (r *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], map[string]int, error) {
 	var count int64
-	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
+	var dependencyVulns = []models.DependencyVuln{}
 
 	q := r.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Joins("CVE").Where("dependency_vulns.asset_version_name = ?", assetVersionName).Where("dependency_vulns.asset_id = ?", assetID)
 
@@ -182,7 +197,7 @@ func (g dependencyVulnRepository) Read(id string) (models.DependencyVuln, error)
 
 func (r *dependencyVulnRepository) GetDependencyVulnsByPurl(tx core.DB, purl []string) ([]models.DependencyVuln, error) {
 
-	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
+	var dependencyVulns = []models.DependencyVuln{}
 	if len(purl) == 0 {
 		return dependencyVulns, nil
 	}
@@ -195,7 +210,7 @@ func (r *dependencyVulnRepository) GetDependencyVulnsByPurl(tx core.DB, purl []s
 }
 
 func (r *dependencyVulnRepository) GetDependencyVulnsPaged(tx core.DB, assetVersionNamesSubquery any, assetVersionAssetIdSubquery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.DependencyVuln], error) {
-	var dependencyVulns []models.DependencyVuln = []models.DependencyVuln{}
+	var dependencyVulns = []models.DependencyVuln{}
 
 	q := r.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Preload("Events").Joins("CVE").Where("dependency_vulns.asset_version_name IN (?) AND dependency_vulns.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIdSubquery)
 

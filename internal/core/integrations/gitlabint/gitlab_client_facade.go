@@ -33,4 +33,6 @@ type gitlabClientFacade interface {
 
 	CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error)
 	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
+
+	IsProjectMember(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions) (bool, error)
 }

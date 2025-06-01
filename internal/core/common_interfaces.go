@@ -29,6 +29,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+type SBOMScanner interface {
+	Scan(bom normalize.SBOM) ([]models.VulnInPackage, error)
+}
 type ProjectRepository interface {
 	Read(projectID uuid.UUID) (models.Project, error)
 	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
@@ -134,6 +137,7 @@ type DependencyVulnRepository interface {
 	GetDependencyVulnsByPurl(tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
+	ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -228,6 +232,12 @@ type DependencyVulnService interface {
 	ShouldCreateIssues(assetVersion models.AssetVersion) bool
 }
 
+// useful for integration testing - use in production to just fire and forget a function "go func()"
+// during testing, this can be used to synchronize the execution of multiple goroutines - and wait for them to finish
+type FireAndForgetSynchronizer interface {
+	FireAndForget(fn func())
+}
+
 type AssetVersionService interface {
 	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) *cdx.BOM
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, orgName string, dependencyVulns []models.DependencyVuln) *cdx.BOM
@@ -247,7 +257,7 @@ type AssetVersionRepository interface {
 	GetAllAssetsVersionFromDBByAssetID(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
-	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error)
+	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error)
 	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
 	GetDefaultAssetVersion(assetID uuid.UUID) (models.AssetVersion, error)
 }

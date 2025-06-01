@@ -63,7 +63,7 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 		riskAggregationOpen := risks["open"]
 		riskAggregationFixed := risks["fixed"]
 
-		var projectRiskHistory models.ProjectRiskHistory = models.ProjectRiskHistory{}
+		var projectRiskHistory = models.ProjectRiskHistory{}
 
 		openDependencyVulns, fixedDependencyVulns := 0, 0
 
@@ -315,16 +315,17 @@ func (s *service) GetDependencyCountPerscanner(assetVersionName string, assetID 
 
 func (s *service) GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
 	var riskIntervalStart, riskIntervalEnd float64
-	if severity == "critical" {
+	switch severity {
+	case "critical":
 		riskIntervalStart = 9
 		riskIntervalEnd = 10
-	} else if severity == "high" {
+	case "high":
 		riskIntervalStart = 7
 		riskIntervalEnd = 9
-	} else if severity == "medium" {
+	case "medium":
 		riskIntervalStart = 4
 		riskIntervalEnd = 7
-	} else if severity == "low" {
+	case "low":
 		riskIntervalStart = 0
 		riskIntervalEnd = 4
 	}
@@ -335,7 +336,7 @@ func (s *service) GetAverageFixingTime(assetVersionName string, assetID uuid.UUI
 func (s *service) GetDependencyVulnAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (DependencyVulnAggregationStateAndChange, error) {
 	// check if calculateChangeTo is in the future
 	if calculateChangeTo.After(time.Now()) {
-		return DependencyVulnAggregationStateAndChange{}, fmt.Errorf("Cannot calculate change to the future")
+		return DependencyVulnAggregationStateAndChange{}, fmt.Errorf("cannot calculate change to the future")
 	}
 
 	results := utils.Concurrently(

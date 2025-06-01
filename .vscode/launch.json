@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run Program",
+            "name": "Launch Server",
             "type": "go",
             "request": "launch",
             "cwd": "${workspaceRoot}",
@@ -13,5 +13,20 @@
             "program": "${workspaceRoot}/cmd/devguard/main.go",
             "args": [],
         },
+        {
+            "name": "Launch Scanner",
+            "type": "go",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "mode": "auto",
+            "program": "${workspaceRoot}/cmd/devguard-scanner/main.go",
+            "args": [
+                "sca",
+                "--path=../devguard-test",
+                "--assetName=l3montree/projects/devguard/assets/devguard-api",
+                "--apiUrl=http://localhost:8080",
+                "--token=5ea4f27ae4385fdcc67628a5d2360880de1b70c768bd6715568edf63c5692981"
+            ],
+        }
     ]
 }

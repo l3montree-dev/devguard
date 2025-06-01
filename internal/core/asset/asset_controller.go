@@ -128,10 +128,10 @@ func (a *httpController) Update(ctx core.Context) error {
 
 	err := json.NewDecoder(req).Decode(&patchRequest)
 	if err != nil {
-		return fmt.Errorf("Error decoding request: %v", err)
+		return fmt.Errorf("error decoding request: %v", err)
 	}
 
-	var justification string = ""
+	var justification = ""
 	if patchRequest.ConfidentialityRequirement != nil && *patchRequest.ConfidentialityRequirement != asset.ConfidentialityRequirement {
 		justification += "Confidentiality Requirement updated: " + string(asset.ConfidentialityRequirement) + " -> " + string(*patchRequest.ConfidentialityRequirement)
 		asset.ConfidentialityRequirement = *patchRequest.ConfidentialityRequirement
@@ -156,7 +156,7 @@ func (a *httpController) Update(ctx core.Context) error {
 	if justification != "" {
 		err = a.assetService.UpdateAssetRequirements(asset, core.GetSession(ctx).GetUserID(), justification)
 		if err != nil {
-			return fmt.Errorf("Error updating requirements: %v", err)
+			return fmt.Errorf("error updating requirements: %v", err)
 		}
 	}
 

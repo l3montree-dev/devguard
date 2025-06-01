@@ -39,7 +39,7 @@ type gitlabBatchClient struct {
 	clients []gitlabClientFacade
 }
 
-var NoGitlabIntegrationError = fmt.Errorf("no gitlab app installations found")
+var ErrNoGitlabIntegration = fmt.Errorf("no gitlab app installations found")
 
 // groups multiple gitlab clients - since an org can have multiple installations
 func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration, oauth2Config map[string]*GitlabOauth2Config, oauth2Tokens []models.GitLabOauth2Token) (*gitlabBatchClient, error) {
@@ -172,6 +172,24 @@ func (client gitlabClient) GetClientID() string {
 
 func (client gitlabClient) ListProjects(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error) {
 	return client.Projects.ListProjects(opt, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) ListProjectMembers(ctx context.Context, projectId int, memberOptions *gitlab.ListProjectMembersOptions, requestOptions ...gitlab.RequestOptionFunc) ([]*gitlab.ProjectMember, *gitlab.Response, error) {
+	return client.ProjectMembers.ListAllProjectMembers(projectId, memberOptions, requestOptions...)
+}
+
+func (client gitlabClient) IsProjectMember(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions) (bool, error) {
+	members, _, err := client.ListProjectMembers(ctx, projectId, options, nil)
+	if err != nil {
+		return false, err
+	}
+	for _, member := range members {
+		if member.ID == userId {
+			return true, nil
+		}
+	}
+	return false, nil
+
 }
 
 func (client gitlabClient) ListProjectHooks(ctx context.Context, projectId int, opt *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error) {

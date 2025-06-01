@@ -528,6 +528,15 @@ func (g *GitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 	}), nil
 }
 
+// Check if the user who comments on a ticket is authorized to use commands like /accept, more checks can be added later
+func isGitlabUserAuthorized(event *gitlab.IssueCommentEvent, client gitlabClientFacade) (bool, error) {
+	if event == nil || event.User == nil {
+		slog.Error("missing event data, could not resolve if user is authorized")
+		return false, fmt.Errorf("missing event data, could not resolve if user is authorized")
+	}
+	return client.IsProjectMember(context.TODO(), event.ProjectID, event.User.ID, nil)
+}
+
 func extractIntegrationIdFromRepoId(repoId string) (uuid.UUID, error) {
 	// the repo id is formatted like this:
 	// gitlab:<integration id>:<project id>
@@ -1090,7 +1099,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1191,7 +1200,7 @@ func (g *GitlabIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 
 	exp := risk.Explain(*vuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1303,7 +1312,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}

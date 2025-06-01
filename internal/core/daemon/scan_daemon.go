@@ -53,7 +53,7 @@ func ScanAssetVersions(db core.DB) error {
 	depsDevService := vulndb.NewDepsDevService()
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository)
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, &componentService)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, vulnEventRepository, &componentService)
 
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, projectRiskHistoryRepository)
 
@@ -87,7 +87,7 @@ func ScanAssetVersions(db core.DB) error {
 			if len(components) <= 0 {
 				continue
 			} else {
-				_, err = scan.ScanNormalizedSBOM(s, assetVersions[i].Asset, assetVersions[i], normalizedBOM, scannerID, "system")
+				_, err = s.ScanNormalizedSBOM(assetVersions[i].Asset, assetVersions[i], normalizedBOM, scannerID, "system")
 			}
 
 			if err != nil {

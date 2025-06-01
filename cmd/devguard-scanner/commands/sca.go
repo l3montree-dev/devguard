@@ -114,11 +114,11 @@ func generateSBOM(path string) (*os.File, error) {
 }
 
 // Function to dynamically change the format of the table row depending on the input parameters
-func dependencyVulnToTableRow(pURL packageurl.PackageURL, v vuln.DependencyVulnDTO, clickableLink string) table.Row {
+func dependencyVulnToTableRow(pURL packageurl.PackageURL, v vuln.DependencyVulnDTO) table.Row {
 	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
-		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, clickableLink}
+		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
 	} else {
-		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State, clickableLink}
+		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
 	}
 }
 
@@ -179,12 +179,11 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	}
 
 	tw := table.NewWriter()
-	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status", "URL"})
+	//tw.SetAllowedRowLength(155)
+	tw.AppendHeader(table.Row{"Library", "Vulnerability", "Risk", "Installed", "Fixed", "Status"})
 	tw.AppendRows(utils.Map(
 		scanResponse.DependencyVulns,
 		func(v vuln.DependencyVulnDTO) table.Row {
-			clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/%s", webUI, assetName, v.AssetVersionName, v.ID)
-
 			// extract package name and version from purl
 			// purl format: pkg:package-type/namespace/name@version?qualifiers#subpath
 			pURL, err := packageurl.FromString(*v.ComponentPurl)
@@ -192,30 +191,34 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 				slog.Error("could not parse purl", "err", err)
 			}
 
-			return dependencyVulnToTableRow(pURL, v, clickableLink)
+			return dependencyVulnToTableRow(pURL, v)
 		},
 	))
 
 	fmt.Println(tw.Render())
+	if len(scanResponse.DependencyVulns) > 0 {
+		clickableLink := fmt.Sprintf("%s/%s/refs/%s/dependency-risks/", webUI, assetName, scanResponse.DependencyVulns[0].AssetVersionName)
+		fmt.Printf("See all dependency risks at:\n%s\n", clickableLink)
+	}
 
 	switch failOnRisk {
 	case "low":
 		if maxRisk > 0.1 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 	case "medium":
 		if maxRisk >= 4 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 
 	case "high":
 		if maxRisk >= 7 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 
 	case "critical":
 		if maxRisk >= 9 {
-			return fmt.Errorf("Max Risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
 		}
 	}
 
@@ -229,8 +232,9 @@ func addDefaultFlags(cmd *cobra.Command) {
 }
 
 func addAssetRefFlags(cmd *cobra.Command) {
-	cmd.Flags().String("ref", "main", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, main will be used")
-	cmd.Flags().String("defaultRef", "main", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, --ref will be used.")
+	cmd.Flags().String("ref", "", "The git reference to use. This can be a branch, tag, or commit hash. If not specified, it will first check for a git repository in the current directory. If not found, it will just use main.")
+	cmd.Flags().String("defaultRef", "", "The default git reference to use. This can be a branch, tag, or commit hash. If not specified, it will check, if the current directory is a git repo. If it isn't, --ref will be used.")
+	cmd.Flags().Bool("isTag", false, "If the current git reference is a tag. If not specified, it will check if the current directory is a git repo. If it isn't, it will be set to false.")
 }
 
 func addScanFlags(cmd *cobra.Command) {
@@ -250,7 +254,7 @@ func addScanFlags(cmd *cobra.Command) {
 
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
-	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.dev'.")
+	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://main.devguard.org'.")
 
 }
 
@@ -268,67 +272,58 @@ func getDirFromPath(path string) string {
 	return path
 }
 
-func scaCommandFactory(scannerID string) func(cmd *cobra.Command, args []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		// read the sbom file and post it to the scan endpoint
-		// get the dependencyVulns and print them to the console
-		file, err := generateSBOM(config.RuntimeBaseConfig.Path)
-		if err != nil {
-			return errors.Wrap(err, "could not open file")
-		}
-		defer os.Remove(file.Name())
-
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-
-		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.ApiUrl), file)
-		if err != nil {
-			return errors.Wrap(err, "could not create request")
-		}
-
-		err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
-		if err != nil {
-			return errors.Wrap(err, "could not sign request")
-		}
-
-		err = utils.SetGitVersionHeader(config.RuntimeBaseConfig.Path, req)
-
-		if err != nil {
-			printGitHelp(err)
-			return errors.Wrap(err, "could not get version info")
-		}
-
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
-		req.Header.Set("X-Scanner", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"+scannerID)
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return errors.Wrap(err, "could not send request")
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			// read the body
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return errors.Wrap(err, "could not scan file")
-			}
-
-			return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
-		}
-
-		// read and parse the body - it should be an array of dependencyVulns
-		// print the dependencyVulns to the console
-		var scanResponse scan.ScanResponse
-
-		err = json.NewDecoder(resp.Body).Decode(&scanResponse)
-		if err != nil {
-			return errors.Wrap(err, "could not parse response")
-		}
-
-		return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+func scaCommand(cmd *cobra.Command, args []string) error {
+	// read the sbom file and post it to the scan endpoint
+	// get the dependencyVulns and print them to the console
+	file, err := generateSBOM(config.RuntimeBaseConfig.Path)
+	if err != nil {
+		return errors.Wrap(err, "could not open file")
 	}
+	defer os.Remove(file.Name())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.ApiUrl), file)
+	if err != nil {
+		return errors.Wrap(err, "could not create request")
+	}
+
+	err = pat.SignRequest(config.RuntimeBaseConfig.Token, req)
+	if err != nil {
+		return errors.Wrap(err, "could not sign request")
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
+	config.SetXAssetHeaders(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "could not send request")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// read the body
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return errors.Wrap(err, "could not scan file")
+		}
+
+		return fmt.Errorf("could not scan file: %s %s", resp.Status, string(body))
+	}
+
+	// read and parse the body - it should be an array of dependencyVulns
+	// print the dependencyVulns to the console
+	var scanResponse scan.ScanResponse
+
+	err = json.NewDecoder(resp.Body).Decode(&scanResponse)
+	if err != nil {
+		return errors.Wrap(err, "could not parse response")
+	}
+
+	return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
 }
 
 func NewSCACommand() *cobra.Command {
@@ -337,9 +332,10 @@ func NewSCACommand() *cobra.Command {
 		Short: "Start a Software composition analysis",
 		Long:  `Scan an application for vulnerabilities. This command will generate a sbom, upload it to devguard and scan it for vulnerabilities.`,
 		// Args:  cobra.ExactArgs(0),
-		RunE: scaCommandFactory("sca"),
+		RunE: scaCommand,
 	}
 
 	addScanFlags(scaCommand)
+	scaCommand.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca", "The ID of the scanner. This is used to identify the scanner in the scan results. Defaults to 'devguard-scanner'.")
 	return scaCommand
 }

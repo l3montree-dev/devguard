@@ -68,7 +68,7 @@ type GithubIntegration struct {
 
 var _ core.ThirdPartyIntegration = &GithubIntegration{}
 
-var NoGithubAppInstallationError = fmt.Errorf("no github app installations found")
+var ErrNoGithubAppInstallation = fmt.Errorf("no github app installations found")
 
 func NewGithubIntegration(db core.DB) *GithubIntegration {
 	githubAppInstallationRepository := repositories.NewGithubAppInstallationRepository(db)
@@ -279,6 +279,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 			}
 		}
 	case *github.IssueCommentEvent:
+
 		// check if the issue is a devguard issues
 		issueNumber := event.Issue.GetNumber()
 		issueID := event.Issue.GetID()
@@ -306,9 +307,20 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
-		// the issue is a devguard issue.
-		// lets check what the comment is about
-		comment := event.Comment.GetBody()
+		client, err := githubIntegration.githubClientFactory(utils.SafeDereference(asset.RepositoryID))
+		if err != nil {
+			slog.Error("could not create github client", "err", err)
+			return err
+		}
+
+		isAuthorized, err := isGithubUserAuthorized(event, client)
+		if err != nil {
+			return err
+		}
+		if !isAuthorized {
+			slog.Info("user not authorized for commands")
+			return ctx.JSON(200, "ok")
+		}
 
 		// make sure to save the user - it might be a new user or it might have new values defined.
 		// we do not care about any error - and we want speed, thus do it on a goroutine
@@ -336,6 +348,10 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 			}
 		}()
 
+		// the issue is a devguard issue.
+		// lets check what the comment is about
+		comment := event.Comment.GetBody()
+
 		// create a new event based on the comment
 		vulnEvent := commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("github:%d", event.Comment.User.GetID()), comment, vuln.GetScannerIDs())
 
@@ -357,37 +373,20 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 			return err
 		}
 
-		// make sure to update the github issue accordingly
-		client, err := githubIntegration.githubClientFactory(utils.SafeDereference(asset.RepositoryID))
-		if err != nil {
-			slog.Error("could not create github client", "err", err)
-			return err
-		}
-
-		owner, repo, err := ownerAndRepoFromRepositoryID(utils.SafeDereference(asset.RepositoryID))
-		if err != nil {
-			slog.Error("could not get owner and repo from repository id", "err", err)
-			return err
-		}
+		ownerName := *event.Repo.Owner.Login
+		repoName := *event.Repo.Name
 
 		switch vulnEvent.Type {
-		case models.EventTypeAccepted:
+		case models.EventTypeAccepted, models.EventTypeFalsePositive:
 			labels := commonint.GetLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
-				State:  github.String("closed"),
-				Labels: &labels,
-			})
-			return err
-		case models.EventTypeFalsePositive:
-			labels := commonint.GetLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
+			_, _, err = client.EditIssue(ctx.Request().Context(), ownerName, repoName, issueNumber, &github.IssueRequest{
 				State:  github.String("closed"),
 				Labels: &labels,
 			})
 			return err
 		case models.EventTypeReopened:
 			labels := commonint.GetLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), owner, repo, issueNumber, &github.IssueRequest{
+			_, _, err = client.EditIssue(ctx.Request().Context(), ownerName, repoName, issueNumber, &github.IssueRequest{
 				State:  github.String("open"),
 				Labels: &labels,
 			})
@@ -427,6 +426,15 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 	}
 
 	return ctx.JSON(200, "ok")
+}
+
+// function to check if a user is allowed to use commands like /accept, more checks can be added later
+func isGithubUserAuthorized(event *github.IssueCommentEvent, client githubClientFacade) (bool, error) {
+	if event == nil || event.Sender == nil || event.Repo == nil || event.Repo.Owner == nil {
+		slog.Error("missing event data, could not resolve if user is authorized")
+		return false, fmt.Errorf("missing event data, could not resolve if user is authorized")
+	}
+	return client.IsCollaboratorInRepository(context.TODO(), *event.Repo.Owner.Login, *event.Repo.Name, *event.Sender.ID, nil)
 }
 
 func (githubIntegration *GithubIntegration) WantsToFinishInstallation(ctx core.Context) bool {
@@ -732,7 +740,7 @@ func (g *GithubIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 
 	exp := risk.Explain(*vuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -870,7 +878,7 @@ func (g *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, depe
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -992,7 +1000,7 @@ func (g *GithubIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.AffectedComponentName)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
