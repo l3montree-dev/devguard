@@ -13,6 +13,7 @@ require (
 	github.com/google/go-github/v62 v62.0.0
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.15.0
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/in-toto/go-witness v0.8.6
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/jackc/pgx/v5 v5.7.5

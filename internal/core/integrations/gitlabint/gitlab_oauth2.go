@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -50,8 +51,11 @@ type gitlabOauth2Client struct {
 	gitlabClient
 }
 
+var httpClientCache = common.NewCacheTransport(1000, 1*time.Hour)
+
 func buildOauth2GitlabClient(token models.GitLabOauth2Token, integration *GitlabOauth2Config) (gitlabClientFacade, error) {
 	oauth2Client := integration.client(token)
+	common.WrapHTTPClient(oauth2Client, httpClientCache.Handler())
 
 	client, err := gitlab.NewClient(token.AccessToken, gitlab.WithHTTPClient(oauth2Client), gitlab.WithBaseURL(integration.GitlabBaseURL))
 	if err != nil {
