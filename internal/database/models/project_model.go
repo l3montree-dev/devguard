@@ -38,7 +38,7 @@ type Project struct {
 	EnabledPolicies []Policy `json:"enabledPolicies" gorm:"many2many:project_enabled_policies;"`
 
 	ExternalEntityID         *string `json:"externalEntityId" gorm:"uniqueIndex:unique_external_entity;"`
-	ExternalEntityProviderID *string `json:"externalEntityProvider" gorm:"uniqueIndex:unique_external_entity;"`
+	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"uniqueIndex:unique_external_entity;"`
 }
 
 func (m Project) TableName() string {

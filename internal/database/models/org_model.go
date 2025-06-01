@@ -27,7 +27,7 @@ type Org struct {
 
 	Language string `json:"language" gorm:"type:text;size:2"`
 
-	ExternalEntityProviderID *string `json:"externalEntityProvider" gorm:"unique;type:text"`
+	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"unique;type:text"`
 }
 
 func (m Org) TableName() string {

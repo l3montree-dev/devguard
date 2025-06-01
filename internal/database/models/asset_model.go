@@ -65,7 +65,7 @@ type Asset struct {
 	WebhookSecret *uuid.UUID `json:"webhookSecret" gorm:"type:uuid;"`
 
 	ExternalEntityID         *string `json:"externalEntityId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
-	ExternalEntityProviderID *string `json:"externalEntityProvider" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
+	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
 }
 
 func (m Asset) TableName() string {
