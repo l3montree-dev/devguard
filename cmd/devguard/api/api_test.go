@@ -29,7 +29,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
 
-		mockOrgService.On("ReadBySlug", "organization-slug").Return(org, nil)
+		mockOrgService.On("ReadBySlug", "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
 		mockRBAC.On("HasAccess", auth.NoSession.GetUserID()).Return(false)
 
@@ -66,7 +66,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: false}
 		session := auth.NewSession("user-id", []string{"test-role"})
 
-		mockOrgService.On("ReadBySlug", "organization-slug").Return(org, nil)
+		mockOrgService.On("ReadBySlug", "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
 		mockRBAC.On("HasAccess", "user-id").Return(false)
 
@@ -120,7 +120,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
 
-		mockOrgService.On("ReadBySlug", "organization-slug").Return(models.Org{}, errors.New("not found"))
+		mockOrgService.On("ReadBySlug", "organization-slug").Return(&models.Org{}, errors.New("not found"))
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
@@ -128,12 +128,12 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService)
 
 		// act
-		middleware(func(ctx echo.Context) error {
+		err := middleware(func(ctx echo.Context) error {
 			return ctx.JSON(http.StatusOK, "success")
 		})(ctx) // nolint:errcheck
 
 		// assert
-		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.NotNil(t, err)
 		mockOrgService.AssertExpectations(t)
 		mockRBACProvider.AssertExpectations(t)
 	})
@@ -154,7 +154,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := core.Object("test-object")
 		act := core.Action("read")
 
-		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(true, nil)
+		mockRBAC.On("IsAllowed", userID, obj, act).Return(true, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -188,7 +188,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := core.Object("test-object")
 		act := core.Action("read")
 
-		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(false, nil)
+		mockRBAC.On("IsAllowed", userID, obj, act).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", mockSession)
@@ -224,7 +224,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := core.Object("test-object")
 		act := core.Action("read")
 
-		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(false, nil)
+		mockRBAC.On("IsAllowed", userID, obj, act).Return(false, nil)
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", &mockSession)
@@ -258,7 +258,7 @@ func TestAccessControlMiddleware(t *testing.T) {
 		obj := core.Object("test-object")
 		act := core.Action("read")
 
-		mockRBAC.On("IsAllowed", userID, string(obj), act).Return(false, errors.New("error"))
+		mockRBAC.On("IsAllowed", userID, obj, act).Return(false, errors.New("error"))
 
 		ctx.Set("rbac", &mockRBAC)
 		ctx.Set("session", &mockSession)

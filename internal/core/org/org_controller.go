@@ -59,6 +59,9 @@ func (o *httpController) Create(ctx core.Context) error {
 	}
 
 	organization := req.toModel()
+	if organization.Slug == "" {
+		return echo.NewHTTPError(400, "slug is required")
+	}
 
 	err := o.orgService.CreateOrganization(ctx, organization)
 	if err != nil {

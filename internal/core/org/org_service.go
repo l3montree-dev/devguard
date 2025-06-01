@@ -125,12 +125,5 @@ func (o *orgService) ReadBySlug(slug string) (*models.Org, error) {
 	}
 
 	org, err := o.organizationRepository.ReadBySlug(slug)
-	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			return nil, echo.NewHTTPError(404, "organization not found").WithInternal(err)
-		}
-		return nil, echo.NewHTTPError(500, "could not get organization").WithInternal(err)
-	}
-
-	return &org, nil
+	return &org, err
 }
