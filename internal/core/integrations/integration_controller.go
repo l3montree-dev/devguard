@@ -17,53 +17,17 @@ package integrations
 
 import (
 	"log/slog"
-	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 )
 
 type integrationController struct {
-	gitlabOauth2Integration map[string]*GitlabOauth2Config
+	gitlabOauth2Integration map[string]*gitlabint.GitlabOauth2Config
 }
 
-func commentTrimmedFalsePositivePrefix(comment string) (models.VulnEventType, models.MechanicalJustificationType, string) {
-	if strings.HasPrefix(comment, "/component-not-present") {
-		return models.EventTypeFalsePositive, models.ComponentNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/component-not-present"))
-	} else if strings.HasPrefix(comment, "/vulnerable-code-not-present") {
-		return models.EventTypeFalsePositive, models.VulnerableCodeNotPresent, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-present"))
-	} else if strings.HasPrefix(comment, "/vulnerable-code-not-in-execute-path") {
-		return models.EventTypeFalsePositive, models.VulnerableCodeNotInExecutePath, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-not-in-execute-path"))
-	} else if strings.HasPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary") {
-		return models.EventTypeFalsePositive, models.VulnerableCodeCannotBeControlledByAdversary, strings.TrimSpace(strings.TrimPrefix(comment, "/vulnerable-code-cannot-be-controlled-by-adversary"))
-	} else if strings.HasPrefix(comment, "/inline-mitigations-already-exist") {
-		return models.EventTypeFalsePositive, models.InlineMitigationsAlreadyExist, strings.TrimSpace(strings.TrimPrefix(comment, "/inline-mitigations-already-exist"))
-	} else if strings.HasPrefix(comment, "/accept") {
-		return models.EventTypeAccepted, "", strings.TrimSpace(strings.TrimPrefix(comment, "/accept"))
-	} else if strings.HasPrefix(comment, "/reopen") {
-		return models.EventTypeReopened, "", strings.TrimSpace(strings.TrimPrefix(comment, "/reopen"))
-	}
-	return models.EventTypeComment, "", comment
-}
-
-func createNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, userId, comment string, scannerIds string) models.VulnEvent {
-
-	event, mechanicalJustification, justification := commentTrimmedFalsePositivePrefix(comment)
-
-	if event == models.EventTypeAccepted {
-		return models.NewAcceptedEvent(vulnId, vulnType, userId, justification)
-	} else if event == models.EventTypeFalsePositive {
-		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, justification, mechanicalJustification, scannerIds)
-	} else if event == models.EventTypeReopened {
-		return models.NewReopenedEvent(vulnId, vulnType, userId, justification)
-	} else if event == models.EventTypeComment {
-		return models.NewCommentEvent(vulnId, vulnType, userId, comment)
-	}
-
-	return models.VulnEvent{}
-}
-
-func NewIntegrationController(gitlabOauth2Integration map[string]*GitlabOauth2Config) *integrationController {
+func NewIntegrationController(gitlabOauth2Integration map[string]*gitlabint.GitlabOauth2Config) *integrationController {
 	return &integrationController{
 		gitlabOauth2Integration: gitlabOauth2Integration,
 	}
@@ -73,24 +37,10 @@ func (c *integrationController) AutoSetup(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
 	if gl != nil {
-		return gl.(*gitlabIntegration).AutoSetup(ctx)
+		return gl.(*gitlabint.GitlabIntegration).AutoSetup(ctx)
 	}
 
 	return nil
-}
-
-func (c *integrationController) FullAutosetup(ctx core.Context) error {
-	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-
-	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
-	if gl != nil {
-		if err := gl.(*gitlabIntegration).FullAutosetup(ctx); err != nil {
-			slog.Error("could not finish full auto setup for GitLab", "err", err)
-			return err
-		}
-	}
-
-	return ctx.JSON(200, "Full auto setup completed")
 }
 
 func (c *integrationController) ListRepositories(ctx core.Context) error {
@@ -108,7 +58,7 @@ func (c *integrationController) FinishInstallation(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	gh := thirdPartyIntegration.GetIntegration(core.GitHubIntegrationID)
 	if gh != nil {
-		if err := gh.(*githubIntegration).FinishInstallation(ctx); err != nil {
+		if err := gh.(*githubint.GithubIntegration).FinishInstallation(ctx); err != nil {
 			slog.Error("could not finish installation", "err", err)
 			return err
 		}
@@ -127,14 +77,14 @@ func (c *integrationController) HandleWebhook(ctx core.Context) error {
 	return ctx.JSON(200, "Webhook handled")
 }
 
-func (c *integrationController) TestAndSaveGitLabIntegration(ctx core.Context) error {
+func (c *integrationController) TestAndSaveGitlabIntegration(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(core.GitLabIntegrationID)
 	if gl == nil {
 		return ctx.JSON(404, "GitLab integration not enabled")
 	}
 
-	if err := gl.(*gitlabIntegration).TestAndSave(ctx); err != nil {
+	if err := gl.(*gitlabint.GitlabIntegration).TestAndSave(ctx); err != nil {
 		slog.Error("could not test GitLab integration", "err", err)
 		return err
 	}
@@ -185,7 +135,7 @@ func (c *integrationController) DeleteGitLabAccessToken(ctx core.Context) error 
 		return ctx.JSON(404, "GitLab integration not enabled")
 	}
 
-	if err := gl.(*gitlabIntegration).Delete(ctx); err != nil {
+	if err := gl.(*gitlabint.GitlabIntegration).Delete(ctx); err != nil {
 		slog.Error("could not delete GitLab integration", "err", err)
 		return err
 	}

@@ -1,4 +1,4 @@
-package integrations
+package gitlabint
 
 import (
 	"log/slog"
@@ -114,7 +114,7 @@ func TestTestAndSave(t *testing.T) {
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
 
-		g := gitlabIntegration{}
+		g := GitlabIntegration{}
 
 		err := g.TestAndSave(ctx)
 

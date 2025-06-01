@@ -1,4 +1,4 @@
-package integrations
+package gitlabint
 
 import (
 	"context"
@@ -117,7 +117,7 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 	return urls
 }
 
-func NewGitLabOauth2Integration(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret string) *GitlabOauth2Config {
+func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret string) *GitlabOauth2Config {
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -198,7 +198,7 @@ func NewGitLabOauth2Integrations(db core.DB) map[string]*GitlabOauth2Config {
 	envs := parseGitlabEnvs()
 	gitlabIntegrations := make(map[string]*GitlabOauth2Config)
 	for id, env := range envs {
-		gitlabIntegration := NewGitLabOauth2Integration(db, id, env.baseURL, env.appID, env.appSecret)
+		gitlabIntegration := NewGitLabOauth2Config(db, id, env.baseURL, env.appID, env.appSecret)
 		gitlabIntegrations[id] = gitlabIntegration
 		slog.Info("gitlab oauth2 integration created", "id", id, "baseURL", env.baseURL, "appID", env.appID)
 	}

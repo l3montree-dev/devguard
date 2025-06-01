@@ -33,6 +33,8 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
@@ -354,9 +356,9 @@ func BuildRouter(db core.DB) *echo.Echo {
 		panic(err)
 	}
 
-	githubIntegration := integrations.NewGithubIntegration(db)
-	gitlabOauth2Integrations := integrations.NewGitLabOauth2Integrations(db)
-	gitlabIntegration := integrations.NewGitLabIntegration(gitlabOauth2Integrations, db)
+	githubIntegration := githubint.NewGithubIntegration(db)
+	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration)
 
 	// init all repositories using the provided database
@@ -454,7 +456,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
 	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
 	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)
-	sessionRouter.POST("/integrations/fullautosetup/", integrationController.FullAutosetup, neededScope([]string{"manage"}))
+
 	// register a simple whoami route for testing purposes
 	sessionRouter.GET("/whoami/", whoami)
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, neededScope([]string{"manage"}))
@@ -512,7 +514,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 
-	organizationRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitLabIntegration, neededScope([]string{"manage"}))
+	organizationRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration, neededScope([]string{"manage"}))
 	organizationRouter.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken, neededScope([]string{"manage"}))
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 	organizationRouter.GET("/stats/risk-history/", statisticsController.GetOrgRiskHistory)

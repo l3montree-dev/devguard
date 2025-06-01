@@ -1,10 +1,11 @@
-package integrations
+package commonint
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
+
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -23,7 +24,7 @@ func TestRenderPathToComponent(t *testing.T) {
 		scannerID := "SBOM-File-Upload"
 		pURL := "pkg:npm:test"
 
-		result, err := renderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
+		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
 		if err != nil {
 			t.Fail()
 		}
@@ -40,7 +41,7 @@ func TestRenderPathToComponent(t *testing.T) {
 		scannerID := "SBOM-File-Upload"
 		pURL := "pkg:npm:test"
 
-		_, err := renderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
+		_, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
 		if err == nil {
 			t.Fail()
 		}
@@ -60,7 +61,7 @@ func TestRenderPathToComponent(t *testing.T) {
 		scannerID := "SBOM-File-Upload"
 		pURL := "pkg:npm:test"
 
-		result, err := renderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
+		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
 		if err != nil {
 			t.Fail()
 		}
@@ -83,7 +84,7 @@ func TestRenderPathToComponent(t *testing.T) {
 		scannerID := "SBOM-File-Upload"
 		pURL := "pkg:npm:test"
 
-		result, err := renderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
+		result, err := RenderPathToComponent(componentRepository, assetID, assetVersionName, scannerID, pURL)
 		if err != nil {
 			t.Fail()
 		}

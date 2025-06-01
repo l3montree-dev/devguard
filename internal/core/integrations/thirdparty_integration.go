@@ -7,9 +7,7 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -262,16 +260,4 @@ func NewThirdPartyIntegrations(integrations ...core.ThirdPartyIntegration) *thir
 	return &thirdPartyIntegrations{
 		integrations: integrations,
 	}
-}
-
-// this function returns a string containing a mermaids js flow chart to the given pURL
-func renderPathToComponent(componentRepository core.ComponentRepository, assetID uuid.UUID, assetVersionName string, scannerID string, pURL string) (string, error) {
-
-	components, err := componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, scannerID)
-	if err != nil {
-		return "", err
-	}
-
-	tree := assetversion.BuildDependencyTree(components)
-	return tree.RenderToMermaid(), nil
 }

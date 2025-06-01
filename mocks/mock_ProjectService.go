@@ -264,24 +264,22 @@ func (_c *ProjectService_ListProjectsByOrganizationID_Call) RunAndReturn(run fun
 }
 
 // ReadBySlug provides a mock function for the type ProjectService
-func (_mock *ProjectService) ReadBySlug(ctx core.Context, organizationID uuid.UUID, slug string) (*models.Project, error) {
+func (_mock *ProjectService) ReadBySlug(ctx core.Context, organizationID uuid.UUID, slug string) (models.Project, error) {
 	ret := _mock.Called(ctx, organizationID, slug)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReadBySlug")
 	}
 
-	var r0 *models.Project
+	var r0 models.Project
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, uuid.UUID, string) (*models.Project, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(core.Context, uuid.UUID, string) (models.Project, error)); ok {
 		return returnFunc(ctx, organizationID, slug)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context, uuid.UUID, string) *models.Project); ok {
+	if returnFunc, ok := ret.Get(0).(func(core.Context, uuid.UUID, string) models.Project); ok {
 		r0 = returnFunc(ctx, organizationID, slug)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*models.Project)
-		}
+		r0 = ret.Get(0).(models.Project)
 	}
 	if returnFunc, ok := ret.Get(1).(func(core.Context, uuid.UUID, string) error); ok {
 		r1 = returnFunc(ctx, organizationID, slug)
@@ -311,12 +309,12 @@ func (_c *ProjectService_ReadBySlug_Call) Run(run func(ctx core.Context, organiz
 	return _c
 }
 
-func (_c *ProjectService_ReadBySlug_Call) Return(project *models.Project, err error) *ProjectService_ReadBySlug_Call {
+func (_c *ProjectService_ReadBySlug_Call) Return(project models.Project, err error) *ProjectService_ReadBySlug_Call {
 	_c.Call.Return(project, err)
 	return _c
 }
 
-func (_c *ProjectService_ReadBySlug_Call) RunAndReturn(run func(ctx core.Context, organizationID uuid.UUID, slug string) (*models.Project, error)) *ProjectService_ReadBySlug_Call {
+func (_c *ProjectService_ReadBySlug_Call) RunAndReturn(run func(ctx core.Context, organizationID uuid.UUID, slug string) (models.Project, error)) *ProjectService_ReadBySlug_Call {
 	_c.Call.Return(run)
 	return _c
 }

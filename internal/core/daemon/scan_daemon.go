@@ -9,6 +9,8 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
@@ -40,10 +42,10 @@ func ScanAssetVersions(db core.DB) error {
 	assetRiskHistoryRepository := repositories.NewAssetRiskHistoryRepository(db)
 	projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(db)
 
-	gitlabOauth2Integrations := integrations.NewGitLabOauth2Integrations(db)
-	gitlabIntegration := integrations.NewGitLabIntegration(gitlabOauth2Integrations, db)
+	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db)
 
-	githubIntegration := integrations.NewGithubIntegration(db)
+	githubIntegration := githubint.NewGithubIntegration(db)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
