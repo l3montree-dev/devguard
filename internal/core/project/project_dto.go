@@ -121,6 +121,9 @@ type ProjectDTO struct {
 
 	Assets      []models.Asset `json:"assets"`
 	ConfigFiles map[string]any `json:"configFiles"`
+
+	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
+	ExternalEntityID         *string `json:"externalEntityId,omitempty"` // only set if this is an external entity
 }
 
 type projectDetailsDTO struct {
@@ -150,5 +153,8 @@ func fromModel(project models.Project) ProjectDTO {
 
 		Assets:      project.Assets,
 		ConfigFiles: project.ConfigFiles,
+
+		ExternalEntityProviderID: project.ExternalEntityProviderID,
+		ExternalEntityID:         project.ExternalEntityID,
 	}
 }
