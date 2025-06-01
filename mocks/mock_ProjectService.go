@@ -263,6 +263,64 @@ func (_c *ProjectService_ListProjectsByOrganizationID_Call) RunAndReturn(run fun
 	return _c
 }
 
+// ReadBySlug provides a mock function for the type ProjectService
+func (_mock *ProjectService) ReadBySlug(ctx core.Context, organizationID uuid.UUID, slug string) (*models.Project, error) {
+	ret := _mock.Called(ctx, organizationID, slug)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReadBySlug")
+	}
+
+	var r0 *models.Project
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context, uuid.UUID, string) (*models.Project, error)); ok {
+		return returnFunc(ctx, organizationID, slug)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.Context, uuid.UUID, string) *models.Project); ok {
+		r0 = returnFunc(ctx, organizationID, slug)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Project)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.Context, uuid.UUID, string) error); ok {
+		r1 = returnFunc(ctx, organizationID, slug)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProjectService_ReadBySlug_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReadBySlug'
+type ProjectService_ReadBySlug_Call struct {
+	*mock.Call
+}
+
+// ReadBySlug is a helper method to define mock.On call
+//   - ctx
+//   - organizationID
+//   - slug
+func (_e *ProjectService_Expecter) ReadBySlug(ctx interface{}, organizationID interface{}, slug interface{}) *ProjectService_ReadBySlug_Call {
+	return &ProjectService_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", ctx, organizationID, slug)}
+}
+
+func (_c *ProjectService_ReadBySlug_Call) Run(run func(ctx core.Context, organizationID uuid.UUID, slug string)) *ProjectService_ReadBySlug_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.Context), args[1].(uuid.UUID), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *ProjectService_ReadBySlug_Call) Return(project *models.Project, err error) *ProjectService_ReadBySlug_Call {
+	_c.Call.Return(project, err)
+	return _c
+}
+
+func (_c *ProjectService_ReadBySlug_Call) RunAndReturn(run func(ctx core.Context, organizationID uuid.UUID, slug string) (*models.Project, error)) *ProjectService_ReadBySlug_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RecursivelyGetChildProjects provides a mock function for the type ProjectService
 func (_mock *ProjectService) RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error) {
 	ret := _mock.Called(projectID)

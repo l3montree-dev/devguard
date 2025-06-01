@@ -50,6 +50,9 @@ func (g *GormRepository[ID, T]) Save(tx *gorm.DB, t *T) error {
 }
 
 func (g *GormRepository[ID, T]) Upsert(t *[]*T, conflictingColumns *[]clause.Column) error {
+	if len(*t) == 0 {
+		return nil
+	}
 	if conflictingColumns == nil {
 		return g.db.Clauses(clause.OnConflict{UpdateAll: true}).Create(t).Error
 	}

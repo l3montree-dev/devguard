@@ -51,7 +51,9 @@ type gitlabOauth2Client struct {
 }
 
 func buildOauth2GitlabClient(token models.GitLabOauth2Token, integration *GitlabOauth2Config) (gitlabClientFacade, error) {
-	client, err := gitlab.NewClient(token.AccessToken, gitlab.WithHTTPClient(integration.client(token)), gitlab.WithBaseURL(integration.GitlabBaseURL))
+	oauth2Client := integration.client(token)
+
+	client, err := gitlab.NewClient(token.AccessToken, gitlab.WithHTTPClient(oauth2Client), gitlab.WithBaseURL(integration.GitlabBaseURL))
 	if err != nil {
 		return gitlabOauth2Client{}, err
 	}

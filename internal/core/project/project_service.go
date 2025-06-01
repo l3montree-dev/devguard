@@ -14,12 +14,47 @@ import (
 
 type service struct {
 	projectRepository core.ProjectRepository
+	assetRepository   core.AssetRepository
 }
 
-func NewService(projectRepository core.ProjectRepository) *service {
+func NewService(projectRepository core.ProjectRepository, assetRepository core.AssetRepository) *service {
 	return &service{
 		projectRepository: projectRepository,
+		assetRepository:   assetRepository,
 	}
+}
+
+func (s *service) ReadBySlug(ctx core.Context, organizationID uuid.UUID, slug string) (models.Project, error) {
+	project, err := s.projectRepository.ReadBySlug(organizationID, slug)
+	if err != nil {
+		return models.Project{}, echo.NewHTTPError(404, "project not found").WithInternal(err)
+	}
+
+	// check if it is an external entity
+	if project.IsExternalEntity() {
+		// we need to fetch the assets for this project
+		thirdpartyIntegration := core.GetThirdPartyIntegration(ctx)
+		assets, err := thirdpartyIntegration.ListProjects(ctx, core.GetSession(ctx).GetUserID(), *project.ExternalEntityProviderID, *project.ExternalEntityID)
+		if err != nil {
+			return models.Project{}, echo.NewHTTPError(500, "could not fetch assets for project").WithInternal(err)
+		}
+		// ensure the assets exist in the database
+		toUpsert := make([]*models.Asset, 0, len(assets))
+		for i := range assets {
+			assets[i].ProjectID = project.ID
+			toUpsert = append(toUpsert, &assets[i])
+		}
+
+		if err := s.assetRepository.Upsert(&toUpsert, &[]clause.Column{
+			{Name: "external_entity_provider_id"},
+			{Name: "external_entity_id"},
+		}); err != nil {
+			return models.Project{}, echo.NewHTTPError(500, "could not upsert assets").WithInternal(err)
+		}
+		// set the assets on the project
+		project.Assets = assets
+	}
+	return project, nil
 }
 
 func (s *service) CreateProject(ctx core.Context, project models.Project) (*models.Project, error) {
@@ -146,6 +181,10 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 	}
 
 	if slice, ok := projectSliceOrProjectIdSlice.([]models.Project); ok {
+		// if the user is looking for projects which have a parent id set, we return an empty slice
+		if c.QueryParam("parentId") != "" {
+			return []models.Project{}, nil
+		}
 		// make sure the projects exist inside the database
 		toUpsert := make([]*models.Project, 0, len(slice))
 		for i := range slice {

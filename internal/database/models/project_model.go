@@ -44,3 +44,7 @@ type Project struct {
 func (m Project) TableName() string {
 	return "projects"
 }
+
+func (m Project) IsExternalEntity() bool {
+	return m.ExternalEntityProviderID != nil && *m.ExternalEntityProviderID != ""
+}

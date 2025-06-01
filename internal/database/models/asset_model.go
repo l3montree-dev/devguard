@@ -64,8 +64,8 @@ type Asset struct {
 	BadgeSecret   *uuid.UUID `json:"badgeSecret" gorm:"type:uuid;default:gen_random_uuid();"`
 	WebhookSecret *uuid.UUID `json:"webhookSecret" gorm:"type:uuid;"`
 
-	ExternalEntityID         *string `json:"externalEntityId" gorm:"uniqueIndex:external_entity_id;type:text"`
-	ExternalEntityProviderID *string `json:"externalEntityProvider" gorm:"uniqueIndex:external_entity_id;type:text"`
+	ExternalEntityID         *string `json:"externalEntityId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
+	ExternalEntityProviderID *string `json:"externalEntityProvider" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
 }
 
 func (m Asset) TableName() string {

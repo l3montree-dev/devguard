@@ -147,7 +147,7 @@ func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config
 	orgRepository := repositories.NewOrgRepository(db)
 
 	orgService := org.NewService(orgRepository, casbinRBACProvider)
-	projectService := project.NewService(projectRepository)
+	projectService := project.NewService(projectRepository, assetRepository)
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, nil)
 
 	frontendUrl := os.Getenv("FRONTEND_URL")

@@ -179,7 +179,7 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) core.
 	}
 }
 
-func projectAccessControl(projectRepository core.ProjectRepository, obj core.Object, act core.Action) core.MiddlewareFunc {
+func projectAccessControl(projectService core.ProjectService, obj core.Object, act core.Action) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) error {
 			// get the rbac
@@ -195,14 +195,9 @@ func projectAccessControl(projectRepository core.ProjectRepository, obj core.Obj
 			}
 
 			// get the project by slug and organization.
-			project, err := projectRepository.ReadBySlug(core.GetOrg(ctx).GetID(), projectSlug)
+			project, err := projectService.ReadBySlug(ctx, core.GetOrg(ctx).GetID(), projectSlug)
 
 			if err != nil {
-				// check if we are in an external entity provider context
-				org := core.GetOrg(ctx)
-				if org.IsExternalEntity() {
-					// create the project on the fly if it does exist
-				}
 				return echo.NewHTTPError(404, "could not get project")
 			}
 
@@ -292,19 +287,8 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 
 			// get the organization
 			org, err := organizationService.ReadBySlug(organization)
-
 			if err != nil {
-				externalEntitySlug, err := core.FromStringToExternalEntitySlug(organization)
-				if err != nil || !externalEntitySlug.IsValid() {
-					return ctx.JSON(400, map[string]string{"error": "invalid organization slug"})
-				}
-
-				// create the organization with the provided slug
-				org, err = organizationService.CreateExternalEntityOrganization(ctx, externalEntitySlug)
-				if err != nil {
-					slog.Error("could not create organization", "err", err)
-					return ctx.JSON(500, map[string]string{"error": "could not create organization"})
-				}
+				return echo.NewHTTPError(404, "organization not found").WithInternal(err)
 			}
 
 			// check what kind of RBAC we need
@@ -396,7 +380,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
-	projectService := project.NewService(projectRepository)
+	projectService := project.NewService(projectRepository, assetRepository)
 	dependencyVulnController := vuln.NewHttpController(dependencyVulnRepository, dependencyVulnService, projectService)
 
 	vulnEventController := events.NewVulnEventController(vulnEventRepository, assetVersionRepository)
@@ -418,7 +402,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
 	patController := pat.NewHttpController(patRepository)
 	orgController := org.NewHttpController(orgRepository, orgService, casbinRBACProvider, projectService, invitationRepository)
-	projectController := project.NewHttpController(projectRepository, assetRepository, project.NewService(projectRepository))
+	projectController := project.NewHttpController(projectRepository, assetRepository, projectService)
 	assetController := asset.NewHttpController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 
@@ -543,7 +527,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
-	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", core.ActionRead))
+	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectService, "project", core.ActionRead))
 	projectRouter.GET("/", projectController.Read)
 
 	projectRouter.PUT("/policies/:policyId/", policyController.EnablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
