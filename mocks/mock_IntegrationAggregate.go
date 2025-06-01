@@ -231,6 +231,120 @@ func (_c *IntegrationAggregate_GetIntegration_Call) RunAndReturn(run func(id cor
 	return _c
 }
 
+// GetRoleInGroup provides a mock function for the type IntegrationAggregate
+func (_mock *IntegrationAggregate) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
+	ret := _mock.Called(ctx, userID, providerID, groupID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRoleInGroup")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) (string, error)); ok {
+		return returnFunc(ctx, userID, providerID, groupID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) string); ok {
+		r0 = returnFunc(ctx, userID, providerID, groupID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+		r1 = returnFunc(ctx, userID, providerID, groupID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// IntegrationAggregate_GetRoleInGroup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRoleInGroup'
+type IntegrationAggregate_GetRoleInGroup_Call struct {
+	*mock.Call
+}
+
+// GetRoleInGroup is a helper method to define mock.On call
+//   - ctx
+//   - userID
+//   - providerID
+//   - groupID
+func (_e *IntegrationAggregate_Expecter) GetRoleInGroup(ctx interface{}, userID interface{}, providerID interface{}, groupID interface{}) *IntegrationAggregate_GetRoleInGroup_Call {
+	return &IntegrationAggregate_GetRoleInGroup_Call{Call: _e.mock.On("GetRoleInGroup", ctx, userID, providerID, groupID)}
+}
+
+func (_c *IntegrationAggregate_GetRoleInGroup_Call) Run(run func(ctx context.Context, userID string, providerID string, groupID string)) *IntegrationAggregate_GetRoleInGroup_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *IntegrationAggregate_GetRoleInGroup_Call) Return(s string, err error) *IntegrationAggregate_GetRoleInGroup_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *IntegrationAggregate_GetRoleInGroup_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, groupID string) (string, error)) *IntegrationAggregate_GetRoleInGroup_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetRoleInProject provides a mock function for the type IntegrationAggregate
+func (_mock *IntegrationAggregate) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
+	ret := _mock.Called(ctx, userID, providerID, projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRoleInProject")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) (string, error)); ok {
+		return returnFunc(ctx, userID, providerID, projectID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) string); ok {
+		r0 = returnFunc(ctx, userID, providerID, projectID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+		r1 = returnFunc(ctx, userID, providerID, projectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// IntegrationAggregate_GetRoleInProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRoleInProject'
+type IntegrationAggregate_GetRoleInProject_Call struct {
+	*mock.Call
+}
+
+// GetRoleInProject is a helper method to define mock.On call
+//   - ctx
+//   - userID
+//   - providerID
+//   - projectID
+func (_e *IntegrationAggregate_Expecter) GetRoleInProject(ctx interface{}, userID interface{}, providerID interface{}, projectID interface{}) *IntegrationAggregate_GetRoleInProject_Call {
+	return &IntegrationAggregate_GetRoleInProject_Call{Call: _e.mock.On("GetRoleInProject", ctx, userID, providerID, projectID)}
+}
+
+func (_c *IntegrationAggregate_GetRoleInProject_Call) Run(run func(ctx context.Context, userID string, providerID string, projectID string)) *IntegrationAggregate_GetRoleInProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *IntegrationAggregate_GetRoleInProject_Call) Return(s string, err error) *IntegrationAggregate_GetRoleInProject_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *IntegrationAggregate_GetRoleInProject_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, projectID string) (string, error)) *IntegrationAggregate_GetRoleInProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetUsers provides a mock function for the type IntegrationAggregate
 func (_mock *IntegrationAggregate) GetUsers(org models.Org) []core.User {
 	ret := _mock.Called(org)
@@ -368,47 +482,221 @@ func (_c *IntegrationAggregate_HandleWebhook_Call) RunAndReturn(run func(ctx cor
 	return _c
 }
 
-// IntegrationEnabled provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) IntegrationEnabled(ctx core.Context) bool {
-	ret := _mock.Called(ctx)
+// HasAccessToExternalEntityProvider provides a mock function for the type IntegrationAggregate
+func (_mock *IntegrationAggregate) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+	ret := _mock.Called(ctx, externalEntityProviderID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for IntegrationEnabled")
+		panic("no return value specified for HasAccessToExternalEntityProvider")
 	}
 
 	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(core.Context) bool); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string) bool); ok {
+		r0 = returnFunc(ctx, externalEntityProviderID)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 	return r0
 }
 
-// IntegrationAggregate_IntegrationEnabled_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IntegrationEnabled'
-type IntegrationAggregate_IntegrationEnabled_Call struct {
+// IntegrationAggregate_HasAccessToExternalEntityProvider_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasAccessToExternalEntityProvider'
+type IntegrationAggregate_HasAccessToExternalEntityProvider_Call struct {
 	*mock.Call
 }
 
-// IntegrationEnabled is a helper method to define mock.On call
+// HasAccessToExternalEntityProvider is a helper method to define mock.On call
 //   - ctx
-func (_e *IntegrationAggregate_Expecter) IntegrationEnabled(ctx interface{}) *IntegrationAggregate_IntegrationEnabled_Call {
-	return &IntegrationAggregate_IntegrationEnabled_Call{Call: _e.mock.On("IntegrationEnabled", ctx)}
+//   - externalEntityProviderID
+func (_e *IntegrationAggregate_Expecter) HasAccessToExternalEntityProvider(ctx interface{}, externalEntityProviderID interface{}) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
+	return &IntegrationAggregate_HasAccessToExternalEntityProvider_Call{Call: _e.mock.On("HasAccessToExternalEntityProvider", ctx, externalEntityProviderID)}
 }
 
-func (_c *IntegrationAggregate_IntegrationEnabled_Call) Run(run func(ctx core.Context)) *IntegrationAggregate_IntegrationEnabled_Call {
+func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) Run(run func(ctx core.Context, externalEntityProviderID string)) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) Return(b bool) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx core.Context, externalEntityProviderID string) bool) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListGroups provides a mock function for the type IntegrationAggregate
+func (_mock *IntegrationAggregate) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
+	ret := _mock.Called(ctx, userID, providerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListGroups")
+	}
+
+	var r0 []models.Project
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string) ([]models.Project, error)); ok {
+		return returnFunc(ctx, userID, providerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string) []models.Project); ok {
+		r0 = returnFunc(ctx, userID, providerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Project)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, userID, providerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// IntegrationAggregate_ListGroups_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListGroups'
+type IntegrationAggregate_ListGroups_Call struct {
+	*mock.Call
+}
+
+// ListGroups is a helper method to define mock.On call
+//   - ctx
+//   - userID
+//   - providerID
+func (_e *IntegrationAggregate_Expecter) ListGroups(ctx interface{}, userID interface{}, providerID interface{}) *IntegrationAggregate_ListGroups_Call {
+	return &IntegrationAggregate_ListGroups_Call{Call: _e.mock.On("ListGroups", ctx, userID, providerID)}
+}
+
+func (_c *IntegrationAggregate_ListGroups_Call) Run(run func(ctx core.Context, userID string, providerID string)) *IntegrationAggregate_ListGroups_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *IntegrationAggregate_ListGroups_Call) Return(projects []models.Project, err error) *IntegrationAggregate_ListGroups_Call {
+	_c.Call.Return(projects, err)
+	return _c
+}
+
+func (_c *IntegrationAggregate_ListGroups_Call) RunAndReturn(run func(ctx core.Context, userID string, providerID string) ([]models.Project, error)) *IntegrationAggregate_ListGroups_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListOrgs provides a mock function for the type IntegrationAggregate
+func (_mock *IntegrationAggregate) ListOrgs(ctx core.Context) ([]models.Org, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListOrgs")
+	}
+
+	var r0 []models.Org
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context) ([]models.Org, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.Context) []models.Org); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Org)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// IntegrationAggregate_ListOrgs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListOrgs'
+type IntegrationAggregate_ListOrgs_Call struct {
+	*mock.Call
+}
+
+// ListOrgs is a helper method to define mock.On call
+//   - ctx
+func (_e *IntegrationAggregate_Expecter) ListOrgs(ctx interface{}) *IntegrationAggregate_ListOrgs_Call {
+	return &IntegrationAggregate_ListOrgs_Call{Call: _e.mock.On("ListOrgs", ctx)}
+}
+
+func (_c *IntegrationAggregate_ListOrgs_Call) Run(run func(ctx core.Context)) *IntegrationAggregate_ListOrgs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(core.Context))
 	})
 	return _c
 }
 
-func (_c *IntegrationAggregate_IntegrationEnabled_Call) Return(b bool) *IntegrationAggregate_IntegrationEnabled_Call {
-	_c.Call.Return(b)
+func (_c *IntegrationAggregate_ListOrgs_Call) Return(orgs []models.Org, err error) *IntegrationAggregate_ListOrgs_Call {
+	_c.Call.Return(orgs, err)
 	return _c
 }
 
-func (_c *IntegrationAggregate_IntegrationEnabled_Call) RunAndReturn(run func(ctx core.Context) bool) *IntegrationAggregate_IntegrationEnabled_Call {
+func (_c *IntegrationAggregate_ListOrgs_Call) RunAndReturn(run func(ctx core.Context) ([]models.Org, error)) *IntegrationAggregate_ListOrgs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListProjects provides a mock function for the type IntegrationAggregate
+func (_mock *IntegrationAggregate) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
+	ret := _mock.Called(ctx, userID, providerID, groupID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListProjects")
+	}
+
+	var r0 []models.Asset
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string, string) ([]models.Asset, error)); ok {
+		return returnFunc(ctx, userID, providerID, groupID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string, string) []models.Asset); ok {
+		r0 = returnFunc(ctx, userID, providerID, groupID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Asset)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.Context, string, string, string) error); ok {
+		r1 = returnFunc(ctx, userID, providerID, groupID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// IntegrationAggregate_ListProjects_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListProjects'
+type IntegrationAggregate_ListProjects_Call struct {
+	*mock.Call
+}
+
+// ListProjects is a helper method to define mock.On call
+//   - ctx
+//   - userID
+//   - providerID
+//   - groupID
+func (_e *IntegrationAggregate_Expecter) ListProjects(ctx interface{}, userID interface{}, providerID interface{}, groupID interface{}) *IntegrationAggregate_ListProjects_Call {
+	return &IntegrationAggregate_ListProjects_Call{Call: _e.mock.On("ListProjects", ctx, userID, providerID, groupID)}
+}
+
+func (_c *IntegrationAggregate_ListProjects_Call) Run(run func(ctx core.Context, userID string, providerID string, groupID string)) *IntegrationAggregate_ListProjects_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.Context), args[1].(string), args[2].(string), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *IntegrationAggregate_ListProjects_Call) Return(assets []models.Asset, err error) *IntegrationAggregate_ListProjects_Call {
+	_c.Call.Return(assets, err)
+	return _c
+}
+
+func (_c *IntegrationAggregate_ListProjects_Call) RunAndReturn(run func(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error)) *IntegrationAggregate_ListProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }

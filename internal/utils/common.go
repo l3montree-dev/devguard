@@ -34,6 +34,14 @@ func Ptr[T any](t T) *T {
 	return &t
 }
 
+func SlicePtr[T any](t []T) []*T {
+	res := make([]*T, len(t))
+	for i := range t {
+		res[i] = &t[i]
+	}
+	return res
+}
+
 func RunsInCI() bool {
 	if val, ok := os.LookupEnv("CI"); ok {
 		return val == "true"

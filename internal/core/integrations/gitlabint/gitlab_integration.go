@@ -1,4 +1,4 @@
-package integrations
+package gitlabint
 
 import (
 	"context"
@@ -17,11 +17,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/go-github/v62/github"
+	"slices"
+
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/asset"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/core/org"
+	"github.com/l3montree-dev/devguard/internal/core/project"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -34,43 +39,97 @@ type gitlabRepository struct {
 }
 
 func (g gitlabRepository) toRepository() core.Repository {
+	// check for group and project access
+	if g.Permissions == nil || (g.Permissions.GroupAccess == nil && g.Permissions.ProjectAccess == nil) {
+		return core.Repository{
+			ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+			Label:        g.NameWithNamespace,
+			IsDeveloper:  false,
+			IsOwner:      false,
+			IsMaintainer: false,
+			Description:  g.Description,
+			Image:        g.AvatarURL,
+		}
+	}
+
+	// check for project access
+	if g.Permissions.ProjectAccess == nil {
+		// group access has to be defined
+		return core.Repository{
+			ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+			Label:        g.NameWithNamespace,
+			IsDeveloper:  g.Permissions.GroupAccess.AccessLevel >= gitlab.DeveloperPermissions,
+			IsOwner:      g.Permissions.GroupAccess.AccessLevel >= gitlab.OwnerPermissions,
+			IsMaintainer: g.Permissions.GroupAccess.AccessLevel >= gitlab.MaintainerPermissions,
+			Description:  g.Description,
+			Image:        g.AvatarURL,
+		}
+	}
+
+	if g.Permissions.GroupAccess == nil {
+
+		return core.Repository{
+			ID:          fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+			Label:       g.NameWithNamespace,
+			Description: g.Description,
+			Image:       g.AvatarURL,
+
+			// check for project access
+			IsDeveloper:  g.Permissions.ProjectAccess.AccessLevel >= gitlab.DeveloperPermissions,
+			IsOwner:      g.Permissions.ProjectAccess.AccessLevel >= gitlab.OwnerPermissions,
+			IsMaintainer: g.Permissions.ProjectAccess.AccessLevel >= gitlab.MaintainerPermissions,
+		}
+	}
+
+	// both is defined - check for the highest access level
 	return core.Repository{
-		ID:    fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
-		Label: g.NameWithNamespace,
+		ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+		Label:        g.NameWithNamespace,
+		IsDeveloper:  g.Permissions.GroupAccess.AccessLevel >= gitlab.DeveloperPermissions || g.Permissions.ProjectAccess.AccessLevel >= gitlab.DeveloperPermissions,
+		IsOwner:      g.Permissions.GroupAccess.AccessLevel >= gitlab.OwnerPermissions || g.Permissions.ProjectAccess.AccessLevel >= gitlab.OwnerPermissions,
+		IsMaintainer: g.Permissions.GroupAccess.AccessLevel >= gitlab.MaintainerPermissions || g.Permissions.ProjectAccess.AccessLevel >= gitlab.MaintainerPermissions,
+		Description:  g.Description,
+		Image:        g.AvatarURL,
 	}
 }
 
-type gitlabIntegration struct {
+type GitlabIntegration struct {
+	oauth2Endpoints             map[string]*GitlabOauth2Config
+	gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
+
 	gitlabIntegrationRepository core.GitlabIntegrationRepository
-	// gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
-
-	externalUserRepository core.ExternalUserRepository
-
-	firstPartyVulnRepository core.FirstPartyVulnRepository
-	aggregatedVulnRepository core.VulnRepository
-	//TODO: remove this
-	dependencyVulnRepository core.DependencyVulnRepository
-	vulnEventRepository      core.VulnEventRepository
-	frontendUrl              string
-	orgRepository            core.OrganizationRepository
-
-	projectRepository      core.ProjectRepository
-	assetRepository        core.AssetRepository
-	assetVersionRepository core.AssetVersionRepository
-	componentRepository    core.ComponentRepository
-
-	gitlabClientFactory func(id uuid.UUID) (core.GitlabClientFacade, error)
+	externalUserRepository      core.ExternalUserRepository
+	firstPartyVulnRepository    core.FirstPartyVulnRepository
+	aggregatedVulnRepository    core.VulnRepository
+	dependencyVulnRepository    core.DependencyVulnRepository
+	vulnEventRepository         core.VulnEventRepository
+	frontendUrl                 string
+	orgRepository               core.OrganizationRepository
+	orgSevice                   core.OrgService
+	projectRepository           core.ProjectRepository
+	projectService              core.ProjectService
+	assetRepository             core.AssetRepository
+	assetVersionRepository      core.AssetVersionRepository
+	assetService                core.AssetService
+	componentRepository         core.ComponentRepository
+	gitlabClientFactory         func(id uuid.UUID) (gitlabClientFacade, error)
+	gitlabOauth2ClientFactory   func(token models.GitLabOauth2Token) (gitlabClientFacade, error)
+	casbinRBACProvider          core.RBACProvider
 }
 
-var _ core.ThirdPartyIntegration = &gitlabIntegration{}
+var _ core.ThirdPartyIntegration = &GitlabIntegration{}
 
 func messageWasCreatedByDevguard(message string) bool {
-
 	return strings.Contains(message, "<devguard>")
-
 }
 
-func NewGitLabIntegration(db core.DB) *gitlabIntegration {
+func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config, db core.DB) *GitlabIntegration {
+
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+	if err != nil {
+		panic(err)
+	}
+
 	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
 
 	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
@@ -82,15 +141,22 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 	projectRepository := repositories.NewProjectRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
+	gitlabOauth2TokenRepository := repositories.NewGitlabOauth2TokenRepository(db)
 
 	orgRepository := repositories.NewOrgRepository(db)
+
+	orgService := org.NewService(orgRepository, casbinRBACProvider)
+	projectService := project.NewService(projectRepository, assetRepository)
+	assetService := asset.NewService(assetRepository, dependencyVulnRepository, nil)
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
 		panic("FRONTEND_URL is not set")
 	}
 
-	return &gitlabIntegration{
+	return &GitlabIntegration{
+		oauth2Endpoints:             oauth2GitlabIntegration,
+		gitlabOauth2TokenRepository: gitlabOauth2TokenRepository,
 		frontendUrl:                 frontendUrl,
 		aggregatedVulnRepository:    aggregatedVulnRepository,
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
@@ -103,8 +169,12 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 		projectRepository:           projectRepository,
 		componentRepository:         componentRepository,
 		orgRepository:               orgRepository,
+		orgSevice:                   orgService,
+		projectService:              projectService,
+		assetService:                assetService,
+		casbinRBACProvider:          casbinRBACProvider,
 
-		gitlabClientFactory: func(id uuid.UUID) (core.GitlabClientFacade, error) {
+		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
 			if err != nil {
 				return nil, err
@@ -115,30 +185,31 @@ func NewGitLabIntegration(db core.DB) *gitlabIntegration {
 				return nil, err
 			}
 
-			return gitlabClient{Client: client, GitLabIntegration: integration}, nil
+			return gitlabClient{Client: client, clientID: integration.ID.String()}, nil
+		},
+
+		gitlabOauth2ClientFactory: func(token models.GitLabOauth2Token) (gitlabClientFacade, error) {
+			// get the correct gitlab oauth2 integration configuration
+			for _, integration := range oauth2GitlabIntegration {
+				if integration.GitlabBaseURL == token.BaseURL {
+					return buildOauth2GitlabClient(token, integration)
+				}
+			}
+			return nil, errors.New("could not find gitlab oauth2 integration")
 		},
 	}
 }
 
-func (g *gitlabIntegration) IntegrationEnabled(ctx core.Context) bool {
-	return len(core.GetOrganization(ctx).GitLabIntegrations) > 0
-}
-
-func (g *gitlabIntegration) WantsToHandleWebhook(ctx core.Context) bool {
+func (g *GitlabIntegration) WantsToHandleWebhook(ctx core.Context) bool {
 	event := ctx.Request().Header.Get("X-Gitlab-Event")
 	return strings.TrimSpace(event) != ""
 }
 
 func isEventSubscribed(event gitlab.EventType) bool {
-	for _, e := range []gitlab.EventType{
+	return slices.Contains([]gitlab.EventType{
 		gitlab.EventTypeNote,
 		gitlab.EventTypeIssue,
-	} {
-		if event == e {
-			return true
-		}
-	}
-	return false
+	}, event)
 }
 
 func parseWebhook(r *http.Request) (any, error) {
@@ -173,240 +244,274 @@ func parseWebhook(r *http.Request) (any, error) {
 	return gitlab.ParseWebhook(eventType, payload)
 }
 
-func (g *gitlabIntegration) checkWebhookSecretToken(gitlabSecretToken string, assetID uuid.UUID) error {
-	asset, err := g.assetRepository.Read(assetID)
-	if err != nil {
-		slog.Error("could not read asset", "err", err)
-		return err
+func oauth2TokenToOrg(token models.GitLabOauth2Token) models.Org {
+	return models.Org{
+		Name:                     token.ProviderID,
+		Slug:                     fmt.Sprintf("@%s", token.ProviderID),
+		ExternalEntityProviderID: &token.ProviderID,
 	}
-
-	if asset.WebhookSecret != nil {
-		if asset.WebhookSecret.String() != gitlabSecretToken {
-			slog.Error("invalid webhook secret")
-			return errors.New("invalid webhook secret")
-		}
-	}
-
-	return nil
-}
-func (g *gitlabIntegration) HandleWebhook(ctx core.Context) error {
-
-	event, err := parseWebhook(ctx.Request())
-	if err != nil {
-		slog.Error("could not parse gitlab webhook", "err", err)
-		return err
-	}
-
-	gitlabSecretToken := ctx.Request().Header.Get("X-Gitlab-Token")
-
-	switch event := event.(type) {
-	case *gitlab.IssueEvent:
-
-		issueId := event.ObjectAttributes.IID
-
-		// look for a dependencyVuln with such a github ticket id
-		vuln, err := g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.Project.ID, issueId))
-		if err != nil {
-			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
-			return nil
-		}
-
-		err = g.checkWebhookSecretToken(gitlabSecretToken, vuln.GetAssetID())
-		if err != nil {
-			return err
-		}
-
-		action := event.ObjectAttributes.Action
-
-		// make sure to save the user - it might be a new user or it might have new values defined.
-		// we do not care about any error - and we want speed, thus do it on a goroutine
-		go func() {
-			org, err := g.aggregatedVulnRepository.GetOrgFromVuln(vuln)
-			if err != nil {
-				slog.Error("could not get org from dependencyVuln id", "err", err)
-				return
-			}
-			// save the user in the database
-			user := models.ExternalUser{
-				ID:        fmt.Sprintf("gitlab:%d", event.User.ID),
-				Username:  event.User.Name,
-				AvatarURL: event.User.AvatarURL,
-			}
-
-			err = g.externalUserRepository.Save(nil, &user)
-			if err != nil {
-				slog.Error("could not save github user", "err", err)
-				return
-			}
-
-			if err = g.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
-				slog.Error("could not append user to organization", "err", err)
-			}
-		}()
-
-		switch action {
-		case "close":
-
-			if vuln.GetState() == models.VulnStateAccepted || vuln.GetState() == models.VulnStateFalsePositive {
-				return nil
-			}
-
-			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the github ticket.", event.User.Name))
-
-			err = g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
-			if err != nil {
-				slog.Error("could not save dependencyVuln and event", "err", err)
-			}
-		case "reopen":
-
-			if vuln.GetState() == models.VulnStateOpen {
-				return nil
-			}
-			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability was reopened by %s", event.User.Name))
-
-			err := g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
-			if err != nil {
-				slog.Error("could not save dependencyVuln and event", "err", err)
-			}
-		}
-
-	case *gitlab.IssueCommentEvent:
-		// check if the issue is a devguard issue
-		issueId := event.Issue.IID
-
-		// check if the user is a bot - we do not want to handle bot comments
-		// if event.Comment.User.GetType() == "Bot" {
-		// 	return nil
-		// }
-		// look for a dependencyVuln with such a github ticket id
-		vuln, err := g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueId))
-		if err != nil {
-			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
-			return nil
-		}
-
-		err = g.checkWebhookSecretToken(gitlabSecretToken, vuln.GetAssetID())
-		if err != nil {
-			return err
-		}
-
-		comment := event.ObjectAttributes.Note
-
-		if messageWasCreatedByDevguard(comment) {
-			return nil
-		}
-
-		// get the asset
-		assetVersion, err := g.assetVersionRepository.Read(vuln.GetAssetVersionName(), vuln.GetAssetID())
-		if err != nil {
-			slog.Error("could not read asset version", "err", err)
-			return err
-		}
-
-		asset, err := g.assetRepository.Read(assetVersion.AssetID)
-		if err != nil {
-			slog.Error("could not read asset", "err", err)
-			return err
-		}
-
-		// get the integration id based on the asset
-		integrationId, err := extractIntegrationIdFromRepoId(utils.SafeDereference(asset.RepositoryID))
-		if err != nil {
-			slog.Error("could not extract integration id from repo id", "err", err)
-			return err
-		}
-
-		// make sure to update the github issue accordingly
-		client, err := g.gitlabClientFactory(integrationId)
-		if err != nil {
-			slog.Error("could not create github client", "err", err)
-			return err
-		}
-
-		isAuthorized, err := isGitlabUserAuthorized(event, client)
-		if err != nil {
-			return err
-		}
-		//if the user is not authorized we are done here
-		if !isAuthorized {
-			slog.Info("user not authorized for commands")
-			return ctx.JSON(200, "ok")
-		}
-
-		// make sure to save the user - it might be a new user or it might have new values defined.
-		// we do not care about any error - and we want speed, thus do it on a goroutine
-		go func() {
-			org, err := g.aggregatedVulnRepository.GetOrgFromVuln(vuln)
-			if err != nil {
-				slog.Error("could not get org from dependencyVuln id", "err", err)
-				return
-			}
-			// save the user in the database
-			user := models.ExternalUser{
-				ID:        fmt.Sprintf("gitlab:%d", event.User.ID),
-				Username:  event.User.Username,
-				AvatarURL: event.User.AvatarURL,
-			}
-
-			err = g.externalUserRepository.Save(nil, &user)
-			if err != nil {
-				slog.Error("could not save github user", "err", err)
-				return
-			}
-
-			if err = g.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
-				slog.Error("could not append user to organization", "err", err)
-			}
-		}()
-
-		// create a new event based on the comment
-		vulnEvent := createNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), comment, vuln.GetScannerIDs())
-
-		vulnEvent.Apply(vuln)
-		// save the dependencyVuln and the event in a transaction
-		err = g.aggregatedVulnRepository.Transaction(func(tx core.DB) error {
-			err := g.aggregatedVulnRepository.Save(tx, &vuln)
-			if err != nil {
-				return err
-			}
-			err = g.vulnEventRepository.Save(tx, &vulnEvent)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			slog.Error("could not save dependencyVuln and event", "err", err)
-
-		}
-
-		gitlabProjectID := event.ProjectID
-		switch vulnEvent.Type {
-		case models.EventTypeAccepted, models.EventTypeFalsePositive:
-			labels := getLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
-				StateEvent: gitlab.Ptr("close"),
-				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
-			})
-			return err
-		case models.EventTypeReopened:
-			labels := getLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
-				StateEvent: gitlab.Ptr("reopen"),
-				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
-			})
-			return err
-		}
-	}
-	return ctx.JSON(200, "ok")
 }
 
-func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
-	org := core.GetOrganization(ctx)
+func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+	// get the oauth2 tokens for this user
+	_, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(core.GetSession(ctx).GetUserID(), externalEntityProviderID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return false
+	}
+
+	return err == nil
+}
+
+func (g *GitlabIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
+	// get the oauth2 tokens for this user
+	tokens, err := g.gitlabOauth2TokenRepository.FindByUserId(core.GetSession(ctx).GetUserID())
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return nil, err
+	}
+
+	if len(tokens) == 0 {
+		slog.Debug("no gitlab oauth2 tokens found for user")
+		return nil, nil
+	}
+
+	return utils.Map(tokens, oauth2TokenToOrg), nil
+
+}
+
+func (g *GitlabIntegration) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
+	// get the oauth2 tokens for this user
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, providerID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return nil, err
+	}
 	// create a new gitlab batch client
-	gitlabBatchClient, err := newGitLabBatchClient(org.GitLabIntegrations)
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	if err != nil {
+		slog.Error("failed to create gitlab batch client", "err", err)
+		return nil, err
+	}
+	// get the groups for this user
+	groups, _, err := gitlabClient.ListGroups(ctx.Request().Context(), &gitlab.ListGroupsOptions{
+		MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions), // only list groups where the user has at least owner permissions
+	})
+
+	if err != nil {
+		slog.Error("failed to list groups", "err", err)
+		return nil, err
+	}
+
+	return utils.Map(groups, func(el *gitlab.Group) models.Project {
+		return groupToProject(el, providerID)
+	}), nil
+}
+
+func (g *GitlabIntegration) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
+	// get the oauth2 tokens for this user
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, providerID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return nil, err
+	}
+	// create a new gitlab batch client
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	if err != nil {
+		slog.Error("failed to create gitlab batch client", "err", err)
+		return nil, err
+	}
+	// convert the groupID to an int
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		slog.Error("failed to convert groupID to int", "err", err)
+		return nil, errors.Wrap(err, "failed to convert groupID to int")
+	}
+	// get the projects in the group
+	projects, _, err := gitlabClient.ListProjectsInGroup(ctx.Request().Context(), groupIDInt, nil)
+	if err != nil {
+		slog.Error("failed to list projects in group", "err", err)
+		return nil, err
+	}
+
+	// convert the projects to assets
+	result := make([]models.Asset, 0, len(projects))
+	for _, project := range projects {
+		result = append(result, projectToAsset(project, providerID))
+	}
+
+	return result, nil
+}
+
+func gitlabAccessLevelToRole(accessLevel gitlab.AccessLevelValue) string {
+	switch accessLevel {
+	case gitlab.OwnerPermissions:
+		return "owner"
+	case gitlab.MaintainerPermissions:
+		return "admin"
+	default:
+		return "member"
+	}
+}
+
+func (g *GitlabIntegration) GetGroup(ctx context.Context, userID string, providerID string, groupID string) (models.Project, error) {
+	// get the oauth2 tokens for this user
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, providerID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return models.Project{}, err
+	}
+
+	// create a new gitlab batch client
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	if err != nil {
+		slog.Error("failed to create gitlab batch client", "err", err)
+		return models.Project{}, err
+	}
+
+	// convert the groupID to an int
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		slog.Error("failed to convert groupID to int", "err", err)
+		return models.Project{}, errors.Wrap(err, "failed to convert groupID to int")
+	}
+
+	group, _, err := gitlabClient.GetGroup(ctx, groupIDInt)
+	if err != nil {
+		slog.Error("failed to get organization", "err", err)
+		return models.Project{}, err
+	}
+	return groupToProject(group, providerID), nil
+}
+
+func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
+	// get the oauth2 tokens for this user
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, providerID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return "", err
+	}
+	// create a new gitlab batch client
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+
+	if err != nil {
+		slog.Error("failed to create gitlab batch client", "err", err)
+		return "", err
+	}
+	// convert the groupID to an int
+	groupIDInt, err := strconv.Atoi(groupID)
+	if err != nil {
+		slog.Error("failed to convert groupID to int", "err", err)
+		return "", errors.Wrap(err, "failed to convert groupID to int")
+	}
+	// get the group members
+	member, _, err := gitlabClient.GetMemberInGroup(ctx, token.GitLabUserID, groupIDInt)
+	if err != nil {
+		slog.Error("failed to get member in group", "err", err)
+		if strings.Contains(err.Error(), "404 Not Found") {
+			// user is not a member of the group
+			return "", nil
+		}
+		return "", err
+	}
+
+	// return the role of the user in the group
+	return gitlabAccessLevelToRole(member.AccessLevel), nil
+}
+
+func (g *GitlabIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
+	// get the oauth2 tokens for this user
+	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, providerID)
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return "", err
+	}
+
+	// create a new gitlab batch client
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	if err != nil {
+		slog.Error("failed to create gitlab batch client", "err", err)
+		return "", err
+	}
+
+	// convert the projectID to an int
+	projectIDInt, err := strconv.Atoi(projectID)
+	if err != nil {
+		slog.Error("failed to convert projectID to int", "err", err)
+		return "", errors.Wrap(err, "failed to convert projectID to int")
+	}
+
+	member, _, err := gitlabClient.GetMemberInProject(ctx, token.GitLabUserID, projectIDInt)
+	if err != nil {
+		slog.Error("failed to get member in project", "err", err)
+		if strings.Contains(err.Error(), "404 Not Found") {
+			// user is not a member of the project
+			return "", nil
+		}
+		return "", err
+	}
+
+	return gitlabAccessLevelToRole(member.AccessLevel), nil
+}
+
+func (g *GitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
+	var organizationGitlabIntegrations []models.GitLabIntegration
+	if core.HasOrganization(ctx) {
+		org := core.GetOrg(ctx)
+		organizationGitlabIntegrations = org.GitLabIntegrations
+	}
+
+	// get the oauth2 tokens for this user
+	tokens, err := g.gitlabOauth2TokenRepository.FindByUserId(core.GetSession(ctx).GetUserID())
+	if err != nil {
+		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		return nil, err
+	}
+
+	if len(tokens) == 0 {
+		// check if the user has a gitlab login
+		// we can even improve the response by checking if the user has a gitlab login
+		// todo this, fetch the kratos user and check if the user has a gitlab login
+		adminClient := core.GetAuthAdminClient(ctx)
+
+		identity, err := adminClient.GetIdentityWithCredentials(ctx.Request().Context(), core.GetSession(ctx).GetUserID())
+		if err != nil {
+			slog.Error("failed to get identity", "err", err)
+			return nil, err
+		}
+
+		t, err := getGitlabAccessTokenFromOryIdentity(g.oauth2Endpoints, identity)
+		if err != nil {
+			slog.Error("failed to get gitlab access token from ory identity", "err", err)
+			return nil, err
+		}
+
+		tokenSlice := make([]models.GitLabOauth2Token, 0, len(t))
+		for providerId, token := range t {
+			tokenSlice = append(tokenSlice, models.GitLabOauth2Token{
+				AccessToken:  token.AccessToken,
+				RefreshToken: token.RefreshToken,
+				BaseURL:      token.BaseURL,
+				GitLabUserID: token.GitLabUserID,
+				UserID:       core.GetSession(ctx).GetUserID(),
+				ProviderID:   providerId,
+				Expiry:       token.Expiry,
+			})
+		}
+
+		if len(tokenSlice) != 0 {
+			// save the tokens in the database
+			err = g.gitlabOauth2TokenRepository.Save(nil, utils.SlicePtr(tokenSlice)...)
+			if err != nil {
+				slog.Error("failed to save gitlab oauth2 tokens", "err", err)
+				return nil, err
+			}
+		}
+		tokens = tokenSlice
+	}
+
+	// create a new gitlab batch client
+	gitlabBatchClient, err := newGitLabBatchClient(organizationGitlabIntegrations, g.oauth2Endpoints, tokens)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return nil, err
@@ -424,7 +529,7 @@ func (g *gitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 }
 
 // Check if the user who comments on a ticket is authorized to use commands like /accept, more checks can be added later
-func isGitlabUserAuthorized(event *gitlab.IssueCommentEvent, client core.GitlabClientFacade) (bool, error) {
+func isGitlabUserAuthorized(event *gitlab.IssueCommentEvent, client gitlabClientFacade) (bool, error) {
 	if event == nil || event.User == nil {
 		slog.Error("missing event data, could not resolve if user is authorized")
 		return false, fmt.Errorf("missing event data, could not resolve if user is authorized")
@@ -444,7 +549,7 @@ func extractProjectIdFromRepoId(repoId string) (int, error) {
 	return strconv.Atoi(strings.Split(repoId, ":")[2])
 }
 
-func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
+func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	repoId := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoId, "gitlab:") {
@@ -456,6 +561,7 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not extract integration id from repo id")
 	}
+
 	client, err := g.gitlabClientFactory(integrationUUID)
 	if err != nil {
 		return errors.Wrap(err, "could not create new gitlab client")
@@ -513,7 +619,7 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 	defaultBranch := project.DefaultBranch
 
 	//generate a random branch name
-	branchName := fmt.Sprintf("devguard-autosetup-%s", strconv.Itoa(generateFourDigitNumber()))
+	branchName := fmt.Sprintf("devguard-autosetup-%s", strconv.Itoa(commonint.GenerateFourDigitNumber()))
 
 	projectName, err := g.getRepoNameFromProjectId(ctx, projectId)
 	if err != nil {
@@ -521,7 +627,7 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 	}
 
 	templatePath := getTemplatePath(ctx.QueryParam("scanner"))
-	err = setupAndPushPipeline(accessToken, gitlabUrl, projectName, templatePath, branchName)
+	err = commonint.SetupAndPushPipeline(accessToken, gitlabUrl, projectName, templatePath, branchName)
 	if err != nil {
 		return errors.Wrap(err, "could not setup and push pipeline")
 	}
@@ -549,7 +655,7 @@ func (g *gitlabIntegration) AutoSetup(ctx core.Context) error {
 	return nil
 }
 
-func (g *gitlabIntegration) addProjectHook(ctx core.Context) error {
+func (g *GitlabIntegration) addProjectHook(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	repoId := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoId, "gitlab:") {
@@ -649,7 +755,7 @@ func createToken() (uuid.UUID, error) {
 	return token, nil
 }
 
-func (g *gitlabIntegration) addProjectVariables(ctx core.Context, devguardPrivateKey, assetName string) error {
+func (g *GitlabIntegration) addProjectVariables(ctx core.Context, devguardPrivateKey, assetName string) error {
 
 	asset := core.GetAsset(ctx)
 	repoId := utils.SafeDereference(asset.RepositoryID)
@@ -686,7 +792,7 @@ func (g *gitlabIntegration) addProjectVariables(ctx core.Context, devguardPrivat
 
 	return nil
 }
-func (g *gitlabIntegration) addProjectVariable(ctx core.Context, key string, value string, Masked bool, projectId int, client core.GitlabClientFacade) error {
+func (g *GitlabIntegration) addProjectVariable(ctx core.Context, key string, value string, Masked bool, projectId int, client gitlabClientFacade) error {
 
 	projectVariable := &gitlab.CreateProjectVariableOptions{
 		Key:    gitlab.Ptr(key),
@@ -719,7 +825,7 @@ func (g *gitlabIntegration) addProjectVariable(ctx core.Context, key string, val
 	return nil
 }
 
-func (g *gitlabIntegration) getRepoNameFromProjectId(ctx core.Context, projectId int) (string, error) {
+func (g *GitlabIntegration) getRepoNameFromProjectId(ctx core.Context, projectId int) (string, error) {
 	asset := core.GetAsset(ctx)
 	repoId := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoId, "gitlab:") {
@@ -758,173 +864,15 @@ func getTemplatePath(scannerID string) string {
 	}
 }
 
-func (g *gitlabIntegration) HandleEvent(event any) error {
-	switch event := event.(type) {
-	case core.ManualMitigateEvent:
-		asset := core.GetAsset(event.Ctx)
-		assetVersionName := core.GetAssetVersion(event.Ctx).Name
-		repoId, err := core.GetRepositoryID(event.Ctx)
-		if err != nil {
-			return err
-		}
-		projectSlug, err := core.GetProjectSlug(event.Ctx)
-
-		if err != nil {
-			return err
-		}
-		vulnID, vulnType, err := core.GetVulnID(event.Ctx)
-		if err != nil {
-			return err
-		}
-
-		var vuln models.Vuln
-
-		switch vulnType {
-		case models.VulnTypeDependencyVuln:
-			// we have a dependency vuln
-			v, err := g.dependencyVulnRepository.Read(vulnID)
-			if err != nil {
-				return err
-			}
-			vuln = &v
-		case models.VulnTypeFirstPartyVuln:
-			v, err := g.firstPartyVulnRepository.Read(vulnID)
-			if err != nil {
-				return err
-			}
-			vuln = &v
-		}
-
-		orgSlug, err := core.GetOrgSlug(event.Ctx)
-		if err != nil {
-			return err
-		}
-
-		session := core.GetSession(event.Ctx)
-
-		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
-	case core.VulnEvent:
-		ev := event.Event
-
-		vulnType := ev.VulnType
-
-		var vuln models.Vuln
-		switch vulnType {
-		case models.VulnTypeDependencyVuln:
-			v, err := g.dependencyVulnRepository.Read(ev.VulnID)
-			if err != nil {
-				return err
-			}
-			vuln = &v
-		case models.VulnTypeFirstPartyVuln:
-			v, err := g.firstPartyVulnRepository.Read(ev.VulnID)
-			if err != nil {
-				return err
-			}
-			vuln = &v
-		}
-
-		asset := core.GetAsset(event.Ctx)
-
-		if vuln.GetTicketID() == nil {
-			// we do not have a ticket id - we do not need to do anything
-			return nil
-		}
-
-		repoId := utils.SafeDereference(asset.RepositoryID)
-		if !strings.HasPrefix(repoId, "gitlab:") || !strings.HasPrefix(*vuln.GetTicketID(), "gitlab:") {
-			// this integration only handles gitlab repositories.
-			return nil
-		}
-
-		integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
-		if err != nil {
-			slog.Error("failed to extract integration id from repo id", "err", err, "repoId", repoId)
-			return err
-		}
-
-		projectId, err := extractProjectIdFromRepoId(repoId)
-		if err != nil {
-			slog.Error("failed to extract project id from repo id", "err", err, "repoId", repoId)
-			return err
-		}
-
-		// we create a new ticket in github
-		client, err := g.gitlabClientFactory(integrationUUID)
-		if err != nil {
-			return err
-		}
-
-		gitlabTicketID := strings.TrimPrefix(*vuln.GetTicketID(), "gitlab:")
-		gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
-		if err != nil {
-			return err
-		}
-
-		members, err := org.FetchMembersOfOrganization(event.Ctx)
-		if err != nil {
-			return err
-		}
-
-		// find the member which created the event
-		member, ok := utils.Find(
-			members,
-			func(member core.User) bool {
-				return member.ID == ev.UserID
-			},
-		)
-		if !ok {
-			member = core.User{
-				Name: "unknown",
-			}
-		}
-
-		switch ev.Type {
-		case models.EventTypeAccepted:
-			// if a dependencyVuln gets accepted, we close the issue and create a comment with that justification
-			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification))),
-			})
-			if err != nil {
-				return err
-			}
-			return g.CloseIssue(event.Ctx.Request().Context(), "accepted", repoId, vuln)
-		case models.EventTypeFalsePositive:
-			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))),
-			})
-			if err != nil {
-				return err
-			}
-			return g.CloseIssue(event.Ctx.Request().Context(), "false-positive", repoId, vuln)
-		case models.EventTypeReopened:
-			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
-			})
-			if err != nil {
-				return err
-			}
-
-			return g.ReopenIssue(event.Ctx.Request().Context(), repoId, vuln)
-		case models.EventTypeComment:
-			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
-				Body: github.String(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
-			})
-			return err
-		}
-	}
-	return nil
-}
-
-func (g *gitlabIntegration) GetUsers(org models.Org) []core.User {
+func (g *GitlabIntegration) GetUsers(org models.Org) []core.User {
 	return []core.User{}
 }
 
-func (g *gitlabIntegration) GetID() core.IntegrationID {
+func (g *GitlabIntegration) GetID() core.IntegrationID {
 	return core.GitLabIntegrationID
 }
 
-func (g *gitlabIntegration) Delete(ctx core.Context) error {
+func (g *GitlabIntegration) Delete(ctx core.Context) error {
 	id := ctx.Param("gitlab_integration_id")
 
 	if id == "" {
@@ -951,7 +899,7 @@ func (g *gitlabIntegration) Delete(ctx core.Context) error {
 	})
 }
 
-func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
+func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 	var data struct {
 		Url   string `json:"url"`
 		Token string `json:"token"`
@@ -990,7 +938,7 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 		GitLabUrl:   data.Url,
 		AccessToken: data.Token,
 		Name:        data.Name,
-		OrgID:       (core.GetOrganization(ctx).GetID()),
+		OrgID:       (core.GetOrg(ctx).GetID()),
 	}
 
 	if err := g.gitlabIntegrationRepository.Save(nil, &integration); err != nil {
@@ -1006,7 +954,7 @@ func (g *gitlabIntegration) TestAndSave(ctx core.Context) error {
 	})
 }
 
-func (g *gitlabIntegration) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
+func (g *GitlabIntegration) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
 	if !strings.HasPrefix(repoId, "gitlab:") {
 		// this integration only handles gitlab repositories
 		return nil
@@ -1034,7 +982,7 @@ func (g *gitlabIntegration) ReopenIssue(ctx context.Context, repoId string, vuln
 	if err != nil {
 		return err
 	}
-	labels := getLabels(vuln)
+	labels := commonint.GetLabels(vuln)
 
 	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent: gitlab.Ptr("reopen"),
@@ -1047,7 +995,7 @@ func (g *gitlabIntegration) ReopenIssue(ctx context.Context, repoId string, vuln
 	return nil
 }
 
-func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, repoId string, vuln models.Vuln) error {
+func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, repoId string, vuln models.Vuln) error {
 	if !strings.HasPrefix(repoId, "gitlab:") {
 		// this integration only handles gitlab repositories
 		return nil
@@ -1109,12 +1057,12 @@ func (g *gitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	return nil
 }
 
-func (g *gitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependencyVuln *models.FirstPartyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
+func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependencyVuln *models.FirstPartyVuln, asset models.Asset, client gitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
 	stateEvent := "close"
 	gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
 
-	labels := getLabels(dependencyVuln)
+	labels := commonint.GetLabels(dependencyVuln)
 
 	if err != nil {
 		return err
@@ -1133,13 +1081,13 @@ func (g *gitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 	return err
 }
 
-func (g *gitlabIntegration) updateDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
+func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client gitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
 
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1149,7 +1097,7 @@ func (g *gitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	if err != nil {
 		return err
 	}
-	labels := getLabels(dependencyVuln)
+	labels := commonint.GetLabels(dependencyVuln)
 
 	stateEvent := "close"
 	if dependencyVuln.State == models.VulnStateOpen {
@@ -1165,7 +1113,7 @@ func (g *gitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	return err
 }
 
-func (g *gitlabIntegration) CloseIssue(ctx context.Context, state string, repoId string, vuln models.Vuln) error {
+func (g *GitlabIntegration) CloseIssue(ctx context.Context, state string, repoId string, vuln models.Vuln) error {
 	if !strings.HasPrefix(repoId, "gitlab:") {
 		// this integration only handles gitlab repositories
 		return nil
@@ -1220,13 +1168,13 @@ func (g *gitlabIntegration) CloseIssue(ctx context.Context, state string, repoId
 	return nil
 }
 
-func (g *gitlabIntegration) closeFirstPartyIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
+func (g *GitlabIntegration) closeFirstPartyIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client gitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
 	gitlabTicketID := strings.TrimPrefix(*vuln.TicketID, "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
 	if err != nil {
 		return err
 	}
-	labels := getLabels(vuln)
+	labels := commonint.GetLabels(vuln)
 
 	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent: gitlab.Ptr("close"),
@@ -1235,12 +1183,12 @@ func (g *gitlabIntegration) closeFirstPartyIssue(ctx context.Context, vuln *mode
 	return err
 }
 
-func (g *gitlabIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *models.DependencyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
+func (g *GitlabIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *models.DependencyVuln, asset models.Asset, client gitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
 	riskMetrics, vector := risk.RiskCalculation(*vuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*vuln, asset, vector, riskMetrics)
 
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1250,7 +1198,7 @@ func (g *gitlabIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 	if err != nil {
 		return err
 	}
-	labels := getLabels(vuln)
+	labels := commonint.GetLabels(vuln)
 
 	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent: gitlab.Ptr("close"),
@@ -1262,7 +1210,7 @@ func (g *gitlabIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 	return err
 }
 
-func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 
 	if !strings.HasPrefix(repoId, "gitlab:") {
 		// this integration only handles gitlab repositories
@@ -1318,9 +1266,9 @@ func (g *gitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	return g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 }
 
-func (g *gitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) (*gitlab.Issue, error) {
+func (g *GitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client gitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) (*gitlab.Issue, error) {
 
-	labels := getLabels(vuln)
+	labels := commonint.GetLabels(vuln)
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(vuln.Title()),
@@ -1345,14 +1293,14 @@ func (g *gitlabIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln 
 	return createdIssue, nil
 }
 
-func (g *gitlabIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) (*gitlab.Issue, error) {
+func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client gitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) (*gitlab.Issue, error) {
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
-	labels := getLabels(dependencyVuln)
-	componentTree, err := renderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
+	labels := commonint.GetLabels(dependencyVuln)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
@@ -1373,8 +1321,4 @@ func (g *gitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 		Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n", justification)),
 	})
 	return createdIssue, err
-}
-
-func (c *gitlabIntegration) Oauth2Callback(ctx core.Context) error {
-	return nil
 }

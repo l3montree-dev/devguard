@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
@@ -38,505 +37,136 @@ func (_m *GitLabOauth2TokenRepository) EXPECT() *GitLabOauth2TokenRepository_Exp
 	return &GitLabOauth2TokenRepository_Expecter{mock: &_m.Mock}
 }
 
-// Activate provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) Activate(tx core.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
+// FindByUserId provides a mock function for the type GitLabOauth2TokenRepository
+func (_mock *GitLabOauth2TokenRepository) FindByUserId(userId string) ([]models.GitLabOauth2Token, error) {
+	ret := _mock.Called(userId)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Activate")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// GitLabOauth2TokenRepository_Activate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Activate'
-type GitLabOauth2TokenRepository_Activate_Call struct {
-	*mock.Call
-}
-
-// Activate is a helper method to define mock.On call
-//   - tx
-//   - id
-func (_e *GitLabOauth2TokenRepository_Expecter) Activate(tx interface{}, id interface{}) *GitLabOauth2TokenRepository_Activate_Call {
-	return &GitLabOauth2TokenRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
-}
-
-func (_c *GitLabOauth2TokenRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *GitLabOauth2TokenRepository_Activate_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
-	})
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_Activate_Call) Return(err error) *GitLabOauth2TokenRepository_Activate_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_Activate_Call) RunAndReturn(run func(tx core.DB, id uuid.UUID) error) *GitLabOauth2TokenRepository_Activate_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// All provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) All() ([]models.GitLabOauth2Token, error) {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for All")
+		panic("no return value specified for FindByUserId")
 	}
 
 	var r0 []models.GitLabOauth2Token
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func() ([]models.GitLabOauth2Token, error)); ok {
-		return returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(string) ([]models.GitLabOauth2Token, error)); ok {
+		return returnFunc(userId)
 	}
-	if returnFunc, ok := ret.Get(0).(func() []models.GitLabOauth2Token); ok {
-		r0 = returnFunc()
+	if returnFunc, ok := ret.Get(0).(func(string) []models.GitLabOauth2Token); ok {
+		r0 = returnFunc(userId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.GitLabOauth2Token)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func() error); ok {
-		r1 = returnFunc()
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(userId)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// GitLabOauth2TokenRepository_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
-type GitLabOauth2TokenRepository_All_Call struct {
+// GitLabOauth2TokenRepository_FindByUserId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByUserId'
+type GitLabOauth2TokenRepository_FindByUserId_Call struct {
 	*mock.Call
 }
 
-// All is a helper method to define mock.On call
-func (_e *GitLabOauth2TokenRepository_Expecter) All() *GitLabOauth2TokenRepository_All_Call {
-	return &GitLabOauth2TokenRepository_All_Call{Call: _e.mock.On("All")}
+// FindByUserId is a helper method to define mock.On call
+//   - userId
+func (_e *GitLabOauth2TokenRepository_Expecter) FindByUserId(userId interface{}) *GitLabOauth2TokenRepository_FindByUserId_Call {
+	return &GitLabOauth2TokenRepository_FindByUserId_Call{Call: _e.mock.On("FindByUserId", userId)}
 }
 
-func (_c *GitLabOauth2TokenRepository_All_Call) Run(run func()) *GitLabOauth2TokenRepository_All_Call {
+func (_c *GitLabOauth2TokenRepository_FindByUserId_Call) Run(run func(userId string)) *GitLabOauth2TokenRepository_FindByUserId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		run(args[0].(string))
 	})
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_All_Call) Return(gitLabOauth2Tokens []models.GitLabOauth2Token, err error) *GitLabOauth2TokenRepository_All_Call {
+func (_c *GitLabOauth2TokenRepository_FindByUserId_Call) Return(gitLabOauth2Tokens []models.GitLabOauth2Token, err error) *GitLabOauth2TokenRepository_FindByUserId_Call {
 	_c.Call.Return(gitLabOauth2Tokens, err)
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_All_Call) RunAndReturn(run func() ([]models.GitLabOauth2Token, error)) *GitLabOauth2TokenRepository_All_Call {
+func (_c *GitLabOauth2TokenRepository_FindByUserId_Call) RunAndReturn(run func(userId string) ([]models.GitLabOauth2Token, error)) *GitLabOauth2TokenRepository_FindByUserId_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Begin provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) Begin() core.DB {
-	ret := _mock.Called()
+// FindByUserIdAndProviderId provides a mock function for the type GitLabOauth2TokenRepository
+func (_mock *GitLabOauth2TokenRepository) FindByUserIdAndProviderId(userId string, providerId string) (*models.GitLabOauth2Token, error) {
+	ret := _mock.Called(userId, providerId)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Begin")
+		panic("no return value specified for FindByUserIdAndProviderId")
 	}
 
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func() core.DB); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
-		}
-	}
-	return r0
-}
-
-// GitLabOauth2TokenRepository_Begin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Begin'
-type GitLabOauth2TokenRepository_Begin_Call struct {
-	*mock.Call
-}
-
-// Begin is a helper method to define mock.On call
-func (_e *GitLabOauth2TokenRepository_Expecter) Begin() *GitLabOauth2TokenRepository_Begin_Call {
-	return &GitLabOauth2TokenRepository_Begin_Call{Call: _e.mock.On("Begin")}
-}
-
-func (_c *GitLabOauth2TokenRepository_Begin_Call) Run(run func()) *GitLabOauth2TokenRepository_Begin_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_Begin_Call) Return(v core.DB) *GitLabOauth2TokenRepository_Begin_Call {
-	_c.Call.Return(v)
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_Begin_Call) RunAndReturn(run func() core.DB) *GitLabOauth2TokenRepository_Begin_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Create provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) Create(tx core.DB, t *models.GitLabOauth2Token) error {
-	ret := _mock.Called(tx, t)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Create")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.GitLabOauth2Token) error); ok {
-		r0 = returnFunc(tx, t)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// GitLabOauth2TokenRepository_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
-type GitLabOauth2TokenRepository_Create_Call struct {
-	*mock.Call
-}
-
-// Create is a helper method to define mock.On call
-//   - tx
-//   - t
-func (_e *GitLabOauth2TokenRepository_Expecter) Create(tx interface{}, t interface{}) *GitLabOauth2TokenRepository_Create_Call {
-	return &GitLabOauth2TokenRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
-}
-
-func (_c *GitLabOauth2TokenRepository_Create_Call) Run(run func(tx core.DB, t *models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Create_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.GitLabOauth2Token))
-	})
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_Create_Call) Return(err error) *GitLabOauth2TokenRepository_Create_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_Create_Call) RunAndReturn(run func(tx core.DB, t *models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_Create_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// CreateBatch provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) CreateBatch(tx core.DB, ts []models.GitLabOauth2Token) error {
-	ret := _mock.Called(tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CreateBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.GitLabOauth2Token) error); ok {
-		r0 = returnFunc(tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// GitLabOauth2TokenRepository_CreateBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateBatch'
-type GitLabOauth2TokenRepository_CreateBatch_Call struct {
-	*mock.Call
-}
-
-// CreateBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
-func (_e *GitLabOauth2TokenRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *GitLabOauth2TokenRepository_CreateBatch_Call {
-	return &GitLabOauth2TokenRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
-}
-
-func (_c *GitLabOauth2TokenRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_CreateBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.GitLabOauth2Token))
-	})
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_CreateBatch_Call) Return(err error) *GitLabOauth2TokenRepository_CreateBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_CreateBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_CreateBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Delete provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) Delete(tx core.DB, id uuid.UUID) error {
-	ret := _mock.Called(tx, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Delete")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
-		r0 = returnFunc(tx, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// GitLabOauth2TokenRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
-type GitLabOauth2TokenRepository_Delete_Call struct {
-	*mock.Call
-}
-
-// Delete is a helper method to define mock.On call
-//   - tx
-//   - id
-func (_e *GitLabOauth2TokenRepository_Expecter) Delete(tx interface{}, id interface{}) *GitLabOauth2TokenRepository_Delete_Call {
-	return &GitLabOauth2TokenRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
-}
-
-func (_c *GitLabOauth2TokenRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *GitLabOauth2TokenRepository_Delete_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
-	})
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_Delete_Call) Return(err error) *GitLabOauth2TokenRepository_Delete_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_Delete_Call) RunAndReturn(run func(tx core.DB, id uuid.UUID) error) *GitLabOauth2TokenRepository_Delete_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// DeleteBatch provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) DeleteBatch(tx core.DB, ids []models.GitLabOauth2Token) error {
-	ret := _mock.Called(tx, ids)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.GitLabOauth2Token) error); ok {
-		r0 = returnFunc(tx, ids)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// GitLabOauth2TokenRepository_DeleteBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteBatch'
-type GitLabOauth2TokenRepository_DeleteBatch_Call struct {
-	*mock.Call
-}
-
-// DeleteBatch is a helper method to define mock.On call
-//   - tx
-//   - ids
-func (_e *GitLabOauth2TokenRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *GitLabOauth2TokenRepository_DeleteBatch_Call {
-	return &GitLabOauth2TokenRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
-}
-
-func (_c *GitLabOauth2TokenRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_DeleteBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.GitLabOauth2Token))
-	})
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_DeleteBatch_Call) Return(err error) *GitLabOauth2TokenRepository_DeleteBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB, ids []models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_DeleteBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetDB provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) GetDB(tx core.DB) core.DB {
-	ret := _mock.Called(tx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetDB")
-	}
-
-	var r0 core.DB
-	if returnFunc, ok := ret.Get(0).(func(core.DB) core.DB); ok {
-		r0 = returnFunc(tx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(core.DB)
-		}
-	}
-	return r0
-}
-
-// GitLabOauth2TokenRepository_GetDB_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDB'
-type GitLabOauth2TokenRepository_GetDB_Call struct {
-	*mock.Call
-}
-
-// GetDB is a helper method to define mock.On call
-//   - tx
-func (_e *GitLabOauth2TokenRepository_Expecter) GetDB(tx interface{}) *GitLabOauth2TokenRepository_GetDB_Call {
-	return &GitLabOauth2TokenRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
-}
-
-func (_c *GitLabOauth2TokenRepository_GetDB_Call) Run(run func(tx core.DB)) *GitLabOauth2TokenRepository_GetDB_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
-	})
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_GetDB_Call) Return(v core.DB) *GitLabOauth2TokenRepository_GetDB_Call {
-	_c.Call.Return(v)
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core.DB) *GitLabOauth2TokenRepository_GetDB_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// List provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) List(ids []uuid.UUID) ([]models.GitLabOauth2Token, error) {
-	ret := _mock.Called(ids)
-
-	if len(ret) == 0 {
-		panic("no return value specified for List")
-	}
-
-	var r0 []models.GitLabOauth2Token
+	var r0 *models.GitLabOauth2Token
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) ([]models.GitLabOauth2Token, error)); ok {
-		return returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(string, string) (*models.GitLabOauth2Token, error)); ok {
+		return returnFunc(userId, providerId)
 	}
-	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID) []models.GitLabOauth2Token); ok {
-		r0 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(0).(func(string, string) *models.GitLabOauth2Token); ok {
+		r0 = returnFunc(userId, providerId)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.GitLabOauth2Token)
+			r0 = ret.Get(0).(*models.GitLabOauth2Token)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func([]uuid.UUID) error); ok {
-		r1 = returnFunc(ids)
+	if returnFunc, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = returnFunc(userId, providerId)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// GitLabOauth2TokenRepository_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
-type GitLabOauth2TokenRepository_List_Call struct {
+// GitLabOauth2TokenRepository_FindByUserIdAndProviderId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByUserIdAndProviderId'
+type GitLabOauth2TokenRepository_FindByUserIdAndProviderId_Call struct {
 	*mock.Call
 }
 
-// List is a helper method to define mock.On call
-//   - ids
-func (_e *GitLabOauth2TokenRepository_Expecter) List(ids interface{}) *GitLabOauth2TokenRepository_List_Call {
-	return &GitLabOauth2TokenRepository_List_Call{Call: _e.mock.On("List", ids)}
+// FindByUserIdAndProviderId is a helper method to define mock.On call
+//   - userId
+//   - providerId
+func (_e *GitLabOauth2TokenRepository_Expecter) FindByUserIdAndProviderId(userId interface{}, providerId interface{}) *GitLabOauth2TokenRepository_FindByUserIdAndProviderId_Call {
+	return &GitLabOauth2TokenRepository_FindByUserIdAndProviderId_Call{Call: _e.mock.On("FindByUserIdAndProviderId", userId, providerId)}
 }
 
-func (_c *GitLabOauth2TokenRepository_List_Call) Run(run func(ids []uuid.UUID)) *GitLabOauth2TokenRepository_List_Call {
+func (_c *GitLabOauth2TokenRepository_FindByUserIdAndProviderId_Call) Run(run func(userId string, providerId string)) *GitLabOauth2TokenRepository_FindByUserIdAndProviderId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]uuid.UUID))
+		run(args[0].(string), args[1].(string))
 	})
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_List_Call) Return(gitLabOauth2Tokens []models.GitLabOauth2Token, err error) *GitLabOauth2TokenRepository_List_Call {
-	_c.Call.Return(gitLabOauth2Tokens, err)
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_List_Call) RunAndReturn(run func(ids []uuid.UUID) ([]models.GitLabOauth2Token, error)) *GitLabOauth2TokenRepository_List_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Read provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) Read(id uuid.UUID) (models.GitLabOauth2Token, error) {
-	ret := _mock.Called(id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Read")
-	}
-
-	var r0 models.GitLabOauth2Token
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (models.GitLabOauth2Token, error)); ok {
-		return returnFunc(id)
-	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) models.GitLabOauth2Token); ok {
-		r0 = returnFunc(id)
-	} else {
-		r0 = ret.Get(0).(models.GitLabOauth2Token)
-	}
-	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
-		r1 = returnFunc(id)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// GitLabOauth2TokenRepository_Read_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Read'
-type GitLabOauth2TokenRepository_Read_Call struct {
-	*mock.Call
-}
-
-// Read is a helper method to define mock.On call
-//   - id
-func (_e *GitLabOauth2TokenRepository_Expecter) Read(id interface{}) *GitLabOauth2TokenRepository_Read_Call {
-	return &GitLabOauth2TokenRepository_Read_Call{Call: _e.mock.On("Read", id)}
-}
-
-func (_c *GitLabOauth2TokenRepository_Read_Call) Run(run func(id uuid.UUID)) *GitLabOauth2TokenRepository_Read_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
-	})
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_Read_Call) Return(gitLabOauth2Token models.GitLabOauth2Token, err error) *GitLabOauth2TokenRepository_Read_Call {
+func (_c *GitLabOauth2TokenRepository_FindByUserIdAndProviderId_Call) Return(gitLabOauth2Token *models.GitLabOauth2Token, err error) *GitLabOauth2TokenRepository_FindByUserIdAndProviderId_Call {
 	_c.Call.Return(gitLabOauth2Token, err)
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_Read_Call) RunAndReturn(run func(id uuid.UUID) (models.GitLabOauth2Token, error)) *GitLabOauth2TokenRepository_Read_Call {
+func (_c *GitLabOauth2TokenRepository_FindByUserIdAndProviderId_Call) RunAndReturn(run func(userId string, providerId string) (*models.GitLabOauth2Token, error)) *GitLabOauth2TokenRepository_FindByUserIdAndProviderId_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Save provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) Save(tx core.DB, t *models.GitLabOauth2Token) error {
-	ret := _mock.Called(tx, t)
+func (_mock *GitLabOauth2TokenRepository) Save(tx core.DB, model ...*models.GitLabOauth2Token) error {
+	var tmpRet mock.Arguments
+	if len(model) > 0 {
+		tmpRet = _mock.Called(tx, model)
+	} else {
+		tmpRet = _mock.Called(tx)
+	}
+	ret := tmpRet
 
 	if len(ret) == 0 {
 		panic("no return value specified for Save")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.GitLabOauth2Token) error); ok {
-		r0 = returnFunc(tx, t)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, ...*models.GitLabOauth2Token) error); ok {
+		r0 = returnFunc(tx, model...)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -550,14 +180,16 @@ type GitLabOauth2TokenRepository_Save_Call struct {
 
 // Save is a helper method to define mock.On call
 //   - tx
-//   - t
-func (_e *GitLabOauth2TokenRepository_Expecter) Save(tx interface{}, t interface{}) *GitLabOauth2TokenRepository_Save_Call {
-	return &GitLabOauth2TokenRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
+//   - model
+func (_e *GitLabOauth2TokenRepository_Expecter) Save(tx interface{}, model ...interface{}) *GitLabOauth2TokenRepository_Save_Call {
+	return &GitLabOauth2TokenRepository_Save_Call{Call: _e.mock.On("Save",
+		append([]interface{}{tx}, model...)...)}
 }
 
-func (_c *GitLabOauth2TokenRepository_Save_Call) Run(run func(tx core.DB, t *models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Save_Call {
+func (_c *GitLabOauth2TokenRepository_Save_Call) Run(run func(tx core.DB, model ...*models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.GitLabOauth2Token))
+		variadicArgs := args[1].([]*models.GitLabOauth2Token)
+		run(args[0].(core.DB), variadicArgs...)
 	})
 	return _c
 }
@@ -567,98 +199,7 @@ func (_c *GitLabOauth2TokenRepository_Save_Call) Return(err error) *GitLabOauth2
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_Save_Call) RunAndReturn(run func(tx core.DB, t *models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_Save_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SaveBatch provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) SaveBatch(tx core.DB, ts []models.GitLabOauth2Token) error {
-	ret := _mock.Called(tx, ts)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveBatch")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.GitLabOauth2Token) error); ok {
-		r0 = returnFunc(tx, ts)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// GitLabOauth2TokenRepository_SaveBatch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBatch'
-type GitLabOauth2TokenRepository_SaveBatch_Call struct {
-	*mock.Call
-}
-
-// SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
-func (_e *GitLabOauth2TokenRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *GitLabOauth2TokenRepository_SaveBatch_Call {
-	return &GitLabOauth2TokenRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
-}
-
-func (_c *GitLabOauth2TokenRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_SaveBatch_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.GitLabOauth2Token))
-	})
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_SaveBatch_Call) Return(err error) *GitLabOauth2TokenRepository_SaveBatch_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_SaveBatch_Call) RunAndReturn(run func(tx core.DB, ts []models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_SaveBatch_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Transaction provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) Transaction(fn func(tx core.DB) error) error {
-	ret := _mock.Called(fn)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Transaction")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(func(tx core.DB) error) error); ok {
-		r0 = returnFunc(fn)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// GitLabOauth2TokenRepository_Transaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Transaction'
-type GitLabOauth2TokenRepository_Transaction_Call struct {
-	*mock.Call
-}
-
-// Transaction is a helper method to define mock.On call
-//   - fn
-func (_e *GitLabOauth2TokenRepository_Expecter) Transaction(fn interface{}) *GitLabOauth2TokenRepository_Transaction_Call {
-	return &GitLabOauth2TokenRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
-}
-
-func (_c *GitLabOauth2TokenRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *GitLabOauth2TokenRepository_Transaction_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(tx core.DB) error))
-	})
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_Transaction_Call) Return(err error) *GitLabOauth2TokenRepository_Transaction_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *GitLabOauth2TokenRepository_Transaction_Call) RunAndReturn(run func(fn func(tx core.DB) error) error) *GitLabOauth2TokenRepository_Transaction_Call {
+func (_c *GitLabOauth2TokenRepository_Save_Call) RunAndReturn(run func(tx core.DB, model ...*models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }

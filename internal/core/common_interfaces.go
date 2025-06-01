@@ -20,13 +20,13 @@ import (
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/google/go-github/v62/github"
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
-	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"gorm.io/gorm/clause"
 )
 
 type SBOMScanner interface {
@@ -47,6 +47,7 @@ type ProjectRepository interface {
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
+	Upsert(projects *[]*models.Project, conflictingColumns *[]clause.Column) error
 }
 
 type PolicyRepository interface {
@@ -184,6 +185,12 @@ type OrganizationRepository interface {
 	GetOrgByID(id uuid.UUID) (models.Org, error)
 }
 
+type OrgService interface {
+	CreateOrganization(ctx Context, organization models.Org) error
+	CreateExternalEntityOrganization(ctx Context, externalEntitySlug ExternalEntitySlug) (*models.Org, error)
+	ReadBySlug(slug string) (*models.Org, error)
+}
+
 type InvitationRepository interface {
 	Save(tx DB, invitation *models.Invitation) error
 	FindByCode(code string) (models.Invitation, error)
@@ -191,10 +198,12 @@ type InvitationRepository interface {
 }
 
 type ProjectService interface {
+	ReadBySlug(ctx Context, organizationID uuid.UUID, slug string) (models.Project, error)
 	ListAllowedProjects(ctx Context) ([]models.Project, error)
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
+	CreateProject(ctx Context, project *models.Project) error
 }
 
 type InTotoVerifierService interface {
@@ -206,6 +215,7 @@ type InTotoVerifierService interface {
 type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 	GetCVSSBadgeSVG(CVSS models.AssetRiskDistribution) string
+	CreateAsset(asset models.Asset) (*models.Asset, error)
 }
 
 type DependencyVulnService interface {
@@ -299,7 +309,9 @@ type GitlabIntegrationRepository interface {
 }
 
 type GitLabOauth2TokenRepository interface {
-	common.Repository[uuid.UUID, models.GitLabOauth2Token, DB]
+	Save(tx DB, model ...*models.GitLabOauth2Token) error
+	FindByUserIdAndProviderId(userId string, providerId string) (*models.GitLabOauth2Token, error)
+	FindByUserId(userId string) ([]models.GitLabOauth2Token, error)
 }
 
 type ConfigService interface {
@@ -347,35 +359,74 @@ type ComponentService interface {
 	GetLicense(component models.Component) (models.Component, error)
 }
 
-type GitlabClientFacade interface {
-	CreateIssue(ctx context.Context, pid int, opt *gitlab.CreateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
-	CreateIssueComment(ctx context.Context, pid int, issue int, opt *gitlab.CreateIssueNoteOptions) (*gitlab.Note, *gitlab.Response, error)
-	EditIssue(ctx context.Context, pid int, issue int, opt *gitlab.UpdateIssueOptions) (*gitlab.Issue, *gitlab.Response, error)
-	EditIssueLabel(ctx context.Context, pid int, issue int, labels []*gitlab.CreateLabelOptions) (*gitlab.Response, error)
+type AccessControl interface {
+	HasAccess(subject string) bool
 
-	ListProjectHooks(ctx context.Context, projectId int, options *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error)
-	AddProjectHook(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error)
-	DeleteProjectHook(ctx context.Context, projectId int, hookId int) (*gitlab.Response, error)
+	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error
 
-	ListVariables(ctx context.Context, projectId int, options *gitlab.ListProjectVariablesOptions) ([]*gitlab.ProjectVariable, *gitlab.Response, error)
-	CreateVariable(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
-	UpdateVariable(ctx context.Context, projectId int, key string, opt *gitlab.UpdateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)
-	RemoveVariable(ctx context.Context, projectId int, key string) (*gitlab.Response, error)
+	GetAllRoles(user string) []string
 
-	CreateMergeRequest(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions) (*gitlab.MergeRequest, *gitlab.Response, error)
-	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
+	GrantRole(subject string, role string) error
+	RevokeRole(subject string, role string) error
 
-	ListProjectMembers(ctx context.Context, projectId int, memberOptions *gitlab.ListProjectMembersOptions, requestOptions ...gitlab.RequestOptionFunc) ([]*gitlab.ProjectMember, *gitlab.Response, error)
-	IsProjectMember(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions) (bool, error)
+	GrantRoleInProject(subject string, role string, project string) error
+	RevokeRoleInProject(subject string, role string, project string) error
+	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string, project string) error
+
+	InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error
+
+	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions string, project string) error
+
+	AllowRole(role string, object Object, action []Action) error
+	IsAllowed(subject string, object Object, action Action) (bool, error)
+
+	IsAllowedInProject(project *models.Project, user string, object Object, action Action) (bool, error)
+	AllowRoleInProject(project string, role string, object Object, action []Action) error
+
+	GetAllProjectsForUser(user string) (any, error) // return is either a slice of strings or projects
+
+	GetOwnerOfOrganization() (string, error)
+
+	GetAllMembersOfOrganization() ([]string, error)
+
+	GetAllMembersOfProject(projectID string) ([]string, error)
+
+	GetDomainRole(user string) (string, error)
+	GetProjectRole(user string, project string) (string, error)
 }
 
-// wrapper around the github package - which provides only the methods
-// we need
-type GithubClientFacade interface {
-	CreateIssue(ctx context.Context, owner string, repo string, issue *github.IssueRequest) (*github.Issue, *github.Response, error)
-	CreateIssueComment(ctx context.Context, owner string, repo string, number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error)
-	EditIssue(ctx context.Context, owner string, repo string, number int, issue *github.IssueRequest) (*github.Issue, *github.Response, error)
-	EditIssueLabel(ctx context.Context, owner string, repo string, name string, label *github.Label) (*github.Label, *github.Response, error)
-	GetRepositoryCollaborators(ctx context.Context, owner string, repoId string, opts *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error)
-	IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userId int64, opts *github.ListCollaboratorsOptions) (bool, error)
+type RBACProvider interface {
+	GetDomainRBAC(domain string) AccessControl
+	DomainsOfUser(user string) ([]string, error)
+}
+
+type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
+
+const (
+	RoleOwner  = "owner"
+	RoleAdmin  = "admin"
+	RoleMember = "member"
+)
+
+type Action string
+
+const (
+	ActionCreate Action = "create"
+	ActionRead   Action = "read"
+	ActionUpdate Action = "update"
+	ActionDelete Action = "delete"
+)
+
+type Object string
+
+const (
+	ObjectProject      Object = "project"
+	ObjectAsset        Object = "asset"
+	ObjectUser         Object = "user"
+	ObjectOrganization Object = "organization"
+)
+
+type ProjectRole struct {
+	Project string
+	Role    string
 }

@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package integrations
+package githubint
 
 import (
 	"context"
@@ -25,7 +25,6 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v62/github"
-	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -120,7 +119,7 @@ func (githubOrgClient *githubBatchClient) ListRepositories(
 	return utils.Flat(results), nil
 }
 
-var _ core.GithubClientFacade = &githubClient{}
+var _ githubClientFacade = &githubClient{}
 
 func (client githubClient) CreateIssue(ctx context.Context, owner string, repo string, issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
 	return client.Issues.Create(ctx, owner, repo, issue)

@@ -14,6 +14,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package common
 
+import "gorm.io/gorm/clause"
+
 type Tabler interface {
 	TableName() string
 }
@@ -30,6 +32,7 @@ type ModelReader[ID any, T Tabler] interface {
 	Read(id ID) (T, error)
 	List(ids []ID) ([]T, error)
 	All() ([]T, error)
+	Upsert(t *[]*T, conflictingColumns *[]clause.Column) error
 }
 
 type BatchModelWriter[T Tabler, Tx any] interface {
