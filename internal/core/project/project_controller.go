@@ -54,7 +54,10 @@ func (p *controller) Create(ctx core.Context) error {
 	// add the organization id
 	newProject.OrganizationID = core.GetOrg(ctx).GetID()
 
-	p.projectService.CreateProject(ctx, newProject)
+	err := p.projectService.CreateProject(ctx, &newProject)
+	if err != nil {
+		return echo.NewHTTPError(409, "could not create project").WithInternal(err)
+	}
 
 	return ctx.JSON(200, newProject)
 }

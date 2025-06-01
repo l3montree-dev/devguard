@@ -203,7 +203,7 @@ type ProjectService interface {
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
-	CreateProject(ctx Context, project models.Project) (*models.Project, error)
+	CreateProject(ctx Context, project *models.Project) error
 }
 
 type InTotoVerifierService interface {

@@ -549,18 +549,6 @@ func extractProjectIdFromRepoId(repoId string) (int, error) {
 	return strconv.Atoi(strings.Split(repoId, ":")[2])
 }
 
-func extractNameSpacesFromProjectPath(projectPath string, projectNamespace *gitlab.ProjectNamespace) []string {
-	nameSpaces := strings.Split(projectPath, "/")
-	if len(nameSpaces) <= 2 {
-		//check if the first part of the namespace is the username
-		if projectNamespace.Kind == "user" {
-			// this is a user namespace
-			nameSpaces = nameSpaces[1:]
-		}
-	}
-	return nameSpaces
-}
-
 func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	repoId := utils.SafeDereference(asset.RepositoryID)
