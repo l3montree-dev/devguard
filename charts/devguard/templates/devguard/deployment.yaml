@@ -92,7 +92,7 @@ spec:
             value: {{ .issuerUrl | quote }}
           - name: GITLAB_{{ .id | upper }}_SCOPES
             value: {{ .scope | join " " | quote }}
-          {{- if .existingBotUserSecretName }}
+            {{- if .existingBotUserSecretName }}
           - name: GITLAB_{{ .id | upper }}_BOTUSERID
             value: {{ .botUserId | quote }}
           - name: GITLAB_{{ .id | upper }}_BOTUSERACCESSTOKEN
@@ -100,6 +100,7 @@ spec:
               secretKeyRef:
                 key: accessToken
                 name: {{ .existingBotUserSecretName | quote }}
+            {{- end }}
             {{- end }}
         {{- end }}
           - name: API_URL
