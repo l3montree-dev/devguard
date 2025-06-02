@@ -324,29 +324,6 @@ func (g *GitlabIntegration) getOauth2TokenFromAuthServer(ctx core.Context) ([]mo
 	return tokenSlice, nil
 }
 
-func (g *GitlabIntegration) checkTokens(ctx core.Context, tokens []models.GitLabOauth2Token) ([]models.GitLabOauth2Token, []models.GitLabOauth2Token) {
-	// remove all invalid tokens
-	wg := utils.ErrGroup[bool](10)
-	for i := range tokens {
-		wg.Go(func() (bool, error) {
-			return g.checkIfTokenIsValid(ctx, tokens[i]), nil
-		})
-	}
-
-	result, _ := wg.WaitAndCollect()
-	validTokens := make([]models.GitLabOauth2Token, 0)
-	toRemove := make([]models.GitLabOauth2Token, 0)
-	for i, valid := range result {
-		if valid {
-			validTokens = append(validTokens, tokens[i])
-		} else {
-			toRemove = append(toRemove, tokens[i])
-		}
-	}
-
-	return validTokens, toRemove
-}
-
 func (g *GitlabIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 	// get the oauth2 tokens for this user
 	tokens, err := g.getOauth2TokenFromAuthServer(ctx)
