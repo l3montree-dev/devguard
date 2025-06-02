@@ -113,7 +113,7 @@ type GitlabIntegration struct {
 	assetService                core.AssetService
 	componentRepository         core.ComponentRepository
 	gitlabClientFactory         func(id uuid.UUID) (gitlabClientFacade, error)
-	gitlabOauth2ClientFactory   func(token models.GitLabOauth2Token) (gitlabClientFacade, error)
+	gitlabOauth2ClientFactory   func(token models.GitLabOauth2Token, enableClientCache bool) (gitlabClientFacade, error)
 	casbinRBACProvider          core.RBACProvider
 }
 
@@ -188,11 +188,11 @@ func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config
 			return gitlabClient{Client: client, clientID: integration.ID.String()}, nil
 		},
 
-		gitlabOauth2ClientFactory: func(token models.GitLabOauth2Token) (gitlabClientFacade, error) {
+		gitlabOauth2ClientFactory: func(token models.GitLabOauth2Token, enableClientCache bool) (gitlabClientFacade, error) {
 			// get the correct gitlab oauth2 integration configuration
 			for _, integration := range oauth2GitlabIntegration {
 				if integration.ProviderID == token.ProviderID {
-					return buildOauth2GitlabClient(token, integration)
+					return buildOauth2GitlabClient(token, integration, enableClientCache)
 				}
 			}
 			return nil, errors.New("could not find gitlab oauth2 integration")
@@ -271,7 +271,7 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx core.Context, 
 
 func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.GitLabOauth2Token) bool {
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(token)
+	gitlabClient, err := g.gitlabOauth2ClientFactory(token, false)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return false
@@ -347,58 +347,6 @@ func (g *GitlabIntegration) checkTokens(ctx core.Context, tokens []models.GitLab
 	return validTokens, toRemove
 }
 
-func (g *GitlabIntegration) GetOauth2Tokens(ctx core.Context) ([]models.GitLabOauth2Token, error) {
-	// get the oauth2 tokens for this user
-	tokens, err := g.gitlabOauth2TokenRepository.FindByUserId(core.GetSession(ctx).GetUserID())
-	if err != nil {
-		tokens = make([]models.GitLabOauth2Token, 0)
-	}
-
-	validTokens, toRemove := g.checkTokens(ctx, tokens)
-
-	// delete the invalid tokens from the database
-	if len(toRemove) > 0 {
-		err = g.gitlabOauth2TokenRepository.Delete(nil, toRemove)
-		if err != nil {
-			slog.Error("failed to delete invalid gitlab oauth2 tokens", "err", err)
-			return nil, err
-		}
-	}
-
-	if len(validTokens) == 0 {
-		// if no valid tokens are found, try to get the tokens from the auth server
-		slog.Debug("no valid gitlab oauth2 tokens found, trying to get them from the auth server")
-		tokens, err = g.getOauth2TokenFromAuthServer(ctx)
-		if err != nil {
-			slog.Error("failed to get gitlab oauth2 tokens from auth server", "err", err)
-			return nil, err
-		}
-
-		// filter the tokens - remove all tokens we already removed
-		tokens = utils.Filter(tokens, func(token models.GitLabOauth2Token) bool {
-			for _, t := range toRemove {
-				if t.AccessToken == token.AccessToken {
-					return false
-				}
-			}
-			return true
-		})
-
-		validTokens, _ = g.checkTokens(ctx, tokens)
-
-		if len(validTokens) != 0 {
-			// save the tokens in the database
-			err = g.gitlabOauth2TokenRepository.Save(nil, utils.SlicePtr(validTokens)...)
-			if err != nil {
-				slog.Error("failed to save gitlab oauth2 tokens", "err", err)
-				return nil, err
-			}
-		}
-	}
-
-	return validTokens, nil
-}
-
 func (g *GitlabIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 	// get the oauth2 tokens for this user
 	tokens, err := g.getOauth2TokenFromAuthServer(ctx)
@@ -423,7 +371,7 @@ func (g *GitlabIntegration) ListGroups(ctx core.Context, userID string, provider
 		return nil, err
 	}
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return nil, err
@@ -451,7 +399,7 @@ func (g *GitlabIntegration) ListProjects(ctx core.Context, userID string, provid
 		return nil, err
 	}
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return nil, err
@@ -498,7 +446,7 @@ func (g *GitlabIntegration) GetGroup(ctx context.Context, userID string, provide
 	}
 
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return models.Project{}, err
@@ -527,7 +475,7 @@ func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, p
 		return "", err
 	}
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token, true)
 
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
@@ -563,7 +511,7 @@ func (g *GitlabIntegration) GetRoleInProject(ctx context.Context, userID string,
 	}
 
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(*token)
+	gitlabClient, err := g.gitlabOauth2ClientFactory(*token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return "", err
@@ -596,14 +544,8 @@ func (g *GitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 		organizationGitlabIntegrations = org.GitLabIntegrations
 	}
 
-	tokens, err := g.GetOauth2Tokens(ctx)
-	if err != nil {
-		slog.Error("failed to get gitlab oauth2 tokens", "err", err)
-		return nil, err
-	}
-
 	// create a new gitlab batch client
-	gitlabBatchClient, err := newGitLabBatchClient(organizationGitlabIntegrations, g.oauth2Endpoints, tokens)
+	gitlabBatchClient, err := newGitLabBatchClient(organizationGitlabIntegrations, g.oauth2Endpoints, nil)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return nil, err

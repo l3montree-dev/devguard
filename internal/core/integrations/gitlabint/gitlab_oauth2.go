@@ -54,9 +54,11 @@ type gitlabOauth2Client struct {
 
 var httpClientCache = common.NewCacheTransport(1000, 1*time.Hour)
 
-func buildOauth2GitlabClient(token models.GitLabOauth2Token, integration *GitlabOauth2Config) (gitlabClientFacade, error) {
+func buildOauth2GitlabClient(token models.GitLabOauth2Token, integration *GitlabOauth2Config, enableClientCache bool) (gitlabClientFacade, error) {
 	oauth2Client := integration.client(token)
-	common.WrapHTTPClient(oauth2Client, httpClientCache.Handler())
+	if enableClientCache {
+		common.WrapHTTPClient(oauth2Client, httpClientCache.Handler())
+	}
 
 	client, err := gitlab.NewClient(token.AccessToken, gitlab.WithHTTPClient(oauth2Client), gitlab.WithBaseURL(integration.GitlabBaseURL))
 	if err != nil {

@@ -79,6 +79,19 @@ spec:
             value: http://kratos:4434
           - name: GOMEMLIMIT
             value: 1024MiB
+        {{- range .Values.oidc.providers }}
+          - name: GITLAB_{{ .id | upper }}_APPID
+            value: {{ .clientId | quote }}
+          - name: GITLAB_{{ .id | upper }}_APPSECRET
+            valueFrom:
+              secretKeyRef:
+                key: secret
+                name: {{ .existingClientSecret | quote }}
+          - name: GITLAB_{{ .id | upper }}_BASEURL
+            value: {{ .issuerUrl | quote }}
+          - name: GITLAB_{{ .id | upper }}_SCOPES
+            value: {{ .scope | join " " | quote }}
+        {{- end }}
         {{- if .Values.api.github.enabled }}
           - name: GITHUB_APP_ID
             value: {{ .Values.api.github.appId | quote }}
