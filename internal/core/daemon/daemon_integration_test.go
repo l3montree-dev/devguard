@@ -5,11 +5,13 @@ package daemon_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/l3montree-dev/devguard/integration_tests"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,6 +26,8 @@ func TestDaemon(t *testing.T) {
 		&models.Asset{},
 	)
 
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
 	_, _, asset := integration_tests.CreateOrgProjectAndAsset(db)
 
 	assetVersion := models.AssetVersion{
@@ -32,14 +36,19 @@ func TestDaemon(t *testing.T) {
 		DefaultBranch: true,
 	}
 
-	fmt.Println("Created Org:", assetVersion.Metadata)
+	fmt.Println("asset version metadata:", assetVersion.Metadata)
 
 	err := db.Create(&assetVersion).Error
 	assert.Nil(t, err)
 
 	t.Run("Initialize HTTP Controller", func(t *testing.T) {
 
-		err = daemon.ScanAssetVersions(db)
+		casbinRBACProvider := mocks.NewRBACProvider(t)
+
+		err = daemon.ScanAssetVersions(db, casbinRBACProvider)
 		assert.Nil(t, err)
+
+		fmt.Println("asset version metadata:", assetVersion.Metadata)
+
 	})
 }
