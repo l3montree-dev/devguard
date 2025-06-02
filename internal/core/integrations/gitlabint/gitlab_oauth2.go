@@ -44,6 +44,7 @@ type gitlabEnvConfig struct {
 	baseURL   string
 	appID     string
 	appSecret string
+	scopes    string
 }
 
 type gitlabOauth2Client struct {
@@ -99,6 +100,8 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 				conf.appID = value
 			case "appsecret":
 				conf.appSecret = value
+			case "scopes":
+				conf.scopes = value
 			}
 
 			urls[name] = conf
@@ -121,7 +124,7 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 	return urls
 }
 
-func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret string) *GitlabOauth2Config {
+func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret, gitlabOauth2Scopes string) *GitlabOauth2Config {
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -144,7 +147,7 @@ func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, 
 				AuthURL:  fmt.Sprintf("%s/oauth/authorize", gitlabBaseURL),
 				TokenURL: fmt.Sprintf("%s/oauth/token", gitlabBaseURL),
 			},
-			Scopes: []string{"api"},
+			Scopes: strings.Fields(gitlabOauth2Scopes),
 		},
 		GitlabOauth2TokenRepository: repositories.NewGitlabOauth2TokenRepository(db),
 	}
@@ -202,7 +205,7 @@ func NewGitLabOauth2Integrations(db core.DB) map[string]*GitlabOauth2Config {
 	envs := parseGitlabEnvs()
 	gitlabIntegrations := make(map[string]*GitlabOauth2Config)
 	for id, env := range envs {
-		gitlabIntegration := NewGitLabOauth2Config(db, id, env.baseURL, env.appID, env.appSecret)
+		gitlabIntegration := NewGitLabOauth2Config(db, id, env.baseURL, env.appID, env.appSecret, env.scopes)
 		gitlabIntegrations[id] = gitlabIntegration
 		slog.Info("gitlab oauth2 integration created", "id", id, "baseURL", env.baseURL, "appID", env.appID)
 	}
@@ -224,6 +227,13 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx core.Context) error {
 	if err != nil {
 		return ctx.JSON(404, map[string]any{
 			"message": "token model not found",
+		})
+	}
+
+	// check if the verifier is set
+	if tokenModel.Verifier == nil {
+		return ctx.JSON(400, map[string]any{
+			"message": "verifier is missing. Did you call the login endpoint first?",
 		})
 	}
 
@@ -282,9 +292,10 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx core.Context) error {
 		})
 	}
 
-	return ctx.JSON(200, map[string]any{
-		"message": "token saved",
-	})
+	// redirect the user to the frontend
+	redirectURL := fmt.Sprintf("%s/@%s", os.Getenv("FRONTEND_URL"), c.ProviderID)
+
+	return ctx.Redirect(302, redirectURL)
 }
 
 func (c *GitlabOauth2Config) Oauth2Login(ctx core.Context) error {

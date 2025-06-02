@@ -312,6 +312,7 @@ type GitLabOauth2TokenRepository interface {
 	Save(tx DB, model ...*models.GitLabOauth2Token) error
 	FindByUserIdAndProviderId(userId string, providerId string) (*models.GitLabOauth2Token, error)
 	FindByUserId(userId string) ([]models.GitLabOauth2Token, error)
+	Delete(tx DB, tokens []models.GitLabOauth2Token) error
 }
 
 type ConfigService interface {

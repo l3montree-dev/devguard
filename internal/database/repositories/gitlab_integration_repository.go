@@ -96,3 +96,10 @@ func (r *gitlabOauth2TokenRepository) FindByUserId(userId string) ([]models.GitL
 	}
 	return tokens, nil
 }
+
+func (r *gitlabOauth2TokenRepository) Delete(tx core.DB, tokens []models.GitLabOauth2Token) error {
+	if err := r.db.Delete(tokens).Error; err != nil {
+		return err
+	}
+	return nil
+}
