@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
-	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/pkg/errors"
 )
@@ -77,7 +76,7 @@ func GetAssetVersionInfo(path string) (GitVersionInfo, error) {
 	// first try to get the version info from the pipeline
 	gitVersionInfo, err := getAssetVersionInfoFromPipeline()
 	if err == nil {
-		slog.Info("got git version info from pipeline", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", utils.SafeDereference(gitVersionInfo.DefaultBranch))
+		slog.Info("got git version info from pipeline", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", SafeDereference(gitVersionInfo.DefaultBranch))
 		return gitVersionInfo, nil
 	}
 	// if that fails, try to get the version info from git
@@ -87,7 +86,7 @@ func GetAssetVersionInfo(path string) (GitVersionInfo, error) {
 		slog.Error("could not get git version info from git")
 		return GitVersionInfo{}, errors.Wrap(err, "could not get git version info from git")
 	}
-	slog.Info("got git version info from git", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", utils.SafeDereference(gitVersionInfo.DefaultBranch))
+	slog.Info("got git version info from git", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", SafeDereference(gitVersionInfo.DefaultBranch))
 	return gitVersionInfo, nil
 }
 

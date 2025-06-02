@@ -584,6 +584,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 
 	var req struct {
 		DevguardPrivateKey string `json:"devguardPrivateKey"`
+		DevguardAssetName  string `json:"devguardAssetName"`
 	}
 	err := ctx.Bind(&req)
 	if err != nil {
@@ -664,7 +665,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 	enc.Encode(map[string]string{"step": "projectHook", "status": "success"}) //nolint:errcheck
 	ctx.Response().Flush()
 
-	err = g.addProjectVariables(ctx.Request().Context(), client, asset, projectIdInt, req.DevguardPrivateKey)
+	err = g.addProjectVariables(ctx.Request().Context(), client, asset, projectIdInt, req.DevguardPrivateKey, req.DevguardAssetName)
 	if err != nil {
 		return errors.Wrap(err, "could not add project variables")
 	}
@@ -806,7 +807,7 @@ func createToken() (uuid.UUID, error) {
 	return token, nil
 }
 
-func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client gitlabClientFacade, asset models.Asset, gitlabProjectID int, devguardPrivateKey string) error {
+func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client gitlabClientFacade, asset models.Asset, gitlabProjectID int, devguardPrivateKey string, devguardAssetName string) error {
 	toCreate := []string{"DEVGUARD_TOKEN", "DEVGUARD_ASSET_NAME"}
 
 	// check if the project variable already exists
@@ -839,7 +840,7 @@ func (g *GitlabIntegration) addProjectVariables(ctx context.Context, client gitl
 
 	assetNameVariable := &gitlab.CreateProjectVariableOptions{
 		Key:    gitlab.Ptr("DEVGUARD_ASSET_NAME"),
-		Value:  gitlab.Ptr(asset.Name),
+		Value:  gitlab.Ptr(devguardAssetName),
 		Masked: gitlab.Ptr(false),
 	}
 
