@@ -34,7 +34,7 @@ func TestScanning(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset := createOrgProjectAndAsset(db)
+	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
 	setupContext := func(ctx core.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -167,7 +167,7 @@ func TestTicketHandling(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset := createOrgProjectAndAsset(db)
+	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
 	setupContext := func(ctx core.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -370,36 +370,6 @@ func createCVE2025_46569(db core.DB) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func createOrgProjectAndAsset(db core.DB) (models.Org, models.Project, models.Asset) {
-	org := models.Org{
-		Name: "Test Org",
-	}
-	err := db.Create(&org).Error
-	if err != nil {
-		panic(err)
-	}
-	project := models.Project{
-		Name:           "Test Project",
-		OrganizationID: org.ID,
-	}
-	err = db.Create(&project).Error
-	if err != nil {
-		panic(err)
-	}
-
-	asset := models.Asset{
-		Name:      "Test Asset",
-		ProjectID: project.ID,
-	}
-
-	err = db.Create(&asset).Error
-	if err != nil {
-		panic(err)
-	}
-
-	return org, project, asset
 }
 
 func sbomWithVulnerability() *os.File {
