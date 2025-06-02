@@ -94,6 +94,8 @@ spec:
             value: {{ .scope | join " " | quote }}
             {{- end }}
         {{- end }}
+          - name: API_URL
+            value: {{ .Values.web.devguardApiUrlPublicInternet }}
         {{- if .Values.api.github.enabled }}
           - name: GITHUB_APP_ID
             value: {{ .Values.api.github.appId | quote }}
