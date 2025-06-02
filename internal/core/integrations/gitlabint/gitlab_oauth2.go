@@ -144,7 +144,7 @@ func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, 
 		Oauth2Conf: &oauth2.Config{
 			ClientID:     gitlabOauth2ClientID,
 			ClientSecret: gitlabOauth2ClientSecret,
-			RedirectURL:  fmt.Sprintf("%s/api/v1/oauth2/gitlab/callback/%s", apiUrl, id),
+			RedirectURL:  fmt.Sprintf("%s/api/devguard-tunnel/api/v1/oauth2/gitlab/callback/%s", frontendUrl, id),
 			Endpoint: oauth2.Endpoint{
 				AuthURL:  fmt.Sprintf("%s/oauth/authorize", gitlabBaseURL),
 				TokenURL: fmt.Sprintf("%s/oauth/token", gitlabBaseURL),
@@ -251,8 +251,7 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx core.Context) error {
 	tokenModel.AccessToken = token.AccessToken
 	tokenModel.RefreshToken = token.RefreshToken
 	tokenModel.Expiry = token.Expiry
-	tokenModel.Scopes = "api"
-
+	tokenModel.Scopes = strings.Join(c.Oauth2Conf.Scopes, " ")
 	// get the gitlab user id by doing a request to the gitlab api
 	client := c.client(*tokenModel)
 	resp, err := client.Get(fmt.Sprintf("%s/api/v4/user", c.GitlabBaseURL))
