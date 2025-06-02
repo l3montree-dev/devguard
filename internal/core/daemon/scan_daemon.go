@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
@@ -28,6 +29,11 @@ func ScanAssetVersions(db core.DB) error {
 		monitoring.ScanDaemonDuration.Observe(time.Since(start).Minutes())
 	}()
 
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+	if err != nil {
+		panic(err)
+	}
+
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
@@ -43,7 +49,7 @@ func ScanAssetVersions(db core.DB) error {
 	projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(db)
 
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db, casbinRBACProvider)
 
 	githubIntegration := githubint.NewGithubIntegration(db)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)

@@ -3,6 +3,7 @@ package daemon
 import (
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
@@ -18,9 +19,14 @@ func SyncTickets(db core.DB) error {
 		monitoring.SyncTicketDuration.Observe(time.Since(start).Minutes())
 	}()
 
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+	if err != nil {
+		panic(err)
+	}
+
 	githubIntegration := githubint.NewGithubIntegration(db)
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db, casbinRBACProvider)
 
 	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
@@ -35,7 +41,7 @@ func SyncTickets(db core.DB) error {
 		repositories.NewAssetVersionRepository(db),
 	)
 
-	err := dependencyVulnService.SyncTicketsForAllAssets()
+	err = dependencyVulnService.SyncTicketsForAllAssets()
 	if err != nil {
 		return err
 	}

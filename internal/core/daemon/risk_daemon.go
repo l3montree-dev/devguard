@@ -3,6 +3,7 @@ package daemon
 import (
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
@@ -17,10 +18,16 @@ func RecalculateRisk(db core.DB) error {
 	defer func() {
 		monitoring.RecalculateAllRawRiskAssessmentsDuration.Observe(time.Since(start).Minutes())
 	}()
+
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+	if err != nil {
+		panic(err)
+	}
+
 	githubIntegration := githubint.NewGithubIntegration(db)
 
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db, casbinRBACProvider)
 
 	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
@@ -35,7 +42,7 @@ func RecalculateRisk(db core.DB) error {
 		repositories.NewAssetVersionRepository(db),
 	)
 
-	err := dependencyVulnService.RecalculateAllRawRiskAssessments()
+	err = dependencyVulnService.RecalculateAllRawRiskAssessments()
 	if err != nil {
 		return err
 	}
