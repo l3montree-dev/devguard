@@ -18,6 +18,7 @@ package integrations
 import (
 	"log/slog"
 
+	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
@@ -94,6 +95,11 @@ func (c *integrationController) TestAndSaveGitlabIntegration(ctx core.Context) e
 }
 
 func (c *integrationController) GitLabOauth2Callback(ctx core.Context) error {
+	// user needs to be logged in to use this endpoint
+	if core.GetSession(ctx).GetUserID() == auth.NoSession.GetUserID() {
+		return ctx.JSON(401, "user not authenticated")
+	}
+
 	integrationName := core.GetParam(ctx, "integrationName")
 	if integrationName == "" {
 		return ctx.JSON(400, "integrationName is missing")
@@ -112,6 +118,10 @@ func (c *integrationController) GitLabOauth2Callback(ctx core.Context) error {
 }
 
 func (c *integrationController) GitLabOauth2Login(ctx core.Context) error {
+	// user needs to be logged in to use this endpoint
+	if core.GetSession(ctx).GetUserID() == auth.NoSession.GetUserID() {
+		return ctx.JSON(401, "user not authenticated")
+	}
 	integrationName := core.GetParam(ctx, "integrationName")
 	if integrationName == "" {
 		return ctx.JSON(400, "integrationName is missing")

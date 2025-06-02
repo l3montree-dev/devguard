@@ -17,6 +17,7 @@ package auth
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -94,6 +95,7 @@ func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.M
 					// user is not authenticated
 					// set a special session - it might be that the user is still allowed todo the request
 					// since the org, project etc. is public
+					slog.Warn("could not get user ID from cookie", "err", err)
 					ctx.Set("session", NoSession)
 					return next(ctx)
 				}
