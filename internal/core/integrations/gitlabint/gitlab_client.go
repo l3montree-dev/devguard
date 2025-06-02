@@ -55,7 +55,7 @@ func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration, oauth2C
 		for _, oauth2 := range oauth2Config {
 			if oauth2.ProviderID == token.ProviderID {
 				// great we can use the config to generate a token
-				client, err := buildOauth2GitlabClient(token, oauth2)
+				client, err := buildOauth2GitlabClient(token, oauth2, true)
 				if err != nil {
 					slog.Error("error while creating oauth2 client", "err", err)
 					continue
