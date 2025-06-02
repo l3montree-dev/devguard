@@ -606,7 +606,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 
 		defer func() {
 			// delete the token from the database - it is no longer needed after this function finishes
-			err = g.gitlabOauth2TokenRepository.DeleteByUserIdAndProviderId(core.GetSession(ctx).GetUserID(), *asset.ExternalEntityProviderID)
+			err = g.gitlabOauth2TokenRepository.DeleteByUserIdAndProviderId(core.GetSession(ctx).GetUserID(), *asset.ExternalEntityProviderID+"autosetup")
 			if err != nil {
 				slog.Error("could not delete gitlab oauth2 token", "err", err)
 			}
