@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
@@ -48,6 +49,11 @@ func markMirrored(configService config.Service, key string) error {
 }
 
 func Start(db core.DB) {
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+	if err != nil {
+		panic(err)
+	}
+
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 	// only run this function if leader
@@ -86,7 +92,7 @@ func Start(db core.DB) {
 		if shouldMirror(configService, "vulndb.scan") {
 			start = time.Now()
 			// update the scan
-			if err := ScanAssetVersions(db); err != nil {
+			if err := ScanAssetVersions(db, casbinRBACProvider); err != nil {
 				slog.Error("could not update scan", "err", err)
 				return nil
 			}

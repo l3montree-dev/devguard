@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
@@ -22,17 +21,12 @@ import (
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 )
 
-func ScanAssetVersions(db core.DB) error {
+func ScanAssetVersions(db core.DB, casbinRBACProvider core.RBACProvider) error {
 
 	start := time.Now()
 	defer func() {
 		monitoring.ScanDaemonDuration.Observe(time.Since(start).Minutes())
 	}()
-
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
-	if err != nil {
-		panic(err)
-	}
 
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)

@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
@@ -53,6 +54,10 @@ func newTriggerCommand() *cobra.Command {
 
 func triggerDaemon(db core.DB, daemons []string) error {
 	configService := config.NewService(db)
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+	if err != nil {
+		panic(err)
+	}
 
 	// we only update the vulnerability database each 6 hours.
 	// thus there is no need to recalculate the risk or anything earlier
@@ -72,7 +77,7 @@ func triggerDaemon(db core.DB, daemons []string) error {
 	if emptyOrContains(daemons, "scan") {
 		start = time.Now()
 		// update scan
-		err := daemon.ScanAssetVersions(db)
+		err := daemon.ScanAssetVersions(db, casbinRBACProvider)
 		if err != nil {
 			slog.Error("could not scan asset versions", "err", err)
 			return nil
