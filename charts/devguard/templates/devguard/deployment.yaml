@@ -80,6 +80,7 @@ spec:
           - name: GOMEMLIMIT
             value: 1024MiB
         {{- range .Values.oidc.providers }}
+            {{- if eq .provider "gitlab" }}
           - name: GITLAB_{{ .id | upper }}_APPID
             value: {{ .clientId | quote }}
           - name: GITLAB_{{ .id | upper }}_APPSECRET
@@ -91,6 +92,7 @@ spec:
             value: {{ .issuerUrl | quote }}
           - name: GITLAB_{{ .id | upper }}_SCOPES
             value: {{ .scope | join " " | quote }}
+            {{- end }}
         {{- end }}
         {{- if .Values.api.github.enabled }}
           - name: GITHUB_APP_ID
