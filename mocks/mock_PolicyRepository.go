@@ -62,15 +62,26 @@ type PolicyRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *PolicyRepository_Expecter) Activate(tx interface{}, id interface{}) *PolicyRepository_Activate_Call {
 	return &PolicyRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *PolicyRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *PolicyRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -209,15 +220,26 @@ type PolicyRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.Policy
 func (_e *PolicyRepository_Expecter) Create(tx interface{}, t interface{}) *PolicyRepository_Create_Call {
 	return &PolicyRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *PolicyRepository_Create_Call) Run(run func(tx core.DB, t *models.Policy)) *PolicyRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.Policy))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.Policy
+		if args[1] != nil {
+			arg1 = args[1].(*models.Policy)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -255,15 +277,26 @@ type PolicyRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.Policy
 func (_e *PolicyRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *PolicyRepository_CreateBatch_Call {
 	return &PolicyRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *PolicyRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.Policy)) *PolicyRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.Policy))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.Policy
+		if args[1] != nil {
+			arg1 = args[1].([]models.Policy)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -301,15 +334,26 @@ type PolicyRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *PolicyRepository_Expecter) Delete(tx interface{}, id interface{}) *PolicyRepository_Delete_Call {
 	return &PolicyRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *PolicyRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *PolicyRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -347,15 +391,26 @@ type PolicyRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx
-//   - ids
+//   - tx core.DB
+//   - ids []models.Policy
 func (_e *PolicyRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *PolicyRepository_DeleteBatch_Call {
 	return &PolicyRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *PolicyRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.Policy)) *PolicyRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.Policy))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.Policy
+		if args[1] != nil {
+			arg1 = args[1].([]models.Policy)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -404,14 +459,20 @@ type PolicyRepository_FindByOrganizationId_Call struct {
 }
 
 // FindByOrganizationId is a helper method to define mock.On call
-//   - organizationId
+//   - organizationId uuid.UUID
 func (_e *PolicyRepository_Expecter) FindByOrganizationId(organizationId interface{}) *PolicyRepository_FindByOrganizationId_Call {
 	return &PolicyRepository_FindByOrganizationId_Call{Call: _e.mock.On("FindByOrganizationId", organizationId)}
 }
 
 func (_c *PolicyRepository_FindByOrganizationId_Call) Run(run func(organizationId uuid.UUID)) *PolicyRepository_FindByOrganizationId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -460,14 +521,20 @@ type PolicyRepository_FindByProjectId_Call struct {
 }
 
 // FindByProjectId is a helper method to define mock.On call
-//   - projectId
+//   - projectId uuid.UUID
 func (_e *PolicyRepository_Expecter) FindByProjectId(projectId interface{}) *PolicyRepository_FindByProjectId_Call {
 	return &PolicyRepository_FindByProjectId_Call{Call: _e.mock.On("FindByProjectId", projectId)}
 }
 
 func (_c *PolicyRepository_FindByProjectId_Call) Run(run func(projectId uuid.UUID)) *PolicyRepository_FindByProjectId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -562,14 +629,20 @@ type PolicyRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx
+//   - tx core.DB
 func (_e *PolicyRepository_Expecter) GetDB(tx interface{}) *PolicyRepository_GetDB_Call {
 	return &PolicyRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *PolicyRepository_GetDB_Call) Run(run func(tx core.DB)) *PolicyRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -618,14 +691,20 @@ type PolicyRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids
+//   - ids []uuid.UUID
 func (_e *PolicyRepository_Expecter) List(ids interface{}) *PolicyRepository_List_Call {
 	return &PolicyRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *PolicyRepository_List_Call) Run(run func(ids []uuid.UUID)) *PolicyRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]uuid.UUID))
+		var arg0 []uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].([]uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -672,14 +751,20 @@ type PolicyRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id uuid.UUID
 func (_e *PolicyRepository_Expecter) Read(id interface{}) *PolicyRepository_Read_Call {
 	return &PolicyRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *PolicyRepository_Read_Call) Run(run func(id uuid.UUID)) *PolicyRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -717,15 +802,26 @@ type PolicyRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.Policy
 func (_e *PolicyRepository_Expecter) Save(tx interface{}, t interface{}) *PolicyRepository_Save_Call {
 	return &PolicyRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *PolicyRepository_Save_Call) Run(run func(tx core.DB, t *models.Policy)) *PolicyRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.Policy))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.Policy
+		if args[1] != nil {
+			arg1 = args[1].(*models.Policy)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -763,15 +859,26 @@ type PolicyRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.Policy
 func (_e *PolicyRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *PolicyRepository_SaveBatch_Call {
 	return &PolicyRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *PolicyRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.Policy)) *PolicyRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.Policy))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.Policy
+		if args[1] != nil {
+			arg1 = args[1].([]models.Policy)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -809,14 +916,20 @@ type PolicyRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn
+//   - fn func(tx core.DB) error
 func (_e *PolicyRepository_Expecter) Transaction(fn interface{}) *PolicyRepository_Transaction_Call {
 	return &PolicyRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *PolicyRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *PolicyRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(tx core.DB) error))
+		var arg0 func(tx core.DB) error
+		if args[0] != nil {
+			arg0 = args[0].(func(tx core.DB) error)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -854,15 +967,26 @@ type PolicyRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
-//   - t
-//   - conflictingColumns
+//   - t *[]*models.Policy
+//   - conflictingColumns *[]clause.Column
 func (_e *PolicyRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *PolicyRepository_Upsert_Call {
 	return &PolicyRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
 }
 
 func (_c *PolicyRepository_Upsert_Call) Run(run func(t *[]*models.Policy, conflictingColumns *[]clause.Column)) *PolicyRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*[]*models.Policy), args[1].(*[]clause.Column))
+		var arg0 *[]*models.Policy
+		if args[0] != nil {
+			arg0 = args[0].(*[]*models.Policy)
+		}
+		var arg1 *[]clause.Column
+		if args[1] != nil {
+			arg1 = args[1].(*[]clause.Column)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
