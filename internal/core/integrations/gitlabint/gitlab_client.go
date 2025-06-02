@@ -151,6 +151,14 @@ func (client gitlabClient) RemoveVariable(ctx context.Context, projectId int, ke
 	return client.ProjectVariables.RemoveVariable(projectId, key, nil, gitlab.WithContext(ctx))
 }
 
+func (client gitlabClient) InviteReporter(ctx context.Context, projectId int, userId int) (*gitlab.ProjectMember, *gitlab.Response, error) {
+	opt := &gitlab.AddProjectMemberOptions{
+		UserID:      gitlab.Ptr(userId),
+		AccessLevel: gitlab.Ptr(gitlab.ReporterPermissions),
+	}
+	return client.ProjectMembers.AddProjectMember(projectId, opt, gitlab.WithContext(ctx))
+}
+
 func (client gitlabClient) AddProjectHook(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error) {
 	return client.Projects.AddProjectHook(projectId, opt, gitlab.WithContext(ctx))
 }

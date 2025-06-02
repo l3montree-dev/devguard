@@ -69,13 +69,6 @@ func toDTO(asset models.Asset) AssetDTO {
 		RepositoryID:   asset.RepositoryID,
 		RepositoryName: asset.RepositoryName,
 
-		LastSecretScan:    asset.LastSecretScan,
-		LastSastScan:      asset.LastSastScan,
-		LastScaScan:       asset.LastScaScan,
-		LastIacScan:       asset.LastIacScan,
-		LastContainerScan: asset.LastContainerScan,
-		LastDastScan:      asset.LastDastScan,
-
 		SigningPubKey: asset.SigningPubKey,
 
 		CVSSAutomaticTicketThreshold: asset.CVSSAutomaticTicketThreshold,

@@ -39,31 +39,20 @@ func (_m *ProjectService) EXPECT() *ProjectService_Expecter {
 }
 
 // CreateProject provides a mock function for the type ProjectService
-func (_mock *ProjectService) CreateProject(ctx core.Context, project models.Project) (*models.Project, error) {
+func (_mock *ProjectService) CreateProject(ctx core.Context, project *models.Project) error {
 	ret := _mock.Called(ctx, project)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateProject")
 	}
 
-	var r0 *models.Project
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, models.Project) (*models.Project, error)); ok {
-		return returnFunc(ctx, project)
-	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context, models.Project) *models.Project); ok {
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context, *models.Project) error); ok {
 		r0 = returnFunc(ctx, project)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*models.Project)
-		}
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context, models.Project) error); ok {
-		r1 = returnFunc(ctx, project)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // ProjectService_CreateProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateProject'
@@ -78,19 +67,19 @@ func (_e *ProjectService_Expecter) CreateProject(ctx interface{}, project interf
 	return &ProjectService_CreateProject_Call{Call: _e.mock.On("CreateProject", ctx, project)}
 }
 
-func (_c *ProjectService_CreateProject_Call) Run(run func(ctx core.Context, project models.Project)) *ProjectService_CreateProject_Call {
+func (_c *ProjectService_CreateProject_Call) Run(run func(ctx core.Context, project *models.Project)) *ProjectService_CreateProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.Context), args[1].(models.Project))
+		run(args[0].(core.Context), args[1].(*models.Project))
 	})
 	return _c
 }
 
-func (_c *ProjectService_CreateProject_Call) Return(project1 *models.Project, err error) *ProjectService_CreateProject_Call {
-	_c.Call.Return(project1, err)
+func (_c *ProjectService_CreateProject_Call) Return(err error) *ProjectService_CreateProject_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ProjectService_CreateProject_Call) RunAndReturn(run func(ctx core.Context, project models.Project) (*models.Project, error)) *ProjectService_CreateProject_Call {
+func (_c *ProjectService_CreateProject_Call) RunAndReturn(run func(ctx core.Context, project *models.Project) error) *ProjectService_CreateProject_Call {
 	_c.Call.Return(run)
 	return _c
 }

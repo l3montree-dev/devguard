@@ -905,6 +905,72 @@ func (_c *GitlabClientFacade_GetProviderID_Call) RunAndReturn(run func() *string
 	return _c
 }
 
+// InviteReporter provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) InviteReporter(ctx context.Context, projectId int, userId int) (*gitlab.ProjectMember, *gitlab.Response, error) {
+	ret := _mock.Called(ctx, projectId, userId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InviteReporter")
+	}
+
+	var r0 *gitlab.ProjectMember
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) (*gitlab.ProjectMember, *gitlab.Response, error)); ok {
+		return returnFunc(ctx, projectId, userId)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) *gitlab.ProjectMember); ok {
+		r0 = returnFunc(ctx, projectId, userId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gitlab.ProjectMember)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int) *gitlab.Response); ok {
+		r1 = returnFunc(ctx, projectId, userId)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, int) error); ok {
+		r2 = returnFunc(ctx, projectId, userId)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_InviteReporter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InviteReporter'
+type GitlabClientFacade_InviteReporter_Call struct {
+	*mock.Call
+}
+
+// InviteReporter is a helper method to define mock.On call
+//   - ctx
+//   - projectId
+//   - userId
+func (_e *GitlabClientFacade_Expecter) InviteReporter(ctx interface{}, projectId interface{}, userId interface{}) *GitlabClientFacade_InviteReporter_Call {
+	return &GitlabClientFacade_InviteReporter_Call{Call: _e.mock.On("InviteReporter", ctx, projectId, userId)}
+}
+
+func (_c *GitlabClientFacade_InviteReporter_Call) Run(run func(ctx context.Context, projectId int, userId int)) *GitlabClientFacade_InviteReporter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_InviteReporter_Call) Return(projectMember *gitlab.ProjectMember, response *gitlab.Response, err error) *GitlabClientFacade_InviteReporter_Call {
+	_c.Call.Return(projectMember, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_InviteReporter_Call) RunAndReturn(run func(ctx context.Context, projectId int, userId int) (*gitlab.ProjectMember, *gitlab.Response, error)) *GitlabClientFacade_InviteReporter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // IsProjectMember provides a mock function for the type GitlabClientFacade
 func (_mock *GitlabClientFacade) IsProjectMember(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions) (bool, error) {
 	ret := _mock.Called(ctx, projectId, userId, options)

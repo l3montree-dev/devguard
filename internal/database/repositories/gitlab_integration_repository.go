@@ -103,3 +103,10 @@ func (r *gitlabOauth2TokenRepository) Delete(tx core.DB, tokens []models.GitLabO
 	}
 	return nil
 }
+
+func (r *gitlabOauth2TokenRepository) DeleteByUserIdAndProviderId(userId string, providerId string) error {
+	if err := r.db.Where("user_id = ? AND provider_id = ?", userId, providerId).Delete(&models.GitLabOauth2Token{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
