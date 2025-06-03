@@ -410,7 +410,9 @@ func (g *GitlabIntegration) ListProjects(ctx core.Context, userID string, provid
 		return nil, errors.Wrap(err, "failed to convert groupID to int")
 	}
 	// get the projects in the group
-	projects, _, err := gitlabClient.ListProjectsInGroup(ctx.Request().Context(), groupIDInt, nil)
+	projects, _, err := gitlabClient.ListProjectsInGroup(ctx.Request().Context(), groupIDInt, &gitlab.ListGroupProjectsOptions{
+		WithShared: gitlab.Ptr(false),
+	})
 	if err != nil {
 		slog.Error("failed to list projects in group", "err", err)
 		return nil, err

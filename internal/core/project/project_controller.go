@@ -20,9 +20,11 @@ import (
 	"fmt"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
+	"gorm.io/gorm/clause"
 )
 
 type controller struct {
@@ -228,10 +230,36 @@ func (p *controller) Delete(c core.Context) error {
 func (p *controller) Read(c core.Context) error {
 	// just get the project from the context
 	project := core.GetProject(c)
-	// lets fetch the assets related to this project
-	assets, err := p.assetRepository.GetByProjectID(project.ID)
-	if err != nil {
-		return err
+	if project.IsExternalEntity() {
+		// we need to fetch the assets for this project
+		thirdpartyIntegration := core.GetThirdPartyIntegration(c)
+		assets, err := thirdpartyIntegration.ListProjects(c, core.GetSession(c).GetUserID(), *project.ExternalEntityProviderID, *project.ExternalEntityID)
+		if err != nil {
+			return echo.NewHTTPError(500, "could not fetch assets for project").WithInternal(err)
+		}
+		// ensure the assets exist in the database
+		toUpsert := make([]*models.Asset, 0, len(assets))
+		for i := range assets {
+			assets[i].ProjectID = project.ID
+			toUpsert = append(toUpsert, &assets[i])
+		}
+
+		if err := p.assetRepository.Upsert(&toUpsert, &[]clause.Column{
+			{Name: "external_entity_provider_id"},
+			{Name: "external_entity_id"},
+		}); err != nil {
+			return echo.NewHTTPError(500, "could not upsert assets").WithInternal(err)
+		}
+		// set the assets on the project
+		project.Assets = assets
+	} else {
+		// lets fetch the assets related to this project
+		assets, err := p.assetRepository.GetByProjectID(project.ID)
+		if err != nil {
+			return err
+		}
+
+		project.Assets = assets
 	}
 
 	// lets fetch the members of the project
@@ -239,8 +267,6 @@ func (p *controller) Read(c core.Context) error {
 	if err != nil {
 		return err
 	}
-
-	project.Assets = assets
 
 	resp := projectDetailsDTO{
 		ProjectDTO: fromModel(project),
