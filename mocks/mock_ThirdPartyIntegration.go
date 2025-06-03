@@ -436,7 +436,7 @@ func (_c *ThirdPartyIntegration_HandleWebhook_Call) RunAndReturn(run func(ctx co
 }
 
 // HasAccessToExternalEntityProvider provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+func (_mock *ThirdPartyIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
 	ret := _mock.Called(ctx, externalEntityProviderID)
 
 	if len(ret) == 0 {
@@ -444,12 +444,21 @@ func (_mock *ThirdPartyIntegration) HasAccessToExternalEntityProvider(ctx core.C
 	}
 
 	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string) (bool, error)); ok {
+		return returnFunc(ctx, externalEntityProviderID)
+	}
 	if returnFunc, ok := ret.Get(0).(func(core.Context, string) bool); ok {
 		r0 = returnFunc(ctx, externalEntityProviderID)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(core.Context, string) error); ok {
+		r1 = returnFunc(ctx, externalEntityProviderID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasAccessToExternalEntityProvider'
@@ -471,12 +480,12 @@ func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) Run(run 
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) Return(b bool) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
-	_c.Call.Return(b)
+func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) Return(b bool, err error) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
+	_c.Call.Return(b, err)
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx core.Context, externalEntityProviderID string) bool) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
+func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx core.Context, externalEntityProviderID string) (bool, error)) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
 	_c.Call.Return(run)
 	return _c
 }

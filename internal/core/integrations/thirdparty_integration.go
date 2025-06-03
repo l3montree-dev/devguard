@@ -75,13 +75,19 @@ func (t *thirdPartyIntegrations) ListProjects(ctx core.Context, userID string, p
 	return utils.Flat(results), nil
 }
 
-func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
 	for _, i := range t.integrations {
-		if i.HasAccessToExternalEntityProvider(ctx, externalEntityProviderID) {
-			return true
+		access, unauth := i.HasAccessToExternalEntityProvider(ctx, externalEntityProviderID)
+		if unauth != nil {
+			// we COULD actually use this provider
+			return access, unauth
+		}
+		if access {
+			// we have access to this provider
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func (t *thirdPartyIntegrations) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupId string) (string, error) {

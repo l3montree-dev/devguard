@@ -69,7 +69,7 @@ func (r *gitlabOauth2TokenRepository) Save(tx core.DB, token ...*models.GitLabOa
 	if err := r.db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "provider_id"}},
 		UpdateAll: true,
-	}).Create(token).Error; err != nil {
+	}).Debug().Create(token).Error; err != nil {
 		return err
 	}
 	return nil

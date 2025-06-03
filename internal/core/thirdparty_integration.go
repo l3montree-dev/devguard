@@ -48,7 +48,7 @@ type ThirdPartyIntegration interface {
 
 	ListRepositories(ctx Context) ([]Repository, error)
 
-	HasAccessToExternalEntityProvider(ctx Context, externalEntityProviderID string) bool
+	HasAccessToExternalEntityProvider(ctx Context, externalEntityProviderID string) (bool, error)
 
 	GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error)
 	GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error)

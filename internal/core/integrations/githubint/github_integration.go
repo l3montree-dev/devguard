@@ -124,8 +124,8 @@ func (githubIntegration *GithubIntegration) ListOrgs(ctx core.Context) ([]models
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (githubIntegration *GithubIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
-	return false
+func (githubIntegration *GithubIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
+	return false, nil
 }
 
 func (githubIntegration *GithubIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {

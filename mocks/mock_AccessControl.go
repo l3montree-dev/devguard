@@ -602,7 +602,7 @@ func (_c *AccessControl_GrantRoleInProject_Call) RunAndReturn(run func(subject s
 }
 
 // HasAccess provides a mock function for the type AccessControl
-func (_mock *AccessControl) HasAccess(subject string) bool {
+func (_mock *AccessControl) HasAccess(subject string) (bool, error) {
 	ret := _mock.Called(subject)
 
 	if len(ret) == 0 {
@@ -610,12 +610,21 @@ func (_mock *AccessControl) HasAccess(subject string) bool {
 	}
 
 	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) (bool, error)); ok {
+		return returnFunc(subject)
+	}
 	if returnFunc, ok := ret.Get(0).(func(string) bool); ok {
 		r0 = returnFunc(subject)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(subject)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // AccessControl_HasAccess_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasAccess'
@@ -636,12 +645,12 @@ func (_c *AccessControl_HasAccess_Call) Run(run func(subject string)) *AccessCon
 	return _c
 }
 
-func (_c *AccessControl_HasAccess_Call) Return(b bool) *AccessControl_HasAccess_Call {
-	_c.Call.Return(b)
+func (_c *AccessControl_HasAccess_Call) Return(b bool, err error) *AccessControl_HasAccess_Call {
+	_c.Call.Return(b, err)
 	return _c
 }
 
-func (_c *AccessControl_HasAccess_Call) RunAndReturn(run func(subject string) bool) *AccessControl_HasAccess_Call {
+func (_c *AccessControl_HasAccess_Call) RunAndReturn(run func(subject string) (bool, error)) *AccessControl_HasAccess_Call {
 	_c.Call.Return(run)
 	return _c
 }

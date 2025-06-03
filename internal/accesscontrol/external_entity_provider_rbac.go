@@ -72,7 +72,7 @@ func NewExternalEntityProviderRBAC(ctx core.Context, thirdPartyIntegration core.
 	GetProjectRole(user string, project string) (string, error)
 */
 
-func (e *externalEntityProviderRBAC) HasAccess(userID string) bool {
+func (e *externalEntityProviderRBAC) HasAccess(userID string) (bool, error) {
 	return e.thirdPartyIntegration.HasAccessToExternalEntityProvider(e.ctx, e.externalEntityProviderID)
 }
 

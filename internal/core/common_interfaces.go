@@ -362,7 +362,7 @@ type ComponentService interface {
 }
 
 type AccessControl interface {
-	HasAccess(subject string) bool
+	HasAccess(subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
 	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error
 

@@ -201,7 +201,7 @@ func (t *tokenPersister) Token() (*oauth2.Token, error) {
 	}
 
 	// check if the refresh token has changed
-	if token.RefreshToken != "" && token.RefreshToken != t.currentToken.RefreshToken {
+	if token.RefreshToken != "" && token.RefreshToken != t.currentToken.RefreshToken && t.currentToken.Expiry.Before(token.Expiry) {
 		// save the new refresh token in the database
 
 		t.currentToken.RefreshToken = token.RefreshToken
@@ -418,8 +418,8 @@ func getGitlabAccessTokenFromOryIdentity(oauth2Endpoints map[string]*GitlabOauth
 			RefreshToken: provider["initial_refresh_token"].(string),
 			BaseURL:      conf.GitlabBaseURL,
 			GitLabUserID: gitlabUserIdInt,
-			Scopes:       "read_api",                    // I know that!
-			Expiry:       time.Now().Add(2 * time.Hour), // this is a guess, we don't know the expiry time
+			Scopes:       "read_api",                         // I know that!
+			Expiry:       creds.UpdatedAt.Add(2 * time.Hour), // this is a guess, we don't know the expiry time
 		}
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -252,21 +253,21 @@ func oauth2TokenToOrg(token models.GitLabOauth2Token) models.Org {
 	}
 }
 
-func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
 	// get the oauth2 tokens for this user
 	token, err := g.gitlabOauth2TokenRepository.FindByUserIdAndProviderId(core.GetSession(ctx).GetUserID(), externalEntityProviderID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
-		return false
+		return false, fmt.Errorf("failed to find gitlab oauth2 tokens: %w", err)
 	}
 
 	// check that the token is valid
 	if !g.checkIfTokenIsValid(ctx, *token) {
 		slog.Error("gitlab oauth2 token is not valid", "providerId", externalEntityProviderID)
-		return false
+		return false, fmt.Errorf("gitlab oauth2 token is not valid for provider %s", externalEntityProviderID)
 	}
 
-	return err == nil
+	return true, nil
 }
 
 func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.GitLabOauth2Token) bool {
@@ -278,7 +279,12 @@ func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.G
 	}
 
 	// check if the token is valid by fetching the user
-	_, _, err = gitlabClient.Whoami(ctx.Request().Context())
+	user, resp, err := gitlabClient.ListGroups(ctx.Request().Context(), &gitlab.ListGroupsOptions{
+		MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions), // only list groups where the user has at least reporter permissions
+		ListOptions:    gitlab.ListOptions{PerPage: 1},        // we only need to check if the request is successful, so we can limit the number of results
+	})
+	_ = resp // we don't need the response, but we need to check if the request was successful
+	_ = user
 	if err != nil {
 		slog.Error("failed to get user", "err", err)
 		return false
@@ -319,9 +325,17 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx core.Context
 		})
 	}
 
+	nonExpiredTokens := make([]models.GitLabOauth2Token, 0, len(tokenSlice))
+	// filter out expired tokens
+	for _, token := range tokenSlice {
+		if token.Expiry.After(time.Now()) {
+			nonExpiredTokens = append(nonExpiredTokens, token)
+		}
+	}
+
 	// save the tokens to the database
-	if len(tokenSlice) != 0 {
-		err = g.gitlabOauth2TokenRepository.Save(nil, utils.SlicePtr(tokenSlice)...)
+	if len(nonExpiredTokens) != 0 {
+		err = g.gitlabOauth2TokenRepository.Save(nil, utils.SlicePtr(nonExpiredTokens)...)
 		if err != nil {
 			// if an error happens, just swallow it
 			return tokenSlice, nil
@@ -332,7 +346,8 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx core.Context
 }
 
 func (g *GitlabIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
-	// get the oauth2 tokens for this user
+	// get the oauth2 tokens for this user only from the auth server
+	// if the user revoked is sign in, we do not want to show him the org anymore.
 	tokens, err := g.getAndSaveOauth2TokenFromAuthServer(ctx)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)

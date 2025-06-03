@@ -303,7 +303,11 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 
 			// check if the user is allowed to access the organization
 			session := core.GetSession(ctx)
-			allowed := domainRBAC.HasAccess(session.GetUserID())
+			allowed, err := domainRBAC.HasAccess(session.GetUserID())
+			if err != nil {
+				slog.Info("asking user to reauthorize", "err", err)
+				return ctx.JSON(401, map[string]string{"error": err.Error()})
+			}
 
 			if !allowed {
 				if org.IsPublic {
