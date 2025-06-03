@@ -474,6 +474,9 @@ func (s *service) reopenIssue(vulnerability models.DependencyVuln, repoId string
 }
 
 func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error {
+	if len(vulnList) == 0 {
+		return nil
+	}
 	project, err := s.projectRepository.Read(asset.ProjectID)
 	if err != nil {
 		return err
