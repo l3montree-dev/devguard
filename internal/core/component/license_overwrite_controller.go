@@ -1,6 +1,8 @@
 package component
 
 import (
+	"net/url"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -51,11 +53,17 @@ func (controller LicenseOverwriteController) Create(ctx core.Context) error {
 }
 
 func (controller LicenseOverwriteController) Delete(ctx core.Context) error {
-	licenseID := ctx.Param("licenseId")
-	if licenseID == "" {
+	componentPurl := ctx.Param("componentPurl")
+	if componentPurl == "" {
 		return echo.NewHTTPError(400, "could not retrieve a valid license id")
 	}
-	err := controller.LicenseOverwriteRepository.Delete(nil, licenseID)
+	// url decode
+	componentPurl, err := url.PathUnescape(componentPurl)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid component purl").WithInternal(err)
+	}
+
+	err = controller.LicenseOverwriteRepository.DeleteByComponentPurlAndOrgID(core.GetOrg(ctx).ID, componentPurl)
 	if err != nil {
 		return echo.NewHTTPError(500, err.Error())
 	}

@@ -300,6 +300,7 @@ type LicenseOverwriteRepository interface {
 	common.Repository[string, models.LicenseOverwrite, DB]
 	GetAllOverwritesForOrganization(orgID uuid.UUID) ([]models.LicenseOverwrite, error)
 	MaybeGetOverwriteForComponent(orgID uuid.UUID, pURL packageurl.PackageURL) (models.LicenseOverwrite, error)
+	DeleteByComponentPurlAndOrgID(orgID uuid.UUID, purl string) error
 }
 
 type ExternalUserRepository interface {

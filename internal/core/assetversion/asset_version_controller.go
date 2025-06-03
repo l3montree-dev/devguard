@@ -206,9 +206,6 @@ func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 	}
 
 	scannerID := ctx.QueryParam("scanner")
-	if scannerID == "" {
-		return nil, echo.NewHTTPError(400, "scanner query param is required")
-	}
 
 	overwrittenLicenses, err := a.licenseOverwriteRepository.GetAllOverwritesForOrganization(org.ID)
 	if err != nil {
