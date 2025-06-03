@@ -101,6 +101,18 @@ spec:
                 key: accessToken
                 name: {{ .existingBotUserSecretName | quote }}
             {{- end }}
+            {{- if .autosetupApplication}}
+            - name: GITLAB_{{ .id | upper }}AUTOSETUP_APPID
+              value: {{ .autosetupApplication.clientId | quote }}
+            - name: GITLAB_{{ .id | upper }}AUTOSETUP_APPSECRET
+              valueFrom:
+                secretKeyRef:
+                  key: secret
+                  name: {{ .autosetupApplication.existingClientSecret | quote }}
+            - name: GITLAB_{{ .id | upper }}AUTOSETUP_BASEURL
+              value: {{ .issuerUrl | quote }}
+            {{- end }}
+            {{- end}}
             {{- end }}
         {{- end }}
           - name: API_URL
