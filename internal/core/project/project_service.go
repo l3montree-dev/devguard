@@ -31,29 +31,7 @@ func (s *service) ReadBySlug(ctx core.Context, organizationID uuid.UUID, slug st
 	}
 
 	// check if it is an external entity
-	if project.IsExternalEntity() {
-		// we need to fetch the assets for this project
-		thirdpartyIntegration := core.GetThirdPartyIntegration(ctx)
-		assets, err := thirdpartyIntegration.ListProjects(ctx, core.GetSession(ctx).GetUserID(), *project.ExternalEntityProviderID, *project.ExternalEntityID)
-		if err != nil {
-			return models.Project{}, echo.NewHTTPError(500, "could not fetch assets for project").WithInternal(err)
-		}
-		// ensure the assets exist in the database
-		toUpsert := make([]*models.Asset, 0, len(assets))
-		for i := range assets {
-			assets[i].ProjectID = project.ID
-			toUpsert = append(toUpsert, &assets[i])
-		}
 
-		if err := s.assetRepository.Upsert(&toUpsert, &[]clause.Column{
-			{Name: "external_entity_provider_id"},
-			{Name: "external_entity_id"},
-		}); err != nil {
-			return models.Project{}, echo.NewHTTPError(500, "could not upsert assets").WithInternal(err)
-		}
-		// set the assets on the project
-		project.Assets = assets
-	}
 	return project, nil
 }
 
