@@ -545,6 +545,17 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 					})
 				}
 
+				if c.Dependency.IsLicenseOverwritten {
+					// manually overwritten license
+					licenses = []cdx.LicenseChoice{
+						{
+							License: &cdx.License{
+								ID: *c.Dependency.License,
+							},
+						},
+					}
+				}
+
 				bomComponents = append(bomComponents, cdx.Component{
 					Licenses:   &licenses,
 					BOMRef:     c.DependencyPurl,
