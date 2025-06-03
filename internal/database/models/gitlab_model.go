@@ -58,7 +58,3 @@ type GitLabIntegration struct {
 func (g GitLabIntegration) TableName() string {
 	return "gitlab_integrations"
 }
-
-func (g GitLabOauth2Token) TableName() string {
-	return "gitlab_oauth2_tokens"
-}
