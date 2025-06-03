@@ -74,7 +74,7 @@ func (httpController httpController) ListPaged(ctx core.Context) error {
 	search := ctx.QueryParam("search")
 	sort := core.GetSortQuery(ctx)
 
-	orgID := core.GetOrganization(ctx).ID
+	orgID := core.GetOrg(ctx).ID
 
 	overwrittenLicense, err := httpController.licenseOverwriteRepository.GetAllOverwritesForOrganization(orgID)
 	if err != nil {
