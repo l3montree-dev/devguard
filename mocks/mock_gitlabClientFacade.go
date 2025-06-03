@@ -1480,3 +1480,67 @@ func (_c *GitlabClientFacade_UpdateVariable_Call) RunAndReturn(run func(ctx cont
 	_c.Call.Return(run)
 	return _c
 }
+
+// Whoami provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Whoami")
+	}
+
+	var r0 *gitlab.User
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (*gitlab.User, *gitlab.Response, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) *gitlab.User); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gitlab.User)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) *gitlab.Response); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context) error); ok {
+		r2 = returnFunc(ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_Whoami_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Whoami'
+type GitlabClientFacade_Whoami_Call struct {
+	*mock.Call
+}
+
+// Whoami is a helper method to define mock.On call
+//   - ctx
+func (_e *GitlabClientFacade_Expecter) Whoami(ctx interface{}) *GitlabClientFacade_Whoami_Call {
+	return &GitlabClientFacade_Whoami_Call{Call: _e.mock.On("Whoami", ctx)}
+}
+
+func (_c *GitlabClientFacade_Whoami_Call) Run(run func(ctx context.Context)) *GitlabClientFacade_Whoami_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_Whoami_Call) Return(user *gitlab.User, response *gitlab.Response, err error) *GitlabClientFacade_Whoami_Call {
+	_c.Call.Return(user, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_Whoami_Call) RunAndReturn(run func(ctx context.Context) (*gitlab.User, *gitlab.Response, error)) *GitlabClientFacade_Whoami_Call {
+	_c.Call.Return(run)
+	return _c
+}

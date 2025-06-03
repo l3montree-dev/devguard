@@ -7,6 +7,8 @@ import (
 )
 
 type gitlabClientFacade interface {
+	Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error)
+
 	GetClientID() string
 	GetProviderID() *string
 

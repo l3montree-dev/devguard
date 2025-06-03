@@ -271,16 +271,14 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx core.Context, 
 
 func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.GitLabOauth2Token) bool {
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(token, false)
+	gitlabClient, err := g.gitlabOauth2ClientFactory(token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return false
 	}
 
 	// check if the token is valid by fetching the user
-	_, _, err = gitlabClient.ListGroups(ctx.Request().Context(), &gitlab.ListGroupsOptions{
-		MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions), // only list groups where the user has at least owner permissions
-	})
+	_, _, err = gitlabClient.Whoami(ctx.Request().Context())
 	if err != nil {
 		slog.Error("failed to get user", "err", err)
 		return false

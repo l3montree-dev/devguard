@@ -135,6 +135,10 @@ func (client gitlabClient) GetMemberInGroup(ctx context.Context, userId int, gro
 	return client.GroupMembers.GetInheritedGroupMember(groupId, userId, nil, gitlab.WithContext(ctx))
 }
 
+func (client gitlabClient) Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error) {
+	return client.Users.CurrentUser(gitlab.WithContext(ctx))
+}
+
 func (client gitlabClient) GetMemberInProject(ctx context.Context, userId int, projectId int) (*gitlab.ProjectMember, *gitlab.Response, error) {
 	return client.ProjectMembers.GetInheritedProjectMember(projectId, userId, nil, gitlab.WithContext(ctx))
 }

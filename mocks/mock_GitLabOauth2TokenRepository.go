@@ -83,6 +83,52 @@ func (_c *GitLabOauth2TokenRepository_Delete_Call) RunAndReturn(run func(tx core
 	return _c
 }
 
+// DeleteByUserIdAndProviderId provides a mock function for the type GitLabOauth2TokenRepository
+func (_mock *GitLabOauth2TokenRepository) DeleteByUserIdAndProviderId(userId string, providerId string) error {
+	ret := _mock.Called(userId, providerId)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteByUserIdAndProviderId")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = returnFunc(userId, providerId)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByUserIdAndProviderId'
+type GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call struct {
+	*mock.Call
+}
+
+// DeleteByUserIdAndProviderId is a helper method to define mock.On call
+//   - userId
+//   - providerId
+func (_e *GitLabOauth2TokenRepository_Expecter) DeleteByUserIdAndProviderId(userId interface{}, providerId interface{}) *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call {
+	return &GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call{Call: _e.mock.On("DeleteByUserIdAndProviderId", userId, providerId)}
+}
+
+func (_c *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call) Run(run func(userId string, providerId string)) *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call) Return(err error) *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call) RunAndReturn(run func(userId string, providerId string) error) *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByUserId provides a mock function for the type GitLabOauth2TokenRepository
 func (_mock *GitLabOauth2TokenRepository) FindByUserId(userId string) ([]models.GitLabOauth2Token, error) {
 	ret := _mock.Called(userId)
