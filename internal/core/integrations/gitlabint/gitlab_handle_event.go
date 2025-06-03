@@ -18,7 +18,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
 		assetVersionName := core.GetAssetVersion(event.Ctx).Name
-		repoId, err := core.GetRepositoryID(event.Ctx)
+		repoId, err := core.GetRepositoryID(&asset)
 		if err != nil {
 			return err
 		}
@@ -160,7 +160,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 				return err
 			}
 
-			return g.ReopenIssue(event.Ctx.Request().Context(), repoId, vuln)
+			return g.ReopenIssue(event.Ctx.Request().Context(), asset, vuln)
 		case models.EventTypeComment:
 			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
 				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),

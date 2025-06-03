@@ -767,16 +767,16 @@ func (_c *IntegrationAggregate_ListRepositories_Call) RunAndReturn(run func(ctx 
 }
 
 // ReopenIssue provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
-	ret := _mock.Called(ctx, repoId, vuln)
+func (_mock *IntegrationAggregate) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+	ret := _mock.Called(ctx, asset, vuln)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReopenIssue")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, models.Vuln) error); ok {
-		r0 = returnFunc(ctx, repoId, vuln)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, models.Vuln) error); ok {
+		r0 = returnFunc(ctx, asset, vuln)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -790,15 +790,15 @@ type IntegrationAggregate_ReopenIssue_Call struct {
 
 // ReopenIssue is a helper method to define mock.On call
 //   - ctx
-//   - repoId
+//   - asset
 //   - vuln
-func (_e *IntegrationAggregate_Expecter) ReopenIssue(ctx interface{}, repoId interface{}, vuln interface{}) *IntegrationAggregate_ReopenIssue_Call {
-	return &IntegrationAggregate_ReopenIssue_Call{Call: _e.mock.On("ReopenIssue", ctx, repoId, vuln)}
+func (_e *IntegrationAggregate_Expecter) ReopenIssue(ctx interface{}, asset interface{}, vuln interface{}) *IntegrationAggregate_ReopenIssue_Call {
+	return &IntegrationAggregate_ReopenIssue_Call{Call: _e.mock.On("ReopenIssue", ctx, asset, vuln)}
 }
 
-func (_c *IntegrationAggregate_ReopenIssue_Call) Run(run func(ctx context.Context, repoId string, vuln models.Vuln)) *IntegrationAggregate_ReopenIssue_Call {
+func (_c *IntegrationAggregate_ReopenIssue_Call) Run(run func(ctx context.Context, asset models.Asset, vuln models.Vuln)) *IntegrationAggregate_ReopenIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(models.Vuln))
+		run(args[0].(context.Context), args[1].(models.Asset), args[2].(models.Vuln))
 	})
 	return _c
 }
@@ -808,7 +808,7 @@ func (_c *IntegrationAggregate_ReopenIssue_Call) Return(err error) *IntegrationA
 	return _c
 }
 
-func (_c *IntegrationAggregate_ReopenIssue_Call) RunAndReturn(run func(ctx context.Context, repoId string, vuln models.Vuln) error) *IntegrationAggregate_ReopenIssue_Call {
+func (_c *IntegrationAggregate_ReopenIssue_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, vuln models.Vuln) error) *IntegrationAggregate_ReopenIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }

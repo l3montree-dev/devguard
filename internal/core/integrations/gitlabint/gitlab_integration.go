@@ -124,6 +124,14 @@ func messageWasCreatedByDevguard(message string) bool {
 	return strings.Contains(message, "<devguard>")
 }
 
+func buildClientFromAccessToken(accessToken string, baseUrl string) (gitlabClientFacade, error) {
+	client, err := gitlab.NewClient(accessToken, gitlab.WithBaseURL(baseUrl))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create gitlab client")
+	}
+	return gitlabClient{Client: client}, nil
+}
+
 func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config, db core.DB) *GitlabIntegration {
 
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
@@ -180,6 +188,7 @@ func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config
 			if err != nil {
 				return nil, err
 			}
+
 			client, err := gitlab.NewClient(integration.AccessToken, gitlab.WithBaseURL(integration.GitLabUrl))
 
 			if err != nil {
@@ -967,28 +976,8 @@ func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 	})
 }
 
-func (g *GitlabIntegration) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
-	if !strings.HasPrefix(repoId, "gitlab:") {
-		// this integration only handles gitlab repositories
-		return nil
-	}
-
-	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
-	if err != nil {
-		slog.Error("failed to extract integration id from repo id", "err", err, "repoId", repoId)
-		return err
-	}
-
-	projectId, err := extractProjectIdFromRepoId(repoId)
-	if err != nil {
-		slog.Error("failed to extract project id from repo id", "err", err, "repoId", repoId)
-		return err
-	}
-
-	client, err := g.gitlabClientFactory(integrationUUID)
-	if err != nil {
-		return err
-	}
+func (g *GitlabIntegration) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+	client, projectId, err := g.getClientBasedOnAsset(asset)
 
 	gitlabTicketID := strings.TrimPrefix(*vuln.GetTicketID(), "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
@@ -1223,27 +1212,53 @@ func (g *GitlabIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *
 	return err
 }
 
-func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (gitlabClientFacade, int, error) {
 
-	if !strings.HasPrefix(repoId, "gitlab:") {
-		// this integration only handles gitlab repositories
-		return nil
+	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
+		integrationUUID, err := extractIntegrationIdFromRepoId(*asset.RepositoryID)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to extract integration id from repo id: %w", err)
+		}
+
+		client, err := g.gitlabClientFactory(integrationUUID)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to create gitlab client: %w", err)
+		}
+		projectId, err := extractProjectIdFromRepoId(*asset.RepositoryID)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to extract project id from repo id: %w", err)
+		}
+		// return the client and project id
+		return client, projectId, nil
+	} else if asset.ExternalEntityProviderID != nil && g.gitlabExternalProviderEntity(asset.ExternalEntityProviderID) {
+		conf := g.oauth2Endpoints[*asset.ExternalEntityProviderID]
+
+		client, err := buildClientFromAccessToken(conf.DevGuardBotUserAccessToken, conf.GitlabBaseURL)
+		if err != nil {
+			slog.Error("failed to create gitlab client from access token", "err", err, "providerId", *asset.ExternalEntityProviderID)
+			return nil, 0, fmt.Errorf("failed to create gitlab client from access token: %w", err)
+		}
+		projectId, err := strconv.Atoi(*asset.ExternalEntityID)
+		if err != nil {
+			slog.Error("failed to convert project id to int", "err", err, "externalEntityID", *asset.ExternalEntityID)
+			return nil, 0, fmt.Errorf("failed to convert project id to int: %w", err)
+		}
+		// return the client and project id
+		return client, projectId, nil
 	}
 
-	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	return nil, 0, fmt.Errorf("asset does not have a valid repository ID or external entity provider ID")
+}
+
+func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+	client, projectId, err := g.getClientBasedOnAsset(asset)
 	if err != nil {
-		slog.Error("failed to extract integration id from repo id", "err", err, "repoId", repoId)
+		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
 		return err
 	}
 
-	projectId, err := extractProjectIdFromRepoId(repoId)
 	if err != nil {
 		slog.Error("failed to extract project id from repo id", "err", err, "repoId", repoId)
-		return err
-	}
-
-	client, err := g.gitlabClientFactory(integrationUUID)
-	if err != nil {
 		return err
 	}
 
