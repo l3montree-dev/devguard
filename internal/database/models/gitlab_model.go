@@ -55,6 +55,6 @@ type GitLabIntegration struct {
 	OrgID uuid.UUID `json:"orgId" gorm:"column:org_id"`
 }
 
-func (GitLabIntegration) TableName() string {
+func (g GitLabIntegration) TableName() string {
 	return "gitlab_integrations"
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
+	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm/clause"
 )
 
@@ -114,7 +115,7 @@ type ComponentRepository interface {
 	common.Repository[string, models.Component, DB]
 
 	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.ComponentDependency, error)
-	LoadComponentsWithProject(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
+	LoadComponentsWithProject(tx DB, overwrittenLicenses []models.LicenseOverwrite, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
@@ -293,6 +294,13 @@ type VulnRepository interface {
 	Transaction(fn func(tx DB) error) error
 	GetOrgFromVuln(vuln models.Vuln) (models.Org, error)
 	ApplyAndSave(tx DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent) error
+}
+
+type LicenseOverwriteRepository interface {
+	common.Repository[string, models.LicenseOverwrite, DB]
+	GetAllOverwritesForOrganization(orgID uuid.UUID) ([]models.LicenseOverwrite, error)
+	MaybeGetOverwriteForComponent(orgID uuid.UUID, pURL packageurl.PackageURL) (models.LicenseOverwrite, error)
+	DeleteByComponentPurlAndOrgID(orgID uuid.UUID, purl string) error
 }
 
 type ExternalUserRepository interface {
