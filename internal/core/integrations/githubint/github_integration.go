@@ -542,7 +542,7 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
 
-		repoId, err := core.GetRepositoryID(event.Ctx)
+		repoId, err := core.GetRepositoryID(&asset)
 
 		if !strings.HasPrefix(repoId, "github:") {
 			// this integration only handles github repositories.
@@ -681,7 +681,7 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 			if err != nil {
 				return err
 			}
-			return g.ReopenIssue(context.Background(), repoId, vuln)
+			return g.ReopenIssue(context.Background(), asset, vuln)
 		case models.EventTypeComment:
 			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketNumber, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("### %s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
@@ -770,7 +770,8 @@ func (g *GithubIntegration) closeFirstPartyVulnIssue(ctx context.Context, vuln *
 	return err
 }
 
-func (g *GithubIntegration) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
+func (g *GithubIntegration) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+	repoId := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoId, "github:") || !strings.HasPrefix(*vuln.GetTicketID(), "github:") {
 		// this integration only handles github repositories.
 		return nil

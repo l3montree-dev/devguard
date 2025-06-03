@@ -217,11 +217,11 @@ func (t *thirdPartyIntegrations) HandleEvent(event any) error {
 	return err
 }
 
-func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
+func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.ReopenIssue(ctx, repoId, vuln)
+			return struct{}{}, i.ReopenIssue(ctx, asset, vuln)
 		})
 	}
 	_, err := wg.WaitAndCollect()
