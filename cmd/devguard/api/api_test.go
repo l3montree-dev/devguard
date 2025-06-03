@@ -31,7 +31,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		mockOrgService.On("ReadBySlug", "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
-		mockRBAC.On("HasAccess", auth.NoSession.GetUserID()).Return(false)
+		mockRBAC.On("HasAccess", auth.NoSession.GetUserID()).Return(false, nil)
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
@@ -68,7 +68,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 
 		mockOrgService.On("ReadBySlug", "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
-		mockRBAC.On("HasAccess", "user-id").Return(false)
+		mockRBAC.On("HasAccess", "user-id").Return(false, nil)
 
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
