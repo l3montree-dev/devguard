@@ -121,25 +121,24 @@ func (t *thirdPartyIntegrations) GetRoleInProject(ctx context.Context, userID st
 }
 
 func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repository, error) {
-	// wg := utils.ErrGroup[[]core.Repository](-1)
-	results := make([][]core.Repository, 0, len(t.integrations))
+	wg := utils.ErrGroup[[]core.Repository](-1)
 	for _, i := range t.integrations {
-		// wg.Go(func() ([]core.Repository, error) {
-		repos, err := i.ListRepositories(ctx)
-		if err != nil {
-			slog.Error("error while listing repositories", "err", err)
-			// swallow error
-			return nil, nil
-		}
-		// return repos, err
-		// })
-		results = append(results, repos)
+		wg.Go(func() ([]core.Repository, error) {
+			repos, err := i.ListRepositories(ctx)
+			if err != nil {
+				slog.Error("error while listing repositories", "err", err)
+				// swallow error
+				return nil, nil
+			}
+			return repos, err
+		})
+
 	}
 
-	// results, err := wg.WaitAndCollect()
-	/*if err != nil {
+	results, err := wg.WaitAndCollect()
+	if err != nil {
 		slog.Error("error while listing repositories", "err", err)
-	}*/
+	}
 
 	return utils.Flat(results), nil
 }
