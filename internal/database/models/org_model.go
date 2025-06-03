@@ -26,8 +26,14 @@ type Org struct {
 	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
 
 	Language string `json:"language" gorm:"type:text;size:2"`
+
+	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"unique;type:text"`
 }
 
 func (m Org) TableName() string {
 	return "organizations"
+}
+
+func (m Org) IsExternalEntity() bool {
+	return m.ExternalEntityProviderID != nil && *m.ExternalEntityProviderID != ""
 }

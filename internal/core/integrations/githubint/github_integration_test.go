@@ -1,4 +1,4 @@
-package integrations
+package githubint
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -20,7 +21,7 @@ import (
 func TestGithubIntegrationHandleEvent(t *testing.T) {
 	t.Run("it should not be possible to call handle event with a context without dependencyVulnId parameter", func(t *testing.T) {
 
-		githubIntegration := githubIntegration{}
+		githubIntegration := GithubIntegration{}
 
 		req := httptest.NewRequest("POST", "/webhook", nil)
 		e := echo.New()
@@ -44,7 +45,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, fmt.Errorf("dependencyVuln not found"))
 
-		githubIntegration := githubIntegration{
+		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 		}
 
@@ -69,7 +70,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 	t.Run("it should do nothing, if the asset is NOT connected to a github repository", func(t *testing.T) {
 		// since we are not asserting anything on dependencyVulnRepository nor vulnEventRepository nor github client, we can be sure
 		// that no methods were called and actually nothing happened
-		githubIntegration := githubIntegration{}
+		githubIntegration := GithubIntegration{}
 
 		req := httptest.NewRequest("POST", "/webhook", nil)
 		e := echo.New()
@@ -94,7 +95,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, nil)
 
-		githubIntegration := githubIntegration{
+		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory: func(repoId string) (githubClientFacade, error) {
 				return mocks.NewGithubClientFacade(t), nil
@@ -174,7 +175,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			return facade, nil
 		}
 
-		githubIntegration := githubIntegration{
+		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
 			frontendUrl:              "http://localhost:3000",
@@ -259,7 +260,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			return facade, nil
 		}
 
-		githubIntegration := githubIntegration{
+		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
 			frontendUrl:              "http://localhost:3000",
@@ -348,7 +349,7 @@ func TestGetLabels(t *testing.T) {
 			},
 		}
 
-		labels := getLabels(vuln)
+		labels := commonint.GetLabels(vuln)
 
 		assert.Contains(t, labels, "devguard")
 		assert.Contains(t, labels, "risk:high")
@@ -366,7 +367,7 @@ func TestGetLabels(t *testing.T) {
 			},
 		}
 
-		labels := getLabels(vuln)
+		labels := commonint.GetLabels(vuln)
 
 		assert.Contains(t, labels, "state:accepted")
 		assert.Contains(t, labels, "risk:medium")
@@ -380,7 +381,7 @@ func TestGetLabels(t *testing.T) {
 		}
 		vuln.RawRiskAssessment = utils.Ptr(9.8)
 
-		labels := getLabels(vuln)
+		labels := commonint.GetLabels(vuln)
 
 		assert.Contains(t, labels, "cvss-severity:critical")
 		assert.Contains(t, labels, "risk:critical")
@@ -390,7 +391,7 @@ func TestGetLabels(t *testing.T) {
 		vuln := &models.DependencyVuln{}
 		vuln.RawRiskAssessment = utils.Ptr(4.0)
 
-		labels := getLabels(vuln)
+		labels := commonint.GetLabels(vuln)
 
 		assert.Contains(t, labels, "risk:medium")
 
@@ -407,8 +408,77 @@ func TestGetLabels(t *testing.T) {
 		}
 		vuln.RawRiskAssessment = utils.Ptr(0.0)
 
-		labels := getLabels(vuln)
+		labels := commonint.GetLabels(vuln)
 
 		assert.Contains(t, labels, "state:false-positive")
+	})
+}
+
+func TestIsGithubUserAuthorized(t *testing.T) {
+	t.Run("If the provided user is a member of the project we want to return true", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Repo:   &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
+			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Nil(t, err)
+		assert.True(t, isAuthorized)
+	})
+	t.Run("If the provided user is not a member of the project we want to return false", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Repo:   &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
+			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Nil(t, err)
+		assert.False(t, isAuthorized)
+	})
+	t.Run("If the participation check of the user in the project runs into an error we also want to return that error", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Repo:   &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
+			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		client.On("IsCollaboratorInRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, fmt.Errorf("the github api was blown into pieces"))
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Equal(t, "the github api was blown into pieces", err.Error())
+		assert.False(t, isAuthorized)
+	})
+	t.Run("If the provided user is nil we want to abort", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Repo: &github.Repository{Owner: &github.User{Login: utils.Ptr("l3monMan")}, Name: utils.Ptr("l3monRepo")},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
+		assert.False(t, isAuthorized)
+	})
+	t.Run("If the provided repo is nil we want to abort", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
+		assert.False(t, isAuthorized)
+	})
+	t.Run("If the provided owner is nil we want to abort", func(t *testing.T) {
+		event := github.IssueCommentEvent{
+			Repo:   &github.Repository{},
+			Sender: &github.User{ID: utils.Ptr(int64(484662))},
+		}
+		client := mocks.NewGithubClientFacade(t)
+		isAuthorized, err := isGithubUserAuthorized(&event, client)
+		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
+		assert.False(t, isAuthorized)
+	})
+	t.Run("If the passed event is nil we also want to abort", func(t *testing.T) {
+		isAuthorized, err := isGithubUserAuthorized(nil, nil)
+		assert.Equal(t, "missing event data, could not resolve if user is authorized", err.Error())
+		assert.False(t, isAuthorized)
 	})
 }

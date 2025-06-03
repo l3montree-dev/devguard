@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm/clause"
 )
 
 // NewAssetRepository creates a new instance of AssetRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -1256,6 +1257,52 @@ func (_c *AssetRepository_Update_Call) Return(err error) *AssetRepository_Update
 }
 
 func (_c *AssetRepository_Update_Call) RunAndReturn(run func(tx core.DB, asset *models.Asset) error) *AssetRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) Upsert(t *[]*models.Asset, conflictingColumns *[]clause.Column) error {
+	ret := _mock.Called(t, conflictingColumns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.Asset, *[]clause.Column) error); ok {
+		r0 = returnFunc(t, conflictingColumns)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AssetRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type AssetRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - t
+//   - conflictingColumns
+func (_e *AssetRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *AssetRepository_Upsert_Call {
+	return &AssetRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
+}
+
+func (_c *AssetRepository_Upsert_Call) Run(run func(t *[]*models.Asset, conflictingColumns *[]clause.Column)) *AssetRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*[]*models.Asset), args[1].(*[]clause.Column))
+	})
+	return _c
+}
+
+func (_c *AssetRepository_Upsert_Call) Return(err error) *AssetRepository_Upsert_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AssetRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Asset, conflictingColumns *[]clause.Column) error) *AssetRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

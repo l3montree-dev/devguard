@@ -50,19 +50,15 @@ type Asset struct {
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
 
-	LastSecretScan    *time.Time `json:"lastSecretScan"`
-	LastSastScan      *time.Time `json:"lastSastScan"`
-	LastScaScan       *time.Time `json:"lastScaScan"`
-	LastIacScan       *time.Time `json:"lastIacScan"`
-	LastContainerScan *time.Time `json:"lastContainerScan"`
-	LastDastScan      *time.Time `json:"lastDastScan"`
-
 	SigningPubKey *string `json:"signingPubKey" gorm:"type:text;"`
 
 	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
 
 	BadgeSecret   *uuid.UUID `json:"badgeSecret" gorm:"type:uuid;default:gen_random_uuid();"`
 	WebhookSecret *uuid.UUID `json:"webhookSecret" gorm:"type:uuid;"`
+
+	ExternalEntityID         *string `json:"externalEntityId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
+	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
 }
 
 func (m Asset) TableName() string {

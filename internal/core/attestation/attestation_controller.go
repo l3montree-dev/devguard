@@ -7,6 +7,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -41,6 +42,7 @@ func (a *attestationController) Create(ctx core.Context) error {
 
 	asset := core.GetAsset(ctx)
 
+	isTag := ctx.Request().Header.Get("X-Tag")
 	defaultBranch := ctx.Request().Header.Get("X-Asset-Default-Branch")
 	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
 	if assetVersionName == "" {
@@ -48,7 +50,7 @@ func (a *attestationController) Create(ctx core.Context) error {
 		assetVersionName = "main"
 	}
 
-	assetVersion, err := a.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, assetVersionName, defaultBranch)
+	assetVersion, err := a.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, isTag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		return err

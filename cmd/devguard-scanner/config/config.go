@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"log/slog"
+	"net/http"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
@@ -43,9 +44,10 @@ type baseConfig struct {
 	Registry string `json:"registry" mapstructure:"registry"`
 
 	// used in SbomCMD
-	ScannerID  string `json:"scannerId" mapstructure:"scannerId"`
-	Ref        string `json:"ref" mapstructure:"ref"`
-	DefaultRef string `json:"defaultRef" mapstructure:"defaultRef"`
+	ScannerID     string `json:"scannerId" mapstructure:"scannerId"`
+	Ref           string `json:"ref" mapstructure:"ref"`
+	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
+	IsTag         bool   `json:"isTag" mapstructure:"isTag"`
 }
 
 type InTotoConfig struct {
@@ -86,7 +88,8 @@ func ParseBaseConfig() {
 			panic(err)
 		}
 	}
-	gitVersionInfo, err := utils.GetAssetVersionInfoFromGit(RuntimeBaseConfig.Path)
+
+	gitVersionInfo, err := utils.GetAssetVersionInfo(RuntimeBaseConfig.Path)
 
 	if RuntimeBaseConfig.Ref == "" {
 		// check if we have a git version info
@@ -94,20 +97,25 @@ func ParseBaseConfig() {
 			RuntimeBaseConfig.Ref = gitVersionInfo.BranchOrTag
 		} else {
 			// if we don't have a git version info, we use the current time as ref
-			slog.Info("could not get git version info, using current 'main' as ref", "err", err)
+			slog.Info("could not get git version info, using current 'main' as ref")
 			RuntimeBaseConfig.Ref = "main"
 		}
 	}
 
-	if RuntimeBaseConfig.DefaultRef == "" {
-
+	if RuntimeBaseConfig.DefaultBranch == "" {
 		// check if we have a git version info
-		if err == nil {
-			RuntimeBaseConfig.DefaultRef = gitVersionInfo.DefaultBranch
+		if gitVersionInfo.DefaultBranch != nil {
+			RuntimeBaseConfig.DefaultBranch = *gitVersionInfo.DefaultBranch
 		} else {
 			// if we don't have a git version info, we use the current time as default ref
-			slog.Info("could not get git version info, using current '--ref' as default ref", "err", err)
-			RuntimeBaseConfig.DefaultRef = RuntimeBaseConfig.Ref
+			slog.Info("could not get git default ref. Not updating anything default branch information")
+		}
+	}
+
+	if !RuntimeBaseConfig.IsTag {
+		// check if we have a git version info
+		if gitVersionInfo.IsTag {
+			RuntimeBaseConfig.IsTag = true
 		}
 	}
 }
@@ -191,5 +199,20 @@ func ParseInTotoConfig() {
 		if err != nil {
 			panic(err)
 		}
+	}
+}
+
+func SetXAssetHeaders(req *http.Request) {
+	req.Header.Set("X-Asset-Name", RuntimeBaseConfig.AssetName)
+	req.Header.Set("X-Asset-Ref", RuntimeBaseConfig.Ref)
+
+	if RuntimeBaseConfig.IsTag {
+		req.Header.Set("X-Tag", "1")
+	} else {
+		req.Header.Set("X-Tag", "0")
+	}
+
+	if RuntimeBaseConfig.DefaultBranch != "" {
+		req.Header.Set("X-Asset-Default-Branch", RuntimeBaseConfig.DefaultBranch)
 	}
 }

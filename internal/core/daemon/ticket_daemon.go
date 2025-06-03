@@ -5,6 +5,8 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
@@ -16,8 +18,9 @@ func SyncTickets(db core.DB) error {
 		monitoring.SyncTicketDuration.Observe(time.Since(start).Minutes())
 	}()
 
-	githubIntegration := integrations.NewGithubIntegration(db)
-	gitlabIntegration := integrations.NewGitLabIntegration(db)
+	githubIntegration := githubint.NewGithubIntegration(db)
+	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db)
 
 	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 

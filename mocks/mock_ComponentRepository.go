@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm/clause"
 )
 
 // NewComponentRepository creates a new instance of ComponentRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -1061,6 +1062,52 @@ func (_c *ComponentRepository_Transaction_Call) Return(err error) *ComponentRepo
 }
 
 func (_c *ComponentRepository_Transaction_Call) RunAndReturn(run func(fn func(tx core.DB) error) error) *ComponentRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type ComponentRepository
+func (_mock *ComponentRepository) Upsert(t *[]*models.Component, conflictingColumns *[]clause.Column) error {
+	ret := _mock.Called(t, conflictingColumns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.Component, *[]clause.Column) error); ok {
+		r0 = returnFunc(t, conflictingColumns)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ComponentRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type ComponentRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - t
+//   - conflictingColumns
+func (_e *ComponentRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *ComponentRepository_Upsert_Call {
+	return &ComponentRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
+}
+
+func (_c *ComponentRepository_Upsert_Call) Run(run func(t *[]*models.Component, conflictingColumns *[]clause.Column)) *ComponentRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*[]*models.Component), args[1].(*[]clause.Column))
+	})
+	return _c
+}
+
+func (_c *ComponentRepository_Upsert_Call) Return(err error) *ComponentRepository_Upsert_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ComponentRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Component, conflictingColumns *[]clause.Column) error) *ComponentRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

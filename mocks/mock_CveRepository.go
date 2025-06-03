@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm/clause"
 )
 
 // NewCveRepository creates a new instance of CveRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -1139,6 +1140,52 @@ func (_c *CveRepository_Transaction_Call) Return(err error) *CveRepository_Trans
 }
 
 func (_c *CveRepository_Transaction_Call) RunAndReturn(run func(fn func(tx core.DB) error) error) *CveRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type CveRepository
+func (_mock *CveRepository) Upsert(t *[]*models.CVE, conflictingColumns *[]clause.Column) error {
+	ret := _mock.Called(t, conflictingColumns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.CVE, *[]clause.Column) error); ok {
+		r0 = returnFunc(t, conflictingColumns)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CveRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type CveRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - t
+//   - conflictingColumns
+func (_e *CveRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *CveRepository_Upsert_Call {
+	return &CveRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
+}
+
+func (_c *CveRepository_Upsert_Call) Run(run func(t *[]*models.CVE, conflictingColumns *[]clause.Column)) *CveRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*[]*models.CVE), args[1].(*[]clause.Column))
+	})
+	return _c
+}
+
+func (_c *CveRepository_Upsert_Call) Return(err error) *CveRepository_Upsert_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *CveRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.CVE, conflictingColumns *[]clause.Column) error) *CveRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

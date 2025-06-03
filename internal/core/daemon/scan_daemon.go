@@ -9,6 +9,8 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
@@ -40,8 +42,10 @@ func ScanAssetVersions(db core.DB) error {
 	assetRiskHistoryRepository := repositories.NewAssetRiskHistoryRepository(db)
 	projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(db)
 
-	gitlabIntegration := integrations.NewGitLabIntegration(db)
-	githubIntegration := integrations.NewGithubIntegration(db)
+	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db)
+
+	githubIntegration := githubint.NewGithubIntegration(db)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
@@ -83,7 +87,7 @@ func ScanAssetVersions(db core.DB) error {
 			if len(components) <= 0 {
 				continue
 			} else {
-				_, err = scan.ScanNormalizedSBOM(s, assetVersions[i].Asset, assetVersions[i], normalizedBOM, scannerID, "system")
+				_, err = s.ScanNormalizedSBOM(assetVersions[i].Asset, assetVersions[i], normalizedBOM, scannerID, "system")
 			}
 
 			if err != nil {

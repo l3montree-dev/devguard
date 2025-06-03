@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm/clause"
 )
 
 // NewOrganizationRepository creates a new instance of OrganizationRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -862,6 +863,52 @@ func (_c *OrganizationRepository_Update_Call) Return(err error) *OrganizationRep
 }
 
 func (_c *OrganizationRepository_Update_Call) RunAndReturn(run func(tx core.DB, organization *models.Org) error) *OrganizationRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type OrganizationRepository
+func (_mock *OrganizationRepository) Upsert(t *[]*models.Org, conflictingColumns *[]clause.Column) error {
+	ret := _mock.Called(t, conflictingColumns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.Org, *[]clause.Column) error); ok {
+		r0 = returnFunc(t, conflictingColumns)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// OrganizationRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type OrganizationRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - t
+//   - conflictingColumns
+func (_e *OrganizationRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *OrganizationRepository_Upsert_Call {
+	return &OrganizationRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
+}
+
+func (_c *OrganizationRepository_Upsert_Call) Run(run func(t *[]*models.Org, conflictingColumns *[]clause.Column)) *OrganizationRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*[]*models.Org), args[1].(*[]clause.Column))
+	})
+	return _c
+}
+
+func (_c *OrganizationRepository_Upsert_Call) Return(err error) *OrganizationRepository_Upsert_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *OrganizationRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Org, conflictingColumns *[]clause.Column) error) *OrganizationRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -65,7 +65,7 @@ func (r *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB,
 
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces
-		q = q.Where("scanner_ids = ANY(string_to_array(?, ' '))", scannerID)
+		q = q.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
 	}
 
 	if err := q.Find(&dependencyVulns).Error; err != nil {
@@ -82,7 +82,7 @@ func (r *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx co
 
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces
-		q = q.Where("scanner_ids = ANY(string_to_array(?, ' '))", scannerID)
+		q = q.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
 	}
 	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err
@@ -94,6 +94,21 @@ func (r *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx co
 func (r *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
 	if err := r.Repository.GetDB(r.db).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Find(&dependencyVulns).Error; err != nil {
+		return nil, err
+	}
+	return dependencyVulns, nil
+}
+
+func (r *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
+	var dependencyVulns = []models.DependencyVuln{}
+	q := r.Repository.GetDB(r.db).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ? AND state != 'fixed'", assetVersionName, assetID)
+
+	if scannerID != "" {
+		// scanner ids is a string array separated by whitespaces
+		q = q.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
+	}
+
+	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
 	return dependencyVulns, nil

@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm/clause"
 )
 
 // NewDependencyVulnRepository creates a new instance of DependencyVulnRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -1111,6 +1112,64 @@ func (_c *DependencyVulnRepository_ListByAssetAndAssetVersion_Call) RunAndReturn
 	return _c
 }
 
+// ListUnfixedByAssetAndAssetVersionAndScannerID provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(assetVersionName, assetID, scannerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUnfixedByAssetAndAssetVersionAndScannerID")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(assetVersionName, assetID, scannerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) []models.DependencyVuln); ok {
+		r0 = returnFunc(assetVersionName, assetID, scannerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
+		r1 = returnFunc(assetVersionName, assetID, scannerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUnfixedByAssetAndAssetVersionAndScannerID'
+type DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call struct {
+	*mock.Call
+}
+
+// ListUnfixedByAssetAndAssetVersionAndScannerID is a helper method to define mock.On call
+//   - assetVersionName
+//   - assetID
+//   - scannerID
+func (_e *DependencyVulnRepository_Expecter) ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName interface{}, assetID interface{}, scannerID interface{}) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call {
+	return &DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call{Call: _e.mock.On("ListUnfixedByAssetAndAssetVersionAndScannerID", assetVersionName, assetID, scannerID)}
+}
+
+func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scannerID string)) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_ListUnfixedByAssetAndAssetVersionAndScannerID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Read provides a mock function for the type DependencyVulnRepository
 func (_mock *DependencyVulnRepository) Read(id string) (models.DependencyVuln, error) {
 	ret := _mock.Called(id)
@@ -1298,6 +1357,52 @@ func (_c *DependencyVulnRepository_Transaction_Call) Return(err error) *Dependen
 }
 
 func (_c *DependencyVulnRepository_Transaction_Call) RunAndReturn(run func(fn func(tx core.DB) error) error) *DependencyVulnRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) Upsert(t *[]*models.DependencyVuln, conflictingColumns *[]clause.Column) error {
+	ret := _mock.Called(t, conflictingColumns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.DependencyVuln, *[]clause.Column) error); ok {
+		r0 = returnFunc(t, conflictingColumns)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DependencyVulnRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type DependencyVulnRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - t
+//   - conflictingColumns
+func (_e *DependencyVulnRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *DependencyVulnRepository_Upsert_Call {
+	return &DependencyVulnRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
+}
+
+func (_c *DependencyVulnRepository_Upsert_Call) Run(run func(t *[]*models.DependencyVuln, conflictingColumns *[]clause.Column)) *DependencyVulnRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*[]*models.DependencyVuln), args[1].(*[]clause.Column))
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_Upsert_Call) Return(err error) *DependencyVulnRepository_Upsert_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.DependencyVuln, conflictingColumns *[]clause.Column) error) *DependencyVulnRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }
