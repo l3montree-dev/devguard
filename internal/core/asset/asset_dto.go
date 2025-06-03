@@ -40,6 +40,9 @@ type AssetDTO struct {
 	WebhookSecret *uuid.UUID `json:"webhookSecret"`
 
 	AssetVersions []models.AssetVersion `json:"refs"`
+
+	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
+	ExternalEntityID         *string `json:"externalEntityId,omitempty"`
 }
 
 func toDTOs(assets []models.Asset) []AssetDTO {
@@ -66,19 +69,15 @@ func toDTO(asset models.Asset) AssetDTO {
 		RepositoryID:   asset.RepositoryID,
 		RepositoryName: asset.RepositoryName,
 
-		LastSecretScan:    asset.LastSecretScan,
-		LastSastScan:      asset.LastSastScan,
-		LastScaScan:       asset.LastScaScan,
-		LastIacScan:       asset.LastIacScan,
-		LastContainerScan: asset.LastContainerScan,
-		LastDastScan:      asset.LastDastScan,
-
 		SigningPubKey: asset.SigningPubKey,
 
 		CVSSAutomaticTicketThreshold: asset.CVSSAutomaticTicketThreshold,
 		RiskAutomaticTicketThreshold: asset.RiskAutomaticTicketThreshold,
 
 		AssetVersions: asset.AssetVersions,
+
+		ExternalEntityProviderID: asset.ExternalEntityProviderID,
+		ExternalEntityID:         asset.ExternalEntityID,
 	}
 }
 

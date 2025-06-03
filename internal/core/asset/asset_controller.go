@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
@@ -103,31 +102,14 @@ func (a *httpController) Create(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
 	newAsset := req.toModel(project.GetID())
+	newAsset.ProjectID = project.GetID()
 
-	if newAsset.Name == "" || newAsset.Slug == "" {
-		return echo.NewHTTPError(409, "assets with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("assets with an empty name or an empty slug are not allowed"))
-	}
-	err := a.assetRepository.Create(nil, &newAsset)
-
+	asset, err := a.assetService.CreateAsset(newAsset)
 	if err != nil {
-		if database.IsDuplicateKeyError(err) {
-			// get the asset by slug and project id unscoped
-			asset, err := a.assetRepository.ReadBySlugUnscoped(project.GetID(), newAsset.Slug)
-			if err != nil {
-				return echo.NewHTTPError(500, "could not read asset").WithInternal(err)
-			}
-
-			if err = a.assetRepository.Activate(nil, asset.GetID()); err != nil {
-				return echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
-			}
-			slog.Info("Asset activated", "assetSlug", asset.Slug, "projectID", project.GetID())
-			newAsset = asset
-		} else {
-			return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
-		}
+		return err
 	}
 
-	return ctx.JSON(200, toDTO(newAsset))
+	return ctx.JSON(200, toDTO(*asset))
 }
 
 func (a *httpController) Read(ctx core.Context) error {
@@ -245,7 +227,7 @@ func (a *httpController) Update(ctx core.Context) error {
 }
 
 func (a *httpController) GetConfigFile(ctx core.Context) error {
-	organization := core.GetOrganization(ctx)
+	organization := core.GetOrg(ctx)
 	project := core.GetProject(ctx)
 	asset := core.GetAsset(ctx)
 	configID := ctx.Param("config-file")

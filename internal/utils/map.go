@@ -23,3 +23,11 @@ func Mapper[Key comparable, T any](s []T, f func(T) Key) map[Key]T {
 
 	return res
 }
+
+func Values[K comparable, T any](m map[K]T) []T {
+	res := make([]T, 0, len(m))
+	for _, v := range m {
+		res = append(res, v)
+	}
+	return res
+}

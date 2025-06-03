@@ -63,10 +63,8 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 
 	// set the headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Asset-Name", config.RuntimeBaseConfig.AssetName)
 	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
-	req.Header.Set("X-Asset-Ref", config.RuntimeBaseConfig.Ref)
-	req.Header.Set("X-Asset-Default-Branch", config.RuntimeBaseConfig.DefaultRef)
+	config.SetXAssetHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

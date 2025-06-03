@@ -88,30 +88,23 @@ func (a *assetVersionRepository) findByAssetVersionNameAndAssetID(name string, a
 	return app, nil
 }
 
-func (a *assetVersionRepository) assetVersionFactory(assetVersionName string, assetID uuid.UUID, assetVersionType models.AssetVersionType, defaultBranch bool) models.AssetVersion {
-	app := models.AssetVersion{Name: assetVersionName, AssetID: assetID, Slug: slug.Make(assetVersionName), Type: assetVersionType, DefaultBranch: defaultBranch}
-
-	return app
-}
-
-func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error) {
-
-	var defaultBranch bool
-	if defaultBranchName == assetVersionName {
-		defaultBranch = true
-	}
-
+func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, isTag bool, defaultBranchName *string) (models.AssetVersion, error) {
 	var assetVersion models.AssetVersion
 	assetVersion, err := a.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
 	if err != nil {
 		var assetVersionType models.AssetVersionType
-		if tag == "" {
-			assetVersionType = "branch"
-		} else {
+		if isTag {
 			assetVersionType = "tag"
+		} else {
+			assetVersionType = "branch"
 		}
 
-		assetVersion = a.assetVersionFactory(assetVersionName, assetID, assetVersionType, defaultBranch)
+		assetVersion = models.AssetVersion{
+			Name:    assetVersionName,
+			AssetID: assetID,
+			Slug:    slug.Make(assetVersionName),
+			Type:    assetVersionType,
+		}
 
 		if assetVersion.Name == "" || assetVersion.Slug == "" {
 			return assetVersion, fmt.Errorf("assetVersions with an empty name or an empty slug are not allowed")
@@ -121,21 +114,39 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 		//Check if the given assetVersion already exists if thats the case don't want to add a new entry to the db but instead update the existing one
 		if err != nil && strings.Contains(err.Error(), "duplicate key value violates") {
 			a.db.Unscoped().Model(&assetVersion).Where("name", assetVersionName).Update("deleted_at", nil) //Update 'deleted_at' to NULL to revert the previous soft delete
-			return assetVersion, nil
 		} else if err != nil {
 			return models.AssetVersion{}, err
 		}
-		return assetVersion, nil
 	}
-	if assetVersion.DefaultBranch != defaultBranch {
-		assetVersion.DefaultBranch = defaultBranch
-		if err = a.db.Save(&assetVersion).Error; err != nil {
-			return models.AssetVersion{}, err
-		}
 
+	// check if defaultBranchName is defined
+	if defaultBranchName != nil {
+		assetVersion.DefaultBranch = *defaultBranchName == assetVersion.Name
+		// update the asset version with this branch name and set defaultBranch to true - if there is no asset version with this name just ignore
+		if err := a.updateAssetDefaultBranch(assetID, *defaultBranchName); err != nil {
+			slog.Error("error updating asset default branch", "err", err, "assetID", assetID, "defaultBranchName", defaultBranchName)
+			// just swallow the error here - we don't want to fail the whole operation if we can't set the default branch
+		}
 	}
 
 	return assetVersion, nil
+}
+
+func (a *assetVersionRepository) updateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error {
+	return a.db.Transaction(func(tx core.DB) error {
+		// reset the default branch for all versions of this asset
+		if err := tx.Model(&models.AssetVersion{}).Where("asset_id = ?", assetID).Update("default_branch", false).Error; err != nil {
+			slog.Error("error resetting default branch for asset versions", "err", err, "assetID", assetID)
+			return err
+		}
+		// update the specific asset version to be the default branch
+		if err := tx.Model(&models.AssetVersion{}).Where("name = ? AND asset_id = ?", defaultBranch, assetID).
+			Update("default_branch", true).Error; err != nil {
+			slog.Error("error setting default branch for asset version", "err", err, "assetVersionName", defaultBranch, "assetID", assetID)
+			return err
+		}
+		return nil
+	})
 }
 
 func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {

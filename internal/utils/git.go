@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,8 +17,9 @@ import (
 )
 
 type GitVersionInfo struct {
+	IsTag         bool
 	BranchOrTag   string
-	DefaultBranch string
+	DefaultBranch *string
 }
 
 func getDirFromPath(path string) string {
@@ -38,36 +38,70 @@ func getDirFromPath(path string) string {
 
 var GitLister gitLister = commandLineGitLister{}
 
-func SetGitVersionHeader(path string, req *http.Request) error {
-	gitVersionInfo, err := GetAssetVersionInfoFromGit(path)
-	if err != nil {
-		if err.Error() == "could not get current version" {
+func getAssetVersionInfoFromPipeline() (GitVersionInfo, error) {
+	var gitVersionInfo GitVersionInfo
+
+	// check if a CI variable is set, so we can get the branch name
+	branchName := os.Getenv("CI_COMMIT_REF_NAME")
+	if branchName != "" {
+		defaultBranch := os.Getenv("CI_DEFAULT_BRANCH")
+		tagName := os.Getenv("CI_COMMIT_TAG")
+		if tagName != "" {
+			// we are on a tag - use the tag as ref name
+			branchName = tagName
+		}
+		gitVersionInfo = GitVersionInfo{
+			BranchOrTag:   branchName,
+			IsTag:         tagName != "",
+			DefaultBranch: EmptyThenNil(defaultBranch),
+		}
+		return gitVersionInfo, nil
+	} else {
+		// check if we are in a GitHub Action
+		branchName = os.Getenv("GITHUB_REF_NAME")
+		//This returns the short ref name of the branch or tag that triggered the workflow run.
+		if branchName != "" {
+			gitVersionInfo = GitVersionInfo{
+				IsTag:         strings.HasPrefix(os.Getenv("GITHUB_REF"), "refs/tags/"),
+				BranchOrTag:   branchName,
+				DefaultBranch: nil, // there is no environment variable for the default branch in GitHub Actions
+			}
+			return gitVersionInfo, nil
 		} else {
-			return err
+			return GitVersionInfo{}, errors.New("could not get branch name from environment variables")
 		}
 	}
-
-	slog.Info("git version info", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", gitVersionInfo.DefaultBranch)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Asset-Ref", gitVersionInfo.BranchOrTag)
-	req.Header.Set("X-Asset-Default-Branch", gitVersionInfo.DefaultBranch)
-
-	return nil
+}
+func GetAssetVersionInfo(path string) (GitVersionInfo, error) {
+	// first try to get the version info from the pipeline
+	gitVersionInfo, err := getAssetVersionInfoFromPipeline()
+	if err == nil {
+		slog.Info("got git version info from pipeline", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", SafeDereference(gitVersionInfo.DefaultBranch))
+		return gitVersionInfo, nil
+	}
+	// if that fails, try to get the version info from git
+	slog.Info("could not get git version info from pipeline, falling back to git")
+	gitVersionInfo, err = getAssetVersionInfoFromGit(path)
+	if err != nil {
+		slog.Error("could not get git version info from git")
+		return GitVersionInfo{}, errors.Wrap(err, "could not get git version info from git")
+	}
+	slog.Info("got git version info from git", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", SafeDereference(gitVersionInfo.DefaultBranch))
+	return gitVersionInfo, nil
 }
 
-func GetAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
+func getAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 	// we use the commit count, to check if we should create a new version - or if its dirty.
 	// v1.0.0 - . . . . . . . . . . - v1.0.1
 	// all commits after v1.0.0 are part of v1.0.1
 	// if there are no commits after the tag, we are on a clean tag
-
 	version, commitAfterTag, err := getCurrentVersion(path)
 	if err != nil {
 		slog.Error("could not get current version", "err", err)
 		return GitVersionInfo{}, errors.New("could not get current version")
 	}
 
-	branchOrTag, err := getCurrentBranchName(path)
+	branchOrTag, err := GitLister.GetBranchName(path)
 	if err != nil {
 		return GitVersionInfo{}, errors.Wrap(err, "could not get branch name")
 	}
@@ -79,22 +113,19 @@ func GetAssetVersionInfoFromGit(path string) (GitVersionInfo, error) {
 
 	defaultBranch, err := GitLister.GetDefaultBranchName(path)
 	if err != nil {
-		return GitVersionInfo{}, errors.Wrap(err, "could not get default branch name")
+		slog.Info("could not get default branch name", "err", err, "path", getDirFromPath(path), "msg", err.Error())
+		return GitVersionInfo{
+			BranchOrTag:   branchOrTag,
+			DefaultBranch: nil,
+			IsTag:         commitAfterTag == 0,
+		}, nil
 	}
 
 	return GitVersionInfo{
 		BranchOrTag:   branchOrTag,
-		DefaultBranch: defaultBranch,
+		DefaultBranch: &defaultBranch,
+		IsTag:         commitAfterTag == 0,
 	}, nil
-}
-
-func getCurrentBranchName(path string) (string, error) {
-	// check if a CI variable is set - this provides a more stable way to get the branch name
-	if os.Getenv("CI_COMMIT_REF_NAME") != "" {
-		return os.Getenv("CI_COMMIT_REF_NAME"), nil
-	}
-
-	return GitLister.GetBranchName(path)
 }
 
 type gitLister interface {

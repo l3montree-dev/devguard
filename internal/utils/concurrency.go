@@ -164,3 +164,28 @@ func Concurrently(fns ...func() (any, error)) concurrentResultSlice {
 
 	return res
 }
+
+type GoroutineFireAndForgetSynchronizer struct{}
+
+// super simple: create a goroutine and call the function in it
+func (f *GoroutineFireAndForgetSynchronizer) FireAndForget(fn func()) {
+	go func() {
+		fn()
+	}()
+}
+
+func NewFireAndForgetSynchronizer() *GoroutineFireAndForgetSynchronizer {
+	return &GoroutineFireAndForgetSynchronizer{}
+}
+
+type SyncFireAndForgetSynchronizer struct {
+}
+
+// just don't use a goroutine, but call the function directly
+func (f *SyncFireAndForgetSynchronizer) FireAndForget(fn func()) {
+	fn()
+}
+
+func NewSyncFireAndForgetSynchronizer() *SyncFireAndForgetSynchronizer {
+	return &SyncFireAndForgetSynchronizer{}
+}

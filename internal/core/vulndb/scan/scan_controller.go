@@ -16,6 +16,7 @@
 package scan
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -29,9 +30,9 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-type httpController struct {
+type HttpController struct {
 	db                     core.DB
-	sbomScanner            *sbomScanner
+	sbomScanner            core.SBOMScanner
 	cveRepository          core.CveRepository
 	componentRepository    core.ComponentRepository
 	assetRepository        core.AssetRepository
@@ -40,23 +41,27 @@ type httpController struct {
 	statisticsService      core.StatisticsService
 
 	dependencyVulnService core.DependencyVulnService
+
+	// mark public to let it be overridden in tests
+	core.FireAndForgetSynchronizer
 }
 
-func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *httpController {
+func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *HttpController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
 	scanner := NewSBOMScanner(cpeComparer, purlComparer, cveRepository)
-	return &httpController{
-		db:                     db,
-		sbomScanner:            scanner,
-		cveRepository:          cveRepository,
-		componentRepository:    componentRepository,
-		assetVersionService:    assetVersionService,
-		assetRepository:        assetRepository,
-		assetVersionRepository: assetVersionRepository,
-		statisticsService:      statisticsService,
-		dependencyVulnService:  dependencyVulnService,
+	return &HttpController{
+		db:                        db,
+		sbomScanner:               scanner,
+		cveRepository:             cveRepository,
+		componentRepository:       componentRepository,
+		assetVersionService:       assetVersionService,
+		assetRepository:           assetRepository,
+		assetVersionRepository:    assetVersionRepository,
+		statisticsService:         statisticsService,
+		dependencyVulnService:     dependencyVulnService,
+		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
 
@@ -72,8 +77,7 @@ type FirstPartyScanResponse struct {
 	FirstPartyVulns []vuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
 }
 
-func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (ScanResponse, error) {
-
+func (s *HttpController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {
 	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
@@ -87,16 +91,14 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	userID := core.GetSession(c).GetUserID()
 
 	tag := c.Request().Header.Get("X-Tag")
-
 	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
 	assetVersionName := c.Request().Header.Get("X-Asset-Ref")
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
-		defaultBranch = "main"
 	}
 
-	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		return scanResults, err
@@ -105,7 +107,7 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
-		return scanResults, err
+		return scanResults, fmt.Errorf("no X-Scanner header found")
 	}
 
 	// update the sbom in the database in parallel
@@ -113,10 +115,10 @@ func DependencyVulnScan(c core.Context, bom normalize.SBOM, s *httpController) (
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
-	return ScanNormalizedSBOM(s, asset, assetVersion, normalizedBom, scannerID, userID)
+	return s.ScanNormalizedSBOM(asset, assetVersion, normalizedBom, scannerID, userID)
 }
 
-func ScanNormalizedSBOM(s *httpController, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
+func (s *HttpController) ScanNormalizedSBOM(asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
@@ -134,7 +136,7 @@ func ScanNormalizedSBOM(s *httpController, asset models.Asset, assetVersion mode
 
 	//Check if we want to create an issue for this assetVersion
 	if s.dependencyVulnService.ShouldCreateIssues(assetVersion) {
-		go func() {
+		s.FireAndForget(func() {
 			err := s.dependencyVulnService.CreateIssuesForVulnsIfThresholdExceeded(asset, opened)
 			if err != nil {
 				slog.Error("could not create issues for vulnerabilities", "err", err)
@@ -144,7 +146,7 @@ func ScanNormalizedSBOM(s *httpController, asset models.Asset, assetVersion mode
 			if err != nil {
 				slog.Error("could not close issues for vulnerabilities", "err", err)
 			}
-		}()
+		})
 	}
 
 	slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
@@ -166,7 +168,7 @@ func ScanNormalizedSBOM(s *httpController, asset models.Asset, assetVersion mode
 	return scanResults, nil
 }
 
-func (s *httpController) FirstPartyVulnScan(c core.Context) error {
+func (s *HttpController) FirstPartyVulnScan(c core.Context) error {
 
 	monitoring.FirstPartyScanAmount.Inc()
 	startTime := time.Now()
@@ -192,9 +194,10 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
+		defaultBranch = "main"
 	}
 
-	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag, defaultBranch)
+	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
@@ -227,7 +230,7 @@ func (s *httpController) FirstPartyVulnScan(c core.Context) error {
 	})
 }
 
-func (s *httpController) ScanDependencyVulnFromProject(c core.Context) error {
+func (s *HttpController) ScanDependencyVulnFromProject(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
 	defer c.Request().Body.Close()
@@ -235,16 +238,14 @@ func (s *httpController) ScanDependencyVulnFromProject(c core.Context) error {
 		return err
 	}
 
-	scanResults, err := DependencyVulnScan(c, normalize.FromCdxBom(bom, true), s)
+	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
 	if err != nil {
 		return err
 	}
 	return c.JSON(200, scanResults)
-
 }
 
-func (s *httpController) ScanSbomFile(c core.Context) error {
-
+func (s *HttpController) ScanSbomFile(c core.Context) error {
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(maxSize)
 	if err != nil {
@@ -264,7 +265,7 @@ func (s *httpController) ScanSbomFile(c core.Context) error {
 		return err
 	}
 
-	scanResults, err := DependencyVulnScan(c, normalize.FromCdxBom(bom, true), s)
+	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
 	if err != nil {
 		return err
 	}

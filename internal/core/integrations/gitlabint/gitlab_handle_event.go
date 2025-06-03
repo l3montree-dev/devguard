@@ -1,0 +1,172 @@
+package gitlabint
+
+import (
+	"fmt"
+	"log/slog"
+	"strconv"
+	"strings"
+
+	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/org"
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
+)
+
+func (g *GitlabIntegration) HandleEvent(event any) error {
+	switch event := event.(type) {
+	case core.ManualMitigateEvent:
+		asset := core.GetAsset(event.Ctx)
+		assetVersionName := core.GetAssetVersion(event.Ctx).Name
+		repoId, err := core.GetRepositoryID(event.Ctx)
+		if err != nil {
+			return err
+		}
+		projectSlug, err := core.GetProjectSlug(event.Ctx)
+
+		if err != nil {
+			return err
+		}
+		vulnID, vulnType, err := core.GetVulnID(event.Ctx)
+		if err != nil {
+			return err
+		}
+
+		var vuln models.Vuln
+
+		switch vulnType {
+		case models.VulnTypeDependencyVuln:
+			// we have a dependency vuln
+			v, err := g.dependencyVulnRepository.Read(vulnID)
+			if err != nil {
+				return err
+			}
+			vuln = &v
+		case models.VulnTypeFirstPartyVuln:
+			v, err := g.firstPartyVulnRepository.Read(vulnID)
+			if err != nil {
+				return err
+			}
+			vuln = &v
+		}
+
+		orgSlug, err := core.GetOrgSlug(event.Ctx)
+		if err != nil {
+			return err
+		}
+
+		session := core.GetSession(event.Ctx)
+
+		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
+	case core.VulnEvent:
+		ev := event.Event
+
+		vulnType := ev.VulnType
+
+		var vuln models.Vuln
+		switch vulnType {
+		case models.VulnTypeDependencyVuln:
+			v, err := g.dependencyVulnRepository.Read(ev.VulnID)
+			if err != nil {
+				return err
+			}
+			vuln = &v
+		case models.VulnTypeFirstPartyVuln:
+			v, err := g.firstPartyVulnRepository.Read(ev.VulnID)
+			if err != nil {
+				return err
+			}
+			vuln = &v
+		}
+
+		asset := core.GetAsset(event.Ctx)
+
+		if vuln.GetTicketID() == nil {
+			// we do not have a ticket id - we do not need to do anything
+			return nil
+		}
+
+		repoId := utils.SafeDereference(asset.RepositoryID)
+		if !strings.HasPrefix(repoId, "gitlab:") || !strings.HasPrefix(*vuln.GetTicketID(), "gitlab:") {
+			// this integration only handles gitlab repositories.
+			return nil
+		}
+
+		integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+		if err != nil {
+			slog.Error("failed to extract integration id from repo id", "err", err, "repoId", repoId)
+			return err
+		}
+
+		projectId, err := extractProjectIdFromRepoId(repoId)
+		if err != nil {
+			slog.Error("failed to extract project id from repo id", "err", err, "repoId", repoId)
+			return err
+		}
+
+		// we create a new ticket in github
+		client, err := g.gitlabClientFactory(integrationUUID)
+		if err != nil {
+			return err
+		}
+
+		gitlabTicketID := strings.TrimPrefix(*vuln.GetTicketID(), "gitlab:")
+		gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
+		if err != nil {
+			return err
+		}
+
+		members, err := org.FetchMembersOfOrganization(event.Ctx)
+		if err != nil {
+			return err
+		}
+
+		// find the member which created the event
+		member, ok := utils.Find(
+			members,
+			func(member core.User) bool {
+				return member.ID == ev.UserID
+			},
+		)
+		if !ok {
+			member = core.User{
+				Name: "unknown",
+			}
+		}
+
+		switch ev.Type {
+		case models.EventTypeAccepted:
+			// if a dependencyVuln gets accepted, we close the issue and create a comment with that justification
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification))),
+			})
+			if err != nil {
+				return err
+			}
+			return g.CloseIssue(event.Ctx.Request().Context(), "accepted", repoId, vuln)
+		case models.EventTypeFalsePositive:
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" marked the vulnerability as false positive", utils.SafeDereference(ev.Justification))),
+			})
+			if err != nil {
+				return err
+			}
+			return g.CloseIssue(event.Ctx.Request().Context(), "false-positive", repoId, vuln)
+		case models.EventTypeReopened:
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))),
+			})
+			if err != nil {
+				return err
+			}
+
+			return g.ReopenIssue(event.Ctx.Request().Context(), repoId, vuln)
+		case models.EventTypeComment:
+			_, _, err = client.CreateIssueComment(event.Ctx.Request().Context(), projectId, gitlabTicketIDInt, &gitlab.CreateIssueNoteOptions{
+				Body: gitlab.Ptr(fmt.Sprintf("<devguard> %s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
+			})
+			return err
+		}
+	}
+	return nil
+}

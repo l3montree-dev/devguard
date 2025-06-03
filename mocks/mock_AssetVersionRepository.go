@@ -140,7 +140,7 @@ func (_c *AssetVersionRepository_Delete_Call) RunAndReturn(run func(tx core.DB, 
 }
 
 // FindOrCreate provides a mock function for the type AssetVersionRepository
-func (_mock *AssetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error) {
+func (_mock *AssetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error) {
 	ret := _mock.Called(assetVersionName, assetID, tag, defaultBranchName)
 
 	if len(ret) == 0 {
@@ -149,15 +149,15 @@ func (_mock *AssetVersionRepository) FindOrCreate(assetVersionName string, asset
 
 	var r0 models.AssetVersion
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string, string) (models.AssetVersion, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, bool, *string) (models.AssetVersion, error)); ok {
 		return returnFunc(assetVersionName, assetID, tag, defaultBranchName)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string, string) models.AssetVersion); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, bool, *string) models.AssetVersion); ok {
 		r0 = returnFunc(assetVersionName, assetID, tag, defaultBranchName)
 	} else {
 		r0 = ret.Get(0).(models.AssetVersion)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, string, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, bool, *string) error); ok {
 		r1 = returnFunc(assetVersionName, assetID, tag, defaultBranchName)
 	} else {
 		r1 = ret.Error(1)
@@ -179,9 +179,9 @@ func (_e *AssetVersionRepository_Expecter) FindOrCreate(assetVersionName interfa
 	return &AssetVersionRepository_FindOrCreate_Call{Call: _e.mock.On("FindOrCreate", assetVersionName, assetID, tag, defaultBranchName)}
 }
 
-func (_c *AssetVersionRepository_FindOrCreate_Call) Run(run func(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string)) *AssetVersionRepository_FindOrCreate_Call {
+func (_c *AssetVersionRepository_FindOrCreate_Call) Run(run func(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string)) *AssetVersionRepository_FindOrCreate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(uuid.UUID), args[2].(string), args[3].(string))
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(bool), args[3].(*string))
 	})
 	return _c
 }
@@ -191,7 +191,7 @@ func (_c *AssetVersionRepository_FindOrCreate_Call) Return(assetVersion models.A
 	return _c
 }
 
-func (_c *AssetVersionRepository_FindOrCreate_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error)) *AssetVersionRepository_FindOrCreate_Call {
+func (_c *AssetVersionRepository_FindOrCreate_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error)) *AssetVersionRepository_FindOrCreate_Call {
 	_c.Call.Return(run)
 	return _c
 }

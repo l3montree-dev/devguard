@@ -24,9 +24,14 @@ import (
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
+	"gorm.io/gorm/clause"
 )
 
+type SBOMScanner interface {
+	Scan(bom normalize.SBOM) ([]models.VulnInPackage, error)
+}
 type ProjectRepository interface {
 	Read(projectID uuid.UUID) (models.Project, error)
 	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
@@ -42,6 +47,7 @@ type ProjectRepository interface {
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
+	Upsert(projects *[]*models.Project, conflictingColumns *[]clause.Column) error
 }
 
 type PolicyRepository interface {
@@ -131,6 +137,7 @@ type DependencyVulnRepository interface {
 	GetDependencyVulnsByPurl(tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
+	ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -178,6 +185,12 @@ type OrganizationRepository interface {
 	GetOrgByID(id uuid.UUID) (models.Org, error)
 }
 
+type OrgService interface {
+	CreateOrganization(ctx Context, organization models.Org) error
+	CreateExternalEntityOrganization(ctx Context, externalEntitySlug ExternalEntitySlug) (*models.Org, error)
+	ReadBySlug(slug string) (*models.Org, error)
+}
+
 type InvitationRepository interface {
 	Save(tx DB, invitation *models.Invitation) error
 	FindByCode(code string) (models.Invitation, error)
@@ -185,10 +198,12 @@ type InvitationRepository interface {
 }
 
 type ProjectService interface {
+	ReadBySlug(ctx Context, organizationID uuid.UUID, slug string) (models.Project, error)
 	ListAllowedProjects(ctx Context) ([]models.Project, error)
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
+	CreateProject(ctx Context, project *models.Project) error
 }
 
 type InTotoVerifierService interface {
@@ -200,6 +215,7 @@ type InTotoVerifierService interface {
 type AssetService interface {
 	UpdateAssetRequirements(asset models.Asset, responsible string, justification string) error
 	GetCVSSBadgeSVG(CVSS models.AssetRiskDistribution) string
+	CreateAsset(asset models.Asset) (*models.Asset, error)
 }
 
 type DependencyVulnService interface {
@@ -214,6 +230,12 @@ type DependencyVulnService interface {
 
 	SyncTickets(assetVersion models.Asset) error
 	ShouldCreateIssues(assetVersion models.AssetVersion) bool
+}
+
+// useful for integration testing - use in production to just fire and forget a function "go func()"
+// during testing, this can be used to synchronize the execution of multiple goroutines - and wait for them to finish
+type FireAndForgetSynchronizer interface {
+	FireAndForget(fn func())
 }
 
 type AssetVersionService interface {
@@ -235,7 +257,7 @@ type AssetVersionRepository interface {
 	GetAllAssetsVersionFromDBByAssetID(tx DB, assetID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error)
 	GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error)
-	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag string, defaultBranchName string) (models.AssetVersion, error)
+	FindOrCreate(assetVersionName string, assetID uuid.UUID, tag bool, defaultBranchName *string) (models.AssetVersion, error)
 	ReadBySlug(assetID uuid.UUID, slug string) (models.AssetVersion, error)
 	GetDefaultAssetVersion(assetID uuid.UUID) (models.AssetVersion, error)
 }
@@ -287,7 +309,11 @@ type GitlabIntegrationRepository interface {
 }
 
 type GitLabOauth2TokenRepository interface {
-	common.Repository[uuid.UUID, models.GitLabOauth2Token, DB]
+	Save(tx DB, model ...*models.GitLabOauth2Token) error
+	FindByUserIdAndProviderId(userId string, providerId string) (*models.GitLabOauth2Token, error)
+	FindByUserId(userId string) ([]models.GitLabOauth2Token, error)
+	Delete(tx DB, tokens []models.GitLabOauth2Token) error
+	DeleteByUserIdAndProviderId(userId string, providerId string) error
 }
 
 type ConfigService interface {
@@ -333,4 +359,76 @@ type ComponentService interface {
 	GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Component, error)
 	RefreshComponentProjectInformation(project models.ComponentProject)
 	GetLicense(component models.Component) (models.Component, error)
+}
+
+type AccessControl interface {
+	HasAccess(subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
+
+	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error
+
+	GetAllRoles(user string) []string
+
+	GrantRole(subject string, role string) error
+	RevokeRole(subject string, role string) error
+
+	GrantRoleInProject(subject string, role string, project string) error
+	RevokeRoleInProject(subject string, role string, project string) error
+	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string, project string) error
+
+	InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error
+
+	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions string, project string) error
+
+	AllowRole(role string, object Object, action []Action) error
+	IsAllowed(subject string, object Object, action Action) (bool, error)
+
+	IsAllowedInProject(project *models.Project, user string, object Object, action Action) (bool, error)
+	AllowRoleInProject(project string, role string, object Object, action []Action) error
+
+	GetAllProjectsForUser(user string) (any, error) // return is either a slice of strings or projects
+
+	GetOwnerOfOrganization() (string, error)
+
+	GetAllMembersOfOrganization() ([]string, error)
+
+	GetAllMembersOfProject(projectID string) ([]string, error)
+
+	GetDomainRole(user string) (string, error)
+	GetProjectRole(user string, project string) (string, error)
+}
+
+type RBACProvider interface {
+	GetDomainRBAC(domain string) AccessControl
+	DomainsOfUser(user string) ([]string, error)
+}
+
+type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
+
+const (
+	RoleOwner  = "owner"
+	RoleAdmin  = "admin"
+	RoleMember = "member"
+)
+
+type Action string
+
+const (
+	ActionCreate Action = "create"
+	ActionRead   Action = "read"
+	ActionUpdate Action = "update"
+	ActionDelete Action = "delete"
+)
+
+type Object string
+
+const (
+	ObjectProject      Object = "project"
+	ObjectAsset        Object = "asset"
+	ObjectUser         Object = "user"
+	ObjectOrganization Object = "organization"
+)
+
+type ProjectRole struct {
+	Project string
+	Role    string
 }

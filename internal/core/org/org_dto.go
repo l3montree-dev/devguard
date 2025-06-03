@@ -179,7 +179,8 @@ type OrgDTO struct {
 
 	ConfigFiles map[string]any `json:"configFiles"`
 
-	Language string `json:"language"`
+	Language                 string  `json:"language"`
+	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"type:text"`
 }
 
 func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.GitlabIntegrationDTO {
@@ -207,11 +208,12 @@ func fromModel(org models.Org) OrgDTO {
 		Description:            org.Description,
 		IsPublic:               org.IsPublic,
 
-		Projects:               org.Projects,
-		GithubAppInstallations: org.GithubAppInstallations,
-		GitLabIntegrations:     utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
-		ConfigFiles:            org.ConfigFiles,
-		Language:               org.Language,
+		Projects:                 org.Projects,
+		GithubAppInstallations:   org.GithubAppInstallations,
+		GitLabIntegrations:       utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
+		ConfigFiles:              org.ConfigFiles,
+		Language:                 org.Language,
+		ExternalEntityProviderID: org.ExternalEntityProviderID,
 	}
 }
 

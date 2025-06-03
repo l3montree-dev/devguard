@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package integrations
+package githubint
 
 import (
 	"context"
@@ -163,4 +163,21 @@ func NewGithubClient(installationID int) (githubClient, error) {
 		Client:                  client,
 		githubAppInstallationID: installationID,
 	}, nil
+}
+
+func (client githubClient) GetRepositoryCollaborators(ctx context.Context, owner string, repoId string, opts *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error) {
+	return client.Repositories.ListCollaborators(ctx, owner, repoId, opts)
+}
+
+func (client githubClient) IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userId int64, opts *github.ListCollaboratorsOptions) (bool, error) {
+	collaborators, _, err := client.GetRepositoryCollaborators(ctx, owner, repoId, opts)
+	if err != nil {
+		return false, err
+	}
+	for _, user := range collaborators {
+		if userId == *user.ID {
+			return true, nil
+		}
+	}
+	return false, nil
 }
