@@ -517,8 +517,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage"}), accessControlMiddleware(accesscontrol.ObjectOrganization, accesscontrol.ActionUpdate))
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
-	organizationRouter.POST("/license-overwrite/", licenseOverwriteController.Create)
-	organizationRouter.DELETE("/license-overwrite/", licenseOverwriteController.Delete)
+	organizationRouter.POST("/license-overwrite/", licenseOverwriteController.Create, neededScope([]string{"manage"}))
+	organizationRouter.DELETE("/license-overwrite/:licenseId", licenseOverwriteController.Delete, neededScope([]string{"manage"}))
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectRepository, "project", accesscontrol.ActionRead))
 	projectRouter.GET("/", projectController.Read)

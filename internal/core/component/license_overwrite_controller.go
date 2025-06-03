@@ -40,7 +40,7 @@ func (controller LicenseOverwriteController) Create(ctx core.Context) error {
 	if err := core.V.Struct(newLicenseOverwrite); err != nil {
 		return echo.NewHTTPError(400, err.Error())
 	}
-	if newLicenseOverwrite.License_id == "" {
+	if newLicenseOverwrite.LicenseID == "" {
 		return echo.NewHTTPError(400, "license id must not be empty")
 	}
 	err := controller.LicenseOverwriteRepository.Create(nil, &newLicenseOverwrite)
@@ -51,11 +51,11 @@ func (controller LicenseOverwriteController) Create(ctx core.Context) error {
 }
 
 func (controller LicenseOverwriteController) Delete(ctx core.Context) error {
-	license_id := ctx.Param("license_id")
-	if license_id == "" {
+	licenseID := ctx.Param("licenseId")
+	if licenseID == "" {
 		return echo.NewHTTPError(400, "could not retrieve a valid license id")
 	}
-	err := controller.LicenseOverwriteRepository.Delete(nil, license_id)
+	err := controller.LicenseOverwriteRepository.Delete(nil, licenseID)
 	if err != nil {
 		return echo.NewHTTPError(500, err.Error())
 	}

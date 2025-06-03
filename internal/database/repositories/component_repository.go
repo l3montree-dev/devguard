@@ -285,7 +285,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 	// convert all overwritten licenses to a map which maps a purl to a new license
 	isPurlOverwrittenMap := make(map[string]string, len(overwrittenLicenses))
 	for i := range overwrittenLicenses {
-		isPurlOverwrittenMap[overwrittenLicenses[i].ComponentPurl] = overwrittenLicenses[i].License_id
+		isPurlOverwrittenMap[overwrittenLicenses[i].ComponentPurl] = overwrittenLicenses[i].LicenseID
 	}
 
 	// now we check if a given component (dependency) is present in the overwrittenMap eg. it needs to be overwritten and flagged as such
