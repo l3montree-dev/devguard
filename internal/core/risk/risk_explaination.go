@@ -257,6 +257,10 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	} else {
 		str.WriteString("No fix is available.\n")
 	}
+
+	str.WriteString("\n### Additional guidance for mitigating vulnerabilities\n")
+	str.WriteString("Visit our guides on [devguard.org](https://devguard.org/risk-mitigation-guides/software-composition-analysis)\n")
+
 	str.WriteString("\n<details>\n\n<summary>See more details...</summary>\n")
 	str.WriteString("\n### Path to component\n")
 	str.WriteString(mermaidPathToComponent)
