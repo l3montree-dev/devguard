@@ -978,6 +978,10 @@ func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 
 func (g *GitlabIntegration) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
 	client, projectId, err := g.getClientBasedOnAsset(asset)
+	if err != nil {
+		slog.Error("could not get gitlab client based on asset", "err", err)
+		return err
+	}
 
 	gitlabTicketID := strings.TrimPrefix(*vuln.GetTicketID(), "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
