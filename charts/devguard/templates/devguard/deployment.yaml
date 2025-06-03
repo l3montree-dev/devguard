@@ -111,8 +111,9 @@ spec:
                   name: {{ .autosetupApplication.existingClientSecret | quote }}
             - name: GITLAB_{{ .id | upper }}AUTOSETUP_BASEURL
               value: {{ .issuerUrl | quote }}
+            - name: GITLAB_{{ .id | upper }}AUTOSETUP_SCOPES
+              value: {{ .autosetupApplication.scope | join " " | quote }}
             {{- end }}
-            {{- end}}
             {{- end }}
         {{- end }}
           - name: API_URL
