@@ -212,7 +212,7 @@ func TestTicketHandling(t *testing.T) {
 		setupContext(ctx)
 
 		// expect there should be a ticket created for the vulnerability
-		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, "main", "repo-123", mock.Anything, "", "", "Risk exceeds predefined threshold", "system").Return(nil).Once()
+		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, "main", "repo-123", mock.Anything, "test-project", "test-org", "Risk exceeds predefined threshold", "system").Return(nil).Once()
 		// now we expect, that the controller creates a ticket for that vulnerability
 		err = controller.ScanDependencyVulnFromProject(ctx)
 		assert.Nil(t, err)
