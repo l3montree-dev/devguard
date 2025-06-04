@@ -8,6 +8,10 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
+	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/spf13/cobra"
 )
 
@@ -58,6 +62,15 @@ func triggerDaemon(db core.DB, daemons []string) error {
 	if err != nil {
 		panic(err)
 	}
+	githubIntegration := githubint.NewGithubIntegration(db)
+	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
+	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
+		repositories.NewGitLabIntegrationRepository(db),
+		gitlabOauth2Integrations,
+	)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
+
+	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
 	// we only update the vulnerability database each 6 hours.
 	// thus there is no need to recalculate the risk or anything earlier
@@ -128,7 +141,7 @@ func triggerDaemon(db core.DB, daemons []string) error {
 
 	if emptyOrContains(daemons, "tickets") {
 		start = time.Now()
-		if err := daemon.SyncTickets(db, casbinRBACProvider); err != nil {
+		if err := daemon.SyncTickets(db, thirdPartyIntegrationAggregate); err != nil {
 			slog.Error("could not sync tickets", "err", err)
 			return nil
 		}

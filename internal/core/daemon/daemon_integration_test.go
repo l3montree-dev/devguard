@@ -11,11 +11,14 @@ import (
 
 	"github.com/l3montree-dev/devguard/integration_tests"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
+	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 func TestDaemonAsssetVersionScan(t *testing.T) {
@@ -149,6 +152,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 		&models.Exploit{},
 		&models.VulnEvent{},
 		&models.DependencyVuln{},
+		&models.GitLabIntegration{},
 	)
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
@@ -160,7 +164,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 	project.Slug = "project-slug"
 	err = db.Save(&project).Error
 
-	repoID := "repo-123"
+	repoID := "gitlab:7c95b7f6-a921-4b27-91ac-38cb94877324:456"
 	asset.RepositoryID = &repoID
 	cvssThreshold := 7.0
 	asset.CVSSAutomaticTicketThreshold = &cvssThreshold
@@ -192,8 +196,10 @@ func TestDaemonSyncTickets(t *testing.T) {
 			State:                models.VulnStateOpen,
 			LastDetected:         time.Now(),
 		},
-		CVE:   &cve,
-		CVEID: utils.Ptr(cve.CVE),
+		CVE:               &cve,
+		CVEID:             utils.Ptr(cve.CVE),
+		ComponentDepth:    utils.Ptr(1),
+		RawRiskAssessment: utils.Ptr(8.0),
 	}
 	err = db.Create(&dependencyVuln).Error
 	assert.Nil(t, err)
@@ -201,13 +207,27 @@ func TestDaemonSyncTickets(t *testing.T) {
 	assert.Nil(t, dependencyVuln.TicketID)
 	assert.Nil(t, dependencyVuln.TicketURL)
 
-	casbinRBACProvider := mocks.NewRBACProvider(t)
-	thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
-	thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, "main", "repo-123", mock.Anything, project.Slug, org.Slug, "Risk exceeds predefined threshold", "system").Return(nil).Once()
+	clientfactory, gitlabClientFacade := integration_tests.NewTestClientFactory(t)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(
+		db,
+		gitlabint.NewGitLabOauth2Integrations(db),
+		mocks.NewRBACProvider(t),
+		clientfactory,
+	)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
 
-	t.Run("should  create a ticket if the CVSS if above the threshold", func(t *testing.T) {
+	gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything).Return(
+		&gitlab.Issue{
+			ID: 12345,
+		}, nil, nil)
 
-		err = daemon.SyncTickets(db, casbinRBACProvider, thirdPartyIntegration)
+	gitlabClientFacade.On("CreateIssueComment", mock.Anything, 456, 0, &gitlab.CreateIssueNoteOptions{
+		Body: gitlab.Ptr("<devguard> Risk exceeds predefined threshold\n"),
+	}).Return(nil, nil, nil)
+
+	t.Run("should create a ticket if the CVSS if above the threshold", func(t *testing.T) {
+
+		err = daemon.SyncTickets(db, thirdPartyIntegration)
 		assert.Nil(t, err)
 
 		var updatedDependencyVuln models.DependencyVuln
