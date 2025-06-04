@@ -9,6 +9,9 @@ import (
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/config"
+	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
 	"gorm.io/gorm"
 )
@@ -53,6 +56,12 @@ func Start(db core.DB) {
 	if err != nil {
 		panic(err)
 	}
+
+	githubIntegration := githubint.NewGithubIntegration(db)
+	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db, casbinRBACProvider)
+
+	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
 	configService := config.NewService(db)
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
@@ -133,7 +142,7 @@ func Start(db core.DB) {
 		if shouldMirror(configService, "vulndb.tickets") {
 			start = time.Now()
 			// sync tickets
-			if err := SyncTickets(db); err != nil {
+			if err := SyncTickets(db, casbinRBACProvider, thirdPartyIntegrationAggregate); err != nil {
 				slog.Error("could not sync tickets", "err", err)
 				return nil
 			}

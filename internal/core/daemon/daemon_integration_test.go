@@ -12,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/integration_tests"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/stretchr/testify/assert"
 )
@@ -92,6 +93,91 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 		assert.Nil(t, err)
 
 		assert.WithinDuration(t, time.Now(), *metadata.LastScan, time.Hour)
+
+	})
+
+}
+
+func TestDaemonSyncTickets(t *testing.T) {
+	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	defer terminate()
+
+	db.AutoMigrate(
+		&models.Org{},
+		&models.Project{},
+		&models.AssetVersion{},
+		&models.Asset{},
+		&models.CVE{},
+		&models.Exploit{},
+		&models.VulnEvent{},
+		&models.DependencyVuln{},
+	)
+
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
+	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+
+	org.Slug = "org-slug"
+	err := db.Save(&org).Error
+	project.Slug = "project-slug"
+	err = db.Save(&project).Error
+
+	repoID := "123"
+	asset.RepositoryID = &repoID
+	cvssThreshold := 7.0
+	asset.CVSSAutomaticTicketThreshold = &cvssThreshold
+	err = db.Save(&asset).Error
+
+	assetVersion := models.AssetVersion{
+		Name:          "main",
+		AssetID:       asset.ID,
+		DefaultBranch: true,
+	}
+	err = db.Create(&assetVersion).Error
+	assert.Nil(t, err)
+
+	cve := models.CVE{
+		CVE:  "CVE-2025-46569",
+		CVSS: 8.0,
+	}
+	err = db.Save(&cve).Error
+
+	dependencyVuln := models.DependencyVuln{
+		Vulnerability: models.Vulnerability{
+			AssetID:              asset.ID,
+			AssetVersion:         assetVersion,
+			AssetVersionName:     assetVersion.Name,
+			ManualTicketCreation: true,
+			TicketID:             nil,
+			TicketURL:            nil,
+			ScannerIDs:           "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca",
+			State:                models.VulnStateOpen,
+			LastDetected:         time.Now(),
+		},
+		CVE:   &cve,
+		CVEID: utils.Ptr(cve.CVE),
+	}
+	err = db.Create(&dependencyVuln).Error
+	assert.Nil(t, err)
+
+	assert.Nil(t, dependencyVuln.TicketID)
+	assert.Nil(t, dependencyVuln.TicketURL)
+
+	casbinRBACProvider := mocks.NewRBACProvider(t)
+	thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
+	thirdPartyIntegration.On("CreateIssue", "", asset, assetVersion.Name, repoID, &dependencyVuln, project.Slug, org.Slug, "", "").Return(nil)
+
+	t.Run("should  create a ticket if the CVSS if above the threshold", func(t *testing.T) {
+
+		err = daemon.SyncTickets(db, casbinRBACProvider, thirdPartyIntegration)
+		assert.Nil(t, err)
+
+		var updatedDependencyVuln models.DependencyVuln
+		err = db.First(&updatedDependencyVuln, "asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).Error
+		assert.Nil(t, err)
+
+		assert.NotNil(t, updatedDependencyVuln.TicketID)
+		assert.NotNil(t, updatedDependencyVuln.TicketURL)
 
 	})
 
