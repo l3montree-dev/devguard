@@ -181,7 +181,6 @@ func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config
 		projectService:              projectService,
 		assetService:                assetService,
 		casbinRBACProvider:          casbinRBACProvider,
-<<<<<<< Updated upstream
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -207,9 +206,6 @@ func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config
 			}
 			return nil, errors.New("could not find gitlab oauth2 integration")
 		},
-=======
-		clientFactory:               clientFactory,
->>>>>>> Stashed changes
 	}
 }
 

@@ -37,6 +37,51 @@ func (_m *GitLabOauth2TokenRepository) EXPECT() *GitLabOauth2TokenRepository_Exp
 	return &GitLabOauth2TokenRepository_Expecter{mock: &_m.Mock}
 }
 
+// CreateIfNotExists provides a mock function for the type GitLabOauth2TokenRepository
+func (_mock *GitLabOauth2TokenRepository) CreateIfNotExists(tokens []*models.GitLabOauth2Token) error {
+	ret := _mock.Called(tokens)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateIfNotExists")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func([]*models.GitLabOauth2Token) error); ok {
+		r0 = returnFunc(tokens)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// GitLabOauth2TokenRepository_CreateIfNotExists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateIfNotExists'
+type GitLabOauth2TokenRepository_CreateIfNotExists_Call struct {
+	*mock.Call
+}
+
+// CreateIfNotExists is a helper method to define mock.On call
+//   - tokens
+func (_e *GitLabOauth2TokenRepository_Expecter) CreateIfNotExists(tokens interface{}) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
+	return &GitLabOauth2TokenRepository_CreateIfNotExists_Call{Call: _e.mock.On("CreateIfNotExists", tokens)}
+}
+
+func (_c *GitLabOauth2TokenRepository_CreateIfNotExists_Call) Run(run func(tokens []*models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].([]*models.GitLabOauth2Token))
+	})
+	return _c
+}
+
+func (_c *GitLabOauth2TokenRepository_CreateIfNotExists_Call) Return(err error) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *GitLabOauth2TokenRepository_CreateIfNotExists_Call) RunAndReturn(run func(tokens []*models.GitLabOauth2Token) error) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Delete provides a mock function for the type GitLabOauth2TokenRepository
 func (_mock *GitLabOauth2TokenRepository) Delete(tx core.DB, tokens []models.GitLabOauth2Token) error {
 	ret := _mock.Called(tx, tokens)
