@@ -12,7 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 )
 
-func SyncTickets(db core.DB) error {
+func SyncTickets(db core.DB, rbacProvider core.RBACProvider) error {
 	start := time.Now()
 	defer func() {
 		monitoring.SyncTicketDuration.Observe(time.Since(start).Minutes())
@@ -24,7 +24,7 @@ func SyncTickets(db core.DB) error {
 		repositories.NewGitLabIntegrationRepository(db),
 		gitlabOauth2Integrations,
 	)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, gitlabClientFactory)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
 
 	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 

@@ -21,8 +21,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 )
 
-func ScanAssetVersions(db core.DB) error {
-
+func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 	start := time.Now()
 	defer func() {
 		monitoring.ScanDaemonDuration.Observe(time.Since(start).Minutes())
@@ -48,7 +47,7 @@ func ScanAssetVersions(db core.DB) error {
 		gitlabOauth2Integrations,
 	)
 
-	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, gitlabClientFactory)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
 
 	githubIntegration := githubint.NewGithubIntegration(db)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)

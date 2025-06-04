@@ -370,6 +370,63 @@ func (_c *AssetRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB, id
 	return _c
 }
 
+// FindAssetByExternalProviderId provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) FindAssetByExternalProviderId(externalEntityProviderID string, externalEntityID string) (*models.Asset, error) {
+	ret := _mock.Called(externalEntityProviderID, externalEntityID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindAssetByExternalProviderId")
+	}
+
+	var r0 *models.Asset
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, string) (*models.Asset, error)); ok {
+		return returnFunc(externalEntityProviderID, externalEntityID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, string) *models.Asset); ok {
+		r0 = returnFunc(externalEntityProviderID, externalEntityID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Asset)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = returnFunc(externalEntityProviderID, externalEntityID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetRepository_FindAssetByExternalProviderId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindAssetByExternalProviderId'
+type AssetRepository_FindAssetByExternalProviderId_Call struct {
+	*mock.Call
+}
+
+// FindAssetByExternalProviderId is a helper method to define mock.On call
+//   - externalEntityProviderID
+//   - externalEntityID
+func (_e *AssetRepository_Expecter) FindAssetByExternalProviderId(externalEntityProviderID interface{}, externalEntityID interface{}) *AssetRepository_FindAssetByExternalProviderId_Call {
+	return &AssetRepository_FindAssetByExternalProviderId_Call{Call: _e.mock.On("FindAssetByExternalProviderId", externalEntityProviderID, externalEntityID)}
+}
+
+func (_c *AssetRepository_FindAssetByExternalProviderId_Call) Run(run func(externalEntityProviderID string, externalEntityID string)) *AssetRepository_FindAssetByExternalProviderId_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *AssetRepository_FindAssetByExternalProviderId_Call) Return(asset *models.Asset, err error) *AssetRepository_FindAssetByExternalProviderId_Call {
+	_c.Call.Return(asset, err)
+	return _c
+}
+
+func (_c *AssetRepository_FindAssetByExternalProviderId_Call) RunAndReturn(run func(externalEntityProviderID string, externalEntityID string) (*models.Asset, error)) *AssetRepository_FindAssetByExternalProviderId_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByName provides a mock function for the type AssetRepository
 func (_mock *AssetRepository) FindByName(name string) (models.Asset, error) {
 	ret := _mock.Called(name)
@@ -800,6 +857,60 @@ func (_c *AssetRepository_GetDB_Call) Return(v core.DB) *AssetRepository_GetDB_C
 }
 
 func (_c *AssetRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core.DB) *AssetRepository_GetDB_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetFQNByID provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) GetFQNByID(id uuid.UUID) (string, error) {
+	ret := _mock.Called(id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFQNByID")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) (string, error)); ok {
+		return returnFunc(id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID) string); ok {
+		r0 = returnFunc(id)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(uuid.UUID) error); ok {
+		r1 = returnFunc(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetRepository_GetFQNByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFQNByID'
+type AssetRepository_GetFQNByID_Call struct {
+	*mock.Call
+}
+
+// GetFQNByID is a helper method to define mock.On call
+//   - id
+func (_e *AssetRepository_Expecter) GetFQNByID(id interface{}) *AssetRepository_GetFQNByID_Call {
+	return &AssetRepository_GetFQNByID_Call{Call: _e.mock.On("GetFQNByID", id)}
+}
+
+func (_c *AssetRepository_GetFQNByID_Call) Run(run func(id uuid.UUID)) *AssetRepository_GetFQNByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *AssetRepository_GetFQNByID_Call) Return(s string, err error) *AssetRepository_GetFQNByID_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *AssetRepository_GetFQNByID_Call) RunAndReturn(run func(id uuid.UUID) (string, error)) *AssetRepository_GetFQNByID_Call {
 	_c.Call.Return(run)
 	return _c
 }

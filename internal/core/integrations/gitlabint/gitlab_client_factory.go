@@ -12,13 +12,6 @@ import (
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
-type gitlabClientFactory interface {
-	FromIntegration(integration models.GitLabIntegration) (gitlabClientFacade, error)
-	FromIntegrationUUID(id uuid.UUID) (gitlabClientFacade, error)
-	FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (gitlabClientFacade, error)
-	FromAccessToken(accessToken string, baseUrl string) (gitlabClientFacade, error)
-}
-
 type SimpleGitlabClientFactory struct {
 	gitlabIntegrationRepository core.GitlabIntegrationRepository
 	oauth2GitlabIntegration     map[string]*GitlabOauth2Config
@@ -31,7 +24,7 @@ func NewGitlabClientFactory(gitlabIntegrationRepository core.GitlabIntegrationRe
 	}
 }
 
-func (factory SimpleGitlabClientFactory) FromIntegration(integration models.GitLabIntegration) (gitlabClientFacade, error) {
+func (factory SimpleGitlabClientFactory) FromIntegration(integration models.GitLabIntegration) (core.GitlabClientFacade, error) {
 	// Use installation transport with client.
 	client, err := gitlab.NewClient(integration.AccessToken, gitlab.WithBaseURL(integration.GitLabUrl))
 	if err != nil {
@@ -44,7 +37,7 @@ func (factory SimpleGitlabClientFactory) FromIntegration(integration models.GitL
 	}, nil
 }
 
-func (factory SimpleGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (gitlabClientFacade, error) {
+func (factory SimpleGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (core.GitlabClientFacade, error) {
 	integration, err := factory.gitlabIntegrationRepository.Read(id)
 	if err != nil {
 		return nil, err
@@ -53,7 +46,7 @@ func (factory SimpleGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (gitl
 	return factory.FromIntegration(integration)
 }
 
-func (factory SimpleGitlabClientFactory) FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (gitlabClientFacade, error) {
+func (factory SimpleGitlabClientFactory) FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (core.GitlabClientFacade, error) {
 	// get the correct gitlab oauth2 integration configuration
 	for _, integration := range factory.oauth2GitlabIntegration {
 		if integration.ProviderID == token.ProviderID {
@@ -75,7 +68,7 @@ func (factory SimpleGitlabClientFactory) FromOauth2Token(token models.GitLabOaut
 	return nil, errors.New("could not find gitlab oauth2 integration")
 }
 
-func (factory SimpleGitlabClientFactory) FromAccessToken(accessToken string, baseUrl string) (gitlabClientFacade, error) {
+func (factory SimpleGitlabClientFactory) FromAccessToken(accessToken string, baseUrl string) (core.GitlabClientFacade, error) {
 	if accessToken == "" {
 		return nil, errors.New("access token is empty")
 	}

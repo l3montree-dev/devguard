@@ -1,12 +1,21 @@
-package gitlabint
+package core
 
 import (
 	"context"
 
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
-type gitlabClientFacade interface {
+type GitlabClientFactory interface {
+	FromIntegration(integration models.GitLabIntegration) (GitlabClientFacade, error)
+	FromIntegrationUUID(id uuid.UUID) (GitlabClientFacade, error)
+	FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (GitlabClientFacade, error)
+	FromAccessToken(accessToken string, baseUrl string) (GitlabClientFacade, error)
+}
+
+type GitlabClientFacade interface {
 	Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error)
 
 	GetClientID() string
