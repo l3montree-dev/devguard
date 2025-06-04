@@ -284,57 +284,6 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	return ev, err
 }
 
-func (s *service) SyncTicketsForAllAssets() error {
-	assets, err := s.assetRepository.GetAllAssetsFromDB()
-	if err != nil {
-		return err
-	}
-
-	for _, asset := range assets {
-		if asset.Slug != "badge-api" {
-			continue
-		}
-		err := s.SyncTickets(asset)
-		if err != nil {
-			slog.Warn("could not sync tickets", "err", err, "assetID", asset.ID)
-			continue
-		}
-	}
-	return nil
-}
-
-func (s *service) SyncTickets(asset models.Asset) error {
-	project, err := s.projectRepository.Read(asset.ProjectID)
-	if err != nil {
-		return err
-	}
-
-	org, err := s.organizationRepository.Read(project.OrganizationID)
-	if err != nil {
-		return err
-	}
-
-	for _, assetVersion := range asset.AssetVersions {
-		slog.Info("syncing tickets", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
-
-		vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID, "")
-		if err != nil {
-			slog.Error("could not get dependencyVulns by asset version", "err", err, "assetVersionName", assetVersion.Name)
-			continue
-		}
-
-		if len(vulnList) == 0 {
-			continue
-		}
-
-		if err := s.SyncIssues(org, project, asset, assetVersion, vulnList); err != nil {
-			slog.Error("could not sync vulnerabilities", "err", err, "assetVersionName", assetVersion.Name)
-			continue
-		}
-	}
-	return nil
-}
-
 func (s *service) SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
 	// get all dependencyVulns for the assetVersion
 	vulnList, err := s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, asset.ID, "")

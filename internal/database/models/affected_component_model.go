@@ -32,19 +32,19 @@ import (
 )
 
 type AffectedComponent struct {
-	ID               string `json:"id" gorm:"primaryKey;"`
-	Source           string
-	PURL             string  `json:"purl" gorm:"type:text;column:purl;index"`
-	Ecosystem        string  `json:"ecosystem" gorm:"type:text;"`
-	Scheme           string  `json:"scheme" gorm:"type:text;"`
-	Type             string  `json:"type" gorm:"type:text;"`
-	Name             string  `json:"name" gorm:"type:text;"`
-	Namespace        *string `json:"namespace" gorm:"type:text;"`
-	Qualifiers       *string `json:"qualifiers" gorm:"type:text;"`
-	Subpath          *string `json:"subpath" gorm:"type:text;"`
-	Version          *string `json:"version" gorm:"index"` // either version or semver is defined
-	SemverIntroduced *string `json:"semverStart" gorm:"type:semver;index"`
-	SemverFixed      *string `json:"semverEnd" gorm:"type:semver;index"`
+	ID                 string `json:"id" gorm:"primaryKey;"`
+	Source             string
+	PurlWithoutVersion string  `json:"purl" gorm:"type:text;column:purl;index"`
+	Ecosystem          string  `json:"ecosystem" gorm:"type:text;"`
+	Scheme             string  `json:"scheme" gorm:"type:text;"`
+	Type               string  `json:"type" gorm:"type:text;"`
+	Name               string  `json:"name" gorm:"type:text;"`
+	Namespace          *string `json:"namespace" gorm:"type:text;"`
+	Qualifiers         *string `json:"qualifiers" gorm:"type:text;"`
+	Subpath            *string `json:"subpath" gorm:"type:text;"`
+	Version            *string `json:"version" gorm:"index"` // either version or semver is defined
+	SemverIntroduced   *string `json:"semverStart" gorm:"type:semver;index"`
+	SemverFixed        *string `json:"semverEnd" gorm:"type:semver;index"`
 
 	VersionIntroduced *string `json:"versionIntroduced" gorm:"index"` // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
 	VersionFixed      *string `json:"versionFixed" gorm:"index"`      // for non semver packages - if both are defined, THIS one should be used for displaying. We might fake semver versions just for database querying and ordering
@@ -58,7 +58,7 @@ func (affectedComponent AffectedComponent) TableName() string {
 
 func (a AffectedComponent) CalculateHash() string {
 	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s",
-		a.PURL,
+		a.PurlWithoutVersion,
 		a.Ecosystem,
 		a.Name,
 		utils.SafeDereference(a.Namespace),
@@ -186,14 +186,14 @@ func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
 
 				// create the affected package
 				affectedComponent := AffectedComponent{
-					PURL:       strings.Split(affected.Package.Purl, "?")[0],
-					Ecosystem:  affected.Package.Ecosystem,
-					Scheme:     "pkg",
-					Type:       purl.Type,
-					Name:       purl.Name,
-					Namespace:  &purl.Namespace,
-					Qualifiers: &qualifiersStr,
-					Subpath:    &purl.Subpath,
+					PurlWithoutVersion: strings.Split(affected.Package.Purl, "?")[0],
+					Ecosystem:          affected.Package.Ecosystem,
+					Scheme:             "pkg",
+					Type:               purl.Type,
+					Name:               purl.Name,
+					Namespace:          &purl.Namespace,
+					Qualifiers:         &qualifiersStr,
+					Subpath:            &purl.Subpath,
 
 					Source: "osv",
 
@@ -212,15 +212,15 @@ func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
 			for _, v := range affected.Versions {
 				tmpV := v
 				affectedComponent := AffectedComponent{
-					PURL:       strings.Split(affected.Package.Purl, "?")[0],
-					Ecosystem:  affected.Package.Ecosystem,
-					Scheme:     "pkg",
-					Type:       purl.Type,
-					Name:       purl.Name,
-					Namespace:  &purl.Namespace,
-					Qualifiers: &qualifiersStr,
-					Subpath:    &purl.Subpath,
-					Version:    &tmpV,
+					PurlWithoutVersion: strings.Split(affected.Package.Purl, "?")[0],
+					Ecosystem:          affected.Package.Ecosystem,
+					Scheme:             "pkg",
+					Type:               purl.Type,
+					Name:               purl.Name,
+					Namespace:          &purl.Namespace,
+					Qualifiers:         &qualifiersStr,
+					Subpath:            &purl.Subpath,
+					Version:            &tmpV,
 
 					Source: "osv",
 

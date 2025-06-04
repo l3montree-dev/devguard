@@ -152,16 +152,16 @@ func debianCveToAffectedComponent(packageName, cveId string, debianCVE debianCVE
 
 			// this version is affected
 			affectedComponent := models.AffectedComponent{
-				PURL:       purl,
-				CVE:        []models.CVE{{CVE: cveId}},
-				Ecosystem:  "Debian:" + codenameToVersion[strings.ToLower(debianVersion)],
-				Scheme:     "pkg",
-				Type:       "deb",
-				Name:       packageName,
-				Namespace:  utils.Ptr("debian"),
-				Qualifiers: utils.Ptr("arch=source"),
-				Source:     "debian-security-tracker",
-				Version:    utils.Ptr(version),
+				PurlWithoutVersion: purl,
+				CVE:                []models.CVE{{CVE: cveId}},
+				Ecosystem:          "Debian:" + codenameToVersion[strings.ToLower(debianVersion)],
+				Scheme:             "pkg",
+				Type:               "deb",
+				Name:               packageName,
+				Namespace:          utils.Ptr("debian"),
+				Qualifiers:         utils.Ptr("arch=source"),
+				Source:             "debian-security-tracker",
+				Version:            utils.Ptr(version),
 
 				// we just fake a semver version here
 				// SemverFixed: utils.EmptyThenNil(normalize.ConvertToSemver(fixedSemver)),

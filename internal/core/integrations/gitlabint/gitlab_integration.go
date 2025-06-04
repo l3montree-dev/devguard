@@ -102,7 +102,6 @@ type GitlabIntegration struct {
 	firstPartyVulnRepository    core.FirstPartyVulnRepository
 	aggregatedVulnRepository    core.VulnRepository
 	dependencyVulnRepository    core.DependencyVulnRepository
-	dependencyVulnService       core.DependencyVulnService
 	vulnEventRepository         core.VulnEventRepository
 	frontendUrl                 string
 	orgRepository               core.OrganizationRepository

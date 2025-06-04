@@ -401,8 +401,8 @@ func createCVE2025_46569(db core.DB) {
 	}
 
 	affectedComponent := models.AffectedComponent{
-		PURL:        "pkg:golang/github.com/open-policy-agent/opa",
-		SemverFixed: utils.Ptr("1.4.0"),
+		PurlWithoutVersion: "pkg:golang/github.com/open-policy-agent/opa",
+		SemverFixed:        utils.Ptr("1.4.0"),
 	}
 
 	err = db.Create(&affectedComponent).Error
