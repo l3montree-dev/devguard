@@ -8,7 +8,7 @@ import (
 	"context"
 
 	mock "github.com/stretchr/testify/mock"
-	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"gitlab.com/gitlab-org/api/client-go"
 )
 
 // NewGitlabClientFacade creates a new instance of GitlabClientFacade. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -1098,16 +1098,32 @@ type GitlabClientFacade_InviteReporter_Call struct {
 }
 
 // InviteReporter is a helper method to define mock.On call
-//   - ctx
-//   - projectId
-//   - userId
+//   - ctx context.Context
+//   - projectId int
+//   - userId int
 func (_e *GitlabClientFacade_Expecter) InviteReporter(ctx interface{}, projectId interface{}, userId interface{}) *GitlabClientFacade_InviteReporter_Call {
 	return &GitlabClientFacade_InviteReporter_Call{Call: _e.mock.On("InviteReporter", ctx, projectId, userId)}
 }
 
 func (_c *GitlabClientFacade_InviteReporter_Call) Run(run func(ctx context.Context, projectId int, userId int)) *GitlabClientFacade_InviteReporter_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -1802,14 +1818,20 @@ type GitlabClientFacade_Whoami_Call struct {
 }
 
 // Whoami is a helper method to define mock.On call
-//   - ctx
+//   - ctx context.Context
 func (_e *GitlabClientFacade_Expecter) Whoami(ctx interface{}) *GitlabClientFacade_Whoami_Call {
 	return &GitlabClientFacade_Whoami_Call{Call: _e.mock.On("Whoami", ctx)}
 }
 
 func (_c *GitlabClientFacade_Whoami_Call) Run(run func(ctx context.Context)) *GitlabClientFacade_Whoami_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }

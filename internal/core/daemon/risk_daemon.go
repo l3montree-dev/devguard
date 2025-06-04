@@ -18,12 +18,6 @@ func RecalculateRisk(db core.DB) error {
 	defer func() {
 		monitoring.RecalculateAllRawRiskAssessmentsDuration.Observe(time.Since(start).Minutes())
 	}()
-
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
-	if err != nil {
-		panic(err)
-	}
-
 	githubIntegration := githubint.NewGithubIntegration(db)
 
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)

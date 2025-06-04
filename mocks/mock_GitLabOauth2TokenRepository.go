@@ -60,14 +60,20 @@ type GitLabOauth2TokenRepository_CreateIfNotExists_Call struct {
 }
 
 // CreateIfNotExists is a helper method to define mock.On call
-//   - tokens
+//   - tokens []*models.GitLabOauth2Token
 func (_e *GitLabOauth2TokenRepository_Expecter) CreateIfNotExists(tokens interface{}) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
 	return &GitLabOauth2TokenRepository_CreateIfNotExists_Call{Call: _e.mock.On("CreateIfNotExists", tokens)}
 }
 
 func (_c *GitLabOauth2TokenRepository_CreateIfNotExists_Call) Run(run func(tokens []*models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_CreateIfNotExists_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]*models.GitLabOauth2Token))
+		var arg0 []*models.GitLabOauth2Token
+		if args[0] != nil {
+			arg0 = args[0].([]*models.GitLabOauth2Token)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -105,15 +111,26 @@ type GitLabOauth2TokenRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - tokens
+//   - tx core.DB
+//   - tokens []models.GitLabOauth2Token
 func (_e *GitLabOauth2TokenRepository_Expecter) Delete(tx interface{}, tokens interface{}) *GitLabOauth2TokenRepository_Delete_Call {
 	return &GitLabOauth2TokenRepository_Delete_Call{Call: _e.mock.On("Delete", tx, tokens)}
 }
 
 func (_c *GitLabOauth2TokenRepository_Delete_Call) Run(run func(tx core.DB, tokens []models.GitLabOauth2Token)) *GitLabOauth2TokenRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.GitLabOauth2Token))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.GitLabOauth2Token
+		if args[1] != nil {
+			arg1 = args[1].([]models.GitLabOauth2Token)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -151,15 +168,26 @@ type GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call struct {
 }
 
 // DeleteByUserIdAndProviderId is a helper method to define mock.On call
-//   - userId
-//   - providerId
+//   - userId string
+//   - providerId string
 func (_e *GitLabOauth2TokenRepository_Expecter) DeleteByUserIdAndProviderId(userId interface{}, providerId interface{}) *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call {
 	return &GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call{Call: _e.mock.On("DeleteByUserIdAndProviderId", userId, providerId)}
 }
 
 func (_c *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call) Run(run func(userId string, providerId string)) *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

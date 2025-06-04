@@ -982,16 +982,32 @@ type IntegrationAggregate_ReopenIssue_Call struct {
 }
 
 // ReopenIssue is a helper method to define mock.On call
-//   - ctx
-//   - asset
-//   - vuln
+//   - ctx context.Context
+//   - asset models.Asset
+//   - vuln models.Vuln
 func (_e *IntegrationAggregate_Expecter) ReopenIssue(ctx interface{}, asset interface{}, vuln interface{}) *IntegrationAggregate_ReopenIssue_Call {
 	return &IntegrationAggregate_ReopenIssue_Call{Call: _e.mock.On("ReopenIssue", ctx, asset, vuln)}
 }
 
 func (_c *IntegrationAggregate_ReopenIssue_Call) Run(run func(ctx context.Context, asset models.Asset, vuln models.Vuln)) *IntegrationAggregate_ReopenIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(models.Asset), args[2].(models.Vuln))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 models.Asset
+		if args[1] != nil {
+			arg1 = args[1].(models.Asset)
+		}
+		var arg2 models.Vuln
+		if args[2] != nil {
+			arg2 = args[2].(models.Vuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }

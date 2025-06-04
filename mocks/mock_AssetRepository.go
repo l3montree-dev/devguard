@@ -459,15 +459,26 @@ type AssetRepository_FindAssetByExternalProviderId_Call struct {
 }
 
 // FindAssetByExternalProviderId is a helper method to define mock.On call
-//   - externalEntityProviderID
-//   - externalEntityID
+//   - externalEntityProviderID string
+//   - externalEntityID string
 func (_e *AssetRepository_Expecter) FindAssetByExternalProviderId(externalEntityProviderID interface{}, externalEntityID interface{}) *AssetRepository_FindAssetByExternalProviderId_Call {
 	return &AssetRepository_FindAssetByExternalProviderId_Call{Call: _e.mock.On("FindAssetByExternalProviderId", externalEntityProviderID, externalEntityID)}
 }
 
 func (_c *AssetRepository_FindAssetByExternalProviderId_Call) Run(run func(externalEntityProviderID string, externalEntityID string)) *AssetRepository_FindAssetByExternalProviderId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -1000,14 +1011,20 @@ type AssetRepository_GetFQNByID_Call struct {
 }
 
 // GetFQNByID is a helper method to define mock.On call
-//   - id
+//   - id uuid.UUID
 func (_e *AssetRepository_Expecter) GetFQNByID(id interface{}) *AssetRepository_GetFQNByID_Call {
 	return &AssetRepository_GetFQNByID_Call{Call: _e.mock.On("GetFQNByID", id)}
 }
 
 func (_c *AssetRepository_GetFQNByID_Call) Run(run func(id uuid.UUID)) *AssetRepository_GetFQNByID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }

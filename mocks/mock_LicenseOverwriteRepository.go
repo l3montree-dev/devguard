@@ -63,15 +63,26 @@ type LicenseOverwriteRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id string
 func (_e *LicenseOverwriteRepository_Expecter) Activate(tx interface{}, id interface{}) *LicenseOverwriteRepository_Activate_Call {
 	return &LicenseOverwriteRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *LicenseOverwriteRepository_Activate_Call) Run(run func(tx core.DB, id string)) *LicenseOverwriteRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -210,15 +221,26 @@ type LicenseOverwriteRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.LicenseOverwrite
 func (_e *LicenseOverwriteRepository_Expecter) Create(tx interface{}, t interface{}) *LicenseOverwriteRepository_Create_Call {
 	return &LicenseOverwriteRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *LicenseOverwriteRepository_Create_Call) Run(run func(tx core.DB, t *models.LicenseOverwrite)) *LicenseOverwriteRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.LicenseOverwrite))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.LicenseOverwrite
+		if args[1] != nil {
+			arg1 = args[1].(*models.LicenseOverwrite)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -256,15 +278,26 @@ type LicenseOverwriteRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.LicenseOverwrite
 func (_e *LicenseOverwriteRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *LicenseOverwriteRepository_CreateBatch_Call {
 	return &LicenseOverwriteRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *LicenseOverwriteRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.LicenseOverwrite)) *LicenseOverwriteRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.LicenseOverwrite))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.LicenseOverwrite
+		if args[1] != nil {
+			arg1 = args[1].([]models.LicenseOverwrite)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -302,15 +335,26 @@ type LicenseOverwriteRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id string
 func (_e *LicenseOverwriteRepository_Expecter) Delete(tx interface{}, id interface{}) *LicenseOverwriteRepository_Delete_Call {
 	return &LicenseOverwriteRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *LicenseOverwriteRepository_Delete_Call) Run(run func(tx core.DB, id string)) *LicenseOverwriteRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -348,15 +392,26 @@ type LicenseOverwriteRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx
-//   - ids
+//   - tx core.DB
+//   - ids []models.LicenseOverwrite
 func (_e *LicenseOverwriteRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *LicenseOverwriteRepository_DeleteBatch_Call {
 	return &LicenseOverwriteRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *LicenseOverwriteRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.LicenseOverwrite)) *LicenseOverwriteRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.LicenseOverwrite))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.LicenseOverwrite
+		if args[1] != nil {
+			arg1 = args[1].([]models.LicenseOverwrite)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -394,15 +449,26 @@ type LicenseOverwriteRepository_DeleteByComponentPurlAndOrgID_Call struct {
 }
 
 // DeleteByComponentPurlAndOrgID is a helper method to define mock.On call
-//   - orgID
-//   - purl
+//   - orgID uuid.UUID
+//   - purl string
 func (_e *LicenseOverwriteRepository_Expecter) DeleteByComponentPurlAndOrgID(orgID interface{}, purl interface{}) *LicenseOverwriteRepository_DeleteByComponentPurlAndOrgID_Call {
 	return &LicenseOverwriteRepository_DeleteByComponentPurlAndOrgID_Call{Call: _e.mock.On("DeleteByComponentPurlAndOrgID", orgID, purl)}
 }
 
 func (_c *LicenseOverwriteRepository_DeleteByComponentPurlAndOrgID_Call) Run(run func(orgID uuid.UUID, purl string)) *LicenseOverwriteRepository_DeleteByComponentPurlAndOrgID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(string))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -451,14 +517,20 @@ type LicenseOverwriteRepository_GetAllOverwritesForOrganization_Call struct {
 }
 
 // GetAllOverwritesForOrganization is a helper method to define mock.On call
-//   - orgID
+//   - orgID uuid.UUID
 func (_e *LicenseOverwriteRepository_Expecter) GetAllOverwritesForOrganization(orgID interface{}) *LicenseOverwriteRepository_GetAllOverwritesForOrganization_Call {
 	return &LicenseOverwriteRepository_GetAllOverwritesForOrganization_Call{Call: _e.mock.On("GetAllOverwritesForOrganization", orgID)}
 }
 
 func (_c *LicenseOverwriteRepository_GetAllOverwritesForOrganization_Call) Run(run func(orgID uuid.UUID)) *LicenseOverwriteRepository_GetAllOverwritesForOrganization_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -498,14 +570,20 @@ type LicenseOverwriteRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx
+//   - tx core.DB
 func (_e *LicenseOverwriteRepository_Expecter) GetDB(tx interface{}) *LicenseOverwriteRepository_GetDB_Call {
 	return &LicenseOverwriteRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *LicenseOverwriteRepository_GetDB_Call) Run(run func(tx core.DB)) *LicenseOverwriteRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -554,14 +632,20 @@ type LicenseOverwriteRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids
+//   - ids []string
 func (_e *LicenseOverwriteRepository_Expecter) List(ids interface{}) *LicenseOverwriteRepository_List_Call {
 	return &LicenseOverwriteRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *LicenseOverwriteRepository_List_Call) Run(run func(ids []string)) *LicenseOverwriteRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]string))
+		var arg0 []string
+		if args[0] != nil {
+			arg0 = args[0].([]string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -608,15 +692,26 @@ type LicenseOverwriteRepository_MaybeGetOverwriteForComponent_Call struct {
 }
 
 // MaybeGetOverwriteForComponent is a helper method to define mock.On call
-//   - orgID
-//   - pURL
+//   - orgID uuid.UUID
+//   - pURL packageurl.PackageURL
 func (_e *LicenseOverwriteRepository_Expecter) MaybeGetOverwriteForComponent(orgID interface{}, pURL interface{}) *LicenseOverwriteRepository_MaybeGetOverwriteForComponent_Call {
 	return &LicenseOverwriteRepository_MaybeGetOverwriteForComponent_Call{Call: _e.mock.On("MaybeGetOverwriteForComponent", orgID, pURL)}
 }
 
 func (_c *LicenseOverwriteRepository_MaybeGetOverwriteForComponent_Call) Run(run func(orgID uuid.UUID, pURL packageurl.PackageURL)) *LicenseOverwriteRepository_MaybeGetOverwriteForComponent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(packageurl.PackageURL))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 packageurl.PackageURL
+		if args[1] != nil {
+			arg1 = args[1].(packageurl.PackageURL)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -663,14 +758,20 @@ type LicenseOverwriteRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id string
 func (_e *LicenseOverwriteRepository_Expecter) Read(id interface{}) *LicenseOverwriteRepository_Read_Call {
 	return &LicenseOverwriteRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *LicenseOverwriteRepository_Read_Call) Run(run func(id string)) *LicenseOverwriteRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -708,15 +809,26 @@ type LicenseOverwriteRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.LicenseOverwrite
 func (_e *LicenseOverwriteRepository_Expecter) Save(tx interface{}, t interface{}) *LicenseOverwriteRepository_Save_Call {
 	return &LicenseOverwriteRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *LicenseOverwriteRepository_Save_Call) Run(run func(tx core.DB, t *models.LicenseOverwrite)) *LicenseOverwriteRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.LicenseOverwrite))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.LicenseOverwrite
+		if args[1] != nil {
+			arg1 = args[1].(*models.LicenseOverwrite)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -754,15 +866,26 @@ type LicenseOverwriteRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.LicenseOverwrite
 func (_e *LicenseOverwriteRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *LicenseOverwriteRepository_SaveBatch_Call {
 	return &LicenseOverwriteRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *LicenseOverwriteRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.LicenseOverwrite)) *LicenseOverwriteRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.LicenseOverwrite))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.LicenseOverwrite
+		if args[1] != nil {
+			arg1 = args[1].([]models.LicenseOverwrite)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -800,14 +923,20 @@ type LicenseOverwriteRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn
+//   - fn func(tx core.DB) error
 func (_e *LicenseOverwriteRepository_Expecter) Transaction(fn interface{}) *LicenseOverwriteRepository_Transaction_Call {
 	return &LicenseOverwriteRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *LicenseOverwriteRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *LicenseOverwriteRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(tx core.DB) error))
+		var arg0 func(tx core.DB) error
+		if args[0] != nil {
+			arg0 = args[0].(func(tx core.DB) error)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -845,15 +974,26 @@ type LicenseOverwriteRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
-//   - t
-//   - conflictingColumns
+//   - t *[]*models.LicenseOverwrite
+//   - conflictingColumns *[]clause.Column
 func (_e *LicenseOverwriteRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *LicenseOverwriteRepository_Upsert_Call {
 	return &LicenseOverwriteRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
 }
 
 func (_c *LicenseOverwriteRepository_Upsert_Call) Run(run func(t *[]*models.LicenseOverwrite, conflictingColumns *[]clause.Column)) *LicenseOverwriteRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*[]*models.LicenseOverwrite), args[1].(*[]clause.Column))
+		var arg0 *[]*models.LicenseOverwrite
+		if args[0] != nil {
+			arg0 = args[0].(*[]*models.LicenseOverwrite)
+		}
+		var arg1 *[]clause.Column
+		if args[1] != nil {
+			arg1 = args[1].(*[]clause.Column)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

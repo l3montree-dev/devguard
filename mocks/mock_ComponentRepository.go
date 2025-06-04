@@ -947,22 +947,68 @@ type ComponentRepository_LoadComponentsWithProject_Call struct {
 }
 
 // LoadComponentsWithProject is a helper method to define mock.On call
-//   - tx
-//   - overwrittenLicenses
-//   - assetVersionName
-//   - assetID
-//   - scannerID
-//   - pageInfo
-//   - search
-//   - filter
-//   - sort
+//   - tx core.DB
+//   - overwrittenLicenses []models.LicenseOverwrite
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scannerID string
+//   - pageInfo core.PageInfo
+//   - search string
+//   - filter []core.FilterQuery
+//   - sort []core.SortQuery
 func (_e *ComponentRepository_Expecter) LoadComponentsWithProject(tx interface{}, overwrittenLicenses interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ComponentRepository_LoadComponentsWithProject_Call {
 	return &ComponentRepository_LoadComponentsWithProject_Call{Call: _e.mock.On("LoadComponentsWithProject", tx, overwrittenLicenses, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)}
 }
 
 func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(tx core.DB, overwrittenLicenses []models.LicenseOverwrite, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *ComponentRepository_LoadComponentsWithProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.LicenseOverwrite), args[2].(string), args[3].(uuid.UUID), args[4].(string), args[5].(core.PageInfo), args[6].(string), args[7].([]core.FilterQuery), args[8].([]core.SortQuery))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.LicenseOverwrite
+		if args[1] != nil {
+			arg1 = args[1].([]models.LicenseOverwrite)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uuid.UUID
+		if args[3] != nil {
+			arg3 = args[3].(uuid.UUID)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 core.PageInfo
+		if args[5] != nil {
+			arg5 = args[5].(core.PageInfo)
+		}
+		var arg6 string
+		if args[6] != nil {
+			arg6 = args[6].(string)
+		}
+		var arg7 []core.FilterQuery
+		if args[7] != nil {
+			arg7 = args[7].([]core.FilterQuery)
+		}
+		var arg8 []core.SortQuery
+		if args[8] != nil {
+			arg8 = args[8].([]core.SortQuery)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+			arg7,
+			arg8,
+		)
 	})
 	return _c
 }
