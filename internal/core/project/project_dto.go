@@ -148,9 +148,6 @@ func fromModel(project models.Project) ProjectDTO {
 		ParentID: project.ParentID,
 		Parent:   parentDTO,
 
-		RepositoryID:   project.RepositoryID,
-		RepositoryName: project.RepositoryName,
-
 		Assets:      project.Assets,
 		ConfigFiles: project.ConfigFiles,
 

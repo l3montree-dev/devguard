@@ -48,7 +48,7 @@ type ThirdPartyIntegration interface {
 
 	ListRepositories(ctx Context) ([]Repository, error)
 
-	HasAccessToExternalEntityProvider(ctx Context, externalEntityProviderID string) bool
+	HasAccessToExternalEntityProvider(ctx Context, externalEntityProviderID string) (bool, error)
 
 	GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error)
 	GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error)
@@ -56,7 +56,7 @@ type ThirdPartyIntegration interface {
 	HandleEvent(event any) error
 	CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error
 	CloseIssue(ctx context.Context, state string, repoId string, vuln models.Vuln) error
-	ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error
+	ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error
 	UpdateIssue(ctx context.Context, asset models.Asset, repoId string, vuln models.Vuln) error
 
 	GetUsers(org models.Org) []User

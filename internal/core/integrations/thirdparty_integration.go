@@ -75,13 +75,19 @@ func (t *thirdPartyIntegrations) ListProjects(ctx core.Context, userID string, p
 	return utils.Flat(results), nil
 }
 
-func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
 	for _, i := range t.integrations {
-		if i.HasAccessToExternalEntityProvider(ctx, externalEntityProviderID) {
-			return true
+		access, unauth := i.HasAccessToExternalEntityProvider(ctx, externalEntityProviderID)
+		if unauth != nil {
+			// we COULD actually use this provider
+			return access, unauth
+		}
+		if access {
+			// we have access to this provider
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func (t *thirdPartyIntegrations) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupId string) (string, error) {
@@ -116,7 +122,6 @@ func (t *thirdPartyIntegrations) GetRoleInProject(ctx context.Context, userID st
 
 func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	wg := utils.ErrGroup[[]core.Repository](-1)
-
 	for _, i := range t.integrations {
 		wg.Go(func() ([]core.Repository, error) {
 			repos, err := i.ListRepositories(ctx)
@@ -127,6 +132,7 @@ func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repo
 			}
 			return repos, err
 		})
+
 	}
 
 	results, err := wg.WaitAndCollect()
@@ -211,11 +217,11 @@ func (t *thirdPartyIntegrations) HandleEvent(event any) error {
 	return err
 }
 
-func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
+func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.ReopenIssue(ctx, repoId, vuln)
+			return struct{}{}, i.ReopenIssue(ctx, asset, vuln)
 		})
 	}
 	_, err := wg.WaitAndCollect()

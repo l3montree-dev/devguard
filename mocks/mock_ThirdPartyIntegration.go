@@ -563,7 +563,7 @@ func (_c *ThirdPartyIntegration_HandleWebhook_Call) RunAndReturn(run func(ctx co
 }
 
 // HasAccessToExternalEntityProvider provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+func (_mock *ThirdPartyIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
 	ret := _mock.Called(ctx, externalEntityProviderID)
 
 	if len(ret) == 0 {
@@ -571,12 +571,21 @@ func (_mock *ThirdPartyIntegration) HasAccessToExternalEntityProvider(ctx core.C
 	}
 
 	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string) (bool, error)); ok {
+		return returnFunc(ctx, externalEntityProviderID)
+	}
 	if returnFunc, ok := ret.Get(0).(func(core.Context, string) bool); ok {
 		r0 = returnFunc(ctx, externalEntityProviderID)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(core.Context, string) error); ok {
+		r1 = returnFunc(ctx, externalEntityProviderID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasAccessToExternalEntityProvider'
@@ -609,12 +618,12 @@ func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) Run(run 
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) Return(b bool) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
-	_c.Call.Return(b)
+func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) Return(b bool, err error) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
+	_c.Call.Return(b, err)
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx core.Context, externalEntityProviderID string) bool) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
+func (_c *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx core.Context, externalEntityProviderID string) (bool, error)) *ThirdPartyIntegration_HasAccessToExternalEntityProvider_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -898,16 +907,16 @@ func (_c *ThirdPartyIntegration_ListRepositories_Call) RunAndReturn(run func(ctx
 }
 
 // ReopenIssue provides a mock function for the type ThirdPartyIntegration
-func (_mock *ThirdPartyIntegration) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
-	ret := _mock.Called(ctx, repoId, vuln)
+func (_mock *ThirdPartyIntegration) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+	ret := _mock.Called(ctx, asset, vuln)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReopenIssue")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, models.Vuln) error); ok {
-		r0 = returnFunc(ctx, repoId, vuln)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, models.Vuln) error); ok {
+		r0 = returnFunc(ctx, asset, vuln)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -920,32 +929,16 @@ type ThirdPartyIntegration_ReopenIssue_Call struct {
 }
 
 // ReopenIssue is a helper method to define mock.On call
-//   - ctx context.Context
-//   - repoId string
-//   - vuln models.Vuln
-func (_e *ThirdPartyIntegration_Expecter) ReopenIssue(ctx interface{}, repoId interface{}, vuln interface{}) *ThirdPartyIntegration_ReopenIssue_Call {
-	return &ThirdPartyIntegration_ReopenIssue_Call{Call: _e.mock.On("ReopenIssue", ctx, repoId, vuln)}
+//   - ctx
+//   - asset
+//   - vuln
+func (_e *ThirdPartyIntegration_Expecter) ReopenIssue(ctx interface{}, asset interface{}, vuln interface{}) *ThirdPartyIntegration_ReopenIssue_Call {
+	return &ThirdPartyIntegration_ReopenIssue_Call{Call: _e.mock.On("ReopenIssue", ctx, asset, vuln)}
 }
 
-func (_c *ThirdPartyIntegration_ReopenIssue_Call) Run(run func(ctx context.Context, repoId string, vuln models.Vuln)) *ThirdPartyIntegration_ReopenIssue_Call {
+func (_c *ThirdPartyIntegration_ReopenIssue_Call) Run(run func(ctx context.Context, asset models.Asset, vuln models.Vuln)) *ThirdPartyIntegration_ReopenIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 models.Vuln
-		if args[2] != nil {
-			arg2 = args[2].(models.Vuln)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(context.Context), args[1].(models.Asset), args[2].(models.Vuln))
 	})
 	return _c
 }
@@ -955,7 +948,7 @@ func (_c *ThirdPartyIntegration_ReopenIssue_Call) Return(err error) *ThirdPartyI
 	return _c
 }
 
-func (_c *ThirdPartyIntegration_ReopenIssue_Call) RunAndReturn(run func(ctx context.Context, repoId string, vuln models.Vuln) error) *ThirdPartyIntegration_ReopenIssue_Call {
+func (_c *ThirdPartyIntegration_ReopenIssue_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, vuln models.Vuln) error) *ThirdPartyIntegration_ReopenIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }

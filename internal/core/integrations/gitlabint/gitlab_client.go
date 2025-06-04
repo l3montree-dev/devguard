@@ -18,10 +18,10 @@ package gitlabint
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
@@ -36,40 +36,16 @@ type gitlabClient struct {
 }
 
 type gitlabBatchClient struct {
-	clients []gitlabClientFacade
+	clients []core.GitlabClientFacade
 }
 
 var ErrNoGitlabIntegration = fmt.Errorf("no gitlab app installations found")
 
 // groups multiple gitlab clients - since an org can have multiple installations
-func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration, oauth2Config map[string]*GitlabOauth2Config, oauth2Tokens []models.GitLabOauth2Token) (*gitlabBatchClient, error) {
-	clients := make([]gitlabClientFacade, 0)
-	for _, integration := range gitlabIntegrations {
-		client, _ := NewGitlabClient(integration)
-		clients = append(clients, client)
-	}
-
-	// create oauth2 clients
-	for _, token := range oauth2Tokens {
-		// check if there is a matching oauth2 config
-		for _, oauth2 := range oauth2Config {
-			if oauth2.ProviderID == token.ProviderID {
-				// great we can use the config to generate a token
-				client, err := buildOauth2GitlabClient(token, oauth2, true)
-				if err != nil {
-					slog.Error("error while creating oauth2 client", "err", err)
-					continue
-				}
-
-				clients = append(clients, client)
-				break
-			}
-		}
-	}
-
+func NewGitlabBatchClient(clients []core.GitlabClientFacade) *gitlabBatchClient {
 	return &gitlabBatchClient{
 		clients: clients,
-	}, nil
+	}
 }
 
 func groupToProject(group *gitlab.Group, providerID string) models.Project {
@@ -135,6 +111,10 @@ func (client gitlabClient) GetMemberInGroup(ctx context.Context, userId int, gro
 	return client.GroupMembers.GetInheritedGroupMember(groupId, userId, nil, gitlab.WithContext(ctx))
 }
 
+func (client gitlabClient) Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error) {
+	return client.Users.CurrentUser(gitlab.WithContext(ctx))
+}
+
 func (client gitlabClient) GetMemberInProject(ctx context.Context, userId int, projectId int) (*gitlab.ProjectMember, *gitlab.Response, error) {
 	return client.ProjectMembers.GetInheritedProjectMember(projectId, userId, nil, gitlab.WithContext(ctx))
 }
@@ -149,6 +129,14 @@ func (client gitlabClient) UpdateVariable(ctx context.Context, projectId int, ke
 
 func (client gitlabClient) RemoveVariable(ctx context.Context, projectId int, key string) (*gitlab.Response, error) {
 	return client.ProjectVariables.RemoveVariable(projectId, key, nil, gitlab.WithContext(ctx))
+}
+
+func (client gitlabClient) InviteReporter(ctx context.Context, projectId int, userId int) (*gitlab.ProjectMember, *gitlab.Response, error) {
+	opt := &gitlab.AddProjectMemberOptions{
+		UserID:      gitlab.Ptr(userId),
+		AccessLevel: gitlab.Ptr(gitlab.ReporterPermissions),
+	}
+	return client.ProjectMembers.AddProjectMember(projectId, opt, gitlab.WithContext(ctx))
 }
 
 func (client gitlabClient) AddProjectHook(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error) {
@@ -254,18 +242,4 @@ func (client gitlabClient) EditIssueLabel(ctx context.Context, projectId int, is
 	})
 
 	return nil, err
-}
-
-func NewGitlabClient(integration models.GitLabIntegration) (gitlabClient, error) {
-
-	// Use installation transport with client.
-	client, err := gitlab.NewClient(integration.AccessToken, gitlab.WithBaseURL(integration.GitLabUrl))
-	if err != nil {
-		return gitlabClient{}, err
-	}
-
-	return gitlabClient{
-		Client:   client,
-		clientID: integration.ID.String(),
-	}, nil
 }

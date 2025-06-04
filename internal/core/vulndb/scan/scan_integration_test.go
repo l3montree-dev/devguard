@@ -2,6 +2,7 @@ package scan_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -11,6 +12,8 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
+	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
@@ -21,6 +24,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"gorm.io/gorm/clause"
 )
 
@@ -162,7 +166,7 @@ func TestTicketHandling(t *testing.T) {
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	controller, thirdPartyIntegration := initHttpController(t, db)
+	controller, gitlabClientFacade := initHttpController(t, db)
 
 	// scan the vulnerable sbom
 	app := echo.New()
@@ -186,10 +190,19 @@ func TestTicketHandling(t *testing.T) {
 	err := db.Create(&assetVersion).Error
 	assert.Nil(t, err)
 
+	// create a gitlab integration for this org
+	gitlabIntegration := models.GitLabIntegration{
+		AccessToken: "access-token",
+		GitLabUrl:   "https://gitlab.com",
+		OrgID:       org.ID,
+	}
+	err = db.Create(&gitlabIntegration).Error
+	assert.Nil(t, err)
+
 	t.Run("should open tickets for vulnerabilities if the risk threshold is exceeded", func(t *testing.T) {
 		// update the asset to have a cvss threshold of 7
 		asset.CVSSAutomaticTicketThreshold = utils.Ptr(7.0)
-		asset.RepositoryID = utils.Ptr("repo-123")
+		asset.RepositoryID = utils.Ptr(fmt.Sprintf("gitlab:%s:123", gitlabIntegration.ID))
 		err := db.Save(&asset).Error
 		assert.Nil(t, err)
 
@@ -212,7 +225,12 @@ func TestTicketHandling(t *testing.T) {
 		setupContext(ctx)
 
 		// expect there should be a ticket created for the vulnerability
-		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, "main", "repo-123", mock.Anything, "", "", "Risk exceeds predefined threshold", "system").Return(nil).Once()
+		gitlabClientFacade.On("CreateIssue", mock.Anything, mock.Anything, mock.Anything).Return(&gitlab.Issue{
+			IID: 456,
+		}, nil, nil).Once()
+		gitlabClientFacade.On("CreateIssueComment", mock.Anything, 123, 456, &gitlab.CreateIssueNoteOptions{
+			Body: gitlab.Ptr("<devguard> Risk exceeds predefined threshold\n"),
+		}).Return(nil, nil, nil).Once()
 		// now we expect, that the controller creates a ticket for that vulnerability
 		err = controller.ScanDependencyVulnFromProject(ctx)
 		assert.Nil(t, err)
@@ -230,7 +248,7 @@ func TestTicketHandling(t *testing.T) {
 				ScannerIDs:       "scanner-4",
 				State:            models.VulnStateOpen,
 				AssetID:          asset.ID,
-				TicketID:         utils.Ptr("ticket-123"),
+				TicketID:         utils.Ptr("gitlab:abc/789"),
 			},
 		}).Error
 		assert.Nil(t, err)
@@ -248,7 +266,7 @@ func TestTicketHandling(t *testing.T) {
 		setupContext(ctx)
 
 		// expect there should be a ticket closed for the vulnerability
-		thirdPartyIntegration.On("CloseIssue", mock.Anything, "fixed", "repo-123", mock.Anything).Return(nil).Once()
+		gitlabClientFacade.On("EditIssue", mock.Anything, 123, 789, mock.Anything).Return(nil, nil, nil).Once()
 
 		err = controller.ScanDependencyVulnFromProject(ctx)
 		assert.Nil(t, err)
@@ -388,10 +406,17 @@ func sbomWithoutVulnerability() *os.File {
 	return file
 }
 
-func initHttpController(t *testing.T, db core.DB) (*scan.HttpController, *mocks.ThirdPartyIntegration) {
+func initHttpController(t *testing.T, db core.DB) (*scan.HttpController, *mocks.GitlabClientFacade) {
 	// there are a lot of repositories and services that need to be initialized...
-	thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
+	clientfactory, client := integration_tests.NewTestClientFactory(t)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(
+		db,
+		gitlabint.NewGitLabOauth2Integrations(db),
+		mocks.NewRBACProvider(t),
+		clientfactory,
+	)
 
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
 	// Initialize repositories
 	assetRepository := repositories.NewAssetRepository(db)
 	assetRiskAggregationRepository := repositories.NewAssetRiskHistoryRepository(db)
@@ -425,5 +450,5 @@ func initHttpController(t *testing.T, db core.DB) (*scan.HttpController, *mocks.
 	controller := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 	// do not use concurrency in this test, because we want to test the ticket creation
 	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
-	return controller, thirdPartyIntegration
+	return controller, client
 }

@@ -160,7 +160,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}
 
 		// make sure to update the github issue accordingly
-		client, err := g.gitlabClientFactory(integrationId)
+		client, err := g.clientFactory.FromIntegrationUUID(integrationId)
 		if err != nil {
 			slog.Error("could not create github client", "err", err)
 			return err

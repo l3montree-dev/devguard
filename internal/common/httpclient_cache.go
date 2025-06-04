@@ -98,12 +98,14 @@ func cacheKey(req *http.Request) string {
 	// Include Authorization and Cookie headers if present
 	auth := req.Header.Get("Authorization")
 	cookie := req.Header.Get("Cookie")
+	privateToken := req.Header.Get("Private-Token")
 
-	if auth != "" || cookie != "" {
+	if auth != "" || cookie != "" || privateToken != "" {
 		h := sha256.New()
 		h.Write([]byte(key))
 		h.Write([]byte(auth))
 		h.Write([]byte(cookie))
+		h.Write([]byte(privateToken))
 		return fmt.Sprintf("%x", h.Sum(nil))
 	}
 

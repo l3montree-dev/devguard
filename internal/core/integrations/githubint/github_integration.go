@@ -41,11 +41,17 @@ type githubRepository struct {
 }
 
 func (g githubRepository) toRepository() core.Repository {
+	var image string
+	if g.Organization != nil && g.Organization.AvatarURL != nil {
+		image = utils.SafeDereference(g.Organization.AvatarURL)
+	} else if g.Owner != nil && g.Owner.AvatarURL != nil {
+		image = utils.SafeDereference(g.Owner.AvatarURL)
+	}
 	return core.Repository{
-		ID:          fmt.Sprintf("github:%d:%s", g.GithubAppInstallationID, *g.FullName),
-		Label:       *g.FullName,
-		Image:       *g.Organization.AvatarURL,
-		Description: *g.Description,
+		ID:          fmt.Sprintf("github:%d:%s", g.GithubAppInstallationID, utils.SafeDereference(g.FullName)),
+		Label:       utils.SafeDereference(g.FullName),
+		Image:       image,
+		Description: utils.SafeDereference(g.Description),
 	}
 }
 
@@ -124,8 +130,8 @@ func (githubIntegration *GithubIntegration) ListOrgs(ctx core.Context) ([]models
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (githubIntegration *GithubIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
-	return false
+func (githubIntegration *GithubIntegration) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
+	return false, nil
 }
 
 func (githubIntegration *GithubIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
@@ -542,7 +548,7 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
 
-		repoId, err := core.GetRepositoryID(event.Ctx)
+		repoId, err := core.GetRepositoryID(&asset)
 
 		if !strings.HasPrefix(repoId, "github:") {
 			// this integration only handles github repositories.
@@ -681,7 +687,7 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 			if err != nil {
 				return err
 			}
-			return g.ReopenIssue(context.Background(), repoId, vuln)
+			return g.ReopenIssue(context.Background(), asset, vuln)
 		case models.EventTypeComment:
 			_, _, err = client.CreateIssueComment(context.Background(), owner, repo, githubTicketNumber, &github.IssueComment{
 				Body: github.String(fmt.Sprintf("### %s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))),
@@ -770,7 +776,8 @@ func (g *GithubIntegration) closeFirstPartyVulnIssue(ctx context.Context, vuln *
 	return err
 }
 
-func (g *GithubIntegration) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
+func (g *GithubIntegration) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+	repoId := utils.SafeDereference(asset.RepositoryID)
 	if !strings.HasPrefix(repoId, "github:") || !strings.HasPrefix(*vuln.GetTicketID(), "github:") {
 		// this integration only handles github repositories.
 		return nil

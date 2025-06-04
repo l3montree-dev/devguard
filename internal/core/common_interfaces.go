@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
+	"github.com/package-url/packageurl-go"
 	"gorm.io/gorm/clause"
 )
 
@@ -62,6 +63,8 @@ type AssetRepository interface {
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	GetByOrgID(organizationID uuid.UUID) ([]models.Asset, error)
 	FindByName(name string) (models.Asset, error)
+	FindAssetByExternalProviderId(externalEntityProviderID string, externalEntityID string) (*models.Asset, error)
+	GetFQNByID(id uuid.UUID) (string, error)
 	FindOrCreate(tx DB, name string) (models.Asset, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
@@ -114,7 +117,7 @@ type ComponentRepository interface {
 	common.Repository[string, models.Component, DB]
 
 	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.ComponentDependency, error)
-	LoadComponentsWithProject(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
+	LoadComponentsWithProject(tx DB, overwrittenLicenses []models.LicenseOverwrite, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
@@ -295,6 +298,13 @@ type VulnRepository interface {
 	ApplyAndSave(tx DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent) error
 }
 
+type LicenseOverwriteRepository interface {
+	common.Repository[string, models.LicenseOverwrite, DB]
+	GetAllOverwritesForOrganization(orgID uuid.UUID) ([]models.LicenseOverwrite, error)
+	MaybeGetOverwriteForComponent(orgID uuid.UUID, pURL packageurl.PackageURL) (models.LicenseOverwrite, error)
+	DeleteByComponentPurlAndOrgID(orgID uuid.UUID, purl string) error
+}
+
 type ExternalUserRepository interface {
 	Save(db DB, user *models.ExternalUser) error
 	GetDB(tx DB) DB
@@ -313,6 +323,8 @@ type GitLabOauth2TokenRepository interface {
 	FindByUserIdAndProviderId(userId string, providerId string) (*models.GitLabOauth2Token, error)
 	FindByUserId(userId string) ([]models.GitLabOauth2Token, error)
 	Delete(tx DB, tokens []models.GitLabOauth2Token) error
+	DeleteByUserIdAndProviderId(userId string, providerId string) error
+	CreateIfNotExists(tokens []*models.GitLabOauth2Token) error
 }
 
 type ConfigService interface {
@@ -361,7 +373,7 @@ type ComponentService interface {
 }
 
 type AccessControl interface {
-	HasAccess(subject string) bool
+	HasAccess(subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
 	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error
 

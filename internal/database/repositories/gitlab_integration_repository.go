@@ -66,7 +66,10 @@ func NewGitlabOauth2TokenRepository(db core.DB) *gitlabOauth2TokenRepository {
 }
 
 func (r *gitlabOauth2TokenRepository) Save(tx core.DB, token ...*models.GitLabOauth2Token) error {
-	if err := r.db.Save(token).Error; err != nil {
+	if err := r.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "provider_id"}},
+		UpdateAll: true,
+	}).Create(token).Error; err != nil {
 		return err
 	}
 	return nil
@@ -102,4 +105,22 @@ func (r *gitlabOauth2TokenRepository) Delete(tx core.DB, tokens []models.GitLabO
 		return err
 	}
 	return nil
+}
+
+func (r *gitlabOauth2TokenRepository) DeleteByUserIdAndProviderId(userId string, providerId string) error {
+	return r.db.Where("user_id = ? AND provider_id = ?", userId, providerId).Delete(&models.GitLabOauth2Token{}).Error
+}
+
+func (r *gitlabOauth2TokenRepository) CreateIfNotExists(tokens []*models.GitLabOauth2Token) error {
+	return r.db.Clauses(clause.OnConflict{
+		DoNothing: true,
+		Columns: []clause.Column{
+			clause.Column{
+				Name: "provider_id",
+			},
+			clause.Column{
+				Name: "user_id",
+			},
+		},
+	}).Create(tokens).Error
 }

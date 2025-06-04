@@ -92,6 +92,28 @@ spec:
             value: {{ .issuerUrl | quote }}
           - name: GITLAB_{{ .id | upper }}_SCOPES
             value: {{ .scope | join " " | quote }}
+            {{- if .existingBotUserSecretName }}
+          - name: GITLAB_{{ .id | upper }}_BOTUSERID
+            value: {{ .botUserId | quote }}
+          - name: GITLAB_{{ .id | upper }}_BOTUSERACCESSTOKEN
+            valueFrom:
+              secretKeyRef:
+                key: accessToken
+                name: {{ .existingBotUserSecretName | quote }}
+            {{- end }}
+            {{- if .autosetupApplication}}
+          - name: GITLAB_{{ .id | upper }}AUTOSETUP_APPID
+            value: {{ .autosetupApplication.clientId | quote }}
+          - name: GITLAB_{{ .id | upper }}AUTOSETUP_APPSECRET
+            valueFrom:
+              secretKeyRef:
+                key: secret
+                name: {{ .autosetupApplication.existingClientSecret | quote }}
+          - name: GITLAB_{{ .id | upper }}AUTOSETUP_BASEURL
+            value: {{ .issuerUrl | quote }}
+          - name: GITLAB_{{ .id | upper }}AUTOSETUP_SCOPES
+            value: {{ .autosetupApplication.scope | join " " | quote }}
+            {{- end }}
             {{- end }}
         {{- end }}
           - name: API_URL

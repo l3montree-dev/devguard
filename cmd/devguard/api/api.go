@@ -303,7 +303,11 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 
 			// check if the user is allowed to access the organization
 			session := core.GetSession(ctx)
-			allowed := domainRBAC.HasAccess(session.GetUserID())
+			allowed, err := domainRBAC.HasAccess(session.GetUserID())
+			if err != nil {
+				slog.Info("asking user to reauthorize", "err", err)
+				return ctx.JSON(401, map[string]string{"error": err.Error()})
+			}
 
 			if !allowed {
 				if org.IsPublic {
@@ -357,7 +361,13 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	githubIntegration := githubint.NewGithubIntegration(db)
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db, casbinRBACProvider)
+
+	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
+		repositories.NewGitLabIntegrationRepository(db),
+		gitlabOauth2Integrations,
+	)
+
+	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration)
 
 	// init all repositories using the provided database
@@ -378,6 +388,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 	attestationRepository := repositories.NewAttestationRepository(db)
 	policyRepository := repositories.NewPolicyRepository(db)
+	licenseOverwriteRepository := repositories.NewLicenseOverwriteRepository(db)
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
@@ -405,16 +416,18 @@ func BuildRouter(db core.DB) *echo.Echo {
 	orgController := org.NewHttpController(orgRepository, orgService, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHttpController(projectRepository, assetRepository, projectService)
 	assetController := asset.NewHttpController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
+
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 
-	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository)
+	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseOverwriteRepository)
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
 	intotoController := intoto.NewHttpController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
-	componentController := component.NewHTTPController(componentRepository, assetVersionRepository)
+	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseOverwriteRepository)
 	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository, policyRepository)
 
 	statisticsController := statistics.NewHttpController(statisticsService, statisticsRepository, assetRepository, assetVersionRepository, projectService)
 	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)
+	licenseOverwriteController := component.NewLicenseOverwriteController(licenseOverwriteRepository)
 
 	patService := pat.NewPatService(patRepository)
 
@@ -444,12 +457,14 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
 
-	apiV1Router.POST("/webhook/", githubIntegration.HandleWebhook)
+	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
 
 	// apply the health route without any session or multi organization middleware
 	apiV1Router.GET("/health/", health)
 
 	apiV1Router.GET("/badges/:badge/:badgeSecret/", assetController.GetBadges)
+
+	apiV1Router.GET("/lookup/", assetController.HandleLookup)
 
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
@@ -527,6 +542,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
+	organizationRouter.PUT("/license-overwrite/", licenseOverwriteController.Create, neededScope([]string{"manage"}))
+	organizationRouter.DELETE("/license-overwrite/:componentPurl", licenseOverwriteController.Delete, neededScope([]string{"manage"}))
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectService, "project", core.ActionRead))
 	projectRouter.GET("/", projectController.Read)

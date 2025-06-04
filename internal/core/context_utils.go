@@ -243,36 +243,15 @@ func SetAttestation(ctx Context, attestation models.Attestation) {
 	ctx.Set("attestation", attestation)
 }
 
-func RecursiveGetProjectRepositoryID(project models.Project) (string, error) {
-
-	if project.RepositoryID != nil {
-		return *project.RepositoryID, nil
-	}
-
-	if project.Parent == nil {
-		return "", fmt.Errorf("could not get repository id")
-	}
-
-	return RecursiveGetProjectRepositoryID(*project.Parent)
-}
-
-func GetRepositoryIdFromAssetAndProject(project models.Project, asset models.Asset) (string, error) {
+func GetRepositoryID(asset *models.Asset) (string, error) {
 	if asset.RepositoryID != nil {
 		return *asset.RepositoryID, nil
 	}
-
-	return RecursiveGetProjectRepositoryID(project)
-}
-
-func GetRepositoryID(ctx Context) (string, error) {
-	// get the asset
-	asset := GetAsset(ctx)
-	if asset.RepositoryID != nil {
-		return *asset.RepositoryID, nil
+	if asset.ExternalEntityID != nil {
+		return *asset.ExternalEntityID, nil
 	}
-	// get the project
-	project := GetProject(ctx)
-	return GetRepositoryIdFromAssetAndProject(project, asset)
+
+	return "", fmt.Errorf("could not get repository id from asset")
 }
 
 type PageInfo struct {

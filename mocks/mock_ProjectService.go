@@ -69,18 +69,7 @@ func (_e *ProjectService_Expecter) CreateProject(ctx interface{}, project interf
 
 func (_c *ProjectService_CreateProject_Call) Run(run func(ctx core.Context, project *models.Project)) *ProjectService_CreateProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
-		if args[0] != nil {
-			arg0 = args[0].(core.Context)
-		}
-		var arg1 *models.Project
-		if args[1] != nil {
-			arg1 = args[1].(*models.Project)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.Context), args[1].(*models.Project))
 	})
 	return _c
 }

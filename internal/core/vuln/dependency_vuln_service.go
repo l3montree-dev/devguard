@@ -311,7 +311,7 @@ func (s *service) SyncTickets(asset models.Asset) error {
 		return err
 	}
 
-	repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
+	repoID, err := core.GetRepositoryID(&asset)
 	if err != nil {
 		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
 	}
@@ -411,7 +411,7 @@ func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vu
 		return err
 	}
 
-	repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
+	repoID, err := core.GetRepositoryID(&asset)
 	if err != nil {
 		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
 	}
@@ -429,7 +429,7 @@ func (s *service) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vu
 			} else {
 				// check if the ticket id is nil
 				errgroup.Go(func() (any, error) {
-					return nil, s.reopenIssue(vulnerability, repoID)
+					return nil, s.reopenIssue(asset, vulnerability)
 				})
 			}
 
@@ -461,11 +461,11 @@ func (s *service) updateIssue(asset models.Asset, vulnerability models.Dependenc
 	return nil
 }
 
-func (s *service) reopenIssue(vulnerability models.DependencyVuln, repoId string) error {
+func (s *service) reopenIssue(asset models.Asset, vulnerability models.DependencyVuln) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	err := s.thirdPartyIntegration.ReopenIssue(ctx, repoId, &vulnerability)
+	err := s.thirdPartyIntegration.ReopenIssue(ctx, asset, &vulnerability)
 	if err != nil {
 		return err
 	}
@@ -477,12 +477,7 @@ func (s *service) CloseIssuesAsFixed(asset models.Asset, vulnList []models.Depen
 	if len(vulnList) == 0 {
 		return nil
 	}
-	project, err := s.projectRepository.Read(asset.ProjectID)
-	if err != nil {
-		return err
-	}
-
-	repoID, err := core.GetRepositoryIdFromAssetAndProject(project, asset)
+	repoID, err := core.GetRepositoryID(&asset)
 	if err != nil {
 		return nil //We don't want to return an error if the user has not yet linked his repo with devguard
 	}

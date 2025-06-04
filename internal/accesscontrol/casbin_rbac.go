@@ -86,9 +86,9 @@ func (c *casbinRBAC) GetAllMembersOfProject(projectID string) ([]string, error) 
 	}), nil
 }
 
-func (c *casbinRBAC) HasAccess(user string) bool {
+func (c *casbinRBAC) HasAccess(user string) (bool, error) {
 	roles := c.enforcer.GetRolesForUserInDomain("user::"+user, "domain::"+c.domain)
-	return len(roles) > 0
+	return len(roles) > 0, nil
 }
 
 func (c *casbinRBAC) GetAllProjectsForUser(user string) (any, error) {

@@ -1,14 +1,24 @@
-package gitlabint
+package core
 
 import (
 	"context"
 
+	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
-type gitlabClientFacade interface {
+type GitlabClientFactory interface {
+	FromIntegration(integration models.GitLabIntegration) (GitlabClientFacade, error)
+	FromIntegrationUUID(id uuid.UUID) (GitlabClientFacade, error)
+	FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (GitlabClientFacade, error)
+	FromAccessToken(accessToken string, baseUrl string) (GitlabClientFacade, error)
+}
+
+type GitlabClientFacade interface {
+	Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error)
+
 	GetClientID() string
-	GetProviderID() *string
 
 	ListProjects(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)
 	ListGroups(ctx context.Context, opt *gitlab.ListGroupsOptions) ([]*gitlab.Group, *gitlab.Response, error)
@@ -35,4 +45,6 @@ type gitlabClientFacade interface {
 	GetProject(ctx context.Context, projectId int) (*gitlab.Project, *gitlab.Response, error)
 
 	IsProjectMember(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions) (bool, error)
+
+	InviteReporter(ctx context.Context, projectId int, userId int) (*gitlab.ProjectMember, *gitlab.Response, error)
 }

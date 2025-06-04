@@ -616,7 +616,7 @@ func (_c *IntegrationAggregate_HandleWebhook_Call) RunAndReturn(run func(ctx cor
 }
 
 // HasAccessToExternalEntityProvider provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) bool {
+func (_mock *IntegrationAggregate) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
 	ret := _mock.Called(ctx, externalEntityProviderID)
 
 	if len(ret) == 0 {
@@ -624,12 +624,21 @@ func (_mock *IntegrationAggregate) HasAccessToExternalEntityProvider(ctx core.Co
 	}
 
 	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context, string) (bool, error)); ok {
+		return returnFunc(ctx, externalEntityProviderID)
+	}
 	if returnFunc, ok := ret.Get(0).(func(core.Context, string) bool); ok {
 		r0 = returnFunc(ctx, externalEntityProviderID)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(core.Context, string) error); ok {
+		r1 = returnFunc(ctx, externalEntityProviderID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // IntegrationAggregate_HasAccessToExternalEntityProvider_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasAccessToExternalEntityProvider'
@@ -662,12 +671,12 @@ func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) Run(run f
 	return _c
 }
 
-func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) Return(b bool) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
-	_c.Call.Return(b)
+func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) Return(b bool, err error) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
+	_c.Call.Return(b, err)
 	return _c
 }
 
-func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx core.Context, externalEntityProviderID string) bool) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
+func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) RunAndReturn(run func(ctx core.Context, externalEntityProviderID string) (bool, error)) *IntegrationAggregate_HasAccessToExternalEntityProvider_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -951,16 +960,16 @@ func (_c *IntegrationAggregate_ListRepositories_Call) RunAndReturn(run func(ctx 
 }
 
 // ReopenIssue provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
-	ret := _mock.Called(ctx, repoId, vuln)
+func (_mock *IntegrationAggregate) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+	ret := _mock.Called(ctx, asset, vuln)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReopenIssue")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, models.Vuln) error); ok {
-		r0 = returnFunc(ctx, repoId, vuln)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, models.Asset, models.Vuln) error); ok {
+		r0 = returnFunc(ctx, asset, vuln)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -973,32 +982,16 @@ type IntegrationAggregate_ReopenIssue_Call struct {
 }
 
 // ReopenIssue is a helper method to define mock.On call
-//   - ctx context.Context
-//   - repoId string
-//   - vuln models.Vuln
-func (_e *IntegrationAggregate_Expecter) ReopenIssue(ctx interface{}, repoId interface{}, vuln interface{}) *IntegrationAggregate_ReopenIssue_Call {
-	return &IntegrationAggregate_ReopenIssue_Call{Call: _e.mock.On("ReopenIssue", ctx, repoId, vuln)}
+//   - ctx
+//   - asset
+//   - vuln
+func (_e *IntegrationAggregate_Expecter) ReopenIssue(ctx interface{}, asset interface{}, vuln interface{}) *IntegrationAggregate_ReopenIssue_Call {
+	return &IntegrationAggregate_ReopenIssue_Call{Call: _e.mock.On("ReopenIssue", ctx, asset, vuln)}
 }
 
-func (_c *IntegrationAggregate_ReopenIssue_Call) Run(run func(ctx context.Context, repoId string, vuln models.Vuln)) *IntegrationAggregate_ReopenIssue_Call {
+func (_c *IntegrationAggregate_ReopenIssue_Call) Run(run func(ctx context.Context, asset models.Asset, vuln models.Vuln)) *IntegrationAggregate_ReopenIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 models.Vuln
-		if args[2] != nil {
-			arg2 = args[2].(models.Vuln)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(context.Context), args[1].(models.Asset), args[2].(models.Vuln))
 	})
 	return _c
 }
@@ -1008,7 +1001,7 @@ func (_c *IntegrationAggregate_ReopenIssue_Call) Return(err error) *IntegrationA
 	return _c
 }
 
-func (_c *IntegrationAggregate_ReopenIssue_Call) RunAndReturn(run func(ctx context.Context, repoId string, vuln models.Vuln) error) *IntegrationAggregate_ReopenIssue_Call {
+func (_c *IntegrationAggregate_ReopenIssue_Call) RunAndReturn(run func(ctx context.Context, asset models.Asset, vuln models.Vuln) error) *IntegrationAggregate_ReopenIssue_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -27,7 +27,18 @@ func RecalculateRisk(db core.DB) error {
 	githubIntegration := githubint.NewGithubIntegration(db)
 
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db, casbinRBACProvider)
+
+	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
+		repositories.NewGitLabIntegrationRepository(db),
+		gitlabOauth2Integrations,
+	)
+
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+	if err != nil {
+		panic(err)
+	}
+
+	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
 
 	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
