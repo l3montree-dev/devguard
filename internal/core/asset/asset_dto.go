@@ -8,6 +8,13 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
+type LookupResponse struct {
+	Org     string `json:"org"`
+	Project string `json:"project"`
+	Asset   string `json:"asset"`
+	Link    string `json:"link"`
+}
+
 type AssetDTO struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`

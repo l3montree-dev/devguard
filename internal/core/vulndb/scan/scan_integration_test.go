@@ -34,7 +34,7 @@ func TestScanning(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset := createOrgProjectAndAsset(db)
+	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
 	setupContext := func(ctx core.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -167,7 +167,7 @@ func TestTicketHandling(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset := createOrgProjectAndAsset(db)
+	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
 	setupContext := func(ctx core.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -212,7 +212,7 @@ func TestTicketHandling(t *testing.T) {
 		setupContext(ctx)
 
 		// expect there should be a ticket created for the vulnerability
-		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, "main", "repo-123", mock.Anything, "", "", "Risk exceeds predefined threshold", "system").Return(nil).Once()
+		thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, "main", "repo-123", mock.Anything, "test-project", "test-org", "Risk exceeds predefined threshold", "system").Return(nil).Once()
 		// now we expect, that the controller creates a ticket for that vulnerability
 		err = controller.ScanDependencyVulnFromProject(ctx)
 		assert.Nil(t, err)
@@ -370,36 +370,6 @@ func createCVE2025_46569(db core.DB) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func createOrgProjectAndAsset(db core.DB) (models.Org, models.Project, models.Asset) {
-	org := models.Org{
-		Name: "Test Org",
-	}
-	err := db.Create(&org).Error
-	if err != nil {
-		panic(err)
-	}
-	project := models.Project{
-		Name:           "Test Project",
-		OrganizationID: org.ID,
-	}
-	err = db.Create(&project).Error
-	if err != nil {
-		panic(err)
-	}
-
-	asset := models.Asset{
-		Name:      "Test Asset",
-		ProjectID: project.ID,
-	}
-
-	err = db.Create(&asset).Error
-	if err != nil {
-		panic(err)
-	}
-
-	return org, project, asset
 }
 
 func sbomWithVulnerability() *os.File {

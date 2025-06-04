@@ -122,7 +122,6 @@ func (t *thirdPartyIntegrations) GetRoleInProject(ctx context.Context, userID st
 
 func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	wg := utils.ErrGroup[[]core.Repository](-1)
-
 	for _, i := range t.integrations {
 		wg.Go(func() ([]core.Repository, error) {
 			repos, err := i.ListRepositories(ctx)
@@ -133,6 +132,7 @@ func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repo
 			}
 			return repos, err
 		})
+
 	}
 
 	results, err := wg.WaitAndCollect()

@@ -105,7 +105,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		}
 
 		// we create a new ticket in github
-		client, err := g.gitlabClientFactory(integrationUUID)
+		client, err := g.clientFactory.FromIntegrationUUID(integrationUUID)
 		if err != nil {
 			return err
 		}

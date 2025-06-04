@@ -41,11 +41,17 @@ type githubRepository struct {
 }
 
 func (g githubRepository) toRepository() core.Repository {
+	var image string
+	if g.Organization != nil && g.Organization.AvatarURL != nil {
+		image = utils.SafeDereference(g.Organization.AvatarURL)
+	} else if g.Owner != nil && g.Owner.AvatarURL != nil {
+		image = utils.SafeDereference(g.Owner.AvatarURL)
+	}
 	return core.Repository{
-		ID:          fmt.Sprintf("github:%d:%s", g.GithubAppInstallationID, *g.FullName),
-		Label:       *g.FullName,
-		Image:       *g.Organization.AvatarURL,
-		Description: *g.Description,
+		ID:          fmt.Sprintf("github:%d:%s", g.GithubAppInstallationID, utils.SafeDereference(g.FullName)),
+		Label:       utils.SafeDereference(g.FullName),
+		Image:       image,
+		Description: utils.SafeDereference(g.Description),
 	}
 }
 

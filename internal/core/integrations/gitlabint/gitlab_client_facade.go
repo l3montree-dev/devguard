@@ -10,7 +10,6 @@ type gitlabClientFacade interface {
 	Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error)
 
 	GetClientID() string
-	GetProviderID() *string
 
 	ListProjects(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)
 	ListGroups(ctx context.Context, opt *gitlab.ListGroupsOptions) ([]*gitlab.Group, *gitlab.Response, error)
