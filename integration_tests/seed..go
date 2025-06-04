@@ -11,6 +11,7 @@ import (
 func CreateOrgProjectAndAsset(db core.DB) (models.Org, models.Project, models.Asset) {
 	org := models.Org{
 		Name: "Test Org",
+		Slug: "test-org",
 	}
 	err := db.Create(&org).Error
 	if err != nil {
@@ -18,6 +19,7 @@ func CreateOrgProjectAndAsset(db core.DB) (models.Org, models.Project, models.As
 	}
 	project := models.Project{
 		Name:           "Test Project",
+		Slug:           "test-project",
 		OrganizationID: org.ID,
 	}
 	err = db.Create(&project).Error
@@ -28,6 +30,7 @@ func CreateOrgProjectAndAsset(db core.DB) (models.Org, models.Project, models.As
 	asset := models.Asset{
 		Name:      "Test Asset",
 		ProjectID: project.ID,
+		Slug:      "test-asset",
 	}
 
 	err = db.Create(&asset).Error

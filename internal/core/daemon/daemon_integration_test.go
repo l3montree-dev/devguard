@@ -143,7 +143,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	db.AutoMigrate(
+	err := db.AutoMigrate(
 		&models.Org{},
 		&models.Project{},
 		&models.AssetVersion{},
@@ -154,21 +154,25 @@ func TestDaemonSyncTickets(t *testing.T) {
 		&models.DependencyVuln{},
 		&models.GitLabIntegration{},
 	)
+	assert.Nil(t, err)
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
 	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
 
 	org.Slug = "org-slug"
-	err := db.Save(&org).Error
+	err = db.Save(&org).Error
+	assert.Nil(t, err)
 	project.Slug = "project-slug"
 	err = db.Save(&project).Error
+	assert.Nil(t, err)
 
 	repoID := "gitlab:7c95b7f6-a921-4b27-91ac-38cb94877324:456"
 	asset.RepositoryID = &repoID
 	cvssThreshold := 7.0
 	asset.CVSSAutomaticTicketThreshold = &cvssThreshold
 	err = db.Save(&asset).Error
+	assert.Nil(t, err)
 
 	assetVersion := models.AssetVersion{
 		Name:          "main",
