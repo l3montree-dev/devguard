@@ -452,7 +452,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
 
-	apiV1Router.POST("/webhook/", githubIntegration.HandleWebhook)
+	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
 
 	// apply the health route without any session or multi organization middleware
 	apiV1Router.GET("/health/", health)
