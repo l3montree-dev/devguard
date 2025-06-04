@@ -15,6 +15,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestDaemonAsssetVersionScan(t *testing.T) {
@@ -122,7 +123,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 	project.Slug = "project-slug"
 	err = db.Save(&project).Error
 
-	repoID := "123"
+	repoID := "repo-123"
 	asset.RepositoryID = &repoID
 	cvssThreshold := 7.0
 	asset.CVSSAutomaticTicketThreshold = &cvssThreshold
@@ -165,7 +166,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 
 	casbinRBACProvider := mocks.NewRBACProvider(t)
 	thirdPartyIntegration := mocks.NewThirdPartyIntegration(t)
-	thirdPartyIntegration.On("CreateIssue", "", asset, assetVersion.Name, repoID, &dependencyVuln, project.Slug, org.Slug, "", "").Return(nil)
+	thirdPartyIntegration.On("CreateIssue", mock.Anything, mock.Anything, "main", "repo-123", mock.Anything, project.Slug, org.Slug, "Risk exceeds predefined threshold", "system").Return(nil).Once()
 
 	t.Run("should  create a ticket if the CVSS if above the threshold", func(t *testing.T) {
 
