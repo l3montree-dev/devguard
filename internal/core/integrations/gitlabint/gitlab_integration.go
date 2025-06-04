@@ -27,6 +27,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/project"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -101,6 +102,7 @@ type GitlabIntegration struct {
 	firstPartyVulnRepository    core.FirstPartyVulnRepository
 	aggregatedVulnRepository    core.VulnRepository
 	dependencyVulnRepository    core.DependencyVulnRepository
+	dependencyVulnService       core.DependencyVulnService
 	vulnEventRepository         core.VulnEventRepository
 	frontendUrl                 string
 	orgRepository               core.OrganizationRepository
@@ -933,51 +935,10 @@ func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 	})
 }
 
-func (g *GitlabIntegration) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
 	client, projectId, err := g.getClientBasedOnAsset(asset)
 	if err != nil {
 		slog.Error("could not get gitlab client based on asset", "err", err)
-		return err
-	}
-
-	gitlabTicketID := strings.TrimPrefix(*vuln.GetTicketID(), "gitlab:")
-	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
-	if err != nil {
-		return err
-	}
-	labels := commonint.GetLabels(vuln)
-
-	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
-		StateEvent: gitlab.Ptr("reopen"),
-		Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset, repoId string, vuln models.Vuln) error {
-	if !strings.HasPrefix(repoId, "gitlab:") {
-		// this integration only handles gitlab repositories
-		return nil
-	}
-
-	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
-	if err != nil {
-		slog.Error("failed to extract integration id from repo id", "err", err, "repoId", repoId)
-		return err
-	}
-
-	projectId, err := extractProjectIdFromRepoId(repoId)
-	if err != nil {
-		slog.Error("failed to extract project id from repo id", "err", err, "repoId", repoId)
-		return err
-	}
-
-	client, err := g.clientFactory.FromIntegrationUUID(integrationUUID)
-	if err != nil {
 		return err
 	}
 
@@ -995,10 +956,10 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 
 	switch v := vuln.(type) {
 	case *models.DependencyVuln:
-		err = g.updateDependencyVulnIssue(ctx, v, asset, client, vuln.GetAssetVersionName(), "", org.Slug, project.Slug, projectId)
+		err = g.updateDependencyVulnIssue(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, projectId)
 
 	case *models.FirstPartyVuln:
-		err = g.updateFirstPartyIssue(ctx, v, asset, client, vuln.GetAssetVersionName(), "", org.Slug, project.Slug, projectId)
+		err = g.updateFirstPartyIssue(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, projectId)
 	}
 
 	if err != nil {
@@ -1020,7 +981,7 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	return nil
 }
 
-func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependencyVuln *models.FirstPartyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
+func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependencyVuln *models.FirstPartyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, orgSlug, projectSlug string, projectId int) error {
 	stateEvent := "close"
 	gitlabTicketID := strings.TrimPrefix(*dependencyVuln.TicketID, "gitlab:")
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
@@ -1044,7 +1005,7 @@ func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 	return err
 }
 
-func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
+func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, orgSlug, projectSlug string, projectId int) error {
 
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
@@ -1062,113 +1023,13 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	}
 	labels := commonint.GetLabels(dependencyVuln)
 
-	stateEvent := "close"
-	if dependencyVuln.State == models.VulnStateOpen {
-		stateEvent = "reopen"
-	}
+	expectedState := vuln.GetExpectedIssueState(asset, dependencyVuln)
 
 	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
-		StateEvent:  gitlab.Ptr(stateEvent),
+		StateEvent:  gitlab.Ptr(expectedState.ToGitlab()),
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
 		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
-	})
-	return err
-}
-
-func (g *GitlabIntegration) CloseIssue(ctx context.Context, state string, repoId string, vuln models.Vuln) error {
-	if !strings.HasPrefix(repoId, "gitlab:") {
-		// this integration only handles gitlab repositories
-		return nil
-	}
-
-	integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
-	if err != nil {
-		slog.Error("failed to extract integration id from repo id", "err", err, "repoId", repoId)
-		return err
-	}
-
-	projectId, err := extractProjectIdFromRepoId(repoId)
-	if err != nil {
-		slog.Error("failed to extract project id from repo id", "err", err, "repoId", repoId)
-		return err
-	}
-
-	client, err := g.clientFactory.FromIntegrationUUID(integrationUUID)
-	if err != nil {
-		return err
-	}
-
-	assetID := vuln.GetAssetID()
-	asset, err := g.assetRepository.Read(assetID)
-	if err != nil {
-		slog.Error("could not read asset", "err", err)
-	}
-
-	project, err := g.projectRepository.GetProjectByAssetID(asset.ID)
-	if err != nil {
-		slog.Error("could not get project by asset id", "err", err)
-		return err
-	}
-
-	org, err := g.orgRepository.Read(project.OrganizationID)
-	if err != nil {
-		slog.Error("could not get org by id", "err", err)
-		return err
-	}
-
-	switch v := vuln.(type) {
-	case *models.DependencyVuln:
-		err = g.closeDependencyVulnIssue(ctx, v, asset, client, vuln.GetAssetVersionName(), "", org.Slug, project.Slug, projectId)
-	case *models.FirstPartyVuln:
-		err = g.closeFirstPartyIssue(ctx, v, asset, client, vuln.GetAssetVersionName(), "", org.Slug, project.Slug, projectId)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (g *GitlabIntegration) closeFirstPartyIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
-	gitlabTicketID := strings.TrimPrefix(*vuln.TicketID, "gitlab:")
-	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
-	if err != nil {
-		return err
-	}
-	labels := commonint.GetLabels(vuln)
-
-	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
-		StateEvent: gitlab.Ptr("close"),
-		Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
-	})
-	return err
-}
-
-func (g *GitlabIntegration) closeDependencyVulnIssue(ctx context.Context, vuln *models.DependencyVuln, asset models.Asset, client core.GitlabClientFacade, assetVersionName, justification, orgSlug, projectSlug string, projectId int) error {
-	riskMetrics, vector := risk.RiskCalculation(*vuln.CVE, core.GetEnvironmentalFromAsset(asset))
-
-	exp := risk.Explain(*vuln, asset, vector, riskMetrics)
-
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, vuln.AssetVersionName, vuln.ScannerIDs, exp.ComponentPurl)
-	if err != nil {
-		return err
-	}
-
-	gitlabTicketID := strings.TrimPrefix(*vuln.TicketID, "gitlab:")
-	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
-	if err != nil {
-		return err
-	}
-	labels := commonint.GetLabels(vuln)
-
-	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
-		StateEvent: gitlab.Ptr("close"),
-		Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
-
-		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(vuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(vuln.ComponentPurl), "pkg:"))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, asset.Slug, vuln.AssetVersionName, componentTree)),
 	})
 	return err
 }
@@ -1211,15 +1072,10 @@ func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.Gitl
 	return nil, 0, fmt.Errorf("asset does not have a valid repository ID or external entity provider ID")
 }
 
-func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 	client, projectId, err := g.getClientBasedOnAsset(asset)
 	if err != nil {
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
-		return err
-	}
-
-	if err != nil {
-		slog.Error("failed to extract project id from repo id", "err", err, "repoId", repoId)
 		return err
 	}
 

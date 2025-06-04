@@ -49,9 +49,9 @@ func TestRenderPathToComponent(t *testing.T) {
 	})
 	t.Run("Everything works as expeted with a non empty component list", func(t *testing.T) {
 		components := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "testDependency", ScannerID: "scanner1"}, // root --> testDependency
-			{ComponentPurl: utils.Ptr("testomatL"), DependencyPurl: "testPURL", ScannerID: "scanner1"},
-			{ComponentPurl: utils.Ptr("testDependency"), DependencyPurl: "testPURL", ScannerID: "scanner1"},
+			{ComponentPurl: nil, DependencyPurl: "testDependency", ScannerIDs: "scanner1"}, // root --> testDependency
+			{ComponentPurl: utils.Ptr("testomatL"), DependencyPurl: "testPURL", ScannerIDs: "scanner1"},
+			{ComponentPurl: utils.Ptr("testDependency"), DependencyPurl: "testPURL", ScannerIDs: "scanner1"},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)
@@ -72,9 +72,9 @@ func TestRenderPathToComponent(t *testing.T) {
 	})
 	t.Run("should escape @ symbols", func(t *testing.T) {
 		components := []models.ComponentDependency{
-			{ComponentPurl: nil, DependencyPurl: "testDependency", ScannerID: "scanner1"}, // root --> testDependency
-			{ComponentPurl: utils.Ptr("testomatL"), DependencyPurl: "testPURL", ScannerID: "scanner1"},
-			{ComponentPurl: utils.Ptr("testDependency"), DependencyPurl: "test@PURL", ScannerID: "scanner1"},
+			{ComponentPurl: nil, DependencyPurl: "testDependency", ScannerIDs: "scanner1"}, // root --> testDependency
+			{ComponentPurl: utils.Ptr("testomatL"), DependencyPurl: "testPURL", ScannerIDs: "scanner1"},
+			{ComponentPurl: utils.Ptr("testDependency"), DependencyPurl: "test@PURL", ScannerIDs: "scanner1"},
 		}
 		componentRepository := mocks.NewComponentRepository(t)
 		componentRepository.On("LoadPathToComponent", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(components, nil)

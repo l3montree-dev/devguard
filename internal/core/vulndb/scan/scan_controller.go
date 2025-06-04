@@ -87,6 +87,8 @@ func (s *HttpController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	normalizedBom := bom
 	asset := core.GetAsset(c)
+	org := core.GetOrg(c)
+	project := core.GetProject(c)
 
 	userID := core.GetSession(c).GetUserID()
 
@@ -115,10 +117,10 @@ func (s *HttpController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
-	return s.ScanNormalizedSBOM(asset, assetVersion, normalizedBom, scannerID, userID)
+	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
 }
 
-func (s *HttpController) ScanNormalizedSBOM(asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
+func (s *HttpController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
@@ -135,19 +137,13 @@ func (s *HttpController) ScanNormalizedSBOM(asset models.Asset, assetVersion mod
 	}
 
 	//Check if we want to create an issue for this assetVersion
-	if s.dependencyVulnService.ShouldCreateIssues(assetVersion) {
-		s.FireAndForget(func() {
-			err := s.dependencyVulnService.CreateIssuesForVulnsIfThresholdExceeded(asset, opened)
-			if err != nil {
-				slog.Error("could not create issues for vulnerabilities", "err", err)
-			}
-			// close the fixed vulnerabilities
-			err = s.dependencyVulnService.CloseIssuesAsFixed(asset, closed)
-			if err != nil {
-				slog.Error("could not close issues for vulnerabilities", "err", err)
-			}
-		})
-	}
+
+	s.FireAndForget(func() {
+		err := s.dependencyVulnService.SyncIssues(org, project, asset, assetVersion, append(newState, closed...))
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
 
 	slog.Info("recalculating risk history for asset", "asset version", assetVersion.Name, "assetID", asset.ID)
 	if err := s.statisticsService.UpdateAssetRiskAggregation(&assetVersion, asset.ID, utils.OrDefault(assetVersion.LastHistoryUpdate, assetVersion.CreatedAt), time.Now(), true); err != nil {

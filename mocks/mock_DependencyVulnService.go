@@ -38,98 +38,6 @@ func (_m *DependencyVulnService) EXPECT() *DependencyVulnService_Expecter {
 	return &DependencyVulnService_Expecter{mock: &_m.Mock}
 }
 
-// CloseIssuesAsFixed provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error {
-	ret := _mock.Called(asset, vulnList)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CloseIssuesAsFixed")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(models.Asset, []models.DependencyVuln) error); ok {
-		r0 = returnFunc(asset, vulnList)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// DependencyVulnService_CloseIssuesAsFixed_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CloseIssuesAsFixed'
-type DependencyVulnService_CloseIssuesAsFixed_Call struct {
-	*mock.Call
-}
-
-// CloseIssuesAsFixed is a helper method to define mock.On call
-//   - asset
-//   - vulnList
-func (_e *DependencyVulnService_Expecter) CloseIssuesAsFixed(asset interface{}, vulnList interface{}) *DependencyVulnService_CloseIssuesAsFixed_Call {
-	return &DependencyVulnService_CloseIssuesAsFixed_Call{Call: _e.mock.On("CloseIssuesAsFixed", asset, vulnList)}
-}
-
-func (_c *DependencyVulnService_CloseIssuesAsFixed_Call) Run(run func(asset models.Asset, vulnList []models.DependencyVuln)) *DependencyVulnService_CloseIssuesAsFixed_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(models.Asset), args[1].([]models.DependencyVuln))
-	})
-	return _c
-}
-
-func (_c *DependencyVulnService_CloseIssuesAsFixed_Call) Return(err error) *DependencyVulnService_CloseIssuesAsFixed_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *DependencyVulnService_CloseIssuesAsFixed_Call) RunAndReturn(run func(asset models.Asset, vulnList []models.DependencyVuln) error) *DependencyVulnService_CloseIssuesAsFixed_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// CreateIssuesForVulnsIfThresholdExceeded provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vulnList []models.DependencyVuln) error {
-	ret := _mock.Called(asset, vulnList)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CreateIssuesForVulnsIfThresholdExceeded")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(models.Asset, []models.DependencyVuln) error); ok {
-		r0 = returnFunc(asset, vulnList)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// DependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateIssuesForVulnsIfThresholdExceeded'
-type DependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call struct {
-	*mock.Call
-}
-
-// CreateIssuesForVulnsIfThresholdExceeded is a helper method to define mock.On call
-//   - asset
-//   - vulnList
-func (_e *DependencyVulnService_Expecter) CreateIssuesForVulnsIfThresholdExceeded(asset interface{}, vulnList interface{}) *DependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call {
-	return &DependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call{Call: _e.mock.On("CreateIssuesForVulnsIfThresholdExceeded", asset, vulnList)}
-}
-
-func (_c *DependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call) Run(run func(asset models.Asset, vulnList []models.DependencyVuln)) *DependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(models.Asset), args[1].([]models.DependencyVuln))
-	})
-	return _c
-}
-
-func (_c *DependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call) Return(err error) *DependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *DependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call) RunAndReturn(run func(asset models.Asset, vulnList []models.DependencyVuln) error) *DependencyVulnService_CreateIssuesForVulnsIfThresholdExceeded_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // RecalculateRawRiskAssessment provides a mock function for the type DependencyVulnService
 func (_mock *DependencyVulnService) RecalculateRawRiskAssessment(tx core.DB, responsible string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
 	ret := _mock.Called(tx, responsible, dependencyVulns, justification, asset)
@@ -179,92 +87,99 @@ func (_c *DependencyVulnService_RecalculateRawRiskAssessment_Call) RunAndReturn(
 	return _c
 }
 
-// ShouldCreateIssues provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) ShouldCreateIssues(assetVersion models.AssetVersion) bool {
-	ret := _mock.Called(assetVersion)
+// SyncAllIssues provides a mock function for the type DependencyVulnService
+func (_mock *DependencyVulnService) SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
+	ret := _mock.Called(org, project, asset, assetVersion)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ShouldCreateIssues")
-	}
-
-	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion) bool); ok {
-		r0 = returnFunc(assetVersion)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	return r0
-}
-
-// DependencyVulnService_ShouldCreateIssues_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ShouldCreateIssues'
-type DependencyVulnService_ShouldCreateIssues_Call struct {
-	*mock.Call
-}
-
-// ShouldCreateIssues is a helper method to define mock.On call
-//   - assetVersion
-func (_e *DependencyVulnService_Expecter) ShouldCreateIssues(assetVersion interface{}) *DependencyVulnService_ShouldCreateIssues_Call {
-	return &DependencyVulnService_ShouldCreateIssues_Call{Call: _e.mock.On("ShouldCreateIssues", assetVersion)}
-}
-
-func (_c *DependencyVulnService_ShouldCreateIssues_Call) Run(run func(assetVersion models.AssetVersion)) *DependencyVulnService_ShouldCreateIssues_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(models.AssetVersion))
-	})
-	return _c
-}
-
-func (_c *DependencyVulnService_ShouldCreateIssues_Call) Return(b bool) *DependencyVulnService_ShouldCreateIssues_Call {
-	_c.Call.Return(b)
-	return _c
-}
-
-func (_c *DependencyVulnService_ShouldCreateIssues_Call) RunAndReturn(run func(assetVersion models.AssetVersion) bool) *DependencyVulnService_ShouldCreateIssues_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SyncTickets provides a mock function for the type DependencyVulnService
-func (_mock *DependencyVulnService) SyncTickets(assetVersion models.Asset) error {
-	ret := _mock.Called(assetVersion)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SyncTickets")
+		panic("no return value specified for SyncAllIssues")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(models.Asset) error); ok {
-		r0 = returnFunc(assetVersion)
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion) error); ok {
+		r0 = returnFunc(org, project, asset, assetVersion)
 	} else {
 		r0 = ret.Error(0)
 	}
 	return r0
 }
 
-// DependencyVulnService_SyncTickets_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncTickets'
-type DependencyVulnService_SyncTickets_Call struct {
+// DependencyVulnService_SyncAllIssues_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncAllIssues'
+type DependencyVulnService_SyncAllIssues_Call struct {
 	*mock.Call
 }
 
-// SyncTickets is a helper method to define mock.On call
+// SyncAllIssues is a helper method to define mock.On call
+//   - org
+//   - project
+//   - asset
 //   - assetVersion
-func (_e *DependencyVulnService_Expecter) SyncTickets(assetVersion interface{}) *DependencyVulnService_SyncTickets_Call {
-	return &DependencyVulnService_SyncTickets_Call{Call: _e.mock.On("SyncTickets", assetVersion)}
+func (_e *DependencyVulnService_Expecter) SyncAllIssues(org interface{}, project interface{}, asset interface{}, assetVersion interface{}) *DependencyVulnService_SyncAllIssues_Call {
+	return &DependencyVulnService_SyncAllIssues_Call{Call: _e.mock.On("SyncAllIssues", org, project, asset, assetVersion)}
 }
 
-func (_c *DependencyVulnService_SyncTickets_Call) Run(run func(assetVersion models.Asset)) *DependencyVulnService_SyncTickets_Call {
+func (_c *DependencyVulnService_SyncAllIssues_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion)) *DependencyVulnService_SyncAllIssues_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(models.Asset))
+		run(args[0].(models.Org), args[1].(models.Project), args[2].(models.Asset), args[3].(models.AssetVersion))
 	})
 	return _c
 }
 
-func (_c *DependencyVulnService_SyncTickets_Call) Return(err error) *DependencyVulnService_SyncTickets_Call {
+func (_c *DependencyVulnService_SyncAllIssues_Call) Return(err error) *DependencyVulnService_SyncAllIssues_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *DependencyVulnService_SyncTickets_Call) RunAndReturn(run func(assetVersion models.Asset) error) *DependencyVulnService_SyncTickets_Call {
+func (_c *DependencyVulnService_SyncAllIssues_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error) *DependencyVulnService_SyncAllIssues_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SyncIssues provides a mock function for the type DependencyVulnService
+func (_mock *DependencyVulnService) SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error {
+	ret := _mock.Called(org, project, asset, assetVersion, vulnList)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SyncIssues")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, []models.DependencyVuln) error); ok {
+		r0 = returnFunc(org, project, asset, assetVersion, vulnList)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DependencyVulnService_SyncIssues_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncIssues'
+type DependencyVulnService_SyncIssues_Call struct {
+	*mock.Call
+}
+
+// SyncIssues is a helper method to define mock.On call
+//   - org
+//   - project
+//   - asset
+//   - assetVersion
+//   - vulnList
+func (_e *DependencyVulnService_Expecter) SyncIssues(org interface{}, project interface{}, asset interface{}, assetVersion interface{}, vulnList interface{}) *DependencyVulnService_SyncIssues_Call {
+	return &DependencyVulnService_SyncIssues_Call{Call: _e.mock.On("SyncIssues", org, project, asset, assetVersion, vulnList)}
+}
+
+func (_c *DependencyVulnService_SyncIssues_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln)) *DependencyVulnService_SyncIssues_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(models.Org), args[1].(models.Project), args[2].(models.Asset), args[3].(models.AssetVersion), args[4].([]models.DependencyVuln))
+	})
+	return _c
+}
+
+func (_c *DependencyVulnService_SyncIssues_Call) Return(err error) *DependencyVulnService_SyncIssues_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DependencyVulnService_SyncIssues_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error) *DependencyVulnService_SyncIssues_Call {
 	_c.Call.Return(run)
 	return _c
 }
