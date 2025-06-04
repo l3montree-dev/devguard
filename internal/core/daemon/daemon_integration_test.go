@@ -25,7 +25,7 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	db.AutoMigrate(
+	err := db.AutoMigrate(
 		&models.Org{},
 		&models.Project{},
 		&models.AssetVersion{},
@@ -51,7 +51,7 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 
 	assert.Nil(t, assetVersion.Metadata)
 
-	err := db.Create(&assetVersion).Error
+	err = db.Create(&assetVersion).Error
 	assert.Nil(t, err)
 
 	t.Run("should update the last scan time of the asset version", func(t *testing.T) {
@@ -187,6 +187,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 		CVSS: 8.0,
 	}
 	err = db.Save(&cve).Error
+	assert.Nil(t, err)
 
 	dependencyVuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
