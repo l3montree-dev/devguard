@@ -27,6 +27,7 @@ type SimpleGitlabClientFactory struct {
 func NewGitlabClientFactory(gitlabIntegrationRepository core.GitlabIntegrationRepository, oauth2GitlabIntegration map[string]*GitlabOauth2Config) SimpleGitlabClientFactory {
 	return SimpleGitlabClientFactory{
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
+		oauth2GitlabIntegration:     oauth2GitlabIntegration,
 	}
 }
 
