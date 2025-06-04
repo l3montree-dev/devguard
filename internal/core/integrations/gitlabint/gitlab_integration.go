@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -182,6 +181,7 @@ func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config
 		projectService:              projectService,
 		assetService:                assetService,
 		casbinRBACProvider:          casbinRBACProvider,
+<<<<<<< Updated upstream
 
 		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
 			integration, err := gitlabIntegrationRepository.Read(id)
@@ -207,6 +207,9 @@ func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config
 			}
 			return nil, errors.New("could not find gitlab oauth2 integration")
 		},
+=======
+		clientFactory:               clientFactory,
+>>>>>>> Stashed changes
 	}
 }
 
@@ -334,20 +337,11 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx core.Context
 		})
 	}
 
-	nonExpiredTokens := make([]models.GitLabOauth2Token, 0, len(tokenSlice))
-	// filter out expired tokens
-	for _, token := range tokenSlice {
-		if token.Expiry.After(time.Now()) {
-			nonExpiredTokens = append(nonExpiredTokens, token)
-		}
-	}
-
-	// save the tokens to the database
-	if len(nonExpiredTokens) != 0 {
-		err = g.gitlabOauth2TokenRepository.Save(nil, utils.SlicePtr(nonExpiredTokens)...)
+	// save the oauth2 tokens if the user doesnt have any tokens yet
+	if len(tokenSlice) > 0 {
+		err := g.gitlabOauth2TokenRepository.CreateIfNotExists(utils.SlicePtr(tokenSlice))
 		if err != nil {
-			// if an error happens, just swallow it
-			return tokenSlice, nil
+			return nil, err
 		}
 	}
 
