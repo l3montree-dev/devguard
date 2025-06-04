@@ -758,7 +758,7 @@ func createProjectHookOptions(token *uuid.UUID, hooks []*gitlab.ProjectHook) (*g
 	instanceDomain := os.Getenv("INSTANCE_DOMAIN")
 
 	for _, hook := range hooks {
-		if strings.HasPrefix(hook.URL, instanceDomain) {
+		if instanceDomain != "" && strings.HasPrefix(hook.URL, instanceDomain) {
 			return projectOptions, fmt.Errorf("hook already exists")
 		}
 	}
