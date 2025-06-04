@@ -21,13 +21,15 @@ import (
 	"strings"
 
 	gormadapter "github.com/casbin/gorm-adapter/v3"
+	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/casbin/casbin/v2"
 	"gorm.io/gorm"
 )
 
-var _ AccessControl = &casbinRBAC{}
+var _ core.AccessControl = &casbinRBAC{}
 var casbinEnforcer *casbin.Enforcer
 
 type casbinRBAC struct {
@@ -39,7 +41,7 @@ type casbinRBACProvider struct {
 	enforcer *casbin.Enforcer
 }
 
-func (c casbinRBACProvider) GetDomainRBAC(domain string) AccessControl {
+func (c casbinRBACProvider) GetDomainRBAC(domain string) core.AccessControl {
 	return &casbinRBAC{
 		domain:   domain,
 		enforcer: c.enforcer,
@@ -84,12 +86,12 @@ func (c *casbinRBAC) GetAllMembersOfProject(projectID string) ([]string, error) 
 	}), nil
 }
 
-func (c *casbinRBAC) HasAccess(user string) bool {
+func (c *casbinRBAC) HasAccess(user string) (bool, error) {
 	roles := c.enforcer.GetRolesForUserInDomain("user::"+user, "domain::"+c.domain)
-	return len(roles) > 0
+	return len(roles) > 0, nil
 }
 
-func (c *casbinRBAC) GetAllProjectsForUser(user string) []string {
+func (c *casbinRBAC) GetAllProjectsForUser(user string) (any, error) {
 	projectIDs := []string{}
 
 	roles, _ := c.enforcer.GetImplicitRolesForUser("user::"+user, "domain::"+c.domain)
@@ -100,9 +102,8 @@ func (c *casbinRBAC) GetAllProjectsForUser(user string) []string {
 		}
 		// extract everything between the prefix and a "|"
 		projectIDs = append(projectIDs, strings.Split(strings.TrimPrefix(role, "project::"), "|")[0])
-
 	}
-	return projectIDs
+	return projectIDs, nil
 }
 
 func (c *casbinRBAC) GetAllRoles(user string) []string {
@@ -167,12 +168,7 @@ func (c *casbinRBAC) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvi
 	return err
 }
 
-type ProjectRole struct {
-	Project string
-	Role    string
-}
-
-func (c *casbinRBAC) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error {
+func (c *casbinRBAC) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions core.ProjectRole) error {
 	_, err := c.enforcer.AddRoleForUserInDomain(c.getProjectRoleName(roleWhichGetsPermissions.Role, roleWhichGetsPermissions.Project), c.getProjectRoleName(roleWhichProvidesPermissions.Role, roleWhichProvidesPermissions.Project), "domain::"+c.domain)
 	return err
 }
@@ -196,7 +192,7 @@ func (c *casbinRBAC) RevokeRole(user string, role string) error {
 	return err
 }
 
-func (c *casbinRBAC) AllowRole(role string, object string, action []Action) error {
+func (c *casbinRBAC) AllowRole(role string, object core.Object, action []core.Action) error {
 	policies := make([][]string, len(action))
 	for i, ac := range action {
 		policies[i] = []string{"role::" + string(role), "domain::" + c.domain, "obj::" + string(object), "act::" + string(ac)}
@@ -206,7 +202,7 @@ func (c *casbinRBAC) AllowRole(role string, object string, action []Action) erro
 	return err
 }
 
-func (c *casbinRBAC) AllowRoleInProject(project string, role string, object string, action []Action) error {
+func (c *casbinRBAC) AllowRoleInProject(project string, role string, object core.Object, action []core.Action) error {
 	policies := make([][]string, len(action))
 	for i, ac := range action {
 		policies[i] = []string{"project::" + project + "|role::" + string(role), "domain::" + c.domain, "project::" + project + "|obj::" + string(object), "act::" + string(ac)}
@@ -225,7 +221,7 @@ func (c *casbinRBAC) RevokeRoleInProject(user string, role string, project strin
 	return err
 }
 
-func (c *casbinRBAC) IsAllowed(user string, object string, action Action) (bool, error) {
+func (c *casbinRBAC) IsAllowed(user string, object core.Object, action core.Action) (bool, error) {
 	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
 	if err != nil {
 		return false, err
@@ -240,7 +236,7 @@ func (c *casbinRBAC) IsAllowed(user string, object string, action Action) (bool,
 	return false, nil
 }
 
-func (c *casbinRBAC) IsAllowedInProject(project, user string, object string, action Action) (bool, error) {
+func (c *casbinRBAC) IsAllowedInProject(project *models.Project, user string, object core.Object, action core.Action) (bool, error) {
 	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
 	if err != nil {
 		return false, err
@@ -248,7 +244,7 @@ func (c *casbinRBAC) IsAllowedInProject(project, user string, object string, act
 
 	// check for the permissions
 	for _, p := range permissions {
-		if p[2] == "project::"+project+"|obj::"+string(object) && p[3] == "act::"+string(action) {
+		if p[2] == "project::"+project.ID.String()+"|obj::"+string(object) && p[3] == "act::"+string(action) {
 			return true, nil
 		}
 	}

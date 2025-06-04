@@ -20,6 +20,7 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type CreateRequest struct {
@@ -112,13 +113,17 @@ type ProjectDTO struct {
 	IsPublic    bool      `json:"isPublic"`
 	Type        string    `json:"type"`
 
-	ParentID *uuid.UUID `json:"parentId"`
+	ParentID *uuid.UUID  `json:"parentId"`
+	Parent   *ProjectDTO `json:"parent,omitempty"` // recursive structure
 
 	RepositoryID   *string `json:"repositoryId"`
 	RepositoryName *string `json:"repositoryName"`
 
 	Assets      []models.Asset `json:"assets"`
 	ConfigFiles map[string]any `json:"configFiles"`
+
+	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
+	ExternalEntityID         *string `json:"externalEntityId,omitempty"` // only set if this is an external entity
 }
 
 type projectDetailsDTO struct {
@@ -127,6 +132,11 @@ type projectDetailsDTO struct {
 }
 
 func fromModel(project models.Project) ProjectDTO {
+	var parentDTO *ProjectDTO
+	if project.Parent != nil {
+		parentDTO = utils.Ptr(fromModel(*project.Parent))
+	}
+
 	return ProjectDTO{
 		ID:          project.ID,
 		Name:        project.Name,
@@ -136,11 +146,12 @@ func fromModel(project models.Project) ProjectDTO {
 		Type:        string(project.Type),
 
 		ParentID: project.ParentID,
-
-		RepositoryID:   project.RepositoryID,
-		RepositoryName: project.RepositoryName,
+		Parent:   parentDTO,
 
 		Assets:      project.Assets,
 		ConfigFiles: project.ConfigFiles,
+
+		ExternalEntityProviderID: project.ExternalEntityProviderID,
+		ExternalEntityID:         project.ExternalEntityID,
 	}
 }

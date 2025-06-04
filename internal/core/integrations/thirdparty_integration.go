@@ -3,12 +3,11 @@ package integrations
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
@@ -33,34 +32,135 @@ func (t *thirdPartyIntegrations) GetID() core.IntegrationID {
 	return core.AggregateID
 }
 
-func (t *thirdPartyIntegrations) IntegrationEnabled(ctx core.Context) bool {
-	return utils.Any(t.integrations, func(i core.ThirdPartyIntegration) bool {
-		return i.IntegrationEnabled(ctx)
-	})
+func (t *thirdPartyIntegrations) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
+	wg := utils.ErrGroup[[]models.Project](-1)
+
+	for _, i := range t.integrations {
+		wg.Go(func() ([]models.Project, error) {
+			groups, err := i.ListGroups(ctx, userID, providerID)
+			if err != nil {
+				slog.Error("error while listing groups", "err", err)
+				// swallow error
+				return nil, nil
+			}
+			return groups, err
+		})
+	}
+
+	results, err := wg.WaitAndCollect()
+	if err != nil {
+		slog.Error("error while listing groups", "err", err)
+	}
+
+	return utils.Flat(results), nil
+}
+
+func (t *thirdPartyIntegrations) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
+	wg := utils.ErrGroup[[]models.Asset](-1)
+	for _, i := range t.integrations {
+		wg.Go(func() ([]models.Asset, error) {
+			projects, err := i.ListProjects(ctx, userID, providerID, groupID)
+			if err != nil {
+				slog.Error("error while listing projects", "err", err)
+				// swallow error
+				return nil, nil
+			}
+			return projects, err
+		})
+	}
+	results, err := wg.WaitAndCollect()
+	if err != nil {
+		slog.Error("error while listing projects", "err", err)
+	}
+	return utils.Flat(results), nil
+}
+
+func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
+	for _, i := range t.integrations {
+		access, unauth := i.HasAccessToExternalEntityProvider(ctx, externalEntityProviderID)
+		if unauth != nil {
+			// we COULD actually use this provider
+			return access, unauth
+		}
+		if access {
+			// we have access to this provider
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (t *thirdPartyIntegrations) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupId string) (string, error) {
+	for _, i := range t.integrations {
+		role, err := i.GetRoleInGroup(ctx, userID, providerID, groupId)
+		if err != nil {
+			slog.Error("error while getting role in org", "err", err, "providerID", providerID, "orgID", groupId)
+			// swallow error
+			continue
+		}
+		if role != "" {
+			return role, nil
+		}
+	}
+	return "", fmt.Errorf("no role found for user %s in org %s with providerID %s", userID, groupId, providerID)
+}
+
+func (t *thirdPartyIntegrations) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
+	for _, i := range t.integrations {
+		role, err := i.GetRoleInProject(ctx, userID, providerID, projectID)
+		if err != nil {
+			slog.Error("error while getting role in project", "err", err, "providerID", providerID, "projectID", projectID)
+			// swallow error
+			continue
+		}
+		if role != "" {
+			return role, nil
+		}
+	}
+	return "", fmt.Errorf("no role found for user %s in project %s with providerID %s", userID, projectID, providerID)
 }
 
 func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	wg := utils.ErrGroup[[]core.Repository](-1)
-
 	for _, i := range t.integrations {
-		if i.IntegrationEnabled(ctx) {
-			wg.Go(func() ([]core.Repository, error) {
-				repos, err := i.ListRepositories(ctx)
-				if err != nil {
-					slog.Error("error while listing repositories", "err", err)
-					// swallow error
-					return nil, nil
-				}
-				return repos, err
-			})
-		} else {
-			slog.Debug("integration not enabled", "integration", i.GetID())
-		}
+		wg.Go(func() ([]core.Repository, error) {
+			repos, err := i.ListRepositories(ctx)
+			if err != nil {
+				slog.Error("error while listing repositories", "err", err)
+				// swallow error
+				return nil, nil
+			}
+			return repos, err
+		})
+
 	}
 
 	results, err := wg.WaitAndCollect()
 	if err != nil {
 		slog.Error("error while listing repositories", "err", err)
+	}
+
+	return utils.Flat(results), nil
+}
+
+func (t *thirdPartyIntegrations) ListOrgs(ctx core.Context) ([]models.Org, error) {
+	wg := utils.ErrGroup[[]models.Org](-1)
+
+	for _, i := range t.integrations {
+		wg.Go(func() ([]models.Org, error) {
+			orgs, err := i.ListOrgs(ctx)
+			if err != nil {
+				slog.Error("error while listing orgs", "err", err)
+				// swallow error
+				return nil, nil
+			}
+			return orgs, err
+		})
+	}
+
+	results, err := wg.WaitAndCollect()
+	if err != nil {
+		slog.Error("error while listing orgs", "err", err)
 	}
 
 	return utils.Flat(results), nil
@@ -117,11 +217,11 @@ func (t *thirdPartyIntegrations) HandleEvent(event any) error {
 	return err
 }
 
-func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, repoId string, vuln models.Vuln) error {
+func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.ReopenIssue(ctx, repoId, vuln)
+			return struct{}{}, i.ReopenIssue(ctx, asset, vuln)
 		})
 	}
 	_, err := wg.WaitAndCollect()
@@ -166,16 +266,4 @@ func NewThirdPartyIntegrations(integrations ...core.ThirdPartyIntegration) *thir
 	return &thirdPartyIntegrations{
 		integrations: integrations,
 	}
-}
-
-// this function returns a string containing a mermaids js flow chart to the given pURL
-func renderPathToComponent(componentRepository core.ComponentRepository, assetID uuid.UUID, assetVersionName string, scannerID string, pURL string) (string, error) {
-
-	components, err := componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, scannerID)
-	if err != nil {
-		return "", err
-	}
-
-	tree := assetversion.BuildDependencyTree(components)
-	return tree.RenderToMermaid(), nil
 }

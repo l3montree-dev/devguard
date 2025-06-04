@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 
@@ -44,6 +43,7 @@ func SetThirdPartyIntegration(ctx Context, i IntegrationAggregate) {
 type AdminClient interface {
 	ListUser(client client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error)
 	GetIdentity(ctx context.Context, userID string) (client.Identity, error)
+	GetIdentityWithCredentials(ctx context.Context, userID string) (client.Identity, error)
 }
 
 type adminClientImplementation struct {
@@ -58,6 +58,14 @@ func NewAdminClient(client *client.APIClient) adminClientImplementation {
 func (a adminClientImplementation) ListUser(request client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error) {
 	clients, _, err := a.apiClient.IdentityAPI.ListIdentitiesExecute(request)
 	return clients, err
+}
+
+func (a adminClientImplementation) GetIdentityWithCredentials(ctx context.Context, userID string) (client.Identity, error) {
+	resp, _, err := a.apiClient.IdentityAPI.GetIdentity(ctx, userID).IncludeCredential([]string{"oidc"}).Execute()
+	if err != nil {
+		return client.Identity{}, err
+	}
+	return *resp, nil
 }
 
 func (a adminClientImplementation) GetIdentity(ctx context.Context, userID string) (client.Identity, error) {
@@ -98,20 +106,29 @@ func GetVulnID(ctx Context) (string, models.VulnType, error) {
 	return "", "", fmt.Errorf("could not get vuln id")
 }
 
-func SetRBAC(ctx Context, rbac accesscontrol.AccessControl) {
+func SetRBAC(ctx Context, rbac AccessControl) {
 	ctx.Set("rbac", rbac)
 }
 
-func GetOrganization(c Context) models.Org {
-	return c.Get("organization").(models.Org)
-}
-
-func SetOrganization(c Context, org models.Org) {
+func SetOrg(c Context, org models.Org) {
 	c.Set("organization", org)
 }
 
-func GetRBAC(ctx Context) accesscontrol.AccessControl {
-	return ctx.Get("rbac").(accesscontrol.AccessControl)
+func SetOrgSlug(ctx Context, orgSlug string) {
+	ctx.Set("orgSlug", orgSlug)
+}
+
+func GetOrg(c Context) models.Org {
+	return c.Get("organization").(models.Org)
+}
+
+func HasOrganization(c Context) bool {
+	_, ok := c.Get("organization").(models.Org)
+	return ok
+}
+
+func GetRBAC(ctx Context) AccessControl {
+	return ctx.Get("rbac").(AccessControl)
 }
 
 func SetIsPublicRequest(ctx Context) {
@@ -160,14 +177,6 @@ func GetOrgSlug(ctx Context) (string, error) {
 		return "", fmt.Errorf("could not get org slug")
 	}
 	return orgSlug, nil
-}
-
-func SetOrg(c Context, org models.Org) {
-	c.Set("org", org)
-}
-
-func SetOrgSlug(ctx Context, orgSlug string) {
-	ctx.Set("orgSlug", orgSlug)
 }
 
 func SetProjectSlug(ctx Context, projectSlug string) {
@@ -234,36 +243,15 @@ func SetAttestation(ctx Context, attestation models.Attestation) {
 	ctx.Set("attestation", attestation)
 }
 
-func RecursiveGetProjectRepositoryID(project models.Project) (string, error) {
-
-	if project.RepositoryID != nil {
-		return *project.RepositoryID, nil
-	}
-
-	if project.Parent == nil {
-		return "", fmt.Errorf("could not get repository id")
-	}
-
-	return RecursiveGetProjectRepositoryID(*project.Parent)
-}
-
-func GetRepositoryIdFromAssetAndProject(project models.Project, asset models.Asset) (string, error) {
+func GetRepositoryID(asset *models.Asset) (string, error) {
 	if asset.RepositoryID != nil {
 		return *asset.RepositoryID, nil
 	}
-
-	return RecursiveGetProjectRepositoryID(project)
-}
-
-func GetRepositoryID(ctx Context) (string, error) {
-	// get the asset
-	asset := GetAsset(ctx)
-	if asset.RepositoryID != nil {
-		return *asset.RepositoryID, nil
+	if asset.ExternalEntityID != nil {
+		return *asset.ExternalEntityID, nil
 	}
-	// get the project
-	project := GetProject(ctx)
-	return GetRepositoryIdFromAssetAndProject(project, asset)
+
+	return "", fmt.Errorf("could not get repository id from asset")
 }
 
 type PageInfo struct {

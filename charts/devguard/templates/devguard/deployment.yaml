@@ -79,6 +79,45 @@ spec:
             value: http://kratos:4434
           - name: GOMEMLIMIT
             value: 1024MiB
+        {{- range .Values.oidc.providers }}
+            {{- if eq .provider "gitlab" }}
+          - name: GITLAB_{{ .id | upper }}_APPID
+            value: {{ .clientId | quote }}
+          - name: GITLAB_{{ .id | upper }}_APPSECRET
+            valueFrom:
+              secretKeyRef:
+                key: secret
+                name: {{ .existingClientSecret | quote }}
+          - name: GITLAB_{{ .id | upper }}_BASEURL
+            value: {{ .issuerUrl | quote }}
+          - name: GITLAB_{{ .id | upper }}_SCOPES
+            value: {{ .scope | join " " | quote }}
+            {{- if .existingBotUserSecretName }}
+          - name: GITLAB_{{ .id | upper }}_BOTUSERID
+            value: {{ .botUserId | quote }}
+          - name: GITLAB_{{ .id | upper }}_BOTUSERACCESSTOKEN
+            valueFrom:
+              secretKeyRef:
+                key: accessToken
+                name: {{ .existingBotUserSecretName | quote }}
+            {{- end }}
+            {{- if .autosetupApplication}}
+          - name: GITLAB_{{ .id | upper }}AUTOSETUP_APPID
+            value: {{ .autosetupApplication.clientId | quote }}
+          - name: GITLAB_{{ .id | upper }}AUTOSETUP_APPSECRET
+            valueFrom:
+              secretKeyRef:
+                key: secret
+                name: {{ .autosetupApplication.existingClientSecret | quote }}
+          - name: GITLAB_{{ .id | upper }}AUTOSETUP_BASEURL
+            value: {{ .issuerUrl | quote }}
+          - name: GITLAB_{{ .id | upper }}AUTOSETUP_SCOPES
+            value: {{ .autosetupApplication.scope | join " " | quote }}
+            {{- end }}
+            {{- end }}
+        {{- end }}
+          - name: API_URL
+            value: {{ .Values.web.devguardApiUrlPublicInternet }}
         {{- if .Values.api.github.enabled }}
           - name: GITHUB_APP_ID
             value: {{ .Values.api.github.appId | quote }}

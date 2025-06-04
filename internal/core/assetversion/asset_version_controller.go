@@ -15,12 +15,13 @@ import (
 )
 
 type assetVersionController struct {
-	assetVersionRepository   core.AssetVersionRepository
-	assetVersionService      core.AssetVersionService
-	dependencyVulnRepository core.DependencyVulnRepository
-	componentRepository      core.ComponentRepository
-	dependencyVulnService    core.DependencyVulnService
-	supplyChainRepository    core.SupplyChainRepository
+	assetVersionRepository     core.AssetVersionRepository
+	assetVersionService        core.AssetVersionService
+	dependencyVulnRepository   core.DependencyVulnRepository
+	componentRepository        core.ComponentRepository
+	dependencyVulnService      core.DependencyVulnService
+	supplyChainRepository      core.SupplyChainRepository
+	licenseOverwriteRepository core.LicenseOverwriteRepository
 }
 
 func NewAssetVersionController(
@@ -30,14 +31,16 @@ func NewAssetVersionController(
 	componentRepository core.ComponentRepository,
 	dependencyVulnService core.DependencyVulnService,
 	supplyChainRepository core.SupplyChainRepository,
+	licenseOverwriteRepository core.LicenseOverwriteRepository,
 ) *assetVersionController {
 	return &assetVersionController{
-		assetVersionRepository:   assetVersionRepository,
-		assetVersionService:      assetVersionService,
-		dependencyVulnRepository: dependencyVulnRepository,
-		componentRepository:      componentRepository,
-		dependencyVulnService:    dependencyVulnService,
-		supplyChainRepository:    supplyChainRepository,
+		assetVersionRepository:     assetVersionRepository,
+		assetVersionService:        assetVersionService,
+		dependencyVulnRepository:   dependencyVulnRepository,
+		componentRepository:        componentRepository,
+		dependencyVulnService:      dependencyVulnService,
+		supplyChainRepository:      supplyChainRepository,
+		licenseOverwriteRepository: licenseOverwriteRepository,
 	}
 }
 
@@ -189,7 +192,7 @@ func (a *assetVersionController) OpenVEXJSON(ctx core.Context) error {
 func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 
 	assetVersion := core.GetAssetVersion(ctx)
-	org := core.GetOrganization(ctx)
+	org := core.GetOrg(ctx)
 	// check for version query param
 	version := ctx.QueryParam("version")
 	if version == "" {
@@ -203,11 +206,13 @@ func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 	}
 
 	scannerID := ctx.QueryParam("scanner")
-	if scannerID == "" {
-		return nil, echo.NewHTTPError(400, "scanner query param is required")
+
+	overwrittenLicenses, err := a.licenseOverwriteRepository.GetAllOverwritesForOrganization(org.ID)
+	if err != nil {
+		return nil, err
 	}
 
-	components, err := a.componentRepository.LoadComponentsWithProject(nil, assetVersion.Name, assetVersion.AssetID, scannerID, core.PageInfo{
+	components, err := a.componentRepository.LoadComponentsWithProject(nil, overwrittenLicenses, assetVersion.Name, assetVersion.AssetID, scannerID, core.PageInfo{
 		PageSize: 1000,
 		Page:     1,
 	}, "", nil, nil)
@@ -221,7 +226,7 @@ func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 func (a *assetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
-	org := core.GetOrganization(ctx)
+	org := core.GetOrg(ctx)
 
 	scannerID := ctx.QueryParam("scanner")
 	if scannerID != "" {
@@ -284,7 +289,7 @@ func (a *assetVersionController) gatherVexInformationIncludingResolvedMarking(as
 func (a *assetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
-	org := core.GetOrganization(ctx)
+	org := core.GetOrg(ctx)
 	scannerID := ctx.QueryParam("scanner")
 	if scannerID != "" {
 		var err error

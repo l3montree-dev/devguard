@@ -166,27 +166,68 @@ ORDER BY depth;
 }
 
 func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error) {
-	var licenses []struct {
+	type License []struct {
 		License string
 		Count   int
 	}
+	var overwrittenLicenses License
+	var otherLicenses License
+	//We want to get all components with an overwritten license and all components without one and then just merge the two
+	//Components WITH an overwrite
+	overwrittenLicensesQuery := c.GetDB(tx).Raw(`SELECT c.license , COUNT(c.license) as count 
+	FROM components as c 
+	RIGHT JOIN component_dependencies as cd 
+	ON c.purl = cd.dependency_purl 
+	WHERE EXISTS 
+	(SELECT license_id FROM license_overwrite as lo WHERE lo.component_purl = c.purl)
+	AND asset_version_name = ?
+	AND asset_id = ? 
+	GROUP BY c.license`,
+		assetVersionName, assetID)
+	//Components WITHOUT an overwrite
+	otherLicensesQuery := c.GetDB(tx).Raw(`SELECT c.license , COUNT(c.license) as count 
+	FROM components as c 
+	RIGHT JOIN component_dependencies as cd 
+	ON c.purl = cd.dependency_purl 
+	WHERE NOT EXISTS 
+	(SELECT license_id FROM license_overwrite as lo WHERE lo.component_purl = c.purl)
+	AND asset_version_name = ?
+	AND asset_id = ? 
+	GROUP BY c.license`,
+		assetVersionName, assetID)
 
-	var err error
-
-	query := c.GetDB(tx).Table("components").Select("components.license as license, COUNT(components.license) as count").Joins("RIGHT JOIN component_dependencies ON components.purl = component_dependencies.dependency_purl").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Group("components.license")
-
+	//We then still need to filter for the right scanner
 	if scannerID != "" {
 		scannerID = "%" + scannerID + "%"
-		query = query.Where("scanner_ids LIKE ?", scannerID)
+		overwrittenLicensesQuery = overwrittenLicensesQuery.Where("scanner_ids LIKE ?", scannerID)
+		otherLicensesQuery = otherLicensesQuery.Where("scanner_ids LIKE ?", scannerID)
 	}
 
-	err = query.Scan(&licenses).Error
-
+	//Map the query to the right struct
+	err := overwrittenLicensesQuery.Scan(&overwrittenLicenses).Error
+	if err != nil {
+		return nil, err
+	}
+	err = otherLicensesQuery.Scan(&otherLicenses).Error
 	if err != nil {
 		return nil, err
 	}
 
-	// convert to map
+	// convert normal query to map
+	overwrittenLicensesMap := licensesToMap(overwrittenLicenses)
+	otherLicensesMap := licensesToMap(otherLicenses)
+	for k := range otherLicensesMap {
+		otherLicensesMap[k] += overwrittenLicensesMap[k]
+	}
+
+	return otherLicensesMap, nil
+}
+
+// this function maps a list of license structs to, well...  a map
+func licensesToMap(licenses []struct {
+	License string
+	Count   int
+}) map[string]int {
 	licensesMap := make(map[string]int)
 	for _, l := range licenses {
 		if l.License == "" {
@@ -200,11 +241,11 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 		licensesMap[l.License] += l.Count
 	}
 
-	return licensesMap, nil
+	return licensesMap
 }
 
-func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
-	var components []models.ComponentDependency
+func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseOverwrite, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+	var componentDependencies []models.ComponentDependency
 
 	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
@@ -239,9 +280,27 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, assetVersion
 	var total int64
 	query.Session(&gorm.Session{}).Distinct("dependency_purl").Count(&total)
 
-	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Scan(&components).Error
+	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Debug().Scan(&componentDependencies).Error
 
-	return core.NewPaged(pageInfo, total, components), err
+	// convert all overwritten licenses to a map which maps a purl to a new license
+	isPurlOverwrittenMap := make(map[string]string, len(overwrittenLicenses))
+	for i := range overwrittenLicenses {
+		isPurlOverwrittenMap[overwrittenLicenses[i].ComponentPurl] = overwrittenLicenses[i].LicenseID
+	}
+
+	// now we check if a given component (dependency) is present in the overwrittenMap eg. it needs to be overwritten and flagged as such
+	for i, component := range componentDependencies {
+		if license, ok := isPurlOverwrittenMap[componentDependencies[i].DependencyPurl]; ok {
+			componentDependencies[i].Dependency.License = &license
+			componentDependencies[i].Dependency.IsLicenseOverwritten = true
+		}
+		if license, ok := isPurlOverwrittenMap[*component.ComponentPurl]; ok {
+			componentDependencies[i].Component.License = &license
+			componentDependencies[i].Component.IsLicenseOverwritten = true
+		}
+	}
+
+	return core.NewPaged(pageInfo, total, componentDependencies), err
 }
 
 func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Component, error) {

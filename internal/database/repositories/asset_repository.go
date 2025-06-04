@@ -153,13 +153,8 @@ func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (mo
 }
 
 func (g *assetRepository) Delete(tx core.DB, id uuid.UUID) error {
-
-	return g.db.Select("AssetVersions").Delete(models.Asset{
-		Model: models.Model{
-			ID: id,
-		},
-	}).Error
-
+	asset := models.Asset{Model: models.Model{ID: id}}
+	return g.db.Select("AssetVersions").Delete(&asset).Error
 }
 
 func (g *assetRepository) GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error) {

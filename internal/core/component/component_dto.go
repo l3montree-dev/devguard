@@ -6,7 +6,9 @@ import (
 )
 
 type componentDTO struct {
-	ID uuid.UUID `json:"id"`
+	ID            uuid.UUID        `json:"id"`
+	Component     models.Component `json:"component"`
+	ComponentPurl string           `json:"componentPurl"`
 
 	// the provided sbom from cyclondx only contains the transitive dependencies, which do really get used
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
@@ -20,6 +22,8 @@ type componentDTO struct {
 func toDTO(m models.ComponentDependency) componentDTO {
 	return componentDTO{
 		ID:             m.ID,
+		Component:      m.Component,
+		ComponentPurl:  *m.ComponentPurl,
 		Dependency:     m.Dependency,
 		DependencyPurl: m.DependencyPurl,
 		AssetID:        m.AssetID,

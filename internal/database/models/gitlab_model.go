@@ -16,17 +16,31 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
 type GitLabOauth2Token struct {
+	ID uuid.UUID `json:"id" gorm:"column:id;primaryKey;default:gen_random_uuid()"` // the id of the token
 	// oauth2 token using GitLab Applications feature
-	Model
-	AccessToken  string `json:"accessToken" gorm:"column:access_token"`
-	RefreshToken string `json:"refreshToken" gorm:"column:refresh_token"`
-	ExpiresAt    int64  `json:"expiresAt" gorm:"column:expires_at"`
-	Scopes       string `json:"scopes" gorm:"column:scopes"`
-	UserID       string `json:"userId" gorm:"column:user_id"` // the gitlab user id
+	AccessToken  string    `json:"accessToken" gorm:"column:access_token"`
+	RefreshToken string    `json:"refreshToken" gorm:"column:refresh_token"`
+	ExpiresAt    int64     `json:"expiresAt" gorm:"column:expires_at"`
+	Scopes       string    `json:"scopes" gorm:"column:scopes"`
+	UserID       string    `json:"userId" gorm:"column:user_id;uniqueIndex:single-provider-token"` // the gitlab user id
+	GitLabUserID int       `json:"gitLabUserId" gorm:"column:gitlab_user_id"`                      // the gitlab user id
+	Expiry       time.Time `json:"expiry" gorm:"column:expiry"`
+	Verifier     *string   `json:"verifier" gorm:"column:verifier"` // used for the PKCE to protect against CSRF attacks during doing oauth2
+	BaseURL      string    `json:"baseUrl" gorm:"column:base_url;"` // the base url of the gitlab instance
+	CreatedAt    time.Time `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt    time.Time `json:"updatedAt" gorm:"column:updated_at"`
+
+	ProviderID string `json:"providerId" gorm:"column:provider_id;uniqueIndex:single-provider-token"` // the id of the provider - what you define in the env variables GITLAB_<PROVIDERID>_BASEURL...
+}
+
+func (GitLabOauth2Token) TableName() string {
+	return "gitlab_oauth2_tokens"
 }
 
 type GitLabIntegration struct {
@@ -41,6 +55,6 @@ type GitLabIntegration struct {
 	OrgID uuid.UUID `json:"orgId" gorm:"column:org_id"`
 }
 
-func (GitLabIntegration) TableName() string {
+func (g GitLabIntegration) TableName() string {
 	return "gitlab_integrations"
 }

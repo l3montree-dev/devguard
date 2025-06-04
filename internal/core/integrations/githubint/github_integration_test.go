@@ -1,4 +1,4 @@
-package integrations
+package githubint
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
@@ -20,7 +21,7 @@ import (
 func TestGithubIntegrationHandleEvent(t *testing.T) {
 	t.Run("it should not be possible to call handle event with a context without dependencyVulnId parameter", func(t *testing.T) {
 
-		githubIntegration := githubIntegration{}
+		githubIntegration := GithubIntegration{}
 
 		req := httptest.NewRequest("POST", "/webhook", nil)
 		e := echo.New()
@@ -44,7 +45,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, fmt.Errorf("dependencyVuln not found"))
 
-		githubIntegration := githubIntegration{
+		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 		}
 
@@ -69,7 +70,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 	t.Run("it should do nothing, if the asset is NOT connected to a github repository", func(t *testing.T) {
 		// since we are not asserting anything on dependencyVulnRepository nor vulnEventRepository nor github client, we can be sure
 		// that no methods were called and actually nothing happened
-		githubIntegration := githubIntegration{}
+		githubIntegration := GithubIntegration{}
 
 		req := httptest.NewRequest("POST", "/webhook", nil)
 		e := echo.New()
@@ -94,9 +95,9 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		dependencyVulnRepository := mocks.NewDependencyVulnRepository(t)
 		dependencyVulnRepository.On("Read", "1").Return(models.DependencyVuln{}, nil)
 
-		githubIntegration := githubIntegration{
+		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
-			githubClientFactory: func(repoId string) (core.GithubClientFacade, error) {
+			githubClientFactory: func(repoId string) (githubClientFacade, error) {
 				return mocks.NewGithubClientFacade(t), nil
 			},
 			frontendUrl: "http://localhost:3000",
@@ -155,7 +156,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}, nil)
 		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
 
-		githubClientFactory := func(repoId string) (core.GithubClientFacade, error) {
+		githubClientFactory := func(repoId string) (githubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
@@ -174,7 +175,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			return facade, nil
 		}
 
-		githubIntegration := githubIntegration{
+		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
 			frontendUrl:              "http://localhost:3000",
@@ -243,7 +244,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}
 		expectedEvent.GetArbitraryJsonData()
 
-		githubClientFactory := func(repoId string) (core.GithubClientFacade, error) {
+		githubClientFactory := func(repoId string) (githubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
@@ -259,7 +260,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			return facade, nil
 		}
 
-		githubIntegration := githubIntegration{
+		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
 			frontendUrl:              "http://localhost:3000",
@@ -348,7 +349,7 @@ func TestGetLabels(t *testing.T) {
 			},
 		}
 
-		labels := getLabels(vuln)
+		labels := commonint.GetLabels(vuln)
 
 		assert.Contains(t, labels, "devguard")
 		assert.Contains(t, labels, "risk:high")
@@ -366,7 +367,7 @@ func TestGetLabels(t *testing.T) {
 			},
 		}
 
-		labels := getLabels(vuln)
+		labels := commonint.GetLabels(vuln)
 
 		assert.Contains(t, labels, "state:accepted")
 		assert.Contains(t, labels, "risk:medium")
@@ -380,7 +381,7 @@ func TestGetLabels(t *testing.T) {
 		}
 		vuln.RawRiskAssessment = utils.Ptr(9.8)
 
-		labels := getLabels(vuln)
+		labels := commonint.GetLabels(vuln)
 
 		assert.Contains(t, labels, "cvss-severity:critical")
 		assert.Contains(t, labels, "risk:critical")
@@ -390,7 +391,7 @@ func TestGetLabels(t *testing.T) {
 		vuln := &models.DependencyVuln{}
 		vuln.RawRiskAssessment = utils.Ptr(4.0)
 
-		labels := getLabels(vuln)
+		labels := commonint.GetLabels(vuln)
 
 		assert.Contains(t, labels, "risk:medium")
 
@@ -407,7 +408,7 @@ func TestGetLabels(t *testing.T) {
 		}
 		vuln.RawRiskAssessment = utils.Ptr(0.0)
 
-		labels := getLabels(vuln)
+		labels := commonint.GetLabels(vuln)
 
 		assert.Contains(t, labels, "state:false-positive")
 	})

@@ -93,6 +93,61 @@ func (_c *AdminClient_GetIdentity_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// GetIdentityWithCredentials provides a mock function for the type AdminClient
+func (_mock *AdminClient) GetIdentityWithCredentials(ctx context.Context, userID string) (client.Identity, error) {
+	ret := _mock.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetIdentityWithCredentials")
+	}
+
+	var r0 client.Identity
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (client.Identity, error)); ok {
+		return returnFunc(ctx, userID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) client.Identity); ok {
+		r0 = returnFunc(ctx, userID)
+	} else {
+		r0 = ret.Get(0).(client.Identity)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AdminClient_GetIdentityWithCredentials_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetIdentityWithCredentials'
+type AdminClient_GetIdentityWithCredentials_Call struct {
+	*mock.Call
+}
+
+// GetIdentityWithCredentials is a helper method to define mock.On call
+//   - ctx
+//   - userID
+func (_e *AdminClient_Expecter) GetIdentityWithCredentials(ctx interface{}, userID interface{}) *AdminClient_GetIdentityWithCredentials_Call {
+	return &AdminClient_GetIdentityWithCredentials_Call{Call: _e.mock.On("GetIdentityWithCredentials", ctx, userID)}
+}
+
+func (_c *AdminClient_GetIdentityWithCredentials_Call) Run(run func(ctx context.Context, userID string)) *AdminClient_GetIdentityWithCredentials_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *AdminClient_GetIdentityWithCredentials_Call) Return(identity client.Identity, err error) *AdminClient_GetIdentityWithCredentials_Call {
+	_c.Call.Return(identity, err)
+	return _c
+}
+
+func (_c *AdminClient_GetIdentityWithCredentials_Call) RunAndReturn(run func(ctx context.Context, userID string) (client.Identity, error)) *AdminClient_GetIdentityWithCredentials_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListUser provides a mock function for the type AdminClient
 func (_mock *AdminClient) ListUser(client1 client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error) {
 	ret := _mock.Called(client1)

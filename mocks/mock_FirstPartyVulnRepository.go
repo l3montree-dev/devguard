@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
+	"gorm.io/gorm/clause"
 )
 
 // NewFirstPartyVulnRepository creates a new instance of FirstPartyVulnRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -1007,6 +1008,52 @@ func (_c *FirstPartyVulnRepository_Transaction_Call) Return(err error) *FirstPar
 }
 
 func (_c *FirstPartyVulnRepository_Transaction_Call) RunAndReturn(run func(txFunc func(core.DB) error) error) *FirstPartyVulnRepository_Transaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Upsert provides a mock function for the type FirstPartyVulnRepository
+func (_mock *FirstPartyVulnRepository) Upsert(t *[]*models.FirstPartyVuln, conflictingColumns *[]clause.Column) error {
+	ret := _mock.Called(t, conflictingColumns)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Upsert")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.FirstPartyVuln, *[]clause.Column) error); ok {
+		r0 = returnFunc(t, conflictingColumns)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// FirstPartyVulnRepository_Upsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Upsert'
+type FirstPartyVulnRepository_Upsert_Call struct {
+	*mock.Call
+}
+
+// Upsert is a helper method to define mock.On call
+//   - t
+//   - conflictingColumns
+func (_e *FirstPartyVulnRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *FirstPartyVulnRepository_Upsert_Call {
+	return &FirstPartyVulnRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
+}
+
+func (_c *FirstPartyVulnRepository_Upsert_Call) Run(run func(t *[]*models.FirstPartyVuln, conflictingColumns *[]clause.Column)) *FirstPartyVulnRepository_Upsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(*[]*models.FirstPartyVuln), args[1].(*[]clause.Column))
+	})
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_Upsert_Call) Return(err error) *FirstPartyVulnRepository_Upsert_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.FirstPartyVuln, conflictingColumns *[]clause.Column) error) *FirstPartyVulnRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

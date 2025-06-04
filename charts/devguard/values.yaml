@@ -19,6 +19,7 @@ oidc:
   #     - profile
   #     - email
 
+
 mail:
   # needs to contain key: "uri". Format should be like: smtps://<user>@<your-domain.com>:<secret>@<mail-server.de>:465/?skip_ssl_verify=false
   existingSMTPConnectionUriSecret: ""

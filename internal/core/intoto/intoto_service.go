@@ -16,7 +16,6 @@ import (
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -29,10 +28,10 @@ type inTotoService struct {
 	patRepository         core.PersonalAccessTokenRepository
 	supplyChainRepository core.SupplyChainRepository
 
-	rbacProvider accesscontrol.RBACProvider
+	rbacProvider core.RBACProvider
 }
 
-func NewInTotoService(rbacProvider accesscontrol.RBACProvider, inTotoLinkRepository core.InTotoLinkRepository, projectRepository core.ProjectRepository, patRepository core.PersonalAccessTokenRepository, supplyChainRepository core.SupplyChainRepository) *inTotoService {
+func NewInTotoService(rbacProvider core.RBACProvider, inTotoLinkRepository core.InTotoLinkRepository, projectRepository core.ProjectRepository, patRepository core.PersonalAccessTokenRepository, supplyChainRepository core.SupplyChainRepository) *inTotoService {
 	return &inTotoService{
 		rbacProvider:          rbacProvider,
 		inTotoLinkRepository:  inTotoLinkRepository,
@@ -217,7 +216,7 @@ func getProjectIdAndOrganizationIDFromAssetId(assetID uuid.UUID, projectReposito
 	return project.ID, project.OrganizationID, nil
 }
 
-func getProjectUsersID(projectID uuid.UUID, accessControl accesscontrol.AccessControl) ([]uuid.UUID, error) {
+func getProjectUsersID(projectID uuid.UUID, accessControl core.AccessControl) ([]uuid.UUID, error) {
 	users, err := accessControl.GetAllMembersOfProject(projectID.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get users")

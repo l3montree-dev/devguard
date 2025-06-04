@@ -36,6 +36,62 @@ func (_m *AssetService) EXPECT() *AssetService_Expecter {
 	return &AssetService_Expecter{mock: &_m.Mock}
 }
 
+// CreateAsset provides a mock function for the type AssetService
+func (_mock *AssetService) CreateAsset(asset models.Asset) (*models.Asset, error) {
+	ret := _mock.Called(asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateAsset")
+	}
+
+	var r0 *models.Asset
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(models.Asset) (*models.Asset, error)); ok {
+		return returnFunc(asset)
+	}
+	if returnFunc, ok := ret.Get(0).(func(models.Asset) *models.Asset); ok {
+		r0 = returnFunc(asset)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Asset)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(models.Asset) error); ok {
+		r1 = returnFunc(asset)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// AssetService_CreateAsset_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateAsset'
+type AssetService_CreateAsset_Call struct {
+	*mock.Call
+}
+
+// CreateAsset is a helper method to define mock.On call
+//   - asset
+func (_e *AssetService_Expecter) CreateAsset(asset interface{}) *AssetService_CreateAsset_Call {
+	return &AssetService_CreateAsset_Call{Call: _e.mock.On("CreateAsset", asset)}
+}
+
+func (_c *AssetService_CreateAsset_Call) Run(run func(asset models.Asset)) *AssetService_CreateAsset_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(models.Asset))
+	})
+	return _c
+}
+
+func (_c *AssetService_CreateAsset_Call) Return(asset1 *models.Asset, err error) *AssetService_CreateAsset_Call {
+	_c.Call.Return(asset1, err)
+	return _c
+}
+
+func (_c *AssetService_CreateAsset_Call) RunAndReturn(run func(asset models.Asset) (*models.Asset, error)) *AssetService_CreateAsset_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCVSSBadgeSVG provides a mock function for the type AssetService
 func (_mock *AssetService) GetCVSSBadgeSVG(CVSS models.AssetRiskDistribution) string {
 	ret := _mock.Called(CVSS)
