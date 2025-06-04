@@ -362,7 +362,13 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	githubIntegration := githubint.NewGithubIntegration(db)
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db)
+
+	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
+		repositories.NewGitLabIntegrationRepository(db),
+		gitlabOauth2Integrations,
+	)
+
+	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, gitlabClientFactory)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration)
 
 	// init all repositories using the provided database

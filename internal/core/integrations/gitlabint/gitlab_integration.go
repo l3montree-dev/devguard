@@ -95,9 +95,9 @@ func (g gitlabRepository) toRepository() core.Repository {
 }
 
 type GitlabIntegration struct {
+	clientFactory               gitlabClientFactory
 	oauth2Endpoints             map[string]*GitlabOauth2Config
 	gitlabOauth2TokenRepository core.GitLabOauth2TokenRepository
-
 	gitlabIntegrationRepository core.GitlabIntegrationRepository
 	externalUserRepository      core.ExternalUserRepository
 	firstPartyVulnRepository    core.FirstPartyVulnRepository
@@ -113,8 +113,6 @@ type GitlabIntegration struct {
 	assetVersionRepository      core.AssetVersionRepository
 	assetService                core.AssetService
 	componentRepository         core.ComponentRepository
-	gitlabClientFactory         func(id uuid.UUID) (gitlabClientFacade, error)
-	gitlabOauth2ClientFactory   func(token models.GitLabOauth2Token, enableClientCache bool) (gitlabClientFacade, error)
 	casbinRBACProvider          core.RBACProvider
 }
 
@@ -124,15 +122,7 @@ func messageWasCreatedByDevguard(message string) bool {
 	return strings.Contains(message, "<devguard>")
 }
 
-func buildClientFromAccessToken(accessToken string, baseUrl string) (gitlabClientFacade, error) {
-	client, err := gitlab.NewClient(accessToken, gitlab.WithBaseURL(baseUrl))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create gitlab client")
-	}
-	return gitlabClient{Client: client}, nil
-}
-
-func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config, db core.DB) *GitlabIntegration {
+func NewGitLabIntegration(db core.DB, oauth2GitlabIntegration map[string]*GitlabOauth2Config, clientFactory gitlabClientFactory) *GitlabIntegration {
 
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
 	if err != nil {
@@ -182,31 +172,6 @@ func NewGitLabIntegration(oauth2GitlabIntegration map[string]*GitlabOauth2Config
 		projectService:              projectService,
 		assetService:                assetService,
 		casbinRBACProvider:          casbinRBACProvider,
-
-		gitlabClientFactory: func(id uuid.UUID) (gitlabClientFacade, error) {
-			integration, err := gitlabIntegrationRepository.Read(id)
-			if err != nil {
-				return nil, err
-			}
-
-			client, err := gitlab.NewClient(integration.AccessToken, gitlab.WithBaseURL(integration.GitLabUrl))
-
-			if err != nil {
-				return nil, err
-			}
-
-			return gitlabClient{Client: client, clientID: integration.ID.String()}, nil
-		},
-
-		gitlabOauth2ClientFactory: func(token models.GitLabOauth2Token, enableClientCache bool) (gitlabClientFacade, error) {
-			// get the correct gitlab oauth2 integration configuration
-			for _, integration := range oauth2GitlabIntegration {
-				if integration.ProviderID == token.ProviderID {
-					return buildOauth2GitlabClient(token, integration, enableClientCache)
-				}
-			}
-			return nil, errors.New("could not find gitlab oauth2 integration")
-		},
 	}
 }
 
@@ -281,7 +246,7 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx core.Context, 
 
 func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.GitLabOauth2Token) bool {
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return false
@@ -379,7 +344,7 @@ func (g *GitlabIntegration) ListGroups(ctx core.Context, userID string, provider
 		return nil, err
 	}
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(*token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return nil, err
@@ -407,7 +372,7 @@ func (g *GitlabIntegration) ListProjects(ctx core.Context, userID string, provid
 		return nil, err
 	}
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(*token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return nil, err
@@ -456,7 +421,7 @@ func (g *GitlabIntegration) GetGroup(ctx context.Context, userID string, provide
 	}
 
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(*token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return models.Project{}, err
@@ -485,7 +450,7 @@ func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, p
 		return "", err
 	}
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(*token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
 
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
@@ -521,7 +486,7 @@ func (g *GitlabIntegration) GetRoleInProject(ctx context.Context, userID string,
 	}
 
 	// create a new gitlab batch client
-	gitlabClient, err := g.gitlabOauth2ClientFactory(*token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return "", err
@@ -554,12 +519,19 @@ func (g *GitlabIntegration) ListRepositories(ctx core.Context) ([]core.Repositor
 		organizationGitlabIntegrations = org.GitLabIntegrations
 	}
 
-	// create a new gitlab batch client
-	gitlabBatchClient, err := newGitLabBatchClient(organizationGitlabIntegrations, g.oauth2Endpoints, nil)
-	if err != nil {
-		slog.Error("failed to create gitlab batch client", "err", err)
-		return nil, err
+	// build all clients
+	var clients []gitlabClientFacade
+	for _, integration := range organizationGitlabIntegrations {
+		client, err := g.clientFactory.FromIntegrationUUID(integration.ID)
+		if err != nil {
+			slog.Error("failed to create gitlab client from integration", "err", err, "integrationId", integration.ID)
+			return nil, err
+		}
+		clients = append(clients, client)
 	}
+
+	// create a new gitlab batch client
+	gitlabBatchClient := NewGitlabBatchClient(clients)
 
 	repos, err := gitlabBatchClient.ListRepositories(ctx.QueryParam("search"))
 	if err != nil {
@@ -647,7 +619,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 			return errors.Wrap(err, "could not find gitlab oauth2 tokens")
 		}
 
-		client, err = g.gitlabOauth2ClientFactory(*token, false)
+		client, err = g.clientFactory.FromOauth2Token(*token, false)
 		if err != nil {
 			return errors.Wrap(err, "could not create new gitlab client")
 		}
@@ -659,15 +631,15 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 			return errors.Wrap(err, "could not extract integration id from repo id")
 		}
 
-		client, err = g.gitlabClientFactory(integrationUUID)
-		if err != nil {
-			return errors.Wrap(err, "could not create new gitlab client")
-		}
-
 		integration, err := g.gitlabIntegrationRepository.Read(integrationUUID)
 		if err != nil {
 			return errors.Wrap(err, "could not read gitlab integration")
 		}
+		client, err = g.clientFactory.FromIntegration(integration)
+		if err != nil {
+			return errors.Wrap(err, "could not create new gitlab client")
+		}
+
 		gitlabUrl = integration.GitLabUrl
 		accessToken = integration.AccessToken
 
@@ -1019,7 +991,7 @@ func (g *GitlabIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 		return err
 	}
 
-	client, err := g.gitlabClientFactory(integrationUUID)
+	client, err := g.clientFactory.FromIntegrationUUID(integrationUUID)
 	if err != nil {
 		return err
 	}
@@ -1137,7 +1109,7 @@ func (g *GitlabIntegration) CloseIssue(ctx context.Context, state string, repoId
 		return err
 	}
 
-	client, err := g.gitlabClientFactory(integrationUUID)
+	client, err := g.clientFactory.FromIntegrationUUID(integrationUUID)
 	if err != nil {
 		return err
 	}
@@ -1224,7 +1196,7 @@ func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (gitlabCli
 			return nil, 0, fmt.Errorf("failed to extract integration id from repo id: %w", err)
 		}
 
-		client, err := g.gitlabClientFactory(integrationUUID)
+		client, err := g.clientFactory.FromIntegrationUUID(integrationUUID)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to create gitlab client: %w", err)
 		}
@@ -1237,7 +1209,7 @@ func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (gitlabCli
 	} else if asset.ExternalEntityProviderID != nil && g.gitlabExternalProviderEntity(asset.ExternalEntityProviderID) {
 		conf := g.oauth2Endpoints[*asset.ExternalEntityProviderID]
 
-		client, err := buildClientFromAccessToken(conf.DevGuardBotUserAccessToken, conf.GitlabBaseURL)
+		client, err := g.clientFactory.FromAccessToken(conf.DevGuardBotUserAccessToken, conf.GitlabBaseURL)
 		if err != nil {
 			slog.Error("failed to create gitlab client from access token", "err", err, "providerId", *asset.ExternalEntityProviderID)
 			return nil, 0, fmt.Errorf("failed to create gitlab client from access token: %w", err)
