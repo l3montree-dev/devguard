@@ -29,7 +29,13 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 		&models.Asset{},
 		&models.ComponentDependency{},
 		&models.Component{},
+		&models.CVE{},
+		&models.AffectedComponent{},
+		&models.DependencyVuln{},
+		&models.Exploit{},
 	)
+
+	casbinRBACProvider := mocks.NewRBACProvider(t)
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
@@ -45,36 +51,34 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 	err := db.Create(&assetVersion).Error
 	assert.Nil(t, err)
 
-	component := models.Component{
-		Purl:                "pkg:npm/react@18.2.0",
-		ComponentType:       models.ComponentTypeLibrary,
-		Version:             "18.2.0",
-		License:             nil,
-		Published:           nil,
-		ComponentProject:    nil,
-		ComponentProjectKey: nil,
-	}
-
-	err = db.Create(&component).Error
-	assert.Nil(t, err)
-
-	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
-	componentDependency := models.ComponentDependency{
-		AssetID:          asset.ID,
-		AssetVersionName: assetVersion.Name,
-		AssetVersion:     assetVersion,
-		ScannerID:        devguardScanner + "sca",
-		ComponentPurl:    nil,
-		DependencyPurl:   "pkg:npm/react-dom@18.2.0",
-		Dependency:       component,
-	}
-
-	err = db.Create(&componentDependency).Error
-	assert.Nil(t, err)
-
 	t.Run("should update the last scan time of the asset version", func(t *testing.T) {
 
-		casbinRBACProvider := mocks.NewRBACProvider(t)
+		component := models.Component{
+			Purl:                "pkg:npm/react@18.2.0",
+			ComponentType:       models.ComponentTypeLibrary,
+			Version:             "18.2.0",
+			License:             nil,
+			Published:           nil,
+			ComponentProject:    nil,
+			ComponentProjectKey: nil,
+		}
+
+		err = db.Create(&component).Error
+		assert.Nil(t, err)
+
+		devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
+		componentDependency := models.ComponentDependency{
+			AssetID:          asset.ID,
+			AssetVersionName: assetVersion.Name,
+			AssetVersion:     assetVersion,
+			ScannerID:        devguardScanner + "sca",
+			ComponentPurl:    nil,
+			DependencyPurl:   "pkg:npm/react@18.2.0",
+			Dependency:       models.Component{Purl: "pkg:npm/react@18.2.0"},
+		}
+
+		err = db.Create(&componentDependency).Error
+		assert.Nil(t, err)
 
 		err = daemon.ScanAssetVersions(db, casbinRBACProvider)
 		assert.Nil(t, err)
@@ -94,6 +98,39 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 		assert.Nil(t, err)
 
 		assert.WithinDuration(t, time.Now(), *metadata.LastScan, time.Hour)
+	})
+
+	t.Run("should find the cve in the component dependency", func(t *testing.T) {
+
+		affectedComponent := models.AffectedComponent{
+			ID:                 "1",
+			PurlWithoutVersion: "pkg:npm/react",
+			Version:            utils.Ptr("18.2.0"),
+			CVE:                []models.CVE{{CVE: "CVE-2025-46569"}},
+		}
+
+		err = db.Create(&affectedComponent).Error
+		assert.Nil(t, err)
+
+		cve := models.CVE{
+			CVE:  "CVE-2025-46569",
+			CVSS: 8.0,
+			AffectedComponents: []*models.AffectedComponent{{
+				ID: "1",
+			}},
+		}
+		err = db.Save(&cve).Error
+		assert.Nil(t, err)
+
+		err = daemon.ScanAssetVersions(db, casbinRBACProvider)
+		assert.Nil(t, err)
+
+		var dependencyVuln []models.DependencyVuln
+
+		err := db.Preload("CVE").Find(&dependencyVuln, "asset_id = ? AND asset_version_name = ? AND cve_id = ?", asset.ID, assetVersion.Name, cve.CVE).Error
+		assert.Nil(t, err)
+		assert.Len(t, dependencyVuln, 1)
+		assert.Equal(t, "CVE-2025-46569", dependencyVuln[0].CVE.CVE)
 
 	})
 
