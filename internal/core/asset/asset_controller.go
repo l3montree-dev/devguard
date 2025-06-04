@@ -241,9 +241,17 @@ func (a *httpController) Update(ctx core.Context) error {
 		asset.RiskAutomaticTicketThreshold = nil
 	}
 
+	org := core.GetOrg(ctx)
+	project := core.GetProject(ctx)
 	if enableTicketRangeUpdated || justification != "" {
 		go func() {
-			if err := a.dependencyVulnService.SyncTickets(asset); err != nil {
+			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+			if err != nil {
+				slog.Error("could not get default asset version", "err", err)
+				return
+			}
+
+			if err := a.dependencyVulnService.SyncAllIssues(org, project, asset, defaultAssetVersion); err != nil {
 				slog.Warn("could not sync tickets", "err", err)
 			}
 		}()

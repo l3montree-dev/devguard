@@ -85,7 +85,7 @@ type ComponentDependency struct {
 	AssetVersionName string       `json:"assetVersionName"`
 	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetID,AssetVersionName;references:AssetID,Name;constraint:OnDelete:CASCADE;"`
 
-	ScannerID string `json:"scannerIds" gorm:"column:scanner_ids"` // the name of the column is wrong! Only a single scanner id is stored here.
+	ScannerIDs string `json:"scannerIds" gorm:"column:scanner_ids"`
 
 	Depth int `json:"depth" gorm:"column:depth"`
 }

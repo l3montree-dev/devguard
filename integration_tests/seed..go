@@ -1,3 +1,6 @@
+// Copyright 2025 l3montree UG (haftungsbeschraenkt).
+// SPDX-License-Identifier: 	AGPL-3.0-or-later
+
 package integration_tests
 
 import (
@@ -26,8 +29,8 @@ func CreateOrgProjectAndAsset(db core.DB) (models.Org, models.Project, models.As
 
 	asset := models.Asset{
 		Name:      "Test Asset",
-		Slug:      "test-asset",
 		ProjectID: project.ID,
+		Slug:      "test-asset",
 	}
 
 	err = db.Create(&asset).Error

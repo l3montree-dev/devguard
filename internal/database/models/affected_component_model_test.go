@@ -96,8 +96,8 @@ func TestFromOSV(t *testing.T) {
 		if len(affectedComponents) != 1 {
 			t.Errorf("Expected 1 affected package, got %d", len(affectedComponents))
 		}
-		if affectedComponents[0].PURL != "pkg:golang/toolchain" {
-			t.Errorf("Expected purl to be pkg:ecosystem/name@version, got %s", affectedComponents[0].PURL)
+		if affectedComponents[0].PurlWithoutVersion != "pkg:golang/toolchain" {
+			t.Errorf("Expected purl to be pkg:ecosystem/name@version, got %s", affectedComponents[0].PurlWithoutVersion)
 		}
 		if affectedComponents[0].Ecosystem != "" {
 			t.Errorf("Expected ecosystem to be ecosystem, got %s", affectedComponents[0].Ecosystem)
@@ -247,8 +247,8 @@ func ptr[T any](t T) *T {
 func TestSetIdHash(t *testing.T) {
 	t.Run("should always set the same hash for the same input, even if cves get updated", func(t *testing.T) {
 		affectedComponent := AffectedComponent{
-			PURL:      "pkg:golang/toolchain",
-			Namespace: ptr("golang"),
+			PurlWithoutVersion: "pkg:golang/toolchain",
+			Namespace:          ptr("golang"),
 			CVE: []CVE{
 				{},
 			},
@@ -256,9 +256,9 @@ func TestSetIdHash(t *testing.T) {
 		affectedComponent.BeforeSave(nil) // nolint:errcheck
 
 		otherAffectedComponent := AffectedComponent{
-			PURL:      "pkg:golang/toolchain",
-			Namespace: ptr("golang"),
-			CVE:       make([]CVE, 0),
+			PurlWithoutVersion: "pkg:golang/toolchain",
+			Namespace:          ptr("golang"),
+			CVE:                make([]CVE, 0),
 		}
 
 		otherAffectedComponent.BeforeSave(nil) // nolint:errcheck

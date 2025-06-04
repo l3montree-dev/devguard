@@ -47,6 +47,10 @@ func (d *DependencyVuln) SetRawRiskAssessment(risk float64) {
 }
 
 func (d *DependencyVuln) GetRawRiskAssessment() float64 {
+	if d.RawRiskAssessment == nil {
+		return 0.0
+	}
+
 	return *d.RawRiskAssessment
 }
 

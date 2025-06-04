@@ -115,7 +115,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
     component_purl IS NULL AND
     asset_id = @assetID AND
     asset_version_name = @assetVersionName AND
-    @scannerID = ANY(string_to_array(scanner_ids, ' '))
+    string_to_array(scanner_ids, ' ') && string_to_array(@scannerID, ' ')
 
   UNION ALL
 
@@ -132,7 +132,7 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
   WHERE
     co.asset_id = @assetID AND
     co.asset_version_name = @assetVersionName AND
-    @scannerID = ANY(string_to_array(co.scanner_ids, ' ')) AND
+    string_to_array(co.scanner_ids, ' ') && string_to_array(@scannerID, ' ') AND
     NOT co.dependency_purl = ANY(cte.path)
 ),
 target_path AS (
@@ -339,8 +339,8 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 
 		//Next step is adding the scanner id to all existing component dependencies we just found
 		for i := range needToBeChanged {
-			if !strings.Contains(needToBeChanged[i].ScannerID, scannerID) {
-				needToBeChanged[i].ScannerID = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerID, scannerID)
+			if !strings.Contains(needToBeChanged[i].ScannerIDs, scannerID) {
+				needToBeChanged[i].ScannerIDs = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID)
 			}
 		}
 		//We also need to update these changes in the database
@@ -392,10 +392,10 @@ func diffComponents(tx core.DB, c *componentRepository, components []models.Comp
 	var componentsToSave []models.ComponentDependency
 
 	for i := range components {
-		if strings.TrimSpace(components[i].ScannerID) == scannerID {
+		if strings.TrimSpace(components[i].ScannerIDs) == scannerID {
 			componentsToDelete = append(componentsToDelete, components[i])
 		} else {
-			components[i].ScannerID = utils.RemoveFromWhitespaceSeparatedStringList(components[i].ScannerID, scannerID)
+			components[i].ScannerIDs = utils.RemoveFromWhitespaceSeparatedStringList(components[i].ScannerIDs, scannerID)
 			componentsToSave = append(componentsToSave, components[i])
 		}
 	}
