@@ -27,6 +27,19 @@
                 "--apiUrl=http://localhost:8080",
                 "--token=5ea4f27ae4385fdcc67628a5d2360880de1b70c768bd6715568edf63c5692981"
             ],
-        }
+        },
+        {
+            "name": "Launch Server with Prod Database",
+            "type": "go",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "mode": "auto",
+            "program": "${workspaceRoot}/cmd/devguard/main.go",
+            "args": [ ],
+            "env": {
+                "DISABLE_AUTOMIGRATE": "true",
+                "POSTGRES_PORT": "5433"
+            }
+        },
     ]
 }
