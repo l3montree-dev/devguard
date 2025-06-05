@@ -10,15 +10,10 @@ import (
 	"github.com/l3montree-dev/devguard/integration_tests"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/assetversion"
-	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/core/statistics"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/inithelper"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
@@ -436,45 +431,13 @@ func sbomWithoutVulnerability() *os.File {
 func initHttpController(t *testing.T, db core.DB) (*scan.HttpController, *mocks.GitlabClientFacade) {
 	// there are a lot of repositories and services that need to be initialized...
 	clientfactory, client := integration_tests.NewTestClientFactory(t)
-	gitlabIntegration := gitlabint.NewGitlabIntegration(
-		db,
-		gitlabint.NewGitLabOauth2Integrations(db),
-		mocks.NewRBACProvider(t),
-		clientfactory,
-	)
 
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
-	// Initialize repositories
-	assetRepository := repositories.NewAssetRepository(db)
-	assetRiskAggregationRepository := repositories.NewAssetRiskHistoryRepository(db)
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	statisticsRepository := repositories.NewStatisticsRepository(db)
-	projectRepository := repositories.NewProjectRepository(db)
-	componentRepository := repositories.NewComponentRepository(db)
-	vulnEventRepository := repositories.NewVulnEventRepository(db)
-	orgRepository := repositories.NewOrgRepository(db)
-	cveRepository := repositories.NewCVERepository(db)
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
-
-	// just to run the migrations
 	repositories.NewExploitRepository(db)
-
-	// Initialize services
-	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
-	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
-
 	// mock the depsDevService to avoid any external calls during tests
 	depsDevService := mocks.NewDepsDevService(t)
 	depsDevService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.DepsDevVersionResponse{}, nil)
 
-	componentProjectRepository := repositories.NewComponentProjectRepository(db)
-	componentService := component.NewComponentService(depsDevService, componentProjectRepository, componentRepository)
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, vulnEventRepository, &componentService)
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
-
-	// finally, create the controller
-	controller := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
+	controller := inithelper.CreateHttpController(db, clientfactory)
 	// do not use concurrency in this test, because we want to test the ticket creation
 	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 	return controller, client

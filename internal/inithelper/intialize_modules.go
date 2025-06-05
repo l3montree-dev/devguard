@@ -1,15 +1,17 @@
 package inithelper
 
 import (
+	"github.com/l3montree-dev/devguard/integration_tests"
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
+	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 )
 
@@ -17,18 +19,25 @@ func CreateGithubIntegration(db core.DB) *githubint.GithubIntegration {
 	return githubint.NewGithubIntegration(db)
 }
 
-func CreateGitlabIntegration(db core.DB) *gitlabint.GitlabIntegration {
+func CreateGitlabIntegration(db core.DB, clientFactory integration_tests.TestGitlabClientFactory) *gitlabint.GitlabIntegration {
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
 	if err != nil {
 		panic(err)
 	}
 	gitlabOauth2Integration := gitlabint.NewGitLabOauth2Integrations(db)
-	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
-		repositories.NewGitLabIntegrationRepository(db),
-		gitlabOauth2Integration,
-	)
+	return gitlabint.NewGitlabIntegration(db, gitlabOauth2Integration, casbinRBACProvider, clientFactory)
+}
 
-	return gitlabint.NewGitlabIntegration(db, gitlabOauth2Integration, casbinRBACProvider, gitlabClientFactory)
+func CreateStatisticsService(db core.DB) core.StatisticsService {
+	return statistics.NewService(
+		repositories.NewStatisticsRepository(db),
+		repositories.NewComponentRepository(db),
+		repositories.NewAssetRiskHistoryRepository(db),
+		repositories.NewDependencyVulnRepository(db),
+		repositories.NewAssetVersionRepository(db),
+		repositories.NewProjectRepository(db),
+		repositories.NewProjectRiskHistoryRepository(db),
+	)
 }
 
 func CreateDepsDevService(db core.DB) core.DepsDevService {
@@ -53,8 +62,7 @@ func CreateFirstPartyVulnService(db core.DB) core.FirstPartyVulnService {
 	)
 }
 
-func CreateDependencyVulnService(db core.DB) core.DependencyVulnService {
-
+func CreateDependencyVulnService(db core.DB, clientFactory integration_tests.TestGitlabClientFactory) core.DependencyVulnService {
 	return vuln.NewService(
 		repositories.NewDependencyVulnRepository(db),
 		repositories.NewVulnEventRepository(db),
@@ -62,18 +70,18 @@ func CreateDependencyVulnService(db core.DB) core.DependencyVulnService {
 		repositories.NewCVERepository(db),
 		repositories.NewOrgRepository(db),
 		repositories.NewProjectRepository(db),
-		integrations.NewThirdPartyIntegrations(CreateGitlabIntegration(db), CreateGithubIntegration(db)),
+		CreateGitlabIntegration(db, clientFactory),
 		repositories.NewAssetVersionRepository(db),
 	)
 }
 
-func CreateAssetVersionService(db core.DB) core.AssetVersionService {
+func CreateAssetVersionService(db core.DB, clientFactory integration_tests.TestGitlabClientFactory) core.AssetVersionService {
 	return assetversion.NewService(
 		repositories.NewAssetVersionRepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewDependencyVulnRepository(db),
 		repositories.NewFirstPartyVulnerabilityRepository(db),
-		CreateDependencyVulnService(db),
+		CreateDependencyVulnService(db, clientFactory),
 		CreateFirstPartyVulnService(db),
 		repositories.NewAssetRepository(db),
 		repositories.NewVulnEventRepository(db),
@@ -81,14 +89,27 @@ func CreateAssetVersionService(db core.DB) core.AssetVersionService {
 	)
 }
 
-func CreateAssetVersionController(db core.DB) *assetversion.AssetVersionController {
+func CreateAssetVersionController(db core.DB, clientFactory integration_tests.TestGitlabClientFactory) *assetversion.AssetVersionController {
 	return assetversion.NewAssetVersionController(
 		repositories.NewAssetVersionRepository(db),
-		CreateAssetVersionService(db),
+		CreateAssetVersionService(db, clientFactory),
 		repositories.NewDependencyVulnRepository(db),
 		repositories.NewComponentRepository(db),
-		CreateDependencyVulnService(db),
+		CreateDependencyVulnService(db, clientFactory),
 		repositories.NewSupplyChainRepository(db),
 		repositories.NewLicenseOverwriteRepository(db),
+	)
+}
+
+func CreateHttpController(db core.DB, clientFactory integration_tests.TestGitlabClientFactory) *scan.HttpController {
+	return scan.NewHttpController(
+		db,
+		repositories.NewCVERepository(db),
+		repositories.NewComponentRepository(db),
+		repositories.NewAssetRepository(db),
+		repositories.NewAssetVersionRepository(db),
+		CreateAssetVersionService(db, clientFactory),
+		CreateStatisticsService(db),
+		CreateDependencyVulnService(db, clientFactory),
 	)
 }
