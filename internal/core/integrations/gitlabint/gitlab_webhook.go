@@ -8,7 +8,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/commonint"
 	"github.com/l3montree-dev/devguard/internal/database/models"
-	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
@@ -31,7 +30,6 @@ func (g *GitlabIntegration) checkWebhookSecretToken(gitlabSecretToken string, as
 }
 
 func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
-
 	event, err := parseWebhook(ctx.Request())
 	if err != nil {
 		slog.Error("could not parse gitlab webhook", "err", err)
@@ -42,6 +40,13 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 	switch event := event.(type) {
 	case *gitlab.IssueEvent:
+		// the even was triggered by devguard - the user which triggered the event is the same as the author of the issue
+		// WE only want to handle tickets created by devguard right here.
+		// thus, if the event user id is the same it HAS to be devguard as well.
+		if event.User.ID == event.ObjectAttributes.AuthorID {
+			slog.Debug("ignoring gitlab issue event created by devguard", "userId", event.User.ID, "authorId", event.ObjectAttributes.AuthorID)
+			return nil
+		}
 
 		issueId := event.ObjectAttributes.IID
 
@@ -87,7 +92,6 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 		switch action {
 		case "close":
-
 			if vuln.GetState() == models.VulnStateAccepted || vuln.GetState() == models.VulnStateFalsePositive {
 				return nil
 			}
@@ -100,8 +104,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
 		case "reopen":
-
-			if vuln.GetState() == models.VulnStateOpen {
+			if vuln.GetState() == models.VulnStateOpen || vuln.GetState() == models.VulnStateFixed {
 				return nil
 			}
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
@@ -152,17 +155,9 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
-		// get the integration id based on the asset
-		integrationId, err := extractIntegrationIdFromRepoId(utils.SafeDereference(asset.RepositoryID))
+		client, _, err := g.getClientBasedOnAsset(asset)
 		if err != nil {
-			slog.Error("could not extract integration id from repo id", "err", err)
-			return err
-		}
-
-		// make sure to update the github issue accordingly
-		client, err := g.clientFactory.FromIntegrationUUID(integrationId)
-		if err != nil {
-			slog.Error("could not create github client", "err", err)
+			slog.Error("could not get gitlab client based on asset", "err", err)
 			return err
 		}
 
