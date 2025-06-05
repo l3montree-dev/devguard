@@ -868,16 +868,16 @@ func (_c *OrganizationRepository_Update_Call) RunAndReturn(run func(tx core.DB, 
 }
 
 // Upsert provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) Upsert(t *[]*models.Org, conflictingColumns *[]clause.Column) error {
-	ret := _mock.Called(t, conflictingColumns)
+func (_mock *OrganizationRepository) Upsert(t *[]*models.Org, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(t, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.Org, *[]clause.Column) error); ok {
-		r0 = returnFunc(t, conflictingColumns)
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.Org, []clause.Column, []string) error); ok {
+		r0 = returnFunc(t, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -892,13 +892,14 @@ type OrganizationRepository_Upsert_Call struct {
 // Upsert is a helper method to define mock.On call
 //   - t
 //   - conflictingColumns
-func (_e *OrganizationRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *OrganizationRepository_Upsert_Call {
-	return &OrganizationRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
+//   - updateOnly
+func (_e *OrganizationRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *OrganizationRepository_Upsert_Call {
+	return &OrganizationRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
-func (_c *OrganizationRepository_Upsert_Call) Run(run func(t *[]*models.Org, conflictingColumns *[]clause.Column)) *OrganizationRepository_Upsert_Call {
+func (_c *OrganizationRepository_Upsert_Call) Run(run func(t *[]*models.Org, conflictingColumns []clause.Column, updateOnly []string)) *OrganizationRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*[]*models.Org), args[1].(*[]clause.Column))
+		run(args[0].(*[]*models.Org), args[1].([]clause.Column), args[2].([]string))
 	})
 	return _c
 }
@@ -908,7 +909,7 @@ func (_c *OrganizationRepository_Upsert_Call) Return(err error) *OrganizationRep
 	return _c
 }
 
-func (_c *OrganizationRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Org, conflictingColumns *[]clause.Column) error) *OrganizationRepository_Upsert_Call {
+func (_c *OrganizationRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Org, conflictingColumns []clause.Column, updateOnly []string) error) *OrganizationRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

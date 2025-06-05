@@ -49,15 +49,25 @@ func (g *GormRepository[ID, T]) Save(tx *gorm.DB, t *T) error {
 	return g.GetDB(tx).Save(t).Error
 }
 
-func (g *GormRepository[ID, T]) Upsert(t *[]*T, conflictingColumns *[]clause.Column) error {
+func (g *GormRepository[ID, T]) Upsert(t *[]*T, conflictingColumns []clause.Column, updateOnly []string) error {
 	if len(*t) == 0 {
 		return nil
 	}
-	if conflictingColumns == nil {
+	if len(conflictingColumns) == 0 {
+		if len(updateOnly) > 0 {
+			return g.db.Clauses(clause.OnConflict{DoUpdates: clause.AssignmentColumns(updateOnly)}).Create(t).Error
+		}
 		return g.db.Clauses(clause.OnConflict{UpdateAll: true}).Create(t).Error
 	}
 
-	return g.db.Clauses(clause.OnConflict{UpdateAll: true, Columns: *conflictingColumns}).Create(t).Error
+	if len(updateOnly) > 0 {
+		return g.db.Clauses(clause.OnConflict{
+			DoUpdates: clause.AssignmentColumns(updateOnly),
+			Columns:   conflictingColumns,
+		}).Create(t).Error
+	}
+
+	return g.db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }
 
 func (g *GormRepository[ID, T]) SaveBatch(tx *gorm.DB, ts []T) error {

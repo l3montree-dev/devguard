@@ -244,10 +244,10 @@ func (p *controller) Read(c core.Context) error {
 			toUpsert = append(toUpsert, &assets[i])
 		}
 
-		if err := p.assetRepository.Upsert(&toUpsert, &[]clause.Column{
+		if err := p.assetRepository.Upsert(&toUpsert, []clause.Column{
 			{Name: "external_entity_provider_id"},
 			{Name: "external_entity_id"},
-		}); err != nil {
+		}, []string{"project_id", "slug", "description", "name"}); err != nil {
 			return echo.NewHTTPError(500, "could not upsert assets").WithInternal(err)
 		}
 		// set the assets on the project

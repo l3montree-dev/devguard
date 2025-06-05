@@ -136,7 +136,7 @@ func (g *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uu
 }
 
 func (g *assetRepository) Update(tx core.DB, asset *models.Asset) error {
-	return g.db.Save(asset).Error
+	return g.db.Debug().Save(asset).Error
 }
 
 func (g *assetRepository) GetAllAssetsFromDB() ([]models.Asset, error) {

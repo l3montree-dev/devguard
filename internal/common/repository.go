@@ -32,7 +32,7 @@ type ModelReader[ID any, T Tabler] interface {
 	Read(id ID) (T, error)
 	List(ids []ID) ([]T, error)
 	All() ([]T, error)
-	Upsert(t *[]*T, conflictingColumns *[]clause.Column) error
+	Upsert(t *[]*T, conflictingColumns []clause.Column, updateOnly []string) error
 }
 
 type BatchModelWriter[T Tabler, Tx any] interface {

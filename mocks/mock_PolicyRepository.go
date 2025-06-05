@@ -832,16 +832,16 @@ func (_c *PolicyRepository_Transaction_Call) RunAndReturn(run func(fn func(tx co
 }
 
 // Upsert provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) Upsert(t *[]*models.Policy, conflictingColumns *[]clause.Column) error {
-	ret := _mock.Called(t, conflictingColumns)
+func (_mock *PolicyRepository) Upsert(t *[]*models.Policy, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(t, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.Policy, *[]clause.Column) error); ok {
-		r0 = returnFunc(t, conflictingColumns)
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.Policy, []clause.Column, []string) error); ok {
+		r0 = returnFunc(t, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -856,13 +856,14 @@ type PolicyRepository_Upsert_Call struct {
 // Upsert is a helper method to define mock.On call
 //   - t
 //   - conflictingColumns
-func (_e *PolicyRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *PolicyRepository_Upsert_Call {
-	return &PolicyRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
+//   - updateOnly
+func (_e *PolicyRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *PolicyRepository_Upsert_Call {
+	return &PolicyRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
-func (_c *PolicyRepository_Upsert_Call) Run(run func(t *[]*models.Policy, conflictingColumns *[]clause.Column)) *PolicyRepository_Upsert_Call {
+func (_c *PolicyRepository_Upsert_Call) Run(run func(t *[]*models.Policy, conflictingColumns []clause.Column, updateOnly []string)) *PolicyRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*[]*models.Policy), args[1].(*[]clause.Column))
+		run(args[0].(*[]*models.Policy), args[1].([]clause.Column), args[2].([]string))
 	})
 	return _c
 }
@@ -872,7 +873,7 @@ func (_c *PolicyRepository_Upsert_Call) Return(err error) *PolicyRepository_Upse
 	return _c
 }
 
-func (_c *PolicyRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Policy, conflictingColumns *[]clause.Column) error) *PolicyRepository_Upsert_Call {
+func (_c *PolicyRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Policy, conflictingColumns []clause.Column, updateOnly []string) error) *PolicyRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

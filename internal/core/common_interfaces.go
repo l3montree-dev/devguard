@@ -48,7 +48,7 @@ type ProjectRepository interface {
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
-	Upsert(projects *[]*models.Project, conflictingColumns *[]clause.Column) error
+	Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
 }
 
 type PolicyRepository interface {

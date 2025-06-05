@@ -1373,16 +1373,16 @@ func (_c *AssetRepository_Update_Call) RunAndReturn(run func(tx core.DB, asset *
 }
 
 // Upsert provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) Upsert(t *[]*models.Asset, conflictingColumns *[]clause.Column) error {
-	ret := _mock.Called(t, conflictingColumns)
+func (_mock *AssetRepository) Upsert(t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(t, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.Asset, *[]clause.Column) error); ok {
-		r0 = returnFunc(t, conflictingColumns)
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.Asset, []clause.Column, []string) error); ok {
+		r0 = returnFunc(t, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1397,13 +1397,14 @@ type AssetRepository_Upsert_Call struct {
 // Upsert is a helper method to define mock.On call
 //   - t
 //   - conflictingColumns
-func (_e *AssetRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *AssetRepository_Upsert_Call {
-	return &AssetRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
+//   - updateOnly
+func (_e *AssetRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *AssetRepository_Upsert_Call {
+	return &AssetRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
-func (_c *AssetRepository_Upsert_Call) Run(run func(t *[]*models.Asset, conflictingColumns *[]clause.Column)) *AssetRepository_Upsert_Call {
+func (_c *AssetRepository_Upsert_Call) Run(run func(t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string)) *AssetRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*[]*models.Asset), args[1].(*[]clause.Column))
+		run(args[0].(*[]*models.Asset), args[1].([]clause.Column), args[2].([]string))
 	})
 	return _c
 }
@@ -1413,7 +1414,7 @@ func (_c *AssetRepository_Upsert_Call) Return(err error) *AssetRepository_Upsert
 	return _c
 }
 
-func (_c *AssetRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Asset, conflictingColumns *[]clause.Column) error) *AssetRepository_Upsert_Call {
+func (_c *AssetRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error) *AssetRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }
