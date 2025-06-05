@@ -294,9 +294,11 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 			componentDependencies[i].Dependency.License = &license
 			componentDependencies[i].Dependency.IsLicenseOverwritten = true
 		}
-		if license, ok := isPurlOverwrittenMap[*component.ComponentPurl]; ok {
-			componentDependencies[i].Component.License = &license
-			componentDependencies[i].Component.IsLicenseOverwritten = true
+		if component.ComponentPurl != nil {
+			if license, ok := isPurlOverwrittenMap[*component.ComponentPurl]; ok {
+				componentDependencies[i].Component.License = &license
+				componentDependencies[i].Component.IsLicenseOverwritten = true
+			}
 		}
 	}
 
