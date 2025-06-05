@@ -119,11 +119,6 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 	case *gitlab.IssueCommentEvent:
 		// check if the issue is a devguard issue
 		issueId := event.Issue.IID
-
-		// check if the user is a bot - we do not want to handle bot comments
-		// if event.Comment.User.GetType() == "Bot" {
-		// 	return nil
-		// }
 		// look for a dependencyVuln with such a github ticket id
 		vuln, err := g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueId))
 		if err != nil {

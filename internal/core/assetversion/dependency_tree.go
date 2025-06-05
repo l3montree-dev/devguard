@@ -17,6 +17,7 @@ package assetversion
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -150,6 +151,10 @@ func (t *tree) RenderToMermaid() string {
 		if node == nil {
 			return
 		}
+		// sort the children by name to ensure consistent rendering
+		slices.SortStableFunc(node.Children, func(a, b *treeNode) int {
+			return strings.Compare(a.Name, b.Name)
+		})
 		for _, child := range node.Children {
 
 			fromLabel, err := utils.BeautifyPURL(node.Name)
