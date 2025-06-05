@@ -436,7 +436,7 @@ func sbomWithoutVulnerability() *os.File {
 func initHttpController(t *testing.T, db core.DB) (*scan.HttpController, *mocks.GitlabClientFacade) {
 	// there are a lot of repositories and services that need to be initialized...
 	clientfactory, client := integration_tests.NewTestClientFactory(t)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(
+	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
 		mocks.NewRBACProvider(t),

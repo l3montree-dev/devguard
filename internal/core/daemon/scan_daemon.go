@@ -47,7 +47,7 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 		gitlabOauth2Integrations,
 	)
 
-	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
+	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
 
 	githubIntegration := githubint.NewGithubIntegration(db)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)

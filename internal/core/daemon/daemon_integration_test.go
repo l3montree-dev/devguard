@@ -212,7 +212,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 	assert.Nil(t, dependencyVuln.TicketURL)
 
 	clientfactory, gitlabClientFacade := integration_tests.NewTestClientFactory(t)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(
+	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
 		mocks.NewRBACProvider(t),

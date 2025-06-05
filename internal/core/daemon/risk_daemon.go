@@ -32,7 +32,7 @@ func RecalculateRisk(db core.DB) error {
 		panic(err)
 	}
 
-	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
+	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
 
 	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
