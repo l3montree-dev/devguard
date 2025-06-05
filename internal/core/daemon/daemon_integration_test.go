@@ -190,15 +190,14 @@ func TestDaemonSyncTickets(t *testing.T) {
 
 	dependencyVuln := models.DependencyVuln{
 		Vulnerability: models.Vulnerability{
-			AssetID:              asset.ID,
-			AssetVersion:         assetVersion,
-			AssetVersionName:     assetVersion.Name,
-			ManualTicketCreation: true,
-			TicketID:             nil,
-			TicketURL:            nil,
-			ScannerIDs:           "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca",
-			State:                models.VulnStateOpen,
-			LastDetected:         time.Now(),
+			AssetID:          asset.ID,
+			AssetVersion:     assetVersion,
+			AssetVersionName: assetVersion.Name,
+			TicketID:         nil,
+			TicketURL:        nil,
+			ScannerIDs:       "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca",
+			State:            models.VulnStateOpen,
+			LastDetected:     time.Now(),
 		},
 		CVE:               &cve,
 		CVEID:             utils.Ptr(cve.CVE),
@@ -229,9 +228,12 @@ func TestDaemonSyncTickets(t *testing.T) {
 		Body: gitlab.Ptr("<devguard> Risk exceeds predefined threshold\n"),
 	}).Return(nil, nil, nil)
 
+	err = daemon.SyncTickets(db, thirdPartyIntegration)
+	assert.Nil(t, err)
+
+	db.Find(&dependencyVuln, "id = ?", dependencyVuln.ID)
+
 	t.Run("should create a ticket if the CVSS if above the threshold", func(t *testing.T) {
-		err = daemon.SyncTickets(db, thirdPartyIntegration)
-		assert.Nil(t, err)
 
 		var updatedDependencyVuln models.DependencyVuln
 		err = db.First(&updatedDependencyVuln, "asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).Error
@@ -240,4 +242,75 @@ func TestDaemonSyncTickets(t *testing.T) {
 		assert.NotNil(t, updatedDependencyVuln.TicketID)
 		assert.NotNil(t, updatedDependencyVuln.TicketURL)
 	})
+
+	t.Run("should not close the ticket if the CVSS is below the threshold but the ticket was manually created", func(t *testing.T) {
+		gitlabClientFacade.ExpectedCalls = nil
+		gitlabClientFacade.Calls = nil
+		// Update the CVSS threshold to a value below the current CVSS
+		newCvssThreshold := 9.0
+		asset.CVSSAutomaticTicketThreshold = &newCvssThreshold
+		err = db.Save(&asset).Error
+		assert.Nil(t, err)
+
+		dependencyVuln.ManualTicketCreation = true
+		err = db.Save(&dependencyVuln).Error
+		assert.Nil(t, err)
+
+		gitlabClientFacade.On("EditIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
+			&gitlab.Issue{
+				ID:    12345,
+				State: "opened",
+			}, nil, nil)
+
+		err = daemon.SyncTickets(db, thirdPartyIntegration)
+		assert.Nil(t, err)
+
+		// Check if the ticket was updated
+		editedIssueOptions := gitlabClientFacade.Calls[0].Arguments[3].(*gitlab.UpdateIssueOptions)
+		assert.Equal(t, "reopen", *editedIssueOptions.StateEvent)
+
+		var updatedDependencyVuln models.DependencyVuln
+		err = db.First(&updatedDependencyVuln, "asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).Error
+		assert.Nil(t, err)
+
+		assert.NotNil(t, updatedDependencyVuln.TicketID)
+		assert.NotNil(t, updatedDependencyVuln.TicketURL)
+	})
+
+	t.Run("should close the ticket if the CVSS is below the threshold", func(t *testing.T) {
+		gitlabClientFacade.ExpectedCalls = nil
+		gitlabClientFacade.Calls = nil
+
+		// Update the CVSS threshold to a value below the current CVSS
+		newCvssThreshold := 9.0
+		asset.CVSSAutomaticTicketThreshold = &newCvssThreshold
+		err = db.Save(&asset).Error
+		assert.Nil(t, err)
+
+		dependencyVuln.ManualTicketCreation = false
+		err = db.Save(&dependencyVuln).Error
+		assert.Nil(t, err)
+
+		gitlabClientFacade.On("EditIssue", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
+			&gitlab.Issue{
+				ID:    12345,
+				State: "closed",
+			}, nil, nil)
+
+		err = daemon.SyncTickets(db, thirdPartyIntegration)
+		assert.Nil(t, err)
+
+		// Check if the ticket was updated
+		editedIssueOptions := gitlabClientFacade.Calls[0].Arguments[3].(*gitlab.UpdateIssueOptions)
+
+		assert.Equal(t, "close", *editedIssueOptions.StateEvent)
+
+		var updatedDependencyVuln models.DependencyVuln
+		err = db.First(&updatedDependencyVuln, "asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).Error
+		assert.Nil(t, err)
+
+		assert.NotNil(t, updatedDependencyVuln.TicketID)
+		assert.NotNil(t, updatedDependencyVuln.TicketURL)
+	})
+
 }
