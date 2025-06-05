@@ -438,7 +438,7 @@ func initHttpController(t *testing.T, db core.DB) (*scan.HttpController, *mocks.
 	depsDevService := mocks.NewDepsDevService(t)
 	depsDevService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.DepsDevVersionResponse{}, nil)
 
-	controller := inithelper.CreateHttpController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory)
+	controller := inithelper.CreateHttpController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, depsDevService)
 	// do not use concurrency in this test, because we want to test the ticket creation
 	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 	return controller, client
