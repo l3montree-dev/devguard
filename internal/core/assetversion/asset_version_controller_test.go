@@ -11,7 +11,7 @@ import (
 func TestBuildSBOM(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
-	assetVersionController := inithelper.CreateAssetVersionController(db, nil)
+	assetVersionController := inithelper.CreateAssetVersionController(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil})
 	app := echo.New()
 	ctx := app.NewContext(nil, nil)
 	t.Run("default test", func(t *testing.T) {
