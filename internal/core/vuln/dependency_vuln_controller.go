@@ -275,22 +275,20 @@ func (c dependencyVulnHttpController) CreateEvent(ctx core.Context) error {
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	err = c.dependencyVulnRepository.Transaction(func(tx core.DB) error {
-		ev, err := c.dependencyVulnService.UpdateDependencyVulnState(tx, asset.ID, userID, &dependencyVuln, statusType, justification, mechanicalJustification, assetVersion.Name)
-		if err != nil {
-			return err
-		}
-		err = thirdPartyIntegration.HandleEvent(core.VulnEvent{
-			Ctx:   ctx,
-			Event: ev,
-		})
-		// we do not want the transaction to be rolled back if the third party integration fails
-		if err != nil {
-			// just log the error
-			slog.Error("could not handle event", "err", err)
-		}
-		return nil
+	ev, err := c.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &dependencyVuln, statusType, justification, mechanicalJustification, assetVersion.Name)
+	if err != nil {
+		return err
+	}
+	err = thirdPartyIntegration.HandleEvent(core.VulnEvent{
+		Ctx:   ctx,
+		Event: ev,
 	})
+	// we do not want the transaction to be rolled back if the third party integration fails
+	if err != nil {
+		// just log the error
+		slog.Error("could not handle event", "err", err)
+	}
+
 	if err != nil {
 		return echo.NewHTTPError(500, "could not create dependencyVuln event").WithInternal(err)
 	}
