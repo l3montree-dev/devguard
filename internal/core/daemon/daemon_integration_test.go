@@ -314,3 +314,119 @@ func TestDaemonSyncTickets(t *testing.T) {
 	})
 
 }
+
+func TestDaemonRecalculateRisk(t *testing.T) {
+	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	defer terminate()
+
+	err := db.AutoMigrate(
+		&models.Org{},
+		&models.Project{},
+		&models.AssetVersion{},
+		&models.Asset{},
+		&models.ComponentDependency{},
+		&models.Component{},
+		&models.CVE{},
+		&models.Exploit{},
+		&models.VulnEvent{},
+		&models.AffectedComponent{},
+		&models.DependencyVuln{},
+	)
+	assert.Nil(t, err)
+
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
+	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+
+	org.Slug = "org-slug"
+	err = db.Save(&org).Error
+	assert.Nil(t, err)
+	project.Slug = "project-slug"
+	err = db.Save(&project).Error
+	assert.Nil(t, err)
+
+	asset.AvailabilityRequirement = models.RequirementLevelLow
+	asset.ConfidentialityRequirement = models.RequirementLevelLow
+	asset.IntegrityRequirement = models.RequirementLevelLow
+	err = db.Save(&asset).Error
+	assert.Nil(t, err)
+
+	assetVersion := models.AssetVersion{
+		Name:          "main",
+		AssetID:       asset.ID,
+		DefaultBranch: true,
+	}
+	err = db.Create(&assetVersion).Error
+	assert.Nil(t, err)
+
+	cve := models.CVE{
+		CVE:  "CVE-2025-46569",
+		CVSS: 8.0,
+
+		Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H",
+	}
+	err = db.Save(&cve).Error
+	assert.Nil(t, err)
+
+	oldRawRiskValue := 1.0
+	dependencyVuln := models.DependencyVuln{
+		Vulnerability: models.Vulnerability{
+			AssetID:          asset.ID,
+			AssetVersion:     assetVersion,
+			AssetVersionName: assetVersion.Name,
+			ScannerIDs:       "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca",
+			State:            models.VulnStateOpen,
+			LastDetected:     time.Now(),
+		},
+		CVE:               &cve,
+		CVEID:             utils.Ptr(cve.CVE),
+		ComponentDepth:    utils.Ptr(1),
+		RawRiskAssessment: utils.Ptr(oldRawRiskValue),
+	}
+	err = db.Create(&dependencyVuln).Error
+	assert.Nil(t, err)
+
+	//gitlabClientFacade
+	clientfactory, _ := integration_tests.NewTestClientFactory(t)
+	gitlabIntegration := gitlabint.NewGitLabIntegration(
+		db,
+		gitlabint.NewGitLabOauth2Integrations(db),
+		mocks.NewRBACProvider(t),
+		clientfactory,
+	)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
+
+	t.Run("should recalculate the risk of the dependency vuln", func(t *testing.T) {
+		err = daemon.RecalculateRisk(db, thirdPartyIntegration)
+		assert.Nil(t, err)
+
+		var updatedDependencyVuln models.DependencyVuln
+		err = db.First(&updatedDependencyVuln, "asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).Error
+		assert.Nil(t, err)
+
+		assert.NotNil(t, updatedDependencyVuln.RawRiskAssessment)
+		assert.NotEqual(t, oldRawRiskValue, *updatedDependencyVuln.RawRiskAssessment)
+	})
+
+	t.Run("should recalculate the risk of the dependency vuln to higher value if the requirements are set to high", func(t *testing.T) {
+		asset.AvailabilityRequirement = models.RequirementLevelHigh
+		asset.ConfidentialityRequirement = models.RequirementLevelHigh
+		asset.IntegrityRequirement = models.RequirementLevelHigh
+		err = db.Save(&asset).Error
+		assert.Nil(t, err)
+
+		err = db.First(&dependencyVuln, "asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).Error
+		assert.Nil(t, err)
+		oldRawRiskValue = *dependencyVuln.RawRiskAssessment
+
+		err = daemon.RecalculateRisk(db, thirdPartyIntegration)
+		assert.Nil(t, err)
+
+		var updatedDependencyVuln models.DependencyVuln
+		err = db.First(&updatedDependencyVuln, "asset_id = ? AND asset_version_name = ?", asset.ID, assetVersion.Name).Error
+		assert.Nil(t, err)
+
+		assert.NotNil(t, updatedDependencyVuln.RawRiskAssessment)
+		assert.Greater(t, *updatedDependencyVuln.RawRiskAssessment, oldRawRiskValue)
+	})
+}
