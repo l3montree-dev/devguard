@@ -46,10 +46,10 @@ func UpdateComponentProperties(db core.DB) error {
 	// to make this as efficient as possible, we start by getting all the assets
 	// and then we get all the components for each asset.
 
-	/* 	start := time.Now()
-	   	defer func() {
-	   		monitoring.UpdateComponentPropertiesDuration.Observe(time.Since(start).Minutes())
-	   	}() */
+	start := time.Now()
+	defer func() {
+		monitoring.UpdateComponentPropertiesDuration.Observe(time.Since(start).Minutes())
+	}()
 
 	assetRepository := repositories.NewAssetRepository(db)
 	purlComparer := scan.NewPurlComparer(db)
