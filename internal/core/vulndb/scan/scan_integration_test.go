@@ -55,6 +55,8 @@ func TestScanning(t *testing.T) {
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Scanner", "scanner-1")
+		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
 
@@ -81,6 +83,8 @@ func TestScanning(t *testing.T) {
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Scanner", "scanner-2")
+		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
 
@@ -105,6 +109,8 @@ func TestScanning(t *testing.T) {
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Scanner", "scanner-3")
+		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
 
@@ -128,6 +134,8 @@ func TestScanning(t *testing.T) {
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Scanner", "scanner-1")
+		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
 
@@ -147,6 +155,8 @@ func TestScanning(t *testing.T) {
 		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Scanner", "scanner-2")
+		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		recorder = httptest.NewRecorder()
 		ctx = app.NewContext(req, recorder)
 		setupContext(ctx)
@@ -158,6 +168,66 @@ func TestScanning(t *testing.T) {
 		assert.Equal(t, 0, response.AmountOpened)  // no new vulnerabilities found
 		assert.Equal(t, 1, response.AmountClosed)  // the vulnerability is finally closed
 		assert.Len(t, response.DependencyVulns, 0) // no vulnerabilities returned
+	})
+
+	t.Run("should respect, if the vulnerability is just found AGAIN on a different branch then the default branch", func(t *testing.T) {
+		// if we find a vuln A on the default branch. Then we accept vuln A.
+		// now we find vuln A on a different branch. This vuln should be accepted as well.
+
+		// create a vulnerability with an accepted state on the default branch in the database
+		dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
+		vulns, err := dependencyVulnRepository.GetByAssetId(nil, asset.ID)
+		// should be only a single vulnerability
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 1)
+		// mark the vuln as accepted
+		vulns[0].State = models.VulnStateAccepted
+		// save it
+		err = dependencyVulnRepository.Save(nil, &vulns[0])
+		assert.Nil(t, err)
+
+		// create an accepted event inside the database
+		acceptedEvent := models.NewAcceptedEvent(vulns[0].ID, vulns[0].GetType(), "abc", "accepting the vulnerability")
+		err = dependencyVulnRepository.ApplyAndSave(nil, &vulns[0], &acceptedEvent)
+		assert.Nil(t, err)
+		// now scan a different branch with the same vulnerability
+		recorder := httptest.NewRecorder()
+		sbomFile := sbomWithVulnerability()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Scanner", "scanner-4")
+		req.Header.Set("X-Asset-Ref", "some-other-branch")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// query the new vulnerability
+		vulns, err = dependencyVulnRepository.GetByAssetId(nil, asset.ID)
+		// should be two now
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 2)
+
+		// both should be accepted
+		for _, vuln := range vulns {
+			assert.Equal(t, models.VulnStateAccepted, vuln.State)
+		}
+
+		// expect the events to be copied as well
+		// the last event should be of type detected on different branch - the event before should be accepted with the same message
+		var newVuln models.DependencyVuln
+		for _, v := range vulns {
+			if v.AssetVersionName == "some-other-branch" {
+				newVuln = v
+			}
+		}
+		assert.NotEmpty(t, newVuln.Events)
+		lastTwoEvents := newVuln.Events[len(newVuln.Events)-2:]
+		assert.Equal(t, models.EventTypeAccepted, lastTwoEvents[0].Type)
+		assert.Equal(t, "accepting the vulnerability", *lastTwoEvents[0].Justification)
+		assert.Equal(t, "main", lastTwoEvents[0].OriginalAssetVersionName)
+		assert.Equal(t, models.EventTypeDetectedOnAnotherBranch, lastTwoEvents[1].Type)
 	})
 }
 
