@@ -3,38 +3,17 @@ package daemon
 import (
 	"time"
 
-	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 )
 
-func RecalculateRisk(db core.DB) error {
+func RecalculateRisk(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyIntegration) error {
 	start := time.Now()
 	defer func() {
 		monitoring.RecalculateAllRawRiskAssessmentsDuration.Observe(time.Since(start).Minutes())
 	}()
-	githubIntegration := githubint.NewGithubIntegration(db)
-
-	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-
-	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
-		repositories.NewGitLabIntegrationRepository(db),
-		gitlabOauth2Integrations,
-	)
-
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
-	if err != nil {
-		panic(err)
-	}
-
-	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
-
-	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
 	dependencyVulnService := vuln.NewService(
 		repositories.NewDependencyVulnRepository(db),
@@ -47,7 +26,7 @@ func RecalculateRisk(db core.DB) error {
 		repositories.NewAssetVersionRepository(db),
 	)
 
-	err = dependencyVulnService.RecalculateAllRawRiskAssessments()
+	err := dependencyVulnService.RecalculateAllRawRiskAssessments()
 	if err != nil {
 		return err
 	}
