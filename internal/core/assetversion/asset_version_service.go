@@ -344,7 +344,7 @@ func diffVulnsBetweenBranches(scannerID string, foundVulnerabilities []models.De
 			newDetectedButOnDefaultBranchExisting = append(newDetectedButOnDefaultBranchExisting, newDetectedVuln)
 			// we also want to get the events for that vuln
 			existingEvents = append(existingEvents, utils.Map(existingVuln.Events, func(event models.VulnEvent) models.VulnEvent {
-				event.OriginalAssetVersionName = vulnMap[*newDetectedVuln.CVEID].AssetVersionName
+				event.OriginalAssetVersionName = utils.Ptr(vulnMap[*newDetectedVuln.CVEID].AssetVersionName)
 				return event
 			}))
 		} else {

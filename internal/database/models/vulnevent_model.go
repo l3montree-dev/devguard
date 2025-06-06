@@ -60,7 +60,7 @@ type VulnEvent struct {
 	MechanicalJustification  MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
 	ArbitraryJsonData        string                      `json:"arbitraryJsonData" gorm:"type:text;"`
 	arbitraryJsonData        map[string]any
-	OriginalAssetVersionName string `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
+	OriginalAssetVersionName *string `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
 }
 
 type VulnEventDetail struct {
