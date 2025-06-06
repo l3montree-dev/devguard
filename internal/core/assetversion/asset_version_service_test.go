@@ -81,3 +81,60 @@ func TestDiffScanResults(t *testing.T) {
 		assert.Empty(t, notDetectedByCurrentScannerAnymore)
 	})
 }
+func TestFixFixedVersion(t *testing.T) {
+	tests := []struct {
+		name         string
+		purl         string
+		fixedVersion *string
+		want         *string
+	}{
+		{
+			name:         "nil fixedVersion returns nil",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@1.9.1",
+			fixedVersion: nil,
+			want:         nil,
+		},
+		{
+			name:         "empty fixedVersion returns nil",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@1.9.1",
+			fixedVersion: utils.Ptr(""),
+			want:         nil,
+		},
+		{
+			name:         "purl without @ returns fixedVersion",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim",
+			fixedVersion: utils.Ptr("1.2.3"),
+			want:         utils.Ptr("1.2.3"),
+		},
+		{
+			name:         "version after @ does not start with v, returns fixedVersion",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@1.9.1",
+			fixedVersion: utils.Ptr("1.2.3"),
+			want:         utils.Ptr("1.2.3"),
+		},
+		{
+			name:         "version after @ starts with v, returns fixedVersion+ver",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@v1.9.1",
+			fixedVersion: utils.Ptr("1.2.3"),
+			want:         utils.Ptr("v1.2.3"),
+		},
+		{
+			name:         "version after @ is just v, returns fixedVersion+ver",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@v",
+			fixedVersion: utils.Ptr("1.2.3"),
+			want:         utils.Ptr("v1.2.3"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := fixFixedVersion(tt.purl, tt.fixedVersion)
+			if tt.want == nil {
+				assert.Nil(t, got)
+			} else {
+				assert.NotNil(t, got)
+				assert.Equal(t, *tt.want, *got)
+			}
+		})
+	}
+}

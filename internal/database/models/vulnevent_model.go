@@ -30,7 +30,8 @@ const (
 	EventTypeComment           VulnEventType = "comment"
 
 	// Automated Events (Events that are triggered by automation's on the server)
-	EventTypeDetected VulnEventType = "detected"
+	EventTypeDetected                VulnEventType = "detected"
+	EventTypeDetectedOnAnotherBranch VulnEventType = "detectedOnAnotherBranch"
 
 	// EventTypeRiskAssessmentUpdated VulnEventType = "riskAssessmentUpdated"
 	EventTypeRawRiskAssessmentUpdated VulnEventType = "rawRiskAssessmentUpdated"
@@ -51,17 +52,15 @@ const (
 
 type VulnEvent struct {
 	Model
-	Type     VulnEventType `json:"type" gorm:"type:text"`
-	VulnID   string        `json:"vulnId"`
-	VulnType VulnType      `json:"vulnType" gorm:"type:text;not null;default:'dependencyVuln'"`
-	UserID   string        `json:"userId"`
-
-	Justification *string `json:"justification" gorm:"type:text;"`
-
-	MechanicalJustification MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
-
-	ArbitraryJsonData string `json:"arbitraryJsonData" gorm:"type:text;"`
-	arbitraryJsonData map[string]any
+	Type                     VulnEventType               `json:"type" gorm:"type:text"`
+	VulnID                   string                      `json:"vulnId"`
+	VulnType                 VulnType                    `json:"vulnType" gorm:"type:text;not null;default:'dependencyVuln'"`
+	UserID                   string                      `json:"userId"`
+	Justification            *string                     `json:"justification" gorm:"type:text;"`
+	MechanicalJustification  MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
+	ArbitraryJsonData        string                      `json:"arbitraryJsonData" gorm:"type:text;"`
+	arbitraryJsonData        map[string]any
+	OriginalAssetVersionName *string `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
 }
 
 type VulnEventDetail struct {
@@ -102,6 +101,9 @@ func (m VulnEvent) TableName() string {
 
 func (e VulnEvent) Apply(vuln Vuln) {
 	switch e.Type {
+	case EventTypeDetectedOnAnotherBranch:
+		// do nothing
+		return
 	case EventTypeAddedScanner:
 		scannerID, ok := (e.GetArbitraryJsonData()["scannerIds"]).(string)
 		if !ok {
@@ -217,6 +219,23 @@ func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalcu
 	return ev
 }
 
+func NewDetectedOnAnotherBranchEvent(vulnID string, vulnType VulnType, userID string, riskCalculationReport common.RiskCalculationReport, scannerID string, assetVersionName string) VulnEvent {
+	ev := VulnEvent{
+		Type:     EventTypeDetectedOnAnotherBranch,
+		VulnType: vulnType,
+		VulnID:   vulnID,
+		UserID:   userID,
+	}
+
+	m := riskCalculationReport.Map()
+	m["scannerIds"] = scannerID
+	m["assetVersionName"] = assetVersionName
+
+	ev.SetArbitraryJsonData(m)
+
+	return ev
+}
+
 func NewMitigateEvent(vulnID string, vulnType VulnType, userID string, justification string, arbitraryData map[string]any) VulnEvent {
 	ev := VulnEvent{
 		Type:          EventTypeMitigate,
@@ -268,6 +287,15 @@ func NewRemovedScannerEvent(vulnID string, vulnType VulnType, userID string, sca
 
 	ev.SetArbitraryJsonData(map[string]any{"scannerIds": scannerID})
 	return ev
+}
+
+func (ev VulnEvent) IsScanUnreleatedEvent() bool {
+	switch ev.Type {
+	case EventTypeAddedScanner, EventTypeRemovedScanner, EventTypeDetectedOnAnotherBranch, EventTypeRawRiskAssessmentUpdated:
+		return false
+	default:
+		return true
+	}
 }
 
 func CheckStatusType(statusType string) error {
