@@ -62,7 +62,7 @@ func getAssetVersionInfoFromPipeline() (GitVersionInfo, error) {
 		//This returns the short ref name of the branch or tag that triggered the workflow run.
 		if branchName != "" {
 			gitVersionInfo = GitVersionInfo{
-				IsTag:         strings.HasPrefix(os.Getenv("GITHUB_REF"), "refs/tags/"),
+				IsTag:         os.Getenv("GITHUB_REF_TYPE") == "tag",
 				BranchOrTag:   branchName,
 				DefaultBranch: nil, // there is no environment variable for the default branch in GitHub Actions
 			}
@@ -76,6 +76,17 @@ func GetAssetVersionInfo(path string) (GitVersionInfo, error) {
 	// first try to get the version info from the pipeline
 	gitVersionInfo, err := getAssetVersionInfoFromPipeline()
 	if err == nil {
+		// check if default branch is set
+		if gitVersionInfo.DefaultBranch == nil || *gitVersionInfo.DefaultBranch == "" {
+			// if not, try to get the default branch from git
+			defaultBranch, err := GitLister.GetDefaultBranchName(path)
+			if err != nil {
+				slog.Info("could not get default branch name from git", "err", err, "path", getDirFromPath(path), "msg", err.Error())
+				gitVersionInfo.DefaultBranch = nil
+			} else {
+				gitVersionInfo.DefaultBranch = &defaultBranch
+			}
+		}
 		slog.Info("got git version info from pipeline", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", SafeDereference(gitVersionInfo.DefaultBranch))
 		return gitVersionInfo, nil
 	}
@@ -83,8 +94,7 @@ func GetAssetVersionInfo(path string) (GitVersionInfo, error) {
 	slog.Info("could not get git version info from pipeline, falling back to git")
 	gitVersionInfo, err = getAssetVersionInfoFromGit(path)
 	if err != nil {
-		slog.Error("could not get git version info from git")
-		return GitVersionInfo{}, errors.Wrap(err, "could not get git version info from git")
+		return gitVersionInfo, err
 	}
 	slog.Info("got git version info from git", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", SafeDereference(gitVersionInfo.DefaultBranch))
 	return gitVersionInfo, nil
