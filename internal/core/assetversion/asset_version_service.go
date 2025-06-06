@@ -417,7 +417,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	return newDetectedVulns, fixedVulns, v, nil
+	return newDetectedVulnsNotOnDefaultBranch, fixedVulns, v, nil
 }
 
 func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
