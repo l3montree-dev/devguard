@@ -30,6 +30,44 @@ func NewHttpController(repository core.AssetRepository, assetVersionRepository c
 	}
 }
 
+func (a *httpController) HandleLookup(ctx core.Context) error {
+	provider := ctx.QueryParam("provider")
+	if provider == "" {
+		return echo.NewHTTPError(400, "missing provider")
+	}
+
+	id := ctx.QueryParam("id")
+	if id == "" {
+		return echo.NewHTTPError(400, "missing repositoryId")
+	}
+
+	asset, err := a.assetRepository.FindAssetByExternalProviderId(provider, id)
+
+	if err != nil {
+		return echo.NewHTTPError(404, "asset not found").WithInternal(err)
+	}
+
+	assetFqn, err := a.assetRepository.GetFQNByID(asset.ID)
+
+	// split the fqn into organization, project and asset
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get asset FQN").WithInternal(err)
+	}
+	parts := strings.Split(assetFqn, "/")
+	if len(parts) != 3 {
+		return echo.NewHTTPError(500, "invalid asset FQN format")
+	}
+
+	response := LookupResponse{
+		Org:     parts[0],
+		Project: parts[1],
+		Asset:   parts[2],
+		Link:    fmt.Sprintf("/api/v1/organizations/%s/projects/%s/assets/%s", parts[0], parts[1], parts[2]),
+	}
+
+	return ctx.JSON(200, response)
+}
+
 func (a *httpController) List(ctx core.Context) error {
 
 	project := core.GetProject(ctx)
@@ -203,9 +241,17 @@ func (a *httpController) Update(ctx core.Context) error {
 		asset.RiskAutomaticTicketThreshold = nil
 	}
 
+	org := core.GetOrg(ctx)
+	project := core.GetProject(ctx)
 	if enableTicketRangeUpdated || justification != "" {
 		go func() {
-			if err := a.dependencyVulnService.SyncTickets(asset); err != nil {
+			defaultAssetVersion, err := a.assetVersionRepository.GetDefaultAssetVersion(asset.ID)
+			if err != nil {
+				slog.Error("could not get default asset version", "err", err)
+				return
+			}
+
+			if err := a.dependencyVulnService.SyncAllIssues(org, project, asset, defaultAssetVersion); err != nil {
 				slog.Warn("could not sync tickets", "err", err)
 			}
 		}()

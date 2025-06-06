@@ -420,7 +420,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  nil, // direct dependency - therefore set it to nil
-					ScannerID:      scannerID,
+					ScannerIDs:     scannerID,
 					DependencyPurl: componentPackageUrl,
 				},
 			)
@@ -446,7 +446,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  utils.EmptyThenNil(compPackageUrl),
-					ScannerID:      scannerID,
+					ScannerIDs:     scannerID,
 					DependencyPurl: depPurlOrName,
 				},
 			)

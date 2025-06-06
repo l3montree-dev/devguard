@@ -122,7 +122,6 @@ func (t *thirdPartyIntegrations) GetRoleInProject(ctx context.Context, userID st
 
 func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 	wg := utils.ErrGroup[[]core.Repository](-1)
-
 	for _, i := range t.integrations {
 		wg.Go(func() ([]core.Repository, error) {
 			repos, err := i.ListRepositories(ctx)
@@ -133,6 +132,7 @@ func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repo
 			}
 			return repos, err
 		})
+
 	}
 
 	results, err := wg.WaitAndCollect()
@@ -217,44 +217,22 @@ func (t *thirdPartyIntegrations) HandleEvent(event any) error {
 	return err
 }
 
-func (t *thirdPartyIntegrations) ReopenIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.ReopenIssue(ctx, asset, vuln)
-		})
-	}
-	_, err := wg.WaitAndCollect()
-	return err
-}
-func (t *thirdPartyIntegrations) UpdateIssue(ctx context.Context, asset models.Asset, repoId string, vuln models.Vuln) error {
-	wg := utils.ErrGroup[struct{}](-1)
-	for _, i := range t.integrations {
-		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.UpdateIssue(ctx, asset, repoId, vuln)
+			return struct{}{}, i.UpdateIssue(ctx, asset, vuln)
 		})
 	}
 	_, err := wg.WaitAndCollect()
 	return err
 }
 
-func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, repoId string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+func (t *thirdPartyIntegrations) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 	wg := utils.ErrGroup[struct{}](-1)
 	for _, i := range t.integrations {
 		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.CreateIssue(ctx, asset, assetVersionName, repoId, vuln, projectSlug, orgSlug, justification, userID)
-		})
-	}
-
-	_, err := wg.WaitAndCollect()
-	return err
-}
-
-func (t *thirdPartyIntegrations) CloseIssue(ctx context.Context, state string, repoId string, vuln models.Vuln) error {
-	wg := utils.ErrGroup[struct{}](-1)
-	for _, i := range t.integrations {
-		wg.Go(func() (struct{}, error) {
-			return struct{}{}, i.CloseIssue(ctx, state, repoId, vuln)
+			return struct{}{}, i.CreateIssue(ctx, asset, assetVersionName, vuln, projectSlug, orgSlug, justification, userID)
 		})
 	}
 

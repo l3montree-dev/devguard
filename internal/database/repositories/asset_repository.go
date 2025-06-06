@@ -43,6 +43,30 @@ func NewAssetRepository(db core.DB) *assetRepository {
 	}
 }
 
+func (r *assetRepository) FindAssetByExternalProviderId(externalEntityProviderID string, externalEntityID string) (*models.Asset, error) {
+	var asset models.Asset
+	err := r.db.Where("external_entity_provider_id = ? AND external_entity_id = ?", externalEntityProviderID, externalEntityID).First(&asset).Error
+	return &asset, err
+}
+
+func (a *assetRepository) GetFQNByID(id uuid.UUID) (string, error) {
+	var fqn struct {
+		FQN string `gorm:"column:fqn"`
+	}
+	// the fully qualified name (FQN) is the slug of the asset - including the project slug and the organization slug
+	// using the fqn an asset is addressable through the API
+	err := a.db.Model(&models.Asset{}).
+		Select("CONCAT(organizations.slug, '/', projects.slug, '/', assets.slug) AS fqn").
+		Joins("JOIN projects ON assets.project_id = projects.id").
+		Joins("JOIN organizations ON projects.organization_id = organizations.id").
+		Where("assets.id = ?", id).
+		First(&fqn).Error
+	if err != nil {
+		return "", err
+	}
+	return fqn.FQN, nil
+}
+
 func (a *assetRepository) FindByName(name string) (models.Asset, error) {
 	var app models.Asset
 	err := a.db.Where("name = ?", name).First(&app).Error
@@ -112,7 +136,7 @@ func (g *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uu
 }
 
 func (g *assetRepository) Update(tx core.DB, asset *models.Asset) error {
-	return g.db.Save(asset).Error
+	return g.db.Debug().Save(asset).Error
 }
 
 func (g *assetRepository) GetAllAssetsFromDB() ([]models.Asset, error) {
@@ -132,13 +156,8 @@ func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (mo
 }
 
 func (g *assetRepository) Delete(tx core.DB, id uuid.UUID) error {
-
-	return g.db.Select("AssetVersions").Delete(models.Asset{
-		Model: models.Model{
-			ID: id,
-		},
-	}).Error
-
+	asset := models.Asset{Model: models.Model{ID: id}}
+	return g.db.Select("AssetVersions").Delete(&asset).Error
 }
 
 func (g *assetRepository) GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error) {

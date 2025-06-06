@@ -412,9 +412,9 @@ func (o *httpController) List(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get organizations from third party integrations").WithInternal(err)
 	}
 	// make sure, that the third party organizations exists inside the database
-	if err := o.organizationRepository.Upsert(utils.Ptr(utils.Map(orgs, utils.Ptr)), &[]clause.Column{
+	if err := o.organizationRepository.Upsert(utils.Ptr(utils.Map(orgs, utils.Ptr)), []clause.Column{
 		{Name: "external_entity_provider_id"},
-	}); err != nil {
+	}, nil); err != nil {
 		return echo.NewHTTPError(500, "could not ensure third party organizations exist").WithInternal(err)
 	}
 

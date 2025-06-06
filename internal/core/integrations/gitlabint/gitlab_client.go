@@ -18,10 +18,10 @@ package gitlabint
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
@@ -36,40 +36,16 @@ type gitlabClient struct {
 }
 
 type gitlabBatchClient struct {
-	clients []gitlabClientFacade
+	clients []core.GitlabClientFacade
 }
 
 var ErrNoGitlabIntegration = fmt.Errorf("no gitlab app installations found")
 
 // groups multiple gitlab clients - since an org can have multiple installations
-func newGitLabBatchClient(gitlabIntegrations []models.GitLabIntegration, oauth2Config map[string]*GitlabOauth2Config, oauth2Tokens []models.GitLabOauth2Token) (*gitlabBatchClient, error) {
-	clients := make([]gitlabClientFacade, 0)
-	for _, integration := range gitlabIntegrations {
-		client, _ := NewGitlabClient(integration)
-		clients = append(clients, client)
-	}
-
-	// create oauth2 clients
-	for _, token := range oauth2Tokens {
-		// check if there is a matching oauth2 config
-		for _, oauth2 := range oauth2Config {
-			if oauth2.ProviderID == token.ProviderID {
-				// great we can use the config to generate a token
-				client, err := buildOauth2GitlabClient(token, oauth2, true)
-				if err != nil {
-					slog.Error("error while creating oauth2 client", "err", err)
-					continue
-				}
-
-				clients = append(clients, client)
-				break
-			}
-		}
-	}
-
+func NewGitlabBatchClient(clients []core.GitlabClientFacade) *gitlabBatchClient {
 	return &gitlabBatchClient{
 		clients: clients,
-	}, nil
+	}
 }
 
 func groupToProject(group *gitlab.Group, providerID string) models.Project {
@@ -266,18 +242,4 @@ func (client gitlabClient) EditIssueLabel(ctx context.Context, projectId int, is
 	})
 
 	return nil, err
-}
-
-func NewGitlabClient(integration models.GitLabIntegration) (gitlabClient, error) {
-
-	// Use installation transport with client.
-	client, err := gitlab.NewClient(integration.AccessToken, gitlab.WithBaseURL(integration.GitLabUrl))
-	if err != nil {
-		return gitlabClient{}, err
-	}
-
-	return gitlabClient{
-		Client:   client,
-		clientID: integration.ID.String(),
-	}, nil
 }

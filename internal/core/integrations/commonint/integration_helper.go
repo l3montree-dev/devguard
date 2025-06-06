@@ -145,6 +145,7 @@ func SetupAndPushPipeline(accessToken string, gitlabUrl string, projectName stri
 		Author: &object.Signature{
 			Name:  "DevGuard",
 			Email: "",
+			When:  time.Now(),
 		},
 	})
 

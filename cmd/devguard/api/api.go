@@ -355,14 +355,19 @@ func BuildRouter(db core.DB) *echo.Echo {
 	ory := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_PUBLIC"))
 	oryAdmin := auth.GetOryApiClient(os.Getenv("ORY_KRATOS_ADMIN"))
 	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
-
 	if err != nil {
 		panic(err)
 	}
 
 	githubIntegration := githubint.NewGithubIntegration(db)
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(gitlabOauth2Integrations, db)
+
+	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
+		repositories.NewGitLabIntegrationRepository(db),
+		gitlabOauth2Integrations,
+	)
+
+	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration)
 
 	// init all repositories using the provided database
@@ -411,6 +416,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	orgController := org.NewHttpController(orgRepository, orgService, casbinRBACProvider, projectService, invitationRepository)
 	projectController := project.NewHttpController(projectRepository, assetRepository, projectService)
 	assetController := asset.NewHttpController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
+
 	scanController := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseOverwriteRepository)
@@ -451,12 +457,14 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	apiV1Router.GET("/metrics/", echo.WrapHandler(promhttp.Handler()))
 
-	apiV1Router.POST("/webhook/", githubIntegration.HandleWebhook)
+	apiV1Router.POST("/webhook/", thirdPartyIntegration.HandleWebhook)
 
 	// apply the health route without any session or multi organization middleware
 	apiV1Router.GET("/health/", health)
 
 	apiV1Router.GET("/badges/:badge/:badgeSecret/", assetController.GetBadges)
+
+	apiV1Router.GET("/lookup/", assetController.HandleLookup)
 
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))

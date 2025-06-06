@@ -1362,16 +1362,16 @@ func (_c *DependencyVulnRepository_Transaction_Call) RunAndReturn(run func(fn fu
 }
 
 // Upsert provides a mock function for the type DependencyVulnRepository
-func (_mock *DependencyVulnRepository) Upsert(t *[]*models.DependencyVuln, conflictingColumns *[]clause.Column) error {
-	ret := _mock.Called(t, conflictingColumns)
+func (_mock *DependencyVulnRepository) Upsert(t *[]*models.DependencyVuln, conflictingColumns []clause.Column, updateOnly []string) error {
+	ret := _mock.Called(t, conflictingColumns, updateOnly)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.DependencyVuln, *[]clause.Column) error); ok {
-		r0 = returnFunc(t, conflictingColumns)
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.DependencyVuln, []clause.Column, []string) error); ok {
+		r0 = returnFunc(t, conflictingColumns, updateOnly)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1386,13 +1386,14 @@ type DependencyVulnRepository_Upsert_Call struct {
 // Upsert is a helper method to define mock.On call
 //   - t
 //   - conflictingColumns
-func (_e *DependencyVulnRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}) *DependencyVulnRepository_Upsert_Call {
-	return &DependencyVulnRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns)}
+//   - updateOnly
+func (_e *DependencyVulnRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *DependencyVulnRepository_Upsert_Call {
+	return &DependencyVulnRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
-func (_c *DependencyVulnRepository_Upsert_Call) Run(run func(t *[]*models.DependencyVuln, conflictingColumns *[]clause.Column)) *DependencyVulnRepository_Upsert_Call {
+func (_c *DependencyVulnRepository_Upsert_Call) Run(run func(t *[]*models.DependencyVuln, conflictingColumns []clause.Column, updateOnly []string)) *DependencyVulnRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*[]*models.DependencyVuln), args[1].(*[]clause.Column))
+		run(args[0].(*[]*models.DependencyVuln), args[1].([]clause.Column), args[2].([]string))
 	})
 	return _c
 }
@@ -1402,7 +1403,7 @@ func (_c *DependencyVulnRepository_Upsert_Call) Return(err error) *DependencyVul
 	return _c
 }
 
-func (_c *DependencyVulnRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.DependencyVuln, conflictingColumns *[]clause.Column) error) *DependencyVulnRepository_Upsert_Call {
+func (_c *DependencyVulnRepository_Upsert_Call) RunAndReturn(run func(t *[]*models.DependencyVuln, conflictingColumns []clause.Column, updateOnly []string) error) *DependencyVulnRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

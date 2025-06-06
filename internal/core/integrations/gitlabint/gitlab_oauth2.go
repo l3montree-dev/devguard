@@ -19,7 +19,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/ory/client-go"
 	"github.com/pkg/errors"
-	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"golang.org/x/oauth2"
 )
 
@@ -58,22 +57,6 @@ type gitlabOauth2Client struct {
 }
 
 var httpClientCache = common.NewCacheTransport(1000, 1*time.Hour)
-
-func buildOauth2GitlabClient(token models.GitLabOauth2Token, integration *GitlabOauth2Config, enableClientCache bool) (gitlabClientFacade, error) {
-	oauth2Client := integration.client(token)
-	if enableClientCache {
-		common.WrapHTTPClient(oauth2Client, httpClientCache.Handler())
-	}
-
-	client, err := gitlab.NewClient(token.AccessToken, gitlab.WithHTTPClient(oauth2Client), gitlab.WithBaseURL(integration.GitlabBaseURL))
-	if err != nil {
-		return gitlabOauth2Client{}, err
-	}
-
-	return gitlabOauth2Client{
-		gitlabUserID: token.GitLabUserID,
-		gitlabClient: gitlabClient{Client: client, clientID: fmt.Sprintf("oauth2-%s", token.ID.String()), gitProviderID: utils.Ptr(integration.ProviderID)}}, nil
-}
 
 func parseGitlabEnvs() map[string]gitlabEnvConfig {
 	urls := make(map[string]gitlabEnvConfig)

@@ -762,16 +762,16 @@ func (_c *ProjectRepository_Update_Call) RunAndReturn(run func(tx core.DB, proje
 }
 
 // Upsert provides a mock function for the type ProjectRepository
-func (_mock *ProjectRepository) Upsert(projects *[]*models.Project, conflictingColumns *[]clause.Column) error {
-	ret := _mock.Called(projects, conflictingColumns)
+func (_mock *ProjectRepository) Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error {
+	ret := _mock.Called(projects, conflictingColumns, toUpdate)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Upsert")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*[]*models.Project, *[]clause.Column) error); ok {
-		r0 = returnFunc(projects, conflictingColumns)
+	if returnFunc, ok := ret.Get(0).(func(*[]*models.Project, []clause.Column, []string) error); ok {
+		r0 = returnFunc(projects, conflictingColumns, toUpdate)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -786,13 +786,14 @@ type ProjectRepository_Upsert_Call struct {
 // Upsert is a helper method to define mock.On call
 //   - projects
 //   - conflictingColumns
-func (_e *ProjectRepository_Expecter) Upsert(projects interface{}, conflictingColumns interface{}) *ProjectRepository_Upsert_Call {
-	return &ProjectRepository_Upsert_Call{Call: _e.mock.On("Upsert", projects, conflictingColumns)}
+//   - toUpdate
+func (_e *ProjectRepository_Expecter) Upsert(projects interface{}, conflictingColumns interface{}, toUpdate interface{}) *ProjectRepository_Upsert_Call {
+	return &ProjectRepository_Upsert_Call{Call: _e.mock.On("Upsert", projects, conflictingColumns, toUpdate)}
 }
 
-func (_c *ProjectRepository_Upsert_Call) Run(run func(projects *[]*models.Project, conflictingColumns *[]clause.Column)) *ProjectRepository_Upsert_Call {
+func (_c *ProjectRepository_Upsert_Call) Run(run func(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string)) *ProjectRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*[]*models.Project), args[1].(*[]clause.Column))
+		run(args[0].(*[]*models.Project), args[1].([]clause.Column), args[2].([]string))
 	})
 	return _c
 }
@@ -802,7 +803,7 @@ func (_c *ProjectRepository_Upsert_Call) Return(err error) *ProjectRepository_Up
 	return _c
 }
 
-func (_c *ProjectRepository_Upsert_Call) RunAndReturn(run func(projects *[]*models.Project, conflictingColumns *[]clause.Column) error) *ProjectRepository_Upsert_Call {
+func (_c *ProjectRepository_Upsert_Call) RunAndReturn(run func(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error) *ProjectRepository_Upsert_Call {
 	_c.Call.Return(run)
 	return _c
 }

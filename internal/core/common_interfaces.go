@@ -48,7 +48,7 @@ type ProjectRepository interface {
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
-	Upsert(projects *[]*models.Project, conflictingColumns *[]clause.Column) error
+	Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
 }
 
 type PolicyRepository interface {
@@ -63,6 +63,8 @@ type AssetRepository interface {
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	GetByOrgID(organizationID uuid.UUID) ([]models.Asset, error)
 	FindByName(name string) (models.Asset, error)
+	FindAssetByExternalProviderId(externalEntityProviderID string, externalEntityID string) (*models.Asset, error)
+	GetFQNByID(id uuid.UUID) (string, error)
 	FindOrCreate(tx DB, name string) (models.Asset, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
@@ -226,11 +228,9 @@ type DependencyVulnService interface {
 	UserDetectedDependencyVulnWithAnotherScanner(tx DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error
 	UserDidNotDetectDependencyVulnWithScannerAnymore(tx DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error
 	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)
-	CreateIssuesForVulnsIfThresholdExceeded(asset models.Asset, vulnList []models.DependencyVuln) error
-	CloseIssuesAsFixed(asset models.Asset, vulnList []models.DependencyVuln) error
+	SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 
-	SyncTickets(assetVersion models.Asset) error
-	ShouldCreateIssues(assetVersion models.AssetVersion) bool
+	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
 }
 
 // useful for integration testing - use in production to just fire and forget a function "go func()"
@@ -322,6 +322,7 @@ type GitLabOauth2TokenRepository interface {
 	FindByUserId(userId string) ([]models.GitLabOauth2Token, error)
 	Delete(tx DB, tokens []models.GitLabOauth2Token) error
 	DeleteByUserIdAndProviderId(userId string, providerId string) error
+	CreateIfNotExists(tokens []*models.GitLabOauth2Token) error
 }
 
 type ConfigService interface {

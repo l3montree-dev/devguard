@@ -31,7 +31,6 @@ func (s *service) ReadBySlug(ctx core.Context, organizationID uuid.UUID, slug st
 	}
 
 	// check if it is an external entity
-
 	return project, nil
 }
 
@@ -164,10 +163,10 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 			toUpsert = append(toUpsert, &slice[i])
 			slice[i].OrganizationID = core.GetOrg(c).GetID() // ensure the organization ID is set
 		}
-		err = s.projectRepository.Upsert(&toUpsert, &[]clause.Column{
+		err = s.projectRepository.Upsert(&toUpsert, []clause.Column{
 			{Name: "external_entity_provider_id"},
 			{Name: "external_entity_id"},
-		})
+		}, []string{"slug", "name", "description", "organization_id"})
 
 		return slice, err
 	}
