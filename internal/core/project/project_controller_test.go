@@ -26,7 +26,7 @@ func TestProjectControllerRead(t *testing.T) {
 	projectService := project.NewService(projectRepo, assetRepo)
 	controller := project.NewHttpController(projectRepo, assetRepo, projectService)
 
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	t.Run("should read external assets if the project is an external entity", func(t *testing.T) {
 		// make the project an external entity

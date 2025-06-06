@@ -34,7 +34,7 @@ func TestScanning(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx core.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -167,7 +167,7 @@ func TestTicketHandling(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx core.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")

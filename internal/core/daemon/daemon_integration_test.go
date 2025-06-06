@@ -43,7 +43,7 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	_, _, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	_, _, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 	assetVersion := models.AssetVersion{
 		Name:          "main",
 		AssetID:       asset.ID,
@@ -157,7 +157,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err = db.Save(&org).Error
