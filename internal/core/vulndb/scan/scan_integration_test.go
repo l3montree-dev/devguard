@@ -226,7 +226,7 @@ func TestScanning(t *testing.T) {
 		lastTwoEvents := newVuln.Events[len(newVuln.Events)-2:]
 		assert.Equal(t, models.EventTypeAccepted, lastTwoEvents[0].Type)
 		assert.Equal(t, "accepting the vulnerability", *lastTwoEvents[0].Justification)
-		assert.Equal(t, "main", lastTwoEvents[0].OriginalAssetVersionName)
+		assert.Equal(t, "main", *lastTwoEvents[0].OriginalAssetVersionName)
 		assert.Equal(t, models.EventTypeDetectedOnAnotherBranch, lastTwoEvents[1].Type)
 	})
 }
