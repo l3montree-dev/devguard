@@ -3,6 +3,7 @@ package component
 import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type componentDTO struct {
@@ -23,7 +24,7 @@ func toDTO(m models.ComponentDependency) componentDTO {
 	return componentDTO{
 		ID:             m.ID,
 		Component:      m.Component,
-		ComponentPurl:  *m.ComponentPurl,
+		ComponentPurl:  utils.SafeDereference(m.ComponentPurl),
 		Dependency:     m.Dependency,
 		DependencyPurl: m.DependencyPurl,
 		AssetID:        m.AssetID,
