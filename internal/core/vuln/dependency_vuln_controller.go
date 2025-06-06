@@ -329,10 +329,17 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 				UserID:                  ev.UserID,
 				Justification:           ev.Justification,
 				MechanicalJustification: ev.MechanicalJustification,
-				AssetVersionName:        dependencyVuln.AssetVersionName,
+				AssetVersionName:        getAssetVersionName(dependencyVuln, ev),
 				ArbitraryJsonData:       ev.GetArbitraryJsonData(),
 				CreatedAt:               ev.CreatedAt,
 			}
 		}),
 	}
+}
+
+func getAssetVersionName(vuln models.DependencyVuln, ev models.VulnEvent) string {
+	if ev.OriginalAssetVersionName != nil && *ev.OriginalAssetVersionName != "" {
+		return *ev.OriginalAssetVersionName
+	}
+	return vuln.AssetVersionName // fallback to the vuln's asset version name if event does not have it
 }

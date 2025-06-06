@@ -244,9 +244,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	// now we have the depth.
 	for _, vuln := range vulns {
 		v := vuln
-
 		fixedVersion := fixFixedVersion(v.Purl, v.FixedVersion)
-
 		dependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
@@ -323,6 +321,40 @@ func diffScanResults(currentScanner string, foundVulnerabilities []models.Depend
 	return foundByScannerAndNotExisting, fixedVulns, detectedByOtherScanner, notDetectedByScannerAnymore
 }
 
+func diffVulnsBetweenBranches(scannerID string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, [][]models.VulnEvent) {
+	// build a map from those vulns based on the cve id
+	vulnMap := make(map[string]models.DependencyVuln)
+	for _, vuln := range existingDependencyVulns {
+		if vuln.CVEID != nil {
+			// we only want to keep the latest version of the vuln
+			vulnMap[*vuln.CVEID] = vuln
+		}
+	}
+
+	newDetectedVulnsNotOnDefaultBranch := make([]models.DependencyVuln, 0)
+	// check the new detected vulns if they are already present on the default branch
+	newDetectedButOnDefaultBranchExisting := make([]models.DependencyVuln, 0)
+	existingEvents := make([][]models.VulnEvent, 0)
+	for _, newDetectedVuln := range foundVulnerabilities {
+		if newDetectedVuln.CVEID == nil {
+			continue // we only want to check for CVE vulns
+		}
+		if existingVuln, ok := vulnMap[*newDetectedVuln.CVEID]; ok {
+			// we found an existing vuln on the default branch
+			newDetectedButOnDefaultBranchExisting = append(newDetectedButOnDefaultBranchExisting, newDetectedVuln)
+			// we also want to get the events for that vuln
+			existingEvents = append(existingEvents, utils.Map(existingVuln.Events, func(event models.VulnEvent) models.VulnEvent {
+				event.OriginalAssetVersionName = utils.Ptr(vulnMap[*newDetectedVuln.CVEID].AssetVersionName)
+				return event
+			}))
+		} else {
+			// this is really a new detected vuln
+			newDetectedVulnsNotOnDefaultBranch = append(newDetectedVulnsNotOnDefaultBranch, newDetectedVuln)
+		}
+	}
+	return newDetectedVulnsNotOnDefaultBranch, newDetectedButOnDefaultBranchExisting, existingEvents
+}
+
 func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	// get all existing dependencyVulns from the database - this is the old state
 	//number := rand.IntN(len(dependencyVulns))
@@ -332,6 +364,15 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
+	// get all vulns from the default branch
+	existingVulnsOnDefaultBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(nil, assetVersion.AssetID, "")
+	if err != nil {
+		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
+	existingVulnsOnDefaultBranch = utils.Filter(existingVulnsOnDefaultBranch, func(dependencyVuln models.DependencyVuln) bool {
+		return dependencyVuln.State != models.VulnStateFixed
+	})
 
 	// remove all fixed dependencyVulns from the existing dependencyVulns
 	existingDependencyVulns = utils.Filter(existingDependencyVulns, func(dependencyVuln models.DependencyVuln) bool {
@@ -340,9 +381,15 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 
 	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(scannerID, dependencyVulns, existingDependencyVulns)
 
+	newDetectedVulnsNotOnDefaultBranch, newDetectedButOnDefaultBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, newDetectedVulns, existingVulnsOnDefaultBranch)
+
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
+		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, userID, scannerID, newDetectedButOnDefaultBranchExisting, existingEvents, *assetVersion, asset); err != nil {
+			slog.Error("error when trying to add events for existing vulnerability on different branch")
+			return err // this will cancel the transaction
+		}
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, scannerID, newDetectedVulns, *assetVersion, asset); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, scannerID, newDetectedVulnsNotOnDefaultBranch, *assetVersion, asset); err != nil {
 			return err // this will cancel the transaction
 		}
 
@@ -370,7 +417,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	return newDetectedVulns, fixedVulns, v, nil
+	return newDetectedVulnsNotOnDefaultBranch, fixedVulns, v, nil
 }
 
 func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
