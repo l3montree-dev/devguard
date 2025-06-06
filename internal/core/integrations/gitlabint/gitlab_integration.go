@@ -121,9 +121,8 @@ func messageWasCreatedByDevguard(message string) bool {
 	return strings.Contains(message, "<devguard>")
 }
 
-func NewGitLabIntegration(db core.DB, oauth2GitlabIntegration map[string]*GitlabOauth2Config, casbinRBACProvider core.RBACProvider, clientFactory core.GitlabClientFactory) *GitlabIntegration {
+func NewGitlabIntegration(db core.DB, oauth2GitlabIntegration map[string]*GitlabOauth2Config, casbinRBACProvider core.RBACProvider, clientFactory core.GitlabClientFactory) *GitlabIntegration {
 	gitlabIntegrationRepository := repositories.NewGitLabIntegrationRepository(db)
-
 	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	vulnEventRepository := repositories.NewVulnEventRepository(db)

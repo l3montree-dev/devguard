@@ -9,29 +9,29 @@ import (
 	"github.com/l3montree-dev/devguard/mocks"
 )
 
-type testGitlabClientFactory struct {
+type TestGitlabClientFactory struct {
 	*mocks.GitlabClientFacade
 }
 
-func NewTestClientFactory(t *testing.T) (testGitlabClientFactory, *mocks.GitlabClientFacade) {
+func NewTestClientFactory(t *testing.T) (TestGitlabClientFactory, *mocks.GitlabClientFacade) {
 	client := mocks.NewGitlabClientFacade(t)
-	return testGitlabClientFactory{
+	return TestGitlabClientFactory{
 		GitlabClientFacade: client,
 	}, client
 }
 
-func (f testGitlabClientFactory) FromAccessToken(accessToken string, baseUrl string) (core.GitlabClientFacade, error) {
+func (f TestGitlabClientFactory) FromAccessToken(accessToken string, baseUrl string) (core.GitlabClientFacade, error) {
 	return f.GitlabClientFacade, nil
 }
 
-func (f testGitlabClientFactory) FromIntegration(integration models.GitLabIntegration) (core.GitlabClientFacade, error) {
+func (f TestGitlabClientFactory) FromIntegration(integration models.GitLabIntegration) (core.GitlabClientFacade, error) {
 	return f.GitlabClientFacade, nil
 }
 
-func (f testGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (core.GitlabClientFacade, error) {
+func (f TestGitlabClientFactory) FromIntegrationUUID(id uuid.UUID) (core.GitlabClientFacade, error) {
 	return f.GitlabClientFacade, nil
 }
 
-func (f testGitlabClientFactory) FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (core.GitlabClientFacade, error) {
+func (f TestGitlabClientFactory) FromOauth2Token(token models.GitLabOauth2Token, enableClientCache bool) (core.GitlabClientFacade, error) {
 	return f.GitlabClientFacade, nil
 }
