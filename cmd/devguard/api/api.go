@@ -275,7 +275,7 @@ func assetNameMiddleware() core.MiddlewareFunc {
 	}
 }
 
-func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationService core.OrgService) core.MiddlewareFunc {
+func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationService core.OrgService, oauth2Config map[string]*gitlabint.GitlabOauth2Config) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) (err error) {
 
@@ -296,7 +296,14 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 			// check what kind of RBAC we need
 			var domainRBAC core.AccessControl
 			if org.IsExternalEntity() {
-				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, core.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID)
+				// check if there is an admin token defined
+				conf, ok := oauth2Config[*org.ExternalEntityProviderID]
+				if !ok {
+					slog.Error("no oauth2 config found for external entity provider", "provider", *org.ExternalEntityProviderID)
+					return ctx.JSON(500, map[string]string{"error": "no oauth2 config found for external entity provider"})
+				}
+
+				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, core.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, *conf.AdminToken)
 			} else {
 				domainRBAC = rbacProvider.GetDomainRBAC(org.ID.String())
 			}
@@ -476,11 +483,11 @@ func BuildRouter(db core.DB) *echo.Echo {
 	sessionRouter.POST("/accept-invitation/", orgController.AcceptInvitation, neededScope([]string{"manage"}))
 
 	//TODO: change "/scan/" to "/sbom-scan/"
-	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/scan/", scanController.ScanDependencyVulnFromProject, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate), assetMiddleware(assetRepository))
 
-	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/sarif-scan/", scanController.FirstPartyVulnScan, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate), assetMiddleware(assetRepository))
 
-	sessionRouter.POST("/attestations/", attestationController.Create, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate), assetMiddleware(assetRepository))
+	sessionRouter.POST("/attestations/", attestationController.Create, neededScope([]string{"scan"}), assetNameMiddleware(), multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate), assetMiddleware(assetRepository))
 
 	sessionRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
 
@@ -500,7 +507,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	orgRouter.GET("/", orgController.List)
 
 	//Api functions for interacting with an organization  ->  .../organizations/<organization-name>/...
-	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService))
+	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations))
 	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
 	organizationRouter.GET("/", orgController.Read, accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
 

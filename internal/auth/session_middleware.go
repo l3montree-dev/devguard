@@ -83,12 +83,18 @@ func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.M
 			var scopes string
 			var err error
 
+			adminTokenHeader := ctx.Request().Header.Get("X-Admin-Token")
+
 			if oryKratosSessionCookie == nil {
 				userID, scopes, err = verifier.VerifyRequestSignature(ctx.Request())
 				if err != nil {
 					ctx.Set("session", NoSession)
 					return next(ctx)
 				}
+			} else if adminTokenHeader != "" {
+				slog.Warn("admin token header is set, using it to create session", "header", adminTokenHeader)
+				ctx.Set("session", NewSession(adminTokenHeader, []string{"admin"}))
+				return next(ctx)
 			} else {
 				userID, err = cookieAuth(ctx.Request().Context(), oryApiClient, oryKratosSessionCookie.String())
 				if err != nil {
