@@ -97,6 +97,7 @@ func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, userID, 
 				return ev.IsScanUnreleatedEvent()
 			}), func(el models.VulnEvent) models.VulnEvent {
 				el.VulnID = dependencyVuln.CalculateHash()
+				el.ID = uuid.Nil
 				return el
 			})
 		}
