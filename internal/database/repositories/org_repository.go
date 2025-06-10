@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright (C) 2023 Tim Bastin, l3montree GmbH
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
