@@ -3,7 +3,9 @@
 name: DevGuard-Workflow
 
 on:
+  workflow_dispatch:
   push:
+
 
 jobs:
   # Secret scanning job to detect secrets in codebase
