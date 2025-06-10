@@ -70,14 +70,14 @@ OWASP Incubating Project`,
 			initLogger(slog.LevelInfo)
 		}
 
-		err = initializeConfig(cmd)
-		if err != nil {
-			return err
-		}
-
 		if utils.RunsInCI() {
 			slog.Info("Running in CI")
 			return utils.GitLister.MarkAllPathsAsSafe()
+		}
+
+		err = initializeConfig(cmd)
+		if err != nil {
+			return err
 		}
 
 		return nil
