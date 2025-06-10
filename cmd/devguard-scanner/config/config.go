@@ -127,8 +127,6 @@ func ParseBaseConfig() {
 		"webUI", RuntimeBaseConfig.WebUI,
 		"failOnRisk", RuntimeBaseConfig.FailOnRisk,
 		"registry", RuntimeBaseConfig.Registry,
-		"username", RuntimeBaseConfig.Username,
-		"password", RuntimeBaseConfig.Password,
 	)
 }
 
