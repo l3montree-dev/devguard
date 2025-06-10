@@ -97,7 +97,6 @@ func TestBuildSBOM(t *testing.T) {
 		assert.Equal(t, "latest", BOMResult.Metadata.Component.Version)
 	})
 	t.Run("test with only components in the db with an invalid version set", func(t *testing.T) {
-		createComponents(db, org.ID, asset.ID, assetVersion.Name)
 		recorder := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/sbom-json/", nil)
 		ctx := app.NewContext(req, recorder)
@@ -111,7 +110,6 @@ func TestBuildSBOM(t *testing.T) {
 		}
 	})
 	t.Run("test with only components in the db with a valid version set", func(t *testing.T) {
-		createComponents(db, org.ID, asset.ID, assetVersion.Name)
 		recorder := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/sbom-json/", nil)
 		ctx := app.NewContext(req, recorder)
