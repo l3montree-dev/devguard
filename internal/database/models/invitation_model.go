@@ -1,4 +1,4 @@
-// Copyright 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright 2024 Tim Bastin, l3montree GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
