@@ -203,6 +203,25 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
+func fixFixedVersion(purl string, fixedVersion *string) *string {
+	if fixedVersion == nil || *fixedVersion == "" {
+		return nil
+	}
+
+	// split the purl after the @ to get the version
+	versionSubstrings := strings.SplitN(purl, "@", 2)
+	if len(versionSubstrings) < 2 {
+		return fixedVersion // no version in purl, return the fixed version as is
+	}
+
+	// check if ver starts with a v
+	if strings.HasPrefix(versionSubstrings[1], "v") {
+		return utils.Ptr("v" + *fixedVersion)
+	}
+
+	return fixedVersion
+
+}
 
 func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 
@@ -226,6 +245,8 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	for _, vuln := range vulns {
 		v := vuln
 
+		fixedVersion := fixFixedVersion(v.Purl, v.FixedVersion)
+
 		dependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
@@ -234,7 +255,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 			},
 			CVEID:                 utils.Ptr(v.CVEID),
 			ComponentPurl:         utils.Ptr(v.Purl),
-			ComponentFixedVersion: v.FixedVersion,
+			ComponentFixedVersion: fixedVersion,
 			ComponentDepth:        utils.Ptr(depthMap[v.Purl]),
 			CVE:                   &v.CVE,
 		}

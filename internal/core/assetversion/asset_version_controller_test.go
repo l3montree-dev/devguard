@@ -1,7 +1,7 @@
 package assetversion_test
 
 import (
-	"fmt"
+	"io"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -14,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/inithelper"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildSBOM(t *testing.T) {
@@ -42,8 +43,18 @@ func TestBuildSBOM(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		var sbom []byte
-		fmt.Printf("\n------------Result------------\n%s\n-------------End--------------\n", sbom)
+		resp := recorder.Result()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fail()
+		}
+		/*jsonSBOM, err := json.Marshal(body)
+		if err != nil {
+			t.Fail()
+		}*/
+		cutBody := string(body)[:82] + string(body)[102:]
+
+		assert.Equal(t, `{"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"metadata":{"timestamp":"","component":{"bom-ref":"main","type":"application","author":"Test Org","publisher":"github.com/l3montree-dev/devguard","name":"main","version":"latest"}},"components":[{"bom-ref":"pkg:npm/@xyflow/react@12.3.0","type":"library","name":"@xyflow/react","version":"12.3.0","licenses":[{"license":{"id":"MIT","name":"MIT"}}],"purl":"pkg:npm/@xyflow/react@12.3.0"},{"bom-ref":"pkg:npm/@xyflow/system@0.0.42","type":"library","name":"@xyflow/system","version":"0.0.42","licenses":[{"license":{"id":"Apache-2.0"}}],"purl":"pkg:npm/@xyflow/system@0.0.42"}],"dependencies":[{"ref":"pkg:npm/@xyflow/system@0.0.42","dependsOn":["pkg:npm/@xyflow/react@12.3.0"]},{"ref":"main","dependsOn":["pkg:npm/@xyflow/system@0.0.42"]}]}`, cutBody[:len(cutBody)-1])
 
 	})
 }

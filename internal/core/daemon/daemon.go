@@ -134,7 +134,7 @@ func Start(db core.DB) {
 		if shouldMirror(configService, "vulndb.risk") {
 			start = time.Now()
 			// finally, recalculate the risk.
-			if err := RecalculateRisk(db); err != nil {
+			if err := RecalculateRisk(db, thirdPartyIntegrationAggregate); err != nil {
 				slog.Error("could not recalculate risk", "err", err)
 				return nil
 			}

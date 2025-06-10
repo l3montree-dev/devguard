@@ -13,7 +13,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 )
 
-func RecalculateRisk(db core.DB) error {
+func RecalculateRisk(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyIntegration) error {
 	start := time.Now()
 	defer func() {
 		monitoring.RecalculateAllRawRiskAssessmentsDuration.Observe(time.Since(start).Minutes())
@@ -47,7 +47,7 @@ func RecalculateRisk(db core.DB) error {
 		repositories.NewAssetVersionRepository(db),
 	)
 
-	err = dependencyVulnService.RecalculateAllRawRiskAssessments()
+	err := dependencyVulnService.RecalculateAllRawRiskAssessments()
 	if err != nil {
 		return err
 	}

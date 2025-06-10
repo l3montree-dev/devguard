@@ -1033,7 +1033,6 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 }
 
 func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.GitlabClientFacade, int, error) {
-
 	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
 		integrationUUID, err := extractIntegrationIdFromRepoId(*asset.RepositoryID)
 		if err != nil {
