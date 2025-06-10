@@ -249,7 +249,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		oldRiskAssessment := dependencyVuln.RawRiskAssessment
 		newRiskAssessment := risk.RawRisk(*dependencyVuln.CVE, env, *dependencyVuln.ComponentDepth)
 
-		if *oldRiskAssessment != newRiskAssessment.Risk {
+		if oldRiskAssessment == nil || *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, oldRiskAssessment, newRiskAssessment)
 			// apply the event on the dependencyVuln
 			ev.Apply(&dependencyVulns[i])
