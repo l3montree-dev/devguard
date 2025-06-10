@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -66,7 +65,7 @@ func TestBuildSBOM(t *testing.T) {
 		assert.Equal(t, "latest", BOMResult.Metadata.Component.Version)
 	})
 	t.Run("test with only components in the db with no specific version", func(t *testing.T) {
-		createComponents(db, org.ID, asset.ID, assetVersion.Name)
+		createComponents(db)
 		recorder := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/sbom-json/", nil)
 		ctx := app.NewContext(req, recorder)
@@ -142,9 +141,9 @@ func TestBuildSBOM(t *testing.T) {
 		assert.Equal(t, "main", BOMResult.Metadata.Component.BOMRef)
 		assert.Equal(t, "2.1.9", BOMResult.Metadata.Component.Version)
 	})
-	/*t.Run("create a normal sbom with components and dependencies and a license overwrite ", func(t *testing.T) {
+	t.Run("create a normal sbom with components and dependencies but no license overwrite ", func(t *testing.T) {
 		//Setup environment for this test
-		buildDatabase(db, org.ID, asset.ID, "main", "with license overwrite, components and dependencies")
+		createDependencies(db, org.ID, asset.ID, assetVersion.Name)
 		recorder := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/sbom-json/", nil)
 		req.Header.Set("Content-Type", "application/json")
@@ -169,9 +168,37 @@ func TestBuildSBOM(t *testing.T) {
 
 		//Test the BOM
 
-	})*/
+	})
+	t.Run("create a normal sbom with components and dependencies but the license of one of the components is now overwritten", func(t *testing.T) {
+		//Setup environment for this test
+		createLicenseOverwrite(db, org.ID)
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/sbom-json/", nil)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Scanner", "scanner-1")
+		ctx := app.NewContext(req, recorder)
+		setupContext(&ctx)
+		err := assetVersionController.SBOMJSON(ctx)
+		if err != nil {
+			t.Fail()
+		}
+
+		//Process the results into an BOM
+		resp := recorder.Result()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fail()
+		}
+		var jsonBOM cyclonedx.BOM
+		if err = json.Unmarshal(body, &jsonBOM); err != nil {
+			t.Fail()
+		}
+
+		//Test the BOM
+
+	})
 }
-func createComponents(db core.DB, orgID uuid.UUID, assetID uuid.UUID, assetVersionName string) {
+func createComponents(db core.DB) {
 	componentProject := models.ComponentProject{
 		ProjectKey:      "github.com/xyflow/xyflow",
 		StarsCount:      2993,
@@ -210,97 +237,55 @@ func createComponents(db core.DB, orgID uuid.UUID, assetID uuid.UUID, assetVersi
 	}
 }
 
-func buildDatabase(db core.DB, orgID uuid.UUID, assetID uuid.UUID, assetVersionName string, mode string) {
-
-	var err error
-	if strings.Contains(mode, "license overwrite") {
-		lo := models.LicenseOverwrite{
-			LicenseID:      "Apache-2.0",
-			OrganizationId: orgID,
-			ComponentPurl:  "pkg:npm/@xyflow/system@0.0.42",
-			Justification:  "while the specifications place no limits on the magnitude or precision of JSON number literals, the widely used JavaScript implementation stores them as IEEE754 binary64 quantities. For interoperability, applications should avoid transmitting numbers that cannot be represented in this way, for example, 1E400 or 3.141592653589793238462643383279.",
-		}
-		err = db.Create(&lo).Error
-		if err != nil {
-			panic(err)
-		}
+func createDependencies(db core.DB, orgID uuid.UUID, assetID uuid.UUID, assetVersionName string) {
+	componentDependency0 := models.ComponentDependency{
+		ComponentPurl:    nil,
+		DependencyPurl:   "pkg:npm/@xyflow/system@0.0.42",
+		AssetID:          assetID,
+		AssetVersionName: assetVersionName,
+		Depth:            0,
+		ScannerIDs:       "SBOM-File-Upload",
 	}
-	if strings.Contains(mode, "components") {
-		componentProject := models.ComponentProject{
-			ProjectKey:      "github.com/xyflow/xyflow",
-			StarsCount:      2993,
-			ForksCount:      282,
-			OpenIssuesCount: 0,
-			License:         "MIT",
-			ScoreCardScore:  utils.Ptr(5.2),
-		}
-		err = db.Create(&componentProject).Error
-		if err != nil {
-			panic(err)
-		}
-		component1 := models.Component{
-			Purl:             "pkg:npm/@xyflow/system@0.0.42",
-			ComponentType:    models.ComponentTypeLibrary,
-			Version:          "0.0.42",
-			License:          utils.Ptr("MIT"),
-			Published:        utils.Ptr(time.Now()),
-			ComponentProject: &componentProject,
-		}
-		err = db.Create(&component1).Error
-		if err != nil {
-			panic(err)
-		}
-		component2 := models.Component{
-			Purl:             "pkg:npm/@xyflow/react@12.3.0",
-			ComponentType:    models.ComponentTypeLibrary,
-			Version:          "12.3.0",
-			License:          utils.Ptr("MIT"),
-			Published:        utils.Ptr(time.Now()),
-			ComponentProject: &componentProject,
-		}
-		err = db.Create(&component2).Error
-		if err != nil {
-			panic(err)
-		}
+	err := db.Create(&componentDependency0).Error
+	if err != nil {
+		panic(err)
 	}
 
-	if strings.Contains(mode, "dependencies") {
-		component_dependency0 := models.ComponentDependency{
-			ComponentPurl:    nil,
-			DependencyPurl:   "pkg:npm/@xyflow/system@0.0.42",
-			AssetID:          assetID,
-			AssetVersionName: assetVersionName,
-			Depth:            0,
-			ScannerIDs:       "SBOM-File-Upload",
-		}
-		err = db.Create(&component_dependency0).Error
-		if err != nil {
-			panic(err)
-		}
+	componentDependency1 := models.ComponentDependency{
+		ComponentPurl:    utils.Ptr("pkg:npm/@xyflow/system@0.0.42"),
+		DependencyPurl:   "pkg:npm/@xyflow/react@12.3.0",
+		AssetID:          assetID,
+		AssetVersionName: assetVersionName,
+		Depth:            0,
+		ScannerIDs:       "SBOM-File-Upload",
+	}
+	err = db.Create(&componentDependency1).Error
+	if err != nil {
+		panic(err)
+	}
+	componentDependency2 := models.ComponentDependency{
+		ComponentPurl:    utils.Ptr("pkg:npm/@xyflow/react@12.3.0"),
+		DependencyPurl:   "pkg:npm/@xyflow/system@0.0.42",
+		AssetID:          assetID,
+		AssetVersionName: assetVersionName,
+		Depth:            0,
+		ScannerIDs:       "SBOM-File-Upload",
+	}
+	err = db.Create(&componentDependency2).Error
+	if err != nil {
+		panic(err)
+	}
+}
 
-		component_dependency1 := models.ComponentDependency{
-			ComponentPurl:    utils.Ptr("pkg:npm/@xyflow/system@0.0.42"),
-			DependencyPurl:   "pkg:npm/@xyflow/react@12.3.0",
-			AssetID:          assetID,
-			AssetVersionName: assetVersionName,
-			Depth:            0,
-			ScannerIDs:       "SBOM-File-Upload",
-		}
-		err = db.Create(&component_dependency1).Error
-		if err != nil {
-			panic(err)
-		}
-		component_dependency2 := models.ComponentDependency{
-			ComponentPurl:    utils.Ptr("pkg:npm/@xyflow/react@12.3.0"),
-			DependencyPurl:   "pkg:npm/@xyflow/system@0.0.42",
-			AssetID:          assetID,
-			AssetVersionName: assetVersionName,
-			Depth:            0,
-			ScannerIDs:       "SBOM-File-Upload",
-		}
-		err = db.Create(&component_dependency2).Error
-		if err != nil {
-			panic(err)
-		}
+func createLicenseOverwrite(db core.DB, orgID uuid.UUID) {
+	lo := models.LicenseOverwrite{
+		LicenseID:      "Apache-2.0",
+		OrganizationId: orgID,
+		ComponentPurl:  "pkg:npm/@xyflow/system@0.0.42",
+		Justification:  "while the specifications place no limits on the magnitude or precision of JSON number literals, the widely used JavaScript implementation stores them as IEEE754 binary64 quantities. For interoperability, applications should avoid transmitting numbers that cannot be represented in this way, for example, 1E400 or 3.141592653589793238462643383279.",
+	}
+	err := db.Create(&lo).Error
+	if err != nil {
+		panic(err)
 	}
 }
