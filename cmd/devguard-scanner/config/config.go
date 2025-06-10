@@ -89,35 +89,47 @@ func ParseBaseConfig() {
 		}
 	}
 
-	gitVersionInfo, err := utils.GetAssetVersionInfo(RuntimeBaseConfig.Path)
+	if RuntimeBaseConfig.Ref == "" || RuntimeBaseConfig.DefaultBranch == "" {
+		gitVersionInfo, err := utils.GetAssetVersionInfo(RuntimeBaseConfig.Path)
+		if err != nil {
+			slog.Warn("could not get git version info", "error", err)
+		}
+		if RuntimeBaseConfig.Ref == "" {
+			// check if we have a git version info
+			if err == nil {
+				RuntimeBaseConfig.Ref = gitVersionInfo.BranchOrTag
+			} else {
+				// if we don't have a git version info, we use the current time as ref
+				slog.Info("could not get git version info, using current 'main' as ref")
+				RuntimeBaseConfig.Ref = "main"
+			}
+		}
 
-	if RuntimeBaseConfig.Ref == "" {
-		// check if we have a git version info
-		if err == nil {
-			RuntimeBaseConfig.Ref = gitVersionInfo.BranchOrTag
-		} else {
-			// if we don't have a git version info, we use the current time as ref
-			slog.Info("could not get git version info, using current 'main' as ref")
-			RuntimeBaseConfig.Ref = "main"
+		if RuntimeBaseConfig.DefaultBranch == "" {
+			// check if we have a git version info
+			if gitVersionInfo.DefaultBranch != nil {
+				RuntimeBaseConfig.DefaultBranch = *gitVersionInfo.DefaultBranch
+			} else {
+				// if we don't have a git version info, we use the current time as default ref
+				slog.Info("could not get git default ref. Not updating anything default branch information")
+			}
 		}
 	}
 
-	if RuntimeBaseConfig.DefaultBranch == "" {
-		// check if we have a git version info
-		if gitVersionInfo.DefaultBranch != nil {
-			RuntimeBaseConfig.DefaultBranch = *gitVersionInfo.DefaultBranch
-		} else {
-			// if we don't have a git version info, we use the current time as default ref
-			slog.Info("could not get git default ref. Not updating anything default branch information")
-		}
-	}
-
-	if !RuntimeBaseConfig.IsTag {
-		// check if we have a git version info
-		if gitVersionInfo.IsTag {
-			RuntimeBaseConfig.IsTag = true
-		}
-	}
+	slog.Info("running with config",
+		"assetName", RuntimeBaseConfig.AssetName,
+		"apiUrl", RuntimeBaseConfig.ApiUrl,
+		"path", RuntimeBaseConfig.Path,
+		"ref", RuntimeBaseConfig.Ref,
+		"defaultBranch", RuntimeBaseConfig.DefaultBranch,
+		"isTag", RuntimeBaseConfig.IsTag,
+		"scannerId", RuntimeBaseConfig.ScannerID,
+		"webUI", RuntimeBaseConfig.WebUI,
+		"failOnRisk", RuntimeBaseConfig.FailOnRisk,
+		"registry", RuntimeBaseConfig.Registry,
+		"username", RuntimeBaseConfig.Username,
+		"password", RuntimeBaseConfig.Password,
+	)
 }
 
 func StoreTokenInKeyring(assetName, token string) error {
