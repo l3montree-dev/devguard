@@ -340,6 +340,7 @@ func (a *httpController) GetBadges(ctx core.Context) error {
 	}
 
 	ctx.Response().Header().Set(echo.HeaderContentType, "image/svg+xml")
+	ctx.Response().Header().Set(echo.HeaderCacheControl, "no-cache, no-store")
 
 	return ctx.String(200, svg)
 }
