@@ -17,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/inithelper"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/package-url/packageurl-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,7 +56,6 @@ func TestBuildSBOM(t *testing.T) {
 			t.Fail()
 		}
 
-		fmt.Printf("\n%s\n", string(body))
 		//Test the bom
 		assert.Empty(t, BOMResult.Components)
 		assert.Empty(t, BOMResult.Dependencies)
@@ -86,7 +86,6 @@ func TestBuildSBOM(t *testing.T) {
 			t.Fail()
 		}
 
-		fmt.Printf("\n%s\n", string(body))
 		//Test the bom
 		assert.Empty(t, BOMResult.Components)
 		assert.Empty(t, BOMResult.Dependencies)
@@ -95,15 +94,15 @@ func TestBuildSBOM(t *testing.T) {
 		assert.Equal(t, "main", BOMResult.Metadata.Component.BOMRef)
 		assert.Equal(t, "latest", BOMResult.Metadata.Component.Version)
 	})
-	t.Run("test with only components in the db with an invalid version set", func(t *testing.T) {
+	t.Run("test with only components in the db with an invalid version set should return an error", func(t *testing.T) {
 		recorder := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/sbom-json/", nil)
 		ctx := app.NewContext(req, recorder)
 		setupContext(&ctx)
 		params := ctx.QueryParams()
 		params.Add("version", "special version")
-
 		err := assetVersionController.SBOMJSON(ctx)
+		//should return an error
 		if err == nil {
 			t.Fail()
 		}
@@ -121,7 +120,7 @@ func TestBuildSBOM(t *testing.T) {
 			t.Fail()
 		}
 
-		//Process the results into an BOM
+		//Process the results into a BOM
 		resp := recorder.Result()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -132,7 +131,6 @@ func TestBuildSBOM(t *testing.T) {
 			t.Fail()
 		}
 
-		fmt.Printf("\n%s\n", string(body))
 		//Test the bom
 		assert.Empty(t, BOMResult.Components)
 		assert.Empty(t, BOMResult.Dependencies)
@@ -155,19 +153,35 @@ func TestBuildSBOM(t *testing.T) {
 			t.Fail()
 		}
 
-		//Process the results into an BOM
+		//Process the results into a BOM
 		resp := recorder.Result()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Fail()
 		}
-		var jsonBOM cyclonedx.BOM
-		if err = json.Unmarshal(body, &jsonBOM); err != nil {
+		var BOMResult cyclonedx.BOM
+		if err = json.Unmarshal(body, &BOMResult); err != nil {
 			t.Fail()
 		}
 
 		//Test the BOM
-
+		componentPURL0, err := packageurl.FromString((*BOMResult.Components)[0].PackageURL)
+		if err != nil {
+			t.Fail()
+		}
+		componentPURL1, err := packageurl.FromString((*BOMResult.Components)[1].PackageURL)
+		if err != nil {
+			t.Fail()
+		}
+		license := cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{ID: "MIT"}}}
+		assert.Equal(t, packageurl.PackageURL{Type: "npm", Namespace: "@xyflow", Name: "react", Version: "12.3.0", Qualifiers: packageurl.Qualifiers{}}, componentPURL0)
+		assert.Equal(t, license[0].License.ID, (*(*BOMResult.Components)[0].Licenses)[0].License.ID)
+		assert.Equal(t, packageurl.PackageURL{Type: "npm", Namespace: "@xyflow", Name: "system", Version: "0.0.42", Qualifiers: packageurl.Qualifiers{}}, componentPURL1)
+		assert.Equal(t, license[0].License.ID, (*(*BOMResult.Components)[1].Licenses)[0].License.ID)
+		assert.Equal(t, "Test Org", BOMResult.Metadata.Component.Author)
+		assert.Equal(t, "github.com/l3montree-dev/devguard", BOMResult.Metadata.Component.Publisher)
+		assert.Equal(t, "main", BOMResult.Metadata.Component.BOMRef)
+		assert.Equal(t, "latest", BOMResult.Metadata.Component.Version)
 	})
 	t.Run("create a normal sbom with components and dependencies but the license of one of the components is now overwritten", func(t *testing.T) {
 		//Setup environment for this test
@@ -189,13 +203,31 @@ func TestBuildSBOM(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		var jsonBOM cyclonedx.BOM
-		if err = json.Unmarshal(body, &jsonBOM); err != nil {
+		var BOMResult cyclonedx.BOM
+		if err = json.Unmarshal(body, &BOMResult); err != nil {
+			t.Fail()
+		}
+		//Test the BOM
+		componentPURL0, err := packageurl.FromString((*BOMResult.Components)[0].PackageURL)
+		if err != nil {
+			t.Fail()
+		}
+		componentPURL1, err := packageurl.FromString((*BOMResult.Components)[1].PackageURL)
+		if err != nil {
 			t.Fail()
 		}
 
-		//Test the BOM
-
+		fmt.Printf("%s", string(body))
+		licenseMIT := cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{ID: "MIT"}}}
+		licenseApache := cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{ID: "Apache-2.0"}}}
+		assert.Equal(t, packageurl.PackageURL{Type: "npm", Namespace: "@xyflow", Name: "react", Version: "12.3.0", Qualifiers: packageurl.Qualifiers{}}, componentPURL0)
+		assert.Equal(t, licenseMIT[0].License.ID, (*(*BOMResult.Components)[0].Licenses)[0].License.ID)
+		assert.Equal(t, packageurl.PackageURL{Type: "npm", Namespace: "@xyflow", Name: "system", Version: "0.0.42", Qualifiers: packageurl.Qualifiers{}}, componentPURL1)
+		assert.Equal(t, licenseApache[0].License.ID, (*(*BOMResult.Components)[1].Licenses)[0].License.ID)
+		assert.Equal(t, "Test Org", BOMResult.Metadata.Component.Author)
+		assert.Equal(t, "github.com/l3montree-dev/devguard", BOMResult.Metadata.Component.Publisher)
+		assert.Equal(t, "main", BOMResult.Metadata.Component.BOMRef)
+		assert.Equal(t, "latest", BOMResult.Metadata.Component.Version)
 	})
 }
 func createComponents(db core.DB) {
