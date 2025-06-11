@@ -88,9 +88,7 @@ func TestBuildSBOM(t *testing.T) {
 		//Test the bom
 		assert.Empty(t, BOMResult.Components)
 		assert.Empty(t, BOMResult.Dependencies)
-		assert.Equal(t, "Test Org", BOMResult.Metadata.Component.Author)
-		assert.Equal(t, "github.com/l3montree-dev/devguard", BOMResult.Metadata.Component.Publisher)
-		assert.Equal(t, "main", BOMResult.Metadata.Component.BOMRef)
+		testSBOMProperties(t, BOMResult)
 		assert.Equal(t, "latest", BOMResult.Metadata.Component.Version)
 	})
 	t.Run("test with only components in the db with an invalid version set should return an error", func(t *testing.T) {
@@ -133,10 +131,9 @@ func TestBuildSBOM(t *testing.T) {
 		//Test the bom
 		assert.Empty(t, BOMResult.Components)
 		assert.Empty(t, BOMResult.Dependencies)
-		assert.Equal(t, "Test Org", BOMResult.Metadata.Component.Author)
-		assert.Equal(t, "github.com/l3montree-dev/devguard", BOMResult.Metadata.Component.Publisher)
-		assert.Equal(t, "main", BOMResult.Metadata.Component.BOMRef)
+		testSBOMProperties(t, BOMResult)
 		assert.Equal(t, "2.1.9", BOMResult.Metadata.Component.Version)
+
 	})
 	t.Run("create a normal sbom with components and dependencies but no license overwrite ", func(t *testing.T) {
 		//Setup environment for this test
@@ -180,13 +177,11 @@ func TestBuildSBOM(t *testing.T) {
 		assert.Equal(t, license[0].License.ID, (*(*BOMResult.Components)[1].Licenses)[0].License.ID)
 
 		assert.Equal(t, []cyclonedx.Dependency{
-			cyclonedx.Dependency{Ref: "pkg:npm/@xyflow/system@0.0.42", Dependencies: &[]string{"pkg:npm/@xyflow/react@12.3.0"}},
-			cyclonedx.Dependency{Ref: "main", Dependencies: &[]string{"pkg:npm/@xyflow/system@0.0.42"}},
+			{Ref: "pkg:npm/@xyflow/system@0.0.42", Dependencies: &[]string{"pkg:npm/@xyflow/react@12.3.0"}},
+			{Ref: "main", Dependencies: &[]string{"pkg:npm/@xyflow/system@0.0.42"}},
 		}, *BOMResult.Dependencies)
 
-		assert.Equal(t, "Test Org", BOMResult.Metadata.Component.Author)
-		assert.Equal(t, "github.com/l3montree-dev/devguard", BOMResult.Metadata.Component.Publisher)
-		assert.Equal(t, "main", BOMResult.Metadata.Component.BOMRef)
+		testSBOMProperties(t, BOMResult)
 		assert.Equal(t, "latest", BOMResult.Metadata.Component.Version)
 	})
 	t.Run("create a normal sbom with components and dependencies but the license of one of the components is now overwritten", func(t *testing.T) {
@@ -232,13 +227,10 @@ func TestBuildSBOM(t *testing.T) {
 		assert.Equal(t, licenseApache[0].License.ID, (*(*BOMResult.Components)[1].Licenses)[0].License.ID)
 
 		assert.Equal(t, []cyclonedx.Dependency{
-			cyclonedx.Dependency{Ref: "pkg:npm/@xyflow/system@0.0.42", Dependencies: &[]string{"pkg:npm/@xyflow/react@12.3.0"}},
-			cyclonedx.Dependency{Ref: "main", Dependencies: &[]string{"pkg:npm/@xyflow/system@0.0.42"}},
+			{Ref: "pkg:npm/@xyflow/system@0.0.42", Dependencies: &[]string{"pkg:npm/@xyflow/react@12.3.0"}},
+			{Ref: "main", Dependencies: &[]string{"pkg:npm/@xyflow/system@0.0.42"}},
 		}, *BOMResult.Dependencies)
-
-		assert.Equal(t, "Test Org", BOMResult.Metadata.Component.Author)
-		assert.Equal(t, "github.com/l3montree-dev/devguard", BOMResult.Metadata.Component.Publisher)
-		assert.Equal(t, "main", BOMResult.Metadata.Component.BOMRef)
+		testSBOMProperties(t, BOMResult)
 		assert.Equal(t, "latest", BOMResult.Metadata.Component.Version)
 	})
 }
@@ -280,6 +272,12 @@ func createComponents(db core.DB) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func testSBOMProperties(t *testing.T, BOMResult cyclonedx.BOM) {
+	assert.Equal(t, "Test Org", BOMResult.Metadata.Component.Author)
+	assert.Equal(t, "github.com/l3montree-dev/devguard", BOMResult.Metadata.Component.Publisher)
+	assert.Equal(t, "main", BOMResult.Metadata.Component.BOMRef)
 }
 
 func createDependencies(db core.DB, orgID uuid.UUID, assetID uuid.UUID, assetVersionName string) {
