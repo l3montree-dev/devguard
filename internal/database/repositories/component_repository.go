@@ -280,7 +280,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 	var total int64
 	query.Session(&gorm.Session{}).Distinct("dependency_purl").Count(&total)
 
-	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Debug().Scan(&componentDependencies).Error
+	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Scan(&componentDependencies).Error
 
 	// convert all overwritten licenses to a map which maps a purl to a new license
 	isPurlOverwrittenMap := make(map[string]string, len(overwrittenLicenses))
