@@ -2,7 +2,6 @@ package assetversion_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http/httptest"
 	"os"
@@ -174,10 +173,17 @@ func TestBuildSBOM(t *testing.T) {
 			t.Fail()
 		}
 		license := cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{ID: "MIT"}}}
+
 		assert.Equal(t, packageurl.PackageURL{Type: "npm", Namespace: "@xyflow", Name: "react", Version: "12.3.0", Qualifiers: packageurl.Qualifiers{}}, componentPURL0)
 		assert.Equal(t, license[0].License.ID, (*(*BOMResult.Components)[0].Licenses)[0].License.ID)
 		assert.Equal(t, packageurl.PackageURL{Type: "npm", Namespace: "@xyflow", Name: "system", Version: "0.0.42", Qualifiers: packageurl.Qualifiers{}}, componentPURL1)
 		assert.Equal(t, license[0].License.ID, (*(*BOMResult.Components)[1].Licenses)[0].License.ID)
+
+		assert.Equal(t, []cyclonedx.Dependency{
+			cyclonedx.Dependency{Ref: "pkg:npm/@xyflow/system@0.0.42", Dependencies: &[]string{"pkg:npm/@xyflow/react@12.3.0"}},
+			cyclonedx.Dependency{Ref: "main", Dependencies: &[]string{"pkg:npm/@xyflow/system@0.0.42"}},
+		}, *BOMResult.Dependencies)
+
 		assert.Equal(t, "Test Org", BOMResult.Metadata.Component.Author)
 		assert.Equal(t, "github.com/l3montree-dev/devguard", BOMResult.Metadata.Component.Publisher)
 		assert.Equal(t, "main", BOMResult.Metadata.Component.BOMRef)
@@ -207,6 +213,7 @@ func TestBuildSBOM(t *testing.T) {
 		if err = json.Unmarshal(body, &BOMResult); err != nil {
 			t.Fail()
 		}
+
 		//Test the BOM
 		componentPURL0, err := packageurl.FromString((*BOMResult.Components)[0].PackageURL)
 		if err != nil {
@@ -216,20 +223,26 @@ func TestBuildSBOM(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-
-		fmt.Printf("%s", string(body))
 		licenseMIT := cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{ID: "MIT"}}}
+
 		licenseApache := cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{ID: "Apache-2.0"}}}
 		assert.Equal(t, packageurl.PackageURL{Type: "npm", Namespace: "@xyflow", Name: "react", Version: "12.3.0", Qualifiers: packageurl.Qualifiers{}}, componentPURL0)
 		assert.Equal(t, licenseMIT[0].License.ID, (*(*BOMResult.Components)[0].Licenses)[0].License.ID)
 		assert.Equal(t, packageurl.PackageURL{Type: "npm", Namespace: "@xyflow", Name: "system", Version: "0.0.42", Qualifiers: packageurl.Qualifiers{}}, componentPURL1)
 		assert.Equal(t, licenseApache[0].License.ID, (*(*BOMResult.Components)[1].Licenses)[0].License.ID)
+
+		assert.Equal(t, []cyclonedx.Dependency{
+			cyclonedx.Dependency{Ref: "pkg:npm/@xyflow/system@0.0.42", Dependencies: &[]string{"pkg:npm/@xyflow/react@12.3.0"}},
+			cyclonedx.Dependency{Ref: "main", Dependencies: &[]string{"pkg:npm/@xyflow/system@0.0.42"}},
+		}, *BOMResult.Dependencies)
+
 		assert.Equal(t, "Test Org", BOMResult.Metadata.Component.Author)
 		assert.Equal(t, "github.com/l3montree-dev/devguard", BOMResult.Metadata.Component.Publisher)
 		assert.Equal(t, "main", BOMResult.Metadata.Component.BOMRef)
 		assert.Equal(t, "latest", BOMResult.Metadata.Component.Version)
 	})
 }
+
 func createComponents(db core.DB) {
 	componentProject := models.ComponentProject{
 		ProjectKey:      "github.com/xyflow/xyflow",
