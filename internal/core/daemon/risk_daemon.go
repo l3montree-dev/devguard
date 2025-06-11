@@ -34,7 +34,7 @@ func RecalculateRisk(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyI
 
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
 
-	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
+	thirdPartyIntegrationAggregate = integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
 	dependencyVulnService := vuln.NewService(
 		repositories.NewDependencyVulnRepository(db),
@@ -47,7 +47,7 @@ func RecalculateRisk(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyI
 		repositories.NewAssetVersionRepository(db),
 	)
 
-	err := dependencyVulnService.RecalculateAllRawRiskAssessments()
+	err = dependencyVulnService.RecalculateAllRawRiskAssessments()
 	if err != nil {
 		return err
 	}
