@@ -747,8 +747,7 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 		// check if cve
 		cve := dependencyVuln.CVE
 		if cve != nil {
-			firstIssued, lastUpdated := getDatesForVulnerabilityEvent(dependencyVuln.Events)
-
+			firstIssued, lastUpdated, responseTime := getDatesForVulnerabilityEvent(dependencyVuln.Events)
 			vuln := cdx.Vulnerability{
 				ID: cve.CVE,
 				Source: &cdx.Source{
@@ -763,6 +762,9 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 					FirstIssued: firstIssued.UTC().Format(time.RFC3339),
 					LastUpdated: lastUpdated.UTC().Format(time.RFC3339),
 				},
+			}
+			if responseTime >= 0 {
+				vuln.Properties = &[]cdx.Property{{Name: "responseTime", Value: responseTime.String()}}
 			}
 
 			response := dependencyVulnStateToResponseStatus(dependencyVuln.State)
@@ -872,7 +874,7 @@ func dependencyVulnStateToResponseStatus(state models.VulnState) cdx.ImpactAnaly
 	}
 }
 
-func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time) {
+func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time, time.Duration) {
 	firstIssued := time.Time{}
 	lastUpdated := time.Time{}
 	if len(vulnEvents) > 0 {
@@ -887,6 +889,7 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 
 		// in case no manual events are available we need to set the default to the firstIssued date
 		lastUpdated = firstIssued
+		firstUpdated := time.Now()
 
 		// find the newest/latest event that was triggered through a human / manual interaction
 		for _, event := range vulnEvents {
@@ -901,8 +904,14 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 				if event.UpdatedAt.After(lastUpdated) {
 					lastUpdated = event.UpdatedAt
 				}
+				if event.UpdatedAt.Before(firstUpdated) {
+					firstUpdated = event.UpdatedAt
+				}
 			}
 		}
+		responseTime := firstUpdated.Sub(firstIssued)
+		return firstIssued, lastUpdated, responseTime
 	}
-	return firstIssued, lastUpdated
+
+	return firstIssued, lastUpdated, -1
 }
