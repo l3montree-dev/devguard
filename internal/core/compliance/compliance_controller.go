@@ -126,7 +126,6 @@ func (c *httpController) Details(ctx core.Context) error {
 	}
 	// we did not find any attestation that matches - lets add the policy with a nil result
 	return ctx.JSON(200, Eval(policy, nil))
-
 }
 
 func (c *httpController) AssetCompliance(ctx core.Context) error {

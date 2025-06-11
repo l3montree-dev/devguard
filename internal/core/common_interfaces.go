@@ -155,6 +155,7 @@ type FirstPartyVulnRepository interface {
 	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], map[string]int, error)
 	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error
+	GetByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
 }
 
 type InTotoLinkRepository interface {
