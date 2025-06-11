@@ -86,7 +86,6 @@ foundMatch:
 			// this matches - lets add it
 			results = append(results, res)
 			continue foundMatch
-
 		}
 		// we did not find any attestation that matches - lets add the policy with a nil result
 		results = append(results, Eval(policy, nil))
