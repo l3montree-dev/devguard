@@ -20,6 +20,32 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBuildVEX(t *testing.T) {
+	//Build up a foundation for all the upcoming tests
+	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	defer terminate()
+	app := echo.New()
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+	assetVersionController := inithelper.CreateAssetVersionController(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
+	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	setupContext := func(ctx *core.Context) {
+		core.SetAsset(*ctx, asset)
+		core.SetProject(*ctx, project)
+		core.SetOrg(*ctx, org)
+		core.SetAssetVersion(*ctx, assetVersion)
+	}
+	t.Run("default test", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/sbom-json/", nil)
+		ctx := app.NewContext(req, recorder)
+		setupContext(&ctx)
+		err := assetVersionController.SBOMJSON(ctx)
+		if err != nil {
+			t.Fail()
+		}
+	})
+}
+
 func TestBuildSBOM(t *testing.T) {
 	//Build up a foundation for all the upcoming tests
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
@@ -233,6 +259,22 @@ func TestBuildSBOM(t *testing.T) {
 		testSBOMProperties(t, BOMResult)
 		assert.Equal(t, "latest", BOMResult.Metadata.Component.Version)
 	})
+}
+
+func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName string) {
+	//first add cves
+	cve := models.CVE{
+		Description: "Text usage",
+		Severity:    models.SeverityHigh,
+		CVSS:        7.50,
+	}
+	if err := db.Create(&cve).Error; err != nil {
+		panic(err)
+	}
+	vuln1 := models.DependencyVuln{
+		Vulnerability: models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
+		ComponentPurl: utils.Ptr("pkg:npm/next@14.2.13"),
+	}
 }
 
 func createComponents(db core.DB) {
