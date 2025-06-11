@@ -18,12 +18,13 @@ import (
 )
 
 func TestGitlabWebhookHandleWebhook(t *testing.T) {
+
 	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 	os.Setenv("FRONTEND_URL", "http://localhost:3000")
 
 	// Setup integration
-	gitlabInt := gitlabint.NewGitLabIntegration(
+	gitlabInt := gitlabint.NewGitlabIntegration(
 		db,
 		nil,
 		mocks.NewRBACProvider(t),
@@ -31,7 +32,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 	)
 
 	// Setup org, asset, asset version, and vuln
-	_, _, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	_, _, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	// create a asset version
 	assetVersion := models.AssetVersion{

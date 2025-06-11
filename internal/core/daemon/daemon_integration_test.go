@@ -43,7 +43,7 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	_, _, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	_, _, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 	assetVersion := models.AssetVersion{
 		Name:          "main",
 		AssetID:       asset.ID,
@@ -157,7 +157,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err = db.Save(&org).Error
@@ -211,7 +211,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 	assert.Nil(t, dependencyVuln.TicketURL)
 
 	clientfactory, gitlabClientFacade := integration_tests.NewTestClientFactory(t)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(
+	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
 		mocks.NewRBACProvider(t),
@@ -336,7 +336,7 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err = db.Save(&org).Error
@@ -388,7 +388,7 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 
 	//gitlabClientFacade
 	clientfactory, _ := integration_tests.NewTestClientFactory(t)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(
+	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
 		mocks.NewRBACProvider(t),
@@ -451,7 +451,7 @@ func TestDaemonComponentProperties(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err = db.Save(&org).Error

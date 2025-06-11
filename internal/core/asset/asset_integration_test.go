@@ -32,7 +32,7 @@ func TestHandleLookup(t *testing.T) {
 	controller := NewHttpController(assetRepo, assetVersionRepo, assetService, depVulnService, statsService)
 
 	// create an organization, project, and asset for testing
-	_, _, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	_, _, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	app := echo.New()
 
@@ -98,7 +98,7 @@ func TestAssetUpdate(t *testing.T) {
 			&models.Asset{}))
 
 		// create an organization, project, and asset for testing
-		org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+		org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 		updateRequest := patchRequest{
 			Name:                         utils.Ptr("test-asset"),

@@ -6,9 +6,7 @@
     "properties": {
         "traits": {
             "required": [
-                "email",
-                "name",
-                "confirmedTerms"
+                "email"
             ],
             "additionalProperties": false,
             "type": "object",
@@ -50,13 +48,6 @@
                             "type": "string"
                         }
                     }
-                },
-                "confirmedTerms": {
-                    "type": "boolean",
-                    "title": "I agree to the terms of use (devguard.org/terms-of-use)",
-                    "description": "You must agree to the terms of use to use this service.",
-                    "default": false,
-                    "const": true
                 }
             }
         }
