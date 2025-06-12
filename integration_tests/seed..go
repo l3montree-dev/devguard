@@ -9,11 +9,15 @@ import (
 )
 
 func CreateOrgProjectAndAssetAssetVersion(db core.DB) (models.Org, models.Project, models.Asset, models.AssetVersion) {
+	err := db.AutoMigrate(models.AssetVersion{})
+	if err != nil {
+		panic(err)
+	}
 	org := models.Org{
 		Name: "Test Org",
 		Slug: "test-org",
 	}
-	err := db.Create(&org).Error
+	err = db.Create(&org).Error
 	if err != nil {
 		panic(err)
 	}

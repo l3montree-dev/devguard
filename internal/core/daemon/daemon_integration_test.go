@@ -43,17 +43,7 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	_, _, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
-	assetVersion := models.AssetVersion{
-		Name:          "main",
-		AssetID:       asset.ID,
-		DefaultBranch: true,
-	}
-
-	assert.Nil(t, assetVersion.Metadata)
-
-	err = db.Create(&assetVersion).Error
-	assert.Nil(t, err)
+	_, _, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	t.Run("should update the last scan time of the asset version", func(t *testing.T) {
 
@@ -157,7 +147,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err = db.Save(&org).Error
@@ -171,14 +161,6 @@ func TestDaemonSyncTickets(t *testing.T) {
 	cvssThreshold := 7.0
 	asset.CVSSAutomaticTicketThreshold = &cvssThreshold
 	err = db.Save(&asset).Error
-	assert.Nil(t, err)
-
-	assetVersion := models.AssetVersion{
-		Name:          "main",
-		AssetID:       asset.ID,
-		DefaultBranch: true,
-	}
-	err = db.Create(&assetVersion).Error
 	assert.Nil(t, err)
 
 	cve := models.CVE{
@@ -451,21 +433,13 @@ func TestDaemonComponentProperties(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err = db.Save(&org).Error
 	assert.Nil(t, err)
 	project.Slug = "project-slug"
 	err = db.Save(&project).Error
-	assert.Nil(t, err)
-
-	assetVersion := models.AssetVersion{
-		Name:          "main",
-		AssetID:       asset.ID,
-		DefaultBranch: true,
-	}
-	err = db.Create(&assetVersion).Error
 	assert.Nil(t, err)
 
 	componentA := models.Component{
