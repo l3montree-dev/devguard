@@ -106,20 +106,13 @@ func UpdateComponentProperties(db core.DB) error {
 
 					for _, dependencyVuln := range dependencyVulns {
 						depth := depthMap[*dependencyVuln.ComponentPurl]
-						if dependencyVuln.ComponentFixedVersion != nil && dependencyVuln.ComponentDepth != nil && depth == *dependencyVuln.ComponentDepth {
-							continue // nothing todo here - the component has a depth which is the same and it already has a fix version
-						}
 
 						doUpdate := false
+						fixedVersion, err := getFixedVersion(purlComparer, dependencyVuln)
 
-						if dependencyVuln.ComponentFixedVersion == nil {
-							fixedVersion, err := getFixedVersion(purlComparer, dependencyVuln)
-
-							if err != nil {
-								slog.Warn("could not get fixed version", "err", err)
-							}
-							if fixedVersion != nil {
-								slog.Info("got fixed version", "fixedVersion", fixedVersion)
+						if err == nil {
+							if fixedVersion != nil && fixedVersion != dependencyVuln.ComponentFixedVersion {
+								slog.Info("got fixed version", "fixedVersion", *fixedVersion)
 								dependencyVuln.ComponentFixedVersion = fixedVersion
 								doUpdate = true
 							}
