@@ -2,6 +2,7 @@ package assetversion_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http/httptest"
 	"os"
@@ -36,13 +37,27 @@ func TestBuildVEX(t *testing.T) {
 	}
 	t.Run("default test", func(t *testing.T) {
 		recorder := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/sbom-json/", nil)
+		req := httptest.NewRequest("GET", "/vex-json/", nil)
 		ctx := app.NewContext(req, recorder)
 		setupContext(&ctx)
-		err := assetVersionController.SBOMJSON(ctx)
+		createDependencyVulns(db, asset.ID, assetVersion.Name)
+		err := assetVersionController.VEXJSON(ctx)
 		if err != nil {
 			t.Fail()
 		}
+
+		resp := recorder.Result()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fail()
+		}
+		var VEXResult cyclonedx.BOM
+		if err = json.Unmarshal(body, &VEXResult); err != nil {
+			t.Fail()
+		}
+
+		fmt.Printf("%s", string(body))
+
 	})
 }
 
@@ -263,17 +278,100 @@ func TestBuildSBOM(t *testing.T) {
 
 func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName string) {
 	//first add cves
+	db.AutoMigrate(&models.Exploit{})
+	var err error
 	cve := models.CVE{
-		Description: "Text usage",
+		CVE:         "CVE-2024-51479",
+		Description: "Test usage",
 		Severity:    models.SeverityHigh,
 		CVSS:        7.50,
 	}
-	if err := db.Create(&cve).Error; err != nil {
+	if err = db.Create(&cve).Error; err != nil {
+		panic(err)
+	}
+	exploit := models.Exploit{
+		ID:       "exploitdb:1",
+		CVE:      cve,
+		CVEID:    cve.CVE,
+		Author:   "mats schummels",
+		Verified: false,
+	}
+	if err = db.Create(&exploit).Error; err != nil {
 		panic(err)
 	}
 	vuln1 := models.DependencyVuln{
-		Vulnerability: models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
-		ComponentPurl: utils.Ptr("pkg:npm/next@14.2.13"),
+		Vulnerability:     models.Vulnerability{ID: "bf2609eb45b7e40d9f59a0555ce267b1bbc565363f765428f638c8d8c39f1604", AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
+		ComponentPurl:     utils.Ptr("pkg:npm/next@14.2.13"),
+		CVE:               &cve,
+		CVEID:             &cve.CVE,
+		RawRiskAssessment: utils.Ptr(4.83),
+		ComponentDepth:    utils.Ptr(8),
+	}
+	if err = db.Create(&vuln1).Error; err != nil {
+		panic(err)
+	}
+	vuln2 := models.DependencyVuln{
+		Vulnerability:     models.Vulnerability{ID: "8374855f8bf1d188f28183e7e1960700ba5864e415a0e62b4feeba5f4d566562", AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
+		ComponentPurl:     utils.Ptr("pkg:npm/axios@1.7.7"),
+		CVE:               &cve,
+		CVEID:             &cve.CVE,
+		RawRiskAssessment: utils.Ptr(8.89),
+		ComponentDepth:    utils.Ptr(2),
+	}
+	if err = db.Create(&vuln2).Error; err != nil {
+		panic(err)
+	}
+	vuln1DetectedEvent := models.VulnEvent{
+		VulnID:   vuln1.Vulnerability.ID,
+		Model:    models.Model{CreatedAt: time.Now().Add(-10 * time.Minute), UpdatedAt: time.Now().Add(-5 * time.Minute)},
+		Type:     "detected",
+		UserID:   "system",
+		VulnType: models.VulnTypeDependencyVuln,
+	}
+	if err = db.Create(&vuln1DetectedEvent).Error; err != nil {
+		panic(err)
+	}
+
+	vuln1CommentEvent := models.VulnEvent{
+		VulnID:   vuln1.Vulnerability.ID,
+		Model:    models.Model{CreatedAt: time.Now().Add(-7 * time.Minute), UpdatedAt: time.Now().Add(-7 * time.Minute)},
+		Type:     "comment",
+		UserID:   "system",
+		VulnType: models.VulnTypeDependencyVuln,
+	}
+	if err = db.Create(&vuln1CommentEvent).Error; err != nil {
+		panic(err)
+	}
+	vuln1FixedEvent := models.VulnEvent{
+		VulnID:   vuln1.Vulnerability.ID,
+		Model:    models.Model{CreatedAt: time.Now().Add(-3 * time.Minute), UpdatedAt: time.Now().Add(-3 * time.Minute)},
+		Type:     "fixed",
+		UserID:   "system",
+		VulnType: models.VulnTypeDependencyVuln,
+	}
+	if err = db.Create(&vuln1FixedEvent).Error; err != nil {
+		panic(err)
+	}
+	vuln2DetectedEvent := models.VulnEvent{
+		VulnID:   vuln2.Vulnerability.ID,
+		Model:    models.Model{CreatedAt: time.Now().Add(-3 * time.Minute), UpdatedAt: time.Now().Add(-2 * time.Minute)},
+		Type:     "detected",
+		UserID:   "system",
+		VulnType: models.VulnTypeDependencyVuln,
+	}
+	if err = db.Create(&vuln2DetectedEvent).Error; err != nil {
+		panic(err)
+	}
+
+	vuln2FixedEvent := models.VulnEvent{
+		VulnID:   vuln2.Vulnerability.ID,
+		Model:    models.Model{CreatedAt: time.Now().Add(-1 * time.Minute), UpdatedAt: time.Now().Add(-1 * time.Minute)},
+		Type:     "fixed",
+		UserID:   "system",
+		VulnType: models.VulnTypeDependencyVuln,
+	}
+	if err = db.Create(&vuln2FixedEvent).Error; err != nil {
+		panic(err)
 	}
 }
 
