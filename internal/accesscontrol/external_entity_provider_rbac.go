@@ -11,6 +11,7 @@ type externalEntityProviderRBAC struct {
 	thirdPartyIntegration    core.ThirdPartyIntegration
 	externalEntityProviderID string
 	externalEntityID         string
+	adminToken               string
 	ctx                      core.Context
 }
 
@@ -28,10 +29,11 @@ func isRoleAllowedToPerformAction(role string, action core.Action) bool {
 	return false
 }
 
-func NewExternalEntityProviderRBAC(ctx core.Context, thirdPartyIntegration core.ThirdPartyIntegration, externalEntityProviderID string) core.AccessControl {
+func NewExternalEntityProviderRBAC(ctx core.Context, thirdPartyIntegration core.ThirdPartyIntegration, externalEntityProviderID string, adminToken string) core.AccessControl {
 	return &externalEntityProviderRBAC{
 		thirdPartyIntegration:    thirdPartyIntegration,
 		externalEntityProviderID: externalEntityProviderID,
+		adminToken:               adminToken,
 		ctx:                      ctx,
 	}
 }
@@ -77,6 +79,9 @@ func (e *externalEntityProviderRBAC) GetExternalEntityProviderID() *string {
 */
 
 func (e *externalEntityProviderRBAC) HasAccess(userID string) (bool, error) {
+	if userID == e.adminToken {
+		return true, nil
+	}
 	return e.thirdPartyIntegration.HasAccessToExternalEntityProvider(e.ctx, e.externalEntityProviderID)
 }
 
@@ -112,6 +117,9 @@ func (e *externalEntityProviderRBAC) AllowRole(role string, object core.Object, 
 	return nil
 }
 func (e *externalEntityProviderRBAC) IsAllowed(userID string, object core.Object, action core.Action) (bool, error) {
+	if userID == e.adminToken && action == core.ActionRead {
+		return true, nil
+	}
 	if object == core.ObjectOrganization {
 		// all users have read only access to this organization
 		if action == core.ActionRead {
@@ -130,6 +138,9 @@ func (e *externalEntityProviderRBAC) IsAllowedInProject(project *models.Project,
 	// check for external entity provider ids
 	if project.ExternalEntityProviderID == nil || project.ExternalEntityID == nil {
 		return false, nil
+	}
+	if user == e.adminToken && action == core.ActionRead {
+		return true, nil
 	}
 
 	role, err := e.thirdPartyIntegration.GetRoleInGroup(context.TODO(), user, *project.ExternalEntityProviderID, *project.ExternalEntityID)
