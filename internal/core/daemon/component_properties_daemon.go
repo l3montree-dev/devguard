@@ -6,6 +6,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -31,10 +32,10 @@ func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.Depe
 
 		if c.SemverFixed != nil {
 			slog.Info("found fixed version", "purl", *dependencyVuln.ComponentPurl, "fixedVersion", *c.SemverFixed, "dependencyVulnId", dependencyVuln.ID)
-			return c.SemverFixed, nil
+			return normalize.FixFixedVersion(utils.SafeDereference(dependencyVuln.ComponentPurl), c.SemverFixed), nil
 		} else if c.VersionFixed != nil && *c.VersionFixed != "" {
 			slog.Info("found fixed version", "purl", *dependencyVuln.ComponentPurl, "fixedVersion", *c.VersionFixed, "dependencyVulnId", dependencyVuln.ID)
-			return c.VersionFixed, nil
+			return normalize.FixFixedVersion(utils.SafeDereference(dependencyVuln.ComponentPurl), c.VersionFixed), nil
 		}
 	}
 

@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
-
 	"github.com/pkg/errors"
 )
 
