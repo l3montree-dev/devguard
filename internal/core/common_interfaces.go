@@ -360,8 +360,8 @@ type StatisticsService interface {
 }
 
 type DepsDevService interface {
-	GetVersion(ctx context.Context, ecosystem, packageName, version string) (common.DepsDevVersionResponse, error)
 	GetProject(ctx context.Context, projectID string) (common.DepsDevProjectResponse, error)
+	GetVersion(ctx context.Context, ecosystem, packageName, version string) (common.DepsDevVersionResponse, error)
 }
 
 type ComponentProjectRepository interface {

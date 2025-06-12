@@ -33,12 +33,12 @@ type service struct {
 	firstPartyVulnService    core.FirstPartyVulnService
 	assetVersionRepository   core.AssetVersionRepository
 	assetRepository          core.AssetRepository
-	vulnEventsRepository     core.VulnEventRepository
+	vulnEventRepository      core.VulnEventRepository
 	componentService         core.ComponentService
 	httpClient               *http.Client
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, vulnEventsRepository core.VulnEventRepository, componentService core.ComponentService) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService) *service {
 	return &service{
 		assetVersionRepository:   assetVersionRepository,
 		componentRepository:      componentRepository,
@@ -46,7 +46,7 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 		firstPartyVulnService:    firstPartyVulnService,
-		vulnEventsRepository:     vulnEventsRepository,
+		vulnEventRepository:      vulnEventRepository,
 		componentService:         componentService,
 		assetRepository:          assetRepository,
 		httpClient:               &http.Client{},
@@ -713,8 +713,7 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 		// check if cve
 		cve := dependencyVuln.CVE
 		if cve != nil {
-			firstIssued, lastUpdated := getDatesForVulnerabilityEvent(dependencyVuln.Events)
-
+			firstIssued, lastUpdated, firstResponded := getDatesForVulnerabilityEvent(dependencyVuln.Events)
 			vuln := cdx.Vulnerability{
 				ID: cve.CVE,
 				Source: &cdx.Source{
@@ -729,6 +728,9 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 					FirstIssued: firstIssued.UTC().Format(time.RFC3339),
 					LastUpdated: lastUpdated.UTC().Format(time.RFC3339),
 				},
+			}
+			if !firstResponded.IsZero() {
+				vuln.Properties = &[]cdx.Property{{Name: "firstResponded", Value: firstResponded.UTC().Format(time.RFC3339)}}
 			}
 
 			response := dependencyVulnStateToResponseStatus(dependencyVuln.State)
@@ -838,9 +840,10 @@ func dependencyVulnStateToResponseStatus(state models.VulnState) cdx.ImpactAnaly
 	}
 }
 
-func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time) {
+func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time, time.Time) {
 	firstIssued := time.Time{}
 	lastUpdated := time.Time{}
+	firstResponded := time.Time{}
 	if len(vulnEvents) > 0 {
 		firstIssued = time.Now()
 		// find the date when the vulnerability was detected/created in the database
@@ -867,8 +870,14 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 				if event.UpdatedAt.After(lastUpdated) {
 					lastUpdated = event.UpdatedAt
 				}
+				if firstResponded.IsZero() {
+					firstResponded = event.UpdatedAt
+				} else if event.UpdatedAt.Before(firstResponded) {
+					firstResponded = event.UpdatedAt
+				}
 			}
 		}
 	}
-	return firstIssued, lastUpdated
+
+	return firstIssued, lastUpdated, firstResponded
 }

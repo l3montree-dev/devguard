@@ -26,7 +26,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 
 	factory, client := integration_tests.NewTestClientFactory(t)
 	// Setup integration
-	gitlabInt := gitlabint.NewGitLabIntegration(
+	gitlabInt := gitlabint.NewGitlabIntegration(
 		db,
 		nil,
 		mocks.NewRBACProvider(t),
@@ -34,7 +34,7 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 	)
 
 	// Setup org, asset, asset version, and vuln
-	org, _, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, _, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 	// create a gitlab integration
 	integration := models.GitLabIntegration{
 		OrgID: org.ID,

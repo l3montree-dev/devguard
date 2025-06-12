@@ -69,7 +69,7 @@ type Component struct {
 
 	ComponentProject     *ComponentProject `json:"project" gorm:"foreignKey:ComponentProjectKey;references:ProjectKey;constraint:OnDelete:CASCADE;"`
 	ComponentProjectKey  *string           `json:"projectId" gorm:"column:project_key"`
-	IsLicenseOverwritten bool              `json:"isLicenseOverwritten" gorm:"sql:-"`
+	IsLicenseOverwritten bool              `json:"isLicenseOverwritten" gorm:"-"`
 }
 
 type ComponentDependency struct {

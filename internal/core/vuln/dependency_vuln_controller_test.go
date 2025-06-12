@@ -29,7 +29,7 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 	os.Setenv("FRONTEND_URL", "http://localhost:3000")
 
 	factory, client := integration_tests.NewTestClientFactory(t)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(
+	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		map[string]*gitlabint.GitlabOauth2Config{
 			"gitlab": {},
@@ -63,7 +63,7 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 		&models.Exploit{},
 		&models.DependencyVuln{}))
 	// Create org, project, asset, asset version, and dependency vuln
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	// mark the asset as external provider
 	asset.ExternalEntityProviderID = utils.Ptr("gitlab")

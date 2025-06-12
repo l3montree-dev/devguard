@@ -281,6 +281,9 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 	query.Session(&gorm.Session{}).Distinct("dependency_purl").Count(&total)
 
 	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Scan(&componentDependencies).Error
+	if err != nil {
+		return core.NewPaged(pageInfo, total, componentDependencies), err
+	}
 
 	// convert all overwritten licenses to a map which maps a purl to a new license
 	isPurlOverwrittenMap := make(map[string]string, len(overwrittenLicenses))
@@ -301,8 +304,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 			}
 		}
 	}
-
-	return core.NewPaged(pageInfo, total, componentDependencies), err
+	return core.NewPaged(pageInfo, total, componentDependencies), nil
 }
 
 func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Component, error) {

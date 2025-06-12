@@ -147,7 +147,7 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 	return asset
 }
 
-type patchRequest struct {
+type PatchRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 
@@ -172,7 +172,7 @@ type patchRequest struct {
 	BadgeSecret   *string `json:"badgeSecret"`
 }
 
-func (assetPatch *patchRequest) applyToModel(asset *models.Asset) bool {
+func (assetPatch *PatchRequest) applyToModel(asset *models.Asset) bool {
 	updated := false
 	if assetPatch.Name != nil {
 		updated = true
