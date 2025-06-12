@@ -131,7 +131,7 @@ func expandAndObfuscateSnippet(sarifScan *common.SarifResult, path string) {
 				var err error
 				// read the file from git - if there is a partial fingerprint which looks like a commit sha
 				// this is a bit of a hack, but we need to read the file from git to expand the snippet
-				if len(sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha) > 0 {
+				if sarifScan.Runs[ru].Results[re].PartialFingerprints != nil && len(sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha) > 0 {
 					fileContent, err = utils.ReadFileFromGitRef(path, sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha, location.PhysicalLocation.ArtifactLocation.Uri)
 					if err != nil {
 						slog.Error("could not read file", "err", err)
