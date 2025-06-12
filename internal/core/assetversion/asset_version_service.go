@@ -123,7 +123,6 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 				firstPartyVulnerability.Email = result.PartialFingerprints.Email
 				firstPartyVulnerability.Author = result.PartialFingerprints.Author
 				firstPartyVulnerability.Date = result.PartialFingerprints.Date
-
 			}
 
 			if len(result.Locations) > 0 {
