@@ -82,7 +82,7 @@ func TestBuildVEX(t *testing.T) {
 		propertyValue2 := (*(*VEXResult.Vulnerabilities)[1].Properties)[0].Value
 		responseTime2, err := time.Parse(time.RFC3339, propertyValue2)
 		assert.Nil(t, err)
-		//test if the first update timestamp is calculated about right
+		//test if the first responded timestamp is calculated about right
 		assert.True(t, responseTime1.Before(time.Now().Add(-7*time.Minute).UTC()) && responseTime1.After(time.Now().Add(-7*time.Minute-time.Second).UTC()))
 		assert.True(t, responseTime2.Before(time.Now().Add(-1*time.Minute)) && responseTime2.After(time.Now().Add(-1*time.Minute-time.Second)))
 		//last updated should be the same as first updated when only 1 updateEvent happens

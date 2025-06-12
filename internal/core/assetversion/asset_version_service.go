@@ -747,7 +747,7 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 		// check if cve
 		cve := dependencyVuln.CVE
 		if cve != nil {
-			firstIssued, lastUpdated, firstUpdated := getDatesForVulnerabilityEvent(dependencyVuln.Events)
+			firstIssued, lastUpdated, firstResponded := getDatesForVulnerabilityEvent(dependencyVuln.Events)
 			vuln := cdx.Vulnerability{
 				ID: cve.CVE,
 				Source: &cdx.Source{
@@ -763,8 +763,8 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 					LastUpdated: lastUpdated.UTC().Format(time.RFC3339),
 				},
 			}
-			if !firstUpdated.IsZero() {
-				vuln.Properties = &[]cdx.Property{{Name: "firstUpdated", Value: firstUpdated.UTC().Format(time.RFC3339)}}
+			if !firstResponded.IsZero() {
+				vuln.Properties = &[]cdx.Property{{Name: "firstResponded", Value: firstResponded.UTC().Format(time.RFC3339)}}
 			}
 
 			response := dependencyVulnStateToResponseStatus(dependencyVuln.State)
@@ -877,7 +877,7 @@ func dependencyVulnStateToResponseStatus(state models.VulnState) cdx.ImpactAnaly
 func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time, time.Time) {
 	firstIssued := time.Time{}
 	lastUpdated := time.Time{}
-	firstUpdated := time.Time{}
+	firstResponded := time.Time{}
 	if len(vulnEvents) > 0 {
 		firstIssued = time.Now()
 		// find the date when the vulnerability was detected/created in the database
@@ -904,14 +904,14 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 				if event.UpdatedAt.After(lastUpdated) {
 					lastUpdated = event.UpdatedAt
 				}
-				if firstUpdated.IsZero() {
-					firstUpdated = event.UpdatedAt
-				} else if event.UpdatedAt.Before(firstUpdated) {
-					firstUpdated = event.UpdatedAt
+				if firstResponded.IsZero() {
+					firstResponded = event.UpdatedAt
+				} else if event.UpdatedAt.Before(firstResponded) {
+					firstResponded = event.UpdatedAt
 				}
 			}
 		}
 	}
 
-	return firstIssued, lastUpdated, firstUpdated
+	return firstIssued, lastUpdated, firstResponded
 }
