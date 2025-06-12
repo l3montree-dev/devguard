@@ -2,7 +2,6 @@ package assetversion_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http/httptest"
 	"os"
@@ -35,6 +34,7 @@ func TestBuildVEX(t *testing.T) {
 		core.SetAssetVersion(*ctx, assetVersion)
 	}
 	t.Run("test with empty db should return vex bom with no vulnerabilities", func(t *testing.T) {
+		//setup function call
 		recorder := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/vex-json/", nil)
 		ctx := app.NewContext(req, recorder)
@@ -50,12 +50,16 @@ func TestBuildVEX(t *testing.T) {
 		err = json.Unmarshal(body, &VEXResult)
 		assert.Nil(t, err)
 
-		assert.Empty(t, VEXResult.Vulnerabilities)
+		//test general metadata
+		assert.Equal(t, VEXResult.Metadata.Component.BOMRef, "main")
+		assert.Equal(t, VEXResult.Metadata.Component.Name, "Test Asset")
+		assert.Equal(t, VEXResult.Metadata.Component.Author, "Test Org")
 
-		fmt.Println(string(body))
+		assert.Empty(t, VEXResult.Vulnerabilities)
 	})
 	vulnID := createDependencyVulns(db, asset.ID, assetVersion.Name)
 	t.Run("build Vex with everything set as intended", func(t *testing.T) {
+		//setup function call
 		recorder := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/vex-json/", nil)
 		ctx := app.NewContext(req, recorder)
@@ -84,30 +88,27 @@ func TestBuildVEX(t *testing.T) {
 		//last updated should be the same as first updated when only 1 updateEvent happens
 		assert.Equal(t, (*VEXResult.Vulnerabilities)[1].Analysis.LastUpdated, (*(*VEXResult.Vulnerabilities)[1].Properties)[0].Value)
 
-		//test general metadata
-		assert.Len(t, *VEXResult.Vulnerabilities, 2)
-		assert.Equal(t, VEXResult.Metadata.Component.BOMRef, "main")
-		assert.Equal(t, VEXResult.Metadata.Component.Name, "Test Asset")
-		assert.Equal(t, VEXResult.Metadata.Component.Author, "Test Org")
-
 		//test Vulnerability id as well as purls
+		assert.Len(t, *VEXResult.Vulnerabilities, 2)
 		assert.Equal(t, (*VEXResult.Vulnerabilities)[1].ID, "CVE-2024-51479", (*VEXResult.Vulnerabilities)[0].ID)
 		assert.Equal(t, (*(*VEXResult.Vulnerabilities)[0].Affects)[0].Ref, "pkg:npm/next@14.2.13")
 		assert.Equal(t, (*(*VEXResult.Vulnerabilities)[1].Affects)[0].Ref, "pkg:npm/axios@1.7.7")
 
 	})
 	t.Run("build Vex but one vuln never gets handled should return empty properties for that vulnerability", func(t *testing.T) {
+		//setup function call
 		recorder := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/vex-json/", nil)
 		ctx := app.NewContext(req, recorder)
 		setupContext(&ctx)
-		if err := db.Debug().Delete(&models.VulnEvent{}, "vuln_id = ?", vulnID).Error; err != nil {
+		if err := db.Debug().Delete(&models.VulnEvent{}, "vuln_id = ? AND type = ?", vulnID, "fixed").Error; err != nil {
 			panic(err)
 		}
 
 		err := assetVersionController.VEXJSON(ctx)
 		assert.Nil(t, err)
 
+		//prep results for testing
 		resp := recorder.Result()
 		body, err := io.ReadAll(resp.Body)
 		assert.Nil(t, err)
@@ -116,8 +117,11 @@ func TestBuildVEX(t *testing.T) {
 		err = json.Unmarshal(body, &VEXResult)
 		assert.Nil(t, err)
 
+		//if the vulnerability never gets handled we should have no first Updated field and first issued and last updated should be the same
 		assert.Nil(t, (*VEXResult.Vulnerabilities)[1].Properties)
+		assert.Equal(t, (*VEXResult.Vulnerabilities)[1].Analysis.FirstIssued, (*VEXResult.Vulnerabilities)[1].Analysis.LastUpdated)
 	})
+
 }
 
 func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName string) string {
@@ -136,6 +140,7 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 	if err = db.Create(&cve).Error; err != nil {
 		panic(err)
 	}
+	//create an exploit for the cve
 	exploit := models.Exploit{
 		ID:       "exploitdb:1",
 		CVE:      cve,
@@ -146,6 +151,7 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 	if err = db.Create(&exploit).Error; err != nil {
 		panic(err)
 	}
+	//create our 2 dependency vuln referencing the cve
 	vuln1 := models.DependencyVuln{
 		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
 		ComponentPurl:     utils.Ptr("pkg:npm/next@14.2.13"),
@@ -168,6 +174,8 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 	if err = db.Create(&vuln2).Error; err != nil {
 		panic(err)
 	}
+
+	//lastly create the vuln events regarding the two dependency vulns where as one dependencyVuln has 2 updates and the other one just has 1 update being the fix
 	vuln1DetectedEvent := models.VulnEvent{
 		VulnID:   vuln1.Vulnerability.ID,
 		Model:    models.Model{CreatedAt: time.Now().Add(-10 * time.Minute), UpdatedAt: time.Now().Add(-5 * time.Minute)},
