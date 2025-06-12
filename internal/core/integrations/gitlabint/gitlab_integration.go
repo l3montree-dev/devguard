@@ -1033,6 +1033,8 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	return err
 }
 
+var notConnectedError = errors.New("not connected to gitlab")
+
 func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.GitlabClientFacade, int, error) {
 	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
 		integrationUUID, err := extractIntegrationIdFromRepoId(*asset.RepositoryID)
@@ -1067,12 +1069,15 @@ func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.Gitl
 		return client, projectId, nil
 	}
 
-	return nil, 0, fmt.Errorf("asset does not have a valid repository ID or external entity provider ID")
+	return nil, 0, notConnectedError
 }
 
 func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
 	client, projectId, err := g.getClientBasedOnAsset(asset)
 	if err != nil {
+		if errors.Is(err, notConnectedError) {
+			return nil
+		}
 		slog.Error("failed to get gitlab client based on asset", "err", err, "asset", asset)
 		return err
 	}
