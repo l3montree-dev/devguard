@@ -68,7 +68,12 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 		attestCmd := exec.Command("cosign", "attest", "--tlog-upload=false", "--key", keyPath, "--predicate", predicate, imageName) // nolint:gosec
 		attestCmd.Stdout = &out
 		attestCmd.Stderr = &errOut
-		attestCmd.Env = []string{"COSIGN_PASSWORD="}
+		attestCmd.Env = []string{
+			"PATH=" + os.Getenv("PATH"),
+			"HOME=" + os.Getenv("HOME"),
+			"DOCKER_CONFIG=" + os.Getenv("DOCKER_CONFIG"),
+			"COSIGN_PASSWORD=",
+		}
 
 		err = attestCmd.Run()
 		if err != nil {
