@@ -363,7 +363,7 @@ func TestTicketHandling(t *testing.T) {
 		err = db.Save(&cve).Error
 		assert.Nil(t, err)
 
-		if err := db.Debug().Delete(&models.DependencyVuln{}, "cve_id = ?", "CVE-2025-46569").Error; err != nil {
+		if err := db.Delete(&models.DependencyVuln{}, "cve_id = ?", "CVE-2025-46569").Error; err != nil {
 			panic(err)
 		}
 		// create a vulnerability with an accepted state

@@ -20,7 +20,6 @@ import (
 )
 
 func TestGitlabWebhookHandleWebhook(t *testing.T) {
-
 	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 	os.Setenv("FRONTEND_URL", "http://localhost:3000")
