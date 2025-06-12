@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type projectRepository struct {
@@ -158,4 +159,48 @@ func (g *projectRepository) DisablePolicyForProject(tx core.DB, projectID uuid.U
 			ID: projectID,
 		},
 	}).Association("EnabledPolicies").Delete(&models.Policy{ID: policyID})
+}
+
+func (g *projectRepository) EnableCommunityManagedPolicies(tx core.DB, projectID uuid.UUID) error {
+	// community policies can be identified by their "organization_id" being nil
+	return g.db.Exec(`
+		INSERT INTO project_enabled_policies (project_id, policy_id)
+		SELECT ?, id
+		FROM policies
+		WHERE organization_id IS NULL
+	`, projectID).Error
+}
+
+func (g *projectRepository) UpsertSplit(tx core.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
+	// check which projects are already in the database - they can be identified by their external_entity_id and external_entity_provider_id
+	var existingProjects []models.Project
+	err := g.db.Where("external_entity_id IN (?) AND external_entity_provider_id = ?", utils.Map(projects, func(p *models.Project) *string { return p.ExternalEntityID }), externalProviderID).Find(&existingProjects).Error
+	if err != nil {
+		return nil, nil, err
+	}
+
+	existingMap := make(map[string]bool)
+	for _, p := range existingProjects {
+		existingMap[*p.ExternalEntityID] = true
+	}
+
+	err = g.Upsert(&projects, []clause.Column{
+		{Name: "external_entity_provider_id"},
+		{Name: "external_entity_id"},
+	}, []string{"slug", "name", "description", "organization_id"})
+	if err != nil {
+		return nil, nil, err
+	}
+	// return the splitted results
+	newProjects := make([]*models.Project, 0)
+	updatedProjects := make([]*models.Project, 0)
+	for _, p := range projects {
+		if !existingMap[*p.ExternalEntityID] {
+			newProjects = append(newProjects, p)
+		} else {
+			updatedProjects = append(updatedProjects, p)
+		}
+	}
+
+	return newProjects, updatedProjects, nil
 }

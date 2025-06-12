@@ -36,6 +36,10 @@ func NewExternalEntityProviderRBAC(ctx core.Context, thirdPartyIntegration core.
 	}
 }
 
+func (e *externalEntityProviderRBAC) GetExternalEntityProviderID() *string {
+	return &e.externalEntityProviderID
+}
+
 /*
 	HasAccess(subject string) bool
 

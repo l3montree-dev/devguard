@@ -224,6 +224,52 @@ func (_c *ProjectRepository_DisablePolicyForProject_Call) RunAndReturn(run func(
 	return _c
 }
 
+// EnableCommunityManagedPolicies provides a mock function for the type ProjectRepository
+func (_mock *ProjectRepository) EnableCommunityManagedPolicies(tx core.DB, projectID uuid.UUID) error {
+	ret := _mock.Called(tx, projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EnableCommunityManagedPolicies")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID) error); ok {
+		r0 = returnFunc(tx, projectID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ProjectRepository_EnableCommunityManagedPolicies_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EnableCommunityManagedPolicies'
+type ProjectRepository_EnableCommunityManagedPolicies_Call struct {
+	*mock.Call
+}
+
+// EnableCommunityManagedPolicies is a helper method to define mock.On call
+//   - tx
+//   - projectID
+func (_e *ProjectRepository_Expecter) EnableCommunityManagedPolicies(tx interface{}, projectID interface{}) *ProjectRepository_EnableCommunityManagedPolicies_Call {
+	return &ProjectRepository_EnableCommunityManagedPolicies_Call{Call: _e.mock.On("EnableCommunityManagedPolicies", tx, projectID)}
+}
+
+func (_c *ProjectRepository_EnableCommunityManagedPolicies_Call) Run(run func(tx core.DB, projectID uuid.UUID)) *ProjectRepository_EnableCommunityManagedPolicies_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.DB), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *ProjectRepository_EnableCommunityManagedPolicies_Call) Return(err error) *ProjectRepository_EnableCommunityManagedPolicies_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ProjectRepository_EnableCommunityManagedPolicies_Call) RunAndReturn(run func(tx core.DB, projectID uuid.UUID) error) *ProjectRepository_EnableCommunityManagedPolicies_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // EnablePolicyForProject provides a mock function for the type ProjectRepository
 func (_mock *ProjectRepository) EnablePolicyForProject(tx core.DB, projectID uuid.UUID, policyID uuid.UUID) error {
 	ret := _mock.Called(tx, projectID, policyID)
@@ -804,6 +850,72 @@ func (_c *ProjectRepository_Upsert_Call) Return(err error) *ProjectRepository_Up
 }
 
 func (_c *ProjectRepository_Upsert_Call) RunAndReturn(run func(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error) *ProjectRepository_Upsert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpsertSplit provides a mock function for the type ProjectRepository
+func (_mock *ProjectRepository) UpsertSplit(tx core.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
+	ret := _mock.Called(tx, externalProviderID, projects)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertSplit")
+	}
+
+	var r0 []*models.Project
+	var r1 []*models.Project
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []*models.Project) ([]*models.Project, []*models.Project, error)); ok {
+		return returnFunc(tx, externalProviderID, projects)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []*models.Project) []*models.Project); ok {
+		r0 = returnFunc(tx, externalProviderID, projects)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.Project)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, []*models.Project) []*models.Project); ok {
+		r1 = returnFunc(tx, externalProviderID, projects)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]*models.Project)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(core.DB, string, []*models.Project) error); ok {
+		r2 = returnFunc(tx, externalProviderID, projects)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// ProjectRepository_UpsertSplit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertSplit'
+type ProjectRepository_UpsertSplit_Call struct {
+	*mock.Call
+}
+
+// UpsertSplit is a helper method to define mock.On call
+//   - tx
+//   - externalProviderID
+//   - projects
+func (_e *ProjectRepository_Expecter) UpsertSplit(tx interface{}, externalProviderID interface{}, projects interface{}) *ProjectRepository_UpsertSplit_Call {
+	return &ProjectRepository_UpsertSplit_Call{Call: _e.mock.On("UpsertSplit", tx, externalProviderID, projects)}
+}
+
+func (_c *ProjectRepository_UpsertSplit_Call) Run(run func(tx core.DB, externalProviderID string, projects []*models.Project)) *ProjectRepository_UpsertSplit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.DB), args[1].(string), args[2].([]*models.Project))
+	})
+	return _c
+}
+
+func (_c *ProjectRepository_UpsertSplit_Call) Return(projects1 []*models.Project, projects2 []*models.Project, err error) *ProjectRepository_UpsertSplit_Call {
+	_c.Call.Return(projects1, projects2, err)
+	return _c
+}
+
+func (_c *ProjectRepository_UpsertSplit_Call) RunAndReturn(run func(tx core.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)) *ProjectRepository_UpsertSplit_Call {
 	_c.Call.Return(run)
 	return _c
 }
