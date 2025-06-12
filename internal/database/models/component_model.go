@@ -81,8 +81,8 @@ type ComponentDependency struct {
 	ComponentPurl    *string      `json:"componentPurl" gorm:"column:component_purl;index:component_purl_idx"` // will be nil, for direct dependencies
 	Dependency       Component    `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl;constraint:OnDelete:CASCADE;"`
 	DependencyPurl   string       `json:"dependencyPurl" gorm:"column:dependency_purl;index:dependency_purl_idx"`
-	AssetID          uuid.UUID    `json:"assetVersionId"`
-	AssetVersionName string       `json:"assetVersionName"`
+	AssetID          uuid.UUID    `json:"assetVersionId" gorm:"column:asset_id;index:asset_id_idx"`
+	AssetVersionName string       `json:"assetVersionName" gorm:"index:asset_version_name_idx"`
 	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetID,AssetVersionName;references:AssetID,Name;constraint:OnDelete:CASCADE;"`
 
 	ScannerIDs string `json:"scannerIds" gorm:"column:scanner_ids"`
