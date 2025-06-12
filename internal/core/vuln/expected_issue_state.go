@@ -36,6 +36,19 @@ func ShouldCreateIssues(assetVersion models.AssetVersion) bool {
 	return assetVersion.DefaultBranch
 }
 
+func IsConnectedToThirdPartyIntegration(asset models.Asset) bool {
+	// check if repository id is not nil
+	if asset.RepositoryID != nil {
+		return true
+	}
+
+	if asset.ExternalEntityID != nil && asset.ExternalEntityProviderID != nil {
+		return true
+	}
+
+	return false
+}
+
 func GetExpectedIssueState(asset models.Asset, dependencyVuln *models.DependencyVuln) ExpectedIssueState {
 	cvssThresholdExceeded := asset.CVSSAutomaticTicketThreshold != nil && float64(dependencyVuln.CVE.CVSS) >= *asset.CVSSAutomaticTicketThreshold
 	riskThresholdExceeded := asset.RiskAutomaticTicketThreshold != nil && *dependencyVuln.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold
