@@ -15,6 +15,8 @@ import (
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 func TestGitlabWebhookHandleWebhook(t *testing.T) {
@@ -22,17 +24,26 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 	defer terminate()
 	os.Setenv("FRONTEND_URL", "http://localhost:3000")
 
+	factory, client := integration_tests.NewTestClientFactory(t)
 	// Setup integration
 	gitlabInt := gitlabint.NewGitLabIntegration(
 		db,
 		nil,
 		mocks.NewRBACProvider(t),
-		nil,
+		factory,
 	)
 
 	// Setup org, asset, asset version, and vuln
-	_, _, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, _, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	// create a gitlab integration
+	integration := models.GitLabIntegration{
+		OrgID: org.ID,
+	}
+	assert.Nil(t, db.Create(&integration).Error)
 
+	// connect the asset to gitlab
+	asset.RepositoryID = utils.Ptr("gitlab:" + integration.ID.String() + ":1")
+	assert.Nil(t, db.Save(&asset).Error)
 	// create a asset version
 	assetVersion := models.AssetVersion{
 		AssetID:       asset.ID,
@@ -159,7 +170,14 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 		app := echo.New()
 		ctx := app.NewContext(req, rec)
 
+		client.On("EditIssue", mock.Anything, mock.Anything, 123, mock.Anything).Return(nil, nil, nil).Once()
+		// expect the gitlab update issue options to have a close and accepted label
+
 		assert.Nil(t, gitlabInt.HandleWebhook(ctx))
+		options := client.Calls[0].Arguments.Get(3).(*gitlab.UpdateIssueOptions)
+
+		assert.Equal(t, utils.Ptr("close"), options.StateEvent)
+		assert.Equal(t, options.Labels, utils.Ptr(gitlab.LabelOptions([]string{"devguard", "state:accepted"})))
 
 		vulnFromDB := models.DependencyVuln{}
 		assert.Nil(t, db.First(&vulnFromDB, "id = ?", vuln.ID).Error)
@@ -191,7 +209,16 @@ func TestGitlabWebhookHandleWebhook(t *testing.T) {
 		app := echo.New()
 		ctx := app.NewContext(req, rec)
 
+		client.Calls = nil // reset the calls to the client
+		client.ExpectedCalls = nil
+
+		client.On("EditIssue", mock.Anything, mock.Anything, 123, mock.Anything).Return(nil, nil, nil).Once()
+
 		assert.Nil(t, gitlabInt.HandleWebhook(ctx))
+		options := client.Calls[0].Arguments.Get(3).(*gitlab.UpdateIssueOptions)
+
+		assert.Equal(t, utils.Ptr("reopen"), options.StateEvent)
+		assert.Equal(t, options.Labels, utils.Ptr(gitlab.LabelOptions([]string{"devguard", "state:open"})))
 
 		vulnFromDB := models.DependencyVuln{}
 		assert.Nil(t, db.First(&vulnFromDB, "id = ?", vuln.ID).Error)
