@@ -85,7 +85,7 @@ func TestBuildVEX(t *testing.T) {
 		//test if the first responded timestamp is calculated about right
 		assert.True(t, responseTime1.Before(time.Now().Add(-7*time.Minute).UTC()) && responseTime1.After(time.Now().Add(-7*time.Minute-time.Second).UTC()))
 		assert.True(t, responseTime2.Before(time.Now().Add(-1*time.Minute)) && responseTime2.After(time.Now().Add(-1*time.Minute-time.Second)))
-		//last updated should be the same as first updated when only 1 updateEvent happens
+		//last updated should be the same as first responded when only 1 updateEvent happens
 		assert.Equal(t, (*VEXResult.Vulnerabilities)[1].Analysis.LastUpdated, (*(*VEXResult.Vulnerabilities)[1].Properties)[0].Value)
 
 		//test Vulnerability id as well as purls
@@ -117,7 +117,7 @@ func TestBuildVEX(t *testing.T) {
 		err = json.Unmarshal(body, &VEXResult)
 		assert.Nil(t, err)
 
-		//if the vulnerability never gets handled we should have no first Updated field and first issued and last updated should be the same
+		//if the vulnerability never gets handled we should have no first responded field and first issued and last updated should be the same
 		assert.Nil(t, (*VEXResult.Vulnerabilities)[1].Properties)
 		assert.Equal(t, (*VEXResult.Vulnerabilities)[1].Analysis.FirstIssued, (*VEXResult.Vulnerabilities)[1].Analysis.LastUpdated)
 	})
@@ -177,7 +177,7 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 
 	//lastly create the vuln events regarding the two dependency vulns where as one dependencyVuln has 2 updates and the other one just has 1 update being the fix
 	vuln1DetectedEvent := models.VulnEvent{
-		VulnID:   vuln1.Vulnerability.ID,
+		VulnID:   vuln1.ID,
 		Model:    models.Model{CreatedAt: time.Now().Add(-10 * time.Minute), UpdatedAt: time.Now().Add(-5 * time.Minute)},
 		Type:     "detected",
 		UserID:   "system",
@@ -188,7 +188,7 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 	}
 
 	vuln1CommentEvent := models.VulnEvent{
-		VulnID:   vuln1.Vulnerability.ID,
+		VulnID:   vuln1.ID,
 		Model:    models.Model{CreatedAt: time.Now().Add(-7 * time.Minute), UpdatedAt: time.Now().Add(-7 * time.Minute)},
 		Type:     "comment",
 		UserID:   "system",
@@ -198,7 +198,7 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 		panic(err)
 	}
 	vuln1FixedEvent := models.VulnEvent{
-		VulnID:   vuln1.Vulnerability.ID,
+		VulnID:   vuln1.ID,
 		Model:    models.Model{CreatedAt: time.Now().Add(-3 * time.Minute), UpdatedAt: time.Now().Add(-3 * time.Minute)},
 		Type:     "fixed",
 		UserID:   "system",
@@ -208,7 +208,7 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 		panic(err)
 	}
 	vuln2DetectedEvent := models.VulnEvent{
-		VulnID:   vuln2.Vulnerability.ID,
+		VulnID:   vuln2.ID,
 		Model:    models.Model{CreatedAt: time.Now().Add(-3 * time.Minute), UpdatedAt: time.Now().Add(-2 * time.Minute)},
 		Type:     "detected",
 		UserID:   "system",
@@ -219,7 +219,7 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 	}
 
 	vuln2FixedEvent := models.VulnEvent{
-		VulnID:   vuln2.Vulnerability.ID,
+		VulnID:   vuln2.ID,
 		Model:    models.Model{CreatedAt: time.Now().Add(-1 * time.Minute), UpdatedAt: time.Now().Add(-1 * time.Minute)},
 		Type:     "fixed",
 		UserID:   "system",

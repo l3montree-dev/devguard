@@ -318,7 +318,7 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err = db.Save(&org).Error
@@ -331,14 +331,6 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 	asset.ConfidentialityRequirement = models.RequirementLevelLow
 	asset.IntegrityRequirement = models.RequirementLevelLow
 	err = db.Save(&asset).Error
-	assert.Nil(t, err)
-
-	assetVersion := models.AssetVersion{
-		Name:          "main",
-		AssetID:       asset.ID,
-		DefaultBranch: true,
-	}
-	err = db.Create(&assetVersion).Error
 	assert.Nil(t, err)
 
 	cve := models.CVE{
