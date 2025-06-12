@@ -33,12 +33,12 @@ type service struct {
 	firstPartyVulnService    core.FirstPartyVulnService
 	assetVersionRepository   core.AssetVersionRepository
 	assetRepository          core.AssetRepository
-	vulnEventsRepository     core.VulnEventRepository
+	vulnEventRepository      core.VulnEventRepository
 	componentService         core.ComponentService
 	httpClient               *http.Client
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, vulnEventsRepository core.VulnEventRepository, componentService core.ComponentService) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService) *service {
 	return &service{
 		assetVersionRepository:   assetVersionRepository,
 		componentRepository:      componentRepository,
@@ -46,7 +46,7 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 		firstPartyVulnService:    firstPartyVulnService,
-		vulnEventsRepository:     vulnEventsRepository,
+		vulnEventRepository:      vulnEventRepository,
 		componentService:         componentService,
 		assetRepository:          assetRepository,
 		httpClient:               &http.Client{},
@@ -117,10 +117,12 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 				RuleHelpUri:     rule.HelpUri,
 				RuleDescription: getBestDescription(rule),
 				RuleProperties:  database.JSONB(rule.Properties),
-				Commit:          result.PartialFingerprints.CommitSha,
-				Email:           result.PartialFingerprints.Email,
-				Author:          result.PartialFingerprints.Author,
-				Date:            result.PartialFingerprints.Date,
+			}
+			if result.PartialFingerprints != nil {
+				firstPartyVulnerability.Commit = result.PartialFingerprints.CommitSha
+				firstPartyVulnerability.Email = result.PartialFingerprints.Email
+				firstPartyVulnerability.Author = result.PartialFingerprints.Author
+				firstPartyVulnerability.Date = result.PartialFingerprints.Date
 			}
 
 			if len(result.Locations) > 0 {
@@ -149,17 +151,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 		assetVersion.Metadata = make(map[string]any)
 	}
 
-	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
-	switch scannerID {
-	case devguardScanner + "sast":
-		assetVersion.Metadata["sast"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	case devguardScanner + "dast":
-		assetVersion.Metadata["dast"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	case devguardScanner + "secret-scanning":
-		assetVersion.Metadata["secret"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	case devguardScanner + "iac":
-		assetVersion.Metadata["iac"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	}
+	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
 	return amountOpened, amountClosed, amountExisting, nil
 }
@@ -225,7 +217,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	// now we have the depth.
 	for _, vuln := range vulns {
 		v := vuln
-
+		fixedVersion := normalize.FixFixedVersion(v.Purl, v.FixedVersion)
 		dependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
@@ -234,7 +226,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 			},
 			CVEID:                 utils.Ptr(v.CVEID),
 			ComponentPurl:         utils.Ptr(v.Purl),
-			ComponentFixedVersion: v.FixedVersion,
+			ComponentFixedVersion: fixedVersion,
 			ComponentDepth:        utils.Ptr(depthMap[v.Purl]),
 			CVE:                   &v.CVE,
 		}
@@ -257,14 +249,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 		assetVersion.Metadata = make(map[string]any)
 	}
 
-	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
-
-	switch scannerID {
-	case devguardScanner + "sca":
-		assetVersion.Metadata["sca"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	case devguardScanner + "container-scanning":
-		assetVersion.Metadata["container"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	}
+	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
 	return opened, closed, newState, nil
 }
@@ -302,6 +287,40 @@ func diffScanResults(currentScanner string, foundVulnerabilities []models.Depend
 	return foundByScannerAndNotExisting, fixedVulns, detectedByOtherScanner, notDetectedByScannerAnymore
 }
 
+func diffVulnsBetweenBranches(scannerID string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, [][]models.VulnEvent) {
+	// build a map from those vulns based on the cve id
+	vulnMap := make(map[string]models.DependencyVuln)
+	for _, vuln := range existingDependencyVulns {
+		if vuln.CVEID != nil {
+			// we only want to keep the latest version of the vuln
+			vulnMap[*vuln.CVEID] = vuln
+		}
+	}
+
+	newDetectedVulnsNotOnDefaultBranch := make([]models.DependencyVuln, 0)
+	// check the new detected vulns if they are already present on the default branch
+	newDetectedButOnDefaultBranchExisting := make([]models.DependencyVuln, 0)
+	existingEvents := make([][]models.VulnEvent, 0)
+	for _, newDetectedVuln := range foundVulnerabilities {
+		if newDetectedVuln.CVEID == nil {
+			continue // we only want to check for CVE vulns
+		}
+		if existingVuln, ok := vulnMap[*newDetectedVuln.CVEID]; ok {
+			// we found an existing vuln on the default branch
+			newDetectedButOnDefaultBranchExisting = append(newDetectedButOnDefaultBranchExisting, newDetectedVuln)
+			// we also want to get the events for that vuln
+			existingEvents = append(existingEvents, utils.Map(existingVuln.Events, func(event models.VulnEvent) models.VulnEvent {
+				event.OriginalAssetVersionName = utils.Ptr(vulnMap[*newDetectedVuln.CVEID].AssetVersionName)
+				return event
+			}))
+		} else {
+			// this is really a new detected vuln
+			newDetectedVulnsNotOnDefaultBranch = append(newDetectedVulnsNotOnDefaultBranch, newDetectedVuln)
+		}
+	}
+	return newDetectedVulnsNotOnDefaultBranch, newDetectedButOnDefaultBranchExisting, existingEvents
+}
+
 func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	// get all existing dependencyVulns from the database - this is the old state
 	//number := rand.IntN(len(dependencyVulns))
@@ -311,6 +330,15 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
+	// get all vulns from the default branch
+	existingVulnsOnDefaultBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(nil, assetVersion.AssetID, "")
+	if err != nil {
+		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
+		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
+	}
+	existingVulnsOnDefaultBranch = utils.Filter(existingVulnsOnDefaultBranch, func(dependencyVuln models.DependencyVuln) bool {
+		return dependencyVuln.State != models.VulnStateFixed
+	})
 
 	// remove all fixed dependencyVulns from the existing dependencyVulns
 	existingDependencyVulns = utils.Filter(existingDependencyVulns, func(dependencyVuln models.DependencyVuln) bool {
@@ -319,9 +347,15 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 
 	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(scannerID, dependencyVulns, existingDependencyVulns)
 
+	newDetectedVulnsNotOnDefaultBranch, newDetectedButOnDefaultBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, newDetectedVulns, existingVulnsOnDefaultBranch)
+
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
+		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, userID, scannerID, newDetectedButOnDefaultBranchExisting, existingEvents, *assetVersion, asset); err != nil {
+			slog.Error("error when trying to add events for existing vulnerability on different branch")
+			return err // this will cancel the transaction
+		}
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, scannerID, newDetectedVulns, *assetVersion, asset); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, scannerID, newDetectedVulnsNotOnDefaultBranch, *assetVersion, asset); err != nil {
 			return err // this will cancel the transaction
 		}
 
@@ -349,7 +383,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	return newDetectedVulns, fixedVulns, v, nil
+	return newDetectedVulnsNotOnDefaultBranch, fixedVulns, v, nil
 }
 
 func recursiveBuildBomRefMap(component cdx.Component) map[string]cdx.Component {
@@ -679,8 +713,7 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 		// check if cve
 		cve := dependencyVuln.CVE
 		if cve != nil {
-			firstIssued, lastUpdated := getDatesForVulnerabilityEvent(dependencyVuln.Events)
-
+			firstIssued, lastUpdated, firstResponded := getDatesForVulnerabilityEvent(dependencyVuln.Events)
 			vuln := cdx.Vulnerability{
 				ID: cve.CVE,
 				Source: &cdx.Source{
@@ -695,6 +728,9 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 					FirstIssued: firstIssued.UTC().Format(time.RFC3339),
 					LastUpdated: lastUpdated.UTC().Format(time.RFC3339),
 				},
+			}
+			if !firstResponded.IsZero() {
+				vuln.Properties = &[]cdx.Property{{Name: "firstResponded", Value: firstResponded.UTC().Format(time.RFC3339)}}
 			}
 
 			response := dependencyVulnStateToResponseStatus(dependencyVuln.State)
@@ -804,9 +840,10 @@ func dependencyVulnStateToResponseStatus(state models.VulnState) cdx.ImpactAnaly
 	}
 }
 
-func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time) {
+func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time, time.Time) {
 	firstIssued := time.Time{}
 	lastUpdated := time.Time{}
+	firstResponded := time.Time{}
 	if len(vulnEvents) > 0 {
 		firstIssued = time.Now()
 		// find the date when the vulnerability was detected/created in the database
@@ -833,8 +870,14 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 				if event.UpdatedAt.After(lastUpdated) {
 					lastUpdated = event.UpdatedAt
 				}
+				if firstResponded.IsZero() {
+					firstResponded = event.UpdatedAt
+				} else if event.UpdatedAt.Before(firstResponded) {
+					firstResponded = event.UpdatedAt
+				}
 			}
 		}
 	}
-	return firstIssued, lastUpdated
+
+	return firstIssued, lastUpdated, firstResponded
 }

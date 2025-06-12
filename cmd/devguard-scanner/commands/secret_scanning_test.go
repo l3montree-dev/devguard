@@ -11,16 +11,8 @@ import (
 var exampleSarifResult = common.SarifResult{
 	Runs: []common.Run{
 		{
-			Tool: struct {
-				Driver struct {
-					Name  string        `json:"name"`
-					Rules []common.Rule `json:"rules"`
-				} `json:"driver"`
-			}{
-				Driver: struct {
-					Name  string        `json:"name"`
-					Rules []common.Rule `json:"rules"`
-				}{
+			Tool: common.Tool{
+				Driver: common.Driver{
 					Name:  "ExampleTool",
 					Rules: []common.Rule{},
 				},
@@ -28,92 +20,36 @@ var exampleSarifResult = common.SarifResult{
 			Results: []common.Result{
 				{
 					RuleId: "EXAMPLE001",
-					Message: struct {
-						Text string `json:"text"`
-					}{
+					Message: common.Text{
 						Text: "This is an example message.",
 					},
-					Locations: []struct {
-						PhysicalLocation struct {
-							ArtifactLocation struct {
-								Uri       string `json:"uri"`
-								UriBaseId string `json:"uriBaseId"`
-							} `json:"artifactLocation"`
-							Region struct {
-								StartLine   int `json:"startLine"`
-								StartColumn int `json:"startColumn"`
-								EndLine     int `json:"endLine"`
-								EndColumn   int `json:"endColumn"`
-								Snippet     struct {
-									Text string `json:"text"`
-								} `json:"snippet"`
-							} `json:"region"`
-						} `json:"physicalLocation"`
-					}{
+					Locations: []common.Location{
 						{
-							PhysicalLocation: struct {
-								ArtifactLocation struct {
-									Uri       string `json:"uri"`
-									UriBaseId string `json:"uriBaseId"`
-								} `json:"artifactLocation"`
-								Region struct {
-									StartLine   int `json:"startLine"`
-									StartColumn int `json:"startColumn"`
-									EndLine     int `json:"endLine"`
-									EndColumn   int `json:"endColumn"`
-									Snippet     struct {
-										Text string `json:"text"`
-									} `json:"snippet"`
-								} `json:"region"`
-							}{
-								ArtifactLocation: struct {
-									Uri       string `json:"uri"`
-									UriBaseId string `json:"uriBaseId"`
-								}{
+							PhysicalLocation: common.PhysicalLocation{
+								ArtifactLocation: common.ArtifactLocation{
 									Uri:       "file:///example/path",
 									UriBaseId: "SRCROOT",
 								},
-								Region: struct {
-									StartLine   int `json:"startLine"`
-									StartColumn int `json:"startColumn"`
-									EndLine     int `json:"endLine"`
-									EndColumn   int `json:"endColumn"`
-									Snippet     struct {
-										Text string `json:"text"`
-									} `json:"snippet"`
-								}{
+								Region: common.Region{
 									StartLine:   10,
 									StartColumn: 5,
 									EndLine:     10,
 									EndColumn:   20,
-									Snippet: struct {
-										Text string `json:"text"`
-									}{
+									Snippet: common.Text{
 										Text: "that is an example code snippet, which are very long and should be obfuscated",
 									},
 								},
 							},
 						},
 					},
-					Properties: struct {
-						Precision string   `json:"precision"`
-						Tags      []string `json:"tags"`
-					}{
+					Properties: &common.Properties{
 						Precision: "high",
 						Tags:      []string{"example", "test"},
 					},
-					Fingerprints: struct {
-						MatchBasedId string `json:"matchBasedId/v1"`
-					}{
+					Fingerprints: &common.Fingerprints{
 						MatchBasedId: "12345",
 					},
-					PartialFingerprints: struct {
-						CommitSha     string `json:"commitSha"`
-						Email         string `json:"email"`
-						Author        string `json:"author"`
-						Date          string `json:"date"`
-						CommitMessage string `json:"commitMessage"`
-					}{
+					PartialFingerprints: &common.PartialFingerprints{
 						CommitSha:     "abcde12345",
 						Email:         "example@example.com",
 						Author:        "Example Author",

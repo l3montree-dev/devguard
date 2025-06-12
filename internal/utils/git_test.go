@@ -10,17 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setEmptyEnvVars(t *testing.T) {
-	// Clear the environment variables to avoid conflicts
-	t.Setenv("CI_COMMIT_REF_NAME", "")
-	t.Setenv("CI_DEFAULT_BRANCH", "")
-	t.Setenv("CI_COMMIT_TAG", "")
-	t.Setenv("GITHUB_REF_NAME", "")
-	t.Setenv("GITHUB_BASE_REF", "")
-}
-
 func TestGetAssetVersionInfo(t *testing.T) {
-	setEmptyEnvVars(t)
 
 	t.Run("it should return error if cannot get tags", func(t *testing.T) {
 		mocksgitLister := mocks.GitLister{}
@@ -181,41 +171,4 @@ func TestGetAssetVersionInfo(t *testing.T) {
 		assert.Equal(t, utils.Ptr("NOTmain"), versionInfo.DefaultBranch)
 
 	})
-
-	t.Run("it should read the branch name from the environment variable CI_COMMIT_REF_NAME", func(t *testing.T) {
-		mocksgitLister := mocks.GitLister{}
-		utils.GitLister = &mocksgitLister
-
-		mocksgitLister.On("GetTags", ".").Return([]string{}, nil)
-		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(5, nil)
-		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
-
-		// Set the environment variable for the default branch name
-		t.Setenv("CI_COMMIT_REF_NAME", "test")
-
-		versionInfo, err := utils.GetAssetVersionInfo(".")
-
-		assert.NoError(t, err)
-		assert.Equal(t, "test", versionInfo.BranchOrTag)
-
-	})
-
-	t.Run("it should read the branch name from the environment variable GITHUB_REF_NAME", func(t *testing.T) {
-		mocksgitLister := mocks.GitLister{}
-		utils.GitLister = &mocksgitLister
-
-		mocksgitLister.On("GetTags", ".").Return([]string{}, nil)
-		mocksgitLister.On("GitCommitCount", ".", mock.Anything).Return(5, nil)
-		mocksgitLister.On("GetDefaultBranchName", ".").Return("", nil)
-
-		// Set the environment variable for the default branch name
-		t.Setenv("GITHUB_REF_NAME", "test")
-
-		versionInfo, err := utils.GetAssetVersionInfo(".")
-
-		assert.NoError(t, err)
-		assert.Equal(t, "test", versionInfo.BranchOrTag)
-
-	})
-
 }

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright (C) 2024 Tim Bastin, l3montree GmbH
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -70,14 +70,17 @@ OWASP Incubating Project`,
 			initLogger(slog.LevelInfo)
 		}
 
+		if utils.RunsInCI() {
+			slog.Info("Running in CI")
+			err := utils.GitLister.MarkAllPathsAsSafe()
+			if err != nil {
+				slog.Error("could not mark all paths as safe", "err", err)
+			}
+		}
+
 		err = initializeConfig(cmd)
 		if err != nil {
 			return err
-		}
-
-		if utils.RunsInCI() {
-			slog.Info("Running in CI")
-			return utils.GitLister.MarkAllPathsAsSafe()
 		}
 
 		return nil

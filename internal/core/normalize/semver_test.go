@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright (C) 2024 Tim Bastin, l3montree GmbH
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -14,7 +14,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package normalize
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestSemverFix(t *testing.T) {
 	t.Run("empty string", func(t *testing.T) {
@@ -67,4 +71,69 @@ func TestSemverFix(t *testing.T) {
 			t.Errorf("Expected 2.4.27-10.sarge1.040815-1, got %s", semver)
 		}
 	})
+}
+
+func ptr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func TestFixFixedVersion(t *testing.T) {
+	tests := []struct {
+		name         string
+		purl         string
+		fixedVersion *string
+		want         *string
+	}{
+		{
+			name:         "nil fixedVersion returns nil",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@1.9.1",
+			fixedVersion: nil,
+			want:         nil,
+		},
+		{
+			name:         "empty fixedVersion returns nil",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@1.9.1",
+			fixedVersion: ptr(""),
+			want:         nil,
+		},
+		{
+			name:         "purl without @ returns fixedVersion",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim",
+			fixedVersion: ptr("1.2.3"),
+			want:         ptr("1.2.3"),
+		},
+		{
+			name:         "version after @ does not start with v, returns fixedVersion",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@1.9.1",
+			fixedVersion: ptr("1.2.3"),
+			want:         ptr("1.2.3"),
+		},
+		{
+			name:         "version after @ starts with v, returns fixedVersion+ver",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@v1.9.1",
+			fixedVersion: ptr("1.2.3"),
+			want:         ptr("v1.2.3"),
+		},
+		{
+			name:         "version after @ is just v, returns fixedVersion+ver",
+			purl:         "pkg:maven/org.apache.xmlgraphics/batik-anim@v",
+			fixedVersion: ptr("1.2.3"),
+			want:         ptr("v1.2.3"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FixFixedVersion(tt.purl, tt.fixedVersion)
+			if tt.want == nil {
+				assert.Nil(t, got)
+			} else {
+				assert.NotNil(t, got)
+				assert.Equal(t, *tt.want, *got)
+			}
+		})
+	}
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
-	"gorm.io/gorm/clause"
 )
 
 type service struct {
@@ -35,25 +34,33 @@ func (s *service) ReadBySlug(ctx core.Context, organizationID uuid.UUID, slug st
 }
 
 func (s *service) CreateProject(ctx core.Context, project *models.Project) error {
+	err := s.assetRepository.Transaction(func(tx core.DB) error {
+		if err := s.projectRepository.Create(tx, project); err != nil {
+			// check if duplicate key error
+			if database.IsDuplicateKeyError(err) {
+				// get the project by slug and project id unscoped
+				project, err := s.projectRepository.ReadBySlugUnscoped(project.OrganizationID, project.Slug)
+				if err != nil {
+					return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
+				}
 
-	if err := s.projectRepository.Create(nil, project); err != nil {
-		// check if duplicate key error
-		if database.IsDuplicateKeyError(err) {
-			// get the project by slug and project id unscoped
-			project, err := s.projectRepository.ReadBySlugUnscoped(project.OrganizationID, project.Slug)
-			if err != nil {
-				return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
+				if err = s.projectRepository.Activate(tx, project.GetID()); err != nil {
+					return echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
+				}
+
+				slog.Info("project activated", "projectSlug", project.Slug, "projectID", project.GetID())
+
+			} else {
+				return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 			}
-
-			if err = s.projectRepository.Activate(nil, project.GetID()); err != nil {
-				return echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
-			}
-
-			slog.Info("project activated", "projectSlug", project.Slug, "projectID", project.GetID())
-
-		} else {
-			return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 		}
+
+		// enable the default community policies
+		return s.projectRepository.EnableCommunityManagedPolicies(tx, project.ID)
+	})
+	if err != nil {
+		slog.Error("could not create project", "err", err, "projectSlug", project.Slug, "projectID", project.ID)
+		return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 	}
 
 	if err := s.bootstrapProject(ctx, project); err != nil {
@@ -163,10 +170,18 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 			toUpsert = append(toUpsert, &slice[i])
 			slice[i].OrganizationID = core.GetOrg(c).GetID() // ensure the organization ID is set
 		}
-		err = s.projectRepository.Upsert(&toUpsert, []clause.Column{
-			{Name: "external_entity_provider_id"},
-			{Name: "external_entity_id"},
-		}, []string{"slug", "name", "description", "organization_id"})
+		created, _, err := s.projectRepository.UpsertSplit(nil, *rbac.GetExternalEntityProviderID(), toUpsert)
+		if err != nil {
+			return nil, echo.NewHTTPError(500, "could not upsert projects").WithInternal(err)
+		}
+
+		// enable the community managed policies for the projects
+		for _, project := range created {
+			if err := s.projectRepository.EnableCommunityManagedPolicies(nil, project.ID); err != nil {
+				return nil, echo.NewHTTPError(500, "could not enable community managed policies").WithInternal(err)
+			}
+			slog.Info("enabled community managed policies for project", "projectSlug", project.Slug, "projectID", project.ID)
+		}
 
 		return slice, err
 	}

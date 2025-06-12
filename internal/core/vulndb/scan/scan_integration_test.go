@@ -10,15 +10,11 @@ import (
 	"github.com/l3montree-dev/devguard/integration_tests"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/core/assetversion"
-	"github.com/l3montree-dev/devguard/internal/core/component"
-	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
-	"github.com/l3montree-dev/devguard/internal/core/statistics"
-	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/inithelper"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
@@ -38,7 +34,7 @@ func TestScanning(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx core.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -55,6 +51,8 @@ func TestScanning(t *testing.T) {
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Scanner", "scanner-1")
+		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
 
@@ -81,6 +79,8 @@ func TestScanning(t *testing.T) {
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Scanner", "scanner-2")
+		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
 
@@ -105,6 +105,8 @@ func TestScanning(t *testing.T) {
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Scanner", "scanner-3")
+		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
 
@@ -128,6 +130,8 @@ func TestScanning(t *testing.T) {
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Scanner", "scanner-1")
+		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
 
@@ -147,6 +151,8 @@ func TestScanning(t *testing.T) {
 		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Scanner", "scanner-2")
+		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
+		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		recorder = httptest.NewRecorder()
 		ctx = app.NewContext(req, recorder)
 		setupContext(ctx)
@@ -158,6 +164,66 @@ func TestScanning(t *testing.T) {
 		assert.Equal(t, 0, response.AmountOpened)  // no new vulnerabilities found
 		assert.Equal(t, 1, response.AmountClosed)  // the vulnerability is finally closed
 		assert.Len(t, response.DependencyVulns, 0) // no vulnerabilities returned
+	})
+
+	t.Run("should respect, if the vulnerability is just found AGAIN on a different branch then the default branch", func(t *testing.T) {
+		// if we find a vuln A on the default branch. Then we accept vuln A.
+		// now we find vuln A on a different branch. This vuln should be accepted as well.
+
+		// create a vulnerability with an accepted state on the default branch in the database
+		dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
+		vulns, err := dependencyVulnRepository.GetByAssetId(nil, asset.ID)
+		// should be only a single vulnerability
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 1)
+		// mark the vuln as accepted
+		vulns[0].State = models.VulnStateAccepted
+		// save it
+		err = dependencyVulnRepository.Save(nil, &vulns[0])
+		assert.Nil(t, err)
+
+		// create an accepted event inside the database
+		acceptedEvent := models.NewAcceptedEvent(vulns[0].ID, vulns[0].GetType(), "abc", "accepting the vulnerability")
+		err = dependencyVulnRepository.ApplyAndSave(nil, &vulns[0], &acceptedEvent)
+		assert.Nil(t, err)
+		// now scan a different branch with the same vulnerability
+		recorder := httptest.NewRecorder()
+		sbomFile := sbomWithVulnerability()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Scanner", "scanner-4")
+		req.Header.Set("X-Asset-Ref", "some-other-branch")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// query the new vulnerability
+		vulns, err = dependencyVulnRepository.GetByAssetId(nil, asset.ID)
+		// should be two now
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 2)
+
+		// both should be accepted
+		for _, vuln := range vulns {
+			assert.Equal(t, models.VulnStateAccepted, vuln.State)
+		}
+
+		// expect the events to be copied as well
+		// the last event should be of type detected on different branch - the event before should be accepted with the same message
+		var newVuln models.DependencyVuln
+		for _, v := range vulns {
+			if v.AssetVersionName == "some-other-branch" {
+				newVuln = v
+			}
+		}
+		assert.NotEmpty(t, newVuln.Events)
+		lastTwoEvents := newVuln.Events[len(newVuln.Events)-2:]
+		assert.Equal(t, models.EventTypeAccepted, lastTwoEvents[0].Type)
+		assert.Equal(t, "accepting the vulnerability", *lastTwoEvents[0].Justification)
+		assert.Equal(t, "main", *lastTwoEvents[0].OriginalAssetVersionName)
+		assert.Equal(t, models.EventTypeDetectedOnAnotherBranch, lastTwoEvents[1].Type)
 	})
 }
 
@@ -171,7 +237,7 @@ func TestTicketHandling(t *testing.T) {
 	// scan the vulnerable sbom
 	app := echo.New()
 	createCVE2025_46569(db)
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx core.Context) {
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -181,22 +247,13 @@ func TestTicketHandling(t *testing.T) {
 		core.SetSession(ctx, authSession)
 	}
 
-	// create the main asset version
-	assetVersion := models.AssetVersion{
-		Name:          "main",
-		AssetID:       asset.ID,
-		DefaultBranch: true,
-	}
-	err := db.Create(&assetVersion).Error
-	assert.Nil(t, err)
-
 	// create a gitlab integration for this org
 	gitlabIntegration := models.GitLabIntegration{
 		AccessToken: "access-token",
 		GitLabUrl:   "https://gitlab.com",
 		OrgID:       org.ID,
 	}
-	err = db.Create(&gitlabIntegration).Error
+	err := db.Create(&gitlabIntegration).Error
 	assert.Nil(t, err)
 
 	t.Run("should open tickets for vulnerabilities if the risk threshold is exceeded", func(t *testing.T) {
@@ -306,7 +363,9 @@ func TestTicketHandling(t *testing.T) {
 		err = db.Save(&cve).Error
 		assert.Nil(t, err)
 
-		db.Delete(&models.DependencyVuln{}, "cve_id = ?", "CVE-2025-46569")
+		if err := db.Delete(&models.DependencyVuln{}, "cve_id = ?", "CVE-2025-46569").Error; err != nil {
+			panic(err)
+		}
 		// create a vulnerability with an accepted state
 		vuln := models.DependencyVuln{
 			CVEID:         utils.Ptr("CVE-2025-46569"),
@@ -436,45 +495,13 @@ func sbomWithoutVulnerability() *os.File {
 func initHttpController(t *testing.T, db core.DB) (*scan.HttpController, *mocks.GitlabClientFacade) {
 	// there are a lot of repositories and services that need to be initialized...
 	clientfactory, client := integration_tests.NewTestClientFactory(t)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(
-		db,
-		gitlabint.NewGitLabOauth2Integrations(db),
-		mocks.NewRBACProvider(t),
-		clientfactory,
-	)
 
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration)
-	// Initialize repositories
-	assetRepository := repositories.NewAssetRepository(db)
-	assetRiskAggregationRepository := repositories.NewAssetRiskHistoryRepository(db)
-	assetVersionRepository := repositories.NewAssetVersionRepository(db)
-	statisticsRepository := repositories.NewStatisticsRepository(db)
-	projectRepository := repositories.NewProjectRepository(db)
-	componentRepository := repositories.NewComponentRepository(db)
-	vulnEventRepository := repositories.NewVulnEventRepository(db)
-	orgRepository := repositories.NewOrgRepository(db)
-	cveRepository := repositories.NewCVERepository(db)
-	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
-
-	// just to run the migrations
 	repositories.NewExploitRepository(db)
-
-	// Initialize services
-	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
-	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
-
 	// mock the depsDevService to avoid any external calls during tests
 	depsDevService := mocks.NewDepsDevService(t)
 	depsDevService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.DepsDevVersionResponse{}, nil)
 
-	componentProjectRepository := repositories.NewComponentProjectRepository(db)
-	componentService := component.NewComponentService(depsDevService, componentProjectRepository, componentRepository)
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, vulnEventRepository, &componentService)
-	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
-
-	// finally, create the controller
-	controller := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
+	controller := inithelper.CreateHttpController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, depsDevService)
 	// do not use concurrency in this test, because we want to test the ticket creation
 	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 	return controller, client

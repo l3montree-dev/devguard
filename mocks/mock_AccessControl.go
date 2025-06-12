@@ -400,6 +400,52 @@ func (_c *AccessControl_GetDomainRole_Call) RunAndReturn(run func(user string) (
 	return _c
 }
 
+// GetExternalEntityProviderID provides a mock function for the type AccessControl
+func (_mock *AccessControl) GetExternalEntityProviderID() *string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetExternalEntityProviderID")
+	}
+
+	var r0 *string
+	if returnFunc, ok := ret.Get(0).(func() *string); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*string)
+		}
+	}
+	return r0
+}
+
+// AccessControl_GetExternalEntityProviderID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetExternalEntityProviderID'
+type AccessControl_GetExternalEntityProviderID_Call struct {
+	*mock.Call
+}
+
+// GetExternalEntityProviderID is a helper method to define mock.On call
+func (_e *AccessControl_Expecter) GetExternalEntityProviderID() *AccessControl_GetExternalEntityProviderID_Call {
+	return &AccessControl_GetExternalEntityProviderID_Call{Call: _e.mock.On("GetExternalEntityProviderID")}
+}
+
+func (_c *AccessControl_GetExternalEntityProviderID_Call) Run(run func()) *AccessControl_GetExternalEntityProviderID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AccessControl_GetExternalEntityProviderID_Call) Return(s *string) *AccessControl_GetExternalEntityProviderID_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *AccessControl_GetExternalEntityProviderID_Call) RunAndReturn(run func() *string) *AccessControl_GetExternalEntityProviderID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetOwnerOfOrganization provides a mock function for the type AccessControl
 func (_mock *AccessControl) GetOwnerOfOrganization() (string, error) {
 	ret := _mock.Called()

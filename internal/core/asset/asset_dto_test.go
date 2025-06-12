@@ -16,14 +16,14 @@ func TestApplyToModel(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		patch    patchRequest
+		patch    PatchRequest
 		initial  models.Asset
 		expected models.Asset
 		updated  bool
 	}{
 		{
 			name: "Update Name and Description",
-			patch: patchRequest{
+			patch: PatchRequest{
 				Name:        utils.Ptr("New Name"),
 				Description: utils.Ptr("New Description"),
 			},
@@ -40,7 +40,7 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name: "Update CentralDependencyVulnManagement",
-			patch: patchRequest{
+			patch: PatchRequest{
 				CentralDependencyVulnManagement: utils.Ptr(true),
 			},
 			initial: models.Asset{
@@ -53,7 +53,7 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name: "Update ReachableFromInternet",
-			patch: patchRequest{
+			patch: PatchRequest{
 				ReachableFromInternet: utils.Ptr(true),
 			},
 			initial: models.Asset{
@@ -66,7 +66,7 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name: "Update RepositoryID and RepositoryName",
-			patch: patchRequest{
+			patch: PatchRequest{
 				RepositoryID:   utils.Ptr("new-repo-id"),
 				RepositoryName: utils.Ptr("new-repo-name"),
 			},
@@ -82,7 +82,7 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name:  "No Updates",
-			patch: patchRequest{},
+			patch: PatchRequest{},
 			initial: models.Asset{
 				Name:        "Old Name",
 				Description: "Old Description",
@@ -95,7 +95,7 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name: "Update nil Badge Secret",
-			patch: patchRequest{
+			patch: PatchRequest{
 				WebhookSecret: utils.Ptr(webhookSecret.String()),
 			},
 			initial: models.Asset{
@@ -108,7 +108,7 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name: "Update nil Webhook Secret",
-			patch: patchRequest{
+			patch: PatchRequest{
 				BadgeSecret: utils.Ptr(badgeSecret.String()),
 			},
 			initial: models.Asset{
@@ -121,7 +121,7 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name: "Update Webhook Secret",
-			patch: patchRequest{
+			patch: PatchRequest{
 				WebhookSecret: utils.Ptr(webhookSecret.String()),
 			},
 			initial: models.Asset{
@@ -134,7 +134,7 @@ func TestApplyToModel(t *testing.T) {
 		},
 		{
 			name: "Update Badge Secret",
-			patch: patchRequest{
+			patch: PatchRequest{
 				BadgeSecret: utils.Ptr(badgeSecret.String()),
 			},
 			initial: models.Asset{

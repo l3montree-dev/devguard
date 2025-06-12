@@ -78,7 +78,7 @@ func (r *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx co
 	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", assetID, true)
 
 	var dependencyVulns = []models.DependencyVuln{}
-	q := r.Repository.GetDB(tx).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name IN (?) AND asset_id = ?", subQuery, assetID)
+	q := r.Repository.GetDB(tx).Preload("CVE").Preload("Events").Preload("CVE.Exploits").Where("asset_version_name IN (?) AND asset_id = ?", subQuery, assetID)
 
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces

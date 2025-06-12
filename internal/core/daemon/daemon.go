@@ -64,7 +64,7 @@ func Start(db core.DB) {
 		repositories.NewGitLabIntegrationRepository(db),
 		gitlabOauth2Integrations,
 	)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
+	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
 
 	thirdPartyIntegrationAggregate := integrations.NewThirdPartyIntegrations(githubIntegration, gitlabIntegration)
 
@@ -134,7 +134,7 @@ func Start(db core.DB) {
 		if shouldMirror(configService, "vulndb.risk") {
 			start = time.Now()
 			// finally, recalculate the risk.
-			if err := RecalculateRisk(db); err != nil {
+			if err := RecalculateRisk(db, thirdPartyIntegrationAggregate); err != nil {
 				slog.Error("could not recalculate risk", "err", err)
 				return nil
 			}

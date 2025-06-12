@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright (C) 2024 Tim Bastin, l3montree GmbH
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -31,7 +31,6 @@ import (
 )
 
 func attestCmd(cmd *cobra.Command, args []string) error {
-
 	// transform the hex private key to an ecdsa private key
 	keyPath, _, err := tokenToKey(config.RuntimeBaseConfig.Token)
 	if err != nil {
@@ -69,7 +68,12 @@ func attestCmd(cmd *cobra.Command, args []string) error {
 		attestCmd := exec.Command("cosign", "attest", "--tlog-upload=false", "--key", keyPath, "--predicate", predicate, imageName) // nolint:gosec
 		attestCmd.Stdout = &out
 		attestCmd.Stderr = &errOut
-		attestCmd.Env = []string{"COSIGN_PASSWORD="}
+		attestCmd.Env = []string{
+			"PATH=" + os.Getenv("PATH"),
+			"HOME=" + os.Getenv("HOME"),
+			"DOCKER_CONFIG=" + os.Getenv("DOCKER_CONFIG"),
+			"COSIGN_PASSWORD=",
+		}
 
 		err = attestCmd.Run()
 		if err != nil {
@@ -144,8 +148,5 @@ func NewAttestCommand() *cobra.Command {
 	addAssetRefFlags(cmd)
 	cmd.Flags().StringP("predicateType", "a", "", "The type of the attestation")
 	cmd.MarkFlagRequired("predicateType") //nolint:errcheck
-
-	cmd.Flags().StringP("scannerId", "s", "", "The scanner id. A newer attestation from the same scanner will replace the old one.")
-	cmd.MarkFlagRequired("scannerId") //nolint:errcheck
 	return cmd
 }

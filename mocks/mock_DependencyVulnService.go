@@ -343,6 +343,57 @@ func (_c *DependencyVulnService_UserDetectedDependencyVulns_Call) RunAndReturn(r
 	return _c
 }
 
+// UserDetectedExistingVulnOnDifferentBranch provides a mock function for the type DependencyVulnService
+func (_mock *DependencyVulnService) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, userID string, scannerID string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
+	ret := _mock.Called(tx, userID, scannerID, dependencyVulns, alreadyExistingEvents, assetVersion, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UserDetectedExistingVulnOnDifferentBranch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, string, []models.DependencyVuln, [][]models.VulnEvent, models.AssetVersion, models.Asset) error); ok {
+		r0 = returnFunc(tx, userID, scannerID, dependencyVulns, alreadyExistingEvents, assetVersion, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UserDetectedExistingVulnOnDifferentBranch'
+type DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call struct {
+	*mock.Call
+}
+
+// UserDetectedExistingVulnOnDifferentBranch is a helper method to define mock.On call
+//   - tx
+//   - userID
+//   - scannerID
+//   - dependencyVulns
+//   - alreadyExistingEvents
+//   - assetVersion
+//   - asset
+func (_e *DependencyVulnService_Expecter) UserDetectedExistingVulnOnDifferentBranch(tx interface{}, userID interface{}, scannerID interface{}, dependencyVulns interface{}, alreadyExistingEvents interface{}, assetVersion interface{}, asset interface{}) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
+	return &DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call{Call: _e.mock.On("UserDetectedExistingVulnOnDifferentBranch", tx, userID, scannerID, dependencyVulns, alreadyExistingEvents, assetVersion, asset)}
+}
+
+func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) Run(run func(tx core.DB, userID string, scannerID string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset)) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.DB), args[1].(string), args[2].(string), args[3].([]models.DependencyVuln), args[4].([][]models.VulnEvent), args[5].(models.AssetVersion), args[6].(models.Asset))
+	})
+	return _c
+}
+
+func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) Return(err error) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call) RunAndReturn(run func(tx core.DB, userID string, scannerID string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error) *DependencyVulnService_UserDetectedExistingVulnOnDifferentBranch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UserDidNotDetectDependencyVulnWithScannerAnymore provides a mock function for the type DependencyVulnService
 func (_mock *DependencyVulnService) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error {
 	ret := _mock.Called(tx, vulnerabilities, userID, scannerID)

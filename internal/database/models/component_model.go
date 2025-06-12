@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright (C) 2024 Tim Bastin, l3montree GmbH
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -69,7 +69,7 @@ type Component struct {
 
 	ComponentProject     *ComponentProject `json:"project" gorm:"foreignKey:ComponentProjectKey;references:ProjectKey;constraint:OnDelete:CASCADE;"`
 	ComponentProjectKey  *string           `json:"projectId" gorm:"column:project_key"`
-	IsLicenseOverwritten bool              `json:"isLicenseOverwritten" gorm:"sql:-"`
+	IsLicenseOverwritten bool              `json:"isLicenseOverwritten" gorm:"-"`
 }
 
 type ComponentDependency struct {
@@ -78,14 +78,14 @@ type ComponentDependency struct {
 	// this means, that the dependency graph between people using the same library might differ, since they use it differently
 	// we use edges, which provide the information, that a component is used by another component in one asset
 	Component        Component    `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl;constraint:OnDelete:CASCADE;"`
-	ComponentPurl    *string      `json:"componentPurl" gorm:"column:component_purl;"` // will be nil, for direct dependencies
+	ComponentPurl    *string      `json:"componentPurl" gorm:"column:component_purl;index:component_purl_idx"` // will be nil, for direct dependencies
 	Dependency       Component    `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl;constraint:OnDelete:CASCADE;"`
-	DependencyPurl   string       `json:"dependencyPurl" gorm:"column:dependency_purl;"`
-	AssetID          uuid.UUID    `json:"assetVersionId"`
-	AssetVersionName string       `json:"assetVersionName"`
+	DependencyPurl   string       `json:"dependencyPurl" gorm:"column:dependency_purl;index:dependency_purl_idx"`
+	AssetID          uuid.UUID    `json:"assetVersionId" gorm:"column:asset_id;index:asset_id_idx"`
+	AssetVersionName string       `json:"assetVersionName" gorm:"index:asset_version_name_idx"`
 	AssetVersion     AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetID,AssetVersionName;references:AssetID,Name;constraint:OnDelete:CASCADE;"`
 
-	ScannerIDs string `json:"scannerIds" gorm:"column:scanner_ids"`
+	ScannerIDs string `json:"scannerIds" gorm:"column:scanner_ids;index:scanner_ids_idx"` // comma separated list of scanner ids, which found this dependency
 
 	Depth int `json:"depth" gorm:"column:depth"`
 }

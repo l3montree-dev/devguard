@@ -82,7 +82,7 @@ func secretScan(p string) (*common.SarifResult, error) {
 
 func printSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI string, assetName string, assetVersionName string) {
 	tw := table.NewWriter()
-	tw.SetAllowedRowLength(155)
+	tw.SetAllowedRowLength(130)
 
 	blue := text.FgBlue
 	green := text.FgGreen
@@ -90,8 +90,8 @@ func printSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI stri
 		raw := []table.Row{
 			{"RuleID:", vuln.RuleID},
 			{"File:", green.Sprint(vuln.Uri + ":" + strconv.Itoa(vuln.StartLine))},
-			{"Snippet:", text.WrapText(vuln.Snippet, 105)},
-			{"Message:", text.WrapText(*vuln.Message, 105)},
+			{"Snippet:", text.WrapText(vuln.Snippet, 80)},
+			{"Message:", text.WrapText(*vuln.Message, 80)},
 			{"Line:", vuln.StartLine},
 			{"Commit:", vuln.Commit},
 			{"Author:", vuln.Author},

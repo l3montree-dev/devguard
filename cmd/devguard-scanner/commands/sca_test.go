@@ -1,4 +1,4 @@
-// Copyright 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright 2024 Tim Bastin, l3montree GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,6 +37,10 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 
 		v := vuln.DependencyVulnDTO{}
 		v.CVEID = &cveid
+		v.CVE = &models.CVE{
+			CVSS: 7.0,
+		}
+
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion
 		v.State = models.VulnState("Example State")
@@ -59,6 +63,9 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 
 		v := vuln.DependencyVulnDTO{}
 		v.CVEID = &cveid
+		v.CVE = &models.CVE{
+			CVSS: 7.0,
+		}
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion
 		v.State = models.VulnState("Example State")

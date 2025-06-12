@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright (C) 2023 Tim Bastin, l3montree GmbH
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -136,7 +136,7 @@ func (g *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uu
 }
 
 func (g *assetRepository) Update(tx core.DB, asset *models.Asset) error {
-	return g.db.Debug().Save(asset).Error
+	return g.db.Save(asset).Error
 }
 
 func (g *assetRepository) GetAllAssetsFromDB() ([]models.Asset, error) {
@@ -162,7 +162,7 @@ func (g *assetRepository) Delete(tx core.DB, id uuid.UUID) error {
 
 func (g *assetRepository) GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error) {
 	var asset models.Asset
-	err := g.db.Debug().Where("badge_secret = ?", badgeSecret).First(&asset).Error
+	err := g.db.Where("badge_secret = ?", badgeSecret).First(&asset).Error
 	if err != nil {
 		return models.Asset{}, err
 	}

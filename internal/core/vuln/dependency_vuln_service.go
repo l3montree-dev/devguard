@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright (C) 2024 Tim Bastin, l3montree GmbH
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -75,6 +75,48 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 		return err
 	}
 	return s.vulnEventRepository.SaveBatch(tx, events)
+}
+
+func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, userID, scannerID string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
+	if len(dependencyVulns) == 0 {
+		return nil
+	}
+
+	e := core.Environmental{
+		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
+		IntegrityRequirements:       string(asset.IntegrityRequirement),
+		AvailabilityRequirements:    string(asset.AvailabilityRequirement),
+	}
+
+	events := make([][]models.VulnEvent, len(dependencyVulns))
+
+	for i, dependencyVuln := range dependencyVulns {
+		// copy all events for this vulnerability
+		if len(alreadyExistingEvents[i]) != 0 {
+			events[i] = utils.Map(utils.Filter(alreadyExistingEvents[i], func(ev models.VulnEvent) bool {
+				return ev.IsScanUnreleatedEvent()
+			}), func(el models.VulnEvent) models.VulnEvent {
+				el.VulnID = dependencyVuln.CalculateHash()
+				el.ID = uuid.Nil
+				return el
+			})
+		}
+		riskReport := risk.RawRisk(*dependencyVuln.CVE, e, *dependencyVuln.ComponentDepth)
+		ev := models.NewDetectedOnAnotherBranchEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, riskReport, scannerID, assetVersion.Name)
+		events[i] = append(events[i], ev)
+		// replay all events on the dependencyVuln
+		for _, ev := range alreadyExistingEvents[i] {
+			ev.Apply(&dependencyVulns[i])
+		}
+	}
+
+	err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
+	if err != nil {
+		return err
+	}
+
+	return s.vulnEventRepository.SaveBatch(tx, utils.Flat(events))
+
 }
 
 func (s *service) UserDetectedDependencyVulns(tx core.DB, userID, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
@@ -208,7 +250,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		oldRiskAssessment := dependencyVuln.RawRiskAssessment
 		newRiskAssessment := risk.RawRisk(*dependencyVuln.CVE, env, *dependencyVuln.ComponentDepth)
 
-		if *oldRiskAssessment != newRiskAssessment.Risk {
+		if oldRiskAssessment == nil || *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, oldRiskAssessment, newRiskAssessment)
 			// apply the event on the dependencyVuln
 			ev.Apply(&dependencyVulns[i])

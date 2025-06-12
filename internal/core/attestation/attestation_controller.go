@@ -59,7 +59,6 @@ func (a *attestationController) Create(ctx core.Context) error {
 	attestation.AssetVersionName = assetVersion.Name
 	attestation.AssetID = asset.ID
 	attestation.PredicateType = ctx.Request().Header.Get("X-Attestation-Name")
-	attestation.ScannerID = ctx.Request().Header.Get("X-Scanner")
 
 	content, err := io.ReadAll(ctx.Request().Body)
 	if err != nil {

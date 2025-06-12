@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Tim Bastin, l3montree UG (haftungsbeschränkt)
+// Copyright (C) 2023 Tim Bastin, l3montree GmbH
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
@@ -46,6 +46,12 @@ func (c casbinRBACProvider) GetDomainRBAC(domain string) core.AccessControl {
 		domain:   domain,
 		enforcer: c.enforcer,
 	}
+}
+
+func (c *casbinRBAC) GetExternalEntityProviderID() *string {
+	// this is the provider ID for the external entity provider
+	// it is used to identify the provider in the database
+	return nil
 }
 
 func (c *casbinRBAC) GetOwnerOfOrganization() (string, error) {

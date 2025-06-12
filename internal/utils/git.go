@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
-
 	"github.com/pkg/errors"
 )
 
@@ -38,53 +37,10 @@ func getDirFromPath(path string) string {
 
 var GitLister gitLister = commandLineGitLister{}
 
-func getAssetVersionInfoFromPipeline() (GitVersionInfo, error) {
-	var gitVersionInfo GitVersionInfo
-
-	// check if a CI variable is set, so we can get the branch name
-	branchName := os.Getenv("CI_COMMIT_REF_NAME")
-	if branchName != "" {
-		defaultBranch := os.Getenv("CI_DEFAULT_BRANCH")
-		tagName := os.Getenv("CI_COMMIT_TAG")
-		if tagName != "" {
-			// we are on a tag - use the tag as ref name
-			branchName = tagName
-		}
-		gitVersionInfo = GitVersionInfo{
-			BranchOrTag:   branchName,
-			IsTag:         tagName != "",
-			DefaultBranch: EmptyThenNil(defaultBranch),
-		}
-		return gitVersionInfo, nil
-	} else {
-		// check if we are in a GitHub Action
-		branchName = os.Getenv("GITHUB_REF_NAME")
-		//This returns the short ref name of the branch or tag that triggered the workflow run.
-		if branchName != "" {
-			gitVersionInfo = GitVersionInfo{
-				IsTag:         strings.HasPrefix(os.Getenv("GITHUB_REF"), "refs/tags/"),
-				BranchOrTag:   branchName,
-				DefaultBranch: nil, // there is no environment variable for the default branch in GitHub Actions
-			}
-			return gitVersionInfo, nil
-		} else {
-			return GitVersionInfo{}, errors.New("could not get branch name from environment variables")
-		}
-	}
-}
 func GetAssetVersionInfo(path string) (GitVersionInfo, error) {
-	// first try to get the version info from the pipeline
-	gitVersionInfo, err := getAssetVersionInfoFromPipeline()
-	if err == nil {
-		slog.Info("got git version info from pipeline", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", SafeDereference(gitVersionInfo.DefaultBranch))
-		return gitVersionInfo, nil
-	}
-	// if that fails, try to get the version info from git
-	slog.Info("could not get git version info from pipeline, falling back to git")
-	gitVersionInfo, err = getAssetVersionInfoFromGit(path)
+	gitVersionInfo, err := getAssetVersionInfoFromGit(path)
 	if err != nil {
-		slog.Error("could not get git version info from git")
-		return GitVersionInfo{}, errors.Wrap(err, "could not get git version info from git")
+		return gitVersionInfo, err
 	}
 	slog.Info("got git version info from git", "branchOrTag", gitVersionInfo.BranchOrTag, "defaultBranch", SafeDereference(gitVersionInfo.DefaultBranch))
 	return gitVersionInfo, nil
