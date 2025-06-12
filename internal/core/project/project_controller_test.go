@@ -125,7 +125,7 @@ func TestProjectControllerList(t *testing.T) {
 	assetRepo := repositories.NewAssetRepository(db)
 	projectService := project.NewService(projectRepo, assetRepo)
 	controller := project.NewHttpController(projectRepo, assetRepo, projectService)
-	org, project, _ := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, _, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	// add 3 community policies to the database
 	communityPolicies := []models.Policy{
