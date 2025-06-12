@@ -474,6 +474,64 @@ func (_c *FirstPartyVulnRepository_GetByAssetId_Call) RunAndReturn(run func(tx c
 	return _c
 }
 
+// GetByAssetVersion provides a mock function for the type FirstPartyVulnRepository
+func (_mock *FirstPartyVulnRepository) GetByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByAssetVersion")
+	}
+
+	var r0 []models.FirstPartyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) ([]models.FirstPartyVuln, error)); ok {
+		return returnFunc(tx, assetVersionName, assetID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID) []models.FirstPartyVuln); ok {
+		r0 = returnFunc(tx, assetVersionName, assetID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.FirstPartyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID) error); ok {
+		r1 = returnFunc(tx, assetVersionName, assetID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// FirstPartyVulnRepository_GetByAssetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetVersion'
+type FirstPartyVulnRepository_GetByAssetVersion_Call struct {
+	*mock.Call
+}
+
+// GetByAssetVersion is a helper method to define mock.On call
+//   - tx
+//   - assetVersionName
+//   - assetID
+func (_e *FirstPartyVulnRepository_Expecter) GetByAssetVersion(tx interface{}, assetVersionName interface{}, assetID interface{}) *FirstPartyVulnRepository_GetByAssetVersion_Call {
+	return &FirstPartyVulnRepository_GetByAssetVersion_Call{Call: _e.mock.On("GetByAssetVersion", tx, assetVersionName, assetID)}
+}
+
+func (_c *FirstPartyVulnRepository_GetByAssetVersion_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID)) *FirstPartyVulnRepository_GetByAssetVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.DB), args[1].(string), args[2].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_GetByAssetVersion_Call) Return(firstPartyVulns []models.FirstPartyVuln, err error) *FirstPartyVulnRepository_GetByAssetVersion_Call {
+	_c.Call.Return(firstPartyVulns, err)
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_GetByAssetVersion_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetByAssetVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetByAssetVersionPaged provides a mock function for the type FirstPartyVulnRepository
 func (_mock *FirstPartyVulnRepository) GetByAssetVersionPaged(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], map[string]int, error) {
 	ret := _mock.Called(tx, assetVersionName, assetID, pageInfo, search, filter, sort)

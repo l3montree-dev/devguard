@@ -49,6 +49,8 @@ type ProjectRepository interface {
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
+	EnableCommunityManagedPolicies(tx DB, projectID uuid.UUID) error
+	UpsertSplit(tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
 }
 
 type PolicyRepository interface {
@@ -406,6 +408,8 @@ type AccessControl interface {
 
 	GetDomainRole(user string) (string, error)
 	GetProjectRole(user string, project string) (string, error)
+
+	GetExternalEntityProviderID() *string
 }
 
 type RBACProvider interface {
