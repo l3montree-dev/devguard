@@ -16,7 +16,7 @@ const (
 )
 
 type ScannerInformation struct {
-	LastScan *time.Time
+	LastScan *time.Time `json:"lastScan,omitempty"`
 }
 
 type AssetVersion struct {
