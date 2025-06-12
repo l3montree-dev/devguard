@@ -117,10 +117,13 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 				RuleHelpUri:     rule.HelpUri,
 				RuleDescription: getBestDescription(rule),
 				RuleProperties:  database.JSONB(rule.Properties),
-				Commit:          result.PartialFingerprints.CommitSha,
-				Email:           result.PartialFingerprints.Email,
-				Author:          result.PartialFingerprints.Author,
-				Date:            result.PartialFingerprints.Date,
+			}
+			if result.PartialFingerprints != nil {
+				firstPartyVulnerability.Commit = result.PartialFingerprints.CommitSha
+				firstPartyVulnerability.Email = result.PartialFingerprints.Email
+				firstPartyVulnerability.Author = result.PartialFingerprints.Author
+				firstPartyVulnerability.Date = result.PartialFingerprints.Date
+
 			}
 
 			if len(result.Locations) > 0 {
