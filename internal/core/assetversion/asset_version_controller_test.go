@@ -35,29 +35,89 @@ func TestBuildVEX(t *testing.T) {
 		core.SetOrg(*ctx, org)
 		core.SetAssetVersion(*ctx, assetVersion)
 	}
-	t.Run("default test", func(t *testing.T) {
+	t.Run("test with empty db should return vex bom with no vulnerabilities", func(t *testing.T) {
 		recorder := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/vex-json/", nil)
 		ctx := app.NewContext(req, recorder)
 		setupContext(&ctx)
-		createDependencyVulns(db, asset.ID, assetVersion.Name)
 		err := assetVersionController.VEXJSON(ctx)
-		if err != nil {
-			t.Fail()
+		assert.Nil(t, err)
+
+		//prep results for testing
+		resp := recorder.Result()
+		body, err := io.ReadAll(resp.Body)
+		assert.Nil(t, err)
+		var VEXResult cyclonedx.BOM
+		err = json.Unmarshal(body, &VEXResult)
+		assert.Nil(t, err)
+
+		assert.Empty(t, VEXResult.Vulnerabilities)
+
+		fmt.Println(string(body))
+	})
+	vulnID := createDependencyVulns(db, asset.ID, assetVersion.Name)
+	t.Run("build Vex with everything set as intended", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/vex-json/", nil)
+		ctx := app.NewContext(req, recorder)
+		setupContext(&ctx)
+		err := assetVersionController.VEXJSON(ctx)
+		assert.Nil(t, err)
+
+		//prep results for testing
+		resp := recorder.Result()
+		body, err := io.ReadAll(resp.Body)
+		assert.Nil(t, err)
+		var VEXResult cyclonedx.BOM
+		err = json.Unmarshal(body, &VEXResult)
+		assert.Nil(t, err)
+
+		//test timestamps if they have the right format
+		propertyValue1 := (*(*VEXResult.Vulnerabilities)[0].Properties)[0].Value
+		responseTime1, err := time.Parse(time.RFC3339, propertyValue1)
+		assert.Nil(t, err)
+		propertyValue2 := (*(*VEXResult.Vulnerabilities)[1].Properties)[0].Value
+		responseTime2, err := time.Parse(time.RFC3339, propertyValue2)
+		assert.Nil(t, err)
+		//test if the first update timestamp is calculated about right
+		assert.True(t, responseTime1.Before(time.Now().Add(-7*time.Minute).UTC()) && responseTime1.After(time.Now().Add(-7*time.Minute-time.Second).UTC()))
+		assert.True(t, responseTime2.Before(time.Now().Add(-1*time.Minute)) && responseTime2.After(time.Now().Add(-1*time.Minute-time.Second)))
+		//last updated should be the same as first updated when only 1 updateEvent happens
+		assert.Equal(t, (*VEXResult.Vulnerabilities)[1].Analysis.LastUpdated, (*(*VEXResult.Vulnerabilities)[1].Properties)[0].Value)
+
+		//test general metadata
+		assert.Len(t, *VEXResult.Vulnerabilities, 2)
+		assert.Equal(t, VEXResult.Metadata.Component.BOMRef, "main")
+		assert.Equal(t, VEXResult.Metadata.Component.Name, "Test Asset")
+		assert.Equal(t, VEXResult.Metadata.Component.Author, "Test Org")
+
+		//test Vulnerability id as well as purls
+		assert.Equal(t, (*VEXResult.Vulnerabilities)[1].ID, "CVE-2024-51479", (*VEXResult.Vulnerabilities)[0].ID)
+		assert.Equal(t, (*(*VEXResult.Vulnerabilities)[0].Affects)[0].Ref, "pkg:npm/next@14.2.13")
+		assert.Equal(t, (*(*VEXResult.Vulnerabilities)[1].Affects)[0].Ref, "pkg:npm/axios@1.7.7")
+
+	})
+	t.Run("build Vex but one vuln never gets handled should return empty properties for that vulnerability", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/vex-json/", nil)
+		ctx := app.NewContext(req, recorder)
+		setupContext(&ctx)
+		if err := db.Debug().Delete(&models.VulnEvent{}, "vuln_id = ?", vulnID).Error; err != nil {
+			panic(err)
 		}
+
+		err := assetVersionController.VEXJSON(ctx)
+		assert.Nil(t, err)
 
 		resp := recorder.Result()
 		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			t.Fail()
-		}
+		assert.Nil(t, err)
+
 		var VEXResult cyclonedx.BOM
-		if err = json.Unmarshal(body, &VEXResult); err != nil {
-			t.Fail()
-		}
+		err = json.Unmarshal(body, &VEXResult)
+		assert.Nil(t, err)
 
-		fmt.Printf("%s", string(body))
-
+		assert.Nil(t, (*VEXResult.Vulnerabilities)[1].Properties)
 	})
 }
 
@@ -85,7 +145,7 @@ func TestBuildSBOM(t *testing.T) {
 			t.Fail()
 		}
 
-		//Process the results into an BOM
+		//Process the results into a BOM
 		resp := recorder.Result()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -276,10 +336,13 @@ func TestBuildSBOM(t *testing.T) {
 	})
 }
 
-func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName string) {
+func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName string) string {
 	//first add cves
-	db.AutoMigrate(&models.Exploit{})
 	var err error
+	if err = db.AutoMigrate(&models.Exploit{}); err != nil {
+		panic(err)
+	}
+
 	cve := models.CVE{
 		CVE:         "CVE-2024-51479",
 		Description: "Test usage",
@@ -300,7 +363,7 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 		panic(err)
 	}
 	vuln1 := models.DependencyVuln{
-		Vulnerability:     models.Vulnerability{ID: "bf2609eb45b7e40d9f59a0555ce267b1bbc565363f765428f638c8d8c39f1604", AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
+		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
 		ComponentPurl:     utils.Ptr("pkg:npm/next@14.2.13"),
 		CVE:               &cve,
 		CVEID:             &cve.CVE,
@@ -311,7 +374,7 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 		panic(err)
 	}
 	vuln2 := models.DependencyVuln{
-		Vulnerability:     models.Vulnerability{ID: "8374855f8bf1d188f28183e7e1960700ba5864e415a0e62b4feeba5f4d566562", AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
+		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID, State: "open"},
 		ComponentPurl:     utils.Ptr("pkg:npm/axios@1.7.7"),
 		CVE:               &cve,
 		CVEID:             &cve.CVE,
@@ -373,6 +436,7 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 	if err = db.Create(&vuln2FixedEvent).Error; err != nil {
 		panic(err)
 	}
+	return vuln2.ID
 }
 
 func createComponents(db core.DB) {

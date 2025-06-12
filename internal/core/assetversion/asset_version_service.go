@@ -747,7 +747,7 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 		// check if cve
 		cve := dependencyVuln.CVE
 		if cve != nil {
-			firstIssued, lastUpdated, responseTime := getDatesForVulnerabilityEvent(dependencyVuln.Events)
+			firstIssued, lastUpdated, firstUpdated := getDatesForVulnerabilityEvent(dependencyVuln.Events)
 			vuln := cdx.Vulnerability{
 				ID: cve.CVE,
 				Source: &cdx.Source{
@@ -763,8 +763,8 @@ func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion,
 					LastUpdated: lastUpdated.UTC().Format(time.RFC3339),
 				},
 			}
-			if responseTime >= 0 {
-				vuln.Properties = &[]cdx.Property{{Name: "responseTime", Value: responseTime.String()}}
+			if !firstUpdated.IsZero() {
+				vuln.Properties = &[]cdx.Property{{Name: "firstUpdated", Value: firstUpdated.UTC().Format(time.RFC3339)}}
 			}
 
 			response := dependencyVulnStateToResponseStatus(dependencyVuln.State)
@@ -874,9 +874,10 @@ func dependencyVulnStateToResponseStatus(state models.VulnState) cdx.ImpactAnaly
 	}
 }
 
-func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time, time.Duration) {
+func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, time.Time, time.Time) {
 	firstIssued := time.Time{}
 	lastUpdated := time.Time{}
+	firstUpdated := time.Time{}
 	if len(vulnEvents) > 0 {
 		firstIssued = time.Now()
 		// find the date when the vulnerability was detected/created in the database
@@ -889,7 +890,6 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 
 		// in case no manual events are available we need to set the default to the firstIssued date
 		lastUpdated = firstIssued
-		firstUpdated := time.Now()
 
 		// find the newest/latest event that was triggered through a human / manual interaction
 		for _, event := range vulnEvents {
@@ -904,14 +904,14 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 				if event.UpdatedAt.After(lastUpdated) {
 					lastUpdated = event.UpdatedAt
 				}
-				if event.UpdatedAt.Before(firstUpdated) {
+				if firstUpdated.IsZero() {
+					firstUpdated = event.UpdatedAt
+				} else if event.UpdatedAt.Before(firstUpdated) {
 					firstUpdated = event.UpdatedAt
 				}
 			}
 		}
-		responseTime := firstUpdated.Sub(firstIssued)
-		return firstIssued, lastUpdated, responseTime
 	}
 
-	return firstIssued, lastUpdated, -1
+	return firstIssued, lastUpdated, firstUpdated
 }

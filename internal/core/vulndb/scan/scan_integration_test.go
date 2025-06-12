@@ -247,22 +247,13 @@ func TestTicketHandling(t *testing.T) {
 		core.SetSession(ctx, authSession)
 	}
 
-	// create the main asset version
-	assetVersion := models.AssetVersion{
-		Name:          "main",
-		AssetID:       asset.ID,
-		DefaultBranch: true,
-	}
-	err := db.Create(&assetVersion).Error
-	assert.Nil(t, err)
-
 	// create a gitlab integration for this org
 	gitlabIntegration := models.GitLabIntegration{
 		AccessToken: "access-token",
 		GitLabUrl:   "https://gitlab.com",
 		OrgID:       org.ID,
 	}
-	err = db.Create(&gitlabIntegration).Error
+	err := db.Create(&gitlabIntegration).Error
 	assert.Nil(t, err)
 
 	t.Run("should open tickets for vulnerabilities if the risk threshold is exceeded", func(t *testing.T) {
@@ -372,7 +363,9 @@ func TestTicketHandling(t *testing.T) {
 		err = db.Save(&cve).Error
 		assert.Nil(t, err)
 
-		db.Delete(&models.DependencyVuln{}, "cve_id = ?", "CVE-2025-46569")
+		if err := db.Debug().Delete(&models.DependencyVuln{}, "cve_id = ?", "CVE-2025-46569").Error; err != nil {
+			panic(err)
+		}
 		// create a vulnerability with an accepted state
 		vuln := models.DependencyVuln{
 			CVEID:         utils.Ptr("CVE-2025-46569"),
