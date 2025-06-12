@@ -117,10 +117,12 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 				RuleHelpUri:     rule.HelpUri,
 				RuleDescription: getBestDescription(rule),
 				RuleProperties:  database.JSONB(rule.Properties),
-				Commit:          result.PartialFingerprints.CommitSha,
-				Email:           result.PartialFingerprints.Email,
-				Author:          result.PartialFingerprints.Author,
-				Date:            result.PartialFingerprints.Date,
+			}
+			if result.PartialFingerprints != nil {
+				firstPartyVulnerability.Commit = result.PartialFingerprints.CommitSha
+				firstPartyVulnerability.Email = result.PartialFingerprints.Email
+				firstPartyVulnerability.Author = result.PartialFingerprints.Author
+				firstPartyVulnerability.Date = result.PartialFingerprints.Date
 			}
 
 			if len(result.Locations) > 0 {
@@ -149,17 +151,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 		assetVersion.Metadata = make(map[string]any)
 	}
 
-	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
-	switch scannerID {
-	case devguardScanner + "sast":
-		assetVersion.Metadata["sast"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	case devguardScanner + "dast":
-		assetVersion.Metadata["dast"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	case devguardScanner + "secret-scanning":
-		assetVersion.Metadata["secret"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	case devguardScanner + "iac":
-		assetVersion.Metadata["iac"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	}
+	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
 	return amountOpened, amountClosed, amountExisting, nil
 }
@@ -203,25 +195,6 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
-func fixFixedVersion(purl string, fixedVersion *string) *string {
-	if fixedVersion == nil || *fixedVersion == "" {
-		return nil
-	}
-
-	// split the purl after the @ to get the version
-	versionSubstrings := strings.SplitN(purl, "@", 2)
-	if len(versionSubstrings) < 2 {
-		return fixedVersion // no version in purl, return the fixed version as is
-	}
-
-	// check if ver starts with a v
-	if strings.HasPrefix(versionSubstrings[1], "v") {
-		return utils.Ptr("v" + *fixedVersion)
-	}
-
-	return fixedVersion
-
-}
 
 func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 
@@ -244,7 +217,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	// now we have the depth.
 	for _, vuln := range vulns {
 		v := vuln
-		fixedVersion := fixFixedVersion(v.Purl, v.FixedVersion)
+		fixedVersion := normalize.FixFixedVersion(v.Purl, v.FixedVersion)
 		dependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
@@ -276,14 +249,7 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 		assetVersion.Metadata = make(map[string]any)
 	}
 
-	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
-
-	switch scannerID {
-	case devguardScanner + "sca":
-		assetVersion.Metadata["sca"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	case devguardScanner + "container-scanning":
-		assetVersion.Metadata["container"] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
-	}
+	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
 	return opened, closed, newState, nil
 }

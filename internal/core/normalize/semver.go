@@ -25,6 +25,26 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+func FixFixedVersion(purl string, fixedVersion *string) *string {
+	if fixedVersion == nil || *fixedVersion == "" {
+		return nil
+	}
+
+	// split the purl after the @ to get the version
+	versionSubstrings := strings.SplitN(purl, "@", 2)
+	if len(versionSubstrings) < 2 {
+		return fixedVersion // no version in purl, return the fixed version as is
+	}
+
+	// check if ver starts with a v
+	if strings.HasPrefix(versionSubstrings[1], "v") {
+		v := ("v" + *fixedVersion)
+		return &v
+	}
+
+	return fixedVersion
+}
+
 // Regex for validating a correct semver.
 var ValidSemverRegex = regexp.MustCompile(`^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 

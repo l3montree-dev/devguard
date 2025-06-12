@@ -60,12 +60,12 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 		err = db.Create(&component).Error
 		assert.Nil(t, err)
 
-		devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
+		devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"
 		componentDependency := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
 			AssetVersion:     assetVersion,
-			ScannerIDs:       devguardScanner + "sca",
+			ScannerIDs:       devguardScanner,
 			ComponentPurl:    nil,
 			DependencyPurl:   "pkg:npm/react@18.2.0",
 			Dependency:       models.Component{Purl: "pkg:npm/react@18.2.0"},
@@ -82,9 +82,9 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 		err = db.First(&updatedAssetVersion, "name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Error
 		assert.Nil(t, err)
 		assert.NotNil(t, updatedAssetVersion.Metadata)
-		assert.Contains(t, updatedAssetVersion.Metadata, "sca")
+		assert.Contains(t, updatedAssetVersion.Metadata, devguardScanner)
 
-		metadataMap := updatedAssetVersion.Metadata["sca"]
+		metadataMap := updatedAssetVersion.Metadata[devguardScanner]
 		metadataBytes, err := json.Marshal(metadataMap)
 		assert.Nil(t, err)
 		var metadata models.ScannerInformation

@@ -61,7 +61,6 @@ func RawRisk(cve models.CVE, env core.Environmental, affectedComponentDepth int)
 
 func RiskCalculation(cve models.CVE, env core.Environmental) (common.RiskMetrics, string) {
 	if cve.Vector == "" {
-		slog.Warn("No CVSS vector found", "cve", cve.CVE)
 		return common.RiskMetrics{}, ""
 	}
 

@@ -45,7 +45,7 @@ func (controller LicenseOverwriteController) Create(ctx core.Context) error {
 	if newLicenseOverwrite.LicenseID == "" {
 		return echo.NewHTTPError(400, "license id must not be empty")
 	}
-	err := controller.LicenseOverwriteRepository.Create(nil, &newLicenseOverwrite)
+	err := controller.LicenseOverwriteRepository.Save(nil, &newLicenseOverwrite)
 	if err != nil {
 		return echo.NewHTTPError(500, err.Error())
 	}

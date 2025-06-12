@@ -346,8 +346,15 @@ func NewInTotoCommand() *cobra.Command {
 		Use:   "intoto",
 		Short: "InToto commands",
 
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// run the root command pre-run
+			root := cmd.Root()
+			if err := root.PersistentPreRunE(cmd, args); err != nil {
+				return err
+			}
+
 			config.ParseInTotoConfig()
+			return nil
 		},
 	}
 
