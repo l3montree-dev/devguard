@@ -13,6 +13,7 @@ oidc:
   #   issuerUrl: https://gitlab.de
   #   clientId: client-id
   #   existingClientSecret: gitlab-secret
+  #   existingAdminTokenSecret: gitlab-admin-token # needs to contain key "token"
   #   scope:
   #     - read_user
   #     - openid
