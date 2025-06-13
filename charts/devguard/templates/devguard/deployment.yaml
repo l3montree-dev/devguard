@@ -101,7 +101,7 @@ spec:
                 key: accessToken
                 name: {{ .existingBotUserSecretName | quote }}
             {{- end }}
-            {{- if. existingAdminTokenSecretName }}
+            {{- if .existingAdminTokenSecretName }}
           - name: GITLAB_{{ .id | upper }}_ADMINTOKEN
             valueFrom:
               secretKeyRef:
