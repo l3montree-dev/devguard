@@ -350,22 +350,22 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 	newDetectedVulnsNotOnDefaultBranch, newDetectedButOnDefaultBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, newDetectedVulns, existingVulnsOnDefaultBranch)
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
-		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, userID, scannerID, newDetectedButOnDefaultBranchExisting, existingEvents, *assetVersion, asset); err != nil {
+		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, scannerID, newDetectedButOnDefaultBranchExisting, existingEvents, *assetVersion, asset); err != nil {
 			slog.Error("error when trying to add events for existing vulnerability on different branch")
 			return err // this will cancel the transaction
 		}
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, userID, scannerID, newDetectedVulnsNotOnDefaultBranch, *assetVersion, asset); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, scannerID, newDetectedVulnsNotOnDefaultBranch, *assetVersion, asset); err != nil {
 			return err // this will cancel the transaction
 		}
 
-		err = s.dependencyVulnService.UserDetectedDependencyVulnWithAnotherScanner(tx, firstTimeDetectedByCurrentScanner, userID, scannerID)
+		err = s.dependencyVulnService.UserDetectedDependencyVulnWithAnotherScanner(tx, firstTimeDetectedByCurrentScanner, scannerID)
 		if err != nil {
 			slog.Error("error when trying to add events for adding scanner to vulnerability")
 			return err
 		}
 
-		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnWithScannerAnymore(tx, notDetectedByCurrentScannerAnymore, userID, scannerID)
+		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnWithScannerAnymore(tx, notDetectedByCurrentScannerAnymore, scannerID)
 		if err != nil {
 			slog.Error("error when trying to add events for removing scanner from vulnerability")
 			return err
