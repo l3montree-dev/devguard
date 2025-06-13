@@ -117,8 +117,11 @@ func (e *externalEntityProviderRBAC) AllowRole(role string, object core.Object, 
 	return nil
 }
 func (e *externalEntityProviderRBAC) IsAllowed(userID string, object core.Object, action core.Action) (bool, error) {
-	if userID == e.adminToken && action == core.ActionRead {
-		return true, nil
+	if userID == e.adminToken {
+		if action == core.ActionRead {
+			return true, nil
+		}
+		return false, nil
 	}
 	if object == core.ObjectOrganization {
 		// all users have read only access to this organization

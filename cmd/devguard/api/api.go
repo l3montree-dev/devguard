@@ -474,7 +474,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	apiV1Router.GET("/lookup/", assetController.HandleLookup)
 
 	// everything below this line is protected by the session middleware
-	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(ory, patService))
+	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(core.NewAdminClient(ory), patService))
 	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
 	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)
 

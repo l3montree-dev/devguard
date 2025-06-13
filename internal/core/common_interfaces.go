@@ -17,6 +17,7 @@ package core
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -51,6 +52,10 @@ type ProjectRepository interface {
 	Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
 	EnableCommunityManagedPolicies(tx DB, projectID uuid.UUID) error
 	UpsertSplit(tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
+}
+
+type Verifier interface {
+	VerifyRequestSignature(req *http.Request) (string, string, error)
 }
 
 type PolicyRepository interface {
