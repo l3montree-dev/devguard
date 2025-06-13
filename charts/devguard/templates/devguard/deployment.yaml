@@ -101,12 +101,12 @@ spec:
                 key: accessToken
                 name: {{ .existingBotUserSecretName | quote }}
             {{- end }}
-            {{- if. existingAdminTokenSecret }}
+            {{- if. existingAdminTokenSecretName }}
           - name: GITLAB_{{ .id | upper }}_ADMINTOKEN
             valueFrom:
               secretKeyRef:
                 key: token
-                name: {{ .existingAdminTokenSecret | quote }}
+                name: {{ .existingAdminTokenSecretName | quote }}
             {{- end }}
             {{- if .autosetupApplication}}
           - name: GITLAB_{{ .id | upper }}AUTOSETUP_APPID
