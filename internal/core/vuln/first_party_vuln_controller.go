@@ -73,7 +73,7 @@ func (c firstPartyVulnController) ListByProjectPaged(ctx core.Context) error {
 		core.GetSortQuery(ctx),
 	)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
+		return echo.NewHTTPError(500, "could not get first party vulns").WithInternal(err)
 	}
 
 	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVuln) any {
@@ -194,7 +194,7 @@ func (c firstPartyVulnController) ListPaged(ctx core.Context) error {
 	)
 
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
+		return echo.NewHTTPError(500, "could not get first party vulns").WithInternal(err)
 	}
 
 	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVuln) any {
@@ -213,9 +213,8 @@ func (c firstPartyVulnController) Sarif(ctx core.Context) error {
 	)
 
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
+		return echo.NewHTTPError(500, "could not get first party vulns").WithInternal(err)
 	}
-
 	sarif := common.SarifResult{
 		Version: "2.1.0",
 		Schema:  "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json",

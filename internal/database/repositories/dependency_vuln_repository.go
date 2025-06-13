@@ -134,7 +134,7 @@ func (r *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, assetVersi
 		q.Where(f.SQL(), f.Value())
 	}
 	if search != "" && len(search) > 2 {
-		q.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR dependency_vulns.scanner_ids ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	err := q.Session(&gorm.Session{}).Distinct("dependency_vulns.component_purl").Count(&count).Error
