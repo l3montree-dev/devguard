@@ -58,7 +58,7 @@ func (r *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx core.DB, a
 		q = q.Where(f.SQL(), f.Value())
 	}
 	if search != "" && len(search) > 2 {
-		q = q.Where("(\"first_party_vulnerabilities\".message ILIKE ?  OR first_party_vulnerabilities.filename ILIKE ? OR rule_description ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("\"first_party_vulnerabilities\".message ILIKE ?  OR first_party_vulnerabilities.uri ILIKE ? OR rule_description ILIKE ? OR first_party_vulnerabilities.scanner_ids ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	err := q.Count(&count).Error
