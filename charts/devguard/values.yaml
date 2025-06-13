@@ -7,13 +7,13 @@ oidc:
   # - id: github
   #   provider: github
   #   clientId: "sample-client-id"
-  #   existingClientSecret: github-client-secret # needs to contain key "secret"
+  #   existingClientSecretName: github-client-secret # needs to contain key "secret"
   # - id: gitlab
   #   provider: gitlab
   #   issuerUrl: https://gitlab.de
   #   clientId: client-id
-  #   existingClientSecret: gitlab-secret
-  #   existingAdminTokenSecret: gitlab-admin-token # needs to contain key "token"
+  #   existingClientSecretName: gitlab-secret
+  #   existingAdminTokenSecretName: gitlab-admin-token # needs to contain key "token"
   #   scope:
   #     - read_user
   #     - openid
