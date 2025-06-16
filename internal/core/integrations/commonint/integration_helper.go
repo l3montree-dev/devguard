@@ -220,9 +220,7 @@ func GetLabels(vuln models.Vuln) []string {
 		if scannerID == "" {
 			continue
 		}
-		if strings.HasPrefix(scannerID, scannerDefault) {
-			scannerID = strings.TrimPrefix(scannerID, scannerDefault)
-		}
+		scannerID = strings.TrimPrefix(scannerID, scannerDefault)
 		labels = append(labels, "scanner:"+scannerID)
 	}
 
