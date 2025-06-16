@@ -217,7 +217,7 @@ func ParseInTotoConfig() {
 
 func SetXAssetHeaders(req *http.Request) {
 	req.Header.Set("X-Asset-Name", RuntimeBaseConfig.AssetName)
-	req.Header.Set("X-Asset-Ref", RuntimeBaseConfig.Ref)
+	req.Header.Set("X-Asset-Ref", normalizeParameter(RuntimeBaseConfig.Ref))
 
 	if RuntimeBaseConfig.IsTag {
 		req.Header.Set("X-Tag", "1")
@@ -226,8 +226,7 @@ func SetXAssetHeaders(req *http.Request) {
 	}
 
 	if RuntimeBaseConfig.DefaultBranch != "" {
-
-		req.Header.Set("X-Asset-Default-Branch", RuntimeBaseConfig.DefaultBranch)
+		req.Header.Set("X-Asset-Default-Branch", normalizeParameter(RuntimeBaseConfig.DefaultBranch))
 	}
 }
 
