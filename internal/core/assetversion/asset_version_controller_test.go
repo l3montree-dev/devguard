@@ -57,7 +57,7 @@ func TestBuildVEX(t *testing.T) {
 
 		assert.Empty(t, VEXResult.Vulnerabilities)
 	})
-	vulnID := createDependencyVulns(db, asset.ID, assetVersion.Name)
+	vuln1, vuln2 := createDependencyVulns(db, asset.ID, assetVersion.Name)
 	t.Run("build Vex with everything set as intended", func(t *testing.T) {
 		//setup function call
 		recorder := httptest.NewRecorder()
@@ -93,15 +93,15 @@ func TestBuildVEX(t *testing.T) {
 		assert.Equal(t, (*VEXResult.Vulnerabilities)[1].ID, "CVE-2024-51479", (*VEXResult.Vulnerabilities)[0].ID)
 		assert.Equal(t, (*(*VEXResult.Vulnerabilities)[0].Affects)[0].Ref, "pkg:npm/next@14.2.13")
 		assert.Equal(t, (*(*VEXResult.Vulnerabilities)[1].Affects)[0].Ref, "pkg:npm/axios@1.7.7")
-
 	})
+
 	t.Run("build Vex but one vuln never gets handled should return empty properties for that vulnerability", func(t *testing.T) {
 		//setup function call
 		recorder := httptest.NewRecorder()
 		req := httptest.NewRequest("GET", "/vex-json/", nil)
 		ctx := app.NewContext(req, recorder)
 		setupContext(&ctx)
-		if err := db.Delete(&models.VulnEvent{}, "vuln_id = ? AND type = ?", vulnID, "fixed").Error; err != nil {
+		if err := db.Delete(&models.VulnEvent{}, "vuln_id = ? AND type = ?", vuln2.ID, "fixed").Error; err != nil {
 			panic(err)
 		}
 
@@ -122,9 +122,36 @@ func TestBuildVEX(t *testing.T) {
 		assert.Equal(t, (*VEXResult.Vulnerabilities)[1].Analysis.FirstIssued, (*VEXResult.Vulnerabilities)[1].Analysis.LastUpdated)
 	})
 
+	t.Run("should not list vulnerabilities which are already fixed", func(t *testing.T) {
+		//setup function call
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/vex-json/", nil)
+		ctx := app.NewContext(req, recorder)
+		setupContext(&ctx)
+
+		// update the vuln1 to be fixed
+		vuln1.State = "fixed"
+		if err := db.Save(&vuln1).Error; err != nil {
+			panic(err)
+		}
+		err := assetVersionController.VEXJSON(ctx)
+		assert.Nil(t, err)
+
+		//prep results for testing
+		resp := recorder.Result()
+		body, err := io.ReadAll(resp.Body)
+		assert.Nil(t, err)
+
+		var VEXResult cyclonedx.BOM
+		err = json.Unmarshal(body, &VEXResult)
+		assert.Nil(t, err)
+
+		assert.Len(t, *VEXResult.Vulnerabilities, 1)
+		assert.Equal(t, (*VEXResult.Vulnerabilities)[0].ID, "CVE-2024-51479")
+	})
 }
 
-func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName string) string {
+func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName string) (models.DependencyVuln, models.DependencyVuln) {
 	//first add cves
 	var err error
 	if err = db.AutoMigrate(&models.Exploit{}); err != nil {
@@ -228,5 +255,5 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 	if err = db.Create(&vuln2FixedEvent).Error; err != nil {
 		panic(err)
 	}
-	return vuln2.ID
+	return vuln1, vuln2
 }

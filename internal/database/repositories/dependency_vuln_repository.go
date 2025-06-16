@@ -101,7 +101,7 @@ func (r *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVersionName s
 
 func (r *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
-	q := r.Repository.GetDB(r.db).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ? AND state != 'fixed'", assetVersionName, assetID)
+	q := r.Repository.GetDB(r.db).Preload("CVE").Preload("Events").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ? AND state != 'fixed'", assetVersionName, assetID)
 
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces

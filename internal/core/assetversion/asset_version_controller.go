@@ -229,13 +229,7 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	org := core.GetOrg(ctx)
 
 	scannerID := ctx.QueryParam("scanner")
-	if scannerID != "" {
-		var err error
-		scannerID, err = url.QueryUnescape(scannerID)
-		if err != nil {
-			return vex.VEX{}, err
-		}
-	}
+
 	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, scannerID)
 	if err != nil {
 		return vex.VEX{}, err
@@ -245,15 +239,17 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 }
 
 func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, scannerID string) ([]models.DependencyVuln, error) {
-
 	// url decode the scanner
-	scannerID, err := url.QueryUnescape(scannerID)
-	if err != nil {
-		return nil, err
+	if scannerID != "" {
+		var err error
+		scannerID, err = url.QueryUnescape(scannerID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// get all associated dependencyVulns
-	dependencyVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return nil, err
 	}
@@ -291,13 +287,6 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 	scannerID := ctx.QueryParam("scanner")
-	if scannerID != "" {
-		var err error
-		scannerID, err = url.QueryUnescape(scannerID)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, scannerID)
 	if err != nil {

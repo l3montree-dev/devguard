@@ -76,7 +76,7 @@ func SessionMiddleware(oryApiClient core.AdminClient, verifier core.Verifier) ec
 				ctx.Set("session", NewSession(userID, scopesArray))
 				return next(ctx)
 			} else if adminTokenHeader != "" {
-				slog.Warn("admin token header is set, using it to create session", "header", adminTokenHeader)
+				slog.Warn("admin token header is set, using it to create session")
 				ctx.Set("session", NewSession(adminTokenHeader, []string{}))
 				return next(ctx)
 			} else {
