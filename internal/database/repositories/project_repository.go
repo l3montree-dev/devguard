@@ -163,7 +163,7 @@ func (g *projectRepository) DisablePolicyForProject(tx core.DB, projectID uuid.U
 
 func (g *projectRepository) EnableCommunityManagedPolicies(tx core.DB, projectID uuid.UUID) error {
 	// community policies can be identified by their "organization_id" being nil
-	return g.db.Exec(`
+	return g.GetDB(tx).Exec(`
 		INSERT INTO project_enabled_policies (project_id, policy_id)
 		SELECT ?, id
 		FROM policies
