@@ -107,10 +107,10 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UU
 
 	q := r.db.
 		Table("vuln_events AS e").
-		Select("e.*, dv.cve_id").
+		Select("e.*, dv.cve_id, dv.component_purl, fv.uri").
 		Joins("LEFT JOIN dependency_vulns dv ON e.vuln_id = dv.id").
-		Where("e.vuln_id IN (?)", dependencyVulnSubQuery).
-		Or("e.vuln_id IN (?)", firstPartyVulnSubQuery).
+		Joins("LEFT JOIN first_party_vulnerabilities fv ON e.vuln_id = fv.id").
+		Where("(e.vuln_id IN (?) OR e.vuln_id IN (?))", dependencyVulnSubQuery, firstPartyVulnSubQuery).
 		Order("e.created_at DESC").
 		Find(&events)
 
