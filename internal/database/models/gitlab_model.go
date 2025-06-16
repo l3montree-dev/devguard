@@ -16,9 +16,11 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type GitLabOauth2Token struct {
@@ -57,4 +59,15 @@ type GitLabIntegration struct {
 
 func (g GitLabIntegration) TableName() string {
 	return "gitlab_integrations"
+}
+
+func validateGitLabOauth2Token(token *GitLabOauth2Token) error {
+	if token.UserID == "NO_SESSION" {
+		return fmt.Errorf("cannot save token for user %s, this is a reserved user ID", "NO_SESSION")
+	}
+	return nil
+}
+
+func (token *GitLabOauth2Token) BeforeSave(tx *gorm.DB) (err error) {
+	return validateGitLabOauth2Token(token)
 }
