@@ -93,3 +93,24 @@ func TestRenderPathToComponent(t *testing.T) {
 
 	})
 }
+func TestGetLabels(t *testing.T) {
+	t.Run("should return correct labels for a DependencyVuln with CVE", func(t *testing.T) {
+		vuln := &models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				State:      models.VulnStateOpen,
+				ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca, github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning",
+			},
+			RawRiskAssessment: utils.Ptr(0.2),
+		}
+		expectedLabels := []string{
+			"devguard",
+			"state:open",
+			"risk:low",
+			"scanner:sca",
+			"scanner:container-scanning",
+		}
+
+		assert.Equal(t, expectedLabels, GetLabels(vuln))
+	})
+
+}
