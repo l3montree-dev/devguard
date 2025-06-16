@@ -80,16 +80,32 @@ type GitlabClientFacade_AddProjectHook_Call struct {
 }
 
 // AddProjectHook is a helper method to define mock.On call
-//   - ctx
-//   - projectId
-//   - opt
+//   - ctx context.Context
+//   - projectId int
+//   - opt *gitlab.AddProjectHookOptions
 func (_e *GitlabClientFacade_Expecter) AddProjectHook(ctx interface{}, projectId interface{}, opt interface{}) *GitlabClientFacade_AddProjectHook_Call {
 	return &GitlabClientFacade_AddProjectHook_Call{Call: _e.mock.On("AddProjectHook", ctx, projectId, opt)}
 }
 
 func (_c *GitlabClientFacade_AddProjectHook_Call) Run(run func(ctx context.Context, projectId int, opt *gitlab.AddProjectHookOptions)) *GitlabClientFacade_AddProjectHook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(*gitlab.AddProjectHookOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *gitlab.AddProjectHookOptions
+		if args[2] != nil {
+			arg2 = args[2].(*gitlab.AddProjectHookOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -146,16 +162,32 @@ type GitlabClientFacade_CreateIssue_Call struct {
 }
 
 // CreateIssue is a helper method to define mock.On call
-//   - ctx
-//   - pid
-//   - opt
+//   - ctx context.Context
+//   - pid int
+//   - opt *gitlab.CreateIssueOptions
 func (_e *GitlabClientFacade_Expecter) CreateIssue(ctx interface{}, pid interface{}, opt interface{}) *GitlabClientFacade_CreateIssue_Call {
 	return &GitlabClientFacade_CreateIssue_Call{Call: _e.mock.On("CreateIssue", ctx, pid, opt)}
 }
 
 func (_c *GitlabClientFacade_CreateIssue_Call) Run(run func(ctx context.Context, pid int, opt *gitlab.CreateIssueOptions)) *GitlabClientFacade_CreateIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(*gitlab.CreateIssueOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *gitlab.CreateIssueOptions
+		if args[2] != nil {
+			arg2 = args[2].(*gitlab.CreateIssueOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -212,17 +244,38 @@ type GitlabClientFacade_CreateIssueComment_Call struct {
 }
 
 // CreateIssueComment is a helper method to define mock.On call
-//   - ctx
-//   - pid
-//   - issue
-//   - opt
+//   - ctx context.Context
+//   - pid int
+//   - issue int
+//   - opt *gitlab.CreateIssueNoteOptions
 func (_e *GitlabClientFacade_Expecter) CreateIssueComment(ctx interface{}, pid interface{}, issue interface{}, opt interface{}) *GitlabClientFacade_CreateIssueComment_Call {
 	return &GitlabClientFacade_CreateIssueComment_Call{Call: _e.mock.On("CreateIssueComment", ctx, pid, issue, opt)}
 }
 
 func (_c *GitlabClientFacade_CreateIssueComment_Call) Run(run func(ctx context.Context, pid int, issue int, opt *gitlab.CreateIssueNoteOptions)) *GitlabClientFacade_CreateIssueComment_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(*gitlab.CreateIssueNoteOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		var arg3 *gitlab.CreateIssueNoteOptions
+		if args[3] != nil {
+			arg3 = args[3].(*gitlab.CreateIssueNoteOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -279,16 +332,32 @@ type GitlabClientFacade_CreateMergeRequest_Call struct {
 }
 
 // CreateMergeRequest is a helper method to define mock.On call
-//   - ctx
-//   - project
-//   - opt
+//   - ctx context.Context
+//   - project string
+//   - opt *gitlab.CreateMergeRequestOptions
 func (_e *GitlabClientFacade_Expecter) CreateMergeRequest(ctx interface{}, project interface{}, opt interface{}) *GitlabClientFacade_CreateMergeRequest_Call {
 	return &GitlabClientFacade_CreateMergeRequest_Call{Call: _e.mock.On("CreateMergeRequest", ctx, project, opt)}
 }
 
 func (_c *GitlabClientFacade_CreateMergeRequest_Call) Run(run func(ctx context.Context, project string, opt *gitlab.CreateMergeRequestOptions)) *GitlabClientFacade_CreateMergeRequest_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(*gitlab.CreateMergeRequestOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 *gitlab.CreateMergeRequestOptions
+		if args[2] != nil {
+			arg2 = args[2].(*gitlab.CreateMergeRequestOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -345,16 +414,32 @@ type GitlabClientFacade_CreateVariable_Call struct {
 }
 
 // CreateVariable is a helper method to define mock.On call
-//   - ctx
-//   - projectId
-//   - opt
+//   - ctx context.Context
+//   - projectId int
+//   - opt *gitlab.CreateProjectVariableOptions
 func (_e *GitlabClientFacade_Expecter) CreateVariable(ctx interface{}, projectId interface{}, opt interface{}) *GitlabClientFacade_CreateVariable_Call {
 	return &GitlabClientFacade_CreateVariable_Call{Call: _e.mock.On("CreateVariable", ctx, projectId, opt)}
 }
 
 func (_c *GitlabClientFacade_CreateVariable_Call) Run(run func(ctx context.Context, projectId int, opt *gitlab.CreateProjectVariableOptions)) *GitlabClientFacade_CreateVariable_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(*gitlab.CreateProjectVariableOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *gitlab.CreateProjectVariableOptions
+		if args[2] != nil {
+			arg2 = args[2].(*gitlab.CreateProjectVariableOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -403,16 +488,32 @@ type GitlabClientFacade_DeleteProjectHook_Call struct {
 }
 
 // DeleteProjectHook is a helper method to define mock.On call
-//   - ctx
-//   - projectId
-//   - hookId
+//   - ctx context.Context
+//   - projectId int
+//   - hookId int
 func (_e *GitlabClientFacade_Expecter) DeleteProjectHook(ctx interface{}, projectId interface{}, hookId interface{}) *GitlabClientFacade_DeleteProjectHook_Call {
 	return &GitlabClientFacade_DeleteProjectHook_Call{Call: _e.mock.On("DeleteProjectHook", ctx, projectId, hookId)}
 }
 
 func (_c *GitlabClientFacade_DeleteProjectHook_Call) Run(run func(ctx context.Context, projectId int, hookId int)) *GitlabClientFacade_DeleteProjectHook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -469,17 +570,38 @@ type GitlabClientFacade_EditIssue_Call struct {
 }
 
 // EditIssue is a helper method to define mock.On call
-//   - ctx
-//   - pid
-//   - issue
-//   - opt
+//   - ctx context.Context
+//   - pid int
+//   - issue int
+//   - opt *gitlab.UpdateIssueOptions
 func (_e *GitlabClientFacade_Expecter) EditIssue(ctx interface{}, pid interface{}, issue interface{}, opt interface{}) *GitlabClientFacade_EditIssue_Call {
 	return &GitlabClientFacade_EditIssue_Call{Call: _e.mock.On("EditIssue", ctx, pid, issue, opt)}
 }
 
 func (_c *GitlabClientFacade_EditIssue_Call) Run(run func(ctx context.Context, pid int, issue int, opt *gitlab.UpdateIssueOptions)) *GitlabClientFacade_EditIssue_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(*gitlab.UpdateIssueOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		var arg3 *gitlab.UpdateIssueOptions
+		if args[3] != nil {
+			arg3 = args[3].(*gitlab.UpdateIssueOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -528,17 +650,38 @@ type GitlabClientFacade_EditIssueLabel_Call struct {
 }
 
 // EditIssueLabel is a helper method to define mock.On call
-//   - ctx
-//   - pid
-//   - issue
-//   - labels
+//   - ctx context.Context
+//   - pid int
+//   - issue int
+//   - labels []*gitlab.CreateLabelOptions
 func (_e *GitlabClientFacade_Expecter) EditIssueLabel(ctx interface{}, pid interface{}, issue interface{}, labels interface{}) *GitlabClientFacade_EditIssueLabel_Call {
 	return &GitlabClientFacade_EditIssueLabel_Call{Call: _e.mock.On("EditIssueLabel", ctx, pid, issue, labels)}
 }
 
 func (_c *GitlabClientFacade_EditIssueLabel_Call) Run(run func(ctx context.Context, pid int, issue int, labels []*gitlab.CreateLabelOptions)) *GitlabClientFacade_EditIssueLabel_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].([]*gitlab.CreateLabelOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		var arg3 []*gitlab.CreateLabelOptions
+		if args[3] != nil {
+			arg3 = args[3].([]*gitlab.CreateLabelOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -639,15 +782,26 @@ type GitlabClientFacade_GetGroup_Call struct {
 }
 
 // GetGroup is a helper method to define mock.On call
-//   - ctx
-//   - groupId
+//   - ctx context.Context
+//   - groupId int
 func (_e *GitlabClientFacade_Expecter) GetGroup(ctx interface{}, groupId interface{}) *GitlabClientFacade_GetGroup_Call {
 	return &GitlabClientFacade_GetGroup_Call{Call: _e.mock.On("GetGroup", ctx, groupId)}
 }
 
 func (_c *GitlabClientFacade_GetGroup_Call) Run(run func(ctx context.Context, groupId int)) *GitlabClientFacade_GetGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -704,16 +858,32 @@ type GitlabClientFacade_GetMemberInGroup_Call struct {
 }
 
 // GetMemberInGroup is a helper method to define mock.On call
-//   - ctx
-//   - userId
-//   - groupId
+//   - ctx context.Context
+//   - userId int
+//   - groupId int
 func (_e *GitlabClientFacade_Expecter) GetMemberInGroup(ctx interface{}, userId interface{}, groupId interface{}) *GitlabClientFacade_GetMemberInGroup_Call {
 	return &GitlabClientFacade_GetMemberInGroup_Call{Call: _e.mock.On("GetMemberInGroup", ctx, userId, groupId)}
 }
 
 func (_c *GitlabClientFacade_GetMemberInGroup_Call) Run(run func(ctx context.Context, userId int, groupId int)) *GitlabClientFacade_GetMemberInGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -770,16 +940,32 @@ type GitlabClientFacade_GetMemberInProject_Call struct {
 }
 
 // GetMemberInProject is a helper method to define mock.On call
-//   - ctx
-//   - userId
-//   - projectId
+//   - ctx context.Context
+//   - userId int
+//   - projectId int
 func (_e *GitlabClientFacade_Expecter) GetMemberInProject(ctx interface{}, userId interface{}, projectId interface{}) *GitlabClientFacade_GetMemberInProject_Call {
 	return &GitlabClientFacade_GetMemberInProject_Call{Call: _e.mock.On("GetMemberInProject", ctx, userId, projectId)}
 }
 
 func (_c *GitlabClientFacade_GetMemberInProject_Call) Run(run func(ctx context.Context, userId int, projectId int)) *GitlabClientFacade_GetMemberInProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -836,15 +1022,26 @@ type GitlabClientFacade_GetProject_Call struct {
 }
 
 // GetProject is a helper method to define mock.On call
-//   - ctx
-//   - projectId
+//   - ctx context.Context
+//   - projectId int
 func (_e *GitlabClientFacade_Expecter) GetProject(ctx interface{}, projectId interface{}) *GitlabClientFacade_GetProject_Call {
 	return &GitlabClientFacade_GetProject_Call{Call: _e.mock.On("GetProject", ctx, projectId)}
 }
 
 func (_c *GitlabClientFacade_GetProject_Call) Run(run func(ctx context.Context, projectId int)) *GitlabClientFacade_GetProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -901,16 +1098,32 @@ type GitlabClientFacade_InviteReporter_Call struct {
 }
 
 // InviteReporter is a helper method to define mock.On call
-//   - ctx
-//   - projectId
-//   - userId
+//   - ctx context.Context
+//   - projectId int
+//   - userId int
 func (_e *GitlabClientFacade_Expecter) InviteReporter(ctx interface{}, projectId interface{}, userId interface{}) *GitlabClientFacade_InviteReporter_Call {
 	return &GitlabClientFacade_InviteReporter_Call{Call: _e.mock.On("InviteReporter", ctx, projectId, userId)}
 }
 
 func (_c *GitlabClientFacade_InviteReporter_Call) Run(run func(ctx context.Context, projectId int, userId int)) *GitlabClientFacade_InviteReporter_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -957,17 +1170,38 @@ type GitlabClientFacade_IsProjectMember_Call struct {
 }
 
 // IsProjectMember is a helper method to define mock.On call
-//   - ctx
-//   - projectId
-//   - userId
-//   - options
+//   - ctx context.Context
+//   - projectId int
+//   - userId int
+//   - options *gitlab.ListProjectMembersOptions
 func (_e *GitlabClientFacade_Expecter) IsProjectMember(ctx interface{}, projectId interface{}, userId interface{}, options interface{}) *GitlabClientFacade_IsProjectMember_Call {
 	return &GitlabClientFacade_IsProjectMember_Call{Call: _e.mock.On("IsProjectMember", ctx, projectId, userId, options)}
 }
 
 func (_c *GitlabClientFacade_IsProjectMember_Call) Run(run func(ctx context.Context, projectId int, userId int, options *gitlab.ListProjectMembersOptions)) *GitlabClientFacade_IsProjectMember_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(*gitlab.ListProjectMembersOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		var arg3 *gitlab.ListProjectMembersOptions
+		if args[3] != nil {
+			arg3 = args[3].(*gitlab.ListProjectMembersOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -1024,15 +1258,26 @@ type GitlabClientFacade_ListGroups_Call struct {
 }
 
 // ListGroups is a helper method to define mock.On call
-//   - ctx
-//   - opt
+//   - ctx context.Context
+//   - opt *gitlab.ListGroupsOptions
 func (_e *GitlabClientFacade_Expecter) ListGroups(ctx interface{}, opt interface{}) *GitlabClientFacade_ListGroups_Call {
 	return &GitlabClientFacade_ListGroups_Call{Call: _e.mock.On("ListGroups", ctx, opt)}
 }
 
 func (_c *GitlabClientFacade_ListGroups_Call) Run(run func(ctx context.Context, opt *gitlab.ListGroupsOptions)) *GitlabClientFacade_ListGroups_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*gitlab.ListGroupsOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gitlab.ListGroupsOptions
+		if args[1] != nil {
+			arg1 = args[1].(*gitlab.ListGroupsOptions)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -1089,16 +1334,32 @@ type GitlabClientFacade_ListProjectHooks_Call struct {
 }
 
 // ListProjectHooks is a helper method to define mock.On call
-//   - ctx
-//   - projectId
-//   - options
+//   - ctx context.Context
+//   - projectId int
+//   - options *gitlab.ListProjectHooksOptions
 func (_e *GitlabClientFacade_Expecter) ListProjectHooks(ctx interface{}, projectId interface{}, options interface{}) *GitlabClientFacade_ListProjectHooks_Call {
 	return &GitlabClientFacade_ListProjectHooks_Call{Call: _e.mock.On("ListProjectHooks", ctx, projectId, options)}
 }
 
 func (_c *GitlabClientFacade_ListProjectHooks_Call) Run(run func(ctx context.Context, projectId int, options *gitlab.ListProjectHooksOptions)) *GitlabClientFacade_ListProjectHooks_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(*gitlab.ListProjectHooksOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *gitlab.ListProjectHooksOptions
+		if args[2] != nil {
+			arg2 = args[2].(*gitlab.ListProjectHooksOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -1155,15 +1416,26 @@ type GitlabClientFacade_ListProjects_Call struct {
 }
 
 // ListProjects is a helper method to define mock.On call
-//   - ctx
-//   - opt
+//   - ctx context.Context
+//   - opt *gitlab.ListProjectsOptions
 func (_e *GitlabClientFacade_Expecter) ListProjects(ctx interface{}, opt interface{}) *GitlabClientFacade_ListProjects_Call {
 	return &GitlabClientFacade_ListProjects_Call{Call: _e.mock.On("ListProjects", ctx, opt)}
 }
 
 func (_c *GitlabClientFacade_ListProjects_Call) Run(run func(ctx context.Context, opt *gitlab.ListProjectsOptions)) *GitlabClientFacade_ListProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*gitlab.ListProjectsOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *gitlab.ListProjectsOptions
+		if args[1] != nil {
+			arg1 = args[1].(*gitlab.ListProjectsOptions)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -1220,16 +1492,32 @@ type GitlabClientFacade_ListProjectsInGroup_Call struct {
 }
 
 // ListProjectsInGroup is a helper method to define mock.On call
-//   - ctx
-//   - groupId
-//   - opt
+//   - ctx context.Context
+//   - groupId int
+//   - opt *gitlab.ListGroupProjectsOptions
 func (_e *GitlabClientFacade_Expecter) ListProjectsInGroup(ctx interface{}, groupId interface{}, opt interface{}) *GitlabClientFacade_ListProjectsInGroup_Call {
 	return &GitlabClientFacade_ListProjectsInGroup_Call{Call: _e.mock.On("ListProjectsInGroup", ctx, groupId, opt)}
 }
 
 func (_c *GitlabClientFacade_ListProjectsInGroup_Call) Run(run func(ctx context.Context, groupId int, opt *gitlab.ListGroupProjectsOptions)) *GitlabClientFacade_ListProjectsInGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(*gitlab.ListGroupProjectsOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *gitlab.ListGroupProjectsOptions
+		if args[2] != nil {
+			arg2 = args[2].(*gitlab.ListGroupProjectsOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -1286,16 +1574,32 @@ type GitlabClientFacade_ListVariables_Call struct {
 }
 
 // ListVariables is a helper method to define mock.On call
-//   - ctx
-//   - projectId
-//   - options
+//   - ctx context.Context
+//   - projectId int
+//   - options *gitlab.ListProjectVariablesOptions
 func (_e *GitlabClientFacade_Expecter) ListVariables(ctx interface{}, projectId interface{}, options interface{}) *GitlabClientFacade_ListVariables_Call {
 	return &GitlabClientFacade_ListVariables_Call{Call: _e.mock.On("ListVariables", ctx, projectId, options)}
 }
 
 func (_c *GitlabClientFacade_ListVariables_Call) Run(run func(ctx context.Context, projectId int, options *gitlab.ListProjectVariablesOptions)) *GitlabClientFacade_ListVariables_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(*gitlab.ListProjectVariablesOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 *gitlab.ListProjectVariablesOptions
+		if args[2] != nil {
+			arg2 = args[2].(*gitlab.ListProjectVariablesOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -1344,16 +1648,32 @@ type GitlabClientFacade_RemoveVariable_Call struct {
 }
 
 // RemoveVariable is a helper method to define mock.On call
-//   - ctx
-//   - projectId
-//   - key
+//   - ctx context.Context
+//   - projectId int
+//   - key string
 func (_e *GitlabClientFacade_Expecter) RemoveVariable(ctx interface{}, projectId interface{}, key interface{}) *GitlabClientFacade_RemoveVariable_Call {
 	return &GitlabClientFacade_RemoveVariable_Call{Call: _e.mock.On("RemoveVariable", ctx, projectId, key)}
 }
 
 func (_c *GitlabClientFacade_RemoveVariable_Call) Run(run func(ctx context.Context, projectId int, key string)) *GitlabClientFacade_RemoveVariable_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(string))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -1410,17 +1730,38 @@ type GitlabClientFacade_UpdateVariable_Call struct {
 }
 
 // UpdateVariable is a helper method to define mock.On call
-//   - ctx
-//   - projectId
-//   - key
-//   - opt
+//   - ctx context.Context
+//   - projectId int
+//   - key string
+//   - opt *gitlab.UpdateProjectVariableOptions
 func (_e *GitlabClientFacade_Expecter) UpdateVariable(ctx interface{}, projectId interface{}, key interface{}, opt interface{}) *GitlabClientFacade_UpdateVariable_Call {
 	return &GitlabClientFacade_UpdateVariable_Call{Call: _e.mock.On("UpdateVariable", ctx, projectId, key, opt)}
 }
 
 func (_c *GitlabClientFacade_UpdateVariable_Call) Run(run func(ctx context.Context, projectId int, key string, opt *gitlab.UpdateProjectVariableOptions)) *GitlabClientFacade_UpdateVariable_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(string), args[3].(*gitlab.UpdateProjectVariableOptions))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 *gitlab.UpdateProjectVariableOptions
+		if args[3] != nil {
+			arg3 = args[3].(*gitlab.UpdateProjectVariableOptions)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -1477,14 +1818,20 @@ type GitlabClientFacade_Whoami_Call struct {
 }
 
 // Whoami is a helper method to define mock.On call
-//   - ctx
+//   - ctx context.Context
 func (_e *GitlabClientFacade_Expecter) Whoami(ctx interface{}) *GitlabClientFacade_Whoami_Call {
 	return &GitlabClientFacade_Whoami_Call{Call: _e.mock.On("Whoami", ctx)}
 }
 
 func (_c *GitlabClientFacade_Whoami_Call) Run(run func(ctx context.Context)) *GitlabClientFacade_Whoami_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }

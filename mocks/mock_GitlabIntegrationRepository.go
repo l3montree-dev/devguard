@@ -61,15 +61,26 @@ type GitlabIntegrationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *GitlabIntegrationRepository_Expecter) Delete(tx interface{}, id interface{}) *GitlabIntegrationRepository_Delete_Call {
 	return &GitlabIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *GitlabIntegrationRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *GitlabIntegrationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -118,14 +129,20 @@ type GitlabIntegrationRepository_FindByOrganizationId_Call struct {
 }
 
 // FindByOrganizationId is a helper method to define mock.On call
-//   - orgID
+//   - orgID uuid.UUID
 func (_e *GitlabIntegrationRepository_Expecter) FindByOrganizationId(orgID interface{}) *GitlabIntegrationRepository_FindByOrganizationId_Call {
 	return &GitlabIntegrationRepository_FindByOrganizationId_Call{Call: _e.mock.On("FindByOrganizationId", orgID)}
 }
 
 func (_c *GitlabIntegrationRepository_FindByOrganizationId_Call) Run(run func(orgID uuid.UUID)) *GitlabIntegrationRepository_FindByOrganizationId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -172,14 +189,20 @@ type GitlabIntegrationRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id uuid.UUID
 func (_e *GitlabIntegrationRepository_Expecter) Read(id interface{}) *GitlabIntegrationRepository_Read_Call {
 	return &GitlabIntegrationRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *GitlabIntegrationRepository_Read_Call) Run(run func(id uuid.UUID)) *GitlabIntegrationRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -217,15 +240,26 @@ type GitlabIntegrationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - model
+//   - tx core.DB
+//   - model *models.GitLabIntegration
 func (_e *GitlabIntegrationRepository_Expecter) Save(tx interface{}, model interface{}) *GitlabIntegrationRepository_Save_Call {
 	return &GitlabIntegrationRepository_Save_Call{Call: _e.mock.On("Save", tx, model)}
 }
 
 func (_c *GitlabIntegrationRepository_Save_Call) Run(run func(tx core.DB, model *models.GitLabIntegration)) *GitlabIntegrationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.GitLabIntegration))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.GitLabIntegration
+		if args[1] != nil {
+			arg1 = args[1].(*models.GitLabIntegration)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

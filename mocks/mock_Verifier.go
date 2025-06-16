@@ -75,14 +75,20 @@ type Verifier_VerifyRequestSignature_Call struct {
 }
 
 // VerifyRequestSignature is a helper method to define mock.On call
-//   - req
+//   - req *http.Request
 func (_e *Verifier_Expecter) VerifyRequestSignature(req interface{}) *Verifier_VerifyRequestSignature_Call {
 	return &Verifier_VerifyRequestSignature_Call{Call: _e.mock.On("VerifyRequestSignature", req)}
 }
 
 func (_c *Verifier_VerifyRequestSignature_Call) Run(run func(req *http.Request)) *Verifier_VerifyRequestSignature_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*http.Request))
+		var arg0 *http.Request
+		if args[0] != nil {
+			arg0 = args[0].(*http.Request)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
