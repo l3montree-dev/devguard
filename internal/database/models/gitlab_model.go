@@ -28,8 +28,8 @@ type GitLabOauth2Token struct {
 	RefreshToken string    `json:"refreshToken" gorm:"column:refresh_token"`
 	ExpiresAt    int64     `json:"expiresAt" gorm:"column:expires_at"`
 	Scopes       string    `json:"scopes" gorm:"column:scopes"`
-	UserID       string    `json:"userId" gorm:"column:user_id;uniqueIndex:single-provider-token"` // the gitlab user id
-	GitLabUserID int       `json:"gitLabUserId" gorm:"column:gitlab_user_id"`                      // the gitlab user id
+	UserID       string    `json:"userId" gorm:"column:user_id;uniqueIndex:single-provider-token;check:LOWER(user_id) <> 'NO_SESSION'"` // the gitlab user id
+	GitLabUserID int       `json:"gitLabUserId" gorm:"column:gitlab_user_id"`                                                           // the gitlab user id
 	Expiry       time.Time `json:"expiry" gorm:"column:expiry"`
 	Verifier     *string   `json:"verifier" gorm:"column:verifier"` // used for the PKCE to protect against CSRF attacks during doing oauth2
 	BaseURL      string    `json:"baseUrl" gorm:"column:base_url;"` // the base url of the gitlab instance
