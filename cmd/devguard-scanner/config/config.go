@@ -21,6 +21,7 @@ import (
 	"encoding/pem"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
@@ -115,6 +116,8 @@ func ParseBaseConfig() {
 			}
 		}
 	}
+	RuntimeBaseConfig.Ref = normalizeParameter(RuntimeBaseConfig.Ref)
+	RuntimeBaseConfig.DefaultBranch = normalizeParameter(RuntimeBaseConfig.DefaultBranch)
 
 	slog.Info("running with config",
 		"assetName", RuntimeBaseConfig.AssetName,
@@ -223,6 +226,12 @@ func SetXAssetHeaders(req *http.Request) {
 	}
 
 	if RuntimeBaseConfig.DefaultBranch != "" {
+
 		req.Header.Set("X-Asset-Default-Branch", RuntimeBaseConfig.DefaultBranch)
 	}
+}
+
+func normalizeParameter(parameter string) string {
+	parsedString := strings.ToLower(parameter)
+	return strings.ReplaceAll(parsedString, "/", "-")
 }
