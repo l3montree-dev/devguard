@@ -101,7 +101,7 @@ func (r *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVersionName s
 
 func (r *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
-	q := r.Repository.GetDB(r.db).Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ? AND state != 'fixed'", assetVersionName, assetID)
+	q := r.Repository.GetDB(r.db).Preload("CVE").Preload("Events").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ? AND state != 'fixed'", assetVersionName, assetID)
 
 	if scannerID != "" {
 		// scanner ids is a string array separated by whitespaces
@@ -134,7 +134,7 @@ func (r *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, assetVersi
 		q.Where(f.SQL(), f.Value())
 	}
 	if search != "" && len(search) > 2 {
-		q.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q.Where("(\"CVE\".description ILIKE ?  OR dependency_vulns.cve_id ILIKE ? OR dependency_vulns.scanner_ids ILIKE ? OR component_purl ILIKE ?)", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	err := q.Session(&gorm.Session{}).Distinct("dependency_vulns.component_purl").Count(&count).Error

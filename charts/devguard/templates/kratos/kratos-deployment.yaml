@@ -54,7 +54,7 @@ spec:
         - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_{{ $index }}_CLIENT_SECRET"
           valueFrom:
             secretKeyRef:
-                name: "{{ $provider.existingClientSecret }}"
+                name: "{{ $provider.existingClientSecretName }}"
                 key: "secret"
         {{- end }}
         securityContext:
@@ -131,7 +131,7 @@ spec:
         - name: "SELFSERVICE_METHODS_OIDC_CONFIG_PROVIDERS_{{ $index }}_CLIENT_SECRET"
           valueFrom:
             secretKeyRef:
-                name: "{{ $provider.existingClientSecret }}"
+                name: "{{ $provider.existingClientSecretName }}"
                 key: "secret"
         {{- end }}
         ports:

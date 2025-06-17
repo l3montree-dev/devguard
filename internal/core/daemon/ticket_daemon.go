@@ -52,6 +52,9 @@ func SyncTickets(db core.DB, thirdPartyIntegrationAggregate core.ThirdPartyInteg
 				continue
 			}
 			for _, asset := range assets {
+				if !vuln.IsConnectedToThirdPartyIntegration(asset) {
+					continue
+				}
 				// get all asset versions for the asset
 				assetVersions, err := assetVersionRepository.GetAllAssetsVersionFromDBByAssetID(db, asset.ID)
 				if err != nil {

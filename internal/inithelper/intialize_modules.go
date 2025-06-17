@@ -1,0 +1,95 @@
+package inithelper
+
+import (
+	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/assetversion"
+	"github.com/l3montree-dev/devguard/internal/core/component"
+	"github.com/l3montree-dev/devguard/internal/core/integrations"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/internal/core/statistics"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/database/repositories"
+)
+
+func CreateStatisticsService(db core.DB) core.StatisticsService {
+	return statistics.NewService(
+		repositories.NewStatisticsRepository(db),
+		repositories.NewComponentRepository(db),
+		repositories.NewAssetRiskHistoryRepository(db),
+		repositories.NewDependencyVulnRepository(db),
+		repositories.NewAssetVersionRepository(db),
+		repositories.NewProjectRepository(db),
+		repositories.NewProjectRiskHistoryRepository(db),
+	)
+}
+
+func CreateComponentService(db core.DB, depsDevService core.DepsDevService) core.ComponentService {
+	componentService := component.NewComponentService(
+		depsDevService,
+		repositories.NewComponentProjectRepository(db),
+		repositories.NewComponentRepository(db),
+	)
+	return &componentService
+}
+
+func CreateFirstPartyVulnService(db core.DB) core.FirstPartyVulnService {
+	return vuln.NewFirstPartyVulnService(
+		repositories.NewFirstPartyVulnerabilityRepository(db),
+		repositories.NewVulnEventRepository(db),
+		repositories.NewAssetRepository(db),
+	)
+}
+
+func CreateDependencyVulnService(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory) core.DependencyVulnService {
+	return vuln.NewService(
+		repositories.NewDependencyVulnRepository(db),
+		repositories.NewVulnEventRepository(db),
+		repositories.NewAssetRepository(db),
+		repositories.NewCVERepository(db),
+		repositories.NewOrgRepository(db),
+		repositories.NewProjectRepository(db),
+		integrations.NewThirdPartyIntegrations(gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory), githubint.NewGithubIntegration(db)),
+		repositories.NewAssetVersionRepository(db),
+	)
+}
+
+func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) core.AssetVersionService {
+	return assetversion.NewService(
+		repositories.NewAssetVersionRepository(db),
+		repositories.NewComponentRepository(db),
+		repositories.NewDependencyVulnRepository(db),
+		repositories.NewFirstPartyVulnerabilityRepository(db),
+		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
+		CreateFirstPartyVulnService(db),
+		repositories.NewAssetRepository(db),
+		repositories.NewVulnEventRepository(db),
+		CreateComponentService(db, depsDevService),
+	)
+}
+
+func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) *assetversion.AssetVersionController {
+	return assetversion.NewAssetVersionController(
+		repositories.NewAssetVersionRepository(db),
+		CreateAssetVersionService(db, oauth2, rbac, clientFactory, depsDevService),
+		repositories.NewDependencyVulnRepository(db),
+		repositories.NewComponentRepository(db),
+		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
+		repositories.NewSupplyChainRepository(db),
+		repositories.NewLicenseOverwriteRepository(db),
+	)
+}
+
+func CreateHttpController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) *scan.HttpController {
+	return scan.NewHttpController(
+		db,
+		repositories.NewCVERepository(db),
+		repositories.NewComponentRepository(db),
+		repositories.NewAssetRepository(db),
+		repositories.NewAssetVersionRepository(db),
+		CreateAssetVersionService(db, oauth2, rbac, clientFactory, depsDevService),
+		CreateStatisticsService(db),
+		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
+	)
+}

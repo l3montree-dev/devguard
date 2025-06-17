@@ -87,7 +87,7 @@ spec:
             valueFrom:
               secretKeyRef:
                 key: secret
-                name: {{ .existingClientSecret | quote }}
+                name: {{ .existingClientSecretName | quote }}
           - name: GITLAB_{{ .id | upper }}_BASEURL
             value: {{ .issuerUrl | quote }}
           - name: GITLAB_{{ .id | upper }}_SCOPES
@@ -101,6 +101,13 @@ spec:
                 key: accessToken
                 name: {{ .existingBotUserSecretName | quote }}
             {{- end }}
+            {{- if .existingAdminTokenSecretName }}
+          - name: GITLAB_{{ .id | upper }}_ADMINTOKEN
+            valueFrom:
+              secretKeyRef:
+                key: token
+                name: {{ .existingAdminTokenSecretName | quote }}
+            {{- end }}
             {{- if .autosetupApplication}}
           - name: GITLAB_{{ .id | upper }}AUTOSETUP_APPID
             value: {{ .autosetupApplication.clientId | quote }}
@@ -108,7 +115,7 @@ spec:
             valueFrom:
               secretKeyRef:
                 key: secret
-                name: {{ .autosetupApplication.existingClientSecret | quote }}
+                name: {{ .autosetupApplication.existingClientSecretName | quote }}
           - name: GITLAB_{{ .id | upper }}AUTOSETUP_BASEURL
             value: {{ .issuerUrl | quote }}
           - name: GITLAB_{{ .id | upper }}AUTOSETUP_SCOPES

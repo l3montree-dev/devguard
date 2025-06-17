@@ -24,6 +24,8 @@ type VulnEventDTO struct {
 	AssetVersionName  string `json:"assetVersionName"`
 	AssetVersionSlug  string `json:"assetVersionSlug"`
 	VulnerabilityName string `json:"vulnerabilityName"`
+	PackageName       string `json:"packageName"`
+	Uri               string `json:"uri"`
 }
 
 func (dto VulnEventDTO) ToModel() models.VulnEvent {

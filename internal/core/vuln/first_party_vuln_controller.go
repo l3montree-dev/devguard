@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -72,7 +73,7 @@ func (c firstPartyVulnController) ListByProjectPaged(ctx core.Context) error {
 		core.GetSortQuery(ctx),
 	)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
+		return echo.NewHTTPError(500, "could not get first party vulns").WithInternal(err)
 	}
 
 	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVuln) any {
@@ -193,13 +194,105 @@ func (c firstPartyVulnController) ListPaged(ctx core.Context) error {
 	)
 
 	if err != nil {
-		return echo.NewHTTPError(500, "could not get dependencyVulns").WithInternal(err)
+		return echo.NewHTTPError(500, "could not get first party vulns").WithInternal(err)
 	}
 
 	return ctx.JSON(200, pagedResp.Map(func(firstPartyVuln models.FirstPartyVuln) any {
 		return convertFirstPartyVulnToDetailedDTO(firstPartyVuln)
 	}))
+}
 
+func (c firstPartyVulnController) Sarif(ctx core.Context) error {
+	// get the asset
+	assetVersion := core.GetAssetVersion(ctx)
+
+	vulns, err := c.firstPartyVulnRepository.GetByAssetVersion(
+		nil,
+		assetVersion.Name,
+		assetVersion.AssetID,
+	)
+
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get first party vulns").WithInternal(err)
+	}
+	sarif := common.SarifResult{
+		Version: "2.1.0",
+		Schema:  "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/123e95847b13fbdd4cbe2120fa5e33355d4a042b/Schemata/sarif-schema-2.1.0.json",
+		Runs:    make([]common.Run, 0),
+	}
+
+	// group the vulns by scanner
+	scannerVulns := make(map[string][]models.FirstPartyVuln)
+	for _, vuln := range vulns {
+		if vuln.ScannerIDs == "" {
+			slog.Warn("firstPartyVuln has no scannerIDs", "vulnID", vuln.ID)
+			continue
+		}
+		scannerID := vuln.ScannerIDs
+		if _, ok := scannerVulns[scannerID]; !ok {
+			scannerVulns[scannerID] = make([]models.FirstPartyVuln, 0)
+		}
+		scannerVulns[scannerID] = append(scannerVulns[scannerID], vuln)
+	}
+
+	// create a run for each scanner
+	for scannerID, vulns := range scannerVulns {
+		run := common.Run{
+			Tool: common.Tool{
+				Driver: common.Driver{
+					Name:  scannerID,
+					Rules: make([]common.Rule, 0),
+				},
+			},
+			Results: make([]common.Result, 0),
+		}
+
+		addedRuleIDs := make(map[string]bool)
+		for _, vuln := range vulns {
+			if _, exists := addedRuleIDs[vuln.RuleID]; !exists {
+				rule := common.Rule{
+					Id:               vuln.RuleID,
+					Name:             vuln.RuleName,
+					FullDescription:  common.Text{Text: vuln.RuleDescription},
+					Help:             common.Text{Text: vuln.RuleHelp},
+					HelpUri:          vuln.RuleHelpUri,
+					ShortDescription: common.Text{Text: vuln.RuleName},
+					Properties:       vuln.RuleProperties,
+				}
+				run.Tool.Driver.Rules = append(run.Tool.Driver.Rules, rule)
+				addedRuleIDs[vuln.RuleID] = true
+			}
+			result := common.Result{
+				Kind:   "issue",
+				RuleId: vuln.RuleID,
+				Message: common.Text{
+					Text: vuln.RuleDescription,
+				},
+				Locations: []common.Location{
+					{
+						PhysicalLocation: common.PhysicalLocation{
+							ArtifactLocation: common.ArtifactLocation{
+								Uri: vuln.Uri,
+							},
+							Region: common.Region{
+								StartLine:   vuln.StartLine,
+								StartColumn: vuln.StartColumn,
+								EndLine:     vuln.EndLine,
+								EndColumn:   vuln.EndColumn,
+								Snippet: common.Text{
+									Text: vuln.Snippet,
+								},
+							},
+						},
+					},
+				},
+			}
+			run.Results = append(run.Results, result)
+		}
+		sarif.Runs = append(sarif.Runs, run)
+	}
+
+	return ctx.JSON(200, sarif)
 }
 
 func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) detailedFirstPartyVulnDTO {

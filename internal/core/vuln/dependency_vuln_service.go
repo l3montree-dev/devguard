@@ -77,7 +77,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 	return s.vulnEventRepository.SaveBatch(tx, events)
 }
 
-func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, userID, scannerID string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, scannerID string, dependencyVulns []models.DependencyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -97,11 +97,12 @@ func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, userID, 
 				return ev.IsScanUnreleatedEvent()
 			}), func(el models.VulnEvent) models.VulnEvent {
 				el.VulnID = dependencyVuln.CalculateHash()
+				el.ID = uuid.Nil
 				return el
 			})
 		}
 		riskReport := risk.RawRisk(*dependencyVuln.CVE, e, *dependencyVuln.ComponentDepth)
-		ev := models.NewDetectedOnAnotherBranchEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, riskReport, scannerID, assetVersion.Name)
+		ev := models.NewDetectedOnAnotherBranchEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, "system", riskReport, scannerID, assetVersion.Name)
 		events[i] = append(events[i], ev)
 		// replay all events on the dependencyVuln
 		for _, ev := range alreadyExistingEvents[i] {
@@ -118,7 +119,7 @@ func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, userID, 
 
 }
 
-func (s *service) UserDetectedDependencyVulns(tx core.DB, userID, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
+func (s *service) UserDetectedDependencyVulns(tx core.DB, scannerID string, dependencyVulns []models.DependencyVuln, assetVersion models.AssetVersion, asset models.Asset) error {
 	if len(dependencyVulns) == 0 {
 		return nil
 	}
@@ -133,7 +134,7 @@ func (s *service) UserDetectedDependencyVulns(tx core.DB, userID, scannerID stri
 
 	for i, dependencyVuln := range dependencyVulns {
 		riskReport := risk.RawRisk(*dependencyVuln.CVE, e, *dependencyVuln.ComponentDepth)
-		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, riskReport, scannerID)
+		ev := models.NewDetectedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, "system", riskReport, scannerID)
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -184,7 +185,7 @@ func (s *service) RecalculateAllRawRiskAssessments() error {
 
 }
 
-func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error {
+func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
 	if len(vulnerabilities) == 0 {
 		return nil
 	}
@@ -193,7 +194,7 @@ func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulne
 	events := make([]models.VulnEvent, len(vulnerabilities))
 
 	for i := range vulnerabilities {
-		ev := models.NewAddedScannerEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, userID, scannerID)
+		ev := models.NewAddedScannerEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
 		ev.Apply(&vulnerabilities[i])
 		events[i] = ev
 	}
@@ -207,14 +208,14 @@ func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulne
 
 }
 
-func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, userID string, scannerID string) error {
+func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
 	if len(vulnerabilities) == 0 {
 		return nil
 	}
 
 	events := make([]models.VulnEvent, len(vulnerabilities))
 	for i := range vulnerabilities {
-		ev := models.NewRemovedScannerEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, userID, scannerID)
+		ev := models.NewRemovedScannerEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
 		ev.Apply(&vulnerabilities[i])
 		events[i] = ev
 	}
@@ -249,7 +250,7 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 		oldRiskAssessment := dependencyVuln.RawRiskAssessment
 		newRiskAssessment := risk.RawRisk(*dependencyVuln.CVE, env, *dependencyVuln.ComponentDepth)
 
-		if *oldRiskAssessment != newRiskAssessment.Risk {
+		if oldRiskAssessment == nil || *oldRiskAssessment != newRiskAssessment.Risk {
 			ev := models.NewRawRiskAssessmentUpdatedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, oldRiskAssessment, newRiskAssessment)
 			// apply the event on the dependencyVuln
 			ev.Apply(&dependencyVulns[i])

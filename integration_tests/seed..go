@@ -8,12 +8,16 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-func CreateOrgProjectAndAsset(db core.DB) (models.Org, models.Project, models.Asset) {
+func CreateOrgProjectAndAssetAssetVersion(db core.DB) (models.Org, models.Project, models.Asset, models.AssetVersion) {
+	err := db.AutoMigrate(models.AssetVersion{})
+	if err != nil {
+		panic(err)
+	}
 	org := models.Org{
 		Name: "Test Org",
 		Slug: "test-org",
 	}
-	err := db.Create(&org).Error
+	err = db.Create(&org).Error
 	if err != nil {
 		panic(err)
 	}
@@ -37,6 +41,17 @@ func CreateOrgProjectAndAsset(db core.DB) (models.Org, models.Project, models.As
 	if err != nil {
 		panic(err)
 	}
+	assetVersion := models.AssetVersion{
+		Name:          "main",
+		AssetID:       asset.ID,
+		DefaultBranch: true,
+		Slug:          "main",
+		Type:          "branch",
+	}
+	err = db.Create(&assetVersion).Error
+	if err != nil {
+		panic(err)
+	}
 
-	return org, project, asset
+	return org, project, asset, assetVersion
 }

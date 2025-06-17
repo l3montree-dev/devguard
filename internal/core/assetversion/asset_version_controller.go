@@ -14,7 +14,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-type assetVersionController struct {
+type AssetVersionController struct {
 	assetVersionRepository     core.AssetVersionRepository
 	assetVersionService        core.AssetVersionService
 	dependencyVulnRepository   core.DependencyVulnRepository
@@ -32,8 +32,8 @@ func NewAssetVersionController(
 	dependencyVulnService core.DependencyVulnService,
 	supplyChainRepository core.SupplyChainRepository,
 	licenseOverwriteRepository core.LicenseOverwriteRepository,
-) *assetVersionController {
-	return &assetVersionController{
+) *AssetVersionController {
+	return &AssetVersionController{
 		assetVersionRepository:     assetVersionRepository,
 		assetVersionService:        assetVersionService,
 		dependencyVulnRepository:   dependencyVulnRepository,
@@ -44,13 +44,13 @@ func NewAssetVersionController(
 	}
 }
 
-func (a *assetVersionController) Read(ctx core.Context) error {
+func (a *AssetVersionController) Read(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 	return ctx.JSON(200, assetVersion)
 }
 
 // Function to delete provided asset version
-func (a *assetVersionController) Delete(ctx core.Context) error {
+func (a *AssetVersionController) Delete(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)                  //Get the asset provided in the context / URL
 	err := a.assetVersionRepository.Delete(nil, &assetVersion) //Call delete on the returned assetVersion
 	if err != nil {
@@ -60,7 +60,7 @@ func (a *assetVersionController) Delete(ctx core.Context) error {
 	return ctx.JSON(200, "deleted asset version successfully")
 }
 
-func (a *assetVersionController) GetAssetVersionsByAssetID(ctx core.Context) error {
+func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 
 	assetVersions, err := a.assetVersionService.GetAssetVersionsByAssetID(asset.ID)
@@ -70,7 +70,7 @@ func (a *assetVersionController) GetAssetVersionsByAssetID(ctx core.Context) err
 	return ctx.JSON(200, assetVersions)
 }
 
-func (a *assetVersionController) AffectedComponents(ctx core.Context) error {
+func (a *AssetVersionController) AffectedComponents(ctx core.Context) error {
 	scannerID := ctx.QueryParam("scanner")
 	if scannerID == "" {
 		return echo.NewHTTPError(400, "scanner query param is required")
@@ -87,7 +87,7 @@ func (a *assetVersionController) AffectedComponents(ctx core.Context) error {
 	}))
 }
 
-func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
+func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
 	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return nil, nil, err
@@ -100,7 +100,7 @@ func (a *assetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 	return components, dependencyVulns, nil
 }
 
-func (a *assetVersionController) DependencyGraph(ctx core.Context) error {
+func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)
 
 	scannerID := ctx.QueryParam("scanner")
@@ -122,7 +122,7 @@ func (a *assetVersionController) DependencyGraph(ctx core.Context) error {
 }
 
 // function to return a graph of all dependencies which lead to the requested pURL
-func (a *assetVersionController) GetDependencyPathFromPURL(ctx core.Context) error {
+func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 
 	scannerID := ctx.QueryParam("scanner")
@@ -145,7 +145,7 @@ func (a *assetVersionController) GetDependencyPathFromPURL(ctx core.Context) err
 	return ctx.JSON(200, tree)
 }
 
-func (a *assetVersionController) SBOMJSON(ctx core.Context) error {
+func (a *AssetVersionController) SBOMJSON(ctx core.Context) error {
 	sbom, err := a.buildSBOM(ctx)
 	if err != nil {
 		return err
@@ -153,7 +153,7 @@ func (a *assetVersionController) SBOMJSON(ctx core.Context) error {
 	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom)
 }
 
-func (a *assetVersionController) SBOMXML(ctx core.Context) error {
+func (a *AssetVersionController) SBOMXML(ctx core.Context) error {
 	sbom, err := a.buildSBOM(ctx)
 	if err != nil {
 		return err
@@ -162,7 +162,7 @@ func (a *assetVersionController) SBOMXML(ctx core.Context) error {
 	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom)
 }
 
-func (a *assetVersionController) VEXXML(ctx core.Context) error {
+func (a *AssetVersionController) VEXXML(ctx core.Context) error {
 	sbom, err := a.buildVeX(ctx)
 	if err != nil {
 		return err
@@ -171,7 +171,7 @@ func (a *assetVersionController) VEXXML(ctx core.Context) error {
 	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatXML).Encode(sbom)
 }
 
-func (a *assetVersionController) VEXJSON(ctx core.Context) error {
+func (a *AssetVersionController) VEXJSON(ctx core.Context) error {
 	sbom, err := a.buildVeX(ctx)
 	if err != nil {
 		return err
@@ -180,7 +180,7 @@ func (a *assetVersionController) VEXJSON(ctx core.Context) error {
 	return cdx.NewBOMEncoder(ctx.Response().Writer, cdx.BOMFileFormatJSON).Encode(sbom)
 }
 
-func (a *assetVersionController) OpenVEXJSON(ctx core.Context) error {
+func (a *AssetVersionController) OpenVEXJSON(ctx core.Context) error {
 	vex, err := a.buildOpenVeX(ctx)
 	if err != nil {
 		return err
@@ -189,7 +189,7 @@ func (a *assetVersionController) OpenVEXJSON(ctx core.Context) error {
 	return vex.ToJSON(ctx.Response().Writer)
 }
 
-func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
+func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
@@ -223,19 +223,13 @@ func (a *assetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 	return a.assetVersionService.BuildSBOM(assetVersion, version, org.Name, components.Data), nil
 }
 
-func (a *assetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {
+func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 
 	scannerID := ctx.QueryParam("scanner")
-	if scannerID != "" {
-		var err error
-		scannerID, err = url.QueryUnescape(scannerID)
-		if err != nil {
-			return vex.VEX{}, err
-		}
-	}
+
 	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, scannerID)
 	if err != nil {
 		return vex.VEX{}, err
@@ -244,16 +238,18 @@ func (a *assetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	return a.assetVersionService.BuildOpenVeX(asset, assetVersion, org.Slug, dependencyVulns), nil
 }
 
-func (a *assetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, scannerID string) ([]models.DependencyVuln, error) {
-
+func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, scannerID string) ([]models.DependencyVuln, error) {
 	// url decode the scanner
-	scannerID, err := url.QueryUnescape(scannerID)
-	if err != nil {
-		return nil, err
+	if scannerID != "" {
+		var err error
+		scannerID, err = url.QueryUnescape(scannerID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// get all associated dependencyVulns
-	dependencyVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return nil, err
 	}
@@ -286,18 +282,11 @@ func (a *assetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	return dependencyVulns, nil
 }
 
-func (a *assetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
+func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 	scannerID := ctx.QueryParam("scanner")
-	if scannerID != "" {
-		var err error
-		scannerID, err = url.QueryUnescape(scannerID)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, scannerID)
 	if err != nil {
@@ -307,7 +296,7 @@ func (a *assetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	return a.assetVersionService.BuildVeX(asset, assetVersion, org.Name, dependencyVulns), nil
 }
 
-func (a *assetVersionController) Metrics(ctx core.Context) error {
+func (a *AssetVersionController) Metrics(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 	scannerIds := []string{}
 	// get the latest events of this asset per scan type

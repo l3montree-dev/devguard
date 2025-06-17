@@ -32,6 +32,7 @@ type GitlabOauth2Config struct {
 
 	DevGuardBotUserID          int    // the user id of the devguard bot user, used to create issues
 	DevGuardBotUserAccessToken string // the access token of the devguard bot user, used to create issues
+	AdminToken                 *string
 }
 
 func (c *GitlabOauth2Config) GetProviderID() string {
@@ -47,8 +48,9 @@ type gitlabEnvConfig struct {
 	appID              string
 	appSecret          string
 	scopes             string
-	botUserID          int    // the user id of the devguard bot user, used to create issues
-	botUserAccessToken string // the access token of the devguard bot user, used to create issues
+	botUserID          int     // the user id of the devguard bot user, used to create issues
+	botUserAccessToken string  // the access token of the devguard bot user, used to create issues
+	adminToken         *string // the admin token for the gitlab instance, used to create issues
 }
 
 type gitlabOauth2Client struct {
@@ -100,6 +102,12 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 				conf.botUserID = intValue
 			case "botuseraccesstoken":
 				conf.botUserAccessToken = value
+			case "admintoken":
+				if value == "" {
+					conf.adminToken = nil
+				} else {
+					conf.adminToken = &value
+				}
 			}
 
 			urls[name] = conf
@@ -127,12 +135,17 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 		if conf.botUserAccessToken == "" {
 			slog.Warn(fmt.Sprintf("GITLAB_%s_BOTUSERACCESSTOKEN is not set", strings.ToUpper(name)))
 		}
+		if conf.adminToken == nil {
+			slog.Warn(fmt.Sprintf("GITLAB_%s_ADMINTOKEN is not set", strings.ToUpper(name)))
+		} else {
+			slog.Info(fmt.Sprintf("GITLAB_%s_ADMINTOKEN is set", strings.ToUpper(name)))
+		}
 	}
 
 	return urls
 }
 
-func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret, gitlabOauth2Scopes string, botUserID int, botUserAccessToken string) *GitlabOauth2Config {
+func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret, gitlabOauth2Scopes string, botUserID int, botUserAccessToken string, adminToken *string) *GitlabOauth2Config {
 
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
@@ -149,6 +162,7 @@ func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, 
 		ProviderID:                 id,
 		DevGuardBotUserID:          botUserID,
 		DevGuardBotUserAccessToken: botUserAccessToken,
+		AdminToken:                 adminToken,
 		Oauth2Conf: &oauth2.Config{
 			ClientID:     gitlabOauth2ClientID,
 			ClientSecret: gitlabOauth2ClientSecret,
@@ -215,7 +229,7 @@ func NewGitLabOauth2Integrations(db core.DB) map[string]*GitlabOauth2Config {
 	envs := parseGitlabEnvs()
 	gitlabIntegrations := make(map[string]*GitlabOauth2Config)
 	for id, env := range envs {
-		gitlabIntegration := NewGitLabOauth2Config(db, id, env.baseURL, env.appID, env.appSecret, env.scopes, env.botUserID, env.botUserAccessToken)
+		gitlabIntegration := NewGitLabOauth2Config(db, id, env.baseURL, env.appID, env.appSecret, env.scopes, env.botUserID, env.botUserAccessToken, env.adminToken)
 		gitlabIntegrations[id] = gitlabIntegration
 		slog.Info("gitlab oauth2 integration created", "id", id, "baseURL", env.baseURL, "appID", env.appID)
 	}

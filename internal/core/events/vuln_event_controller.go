@@ -39,6 +39,7 @@ func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
 		ID:                event.ID,
 		Type:              event.Type,
 		VulnID:            event.VulnID,
+		VulnType:          event.VulnType,
 		UserID:            event.UserID,
 		Justification:     event.Justification,
 		ArbitraryJsonData: event.GetArbitraryJsonData(),
@@ -46,6 +47,8 @@ func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
 		AssetVersionName:  event.AssetVersionName,
 		AssetVersionSlug:  event.Slug,
 		VulnerabilityName: event.CVEID,
+		PackageName:       event.ComponentPurl,
+		Uri:               event.Uri,
 	}
 }
 
@@ -64,6 +67,8 @@ func convertToDetailedDTO(event []models.VulnEventDetail) []VulnEventDTO {
 			CreatedAt:               e.CreatedAt,
 			AssetVersionName:        e.AssetVersionName,
 			AssetVersionSlug:        e.Slug,
+			PackageName:             e.ComponentPurl,
+			Uri:                     e.Uri,
 		})
 
 	}

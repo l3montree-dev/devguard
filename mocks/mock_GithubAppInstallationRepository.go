@@ -61,15 +61,26 @@ type GithubAppInstallationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - installationID
+//   - tx core.DB
+//   - installationID int
 func (_e *GithubAppInstallationRepository_Expecter) Delete(tx interface{}, installationID interface{}) *GithubAppInstallationRepository_Delete_Call {
 	return &GithubAppInstallationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, installationID)}
 }
 
 func (_c *GithubAppInstallationRepository_Delete_Call) Run(run func(tx core.DB, installationID int)) *GithubAppInstallationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(int))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -118,14 +129,20 @@ type GithubAppInstallationRepository_FindByOrganizationId_Call struct {
 }
 
 // FindByOrganizationId is a helper method to define mock.On call
-//   - orgID
+//   - orgID uuid.UUID
 func (_e *GithubAppInstallationRepository_Expecter) FindByOrganizationId(orgID interface{}) *GithubAppInstallationRepository_FindByOrganizationId_Call {
 	return &GithubAppInstallationRepository_FindByOrganizationId_Call{Call: _e.mock.On("FindByOrganizationId", orgID)}
 }
 
 func (_c *GithubAppInstallationRepository_FindByOrganizationId_Call) Run(run func(orgID uuid.UUID)) *GithubAppInstallationRepository_FindByOrganizationId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -172,14 +189,20 @@ type GithubAppInstallationRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - installationID
+//   - installationID int
 func (_e *GithubAppInstallationRepository_Expecter) Read(installationID interface{}) *GithubAppInstallationRepository_Read_Call {
 	return &GithubAppInstallationRepository_Read_Call{Call: _e.mock.On("Read", installationID)}
 }
 
 func (_c *GithubAppInstallationRepository_Read_Call) Run(run func(installationID int)) *GithubAppInstallationRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
+		var arg0 int
+		if args[0] != nil {
+			arg0 = args[0].(int)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -217,15 +240,26 @@ type GithubAppInstallationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - model
+//   - tx core.DB
+//   - model *models.GithubAppInstallation
 func (_e *GithubAppInstallationRepository_Expecter) Save(tx interface{}, model interface{}) *GithubAppInstallationRepository_Save_Call {
 	return &GithubAppInstallationRepository_Save_Call{Call: _e.mock.On("Save", tx, model)}
 }
 
 func (_c *GithubAppInstallationRepository_Save_Call) Run(run func(tx core.DB, model *models.GithubAppInstallation)) *GithubAppInstallationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.GithubAppInstallation))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.GithubAppInstallation
+		if args[1] != nil {
+			arg1 = args[1].(*models.GithubAppInstallation)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

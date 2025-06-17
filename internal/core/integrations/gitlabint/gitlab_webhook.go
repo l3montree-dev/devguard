@@ -38,6 +38,12 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 	gitlabSecretToken := ctx.Request().Header.Get("X-Gitlab-Token")
 
+	var vulnEvent models.VulnEvent
+	var client core.GitlabClientFacade
+	var vuln models.Vuln
+	var issueId int
+	var projectId int
+
 	switch event := event.(type) {
 	case *gitlab.IssueEvent:
 		// the even was triggered by devguard - the user which triggered the event is the same as the author of the issue
@@ -48,10 +54,11 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return nil
 		}
 
-		issueId := event.ObjectAttributes.IID
+		issueId = event.ObjectAttributes.IID
+		projectId = event.Project.ID
 
 		// look for a dependencyVuln with such a github ticket id
-		vuln, err := g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.Project.ID, issueId))
+		vuln, err = g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.Project.ID, issueId))
 		if err != nil {
 			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
 			return nil
@@ -97,7 +104,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			}
 
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the github ticket.", event.User.Name))
+			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the github ticket.", event.User.Name))
 
 			err = g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
@@ -108,19 +115,30 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 				return nil
 			}
 			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent := models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability was reopened by %s", event.User.Name))
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability was reopened by %s", event.User.Name))
 
 			err := g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
 		}
+		asset, err := g.assetRepository.Read(vuln.GetAssetID())
+		if err != nil {
+			slog.Error("could not read asset", "err", err)
+			return err
+		}
+		client, _, err = g.getClientBasedOnAsset(asset)
+		if err != nil {
+			slog.Error("could not get gitlab client based on asset", "err", err)
+			return err
+		}
 
 	case *gitlab.IssueCommentEvent:
 		// check if the issue is a devguard issue
-		issueId := event.Issue.IID
+		issueId = event.Issue.IID
+		projectId = event.ProjectID
 		// look for a dependencyVuln with such a github ticket id
-		vuln, err := g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueId))
+		vuln, err = g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueId))
 		if err != nil {
 			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
 			return nil
@@ -150,7 +168,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			return err
 		}
 
-		client, _, err := g.getClientBasedOnAsset(asset)
+		client, _, err = g.getClientBasedOnAsset(asset)
 		if err != nil {
 			slog.Error("could not get gitlab client based on asset", "err", err)
 			return err
@@ -193,7 +211,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}()
 
 		// create a new event based on the comment
-		vulnEvent := commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), comment, vuln.GetScannerIDs())
+		vulnEvent = commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), comment, vuln.GetScannerIDs())
 
 		vulnEvent.Apply(vuln)
 		// save the dependencyVuln and the event in a transaction
@@ -212,24 +230,24 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 			slog.Error("could not save dependencyVuln and event", "err", err)
 
 		}
+	}
 
-		gitlabProjectID := event.ProjectID
-		switch vulnEvent.Type {
-		case models.EventTypeAccepted, models.EventTypeFalsePositive:
-			labels := commonint.GetLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
-				StateEvent: gitlab.Ptr("close"),
-				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
-			})
-			return err
-		case models.EventTypeReopened:
-			labels := commonint.GetLabels(vuln)
-			_, _, err = client.EditIssue(ctx.Request().Context(), gitlabProjectID, issueId, &gitlab.UpdateIssueOptions{
-				StateEvent: gitlab.Ptr("reopen"),
-				Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
-			})
-			return err
-		}
+	switch vulnEvent.Type {
+	case models.EventTypeAccepted, models.EventTypeFalsePositive:
+		labels := commonint.GetLabels(vuln)
+		_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
+			StateEvent: gitlab.Ptr("close"),
+			Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
+		})
+		return err
+	case models.EventTypeReopened:
+		labels := commonint.GetLabels(vuln)
+		_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
+			StateEvent: gitlab.Ptr("reopen"),
+			Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
+		})
+		return err
+
 	}
 	return ctx.JSON(200, "ok")
 }

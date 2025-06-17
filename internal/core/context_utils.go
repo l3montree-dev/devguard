@@ -42,6 +42,7 @@ func SetThirdPartyIntegration(ctx Context, i IntegrationAggregate) {
 
 type AdminClient interface {
 	ListUser(client client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error)
+	GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error)
 	GetIdentity(ctx context.Context, userID string) (client.Identity, error)
 	GetIdentityWithCredentials(ctx context.Context, userID string) (client.Identity, error)
 }
@@ -55,6 +56,18 @@ func NewAdminClient(client *client.APIClient) adminClientImplementation {
 		apiClient: client,
 	}
 }
+
+func (a adminClientImplementation) GetIdentityFromCookie(ctx context.Context, cookie string) (client.Identity, error) {
+	session, _, err := a.apiClient.FrontendAPI.ToSession(ctx).Cookie(cookie).Execute()
+	if err != nil {
+		return client.Identity{}, fmt.Errorf("could not get identity from cookie: %w", err)
+	}
+	if session.Identity == nil {
+		return client.Identity{}, fmt.Errorf("identity not found in session")
+	}
+	return *session.Identity, nil
+}
+
 func (a adminClientImplementation) ListUser(request client.IdentityAPIListIdentitiesRequest) ([]client.Identity, error) {
 	clients, _, err := a.apiClient.IdentityAPI.ListIdentitiesExecute(request)
 	return clients, err

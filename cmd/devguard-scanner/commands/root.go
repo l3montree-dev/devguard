@@ -70,14 +70,17 @@ OWASP Incubating Project`,
 			initLogger(slog.LevelInfo)
 		}
 
+		if utils.RunsInCI() {
+			slog.Info("Running in CI")
+			err := utils.GitLister.MarkAllPathsAsSafe()
+			if err != nil {
+				slog.Error("could not mark all paths as safe", "err", err)
+			}
+		}
+
 		err = initializeConfig(cmd)
 		if err != nil {
 			return err
-		}
-
-		if utils.RunsInCI() {
-			slog.Info("Running in CI")
-			return utils.GitLister.MarkAllPathsAsSafe()
 		}
 
 		return nil
@@ -104,8 +107,9 @@ func init() {
 		NewLoginCommand(),
 		NewIaCCommand(),
 		NewSarifCommand(),
-		NewGetCommand(),
+		NewSlugCommand(),
 		NewSbomCommand(),
+		NewGetCommand(),
 	)
 
 	// Here you will define your flags and configuration settings.

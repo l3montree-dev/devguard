@@ -43,17 +43,7 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	_, _, asset := integration_tests.CreateOrgProjectAndAsset(db)
-	assetVersion := models.AssetVersion{
-		Name:          "main",
-		AssetID:       asset.ID,
-		DefaultBranch: true,
-	}
-
-	assert.Nil(t, assetVersion.Metadata)
-
-	err = db.Create(&assetVersion).Error
-	assert.Nil(t, err)
+	_, _, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	t.Run("should update the last scan time of the asset version", func(t *testing.T) {
 
@@ -70,12 +60,12 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 		err = db.Create(&component).Error
 		assert.Nil(t, err)
 
-		devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
+		devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"
 		componentDependency := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
 			AssetVersion:     assetVersion,
-			ScannerIDs:       devguardScanner + "sca",
+			ScannerIDs:       devguardScanner,
 			ComponentPurl:    nil,
 			DependencyPurl:   "pkg:npm/react@18.2.0",
 			Dependency:       models.Component{Purl: "pkg:npm/react@18.2.0"},
@@ -92,9 +82,9 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 		err = db.First(&updatedAssetVersion, "name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Error
 		assert.Nil(t, err)
 		assert.NotNil(t, updatedAssetVersion.Metadata)
-		assert.Contains(t, updatedAssetVersion.Metadata, "sca")
+		assert.Contains(t, updatedAssetVersion.Metadata, devguardScanner)
 
-		metadataMap := updatedAssetVersion.Metadata["sca"]
+		metadataMap := updatedAssetVersion.Metadata[devguardScanner]
 		metadataBytes, err := json.Marshal(metadataMap)
 		assert.Nil(t, err)
 		var metadata models.ScannerInformation
@@ -157,7 +147,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err = db.Save(&org).Error
@@ -171,14 +161,6 @@ func TestDaemonSyncTickets(t *testing.T) {
 	cvssThreshold := 7.0
 	asset.CVSSAutomaticTicketThreshold = &cvssThreshold
 	err = db.Save(&asset).Error
-	assert.Nil(t, err)
-
-	assetVersion := models.AssetVersion{
-		Name:          "main",
-		AssetID:       asset.ID,
-		DefaultBranch: true,
-	}
-	err = db.Create(&assetVersion).Error
 	assert.Nil(t, err)
 
 	cve := models.CVE{
@@ -211,7 +193,7 @@ func TestDaemonSyncTickets(t *testing.T) {
 	assert.Nil(t, dependencyVuln.TicketURL)
 
 	clientfactory, gitlabClientFacade := integration_tests.NewTestClientFactory(t)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(
+	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
 		mocks.NewRBACProvider(t),
@@ -336,7 +318,7 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err = db.Save(&org).Error
@@ -349,14 +331,6 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 	asset.ConfidentialityRequirement = models.RequirementLevelLow
 	asset.IntegrityRequirement = models.RequirementLevelLow
 	err = db.Save(&asset).Error
-	assert.Nil(t, err)
-
-	assetVersion := models.AssetVersion{
-		Name:          "main",
-		AssetID:       asset.ID,
-		DefaultBranch: true,
-	}
-	err = db.Create(&assetVersion).Error
 	assert.Nil(t, err)
 
 	cve := models.CVE{
@@ -388,7 +362,7 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 
 	//gitlabClientFacade
 	clientfactory, _ := integration_tests.NewTestClientFactory(t)
-	gitlabIntegration := gitlabint.NewGitLabIntegration(
+	gitlabIntegration := gitlabint.NewGitlabIntegration(
 		db,
 		gitlabint.NewGitLabOauth2Integrations(db),
 		mocks.NewRBACProvider(t),
@@ -451,21 +425,13 @@ func TestDaemonComponentProperties(t *testing.T) {
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
 
-	org, project, asset := integration_tests.CreateOrgProjectAndAsset(db)
+	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	org.Slug = "org-slug"
 	err = db.Save(&org).Error
 	assert.Nil(t, err)
 	project.Slug = "project-slug"
 	err = db.Save(&project).Error
-	assert.Nil(t, err)
-
-	assetVersion := models.AssetVersion{
-		Name:          "main",
-		AssetID:       asset.ID,
-		DefaultBranch: true,
-	}
-	err = db.Create(&assetVersion).Error
 	assert.Nil(t, err)
 
 	componentA := models.Component{

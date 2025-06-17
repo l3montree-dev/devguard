@@ -37,7 +37,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamValues("organization-slug")
 		ctx.Set("session", auth.NoSession)
 
-		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {
@@ -74,7 +74,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamValues("organization-slug")
 		ctx.Set("session", session)
 
-		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		middleware(func(ctx echo.Context) error {
@@ -98,7 +98,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockRBACProvider := mocks.RBACProvider{}
 		mockOrgService := mocks.OrgService{}
 
-		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		middleware(func(ctx echo.Context) error {
@@ -125,7 +125,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		ctx.SetParamNames("organization")
 		ctx.SetParamValues("organization-slug")
 
-		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService)
+		middleware := multiOrganizationMiddleware(&mockRBACProvider, &mockOrgService, nil)
 
 		// act
 		err := middleware(func(ctx echo.Context) error {

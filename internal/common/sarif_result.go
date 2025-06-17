@@ -21,51 +21,64 @@ type Rule struct {
 	Properties       map[string]any
 }
 
+type Driver struct {
+	Name  string `json:"name"`
+	Rules []Rule `json:"rules"`
+}
+
+type Tool struct {
+	Driver Driver `json:"driver"`
+}
+
 type Run struct {
-	Tool struct {
-		Driver struct {
-			Name  string `json:"name"`
-			Rules []Rule `json:"rules"`
-		} `json:"driver"`
-	} `json:"tool"`
+	Tool    Tool     `json:"tool"`
 	Results []Result `json:"results"`
 }
 
+type ArtifactLocation struct {
+	Uri       string `json:"uri"`
+	UriBaseId string `json:"uriBaseId,omitempty"`
+}
+
+type Region struct {
+	StartLine   int  `json:"startLine"`
+	StartColumn int  `json:"startColumn"`
+	EndLine     int  `json:"endLine"`
+	EndColumn   int  `json:"endColumn"`
+	Snippet     Text `json:"snippet"`
+}
+
+type PhysicalLocation struct {
+	ArtifactLocation ArtifactLocation `json:"artifactLocation"`
+	Region           Region           `json:"region"`
+}
+
+type Location struct {
+	PhysicalLocation PhysicalLocation `json:"physicalLocation"`
+}
+
+type PartialFingerprints struct {
+	CommitSha     string `json:"commitSha"`
+	Email         string `json:"email"`
+	Author        string `json:"author"`
+	Date          string `json:"date"`
+	CommitMessage string `json:"commitMessage"`
+}
+type Fingerprints struct {
+	MatchBasedId string `json:"matchBasedId/v1"`
+}
+
+type Properties struct {
+	Precision string   `json:"precision"`
+	Tags      []string `json:"tags"`
+}
+
 type Result struct {
-	Kind    string `json:"kind"`
-	RuleId  string `json:"ruleId"`
-	Message struct {
-		Text string `json:"text"`
-	} `json:"message"`
-	Locations []struct {
-		PhysicalLocation struct {
-			ArtifactLocation struct {
-				Uri       string `json:"uri"`
-				UriBaseId string `json:"uriBaseId"`
-			} `json:"artifactLocation"`
-			Region struct {
-				StartLine   int `json:"startLine"`
-				StartColumn int `json:"startColumn"`
-				EndLine     int `json:"endLine"`
-				EndColumn   int `json:"endColumn"`
-				Snippet     struct {
-					Text string `json:"text"`
-				} `json:"snippet"`
-			} `json:"region"`
-		} `json:"physicalLocation"`
-	} `json:"locations"`
-	Properties struct {
-		Precision string   `json:"precision"`
-		Tags      []string `json:"tags"`
-	} `json:"properties"`
-	Fingerprints struct {
-		MatchBasedId string `json:"matchBasedId/v1"`
-	} `json:"fingerprints"`
-	PartialFingerprints struct {
-		CommitSha     string `json:"commitSha"`
-		Email         string `json:"email"`
-		Author        string `json:"author"`
-		Date          string `json:"date"`
-		CommitMessage string `json:"commitMessage"`
-	} `json:"partialFingerprints"`
+	Kind                string `json:"kind"`
+	RuleId              string `json:"ruleId"`
+	Message             Text
+	Locations           []Location           `json:"locations"`
+	Properties          *Properties          `json:"properties,omitempty"`
+	Fingerprints        *Fingerprints        `json:"fingerprints,omitempty"`
+	PartialFingerprints *PartialFingerprints `json:"partialFingerprints,omitempty"`
 }

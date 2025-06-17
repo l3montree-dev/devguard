@@ -211,6 +211,19 @@ func GetLabels(vuln models.Vuln) []string {
 		}
 	}
 
+	scannerIDsString := vuln.GetScannerIDs()
+	scannerIDs := strings.Split(scannerIDsString, ",")
+	scannerDefault := "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"
+
+	for _, scannerID := range scannerIDs {
+		scannerID = strings.TrimSpace(scannerID)
+		if scannerID == "" {
+			continue
+		}
+		scannerID = strings.TrimPrefix(scannerID, scannerDefault)
+		labels = append(labels, "scanner:"+scannerID)
+	}
+
 	return labels
 }
 

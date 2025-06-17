@@ -34,6 +34,18 @@ func (r *firstPartyVulnerabilityRepository) ListByScanner(assetVersionName strin
 	return vulns, nil
 }
 
+func (r *firstPartyVulnerabilityRepository) GetByAssetVersion(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
+	var firstPartyVulns = []models.FirstPartyVuln{}
+	err := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).
+		Where("first_party_vulnerabilities.asset_version_name = ?", assetVersionName).
+		Where("first_party_vulnerabilities.asset_id = ?", assetID).
+		Find(&firstPartyVulns).Error
+	if err != nil {
+		return nil, err
+	}
+	return firstPartyVulns, nil
+}
+
 func (r *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], map[string]int, error) {
 
 	var count int64
@@ -46,7 +58,7 @@ func (r *firstPartyVulnerabilityRepository) GetByAssetVersionPaged(tx core.DB, a
 		q = q.Where(f.SQL(), f.Value())
 	}
 	if search != "" && len(search) > 2 {
-		q = q.Where("(\"first_party_vulnerabilities\".message ILIKE ?  OR first_party_vulnerabilities.filename ILIKE ? OR rule_description ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("\"first_party_vulnerabilities\".message ILIKE ?  OR first_party_vulnerabilities.uri ILIKE ? OR rule_description ILIKE ? OR first_party_vulnerabilities.scanner_ids ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	err := q.Count(&count).Error

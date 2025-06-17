@@ -37,6 +37,10 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 
 		v := vuln.DependencyVulnDTO{}
 		v.CVEID = &cveid
+		v.CVE = &models.CVE{
+			CVSS: 7.0,
+		}
+
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion
 		v.State = models.VulnState("Example State")
@@ -59,6 +63,9 @@ func TestDependencyVulnToTableRow(t *testing.T) {
 
 		v := vuln.DependencyVulnDTO{}
 		v.CVEID = &cveid
+		v.CVE = &models.CVE{
+			CVSS: 7.0,
+		}
 		v.RawRiskAssessment = &rawRiskAssessment
 		v.ComponentFixedVersion = &componentFixedVersion
 		v.State = models.VulnState("Example State")

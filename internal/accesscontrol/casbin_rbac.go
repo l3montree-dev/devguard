@@ -48,6 +48,12 @@ func (c casbinRBACProvider) GetDomainRBAC(domain string) core.AccessControl {
 	}
 }
 
+func (c *casbinRBAC) GetExternalEntityProviderID() *string {
+	// this is the provider ID for the external entity provider
+	// it is used to identify the provider in the database
+	return nil
+}
+
 func (c *casbinRBAC) GetOwnerOfOrganization() (string, error) {
 	listOfUsers := c.enforcer.GetUsersForRoleInDomain("role::owner", "domain::"+c.domain)
 	if len(listOfUsers) == 0 {

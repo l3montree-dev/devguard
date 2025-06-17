@@ -22,13 +22,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/labstack/echo/v4"
-	"github.com/ory/client-go"
 )
-
-type verifier interface {
-	VerifyRequestSignature(req *http.Request) (string, string, error)
-}
 
 func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
 	for _, cookie := range cookies {
@@ -39,42 +35,22 @@ func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
 	return nil
 }
 
-func cookieAuth(ctx context.Context, oryApiClient *client.APIClient, oryKratosSessionCookie string) (string, error) {
+func cookieAuth(ctx context.Context, oryApiClient core.AdminClient, oryKratosSessionCookie string) (string, error) {
 	// check if we have a session
 	unescaped, err := url.QueryUnescape(oryKratosSessionCookie)
 	if err != nil {
 		return "", err
 	}
 
-	session, _, err := oryApiClient.FrontendAPI.ToSession(ctx).Cookie(unescaped).Execute()
+	session, err := oryApiClient.GetIdentityFromCookie(ctx, unescaped)
 	if err != nil {
 		return "", err
 	}
 
-	/*cred, _, err := oryApiClient.IdentityAPI.GetIdentity(ctx, session.Identity.Id).IncludeCredential([]string{"oidc"}).Execute()
-	if err != nil {
-		panic(err)
-	}
-
-	if cred.Credentials != nil {
-		// check if oidc creds exist
-		creds, ok := (*cred.Credentials)["oidc"]
-		if ok {
-			// check if we find opencode in the providers
-			for _, provider := range creds.Config["providers"].([]interface{}) {
-				if provider.(map[string]interface{})["provider"] == "opencode" {
-					// print initial_refresh_token and initial_access_token
-					fmt.Println(provider.(map[string]interface{})["initial_refresh_token"])
-					fmt.Println(provider.(map[string]interface{})["initial_access_token"])
-				}
-			}
-		}
-	}*/
-
-	return session.Identity.Id, nil
+	return session.Id, nil
 }
 
-func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.MiddlewareFunc {
+func SessionMiddleware(oryApiClient core.AdminClient, verifier core.Verifier) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())
@@ -83,13 +59,9 @@ func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.M
 			var scopes string
 			var err error
 
-			if oryKratosSessionCookie == nil {
-				userID, scopes, err = verifier.VerifyRequestSignature(ctx.Request())
-				if err != nil {
-					ctx.Set("session", NoSession)
-					return next(ctx)
-				}
-			} else {
+			adminTokenHeader := ctx.Request().Header.Get("X-Admin-Token")
+
+			if oryKratosSessionCookie != nil {
 				userID, err = cookieAuth(ctx.Request().Context(), oryApiClient, oryKratosSessionCookie.String())
 				if err != nil {
 					// user is not authenticated
@@ -99,15 +71,24 @@ func SessionMiddleware(oryApiClient *client.APIClient, verifier verifier) echo.M
 					ctx.Set("session", NoSession)
 					return next(ctx)
 				}
-
 				scopes = "scan manage"
+				scopesArray := strings.Fields(scopes)
+				ctx.Set("session", NewSession(userID, scopesArray))
+				return next(ctx)
+			} else if adminTokenHeader != "" {
+				slog.Warn("admin token header is set, using it to create session")
+				ctx.Set("session", NewSession(adminTokenHeader, []string{}))
+				return next(ctx)
+			} else {
+				userID, scopes, err = verifier.VerifyRequestSignature(ctx.Request())
+				if err != nil {
+					ctx.Set("session", NoSession)
+					return next(ctx)
+				}
+				scopesArray := strings.Fields(scopes)
+				ctx.Set("session", NewSession(userID, scopesArray))
+				return next(ctx)
 			}
-
-			scopesArray := strings.Fields(scopes)
-
-			ctx.Set("session", NewSession(userID, scopesArray))
-
-			return next(ctx)
 		}
 	}
 }
