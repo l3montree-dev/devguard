@@ -8,7 +8,7 @@ import (
 )
 
 func NewSlugCommand() *cobra.Command {
-	getCmd := &cobra.Command{
+	slugCmd := &cobra.Command{
 		Use:   "slug",
 		Args:  cobra.ExactArgs(1),
 		Short: "Get the slug of a version using the slug method from the github package ",
@@ -23,5 +23,5 @@ func NewSlugCommand() *cobra.Command {
 		},
 	}
 
-	return getCmd
+	return slugCmd
 }
