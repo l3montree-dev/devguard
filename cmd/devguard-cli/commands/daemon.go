@@ -51,7 +51,7 @@ func newTriggerCommand() *cobra.Command {
 		},
 	}
 
-	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "componentProperties", "risk", "tickets", "statistics"}, "List of daemons to trigger")
+	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "componentProperties", "risk", "tickets", "statistics", "deleteOldAssetVersions"}, "List of daemons to trigger")
 
 	return trigger
 }
@@ -76,6 +76,23 @@ func triggerDaemon(db core.DB, daemons []string) error {
 	// thus there is no need to recalculate the risk or anything earlier
 	slog.Info("starting background jobs", "time", time.Now())
 	var start time.Time
+	if emptyOrContains(daemons, "deleteOldAssetVersions") {
+		start = time.Now()
+		// delete old asset versions
+		err := daemon.DeleteOldAssetVersions(db)
+		if err != nil {
+			slog.Error("could not delete old asset versions", "err", err)
+			return nil
+		}
+
+		if err := markMirrored(configService, "assetVersionsDelete"); err != nil {
+			slog.Error("could not mark assetVersionsDelete as mirrored", "err", err)
+			return nil
+		}
+
+		slog.Info("old asset versions deleted", "duration", time.Since(start))
+	}
+
 	if emptyOrContains(daemons, "depsDev") {
 		start = time.Now()
 		// update deps dev

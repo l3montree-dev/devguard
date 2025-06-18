@@ -5,6 +5,7 @@ package daemon_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -20,6 +21,206 @@ import (
 	"github.com/stretchr/testify/mock"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
+
+func TestDaemonAssetVersionDelete(t *testing.T) {
+	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	defer terminate()
+
+	err := db.AutoMigrate(
+		&models.Org{},
+		&models.Project{},
+		&models.AssetVersion{},
+		&models.Asset{},
+		&models.ComponentDependency{},
+		&models.Component{},
+		&models.CVE{},
+		&models.AffectedComponent{},
+		&models.DependencyVuln{},
+		&models.Exploit{},
+		&models.VulnEvent{},
+		&models.FirstPartyVuln{},
+	)
+	assert.Nil(t, err)
+
+	_, _, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+
+	t.Run("should not delete the asset version if it is the default branch", func(t *testing.T) {
+		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+		assetVersion.DefaultBranch = true
+		err = db.Save(&assetVersion).Error
+		assert.Nil(t, err)
+
+		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 8)
+
+		err = db.Exec("UPDATE asset_versions SET updated_at = ? WHERE name = ? AND asset_id = ?", changeUpdatedTime, assetVersion.Name, assetVersion.AssetID).Error
+		assert.Nil(t, err)
+
+		err = daemon.DeleteOldAssetVersions(db)
+		assert.Nil(t, err)
+
+		var notDeletedAssetVersion models.AssetVersion
+		err = db.First(&notDeletedAssetVersion, "name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Error
+
+		assert.Nil(t, err) // should find the asset version
+
+		assert.Equal(t, assetVersion.Name, notDeletedAssetVersion.Name)
+		assert.Equal(t, assetVersion.AssetID, notDeletedAssetVersion.AssetID)
+		assert.Equal(t, assetVersion.DefaultBranch, notDeletedAssetVersion.DefaultBranch)
+
+	})
+
+	t.Run("should delete the asset version", func(t *testing.T) {
+		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
+		assetVersion := models.AssetVersion{
+			Name:          "test",
+			AssetID:       asset.ID,
+			DefaultBranch: false,
+			Slug:          "main",
+			Type:          "branch",
+		}
+		err = db.Create(&assetVersion).Error
+		assert.Nil(t, err)
+
+		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 8)
+
+		err = db.Exec("UPDATE asset_versions SET updated_at = ? WHERE name = ? AND asset_id = ?", changeUpdatedTime, assetVersion.Name, assetVersion.AssetID).Error
+		assert.Nil(t, err)
+
+		err = daemon.DeleteOldAssetVersions(db)
+		assert.Nil(t, err)
+
+		var deletedAssetVersion models.AssetVersion
+		err = db.First(&deletedAssetVersion, "name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Error
+
+		assert.Equal(t, "record not found", err.Error())
+
+	})
+
+	t.Run("should not delete the asset version if it was updated in the last 7 days", func(t *testing.T) {
+		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
+		assetVersion := models.AssetVersion{
+			Name:          "test",
+			AssetID:       asset.ID,
+			DefaultBranch: false,
+			Slug:          "main",
+			Type:          "branch",
+		}
+		err = db.Create(&assetVersion).Error
+		assert.Nil(t, err)
+
+		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 6) // Set the updated at time to 6 days ago
+
+		assetVersion.UpdatedAt = changeUpdatedTime
+
+		err = db.Exec("UPDATE asset_versions SET updated_at = ? WHERE name = ? AND asset_id = ?", changeUpdatedTime, assetVersion.Name, assetVersion.AssetID).Error
+		assert.Nil(t, err)
+
+		err = daemon.DeleteOldAssetVersions(db)
+		assert.Nil(t, err)
+
+		var notDeletedAssetVersion models.AssetVersion
+		err = db.First(&notDeletedAssetVersion, "name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Error
+		assert.Nil(t, err)
+
+	})
+
+	t.Run("should delete the asset version with all related data", func(t *testing.T) {
+		os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
+		assetVersion := models.AssetVersion{
+			Name:          "test-dependency",
+			AssetID:       asset.ID,
+			DefaultBranch: false,
+			Slug:          "main",
+			Type:          "branch",
+		}
+		err = db.Create(&assetVersion).Error
+		assert.Nil(t, err)
+
+		vulnId := "vuln-1"
+
+		componentDependency := models.ComponentDependency{
+			AssetID:          asset.ID,
+			AssetVersionName: assetVersion.Name,
+			AssetVersion:     assetVersion,
+			ScannerIDs:       "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca",
+			ComponentPurl:    nil,
+			DependencyPurl:   "pkg:npm/react@18.2.0",
+			Dependency:       models.Component{Purl: "pkg:npm/react@18.2.0"},
+		}
+
+		err = db.Create(&componentDependency).Error
+		assert.Nil(t, err)
+
+		dependencyVuln := models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				ID:               vulnId,
+				AssetID:          asset.ID,
+				AssetVersion:     assetVersion,
+				AssetVersionName: assetVersion.Name,
+			},
+		}
+
+		err = db.Create(&dependencyVuln).Error
+		assert.Nil(t, err)
+
+		firstPartyVuln := models.FirstPartyVuln{
+			Vulnerability: models.Vulnerability{
+				ID:               vulnId,
+				AssetID:          asset.ID,
+				AssetVersion:     assetVersion,
+				AssetVersionName: assetVersion.Name,
+			},
+		}
+
+		err = db.Create(&firstPartyVuln).Error
+		assert.Nil(t, err)
+
+		vulnEvent := models.VulnEvent{
+			VulnID: dependencyVuln.ID,
+		}
+
+		err = db.Create(&vulnEvent).Error
+		assert.Nil(t, err)
+
+		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 8) // Set the updated at time to 8 days ago
+		err = db.Exec("UPDATE asset_versions SET updated_at = ? WHERE name = ? AND asset_id = ?", changeUpdatedTime, assetVersion.Name, assetVersion.AssetID).Error
+		assert.Nil(t, err)
+
+		updaedAssetVersion := models.AssetVersion{}
+		err = db.First(&updaedAssetVersion, "name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Error
+		assert.Nil(t, err)
+		fmt.Println("Updated Asset Version:", updaedAssetVersion.UpdatedAt)
+
+		err = daemon.DeleteOldAssetVersions(db)
+		assert.Nil(t, err)
+
+		var deletedAssetVersion models.AssetVersion
+		err = db.First(&deletedAssetVersion, "name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Error
+		assert.Equal(t, "record not found", err.Error())
+
+		var deletedComponentDependency models.ComponentDependency
+		err = db.First(&deletedComponentDependency, "asset_id = ? AND asset_version_name = ?", componentDependency.AssetID, componentDependency.AssetVersionName).Error
+		assert.Equal(t, "record not found", err.Error())
+
+		var deletedDependencyVuln models.DependencyVuln
+		err = db.First(&deletedDependencyVuln, "asset_id = ? AND asset_version_name = ?", dependencyVuln.AssetID, dependencyVuln.AssetVersionName).Error
+		assert.Equal(t, "record not found", err.Error())
+
+		var deletedFirstPartyVuln models.FirstPartyVuln
+		err = db.First(&deletedFirstPartyVuln, "asset_id = ? AND asset_version_name = ?", firstPartyVuln.AssetID, firstPartyVuln.AssetVersionName).Error
+		assert.Equal(t, "record not found", err.Error())
+
+		var deletedVulnEvent models.VulnEvent
+		err = db.Debug().First(&deletedVulnEvent, "vuln_id = ?", vulnEvent.VulnID).Error
+		fmt.Println("Deleted Vuln Event:", deletedVulnEvent.ID)
+		assert.Equal(t, "record not found", err.Error())
+
+	})
+
+}
 
 func TestDaemonAsssetVersionScan(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
