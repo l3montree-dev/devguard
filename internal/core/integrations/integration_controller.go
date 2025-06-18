@@ -21,6 +21,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
 )
 
 type integrationController struct {
@@ -86,6 +87,21 @@ func (c *integrationController) TestAndSaveGitlabIntegration(ctx core.Context) e
 	}
 
 	if err := gl.(*gitlabint.GitlabIntegration).TestAndSave(ctx); err != nil {
+		slog.Error("could not test GitLab integration", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *integrationController) TestAndSaveJiraIntegration(ctx core.Context) error {
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	gl := thirdPartyIntegration.GetIntegration(core.JiraIntegrationID)
+	if gl == nil {
+		return ctx.JSON(404, "Jira integration not enabled")
+	}
+
+	if err := gl.(*jiraint.JiraIntegration).TestAndSave(ctx); err != nil {
 		slog.Error("could not test GitLab integration", "err", err)
 		return err
 	}

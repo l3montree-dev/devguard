@@ -175,6 +175,8 @@ type OrgDTO struct {
 
 	GitLabIntegrations []common.GitlabIntegrationDTO `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
 
+	JiraIntegrations []common.JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
+
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
 	ConfigFiles map[string]any `json:"configFiles"`
@@ -189,6 +191,16 @@ func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.Gi
 		Name:            integration.Name,
 		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
 		Url:             integration.GitLabUrl,
+	}
+}
+
+func obfuscateJiraIntegrations(integration models.JiraIntegration) common.JiraIntegrationDTO {
+	return common.JiraIntegrationDTO{
+		ID:              integration.ID.String(),
+		Name:            integration.Name,
+		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
+		URL:             integration.URL,
+		UserEmail:       integration.UserEmail,
 	}
 }
 
@@ -211,6 +223,7 @@ func fromModel(org models.Org) OrgDTO {
 		Projects:                 org.Projects,
 		GithubAppInstallations:   org.GithubAppInstallations,
 		GitLabIntegrations:       utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
+		JiraIntegrations:         utils.Map(org.JiraIntegrations, obfuscateJiraIntegrations),
 		ConfigFiles:              org.ConfigFiles,
 		Language:                 org.Language,
 		ExternalEntityProviderID: org.ExternalEntityProviderID,
