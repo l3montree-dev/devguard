@@ -147,13 +147,13 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 
 func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret, gitlabOauth2Scopes string, botUserID int, botUserAccessToken string, adminToken *string) *GitlabOauth2Config {
 
-	frontendUrl := os.Getenv("FRONTEND_URL")
-	if frontendUrl == "" {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
 		panic("FRONTEND_URL is not set")
 	}
 
-	apiUrl := os.Getenv("API_URL")
-	if apiUrl == "" {
+	apiURL := os.Getenv("API_URL")
+	if apiURL == "" {
 		panic("API_URL is not set")
 	}
 
@@ -166,7 +166,7 @@ func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, 
 		Oauth2Conf: &oauth2.Config{
 			ClientID:     gitlabOauth2ClientID,
 			ClientSecret: gitlabOauth2ClientSecret,
-			RedirectURL:  fmt.Sprintf("%s/api/devguard-tunnel/api/v1/oauth2/gitlab/callback/%s", frontendUrl, id),
+			RedirectURL:  fmt.Sprintf("%s/api/devguard-tunnel/api/v1/oauth2/gitlab/callback/%s", frontendURL, id),
 			Endpoint: oauth2.Endpoint{
 				AuthURL:  fmt.Sprintf("%s/oauth/authorize", gitlabBaseURL),
 				TokenURL: fmt.Sprintf("%s/oauth/token", gitlabBaseURL),

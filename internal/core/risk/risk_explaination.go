@@ -216,7 +216,7 @@ type Explanation struct {
 	depth int
 	epss  float64
 
-	cveId          string
+	cveID          string
 	cveDescription string
 
 	ComponentPurl string
@@ -226,9 +226,9 @@ type Explanation struct {
 	ShortenedComponentPurl string `json:"componentPurl" gorm:"type:text;default:null;"`
 }
 
-func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) string {
+func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) string {
 	var str strings.Builder
-	str.WriteString(fmt.Sprintf("## %s found in %s \n", e.cveId, e.ShortenedComponentPurl))
+	str.WriteString(fmt.Sprintf("## %s found in %s \n", e.cveID, e.ShortenedComponentPurl))
 
 	str.WriteString("> [!important] \n")
 
@@ -274,7 +274,7 @@ func (e Explanation) Markdown(baseUrl, orgSlug, projectSlug, assetSlug, assetVer
 	str.WriteString(fmt.Sprintf("| CVSS-B | `%.1f` | %s | \n", e.BaseScore, e.cvssMessage))
 	str.WriteString("\n")
 	//TODO: change it
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
 	str.WriteString("\n\n</details>\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
@@ -310,7 +310,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		depth: utils.OrDefault(dependencyVuln.ComponentDepth, 0),
 
 		RiskMetrics:    riskMetrics,
-		cveId:          utils.SafeDereference(dependencyVuln.CVEID),
+		cveID:          utils.SafeDereference(dependencyVuln.CVEID),
 		cveDescription: dependencyVuln.CVE.Description,
 
 		ComponentPurl: utils.SafeDereference(dependencyVuln.ComponentPurl),

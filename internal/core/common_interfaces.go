@@ -97,7 +97,7 @@ type CveRepository interface {
 	GetAllCVEsID() ([]string, error)
 	GetAllCPEMatchesID() ([]string, error)
 	Save(tx DB, cve *models.CVE) error
-	SaveCveAffectedComponents(tx DB, cveId string, affectedComponentHashes []string) error
+	SaveCveAffectedComponents(tx DB, cveID string, affectedComponentHashes []string) error
 	FindCVE(tx DB, id string) (models.CVE, error)
 	FindCVEs(tx DB, ids []string) ([]models.CVE, error)
 	FindAllListPaged(tx DB, pageInfo PageInfo, filter []FilterQuery, sort []SortQuery) (Paged[models.CVE], error)

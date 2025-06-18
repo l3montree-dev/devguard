@@ -78,7 +78,7 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string
 		return errors.Wrap(err, "failed to marshal body")
 	}
 
-	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto", config.RuntimeBaseConfig.ApiUrl, config.RuntimeBaseConfig.AssetName), bytes.NewBuffer(bodyjson))
+	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto", config.RuntimeBaseConfig.ApiURL, config.RuntimeBaseConfig.AssetName), bytes.NewBuffer(bodyjson))
 	if err != nil {
 		return errors.Wrap(err, "failed to create request")
 	}
@@ -86,7 +86,7 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string
 	req.Header.Set("Content-Type", "application/json")
 	config.SetXAssetHeaders(req)
 	// send the request
-	resp, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.ApiUrl).Do(req)
+	resp, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.ApiURL).Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to send request")
 	}
@@ -163,10 +163,10 @@ func NewInTotoRunCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("apiUrl", "", "The URL of the devguard API")
-	err := cmd.MarkFlagRequired("apiUrl")
+	cmd.Flags().String("apiURL", "", "The URL of the devguard API")
+	err := cmd.MarkFlagRequired("apiURL")
 	if err != nil {
-		slog.Error("failed to mark flag as required", "flag", "apiUrl", "err", err)
+		slog.Error("failed to mark flag as required", "flag", "apiURL", "err", err)
 	}
 	cmd.Flags().String("step", "", "The step to run")
 	err = cmd.MarkFlagRequired("step")

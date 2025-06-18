@@ -94,15 +94,15 @@ func FetchMembersOfProject(ctx core.Context) ([]core.User, error) {
 				name += " " + nameMap["last"].(string)
 			}
 		}
-		role, err := rbac.GetProjectRole(i.Id, project.ID.String())
+		role, err := rbac.GetProjectRole(i.ID, project.ID.String())
 		if err != nil {
 			return core.User{
-				ID:   i.Id,
+				ID:   i.ID,
 				Name: name,
 			}
 		}
 		return core.User{
-			ID:   i.Id,
+			ID:   i.ID,
 			Name: name,
 			Role: role,
 		}

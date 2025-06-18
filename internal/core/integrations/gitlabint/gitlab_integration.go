@@ -103,7 +103,7 @@ type GitlabIntegration struct {
 	aggregatedVulnRepository    core.VulnRepository
 	dependencyVulnRepository    core.DependencyVulnRepository
 	vulnEventRepository         core.VulnEventRepository
-	frontendUrl                 string
+	frontendURL                 string
 	orgRepository               core.OrganizationRepository
 	orgSevice                   core.OrgService
 	projectRepository           core.ProjectRepository
@@ -140,15 +140,15 @@ func NewGitlabIntegration(db core.DB, oauth2GitlabIntegration map[string]*Gitlab
 	projectService := project.NewService(projectRepository, assetRepository)
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, nil)
 
-	frontendUrl := os.Getenv("FRONTEND_URL")
-	if frontendUrl == "" {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
 		panic("FRONTEND_URL is not set")
 	}
 
 	return &GitlabIntegration{
 		oauth2Endpoints:             oauth2GitlabIntegration,
 		gitlabOauth2TokenRepository: gitlabOauth2TokenRepository,
-		frontendUrl:                 frontendUrl,
+		frontendURL:                 frontendURL,
 		aggregatedVulnRepository:    aggregatedVulnRepository,
 		gitlabIntegrationRepository: gitlabIntegrationRepository,
 		dependencyVulnRepository:    dependencyVulnRepository,
@@ -574,7 +574,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 	var client core.GitlabClientFacade
 	var projectIdInt int
 	enc := json.NewEncoder(ctx.Response())
-	var gitlabUrl string
+	var gitlabURL string
 	var accessToken string
 
 	switch {
@@ -608,7 +608,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 			return errors.Wrap(err, "could not create new gitlab client")
 		}
 		accessToken = token.AccessToken
-		gitlabUrl = token.BaseURL
+		gitlabURL = token.BaseURL
 	case strings.HasPrefix(repoId, "gitlab:"):
 		integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
 		if err != nil {
@@ -624,7 +624,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 			return errors.Wrap(err, "could not create new gitlab client")
 		}
 
-		gitlabUrl = integration.GitLabUrl
+		gitlabURL = integration.GitLabURL
 		accessToken = integration.AccessToken
 
 		ctx.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -668,7 +668,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 
 	templatePath := getTemplatePath(ctx.QueryParam("scanner"))
 
-	err = commonint.SetupAndPushPipeline(accessToken, gitlabUrl, project.PathWithNamespace, templatePath, branchName)
+	err = commonint.SetupAndPushPipeline(accessToken, gitlabURL, project.PathWithNamespace, templatePath, branchName)
 	if err != nil {
 		return errors.Wrap(err, "could not setup and push pipeline")
 	}
@@ -880,7 +880,7 @@ func (g *GitlabIntegration) Delete(ctx core.Context) error {
 
 func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 	var data struct {
-		Url   string `json:"url"`
+		URL   string `json:"url"`
 		Token string `json:"token"`
 		Name  string `json:"name"`
 	}
@@ -894,11 +894,11 @@ func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 		return ctx.JSON(400, "token must not be empty")
 	}
 	// check if valid url - maybe the user forgot to add the protocol
-	if !strings.HasPrefix(data.Url, "http://") && !strings.HasPrefix(data.Url, "https://") {
-		data.Url = "https://" + data.Url
+	if !strings.HasPrefix(data.URL, "http://") && !strings.HasPrefix(data.URL, "https://") {
+		data.URL = "https://" + data.URL
 	}
 
-	git, err := gitlab.NewClient(data.Token, gitlab.WithBaseURL(data.Url))
+	git, err := gitlab.NewClient(data.Token, gitlab.WithBaseURL(data.URL))
 	if err != nil {
 		return err
 	}
@@ -914,7 +914,7 @@ func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 
 	// save the integration
 	integration := models.GitLabIntegration{
-		GitLabUrl:   data.Url,
+		GitLabURL:   data.URL,
 		AccessToken: data.Token,
 		Name:        data.Name,
 		OrgID:       (core.GetOrg(ctx).GetID()),
@@ -927,7 +927,7 @@ func (g *GitlabIntegration) TestAndSave(ctx core.Context) error {
 	// return all projects
 	return ctx.JSON(200, common.GitlabIntegrationDTO{
 		ID:              integration.ID.String(),
-		Url:             integration.GitLabUrl,
+		URL:             integration.GitLabURL,
 		Name:            integration.Name,
 		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
 	})
@@ -1026,7 +1026,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 	_, _, err = client.EditIssue(ctx, projectId, gitlabTicketIDInt, &gitlab.UpdateIssueOptions{
 		StateEvent:  gitlab.Ptr(expectedState.ToGitlab()),
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendURL, orgSlug, projectSlug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	})
 	return err
@@ -1107,7 +1107,7 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		justification,
 		map[string]any{
 			"ticketId":  vuln.GetTicketID(),
-			"ticketUrl": createdIssue.WebURL,
+			"ticketURL": createdIssue.WebURL,
 		})
 
 	return g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
@@ -1154,7 +1154,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	issue := &gitlab.CreateIssueOptions{
 		Title:       gitlab.Ptr(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
-		Description: gitlab.Ptr(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)),
+		Description: gitlab.Ptr(exp.Markdown(g.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)),
 		Labels:      gitlab.Ptr(gitlab.LabelOptions(labels)),
 	}
 

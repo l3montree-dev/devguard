@@ -27,8 +27,8 @@ var exampleSarifResult = common.SarifResult{
 						{
 							PhysicalLocation: common.PhysicalLocation{
 								ArtifactLocation: common.ArtifactLocation{
-									Uri:       "file:///example/path",
-									UriBaseId: "SRCROOT",
+									URI:       "file:///example/path",
+									URIBaseId: "SRCROOT",
 								},
 								Region: common.Region{
 									StartLine:   10,

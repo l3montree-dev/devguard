@@ -100,7 +100,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			githubClientFactory: func(repoId string) (githubClientFacade, error) {
 				return mocks.NewGithubClientFacade(t), nil
 			},
-			frontendUrl: "http://localhost:3000",
+			frontendURL: "http://localhost:3000",
 		}
 
 		// create echo context
@@ -178,7 +178,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
-			frontendUrl:              "http://localhost:3000",
+			frontendURL:              "http://localhost:3000",
 			componentRepository:      componentRepository,
 			aggregatedVulnRepository: aggregatedVulnRepository,
 		}
@@ -238,7 +238,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			Type:   models.EventTypeMitigate,
 			UserID: "1",
 
-			ArbitraryJsonData: "{\"ticketId\":\"github:0\",\"ticketUrl\":\"\"}",
+			ArbitraryJsonData: "{\"ticketId\":\"github:0\",\"ticketURL\":\"\"}",
 
 			Justification: utils.Ptr("that is a justification"),
 		}
@@ -263,7 +263,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
-			frontendUrl:              "http://localhost:3000",
+			frontendURL:              "http://localhost:3000",
 			componentRepository:      componentRepository,
 			aggregatedVulnRepository: aggregatedVulnRepository,
 		}

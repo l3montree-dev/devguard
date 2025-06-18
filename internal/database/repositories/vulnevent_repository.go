@@ -50,7 +50,7 @@ func (r *eventRepository) readFirstPartyVulnAssetEvents(vulnID string) ([]models
 		Where("vuln_events.vuln_id IN (?)",
 			r.db.Table("first_party_vulnerabilities").
 				Select("id").
-				Where("asset_id = ? AND scanner_ids = ? AND rule_id = ? AND uri = ? AND start_line = ?", t.AssetID, t.ScannerIDs, t.RuleID, t.Uri, t.StartLine),
+				Where("asset_id = ? AND scanner_ids = ? AND rule_id = ? AND uri = ? AND start_line = ?", t.AssetID, t.ScannerIDs, t.RuleID, t.URI, t.StartLine),
 		).
 		Order("vuln_events.created_at ASC").
 		Find(&events).Error

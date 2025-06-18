@@ -20,7 +20,7 @@ func NewTestClientFactory(t *testing.T) (TestGitlabClientFactory, *mocks.GitlabC
 	}, client
 }
 
-func (f TestGitlabClientFactory) FromAccessToken(accessToken string, baseUrl string) (core.GitlabClientFacade, error) {
+func (f TestGitlabClientFactory) FromAccessToken(accessToken string, baseURL string) (core.GitlabClientFacade, error) {
 	return f.GitlabClientFacade, nil
 }
 

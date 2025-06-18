@@ -250,7 +250,7 @@ func TestTicketHandling(t *testing.T) {
 	// create a gitlab integration for this org
 	gitlabIntegration := models.GitLabIntegration{
 		AccessToken: "access-token",
-		GitLabUrl:   "https://gitlab.com",
+		GitLabURL:   "https://gitlab.com",
 		OrgID:       org.ID,
 	}
 	err := db.Create(&gitlabIntegration).Error

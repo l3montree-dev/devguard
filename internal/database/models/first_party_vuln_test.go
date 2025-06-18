@@ -14,7 +14,7 @@ func TestRenderMarkdown(t *testing.T) {
 		first_party_vul := models.FirstPartyVuln{
 			Snippet:       "TestSnippet",
 			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message")},
-			Uri:           "the/uri/of/the/vuln",
+			URI:           "the/uri/of/the/vuln",
 			StartLine:     64,
 		}
 		result := first_party_vul.RenderMarkdown()
@@ -24,7 +24,7 @@ func TestRenderMarkdown(t *testing.T) {
 		first_party_vul := models.FirstPartyVuln{
 			Snippet:       "TestSnippet",
 			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message")},
-			Uri:           "the/uri/of/the/vuln",
+			URI:           "the/uri/of/the/vuln",
 			StartLine:     0,
 		}
 		result := first_party_vul.RenderMarkdown()
@@ -72,12 +72,12 @@ func TestBeforeSave(t *testing.T) {
 }
 
 func TestTitle(t *testing.T) {
-	t.Run("Uri is empty", func(t *testing.T) {
+	t.Run("URI is empty", func(t *testing.T) {
 		first_party_vul := models.FirstPartyVuln{RuleName: "tralalero tralala"}
 		assert.Equal(t, "tralalero tralala", first_party_vul.Title())
 	})
-	t.Run("Uri not empty", func(t *testing.T) {
-		first_party_vul := models.FirstPartyVuln{Uri: "tung/tung/tung/sahur", RuleName: "tralalero tralala"}
+	t.Run("URI not empty", func(t *testing.T) {
+		first_party_vul := models.FirstPartyVuln{URI: "tung/tung/tung/sahur", RuleName: "tralalero tralala"}
 		assert.Equal(t, "tralalero tralala found in tung/tung/tung/sahur", first_party_vul.Title())
 	})
 }

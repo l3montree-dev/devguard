@@ -251,11 +251,11 @@ func (c firstPartyVulnController) Sarif(ctx core.Context) error {
 		for _, vuln := range vulns {
 			if _, exists := addedRuleIDs[vuln.RuleID]; !exists {
 				rule := common.Rule{
-					Id:               vuln.RuleID,
+					ID:               vuln.RuleID,
 					Name:             vuln.RuleName,
 					FullDescription:  common.Text{Text: vuln.RuleDescription},
 					Help:             common.Text{Text: vuln.RuleHelp},
-					HelpUri:          vuln.RuleHelpUri,
+					HelpURI:          vuln.RuleHelpURI,
 					ShortDescription: common.Text{Text: vuln.RuleName},
 					Properties:       vuln.RuleProperties,
 				}
@@ -272,7 +272,7 @@ func (c firstPartyVulnController) Sarif(ctx core.Context) error {
 					{
 						PhysicalLocation: common.PhysicalLocation{
 							ArtifactLocation: common.ArtifactLocation{
-								Uri: vuln.Uri,
+								URI: vuln.URI,
 							},
 							Region: common.Region{
 								StartLine:   vuln.StartLine,

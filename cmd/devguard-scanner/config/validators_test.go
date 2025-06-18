@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSanitizeApiUrl(t *testing.T) {
+func TestSanitizeApiURL(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected string
@@ -19,7 +19,7 @@ func TestSanitizeApiUrl(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := sanitizeApiUrl(test.input)
+		result := sanitizeApiURL(test.input)
 		assert.Equal(t, test.expected, result)
 	}
 }

@@ -1208,8 +1208,8 @@ func (_c *CveRepository_SaveBatchCPEMatch_Call) RunAndReturn(run func(tx core.DB
 }
 
 // SaveCveAffectedComponents provides a mock function for the type CveRepository
-func (_mock *CveRepository) SaveCveAffectedComponents(tx core.DB, cveId string, affectedComponentHashes []string) error {
-	ret := _mock.Called(tx, cveId, affectedComponentHashes)
+func (_mock *CveRepository) SaveCveAffectedComponents(tx core.DB, cveID string, affectedComponentHashes []string) error {
+	ret := _mock.Called(tx, cveID, affectedComponentHashes)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveCveAffectedComponents")
@@ -1217,7 +1217,7 @@ func (_mock *CveRepository) SaveCveAffectedComponents(tx core.DB, cveId string, 
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []string) error); ok {
-		r0 = returnFunc(tx, cveId, affectedComponentHashes)
+		r0 = returnFunc(tx, cveID, affectedComponentHashes)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1231,13 +1231,13 @@ type CveRepository_SaveCveAffectedComponents_Call struct {
 
 // SaveCveAffectedComponents is a helper method to define mock.On call
 //   - tx core.DB
-//   - cveId string
+//   - cveID string
 //   - affectedComponentHashes []string
-func (_e *CveRepository_Expecter) SaveCveAffectedComponents(tx interface{}, cveId interface{}, affectedComponentHashes interface{}) *CveRepository_SaveCveAffectedComponents_Call {
-	return &CveRepository_SaveCveAffectedComponents_Call{Call: _e.mock.On("SaveCveAffectedComponents", tx, cveId, affectedComponentHashes)}
+func (_e *CveRepository_Expecter) SaveCveAffectedComponents(tx interface{}, cveID interface{}, affectedComponentHashes interface{}) *CveRepository_SaveCveAffectedComponents_Call {
+	return &CveRepository_SaveCveAffectedComponents_Call{Call: _e.mock.On("SaveCveAffectedComponents", tx, cveID, affectedComponentHashes)}
 }
 
-func (_c *CveRepository_SaveCveAffectedComponents_Call) Run(run func(tx core.DB, cveId string, affectedComponentHashes []string)) *CveRepository_SaveCveAffectedComponents_Call {
+func (_c *CveRepository_SaveCveAffectedComponents_Call) Run(run func(tx core.DB, cveID string, affectedComponentHashes []string)) *CveRepository_SaveCveAffectedComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -1265,7 +1265,7 @@ func (_c *CveRepository_SaveCveAffectedComponents_Call) Return(err error) *CveRe
 	return _c
 }
 
-func (_c *CveRepository_SaveCveAffectedComponents_Call) RunAndReturn(run func(tx core.DB, cveId string, affectedComponentHashes []string) error) *CveRepository_SaveCveAffectedComponents_Call {
+func (_c *CveRepository_SaveCveAffectedComponents_Call) RunAndReturn(run func(tx core.DB, cveID string, affectedComponentHashes []string) error) *CveRepository_SaveCveAffectedComponents_Call {
 	_c.Call.Return(run)
 	return _c
 }

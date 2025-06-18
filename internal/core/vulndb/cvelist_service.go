@@ -159,8 +159,8 @@ func (s *cvelistService) downloadZip() (*zip.Reader, error) {
 	return utils.ZipReaderFromResponse(res)
 }
 
-func (s *cvelistService) ImportCVE(cveId string) ([]models.CPEMatch, error) {
-	resp, err := s.httpClient.Get(fmt.Sprintf("https://cveawg.mitre.org/api/cve/%s", cveId))
+func (s *cvelistService) ImportCVE(cveID string) ([]models.CPEMatch, error) {
+	resp, err := s.httpClient.Get(fmt.Sprintf("https://cveawg.mitre.org/api/cve/%s", cveID))
 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cve")
@@ -183,7 +183,7 @@ func (s *cvelistService) ImportCVE(cveId string) ([]models.CPEMatch, error) {
 	}
 
 	if err := s.cveRepository.GetDB(nil).Model(&models.CVE{
-		CVE: cveId,
+		CVE: cveID,
 		// unique the cpeIds
 	}).Association("Configurations").Append(utils.Map(matches, func(el models.CPEMatch) models.CPEMatch {
 		return models.CPEMatch{
@@ -275,7 +275,7 @@ func (s *cvelistService) Mirror() error {
 			}
 
 			// save the cve to cpe mapping
-			for cveId, cpeIds := range cve2cpeId {
+			for cveID, cpeIds := range cve2cpeId {
 				for i := 0; i < len(cpeIds); i += 1000 {
 					end := i + 1000
 					if end > len(cpeIds) {
@@ -286,14 +286,14 @@ func (s *cvelistService) Mirror() error {
 						// it might log slow queries or a missing cve.
 						Logger: logger.Default.LogMode(logger.Silent),
 					}).Model(&models.CVE{
-						CVE: cveId,
+						CVE: cveID,
 						// unique the cpeIds
 					}).Association("Configurations").Append(utils.Map(utils.UniqBy(cpeIds[i:end], func(el string) string {
 						return el
 					}), func(el string) models.CPEMatch {
 						return models.CPEMatch{MatchCriteriaID: el}
 					})); err != nil {
-						slog.Error("could not save cve to cpe mapping", "err", err, "cveId", cveId)
+						slog.Error("could not save cve to cpe mapping", "err", err, "cveID", cveID)
 					}
 				}
 			}

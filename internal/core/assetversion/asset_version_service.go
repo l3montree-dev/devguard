@@ -92,7 +92,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 	ruleMap := make(map[string]common.Rule)
 	for _, run := range sarifScan.Runs {
 		for _, rule := range run.Tool.Driver.Rules {
-			ruleMap[rule.Id] = rule
+			ruleMap[rule.ID] = rule
 		}
 	}
 
@@ -114,7 +114,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 				RuleID:          result.RuleId,
 				RuleHelp:        preferMarkdown(rule.Help),
 				RuleName:        rule.Name,
-				RuleHelpUri:     rule.HelpUri,
+				RuleHelpURI:     rule.HelpURI,
 				RuleDescription: getBestDescription(rule),
 				RuleProperties:  database.JSONB(rule.Properties),
 			}
@@ -126,7 +126,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 			}
 
 			if len(result.Locations) > 0 {
-				firstPartyVulnerability.Uri = result.Locations[0].PhysicalLocation.ArtifactLocation.Uri
+				firstPartyVulnerability.URI = result.Locations[0].PhysicalLocation.ArtifactLocation.URI
 				firstPartyVulnerability.StartLine = result.Locations[0].PhysicalLocation.Region.StartLine
 				firstPartyVulnerability.StartColumn = result.Locations[0].PhysicalLocation.Region.StartColumn
 				firstPartyVulnerability.EndLine = result.Locations[0].PhysicalLocation.Region.EndLine
@@ -448,19 +448,19 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			component := bomRefMap[directDependency]
 			// the sbom of a container image does not contain the scope. In a container image, we do not have
 			// anything like a deep nested dependency tree. Everything is a direct dependency.
-			componentPackageUrl := normalize.Purl(component)
+			componentPackageURL := normalize.Purl(component)
 
 			// create the direct dependency edge.
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  nil, // direct dependency - therefore set it to nil
 					ScannerIDs:     scannerID,
-					DependencyPurl: componentPackageUrl,
+					DependencyPurl: componentPackageURL,
 				},
 			)
-			if _, ok := existingComponentPurls[componentPackageUrl]; !ok {
-				components[componentPackageUrl] = models.Component{
-					Purl:          componentPackageUrl,
+			if _, ok := existingComponentPurls[componentPackageURL]; !ok {
+				components[componentPackageURL] = models.Component{
+					Purl:          componentPackageURL,
 					ComponentType: models.ComponentType(component.Type),
 					Version:       component.Version,
 				}
@@ -471,7 +471,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	// find all dependencies from this component
 	for _, c := range *sbom.GetDependencies() {
 		comp := bomRefMap[c.Ref]
-		compPackageUrl := normalize.Purl(comp)
+		compPackageURL := normalize.Purl(comp)
 
 		for _, d := range *c.Dependencies {
 			dep := bomRefMap[d]
@@ -479,7 +479,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurl:  utils.EmptyThenNil(compPackageUrl),
+					ComponentPurl:  utils.EmptyThenNil(compPackageURL),
 					ScannerIDs:     scannerID,
 					DependencyPurl: depPurlOrName,
 				},
@@ -493,9 +493,9 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 				}
 			}
 
-			if _, ok := existingComponentPurls[compPackageUrl]; !ok {
-				components[compPackageUrl] = models.Component{
-					Purl:          compPackageUrl,
+			if _, ok := existingComponentPurls[compPackageURL]; !ok {
+				components[compPackageURL] = models.Component{
+					Purl:          compPackageURL,
 					ComponentType: models.ComponentType(comp.Type),
 					Version:       comp.Version,
 				}

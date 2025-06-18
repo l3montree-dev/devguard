@@ -56,17 +56,17 @@ func (c cveHttpController) ListPaged(ctx core.Context) error {
 // @Description Retrieve details of a specific CVE by its ID, including risk and vector calculations
 // @Tags CVE
 // @Produce json
-// @Param cveId path string true "CVE ID"
+// @Param cveID path string true "CVE ID"
 // @Param confidentialityRequirements query string false "Confidentiality Requirements (low, medium, high), default is medium"
 // @Param integrityRequirements query string false "Integrity Requirements (low, medium, high), default is medium"
 // @Param availabilityRequirements query string false "Availability Requirements (low, medium, high), default is medium"
 // @Success 200 {object} models.CVE "Details of the specified CVE"
 // @Failure 500 {object} object{message=string} "Internal server error"
-// @Router /vulndb/{cveId}/ [get]
+// @Router /vulndb/{cveID}/ [get]
 func (c cveHttpController) Read(ctx core.Context) error {
 	cve, err := c.cveRepository.FindCVE(
 		nil,
-		core.GetParam(ctx, "cveId"),
+		core.GetParam(ctx, "cveID"),
 	)
 
 	if err != nil {

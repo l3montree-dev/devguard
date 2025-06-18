@@ -93,7 +93,7 @@ func uploadAttestation(ctx context.Context, predicate string) error {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/attestations", config.RuntimeBaseConfig.ApiUrl), bytes.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/attestations", config.RuntimeBaseConfig.ApiURL), bytes.NewReader(file))
 	if err != nil {
 		slog.Error("could not create request", "err", err)
 		return err

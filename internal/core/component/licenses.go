@@ -11,7 +11,7 @@ var licensesFile []byte
 type license struct {
 	Reference             *string  `json:"reference"`
 	IsDeprecatedLicenseID *bool    `json:"isDeprecatedLicenseId"`
-	DetailsURL            *string  `json:"detailsUrl"`
+	DetailsURL            *string  `json:"detailsURL"`
 	ReferenceNumber       *int     `json:"referenceNumber"`
 	Name                  string   `json:"name"`
 	LicenseID             string   `json:"licenseId"`

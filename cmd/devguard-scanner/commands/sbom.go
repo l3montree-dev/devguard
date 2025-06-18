@@ -50,7 +50,7 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.ApiUrl), bytes.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.ApiURL), bytes.NewReader(file))
 
 	if err != nil {
 		return err

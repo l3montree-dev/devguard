@@ -17,10 +17,10 @@ type FirstPartyVuln struct {
 	RuleName        string         `json:"ruleName"`
 	RuleDescription string         `json:"ruleDescription"`
 	RuleHelp        string         `json:"ruleHelp"`
-	RuleHelpUri     string         `json:"ruleHelpUri"`
+	RuleHelpURI     string         `json:"ruleHelpUri"`
 	RuleProperties  database.JSONB `json:"ruleProperties" gorm:"type:jsonb"`
 
-	Uri         string `json:"uri"`
+	URI         string `json:"uri"`
 	StartLine   int    `json:"startLine" `
 	StartColumn int    `json:"startColumn"`
 	EndLine     int    `json:"endLine"`
@@ -47,7 +47,7 @@ func (m *FirstPartyVuln) CalculateHash() string {
 	endLineStr := strconv.Itoa(m.EndLine)
 	startColumnStr := strconv.Itoa(m.StartColumn)
 	endColumnStr := strconv.Itoa(m.EndColumn)
-	stringToHash := startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + m.RuleID + "/" + m.Uri + "/" + m.ScannerIDs + "/" + m.AssetID.String() + "/" + m.AssetVersionName
+	stringToHash := startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + m.RuleID + "/" + m.URI + "/" + m.ScannerIDs + "/" + m.AssetID.String() + "/" + m.AssetVersionName
 	hash := utils.HashString(stringToHash)
 	m.ID = hash
 	return hash
@@ -72,14 +72,14 @@ func (f *FirstPartyVuln) RenderMarkdown() string {
 		str.WriteString("```")
 	}
 
-	if f.Uri != "" {
+	if f.URI != "" {
 		str.WriteString("\n\n")
 		str.WriteString("File: ")
 		var link string
 		if f.StartLine != 0 {
-			link = fmt.Sprintf("[%s](%s%s)", f.Uri, strings.TrimPrefix(f.Uri, "/"), fmt.Sprintf("#L%d", f.StartLine))
+			link = fmt.Sprintf("[%s](%s%s)", f.URI, strings.TrimPrefix(f.URI, "/"), fmt.Sprintf("#L%d", f.StartLine))
 		} else {
-			link = fmt.Sprintf("[%s](%s)", f.Uri, strings.TrimPrefix(f.Uri, "/"))
+			link = fmt.Sprintf("[%s](%s)", f.URI, strings.TrimPrefix(f.URI, "/"))
 		}
 
 		str.WriteString(link)
@@ -92,9 +92,9 @@ func (f *FirstPartyVuln) RenderMarkdown() string {
 }
 
 func (f *FirstPartyVuln) Title() string {
-	if f.Uri == "" {
+	if f.URI == "" {
 		return f.RuleName
 	}
 
-	return fmt.Sprintf("%s found in %s", f.RuleName, f.Uri)
+	return fmt.Sprintf("%s found in %s", f.RuleName, f.URI)
 }

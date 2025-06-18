@@ -63,7 +63,7 @@ type GithubIntegration struct {
 	firstPartyVulnRepository        core.FirstPartyVulnRepository
 	vulnEventRepository             core.VulnEventRepository
 	aggregatedVulnRepository        core.VulnRepository
-	frontendUrl                     string
+	frontendURL                     string
 	assetRepository                 core.AssetRepository
 	assetVersionRepository          core.AssetVersionRepository
 	componentRepository             core.ComponentRepository
@@ -88,8 +88,8 @@ func NewGithubIntegration(db core.DB) *GithubIntegration {
 	orgRepository := repositories.NewOrgRepository(db)
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
 
-	frontendUrl := os.Getenv("FRONTEND_URL")
-	if frontendUrl == "" {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
 		panic("FRONTEND_URL is not set")
 	}
 
@@ -100,7 +100,7 @@ func NewGithubIntegration(db core.DB) *GithubIntegration {
 		dependencyVulnRepository:        dependencyVulnRepository,
 		firstPartyVulnRepository:        firstPartyVulnRepository,
 		vulnEventRepository:             vulnEventRepository,
-		frontendUrl:                     frontendUrl,
+		frontendURL:                     frontendURL,
 		assetRepository:                 repositories.NewAssetRepository(db),
 		assetVersionRepository:          repositories.NewAssetVersionRepository(db),
 		componentRepository:             componentRepository,
@@ -777,7 +777,7 @@ func (g *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, depe
 	issueRequest := &github.IssueRequest{
 		State:  github.String(expectedIssueState.ToGithub()),
 		Title:  github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
-		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
+		Body:   github.String(exp.Markdown(g.frontendURL, orgSlug, projectSlug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
 		Labels: &labels,
 	}
 
@@ -826,7 +826,7 @@ func (g *GithubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	// create an event
 	vulnEvent := models.NewMitigateEvent(vuln.GetID(), vuln.GetType(), userID, justification, map[string]any{
 		"ticketId":  vuln.GetTicketID(),
-		"ticketUrl": vuln.GetTicketURL(),
+		"ticketURL": vuln.GetTicketURL(),
 	})
 	// save the dependencyVuln and the event in a transaction
 	err = g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
@@ -891,7 +891,7 @@ func (g *GithubIntegration) createDependencyVulnIssue(ctx context.Context, depen
 	issue := &github.IssueRequest{
 		Title: github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID),
 			utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
-		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)),
+		Body:   github.String(exp.Markdown(g.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)),
 		Labels: &labels,
 	}
 

@@ -12,11 +12,11 @@ type Text struct {
 }
 
 type Rule struct {
-	Id               string `json:"id"`
+	ID               string `json:"id"`
 	Name             string `json:"name"`
 	FullDescription  Text   `json:"fullDescription"`
 	Help             Text   `json:"help"`
-	HelpUri          string `json:"helpUri"`
+	HelpURI          string `json:"helpURI"`
 	ShortDescription Text   `json:"shortDescription"`
 	Properties       map[string]any
 }
@@ -36,8 +36,8 @@ type Run struct {
 }
 
 type ArtifactLocation struct {
-	Uri       string `json:"uri"`
-	UriBaseId string `json:"uriBaseId,omitempty"`
+	URI       string `json:"uri"`
+	URIBaseId string `json:"uriBaseId,omitempty"`
 }
 
 type Region struct {

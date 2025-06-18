@@ -14,7 +14,7 @@ type FirstPartyVulnDTO struct {
 	AssetID              string           `json:"assetId"`
 	State                models.VulnState `json:"state"`
 	RuleID               string           `json:"ruleId"`
-	Uri                  string           `json:"uri"`
+	URI                  string           `json:"uri"`
 	StartLine            int              `json:"startLine"`
 	StartColumn          int              `json:"startColumn"`
 	EndLine              int              `json:"endLine"`
@@ -31,7 +31,7 @@ type FirstPartyVulnDTO struct {
 
 	RuleName        string         `json:"ruleName"`
 	RuleHelp        string         `json:"ruleHelp"`
-	RuleHelpUri     string         `json:"ruleHelpUri"`
+	RuleHelpURI     string         `json:"ruleHelpURI"`
 	RuleDescription string         `json:"ruleDescription"`
 	RuleProperties  map[string]any `json:"ruleProperties"`
 }
@@ -50,7 +50,7 @@ func FirstPartyVulnToDto(f models.FirstPartyVuln) FirstPartyVulnDTO {
 		AssetID:              f.AssetID.String(),
 		State:                f.State,
 		RuleID:               f.RuleID,
-		Uri:                  f.Uri,
+		URI:                  f.URI,
 		StartLine:            f.StartLine,
 		StartColumn:          f.StartColumn,
 		EndLine:              f.EndLine,
@@ -67,7 +67,7 @@ func FirstPartyVulnToDto(f models.FirstPartyVuln) FirstPartyVulnDTO {
 
 		RuleName:        f.RuleName,
 		RuleHelp:        f.RuleHelp,
-		RuleHelpUri:     f.RuleHelpUri,
+		RuleHelpURI:     f.RuleHelpURI,
 		RuleDescription: f.RuleDescription,
 		RuleProperties:  f.RuleProperties,
 	}
