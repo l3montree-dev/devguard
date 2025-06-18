@@ -305,11 +305,11 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	errGroup := utils.ErrGroup[map[string]string](10)
 	for _, member := range m {
 		errGroup.Go(func() (map[string]string, error) {
-			role, err := accessControl.GetDomainRole(member.ID)
+			role, err := accessControl.GetDomainRole(member.Id)
 			if err != nil {
 				return nil, err
 			}
-			return map[string]string{member.ID: role}, nil
+			return map[string]string{member.Id: role}, nil
 		})
 	}
 
@@ -339,9 +339,9 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 		}
 
 		users[i] = core.User{
-			ID:   member.ID,
+			ID:   member.Id,
 			Name: name,
-			Role: roleMap[member.ID],
+			Role: roleMap[member.Id],
 		}
 	}
 

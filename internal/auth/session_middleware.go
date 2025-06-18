@@ -47,7 +47,7 @@ func cookieAuth(ctx context.Context, oryApiClient core.AdminClient, oryKratosSes
 		return "", err
 	}
 
-	return session.ID, nil
+	return session.Id, nil
 }
 
 func SessionMiddleware(oryApiClient core.AdminClient, verifier core.Verifier) echo.MiddlewareFunc {
