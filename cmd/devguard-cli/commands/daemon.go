@@ -51,7 +51,7 @@ func newTriggerCommand() *cobra.Command {
 		},
 	}
 
-	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "componentProperties", "risk", "tickets", "statistics", "deleteOldAssetVersions"}, "List of daemons to trigger")
+	trigger.Flags().StringArrayP("daemons", "d", []string{"vulndb", "componentProperties", "risk", "tickets", "statistics", "vulndb.cleanup"}, "List of daemons to trigger")
 
 	return trigger
 }
@@ -76,7 +76,7 @@ func triggerDaemon(db core.DB, daemons []string) error {
 	// thus there is no need to recalculate the risk or anything earlier
 	slog.Info("starting background jobs", "time", time.Now())
 	var start time.Time
-	if emptyOrContains(daemons, "deleteOldAssetVersions") {
+	if emptyOrContains(daemons, "vulndb.cleanup") {
 		start = time.Now()
 		// delete old asset versions
 		err := daemon.DeleteOldAssetVersions(db)

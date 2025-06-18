@@ -30,7 +30,5 @@ func DeleteOldAssetVersions(db core.DB) error {
 		slog.Error("Failed to delete old vuln events", "err", err)
 	}
 
-	slog.Info("Old vuln events deleted successfully")
-
 	return nil
 }

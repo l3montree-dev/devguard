@@ -220,6 +220,7 @@ func (g *assetVersionRepository) GetAllAssetsVersionFromDBByAssetID(tx core.DB, 
 
 func (g *assetVersionRepository) DeleteOldAssetVersions(day int) (int64, error) {
 
+	//this is not exploitable because the day is an int and golang is statically typed
 	interval := fmt.Sprintf("INTERVAL '%d days'", day)
 	query := fmt.Sprintf("updated_at < NOW() - %s AND default_branch = false", interval)
 

@@ -133,7 +133,8 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UU
 func (r *eventRepository) DeleteEventsWithNotExistingVulnID() error {
 
 	err := r.db.Unscoped().
-		Where("vuln_id NOT IN (SELECT id FROM dependency_vulns UNION SELECT id FROM first_party_vulnerabilities)").
+		Where(`NOT EXISTS (
+		SELECT 1 FROM dependency_vulns UNION SELECT 1 FROM first_party_vulnerabilities)`).
 		Delete(&models.VulnEvent{}).Error
 
 	if err != nil {

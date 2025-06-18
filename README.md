@@ -167,8 +167,3 @@ docker run -v "$(PWD):/app" scanner devguard-scanner container-scanning \
   --token="<TOKEN>" \
   --path="/app/image.tar"
 ```
-
-
-go run ./cmd/devguard-scanner/main.go sca \                 --assetName="orgg/projects/p/assets/a" \
---apiUrl="http://localhost:8080" \                                          --token="3a049c8e5a21d8953cb338fc56d55fc68ed593c4119e8f24c04e965287a085e8" \
---path="../../myProject-gitlab/my-project-local/"
