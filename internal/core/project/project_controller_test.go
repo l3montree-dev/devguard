@@ -228,6 +228,7 @@ func TestProjectCreation(t *testing.T) {
 		}
 
 		b, err := json.Marshal(requestBody)
+		assert.Nil(t, err)
 
 		req := httptest.NewRequest("POST", "/projects", bytes.NewBuffer(b))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -262,6 +263,7 @@ func TestProjectCreation(t *testing.T) {
 		core.SetRBAC(ctx, rbac)
 
 		err = controller.Create(ctx)
+		assert.Nil(t, err)
 
 		var createdProject models.Project
 		err = db.Preload("EnabledPolicies").First(&createdProject, "slug = ?", requestBody["name"]).Error
