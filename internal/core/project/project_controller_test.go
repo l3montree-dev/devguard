@@ -1,6 +1,8 @@
 package project_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http/httptest"
 	"testing"
 
@@ -190,5 +192,81 @@ func TestProjectControllerList(t *testing.T) {
 		assert.NotEmpty(t, newProject.EnabledPolicies, "New project should have all community policies enabled")
 		assert.Len(t, newProject.EnabledPolicies, 3, "New project should have exactly 3 community policies enabled")
 
+	})
+}
+
+func TestProjectCreation(t *testing.T) {
+	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	defer terminate()
+
+	controller := project.NewHttpController(
+		repositories.NewProjectRepository(db),
+		repositories.NewAssetRepository(db),
+		project.NewService(
+			repositories.NewProjectRepository(db),
+			repositories.NewAssetRepository(db),
+		),
+	)
+
+	org, _, _, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+
+	t.Run("should enable all community policies by default", func(t *testing.T) {
+		e := echo.New()
+		rec := httptest.NewRecorder()
+		// create a community policy
+		communityPolicy := models.Policy{
+			Title:          "Community Policy 1",
+			Description:    "This is a community policy",
+			OrganizationID: nil, // nil means it's a community policy
+		}
+
+		assert.Nil(t, db.Create(&communityPolicy).Error)
+
+		requestBody := map[string]string{
+			"name":        "new-project",
+			"description": "This is a new project",
+		}
+
+		b, err := json.Marshal(requestBody)
+
+		req := httptest.NewRequest("POST", "/projects", bytes.NewBuffer(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		ctx := e.NewContext(req, rec)
+		core.SetOrg(ctx, org)
+		session := mocks.NewAuthSession(t)
+		core.SetSession(ctx, session)
+		rbac := mocks.NewAccessControl(t)
+		rbac.On("LinkDomainAndProjectRole", "admin", "admin", mock.Anything).Return(nil)
+		rbac.On("InheritProjectRole", "admin", "member", mock.Anything).Return(nil)
+		rbac.On("AllowRoleInProject", mock.Anything, "admin", core.ObjectUser, []core.Action{
+			core.ActionCreate,
+			core.ActionDelete,
+			core.ActionUpdate,
+		}).Return(nil)
+		rbac.On("AllowRoleInProject", mock.Anything, "admin", core.ObjectAsset, []core.Action{
+			core.ActionCreate,
+			core.ActionDelete,
+			core.ActionUpdate,
+		}).Return(nil)
+		rbac.On("AllowRoleInProject", mock.Anything, "admin", core.ObjectProject, []core.Action{
+			core.ActionDelete,
+			core.ActionUpdate,
+		}).Return(nil)
+		rbac.On("AllowRoleInProject", mock.Anything, "member", core.ObjectProject, []core.Action{
+			core.ActionRead,
+		}).Return(nil)
+		rbac.On("AllowRoleInProject", mock.Anything, "member", core.ObjectAsset, []core.Action{
+			core.ActionRead,
+		}).Return(nil)
+
+		core.SetRBAC(ctx, rbac)
+
+		err = controller.Create(ctx)
+
+		var createdProject models.Project
+		err = db.Preload("EnabledPolicies").First(&createdProject, "slug = ?", requestBody["name"]).Error
+
+		assert.Nil(t, err)
+		assert.Len(t, createdProject.EnabledPolicies, 1)
 	})
 }
