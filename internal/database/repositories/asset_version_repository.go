@@ -224,7 +224,6 @@ func (g *assetVersionRepository) DeleteOldAssetVersions(day int) (int64, error) 
 	query := fmt.Sprintf("updated_at < NOW() - %s AND default_branch = false", interval)
 
 	var count int64
-	count = 0
 	err := g.db.Model(&models.AssetVersion{}).
 		Where(query).
 		Count(&count).Error
