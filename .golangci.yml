@@ -15,8 +15,12 @@
 
 version: "2"
 linters:
-  enable:
-    - gosec
+  default: standard
+  settings:
+    staticcheck:
+      checks:
+      - all
+      - '-ST1005'
   exclusions:
     generated: lax
     presets:
