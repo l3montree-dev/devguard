@@ -42,9 +42,9 @@ func NewGitLabIntegrationRepository(db core.DB) *gitlabIntegrationRepository {
 	}
 }
 
-func (r *gitlabIntegrationRepository) FindByOrganizationID(orgId uuid.UUID) ([]models.GitLabIntegration, error) {
+func (r *gitlabIntegrationRepository) FindByOrganizationID(orgID uuid.UUID) ([]models.GitLabIntegration, error) {
 	var integrations []models.GitLabIntegration
-	if err := r.db.Find(&integrations, "orgID = ?", orgId).Error; err != nil {
+	if err := r.db.Find(&integrations, "orgID = ?", orgID).Error; err != nil {
 		return nil, err
 	}
 	return integrations, nil
@@ -107,7 +107,7 @@ func (r *gitlabOauth2TokenRepository) Delete(tx core.DB, tokens []models.GitLabO
 	return nil
 }
 
-func (r *gitlabOauth2TokenRepository) DeleteByUserIdAndProviderID(userID string, providerID string) error {
+func (r *gitlabOauth2TokenRepository) DeleteByUserIDAndProviderID(userID string, providerID string) error {
 	return r.db.Where("user_id = ? AND provider_id = ?", userID, providerID).Delete(&models.GitLabOauth2Token{}).Error
 }
 

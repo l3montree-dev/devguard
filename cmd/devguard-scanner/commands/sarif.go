@@ -57,7 +57,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan", config.RuntimeBaseConfig.ApiURL), bytes.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
 
 	if err != nil {
 		return err
@@ -300,7 +300,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return errors.Wrap(err, "could not marshal sarif result")
 		}
 
-		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.ApiURL), bytes.NewReader(b))
+		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.APIURL), bytes.NewReader(b))
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
 		}

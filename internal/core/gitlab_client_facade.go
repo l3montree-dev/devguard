@@ -34,7 +34,7 @@ type GitlabClientFacade interface {
 
 	ListProjectHooks(ctx context.Context, projectID int, options *gitlab.ListProjectHooksOptions) ([]*gitlab.ProjectHook, *gitlab.Response, error)
 	AddProjectHook(ctx context.Context, projectID int, opt *gitlab.AddProjectHookOptions) (*gitlab.ProjectHook, *gitlab.Response, error)
-	DeleteProjectHook(ctx context.Context, projectID int, hookId int) (*gitlab.Response, error)
+	DeleteProjectHook(ctx context.Context, projectID int, hookID int) (*gitlab.Response, error)
 
 	ListVariables(ctx context.Context, projectID int, options *gitlab.ListProjectVariablesOptions) ([]*gitlab.ProjectVariable, *gitlab.Response, error)
 	CreateVariable(ctx context.Context, projectID int, opt *gitlab.CreateProjectVariableOptions) (*gitlab.ProjectVariable, *gitlab.Response, error)

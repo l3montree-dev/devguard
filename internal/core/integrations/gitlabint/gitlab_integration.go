@@ -35,14 +35,14 @@ import (
 
 type gitlabRepository struct {
 	*gitlab.Project
-	gitlabIntegrationId string
+	gitlabIntegrationID string
 }
 
 func (g gitlabRepository) toRepository() core.Repository {
 	// check for group and project access
 	if g.Permissions == nil || (g.Permissions.GroupAccess == nil && g.Permissions.ProjectAccess == nil) {
 		return core.Repository{
-			ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+			ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationID, g.ID),
 			Label:        g.NameWithNamespace,
 			IsDeveloper:  false,
 			IsOwner:      false,
@@ -56,7 +56,7 @@ func (g gitlabRepository) toRepository() core.Repository {
 	if g.Permissions.ProjectAccess == nil {
 		// group access has to be defined
 		return core.Repository{
-			ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+			ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationID, g.ID),
 			Label:        g.NameWithNamespace,
 			IsDeveloper:  g.Permissions.GroupAccess.AccessLevel >= gitlab.DeveloperPermissions,
 			IsOwner:      g.Permissions.GroupAccess.AccessLevel >= gitlab.OwnerPermissions,
@@ -69,7 +69,7 @@ func (g gitlabRepository) toRepository() core.Repository {
 	if g.Permissions.GroupAccess == nil {
 
 		return core.Repository{
-			ID:          fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+			ID:          fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationID, g.ID),
 			Label:       g.NameWithNamespace,
 			Description: g.Description,
 			Image:       g.AvatarURL,
@@ -83,7 +83,7 @@ func (g gitlabRepository) toRepository() core.Repository {
 
 	// both is defined - check for the highest access level
 	return core.Repository{
-		ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationId, g.ID),
+		ID:           fmt.Sprintf("gitlab:%s:%d", g.gitlabIntegrationID, g.ID),
 		Label:        g.NameWithNamespace,
 		IsDeveloper:  g.Permissions.GroupAccess.AccessLevel >= gitlab.DeveloperPermissions || g.Permissions.ProjectAccess.AccessLevel >= gitlab.DeveloperPermissions,
 		IsOwner:      g.Permissions.GroupAccess.AccessLevel >= gitlab.OwnerPermissions || g.Permissions.ProjectAccess.AccessLevel >= gitlab.OwnerPermissions,
@@ -537,16 +537,16 @@ func isGitlabUserAuthorized(event *gitlab.IssueCommentEvent, client core.GitlabC
 	return client.IsProjectMember(context.TODO(), event.ProjectID, event.User.ID, nil)
 }
 
-func extractIntegrationIdFromRepoId(repoId string) (uuid.UUID, error) {
+func extractIntegrationIdFromRepoId(repoID string) (uuid.UUID, error) {
 	// the repo id is formatted like this:
 	// gitlab:<integration id>:<project id>
-	return uuid.Parse(strings.Split(repoId, ":")[1])
+	return uuid.Parse(strings.Split(repoID, ":")[1])
 }
 
-func extractProjectIdFromRepoId(repoId string) (int, error) {
+func extractProjectIdFromRepoId(repoID string) (int, error) {
 	// the repo id is formatted like this:
 	// gitlab:<integration id>:<project id>
-	return strconv.Atoi(strings.Split(repoId, ":")[2])
+	return strconv.Atoi(strings.Split(repoID, ":")[2])
 }
 
 func (g *GitlabIntegration) gitlabExternalProviderEntity(externalProvider *string) bool {
@@ -560,7 +560,7 @@ func (g *GitlabIntegration) gitlabExternalProviderEntity(externalProvider *strin
 
 func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
-	repoId := utils.SafeDereference(asset.RepositoryID)
+	repoID := utils.SafeDereference(asset.RepositoryID)
 
 	var req struct {
 		DevguardPrivateKey string `json:"devguardPrivateKey"`
@@ -586,7 +586,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 
 		defer func() {
 			// delete the token from the database - it is no longer needed after this function finishes
-			err = g.gitlabOauth2TokenRepository.DeleteByUserIdAndProviderID(core.GetSession(ctx).GetUserID(), *asset.ExternalEntityProviderID+"autosetup")
+			err = g.gitlabOauth2TokenRepository.DeleteByUserIDAndProviderID(core.GetSession(ctx).GetUserID(), *asset.ExternalEntityProviderID+"autosetup")
 			if err != nil {
 				slog.Error("could not delete gitlab oauth2 token", "err", err)
 			}
@@ -609,8 +609,8 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 		}
 		accessToken = token.AccessToken
 		gitlabURL = token.BaseURL
-	case strings.HasPrefix(repoId, "gitlab:"):
-		integrationUUID, err := extractIntegrationIdFromRepoId(repoId)
+	case strings.HasPrefix(repoID, "gitlab:"):
+		integrationUUID, err := extractIntegrationIdFromRepoId(repoID)
 		if err != nil {
 			return errors.Wrap(err, "could not extract integration id from repo id")
 		}
@@ -630,7 +630,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 		ctx.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		ctx.Response().WriteHeader(http.StatusOK) //nolint:errcheck
 
-		projectIDInt, err = extractProjectIdFromRepoId(repoId)
+		projectIDInt, err = extractProjectIdFromRepoId(repoID)
 		if err != nil {
 			return errors.Wrap(err, "could not extract project id from repo id")
 		}
@@ -1106,7 +1106,7 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		userID,
 		justification,
 		map[string]any{
-			"ticketId":  vuln.GetTicketID(),
+			"ticketID":  vuln.GetTicketID(),
 			"ticketURL": createdIssue.WebURL,
 		})
 

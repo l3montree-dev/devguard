@@ -20,7 +20,7 @@ func containsRune(s string, r rune) bool {
 	return false
 }
 
-func sanitizeApiURL(apiURL string) string {
+func sanitizeAPIURL(apiURL string) string {
 	// check if the url has a trailing slash
 	apiURL = strings.TrimSuffix(apiURL, "/")
 

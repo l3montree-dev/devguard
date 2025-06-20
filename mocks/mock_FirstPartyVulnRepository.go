@@ -417,12 +417,12 @@ func (_c *FirstPartyVulnRepository_DeleteBatch_Call) RunAndReturn(run func(tx co
 	return _c
 }
 
-// GetByAssetId provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) GetByAssetId(tx core.DB, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
+// GetByAssetID provides a mock function for the type FirstPartyVulnRepository
+func (_mock *FirstPartyVulnRepository) GetByAssetID(tx core.DB, assetID uuid.UUID) ([]models.FirstPartyVuln, error) {
 	ret := _mock.Called(tx, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetByAssetId")
+		panic("no return value specified for GetByAssetID")
 	}
 
 	var r0 []models.FirstPartyVuln
@@ -445,31 +445,31 @@ func (_mock *FirstPartyVulnRepository) GetByAssetId(tx core.DB, assetID uuid.UUI
 	return r0, r1
 }
 
-// FirstPartyVulnRepository_GetByAssetId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetId'
-type FirstPartyVulnRepository_GetByAssetId_Call struct {
+// FirstPartyVulnRepository_GetByAssetID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByAssetID'
+type FirstPartyVulnRepository_GetByAssetID_Call struct {
 	*mock.Call
 }
 
-// GetByAssetId is a helper method to define mock.On call
+// GetByAssetID is a helper method to define mock.On call
 //   - tx
 //   - assetID
-func (_e *FirstPartyVulnRepository_Expecter) GetByAssetId(tx interface{}, assetID interface{}) *FirstPartyVulnRepository_GetByAssetId_Call {
-	return &FirstPartyVulnRepository_GetByAssetId_Call{Call: _e.mock.On("GetByAssetId", tx, assetID)}
+func (_e *FirstPartyVulnRepository_Expecter) GetByAssetID(tx interface{}, assetID interface{}) *FirstPartyVulnRepository_GetByAssetID_Call {
+	return &FirstPartyVulnRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", tx, assetID)}
 }
 
-func (_c *FirstPartyVulnRepository_GetByAssetId_Call) Run(run func(tx core.DB, assetID uuid.UUID)) *FirstPartyVulnRepository_GetByAssetId_Call {
+func (_c *FirstPartyVulnRepository_GetByAssetID_Call) Run(run func(tx core.DB, assetID uuid.UUID)) *FirstPartyVulnRepository_GetByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetByAssetId_Call) Return(firstPartyVulns []models.FirstPartyVuln, err error) *FirstPartyVulnRepository_GetByAssetId_Call {
+func (_c *FirstPartyVulnRepository_GetByAssetID_Call) Return(firstPartyVulns []models.FirstPartyVuln, err error) *FirstPartyVulnRepository_GetByAssetID_Call {
 	_c.Call.Return(firstPartyVulns, err)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetByAssetId_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetByAssetId_Call {
+func (_c *FirstPartyVulnRepository_GetByAssetID_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetByAssetID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -647,12 +647,12 @@ func (_c *FirstPartyVulnRepository_GetDB_Call) RunAndReturn(run func(tx core.DB)
 	return _c
 }
 
-// GetDefaultFirstPartyVulnsByOrgIdPaged provides a mock function for the type FirstPartyVulnRepository
-func (_mock *FirstPartyVulnRepository) GetDefaultFirstPartyVulnsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
+// GetDefaultFirstPartyVulnsByOrgIDPaged provides a mock function for the type FirstPartyVulnRepository
+func (_mock *FirstPartyVulnRepository) GetDefaultFirstPartyVulnsByOrgIDPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
 	ret := _mock.Called(tx, userAllowedProjectIds, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetDefaultFirstPartyVulnsByOrgIdPaged")
+		panic("no return value specified for GetDefaultFirstPartyVulnsByOrgIDPaged")
 	}
 
 	var r0 core.Paged[models.FirstPartyVuln]
@@ -673,35 +673,35 @@ func (_mock *FirstPartyVulnRepository) GetDefaultFirstPartyVulnsByOrgIdPaged(tx 
 	return r0, r1
 }
 
-// FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDefaultFirstPartyVulnsByOrgIdPaged'
-type FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call struct {
+// FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDefaultFirstPartyVulnsByOrgIDPaged'
+type FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call struct {
 	*mock.Call
 }
 
-// GetDefaultFirstPartyVulnsByOrgIdPaged is a helper method to define mock.On call
+// GetDefaultFirstPartyVulnsByOrgIDPaged is a helper method to define mock.On call
 //   - tx
 //   - userAllowedProjectIds
 //   - pageInfo
 //   - search
 //   - filter
 //   - sort
-func (_e *FirstPartyVulnRepository_Expecter) GetDefaultFirstPartyVulnsByOrgIdPaged(tx interface{}, userAllowedProjectIds interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call {
-	return &FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call{Call: _e.mock.On("GetDefaultFirstPartyVulnsByOrgIdPaged", tx, userAllowedProjectIds, pageInfo, search, filter, sort)}
+func (_e *FirstPartyVulnRepository_Expecter) GetDefaultFirstPartyVulnsByOrgIDPaged(tx interface{}, userAllowedProjectIds interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call {
+	return &FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call{Call: _e.mock.On("GetDefaultFirstPartyVulnsByOrgIDPaged", tx, userAllowedProjectIds, pageInfo, search, filter, sort)}
 }
 
-func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call) Run(run func(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call {
+func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call) Run(run func(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(core.DB), args[1].([]string), args[2].(core.PageInfo), args[3].(string), args[4].([]core.FilterQuery), args[5].([]core.SortQuery))
 	})
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call) Return(paged core.Paged[models.FirstPartyVuln], err error) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call {
+func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call) Return(paged core.Paged[models.FirstPartyVuln], err error) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call {
 	_c.Call.Return(paged, err)
 	return _c
 }
 
-func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call) RunAndReturn(run func(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error)) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIdPaged_Call {
+func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call) RunAndReturn(run func(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error)) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }

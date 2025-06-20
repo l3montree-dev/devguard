@@ -41,9 +41,9 @@ func NewGithubAppInstallationRepository(db core.DB) *githubAppInstallationReposi
 	}
 }
 
-func (r *githubAppInstallationRepository) FindByOrganizationID(orgId uuid.UUID) ([]models.GithubAppInstallation, error) {
+func (r *githubAppInstallationRepository) FindByOrganizationID(orgID uuid.UUID) ([]models.GithubAppInstallation, error) {
 	var installations []models.GithubAppInstallation
-	if err := r.db.Find(&installations, "orgID = ?", orgId).Error; err != nil {
+	if err := r.db.Find(&installations, "orgID = ?", orgID).Error; err != nil {
 		return nil, err
 	}
 	return installations, nil

@@ -158,7 +158,7 @@ func signCmd(cmd *cobra.Command, args []string) error {
 	defer os.RemoveAll(path.Dir(keyPath))
 
 	// upload the public key to the backend
-	err = uploadPublicKey(cmd.Context(), config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.ApiURL, publicKeyPath, config.RuntimeBaseConfig.AssetName)
+	err = uploadPublicKey(cmd.Context(), config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL, publicKeyPath, config.RuntimeBaseConfig.AssetName)
 	if err != nil {
 		slog.Error("could not upload public key", "err", err)
 		return err

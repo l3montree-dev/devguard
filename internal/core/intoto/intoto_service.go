@@ -94,13 +94,13 @@ func (i inTotoService) VerifySupplyChain(supplyChainID string) (bool, error) {
 	}
 
 	// get assetID from links
-	assetID, err := getAssetIdFromLinks(supplyChainLinks)
+	assetID, err := getAssetIDFromLinks(supplyChainLinks)
 	if err != nil {
 		return false, errors.Wrap(err, "could not get assetID from links")
 	}
 
 	//get projectID and organizationID from assetID
-	projectID, organizationID, err := getProjectIdAndOrganizationIDFromAssetId(assetID, i.projectRepository)
+	projectID, organizationID, err := getProjectIDAndOrganizationIDFromAssetID(assetID, i.projectRepository)
 	if err != nil {
 		return false, errors.Wrap(err, "could not get projectID and organizationID from assetID")
 	}
@@ -121,13 +121,13 @@ func (i inTotoService) VerifySupplyChain(supplyChainID string) (bool, error) {
 	}
 
 	// convert the pats to in-toto keys
-	keyIds, totoKeys, err := convertPatsToInTotoKeys(pats)
+	keyIDs, totoKeys, err := convertPatsToInTotoKeys(pats)
 	if err != nil {
 		return false, errors.Wrap(err, "could not convert pats to in-toto keys")
 	}
 
 	// create a new layout
-	layout := createLayout(keyIds, totoKeys)
+	layout := createLayout(keyIDs, totoKeys)
 
 	// generate the the ecdsa key pair and convert them to in-toto keys for signing and verifying the layout
 	// it is not very useful here ,but we do need it because the in-toto library requires it
@@ -195,7 +195,7 @@ func getSupplyChainIDFromImageName(imageName string) (string, error) {
 	return supplyChainID, nil
 }
 
-func getAssetIdFromLinks(supplyChainLinks []models.InTotoLink) (uuid.UUID, error) {
+func getAssetIDFromLinks(supplyChainLinks []models.InTotoLink) (uuid.UUID, error) {
 	// get assetID from links
 	if len(supplyChainLinks) == 0 {
 		return uuid.Nil, errors.New("no links found")
@@ -207,7 +207,7 @@ func getAssetIdFromLinks(supplyChainLinks []models.InTotoLink) (uuid.UUID, error
 
 }
 
-func getProjectIdAndOrganizationIDFromAssetId(assetID uuid.UUID, projectRepository core.ProjectRepository) (uuid.UUID, uuid.UUID, error) {
+func getProjectIDAndOrganizationIDFromAssetID(assetID uuid.UUID, projectRepository core.ProjectRepository) (uuid.UUID, uuid.UUID, error) {
 	project, err := projectRepository.GetProjectByAssetID(assetID)
 	if err != nil {
 		return uuid.Nil, uuid.Nil, err
@@ -234,7 +234,7 @@ func getProjectUsersID(projectID uuid.UUID, accessControl core.AccessControl) ([
 }
 
 func convertPatsToInTotoKeys(pats []models.PAT) ([]string, map[string]toto.Key, error) {
-	keyIds := make([]string, len(pats))
+	keyIDs := make([]string, len(pats))
 	totoKeys := make(map[string]toto.Key)
 	for i, pat := range pats {
 		key, err := hexPublicKeyToInTotoKey(pat.PubKey)
@@ -242,13 +242,13 @@ func convertPatsToInTotoKeys(pats []models.PAT) ([]string, map[string]toto.Key, 
 			return nil, nil, errors.Wrap(err, "could not convert public key")
 		}
 
-		keyIds[i] = key.KeyID
+		keyIDs[i] = key.KeyID
 		totoKeys[key.KeyID] = key
 	}
-	return keyIds, totoKeys, nil
+	return keyIDs, totoKeys, nil
 }
 
-func createLayout(keyIds []string, totoKeys map[string]toto.Key) *toto.Metablock {
+func createLayout(keyIDs []string, totoKeys map[string]toto.Key) *toto.Metablock {
 	t := time.Now()
 	t = t.Add(30 * 24 * time.Hour)
 	return &toto.Metablock{
@@ -258,7 +258,7 @@ func createLayout(keyIds []string, totoKeys map[string]toto.Key) *toto.Metablock
 			Steps: []toto.Step{
 				{
 					Type:    "step",
-					PubKeys: keyIds,
+					PubKeys: keyIDs,
 					SupplyChainItem: toto.SupplyChainItem{
 						Name:              "post-commit",
 						ExpectedMaterials: [][]string{{"ALLOW", "*"}}, // there is no way we can know what the materials are
@@ -267,7 +267,7 @@ func createLayout(keyIds []string, totoKeys map[string]toto.Key) *toto.Metablock
 				},
 				{
 					Type:    "step",
-					PubKeys: keyIds,
+					PubKeys: keyIDs,
 					SupplyChainItem: toto.SupplyChainItem{
 						Name:              "build",
 						ExpectedMaterials: [][]string{{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "post-commit"}, {"DISALLOW", "*"}}, // we expect the post-commit step to
@@ -276,7 +276,7 @@ func createLayout(keyIds []string, totoKeys map[string]toto.Key) *toto.Metablock
 				},
 				{
 					Type:    "step",
-					PubKeys: keyIds,
+					PubKeys: keyIDs,
 					SupplyChainItem: toto.SupplyChainItem{
 						Name:              "deploy",
 						ExpectedMaterials: [][]string{{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "build"}, {"DISALLOW", "*"}},

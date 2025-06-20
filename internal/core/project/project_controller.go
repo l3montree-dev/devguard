@@ -140,12 +140,12 @@ func (p *controller) InviteMembers(c core.Context) error {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
-	for _, newMemberId := range req.Ids {
-		if !utils.Contains(members, newMemberId) {
+	for _, newMemberID := range req.Ids {
+		if !utils.Contains(members, newMemberID) {
 			return echo.NewHTTPError(400, "user is not a member of the organization")
 		}
 
-		if err := rbac.GrantRoleInProject(newMemberId, "member", project.ID.String()); err != nil {
+		if err := rbac.GrantRoleInProject(newMemberID, "member", project.ID.String()); err != nil {
 			return err
 		}
 	}

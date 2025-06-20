@@ -196,7 +196,7 @@ func (a *httpController) RootLayout(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get pats").WithInternal(err)
 	}
 
-	keyIds := make([]string, len(pats))
+	keyIDs := make([]string, len(pats))
 	totoKeys := make(map[string]toto.Key)
 	for i, pat := range pats {
 		key, err := hexPublicKeyToInTotoKey(pat.PubKey)
@@ -204,7 +204,7 @@ func (a *httpController) RootLayout(ctx core.Context) error {
 			return echo.NewHTTPError(500, "could not convert public key").WithInternal(err)
 		}
 
-		keyIds[i] = key.KeyID
+		keyIDs[i] = key.KeyID
 		totoKeys[key.KeyID] = key
 	}
 
@@ -219,7 +219,7 @@ func (a *httpController) RootLayout(ctx core.Context) error {
 			Steps: []toto.Step{
 				{
 					Type:    "step",
-					PubKeys: keyIds,
+					PubKeys: keyIDs,
 					SupplyChainItem: toto.SupplyChainItem{
 						Name:              "post-commit",
 						ExpectedMaterials: [][]string{{"ALLOW", "*"}}, // there is no way we can know what the materials are
@@ -228,7 +228,7 @@ func (a *httpController) RootLayout(ctx core.Context) error {
 				},
 				{
 					Type:    "step",
-					PubKeys: keyIds,
+					PubKeys: keyIDs,
 					SupplyChainItem: toto.SupplyChainItem{
 						Name:              "build",
 						ExpectedMaterials: [][]string{{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "post-commit"}, {"DISALLOW", "*"}}, // we expect the post-commit step to
@@ -237,7 +237,7 @@ func (a *httpController) RootLayout(ctx core.Context) error {
 				},
 				{
 					Type:    "step",
-					PubKeys: keyIds,
+					PubKeys: keyIDs,
 					SupplyChainItem: toto.SupplyChainItem{
 						Name:              "deploy",
 						ExpectedMaterials: [][]string{{"MATCH", "*", "WITH", "PRODUCTS", "FROM", "build"}, {"DISALLOW", "*"}},
@@ -300,7 +300,7 @@ func (a *httpController) RootLayout(ctx core.Context) error {
 func (a *httpController) Read(ctx core.Context) error {
 	app := core.GetAsset(ctx)
 	// find a link with the corresponding opaque id
-	links, err := a.linkRepository.FindByAssetAndSupplyChainId(app.GetID(), ctx.Param("supplyChainID"))
+	links, err := a.linkRepository.FindByAssetAndSupplyChainID(app.GetID(), ctx.Param("supplyChainID"))
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find in-toto link").WithInternal(err)
 	}

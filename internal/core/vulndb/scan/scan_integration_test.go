@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/integration_tests"
+	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
@@ -172,7 +172,7 @@ func TestScanning(t *testing.T) {
 
 		// create a vulnerability with an accepted state on the default branch in the database
 		dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
-		vulns, err := dependencyVulnRepository.GetByAssetId(nil, asset.ID)
+		vulns, err := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
 		// should be only a single vulnerability
 		assert.Nil(t, err)
 		assert.Len(t, vulns, 1)
@@ -200,7 +200,7 @@ func TestScanning(t *testing.T) {
 		assert.Equal(t, 200, recorder.Code)
 
 		// query the new vulnerability
-		vulns, err = dependencyVulnRepository.GetByAssetId(nil, asset.ID)
+		vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
 		// should be two now
 		assert.Nil(t, err)
 		assert.Len(t, vulns, 2)

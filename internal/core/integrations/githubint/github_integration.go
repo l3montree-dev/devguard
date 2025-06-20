@@ -70,7 +70,7 @@ type GithubIntegration struct {
 
 	orgRepository       core.OrganizationRepository
 	projectRepository   core.ProjectRepository
-	githubClientFactory func(repoId string) (githubClientFacade, error)
+	githubClientFactory func(repoID string) (githubClientFacade, error)
 }
 
 var _ core.ThirdPartyIntegration = &GithubIntegration{}
@@ -107,8 +107,8 @@ func NewGithubIntegration(db core.DB) *GithubIntegration {
 		projectRepository:               projectRepository,
 		orgRepository:                   orgRepository,
 
-		githubClientFactory: func(repoId string) (githubClientFacade, error) {
-			return NewGithubClient(installationIdFromRepositoryID(repoId))
+		githubClientFactory: func(repoID string) (githubClientFacade, error) {
+			return NewGithubClient(installationIDFromRepositoryID(repoID))
 		},
 	}
 }
@@ -229,7 +229,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 		// look for a vuln with such a github ticket id
 		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 		if err != nil {
-			slog.Debug("could not find vuln by ticket id", "err", err, "ticketId", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
+			slog.Debug("could not find vuln by ticket id", "err", err, "ticketID", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 			return nil
 		}
 		action := *event.Action
@@ -296,7 +296,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 		// look for a vuln with such a github ticket id
 		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 		if err != nil {
-			slog.Debug("could not find vuln by ticket id", "err", err, "ticketId", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
+			slog.Debug("could not find vuln by ticket id", "err", err, "ticketID", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 			return nil
 		}
 
@@ -468,8 +468,8 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx core.Context)
 	}
 
 	// add the organization id to the installation
-	orgId := organization.GetID()
-	appInstallation.OrgID = &orgId
+	orgID := organization.GetID()
+	appInstallation.OrgID = &orgID
 	// save the installation to the database
 	err = githubIntegration.githubAppInstallationRepository.Save(nil, &appInstallation)
 	if err != nil {
@@ -482,7 +482,7 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx core.Context)
 	return ctx.JSON(200, "ok")
 }
 
-func installationIdFromRepositoryID(repositoryID string) int {
+func installationIDFromRepositoryID(repositoryID string) int {
 	split := strings.Split(repositoryID, ":")
 	if len(split) != 3 {
 		return 0
@@ -509,7 +509,7 @@ func ownerAndRepoFromRepositoryID(repositoryID string) (string, string, error) {
 }
 
 // the first return value is the global ticket id - a huge number, the second is the ticket number - like #386 you find in github links
-func githubTicketIdToIdAndNumber(id string) (int, int) {
+func githubTicketIDToIDAndNumber(id string) (int, int) {
 	// format: github:123456789/123
 	split := strings.Split(id, "/")
 
@@ -517,7 +517,7 @@ func githubTicketIdToIdAndNumber(id string) (int, int) {
 		return 0, 0
 	}
 
-	ticketId, err := strconv.Atoi(strings.TrimPrefix(split[0], "github:"))
+	ticketID, err := strconv.Atoi(strings.TrimPrefix(split[0], "github:"))
 	if err != nil {
 		return 0, 0
 	}
@@ -527,7 +527,7 @@ func githubTicketIdToIdAndNumber(id string) (int, int) {
 		return 0, 0
 	}
 
-	return ticketId, ticketNumber
+	return ticketID, ticketNumber
 }
 
 func (g *GithubIntegration) HandleEvent(event any) error {
@@ -535,9 +535,9 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
 
-		repoId, err := core.GetRepositoryID(&asset)
+		repoID, err := core.GetRepositoryID(&asset)
 
-		if !strings.HasPrefix(repoId, "github:") {
+		if !strings.HasPrefix(repoID, "github:") {
 			// this integration only handles github repositories.
 			return nil
 		}
@@ -611,23 +611,23 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 			return nil
 		}
 
-		repoId := utils.SafeDereference(asset.RepositoryID)
-		if !strings.HasPrefix(repoId, "github:") || !strings.HasPrefix(*vuln.GetTicketID(), "github:") {
+		repoID := utils.SafeDereference(asset.RepositoryID)
+		if !strings.HasPrefix(repoID, "github:") || !strings.HasPrefix(*vuln.GetTicketID(), "github:") {
 			// this integration only handles github repositories.
 			return nil
 		}
 		// we create a new ticket in github
-		client, err := g.githubClientFactory(repoId)
+		client, err := g.githubClientFactory(repoID)
 		if err != nil {
 			return err
 		}
 
-		owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
+		owner, repo, err := ownerAndRepoFromRepositoryID(repoID)
 		if err != nil {
 			return err
 		}
 
-		_, githubTicketNumber := githubTicketIdToIdAndNumber(*vuln.GetTicketID())
+		_, githubTicketNumber := githubTicketIDToIDAndNumber(*vuln.GetTicketID())
 
 		members, err := org.FetchMembersOfOrganization(event.Ctx)
 		if err != nil {
@@ -685,18 +685,18 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 }
 
 func (g *GithubIntegration) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
-	repoId := utils.SafeDereference(asset.RepositoryID)
-	if !strings.HasPrefix(repoId, "github:") {
+	repoID := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoID, "github:") {
 		// this integration only handles github repositories.
 		return nil
 	}
 
-	owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
+	owner, repo, err := ownerAndRepoFromRepositoryID(repoID)
 	if err != nil {
 		return err
 	}
 
-	client, err := g.githubClientFactory(repoId)
+	client, err := g.githubClientFactory(repoID)
 	if err != nil {
 		return err
 	}
@@ -739,7 +739,7 @@ func (g *GithubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 }
 
 func (g *GithubIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client githubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
-	_, ticketNumber := githubTicketIdToIdAndNumber(*firstPartyVuln.TicketID)
+	_, ticketNumber := githubTicketIDToIDAndNumber(*firstPartyVuln.TicketID)
 
 	expectedIssueState := "closed"
 	if firstPartyVuln.State == models.VulnStateOpen {
@@ -769,7 +769,7 @@ func (g *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, depe
 		return err
 	}
 
-	_, ticketNumber := githubTicketIdToIdAndNumber(*dependencyVuln.TicketID)
+	_, ticketNumber := githubTicketIDToIDAndNumber(*dependencyVuln.TicketID)
 
 	expectedIssueState := vuln.GetExpectedIssueState(asset, dependencyVuln)
 
@@ -786,19 +786,19 @@ func (g *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, depe
 }
 
 func (g *GithubIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
-	repoId := utils.SafeDereference(asset.RepositoryID)
-	if !strings.HasPrefix(repoId, "github:") {
+	repoID := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoID, "github:") {
 		// this integration only handles github repositories.
 		return nil
 	}
 
-	owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
+	owner, repo, err := ownerAndRepoFromRepositoryID(repoID)
 	if err != nil {
 		return err
 	}
 
 	// we create a new ticket in github
-	client, err := g.githubClientFactory(repoId)
+	client, err := g.githubClientFactory(repoID)
 	if err != nil {
 		return err
 	}
@@ -825,7 +825,7 @@ func (g *GithubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	// create an event
 	vulnEvent := models.NewMitigateEvent(vuln.GetID(), vuln.GetType(), userID, justification, map[string]any{
-		"ticketId":  vuln.GetTicketID(),
+		"ticketID":  vuln.GetTicketID(),
 		"ticketURL": vuln.GetTicketURL(),
 	})
 	// save the dependencyVuln and the event in a transaction

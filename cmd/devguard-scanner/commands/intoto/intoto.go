@@ -296,7 +296,7 @@ func newInTotoSetupCommand() *cobra.Command {
 			}
 
 			// use empty materials string to avoid default "." which would result in duplicate materials and products
-			commandString := fmt.Sprintf(`devguard-scanner intoto run --materials="" --step=post-commit --apiURL="%s" --assetName="%s"`, config.RuntimeBaseConfig.ApiURL, config.RuntimeBaseConfig.AssetName)
+			commandString := fmt.Sprintf(`devguard-scanner intoto run --materials="" --step=post-commit --apiURL="%s" --assetName="%s"`, config.RuntimeBaseConfig.APIURL, config.RuntimeBaseConfig.AssetName)
 
 			// check if a git post-commit hook exists
 			if _, err := os.Stat(".git/hooks/post-commit"); os.IsNotExist(err) {

@@ -370,12 +370,12 @@ func (_c *InTotoLinkRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.D
 	return _c
 }
 
-// FindByAssetAndSupplyChainId provides a mock function for the type InTotoLinkRepository
-func (_mock *InTotoLinkRepository) FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainID string) ([]models.InTotoLink, error) {
+// FindByAssetAndSupplyChainID provides a mock function for the type InTotoLinkRepository
+func (_mock *InTotoLinkRepository) FindByAssetAndSupplyChainID(assetID uuid.UUID, supplyChainID string) ([]models.InTotoLink, error) {
 	ret := _mock.Called(assetID, supplyChainID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindByAssetAndSupplyChainId")
+		panic("no return value specified for FindByAssetAndSupplyChainID")
 	}
 
 	var r0 []models.InTotoLink
@@ -398,31 +398,31 @@ func (_mock *InTotoLinkRepository) FindByAssetAndSupplyChainId(assetID uuid.UUID
 	return r0, r1
 }
 
-// InTotoLinkRepository_FindByAssetAndSupplyChainId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetAndSupplyChainId'
-type InTotoLinkRepository_FindByAssetAndSupplyChainId_Call struct {
+// InTotoLinkRepository_FindByAssetAndSupplyChainID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByAssetAndSupplyChainID'
+type InTotoLinkRepository_FindByAssetAndSupplyChainID_Call struct {
 	*mock.Call
 }
 
-// FindByAssetAndSupplyChainId is a helper method to define mock.On call
+// FindByAssetAndSupplyChainID is a helper method to define mock.On call
 //   - assetID
 //   - supplyChainID
-func (_e *InTotoLinkRepository_Expecter) FindByAssetAndSupplyChainId(assetID interface{}, supplyChainID interface{}) *InTotoLinkRepository_FindByAssetAndSupplyChainId_Call {
-	return &InTotoLinkRepository_FindByAssetAndSupplyChainId_Call{Call: _e.mock.On("FindByAssetAndSupplyChainId", assetID, supplyChainID)}
+func (_e *InTotoLinkRepository_Expecter) FindByAssetAndSupplyChainID(assetID interface{}, supplyChainID interface{}) *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call {
+	return &InTotoLinkRepository_FindByAssetAndSupplyChainID_Call{Call: _e.mock.On("FindByAssetAndSupplyChainID", assetID, supplyChainID)}
 }
 
-func (_c *InTotoLinkRepository_FindByAssetAndSupplyChainId_Call) Run(run func(assetID uuid.UUID, supplyChainID string)) *InTotoLinkRepository_FindByAssetAndSupplyChainId_Call {
+func (_c *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call) Run(run func(assetID uuid.UUID, supplyChainID string)) *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(uuid.UUID), args[1].(string))
 	})
 	return _c
 }
 
-func (_c *InTotoLinkRepository_FindByAssetAndSupplyChainId_Call) Return(inTotoLinks []models.InTotoLink, err error) *InTotoLinkRepository_FindByAssetAndSupplyChainId_Call {
+func (_c *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call) Return(inTotoLinks []models.InTotoLink, err error) *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call {
 	_c.Call.Return(inTotoLinks, err)
 	return _c
 }
 
-func (_c *InTotoLinkRepository_FindByAssetAndSupplyChainId_Call) RunAndReturn(run func(assetID uuid.UUID, supplyChainID string) ([]models.InTotoLink, error)) *InTotoLinkRepository_FindByAssetAndSupplyChainId_Call {
+func (_c *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call) RunAndReturn(run func(assetID uuid.UUID, supplyChainID string) ([]models.InTotoLink, error)) *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call {
 	_c.Call.Return(run)
 	return _c
 }

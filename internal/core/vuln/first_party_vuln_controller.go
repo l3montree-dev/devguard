@@ -40,7 +40,7 @@ func (c firstPartyVulnController) ListByOrgPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
 
-	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByOrgIdPaged(
+	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByOrgIDPaged(
 		nil,
 
 		utils.Map(userAllowedProjectIds, func(p models.Project) string {

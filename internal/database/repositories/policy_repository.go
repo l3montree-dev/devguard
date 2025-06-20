@@ -26,7 +26,7 @@ func NewPolicyRepository(db core.DB) *policyRepository {
 	}
 }
 
-func (r *policyRepository) FindByProjectId(projectID uuid.UUID) ([]models.Policy, error) {
+func (r *policyRepository) FindByProjectID(projectID uuid.UUID) ([]models.Policy, error) {
 	// we need to use the project_enabled_policies pivot table to get the policies for a project
 	var policies []models.Policy
 	if err := r.db.Joins("JOIN project_enabled_policies ON project_enabled_policies.policy_id = policies.id").

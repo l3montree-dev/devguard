@@ -78,7 +78,7 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainID string, step string
 		return errors.Wrap(err, "failed to marshal body")
 	}
 
-	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto", config.RuntimeBaseConfig.ApiURL, config.RuntimeBaseConfig.AssetName), bytes.NewBuffer(bodyjson))
+	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodPost, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto", config.RuntimeBaseConfig.APIURL, config.RuntimeBaseConfig.AssetName), bytes.NewBuffer(bodyjson))
 	if err != nil {
 		return errors.Wrap(err, "failed to create request")
 	}
@@ -86,7 +86,7 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainID string, step string
 	req.Header.Set("Content-Type", "application/json")
 	config.SetXAssetHeaders(req)
 	// send the request
-	resp, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.ApiURL).Do(req)
+	resp, err := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL).Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to send request")
 	}

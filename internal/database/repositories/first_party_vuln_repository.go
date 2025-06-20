@@ -114,7 +114,7 @@ func (r *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByProjectID
 	return r.GetFirstPartyVulnsPaged(tx, subQuery, subQueryAssetIDs, pageInfo, search, filter, sort)
 }
 
-func (r *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByOrgIdPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
+func (r *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByOrgIDPaged(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
 
 	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("assets.project_id IN (?)", userAllowedProjectIds)
 

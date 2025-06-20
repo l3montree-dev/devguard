@@ -310,8 +310,8 @@ func (_c *GithubClientFacade_EditIssueLabel_Call) RunAndReturn(run func(ctx cont
 }
 
 // IsCollaboratorInRepository provides a mock function for the type GithubClientFacade
-func (_mock *GithubClientFacade) IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userID int64, opts *github.ListCollaboratorsOptions) (bool, error) {
-	ret := _mock.Called(ctx, owner, repoId, userID, opts)
+func (_mock *GithubClientFacade) IsCollaboratorInRepository(ctx context.Context, owner string, repoID string, userID int64, opts *github.ListCollaboratorsOptions) (bool, error) {
+	ret := _mock.Called(ctx, owner, repoID, userID, opts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IsCollaboratorInRepository")
@@ -320,15 +320,15 @@ func (_mock *GithubClientFacade) IsCollaboratorInRepository(ctx context.Context,
 	var r0 bool
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, int64, *github.ListCollaboratorsOptions) (bool, error)); ok {
-		return returnFunc(ctx, owner, repoId, userID, opts)
+		return returnFunc(ctx, owner, repoID, userID, opts)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, int64, *github.ListCollaboratorsOptions) bool); ok {
-		r0 = returnFunc(ctx, owner, repoId, userID, opts)
+		r0 = returnFunc(ctx, owner, repoID, userID, opts)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, int64, *github.ListCollaboratorsOptions) error); ok {
-		r1 = returnFunc(ctx, owner, repoId, userID, opts)
+		r1 = returnFunc(ctx, owner, repoID, userID, opts)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -343,14 +343,14 @@ type GithubClientFacade_IsCollaboratorInRepository_Call struct {
 // IsCollaboratorInRepository is a helper method to define mock.On call
 //   - ctx
 //   - owner
-//   - repoId
+//   - repoID
 //   - userID
 //   - opts
-func (_e *GithubClientFacade_Expecter) IsCollaboratorInRepository(ctx interface{}, owner interface{}, repoId interface{}, userID interface{}, opts interface{}) *GithubClientFacade_IsCollaboratorInRepository_Call {
-	return &GithubClientFacade_IsCollaboratorInRepository_Call{Call: _e.mock.On("IsCollaboratorInRepository", ctx, owner, repoId, userID, opts)}
+func (_e *GithubClientFacade_Expecter) IsCollaboratorInRepository(ctx interface{}, owner interface{}, repoID interface{}, userID interface{}, opts interface{}) *GithubClientFacade_IsCollaboratorInRepository_Call {
+	return &GithubClientFacade_IsCollaboratorInRepository_Call{Call: _e.mock.On("IsCollaboratorInRepository", ctx, owner, repoID, userID, opts)}
 }
 
-func (_c *GithubClientFacade_IsCollaboratorInRepository_Call) Run(run func(ctx context.Context, owner string, repoId string, userID int64, opts *github.ListCollaboratorsOptions)) *GithubClientFacade_IsCollaboratorInRepository_Call {
+func (_c *GithubClientFacade_IsCollaboratorInRepository_Call) Run(run func(ctx context.Context, owner string, repoID string, userID int64, opts *github.ListCollaboratorsOptions)) *GithubClientFacade_IsCollaboratorInRepository_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(int64), args[4].(*github.ListCollaboratorsOptions))
 	})
@@ -362,7 +362,7 @@ func (_c *GithubClientFacade_IsCollaboratorInRepository_Call) Return(b bool, err
 	return _c
 }
 
-func (_c *GithubClientFacade_IsCollaboratorInRepository_Call) RunAndReturn(run func(ctx context.Context, owner string, repoId string, userID int64, opts *github.ListCollaboratorsOptions) (bool, error)) *GithubClientFacade_IsCollaboratorInRepository_Call {
+func (_c *GithubClientFacade_IsCollaboratorInRepository_Call) RunAndReturn(run func(ctx context.Context, owner string, repoID string, userID int64, opts *github.ListCollaboratorsOptions) (bool, error)) *GithubClientFacade_IsCollaboratorInRepository_Call {
 	_c.Call.Return(run)
 	return _c
 }

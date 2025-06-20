@@ -138,11 +138,11 @@ func (client githubClient) EditIssueLabel(ctx context.Context, owner string, rep
 }
 
 func NewGithubClient(installationID int) (githubClient, error) {
-	appId := os.Getenv("GITHUB_APP_ID")
-	if appId == "" {
+	appID := os.Getenv("GITHUB_APP_ID")
+	if appID == "" {
 		panic("GITHUB_APP_ID is not set")
 	}
-	appIdInt, err := strconv.Atoi(appId)
+	appIDInt, err := strconv.Atoi(appID)
 	if err != nil {
 		return githubClient{}, err
 	}
@@ -150,7 +150,7 @@ func NewGithubClient(installationID int) (githubClient, error) {
 	// Wrap the shared transport for use with the integration ID 1 authenticating with installation ID 99.
 	// itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, 923505, 52040746, "devguard.2024-06-20.private-key.pem")
 	// Or for endpoints that require JWT authentication
-	itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, int64(appIdInt), int64(installationID), os.Getenv("GITHUB_PRIVATE_KEY"))
+	itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, int64(appIDInt), int64(installationID), os.Getenv("GITHUB_PRIVATE_KEY"))
 
 	if err != nil {
 		return githubClient{}, err
@@ -165,12 +165,12 @@ func NewGithubClient(installationID int) (githubClient, error) {
 	}, nil
 }
 
-func (client githubClient) GetRepositoryCollaborators(ctx context.Context, owner string, repoId string, opts *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error) {
-	return client.Repositories.ListCollaborators(ctx, owner, repoId, opts)
+func (client githubClient) GetRepositoryCollaborators(ctx context.Context, owner string, repoID string, opts *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error) {
+	return client.Repositories.ListCollaborators(ctx, owner, repoID, opts)
 }
 
-func (client githubClient) IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userID int64, opts *github.ListCollaboratorsOptions) (bool, error) {
-	collaborators, _, err := client.GetRepositoryCollaborators(ctx, owner, repoId, opts)
+func (client githubClient) IsCollaboratorInRepository(ctx context.Context, owner string, repoID string, userID int64, opts *github.ListCollaboratorsOptions) (bool, error) {
+	collaborators, _, err := client.GetRepositoryCollaborators(ctx, owner, repoID, opts)
 	if err != nil {
 		return false, err
 	}

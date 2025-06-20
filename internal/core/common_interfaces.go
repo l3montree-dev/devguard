@@ -60,7 +60,7 @@ type Verifier interface {
 
 type PolicyRepository interface {
 	common.Repository[uuid.UUID, models.Policy, DB]
-	FindByProjectId(projectID uuid.UUID) ([]models.Policy, error)
+	FindByProjectID(projectID uuid.UUID) ([]models.Policy, error)
 	FindByOrganizationID(organizationID uuid.UUID) ([]models.Policy, error)
 	FindCommunityManagedPolicies() ([]models.Policy, error)
 }
@@ -137,7 +137,7 @@ type DependencyVulnRepository interface {
 	common.Repository[string, models.DependencyVuln, DB]
 
 	GetAllVulnsByAssetID(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	GetAllOpenVulnsByAssetVersionNameAndAssetId(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsByAssetVersionNameAndAssetID(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], map[string]int, error)
 	GetDefaultDependencyVulnsByOrgIDPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
@@ -157,8 +157,8 @@ type FirstPartyVulnRepository interface {
 	Transaction(txFunc func(DB) error) error
 	Begin() DB
 	GetDefaultFirstPartyVulnsByProjectIDPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
-	GetDefaultFirstPartyVulnsByOrgIdPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
-	GetByAssetId(tx DB, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
+	GetDefaultFirstPartyVulnsByOrgIDPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
+	GetByAssetID(tx DB, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
 	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], map[string]int, error)
 	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error
@@ -167,7 +167,7 @@ type FirstPartyVulnRepository interface {
 
 type InTotoLinkRepository interface {
 	common.Repository[uuid.UUID, models.InTotoLink, DB]
-	FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainID string) ([]models.InTotoLink, error)
+	FindByAssetAndSupplyChainID(assetID uuid.UUID, supplyChainID string) ([]models.InTotoLink, error)
 	Save(tx DB, model *models.InTotoLink) error
 	FindBySupplyChainID(supplyChainID string) ([]models.InTotoLink, error)
 }
@@ -330,7 +330,7 @@ type GitLabOauth2TokenRepository interface {
 	FindByUserIDAndProviderID(userID string, providerID string) (*models.GitLabOauth2Token, error)
 	FindByUserID(userID string) ([]models.GitLabOauth2Token, error)
 	Delete(tx DB, tokens []models.GitLabOauth2Token) error
-	DeleteByUserIdAndProviderID(userID string, providerID string) error
+	DeleteByUserIDAndProviderID(userID string, providerID string) error
 	CreateIfNotExists(tokens []*models.GitLabOauth2Token) error
 }
 

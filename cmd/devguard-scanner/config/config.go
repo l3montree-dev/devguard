@@ -33,7 +33,7 @@ import (
 type baseConfig struct {
 	Token     string `json:"token" mapstructure:"token"`
 	AssetName string `json:"assetName" mapstructure:"assetName"`
-	ApiURL    string `json:"apiUrl" mapstructure:"apiUrl"`
+	APIURL    string `json:"apiUrl" mapstructure:"apiUrl"`
 
 	Path       string `json:"path" mapstructure:"path"`
 	FailOnRisk string `json:"failOnRisk" mapstructure:"failOnRisk"`
@@ -79,8 +79,8 @@ func ParseBaseConfig() {
 		panic(err)
 	}
 
-	if RuntimeBaseConfig.ApiURL != "" {
-		RuntimeBaseConfig.ApiURL = sanitizeApiURL(RuntimeBaseConfig.ApiURL)
+	if RuntimeBaseConfig.APIURL != "" {
+		RuntimeBaseConfig.APIURL = sanitizeAPIURL(RuntimeBaseConfig.APIURL)
 	}
 
 	if RuntimeBaseConfig.Path != "" {
@@ -118,7 +118,7 @@ func ParseBaseConfig() {
 
 	slog.Info("running with config",
 		"assetName", RuntimeBaseConfig.AssetName,
-		"apiURL", RuntimeBaseConfig.ApiURL,
+		"apiURL", RuntimeBaseConfig.APIURL,
 		"path", RuntimeBaseConfig.Path,
 		"ref", RuntimeBaseConfig.Ref,
 		"defaultBranch", RuntimeBaseConfig.DefaultBranch,

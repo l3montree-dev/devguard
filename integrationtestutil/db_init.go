@@ -11,7 +11,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-func InitDatabaseContainer(initDbSqlPath string) (core.DB, func()) {
+func InitDatabaseContainer(initDBSQLPath string) (core.DB, func()) {
 	ctx := context.Background()
 
 	dbName := "devguard"
@@ -23,7 +23,7 @@ func InitDatabaseContainer(initDbSqlPath string) (core.DB, func()) {
 		postgres.WithDatabase(dbName),
 		postgres.WithUsername(dbUser),
 		postgres.WithPassword(dbPassword),
-		postgres.WithInitScripts(initDbSqlPath),
+		postgres.WithInitScripts(initDBSQLPath),
 		postgres.BasicWaitStrategies(),
 	)
 

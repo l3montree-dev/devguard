@@ -288,7 +288,7 @@ func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, en
 
 func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error) {
 
-	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetId(nil, assetVersionName, assetID)
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(nil, assetVersionName, assetID)
 	if err != nil {
 		return nil, err
 	}

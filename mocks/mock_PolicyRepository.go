@@ -426,12 +426,12 @@ func (_c *PolicyRepository_FindByOrganizationID_Call) RunAndReturn(run func(orga
 	return _c
 }
 
-// FindByProjectId provides a mock function for the type PolicyRepository
-func (_mock *PolicyRepository) FindByProjectId(projectID uuid.UUID) ([]models.Policy, error) {
+// FindByProjectID provides a mock function for the type PolicyRepository
+func (_mock *PolicyRepository) FindByProjectID(projectID uuid.UUID) ([]models.Policy, error) {
 	ret := _mock.Called(projectID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindByProjectId")
+		panic("no return value specified for FindByProjectID")
 	}
 
 	var r0 []models.Policy
@@ -454,30 +454,30 @@ func (_mock *PolicyRepository) FindByProjectId(projectID uuid.UUID) ([]models.Po
 	return r0, r1
 }
 
-// PolicyRepository_FindByProjectId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByProjectId'
-type PolicyRepository_FindByProjectId_Call struct {
+// PolicyRepository_FindByProjectID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByProjectID'
+type PolicyRepository_FindByProjectID_Call struct {
 	*mock.Call
 }
 
-// FindByProjectId is a helper method to define mock.On call
+// FindByProjectID is a helper method to define mock.On call
 //   - projectID
-func (_e *PolicyRepository_Expecter) FindByProjectId(projectID interface{}) *PolicyRepository_FindByProjectId_Call {
-	return &PolicyRepository_FindByProjectId_Call{Call: _e.mock.On("FindByProjectId", projectID)}
+func (_e *PolicyRepository_Expecter) FindByProjectID(projectID interface{}) *PolicyRepository_FindByProjectID_Call {
+	return &PolicyRepository_FindByProjectID_Call{Call: _e.mock.On("FindByProjectID", projectID)}
 }
 
-func (_c *PolicyRepository_FindByProjectId_Call) Run(run func(projectID uuid.UUID)) *PolicyRepository_FindByProjectId_Call {
+func (_c *PolicyRepository_FindByProjectID_Call) Run(run func(projectID uuid.UUID)) *PolicyRepository_FindByProjectID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
 
-func (_c *PolicyRepository_FindByProjectId_Call) Return(policys []models.Policy, err error) *PolicyRepository_FindByProjectId_Call {
+func (_c *PolicyRepository_FindByProjectID_Call) Return(policys []models.Policy, err error) *PolicyRepository_FindByProjectID_Call {
 	_c.Call.Return(policys, err)
 	return _c
 }
 
-func (_c *PolicyRepository_FindByProjectId_Call) RunAndReturn(run func(projectID uuid.UUID) ([]models.Policy, error)) *PolicyRepository_FindByProjectId_Call {
+func (_c *PolicyRepository_FindByProjectID_Call) RunAndReturn(run func(projectID uuid.UUID) ([]models.Policy, error)) *PolicyRepository_FindByProjectID_Call {
 	_c.Call.Return(run)
 	return _c
 }

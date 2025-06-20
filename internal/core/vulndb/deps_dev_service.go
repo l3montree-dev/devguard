@@ -25,7 +25,7 @@ func NewDepsDevService() depsDevService {
 	}
 }
 
-var depsDevApiURL = "https://api.deps.dev/v3"
+var depsDevAPIURL = "https://api.deps.dev/v3"
 
 func (s *depsDevService) GetProject(ctx context.Context, projectID string) (common.DepsDevProjectResponse, error) {
 	// make sure the projectID (which is usually a github repository url) is url encoded
@@ -35,7 +35,7 @@ func (s *depsDevService) GetProject(ctx context.Context, projectID string) (comm
 		return common.DepsDevProjectResponse{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/projects/%s", depsDevApiURL, projectID), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/projects/%s", depsDevAPIURL, projectID), nil)
 
 	if err != nil {
 		return common.DepsDevProjectResponse{}, err
@@ -90,7 +90,7 @@ func (s *depsDevService) GetVersion(ctx context.Context, ecosystem, packageName,
 		return common.DepsDevVersionResponse{}, err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/systems/%s/packages/%s/versions/%s", depsDevApiURL, ecosystem, packageName, version), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/systems/%s/packages/%s/versions/%s", depsDevAPIURL, ecosystem, packageName, version), nil)
 	if err != nil {
 		return common.DepsDevVersionResponse{}, err
 	}

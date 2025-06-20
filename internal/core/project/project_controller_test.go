@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/l3montree-dev/devguard/integration_tests"
+	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/project"
 	"github.com/l3montree-dev/devguard/internal/database/models"

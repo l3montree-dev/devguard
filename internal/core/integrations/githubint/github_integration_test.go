@@ -97,7 +97,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
-			githubClientFactory: func(repoId string) (githubClientFacade, error) {
+			githubClientFactory: func(repoID string) (githubClientFacade, error) {
 				return mocks.NewGithubClientFacade(t), nil
 			},
 			frontendURL: "http://localhost:3000",
@@ -156,7 +156,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}, nil)
 		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
 
-		githubClientFactory := func(repoId string) (githubClientFacade, error) {
+		githubClientFactory := func(repoID string) (githubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
@@ -244,7 +244,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}
 		expectedEvent.GetArbitraryJSONData()
 
-		githubClientFactory := func(repoId string) (githubClientFacade, error) {
+		githubClientFactory := func(repoID string) (githubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
@@ -294,49 +294,49 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 func TestGithubTicketIdToIdAndNumber(t *testing.T) {
 	t.Run("it should return the correct ticket ID and number for a valid input", func(t *testing.T) {
 		id := "github:123456789/123"
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 123456789, ticketId)
+		assert.Equal(t, 123456789, ticketID)
 		assert.Equal(t, 123, ticketNumber)
 	})
 
 	t.Run("it should return 0, 0 if the input format is invalid (missing slash)", func(t *testing.T) {
 		id := "github:123456789"
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketID)
 		assert.Equal(t, 0, ticketNumber)
 	})
 
 	t.Run("it should return the correct values, even if the prefix is missing", func(t *testing.T) {
 		id := "123456789/123"
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 123456789, ticketId)
+		assert.Equal(t, 123456789, ticketID)
 		assert.Equal(t, 123, ticketNumber)
 	})
 
 	t.Run("it should return 0, 0 if the ticket ID is not a valid integer", func(t *testing.T) {
 		id := "github:abc/123"
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketID)
 		assert.Equal(t, 0, ticketNumber)
 	})
 
 	t.Run("it should return 0, 0 if the ticket number is not a valid integer", func(t *testing.T) {
 		id := "github:123456789/abc"
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketID)
 		assert.Equal(t, 0, ticketNumber)
 	})
 
 	t.Run("it should return 0, 0 if the input is empty", func(t *testing.T) {
 		id := ""
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketID)
 		assert.Equal(t, 0, ticketNumber)
 	})
 }

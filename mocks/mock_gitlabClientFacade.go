@@ -370,8 +370,8 @@ func (_c *GitlabClientFacade_CreateVariable_Call) RunAndReturn(run func(ctx cont
 }
 
 // DeleteProjectHook provides a mock function for the type GitlabClientFacade
-func (_mock *GitlabClientFacade) DeleteProjectHook(ctx context.Context, projectID int, hookId int) (*gitlab.Response, error) {
-	ret := _mock.Called(ctx, projectID, hookId)
+func (_mock *GitlabClientFacade) DeleteProjectHook(ctx context.Context, projectID int, hookID int) (*gitlab.Response, error) {
+	ret := _mock.Called(ctx, projectID, hookID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteProjectHook")
@@ -380,17 +380,17 @@ func (_mock *GitlabClientFacade) DeleteProjectHook(ctx context.Context, projectI
 	var r0 *gitlab.Response
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) (*gitlab.Response, error)); ok {
-		return returnFunc(ctx, projectID, hookId)
+		return returnFunc(ctx, projectID, hookID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, int, int) *gitlab.Response); ok {
-		r0 = returnFunc(ctx, projectID, hookId)
+		r0 = returnFunc(ctx, projectID, hookID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*gitlab.Response)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
-		r1 = returnFunc(ctx, projectID, hookId)
+		r1 = returnFunc(ctx, projectID, hookID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -405,12 +405,12 @@ type GitlabClientFacade_DeleteProjectHook_Call struct {
 // DeleteProjectHook is a helper method to define mock.On call
 //   - ctx
 //   - projectID
-//   - hookId
-func (_e *GitlabClientFacade_Expecter) DeleteProjectHook(ctx interface{}, projectID interface{}, hookId interface{}) *GitlabClientFacade_DeleteProjectHook_Call {
-	return &GitlabClientFacade_DeleteProjectHook_Call{Call: _e.mock.On("DeleteProjectHook", ctx, projectID, hookId)}
+//   - hookID
+func (_e *GitlabClientFacade_Expecter) DeleteProjectHook(ctx interface{}, projectID interface{}, hookID interface{}) *GitlabClientFacade_DeleteProjectHook_Call {
+	return &GitlabClientFacade_DeleteProjectHook_Call{Call: _e.mock.On("DeleteProjectHook", ctx, projectID, hookID)}
 }
 
-func (_c *GitlabClientFacade_DeleteProjectHook_Call) Run(run func(ctx context.Context, projectID int, hookId int)) *GitlabClientFacade_DeleteProjectHook_Call {
+func (_c *GitlabClientFacade_DeleteProjectHook_Call) Run(run func(ctx context.Context, projectID int, hookID int)) *GitlabClientFacade_DeleteProjectHook_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(int), args[2].(int))
 	})
@@ -422,7 +422,7 @@ func (_c *GitlabClientFacade_DeleteProjectHook_Call) Return(response *gitlab.Res
 	return _c
 }
 
-func (_c *GitlabClientFacade_DeleteProjectHook_Call) RunAndReturn(run func(ctx context.Context, projectID int, hookId int) (*gitlab.Response, error)) *GitlabClientFacade_DeleteProjectHook_Call {
+func (_c *GitlabClientFacade_DeleteProjectHook_Call) RunAndReturn(run func(ctx context.Context, projectID int, hookID int) (*gitlab.Response, error)) *GitlabClientFacade_DeleteProjectHook_Call {
 	_c.Call.Return(run)
 	return _c
 }

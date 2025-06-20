@@ -118,7 +118,7 @@ func (c *policyController) GetOrganizationPolicies(ctx core.Context) error {
 
 func (c *policyController) GetProjectPolicies(ctx core.Context) error {
 	project := core.GetProject(ctx)
-	policies, err := c.policyRepository.FindByProjectId(project.ID)
+	policies, err := c.policyRepository.FindByProjectID(project.ID)
 
 	if err != nil {
 		return err
@@ -128,15 +128,15 @@ func (c *policyController) GetProjectPolicies(ctx core.Context) error {
 }
 
 func (c *policyController) GetPolicy(ctx core.Context) error {
-	policyId := ctx.Param("policyId")
+	policyID := ctx.Param("policyID")
 
 	// parse the uuid
-	policyUuid, err := uuid.Parse(policyId)
+	policyUUID, err := uuid.Parse(policyID)
 	if err != nil {
 		return err
 	}
 
-	policy, err := c.policyRepository.Read(policyUuid)
+	policy, err := c.policyRepository.Read(policyUUID)
 
 	if err != nil {
 		return err
@@ -171,10 +171,10 @@ func (c *policyController) CreatePolicy(ctx core.Context) error {
 }
 
 func (c *policyController) UpdatePolicy(ctx core.Context) error {
-	policyId := ctx.Param("policyId")
+	policyID := ctx.Param("policyID")
 
 	// parse the uuid
-	policyUuid, err := uuid.Parse(policyId)
+	policyUUID, err := uuid.Parse(policyID)
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func (c *policyController) UpdatePolicy(ctx core.Context) error {
 
 	// create a new policy model
 	policyModel := models.Policy{
-		ID:             policyUuid,
+		ID:             policyUUID,
 		Rego:           policy.Rego,
 		Description:    policy.Description,
 		Title:          policy.Title,
@@ -204,16 +204,16 @@ func (c *policyController) UpdatePolicy(ctx core.Context) error {
 }
 
 func (c *policyController) DeletePolicy(ctx core.Context) error {
-	policyId := ctx.Param("policyId")
+	policyID := ctx.Param("policyID")
 
 	// parse the uuid
-	policyUuid, err := uuid.Parse(policyId)
+	policyUUID, err := uuid.Parse(policyID)
 	if err != nil {
 		return err
 	}
 
 	// delete the policy
-	if err := c.policyRepository.Delete(nil, policyUuid); err != nil {
+	if err := c.policyRepository.Delete(nil, policyUUID); err != nil {
 		return err
 	}
 
@@ -221,18 +221,18 @@ func (c *policyController) DeletePolicy(ctx core.Context) error {
 }
 
 func (c *policyController) EnablePolicyForProject(ctx core.Context) error {
-	policyId := ctx.Param("policyId")
+	policyID := ctx.Param("policyID")
 
 	project := core.GetProject(ctx)
 
 	// parse the uuid
-	policyUuid, err := uuid.Parse(policyId)
+	policyUUID, err := uuid.Parse(policyID)
 	if err != nil {
 		return err
 	}
 
 	// enable the policy for the project
-	if err := c.projectRepository.EnablePolicyForProject(nil, project.ID, policyUuid); err != nil {
+	if err := c.projectRepository.EnablePolicyForProject(nil, project.ID, policyUUID); err != nil {
 		return err
 	}
 
@@ -240,10 +240,10 @@ func (c *policyController) EnablePolicyForProject(ctx core.Context) error {
 }
 
 func (c *policyController) DisablePolicyForProject(ctx core.Context) error {
-	policyId := ctx.Param("policyId")
+	policyID := ctx.Param("policyID")
 
 	// parse the uuid
-	policyUuid, err := uuid.Parse(policyId)
+	policyUUID, err := uuid.Parse(policyID)
 	if err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func (c *policyController) DisablePolicyForProject(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
 	// disable the policy for the project
-	if err := c.projectRepository.DisablePolicyForProject(nil, project.ID, policyUuid); err != nil {
+	if err := c.projectRepository.DisablePolicyForProject(nil, project.ID, policyUUID); err != nil {
 		return err
 	}
 

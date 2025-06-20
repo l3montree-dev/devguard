@@ -40,7 +40,7 @@ type DependencyVulnDTO struct {
 	Priority              *int             `json:"priority"`
 	LastDetected          time.Time        `json:"lastDetected"`
 	CreatedAt             time.Time        `json:"createdAt"`
-	TicketID              *string          `json:"ticketId"`
+	TicketID              *string          `json:"ticketID"`
 	TicketURL             *string          `json:"ticketUrl"`
 	ManualTicketCreation  bool             `json:"manualTicketCreation"`
 

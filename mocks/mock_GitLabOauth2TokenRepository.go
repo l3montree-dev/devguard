@@ -128,12 +128,12 @@ func (_c *GitLabOauth2TokenRepository_Delete_Call) RunAndReturn(run func(tx core
 	return _c
 }
 
-// DeleteByUserIdAndProviderID provides a mock function for the type GitLabOauth2TokenRepository
-func (_mock *GitLabOauth2TokenRepository) DeleteByUserIdAndProviderID(userID string, providerID string) error {
+// DeleteByUserIDAndProviderID provides a mock function for the type GitLabOauth2TokenRepository
+func (_mock *GitLabOauth2TokenRepository) DeleteByUserIDAndProviderID(userID string, providerID string) error {
 	ret := _mock.Called(userID, providerID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for DeleteByUserIdAndProviderID")
+		panic("no return value specified for DeleteByUserIDAndProviderID")
 	}
 
 	var r0 error
@@ -145,31 +145,31 @@ func (_mock *GitLabOauth2TokenRepository) DeleteByUserIdAndProviderID(userID str
 	return r0
 }
 
-// GitLabOauth2TokenRepository_DeleteByUserIdAndProviderID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByUserIdAndProviderID'
-type GitLabOauth2TokenRepository_DeleteByUserIdAndProviderID_Call struct {
+// GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByUserIDAndProviderID'
+type GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call struct {
 	*mock.Call
 }
 
-// DeleteByUserIdAndProviderID is a helper method to define mock.On call
+// DeleteByUserIDAndProviderID is a helper method to define mock.On call
 //   - userID
 //   - providerID
-func (_e *GitLabOauth2TokenRepository_Expecter) DeleteByUserIdAndProviderID(userID interface{}, providerID interface{}) *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderID_Call {
-	return &GitLabOauth2TokenRepository_DeleteByUserIdAndProviderID_Call{Call: _e.mock.On("DeleteByUserIdAndProviderID", userID, providerID)}
+func (_e *GitLabOauth2TokenRepository_Expecter) DeleteByUserIDAndProviderID(userID interface{}, providerID interface{}) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
+	return &GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call{Call: _e.mock.On("DeleteByUserIDAndProviderID", userID, providerID)}
 }
 
-func (_c *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderID_Call) Run(run func(userID string, providerID string)) *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderID_Call {
+func (_c *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call) Run(run func(userID string, providerID string)) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string), args[1].(string))
 	})
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderID_Call) Return(err error) *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderID_Call {
+func (_c *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call) Return(err error) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
 	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderID_Call) RunAndReturn(run func(userID string, providerID string) error) *GitLabOauth2TokenRepository_DeleteByUserIdAndProviderID_Call {
+func (_c *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call) RunAndReturn(run func(userID string, providerID string) error) *GitLabOauth2TokenRepository_DeleteByUserIDAndProviderID_Call {
 	_c.Call.Return(run)
 	return _c
 }

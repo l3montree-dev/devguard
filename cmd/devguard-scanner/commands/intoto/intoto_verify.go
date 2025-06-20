@@ -64,9 +64,9 @@ func verify(cmd *cobra.Command, args []string) error {
 	}
 
 	// download the layout
-	c := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.ApiURL)
+	c := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL)
 
-	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/root.layout.json", config.RuntimeBaseConfig.ApiURL, config.RuntimeBaseConfig.AssetName), nil)
+	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/root.layout.json", config.RuntimeBaseConfig.APIURL, config.RuntimeBaseConfig.AssetName), nil)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func verify(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not create temp dir")
 	}
 
-	err = downloadSupplyChainLinks(cmd.Context(), c, linkDir, config.RuntimeBaseConfig.ApiURL, config.RuntimeBaseConfig.AssetName, config.RuntimeInTotoConfig.SupplyChainID)
+	err = downloadSupplyChainLinks(cmd.Context(), c, linkDir, config.RuntimeBaseConfig.APIURL, config.RuntimeBaseConfig.AssetName, config.RuntimeInTotoConfig.SupplyChainID)
 	if err != nil {
 		return errors.Wrap(err, "could not download supply chain links")
 	}
