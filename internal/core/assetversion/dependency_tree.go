@@ -136,7 +136,7 @@ func escapeAtSign(pURL string) string {
 	return strings.ReplaceAll(pURL, "@", "\\@")
 }
 
-func (t *tree) RenderToMermaid() string {
+func (tree *tree) RenderToMermaid() string {
 	//basic string to tell markdown that we have a mermaid flow chart with given parameters
 	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n"
 
@@ -179,7 +179,7 @@ func (t *tree) RenderToMermaid() string {
 		}
 	}
 
-	renderPaths(t.Root)
+	renderPaths(tree.Root)
 
 	return "```" + builder.String() + "\nclassDef default stroke-width:2px\n```\n"
 }

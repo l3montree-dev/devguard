@@ -89,10 +89,10 @@ func (p *PatController) RevokeByPrivateKey(c core.Context) error {
 }
 
 func (p *PatController) Delete(c core.Context) error {
-	tokenId := core.SanitizeParam(c.Param("tokenId"))
+	tokenID := core.SanitizeParam(c.Param("tokenID"))
 
 	// check if the current user is allowed to delete the token
-	pat, err := p.patRepository.Read(uuid.MustParse(tokenId))
+	pat, err := p.patRepository.Read(uuid.MustParse(tokenID))
 	if err != nil {
 		return echo.NewHTTPError(500, err.Error())
 	}
@@ -100,7 +100,7 @@ func (p *PatController) Delete(c core.Context) error {
 	if pat.UserID.String() != core.GetSession(c).GetUserID() {
 		return echo.NewHTTPError(403, "not allowed to delete this token")
 	}
-	err = p.patRepository.Delete(nil, uuid.MustParse(tokenId))
+	err = p.patRepository.Delete(nil, uuid.MustParse(tokenID))
 
 	if err != nil {
 		return echo.NewHTTPError(500, err.Error())

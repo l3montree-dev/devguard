@@ -404,7 +404,7 @@ func getGitlabAccessTokenFromOryIdentity(oauth2Endpoints map[string]*GitlabOauth
 			continue
 		}
 
-		gitlabUserIdInt, err := strconv.Atoi(provider["subject"].(string))
+		gitlabUserIDInt, err := strconv.Atoi(provider["subject"].(string))
 		if err != nil {
 			slog.Error("could not convert gitlab user id to int", "err", err)
 			continue
@@ -414,7 +414,7 @@ func getGitlabAccessTokenFromOryIdentity(oauth2Endpoints map[string]*GitlabOauth
 			AccessToken:  provider["initial_access_token"].(string),
 			RefreshToken: provider["initial_refresh_token"].(string),
 			BaseURL:      conf.GitlabBaseURL,
-			GitLabUserID: gitlabUserIdInt,
+			GitLabUserID: gitlabUserIDInt,
 			Scopes:       "read_api",                         // I know that!
 			Expiry:       creds.UpdatedAt.Add(2 * time.Hour), // this is a guess, we don't know the expiry time
 		}

@@ -24,22 +24,22 @@ func TestGetPubKeyUsingFingerprint(t *testing.T) {
 		patService := NewPatService(patMock)
 
 		//pubKey := "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f2961892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"
-		pubKey_X := "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f296"
-		pubKey_Y := "1892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"
+		pubKeyX := "b7c43ec092437bee964bb0b4babb017035db0fec3dae273254d1a0eed2c1f296"
+		pubKeyY := "1892101c1f186ff599d16574a9d5386660b52ad88224c8a8c010e1e2572d9df5"
 
 		fingerprint := "fffdeb60-7eb8-45a5-aaaa-35e051c2eeb6"
 
-		pubKeyCheck, _, _, err := patService.getPubKeyAndUserIdUsingFingerprint(fingerprint)
+		pubKeyCheck, _, _, err := patService.getPubKeyAndUserIDUsingFingerprint(fingerprint)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if pubKey_X != hex.EncodeToString(pubKeyCheck.X.Bytes()) {
-			t.Fatalf("expected %s, got %s", pubKey_X, hex.EncodeToString(pubKeyCheck.X.Bytes()))
+		if pubKeyX != hex.EncodeToString(pubKeyCheck.X.Bytes()) {
+			t.Fatalf("expected %s, got %s", pubKeyX, hex.EncodeToString(pubKeyCheck.X.Bytes()))
 		}
 
-		if pubKey_Y != hex.EncodeToString(pubKeyCheck.Y.Bytes()) {
-			t.Fatalf("expected %s, got %s", pubKey_Y, hex.EncodeToString(pubKeyCheck.Y.Bytes()))
+		if pubKeyY != hex.EncodeToString(pubKeyCheck.Y.Bytes()) {
+			t.Fatalf("expected %s, got %s", pubKeyY, hex.EncodeToString(pubKeyCheck.Y.Bytes()))
 		}
 	})
 }

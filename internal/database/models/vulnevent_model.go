@@ -73,50 +73,50 @@ type VulnEventDetail struct {
 	URI              string `json:"uri"`
 }
 
-func (e *VulnEvent) GetArbitraryJSONData() map[string]any {
+func (event *VulnEvent) GetArbitraryJSONData() map[string]any {
 	// parse the additional data
-	if e.ArbitraryJSONData == "" {
+	if event.ArbitraryJSONData == "" {
 		return make(map[string]any)
 	}
-	if e.arbitraryJSONData == nil {
-		e.arbitraryJSONData = make(map[string]any)
-		err := json.Unmarshal([]byte(e.ArbitraryJSONData), &e.arbitraryJSONData)
+	if event.arbitraryJSONData == nil {
+		event.arbitraryJSONData = make(map[string]any)
+		err := json.Unmarshal([]byte(event.ArbitraryJSONData), &event.arbitraryJSONData)
 		if err != nil {
-			slog.Error("could not parse additional data", "err", err, "dependencyVulnID", e.ID)
+			slog.Error("could not parse additional data", "err", err, "dependencyVulnID", event.ID)
 		}
 	}
-	return e.arbitraryJSONData
+	return event.arbitraryJSONData
 }
 
-func (e *VulnEvent) SetArbitraryJSONData(data map[string]any) {
-	e.arbitraryJSONData = data
+func (event *VulnEvent) SetArbitraryJSONData(data map[string]any) {
+	event.arbitraryJSONData = data
 	// parse the additional data
-	dataBytes, err := json.Marshal(e.arbitraryJSONData)
+	dataBytes, err := json.Marshal(event.arbitraryJSONData)
 	if err != nil {
-		slog.Error("could not marshal additional data", "err", err, "dependencyVulnID", e.ID)
+		slog.Error("could not marshal additional data", "err", err, "dependencyVulnID", event.ID)
 	}
-	e.ArbitraryJSONData = string(dataBytes)
+	event.ArbitraryJSONData = string(dataBytes)
 }
 func (m VulnEvent) TableName() string {
 	return "vuln_events"
 }
 
-func (e VulnEvent) Apply(vuln Vuln) {
-	switch e.Type {
+func (event VulnEvent) Apply(vuln Vuln) {
+	switch event.Type {
 	case EventTypeDetectedOnAnotherBranch:
 		// do nothing
 		return
 	case EventTypeAddedScanner:
-		scannerID, ok := (e.GetArbitraryJSONData()["scannerIDs"]).(string)
+		scannerID, ok := (event.GetArbitraryJSONData()["scannerIDs"]).(string)
 		if !ok {
-			slog.Error("could not parse scanner id", "dependencyVulnID", e.VulnID)
+			slog.Error("could not parse scanner id", "dependencyVulnID", event.VulnID)
 			return
 		}
 		vuln.AddScannerID(scannerID)
 	case EventTypeRemovedScanner:
-		scannerID, ok := (e.GetArbitraryJSONData()["scannerIDs"]).(string)
+		scannerID, ok := (event.GetArbitraryJSONData()["scannerIDs"]).(string)
 		if !ok {
-			slog.Error("could not parse scanner id", "dependencyVulnID", e.VulnID)
+			slog.Error("could not parse scanner id", "dependencyVulnID", event.VulnID)
 			return
 		}
 		vuln.RemoveScannerID(scannerID)
@@ -126,9 +126,9 @@ func (e VulnEvent) Apply(vuln Vuln) {
 		vuln.SetState(VulnStateOpen)
 	case EventTypeDetected:
 		vuln.SetState(VulnStateOpen)
-		f, ok := (e.GetArbitraryJSONData()["risk"]).(float64)
+		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
 		if !ok {
-			slog.Error("could not parse risk assessment", "dependencyVulnID", e.VulnID)
+			slog.Error("could not parse risk assessment", "dependencyVulnID", event.VulnID)
 			return
 		}
 		vuln.SetRawRiskAssessment(f)
@@ -140,9 +140,9 @@ func (e VulnEvent) Apply(vuln Vuln) {
 	case EventTypeMarkedForTransfer:
 		vuln.SetState(VulnStateMarkedForTransfer)
 	case EventTypeRawRiskAssessmentUpdated:
-		f, ok := (e.GetArbitraryJSONData()["risk"]).(float64)
+		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
 		if !ok {
-			slog.Error("could not parse risk assessment", "dependencyVulnID", e.VulnID)
+			slog.Error("could not parse risk assessment", "dependencyVulnID", event.VulnID)
 			return
 		}
 		vuln.SetRawRiskAssessment(f)
@@ -291,8 +291,8 @@ func NewRemovedScannerEvent(vulnID string, vulnType VulnType, userID string, sca
 	return ev
 }
 
-func (ev VulnEvent) IsScanUnreleatedEvent() bool {
-	switch ev.Type {
+func (event VulnEvent) IsScanUnreleatedEvent() bool {
+	switch event.Type {
 	case EventTypeAddedScanner, EventTypeRemovedScanner, EventTypeDetectedOnAnotherBranch, EventTypeRawRiskAssessmentUpdated:
 		return false
 	default:

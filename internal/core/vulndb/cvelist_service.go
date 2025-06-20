@@ -224,7 +224,7 @@ func (s *cvelistService) Mirror() error {
 
 		batch := zipReader.File[i:end]
 		group.Go(func() error {
-			cve2cpeId := make(map[string][]string)
+			cve2cpeID := make(map[string][]string)
 			cpeMatch := make([]models.CPEMatch, 0)
 
 			for _, file := range batch {
@@ -248,11 +248,11 @@ func (s *cvelistService) Mirror() error {
 				matches := generateCPE(cvelistJSON)
 				cpeMatch = append(cpeMatch, matches...)
 				for _, match := range matches {
-					if _, ok := cve2cpeId[cvelistJSON.CveMetadata.CveID]; !ok {
-						cve2cpeId[cvelistJSON.CveMetadata.CveID] = make([]string, 0)
+					if _, ok := cve2cpeID[cvelistJSON.CveMetadata.CveID]; !ok {
+						cve2cpeID[cvelistJSON.CveMetadata.CveID] = make([]string, 0)
 					}
 					// check if id is already in the list
-					cve2cpeId[cvelistJSON.CveMetadata.CveID] = append(cve2cpeId[cvelistJSON.CveMetadata.CveID], match.CalculateHash())
+					cve2cpeID[cvelistJSON.CveMetadata.CveID] = append(cve2cpeID[cvelistJSON.CveMetadata.CveID], match.CalculateHash())
 				}
 			}
 
@@ -275,7 +275,7 @@ func (s *cvelistService) Mirror() error {
 			}
 
 			// save the cve to cpe mapping
-			for cveID, cpeIds := range cve2cpeId {
+			for cveID, cpeIds := range cve2cpeID {
 				for i := 0; i < len(cpeIds); i += 1000 {
 					end := i + 1000
 					if end > len(cpeIds) {

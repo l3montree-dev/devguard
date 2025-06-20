@@ -537,13 +537,13 @@ func isGitlabUserAuthorized(event *gitlab.IssueCommentEvent, client core.GitlabC
 	return client.IsProjectMember(context.TODO(), event.ProjectID, event.User.ID, nil)
 }
 
-func extractIntegrationIdFromRepoId(repoID string) (uuid.UUID, error) {
+func extractIntegrationIDFromRepoID(repoID string) (uuid.UUID, error) {
 	// the repo id is formatted like this:
 	// gitlab:<integration id>:<project id>
 	return uuid.Parse(strings.Split(repoID, ":")[1])
 }
 
-func extractProjectIdFromRepoId(repoID string) (int, error) {
+func extractProjectIdFromRepoID(repoID string) (int, error) {
 	// the repo id is formatted like this:
 	// gitlab:<integration id>:<project id>
 	return strconv.Atoi(strings.Split(repoID, ":")[2])
@@ -610,7 +610,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 		accessToken = token.AccessToken
 		gitlabURL = token.BaseURL
 	case strings.HasPrefix(repoID, "gitlab:"):
-		integrationUUID, err := extractIntegrationIdFromRepoId(repoID)
+		integrationUUID, err := extractIntegrationIDFromRepoID(repoID)
 		if err != nil {
 			return errors.Wrap(err, "could not extract integration id from repo id")
 		}
@@ -630,7 +630,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 		ctx.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		ctx.Response().WriteHeader(http.StatusOK) //nolint:errcheck
 
-		projectIDInt, err = extractProjectIdFromRepoId(repoID)
+		projectIDInt, err = extractProjectIdFromRepoID(repoID)
 		if err != nil {
 			return errors.Wrap(err, "could not extract project id from repo id")
 		}
@@ -1036,7 +1036,7 @@ var notConnectedError = errors.New("not connected to gitlab")
 
 func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.GitlabClientFacade, int, error) {
 	if asset.RepositoryID != nil && strings.HasPrefix(*asset.RepositoryID, "gitlab:") {
-		integrationUUID, err := extractIntegrationIdFromRepoId(*asset.RepositoryID)
+		integrationUUID, err := extractIntegrationIDFromRepoID(*asset.RepositoryID)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to extract integration id from repo id: %w", err)
 		}
@@ -1045,7 +1045,7 @@ func (g *GitlabIntegration) getClientBasedOnAsset(asset models.Asset) (core.Gitl
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to create gitlab client: %w", err)
 		}
-		projectID, err := extractProjectIdFromRepoId(*asset.RepositoryID)
+		projectID, err := extractProjectIdFromRepoID(*asset.RepositoryID)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to extract project id from repo id: %w", err)
 		}

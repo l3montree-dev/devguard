@@ -47,7 +47,7 @@ func NewHTTPController(repository core.OrganizationRepository, orgService core.O
 	}
 }
 
-func (o *httpController) Create(ctx core.Context) error {
+func (controller *httpController) Create(ctx core.Context) error {
 
 	var req createRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -63,7 +63,7 @@ func (o *httpController) Create(ctx core.Context) error {
 		return echo.NewHTTPError(400, "slug is required")
 	}
 
-	err := o.orgService.CreateOrganization(ctx, organization)
+	err := controller.orgService.CreateOrganization(ctx, organization)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (o *httpController) Create(ctx core.Context) error {
 	return ctx.JSON(200, organization)
 }
 
-func (o *httpController) Update(ctx core.Context) error {
+func (controller *httpController) Update(ctx core.Context) error {
 	organization := core.GetOrg(ctx)
 	members, err := FetchMembersOfOrganization(ctx)
 	if err != nil {
@@ -95,7 +95,7 @@ func (o *httpController) Update(ctx core.Context) error {
 	}
 
 	if updated {
-		err := o.organizationRepository.Update(nil, &organization)
+		err := controller.organizationRepository.Update(nil, &organization)
 		if err != nil {
 			return echo.NewHTTPError(500, "could not update organization").WithInternal(err)
 		}
@@ -109,12 +109,12 @@ func (o *httpController) Update(ctx core.Context) error {
 	return ctx.JSON(200, resp)
 }
 
-func (o *httpController) Delete(ctx core.Context) error {
+func (controller *httpController) Delete(ctx core.Context) error {
 	// get the id of the organization
 	organizationID := core.GetOrg(ctx).GetID()
 
 	// delete the organization
-	err := o.organizationRepository.Delete(nil, organizationID)
+	err := controller.organizationRepository.Delete(nil, organizationID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not delete organization").WithInternal(err)
 	}
@@ -122,14 +122,14 @@ func (o *httpController) Delete(ctx core.Context) error {
 	return ctx.NoContent(200)
 }
 
-func (c *httpController) ContentTree(ctx core.Context) error {
+func (controller *httpController) ContentTree(ctx core.Context) error {
 	// get the whole content tree of the organization
 	// this means all projects and their corresponding assets
 
 	// get the organization from the context
 	organization := core.GetOrg(ctx)
 
-	ps, err := c.projectService.ListAllowedProjects(ctx)
+	ps, err := controller.projectService.ListAllowedProjects(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
@@ -138,10 +138,10 @@ func (c *httpController) ContentTree(ctx core.Context) error {
 		return p.ID.String()
 	})
 
-	return ctx.JSON(200, c.organizationRepository.ContentTree(organization.GetID(), projects))
+	return ctx.JSON(200, controller.organizationRepository.ContentTree(organization.GetID(), projects))
 }
 
-func (c *httpController) AcceptInvitation(ctx core.Context) error {
+func (controller *httpController) AcceptInvitation(ctx core.Context) error {
 	// get the code and the org id from the path
 	var req acceptInvitationRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -155,7 +155,7 @@ func (c *httpController) AcceptInvitation(ctx core.Context) error {
 	code := req.Code
 
 	// find the invitation
-	invitation, err := c.invitationRepository.FindByCode(code)
+	invitation, err := controller.invitationRepository.FindByCode(code)
 	if err != nil {
 		return echo.NewHTTPError(404, "invitation not found").WithInternal(err)
 	}
@@ -177,7 +177,7 @@ func (c *httpController) AcceptInvitation(ctx core.Context) error {
 	}
 
 	// get the rbac from the context
-	rbac := c.rbacProvider.GetDomainRBAC((invitation.OrganizationID).String())
+	rbac := controller.rbacProvider.GetDomainRBAC((invitation.OrganizationID).String())
 	// grant the user the role of member
 	err = rbac.GrantRole(userID, "member")
 	if err != nil {
@@ -185,7 +185,7 @@ func (c *httpController) AcceptInvitation(ctx core.Context) error {
 	}
 
 	// delete the invitation
-	err = c.invitationRepository.Delete(nil, invitation.ID)
+	err = controller.invitationRepository.Delete(nil, invitation.ID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not delete invitation").WithInternal(err)
 	}
@@ -195,7 +195,7 @@ func (c *httpController) AcceptInvitation(ctx core.Context) error {
 	)
 }
 
-func (c *httpController) InviteMember(ctx core.Context) error {
+func (controller *httpController) InviteMember(ctx core.Context) error {
 	// we expect an email address in the request.
 	// afterwards we create a new invitation model and a code corresponding to the invitation
 	var req inviteRequest
@@ -217,7 +217,7 @@ func (c *httpController) InviteMember(ctx core.Context) error {
 	}
 
 	// save the model
-	err := c.invitationRepository.Save(nil, &model)
+	err := controller.invitationRepository.Save(nil, &model)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not save invitation").WithInternal(err)
 	}
@@ -225,7 +225,7 @@ func (c *httpController) InviteMember(ctx core.Context) error {
 	return ctx.JSON(200, model) // for now return the model - later on we should send an email
 }
 
-func (c *httpController) ChangeRole(ctx core.Context) error {
+func (controller *httpController) ChangeRole(ctx core.Context) error {
 	// get the user id from the request
 	var req changeRoleRequest
 
@@ -256,7 +256,7 @@ func (c *httpController) ChangeRole(ctx core.Context) error {
 	return ctx.NoContent(200)
 }
 
-func (c *httpController) RemoveMember(ctx core.Context) error {
+func (controller *httpController) RemoveMember(ctx core.Context) error {
 	// get the user id from the request
 	userID := ctx.Param("userID")
 
@@ -268,7 +268,7 @@ func (c *httpController) RemoveMember(ctx core.Context) error {
 	rbac.RevokeRole(userID, "admin")  // nolint:errcheck// we do not care if the user is not an admin
 
 	// remove member from all projects
-	projects, err := c.projectService.ListProjectsByOrganizationID(core.GetOrg(ctx).GetID())
+	projects, err := controller.projectService.ListProjectsByOrganizationID(core.GetOrg(ctx).GetID())
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
@@ -353,7 +353,7 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 	return users, nil
 }
 
-func (o *httpController) Members(ctx core.Context) error {
+func (controller *httpController) Members(ctx core.Context) error {
 	users, err := FetchMembersOfOrganization(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
@@ -362,7 +362,7 @@ func (o *httpController) Members(ctx core.Context) error {
 	return ctx.JSON(200, users)
 }
 
-func (o *httpController) Read(ctx core.Context) error {
+func (controller *httpController) Read(ctx core.Context) error {
 	// get the organization from the context
 	organization := core.GetOrg(ctx)
 	// fetch the regular members of the current organization
@@ -380,11 +380,11 @@ func (o *httpController) Read(ctx core.Context) error {
 	return ctx.JSON(200, resp)
 }
 
-func (o *httpController) List(ctx core.Context) error {
+func (controller *httpController) List(ctx core.Context) error {
 	// get all organizations the user has access to
 	userID := core.GetSession(ctx).GetUserID()
 
-	domains, err := o.rbacProvider.DomainsOfUser(userID)
+	domains, err := controller.rbacProvider.DomainsOfUser(userID)
 
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get domains of user").WithInternal(err)
@@ -401,7 +401,7 @@ func (o *httpController) List(ctx core.Context) error {
 	}
 
 	// get the organizations from the database
-	organizations, err := o.organizationRepository.List(organizationIDs)
+	organizations, err := controller.organizationRepository.List(organizationIDs)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read organizations").WithInternal(err)
 	}
@@ -412,7 +412,7 @@ func (o *httpController) List(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get organizations from third party integrations").WithInternal(err)
 	}
 	// make sure, that the third party organizations exists inside the database
-	if err := o.organizationRepository.Upsert(utils.Ptr(utils.Map(orgs, utils.Ptr)), []clause.Column{
+	if err := controller.organizationRepository.Upsert(utils.Ptr(utils.Map(orgs, utils.Ptr)), []clause.Column{
 		{Name: "external_entity_provider_id"},
 	}, nil); err != nil {
 		return echo.NewHTTPError(500, "could not ensure third party organizations exist").WithInternal(err)
@@ -421,7 +421,7 @@ func (o *httpController) List(ctx core.Context) error {
 	return ctx.JSON(200, append(organizations, orgs...))
 }
 
-func (o *httpController) Metrics(ctx core.Context) error {
+func (controller *httpController) Metrics(ctx core.Context) error {
 	owner, err := core.GetRBAC(ctx).GetOwnerOfOrganization()
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get owner of organization").WithInternal(err)
@@ -429,7 +429,7 @@ func (o *httpController) Metrics(ctx core.Context) error {
 	return ctx.JSON(200, map[string]string{"ownerId": owner})
 }
 
-func (o *httpController) GetConfigFile(ctx core.Context) error {
+func (controller *httpController) GetConfigFile(ctx core.Context) error {
 	organization := core.GetOrg(ctx)
 	configID := ctx.Param("config-file")
 

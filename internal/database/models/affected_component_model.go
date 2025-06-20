@@ -56,19 +56,19 @@ func (affectedComponent AffectedComponent) TableName() string {
 	return "affected_components"
 }
 
-func (a AffectedComponent) CalculateHash() string {
+func (affectedComponent AffectedComponent) CalculateHash() string {
 	toHash := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%s/%s/%s",
-		a.PurlWithoutVersion,
-		a.Ecosystem,
-		a.Name,
-		utils.SafeDereference(a.Namespace),
-		utils.SafeDereference(a.Qualifiers),
-		utils.SafeDereference(a.Subpath),
-		utils.SafeDereference(a.Version),
-		utils.SafeDereference(a.SemverIntroduced),
-		utils.SafeDereference(a.SemverFixed),
-		utils.SafeDereference(a.VersionIntroduced),
-		utils.SafeDereference(a.VersionFixed),
+		affectedComponent.PurlWithoutVersion,
+		affectedComponent.Ecosystem,
+		affectedComponent.Name,
+		utils.SafeDereference(affectedComponent.Namespace),
+		utils.SafeDereference(affectedComponent.Qualifiers),
+		utils.SafeDereference(affectedComponent.Subpath),
+		utils.SafeDereference(affectedComponent.Version),
+		utils.SafeDereference(affectedComponent.SemverIntroduced),
+		utils.SafeDereference(affectedComponent.SemverFixed),
+		utils.SafeDereference(affectedComponent.VersionIntroduced),
+		utils.SafeDereference(affectedComponent.VersionFixed),
 	)
 
 	hash := sha256.Sum256([]byte(toHash))

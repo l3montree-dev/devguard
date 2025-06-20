@@ -47,21 +47,21 @@ func NewAssetVersionRepository(db core.DB) *assetVersionRepository {
 	}
 }
 
-func (a *assetVersionRepository) All() ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) All() ([]models.AssetVersion, error) {
 	var result []models.AssetVersion
 
-	err := a.db.Model(models.AssetVersion{}).Preload("Asset").Find(&result).Error
+	err := repository.db.Model(models.AssetVersion{}).Preload("Asset").Find(&result).Error
 	return result, err
 }
 
-func (a *assetVersionRepository) Read(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) Read(assetVersionName string, assetID uuid.UUID) (models.AssetVersion, error) {
 	var asset models.AssetVersion
-	err := a.db.First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
+	err := repository.db.First(&asset, "name = ? AND asset_id = ?", assetVersionName, assetID).Error
 	return asset, err
 }
 
-func (a *assetVersionRepository) Delete(tx core.DB, assetVersion *models.AssetVersion) error {
-	err := a.db.Delete(assetVersion).Error //Call db delete function with the provided asset version
+func (repository *assetVersionRepository) Delete(tx core.DB, assetVersion *models.AssetVersion) error {
+	err := repository.db.Delete(assetVersion).Error //Call db delete function with the provided asset version
 	if err != nil {
 		slog.Error("error when deleting asset in database", "err", err)
 		return err
@@ -70,27 +70,27 @@ func (a *assetVersionRepository) Delete(tx core.DB, assetVersion *models.AssetVe
 
 }
 
-func (a *assetVersionRepository) FindByName(name string) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) FindByName(name string) (models.AssetVersion, error) {
 	var app models.AssetVersion
-	err := a.db.Where("name = ?", name).First(&app).Error
+	err := repository.db.Where("name = ?", name).First(&app).Error
 	if err != nil {
 		return app, err
 	}
 	return app, nil
 }
 
-func (a *assetVersionRepository) findByAssetVersionNameAndAssetID(name string, assetID uuid.UUID) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) findByAssetVersionNameAndAssetID(name string, assetID uuid.UUID) (models.AssetVersion, error) {
 	var app models.AssetVersion
-	err := a.db.Where("name = ? AND asset_id = ?", name, assetID).First(&app).Error
+	err := repository.db.Where("name = ? AND asset_id = ?", name, assetID).First(&app).Error
 	if err != nil {
 		return app, err
 	}
 	return app, nil
 }
 
-func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, isTag bool, defaultBranchName *string) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) FindOrCreate(assetVersionName string, assetID uuid.UUID, isTag bool, defaultBranchName *string) (models.AssetVersion, error) {
 	var assetVersion models.AssetVersion
-	assetVersion, err := a.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
+	assetVersion, err := repository.findByAssetVersionNameAndAssetID(assetVersionName, assetID)
 	if err != nil {
 		var assetVersionType models.AssetVersionType
 		if isTag {
@@ -110,10 +110,10 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 			return assetVersion, fmt.Errorf("assetVersions with an empty name or an empty slug are not allowed")
 		}
 
-		err := a.db.Create(&assetVersion).Error
-		//Check if the given assetVersion already exists if thats the case don't want to add a new entry to the db but instead update the existing one
+		err := repository.db.Create(&assetVersion).Error
+		//Check if the given assetVersion already exists if thats the case don't want to add repository new entry to the db but instead update the existing one
 		if err != nil && strings.Contains(err.Error(), "duplicate key value violates") {
-			a.db.Unscoped().Model(&assetVersion).Where("name", assetVersionName).Update("deleted_at", nil) //Update 'deleted_at' to NULL to revert the previous soft delete
+			repository.db.Unscoped().Model(&assetVersion).Where("name", assetVersionName).Update("deleted_at", nil) //Update 'deleted_at' to NULL to revert the previous soft delete
 		} else if err != nil {
 			return models.AssetVersion{}, err
 		}
@@ -123,7 +123,7 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 	if defaultBranchName != nil {
 		assetVersion.DefaultBranch = *defaultBranchName == assetVersion.Name
 		// update the asset version with this branch name and set defaultBranch to true - if there is no asset version with this name just ignore
-		if err := a.updateAssetDefaultBranch(assetID, *defaultBranchName); err != nil {
+		if err := repository.updateAssetDefaultBranch(assetID, *defaultBranchName); err != nil {
 			slog.Error("error updating asset default branch", "err", err, "assetID", assetID, "defaultBranchName", defaultBranchName)
 			// just swallow the error here - we don't want to fail the whole operation if we can't set the default branch
 		}
@@ -132,8 +132,8 @@ func (a *assetVersionRepository) FindOrCreate(assetVersionName string, assetID u
 	return assetVersion, nil
 }
 
-func (a *assetVersionRepository) updateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error {
-	return a.db.Transaction(func(tx core.DB) error {
+func (repository *assetVersionRepository) updateAssetDefaultBranch(assetID uuid.UUID, defaultBranch string) error {
+	return repository.db.Transaction(func(tx core.DB) error {
 		// reset the default branch for all versions of this asset
 		if err := tx.Model(&models.AssetVersion{}).Where("asset_id = ?", assetID).Update("default_branch", false).Error; err != nil {
 			slog.Error("error resetting default branch for asset versions", "err", err, "assetID", assetID)
@@ -149,9 +149,9 @@ func (a *assetVersionRepository) updateAssetDefaultBranch(assetID uuid.UUID, def
 	})
 }
 
-func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
-	err := a.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").Where("default_branch = true").
+	err := repository.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").Where("default_branch = true").
 		Joins("JOIN projects ON projects.id = assets.project_id").
 		Where("projects.id = ?", projectID).
 		Where("assets.deleted_at IS NULL").
@@ -162,15 +162,15 @@ func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectID(projectID uu
 	return apps, nil
 }
 
-func (a *assetVersionRepository) GetDefaultAssetVersion(assetID uuid.UUID) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetDefaultAssetVersion(assetID uuid.UUID) (models.AssetVersion, error) {
 	var app models.AssetVersion
-	err := a.db.Model(&models.AssetVersion{}).Where("default_branch = true AND asset_id = ?", assetID).First(&app).Error
+	err := repository.db.Model(&models.AssetVersion{}).Where("default_branch = true AND asset_id = ?", assetID).First(&app).Error
 	return app, err
 }
 
-func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(projectIDs []uuid.UUID) ([]models.AssetVersion, error) {
 	var apps []models.AssetVersion
-	err := a.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").
+	err := repository.db.Joins("JOIN assets ON assets.id = asset_versions.asset_id").
 		Joins("JOIN projects ON projects.id = assets.project_id").
 		Where("default_branch = true").
 		Where("assets.deleted_at IS NULL").
@@ -182,38 +182,38 @@ func (a *assetVersionRepository) GetDefaultAssetVersionsByProjectIDs(projectIDs 
 	return apps, nil
 }
 
-func (g *assetVersionRepository) ReadBySlug(AssetID uuid.UUID, slug string) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) ReadBySlug(AssetID uuid.UUID, slug string) (models.AssetVersion, error) {
 	var t models.AssetVersion
-	err := g.db.Where("slug = ? AND asset_id = ?", slug, AssetID).First(&t).Error
+	err := repository.db.Where("slug = ? AND asset_id = ?", slug, AssetID).First(&t).Error
 	return t, err
 }
 
-func (g *assetVersionRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.AssetVersion, error) {
+func (repository *assetVersionRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.AssetVersion, error) {
 	var asset models.AssetVersion
-	err := g.db.Unscoped().Where("slug = ? AND project_id = ?", slug, projectID).First(&asset).Error
+	err := repository.db.Unscoped().Where("slug = ? AND project_id = ?", slug, projectID).First(&asset).Error
 	return asset, err
 }
 
-/* func (g *assetVersionRepository) GetAssetVersionIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
-	app, err := g.ReadBySlug(projectID, slug)
+/* func (repository *assetVersionRepository) GetAssetVersionIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
+	app, err := repository.ReadBySlug(projectID, slug)
 	if err != nil {
 		return uuid.UUID{}, err
 	}
 	return app.ID, nil
 } */
 
-func (g *assetVersionRepository) Update(tx core.DB, asset *models.AssetVersion) error {
-	return g.db.Save(asset).Error
+func (repository *assetVersionRepository) Update(tx core.DB, asset *models.AssetVersion) error {
+	return repository.db.Save(asset).Error
 }
 
-func (g *assetVersionRepository) GetAllAssetsVersionFromDB(tx core.DB) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetAllAssetsVersionFromDB(tx core.DB) ([]models.AssetVersion, error) {
 	var assets []models.AssetVersion
-	err := g.db.Find(&assets).Error
+	err := repository.db.Find(&assets).Error
 	return assets, err
 }
 
-func (g *assetVersionRepository) GetAllAssetsVersionFromDBByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
+func (repository *assetVersionRepository) GetAllAssetsVersionFromDBByAssetID(tx core.DB, assetID uuid.UUID) ([]models.AssetVersion, error) {
 	var assets []models.AssetVersion
-	err := g.db.Where("asset_id = ?", assetID).Find(&assets).Error
+	err := repository.db.Where("asset_id = ?", assetID).Find(&assets).Error
 	return assets, err
 }
