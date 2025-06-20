@@ -247,7 +247,7 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx core.Context) error {
 	}
 
 	// fetch the token model from the database
-	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, c.ProviderID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, c.ProviderID)
 	if err != nil {
 		return ctx.JSON(404, map[string]any{
 			"message": "token model not found",
@@ -339,7 +339,7 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx core.Context) error {
 	url := c.Oauth2Conf.AuthCodeURL(redirectTo, oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(verifier))
 
 	// check if a token model already exists
-	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, c.ProviderID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, c.ProviderID)
 	if err == nil {
 		// it does exist - update the verifier
 		tokenModel.Verifier = utils.Ptr(verifier)

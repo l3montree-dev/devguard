@@ -102,7 +102,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 				continue
 			}
 
-			rule := ruleMap[result.RuleId]
+			rule := ruleMap[result.RuleID]
 
 			firstPartyVulnerability := models.FirstPartyVuln{
 				Vulnerability: models.Vulnerability{
@@ -111,7 +111,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 					Message:          &result.Message.Text,
 					ScannerIDs:       scannerID,
 				},
-				RuleID:          result.RuleId,
+				RuleID:          result.RuleID,
 				RuleHelp:        preferMarkdown(rule.Help),
 				RuleName:        rule.Name,
 				RuleHelpURI:     rule.HelpURI,

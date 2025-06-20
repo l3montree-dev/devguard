@@ -44,7 +44,7 @@ type baseConfig struct {
 	Registry string `json:"registry" mapstructure:"registry"`
 
 	// used in SbomCMD
-	ScannerID     string `json:"scannerId" mapstructure:"scannerId"`
+	ScannerID     string `json:"scannerId" mapstructure:"scannerID"`
 	Ref           string `json:"ref" mapstructure:"ref"`
 	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
 	IsTag         bool   `json:"isTag" mapstructure:"isTag"`
@@ -56,7 +56,7 @@ type InTotoConfig struct {
 	Products  []string `mapstructure:"products"`
 	Ignore    []string `mapstructure:"ignore"`
 
-	SupplyChainID          string `mapstructure:"supplyChainId"`
+	SupplyChainID          string `mapstructure:"supplyChainID"`
 	GenerateSlsaProvenance bool   `mapstructure:"generateSlsaProvenance"`
 
 	LayoutKeyPath string `mapstructure:"layoutKey"`
@@ -123,7 +123,7 @@ func ParseBaseConfig() {
 		"ref", RuntimeBaseConfig.Ref,
 		"defaultBranch", RuntimeBaseConfig.DefaultBranch,
 		"isTag", RuntimeBaseConfig.IsTag,
-		"scannerId", RuntimeBaseConfig.ScannerID,
+		"scannerID", RuntimeBaseConfig.ScannerID,
 		"webUI", RuntimeBaseConfig.WebUI,
 		"failOnRisk", RuntimeBaseConfig.FailOnRisk,
 		"registry", RuntimeBaseConfig.Registry,

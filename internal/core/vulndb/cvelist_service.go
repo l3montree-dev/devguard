@@ -18,7 +18,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type cvelistJson struct {
+type cvelistJSON struct {
 	DataType    string `json:"dataType"`
 	CveMetadata struct {
 		CveID             string `json:"cveId"`
@@ -171,7 +171,7 @@ func (s *cvelistService) ImportCVE(cveID string) ([]models.CPEMatch, error) {
 	}
 	defer resp.Body.Close()
 
-	var cvelist cvelistJson
+	var cvelist cvelistJSON
 	if err := json.NewDecoder(resp.Body).Decode(&cvelist); err != nil {
 		return nil, errors.Wrap(err, "could not decode json")
 	}
@@ -239,20 +239,20 @@ func (s *cvelistService) Mirror() error {
 					continue
 				}
 
-				var cvelistJson cvelistJson
-				if err := json.Unmarshal(unzippedFileBytes, &cvelistJson); err != nil {
+				var cvelistJSON cvelistJSON
+				if err := json.Unmarshal(unzippedFileBytes, &cvelistJSON); err != nil {
 					slog.Error("could not unmarshal json", "err", err)
 					continue
 				}
 
-				matches := generateCPE(cvelistJson)
+				matches := generateCPE(cvelistJSON)
 				cpeMatch = append(cpeMatch, matches...)
 				for _, match := range matches {
-					if _, ok := cve2cpeId[cvelistJson.CveMetadata.CveID]; !ok {
-						cve2cpeId[cvelistJson.CveMetadata.CveID] = make([]string, 0)
+					if _, ok := cve2cpeId[cvelistJSON.CveMetadata.CveID]; !ok {
+						cve2cpeId[cvelistJSON.CveMetadata.CveID] = make([]string, 0)
 					}
 					// check if id is already in the list
-					cve2cpeId[cvelistJson.CveMetadata.CveID] = append(cve2cpeId[cvelistJson.CveMetadata.CveID], match.CalculateHash())
+					cve2cpeId[cvelistJSON.CveMetadata.CveID] = append(cve2cpeId[cvelistJSON.CveMetadata.CveID], match.CalculateHash())
 				}
 			}
 
@@ -309,7 +309,7 @@ func isCVEFile(fileName string) bool {
 	return strings.Contains(fileName, "CVE-") && strings.HasSuffix(fileName, ".json")
 }
 
-func generateCPE(cve cvelistJson) []models.CPEMatch {
+func generateCPE(cve cvelistJSON) []models.CPEMatch {
 	cpeCriteria := make([]models.CPEMatch, 0)
 
 	for _, product := range cve.Containers.Cna.Affected {

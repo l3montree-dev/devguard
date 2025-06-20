@@ -26,7 +26,7 @@ func TestProjectControllerRead(t *testing.T) {
 	projectRepo := repositories.NewProjectRepository(db)
 	assetRepo := repositories.NewAssetRepository(db)
 	projectService := project.NewService(projectRepo, assetRepo)
-	controller := project.NewHttpController(projectRepo, assetRepo, projectService)
+	controller := project.NewHTTPController(projectRepo, assetRepo, projectService)
 
 	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
@@ -126,7 +126,7 @@ func TestProjectControllerList(t *testing.T) {
 	projectRepo := repositories.NewProjectRepository(db)
 	assetRepo := repositories.NewAssetRepository(db)
 	projectService := project.NewService(projectRepo, assetRepo)
-	controller := project.NewHttpController(projectRepo, assetRepo, projectService)
+	controller := project.NewHTTPController(projectRepo, assetRepo, projectService)
 	org, project, _, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	// add 3 community policies to the database
@@ -199,7 +199,7 @@ func TestProjectCreation(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
 	defer terminate()
 
-	controller := project.NewHttpController(
+	controller := project.NewHTTPController(
 		repositories.NewProjectRepository(db),
 		repositories.NewAssetRepository(db),
 		project.NewService(

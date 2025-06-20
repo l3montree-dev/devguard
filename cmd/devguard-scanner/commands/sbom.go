@@ -104,7 +104,7 @@ func NewSbomCommand() *cobra.Command {
 		RunE:  sbomCmd,
 	}
 
-	cmd.Flags().String("scannerId", "github.com/l3montree-dev/devguard-scanner/cmd/sbom", "Name of the scanner. DevGuard will compare new and old results based on the scannerId.")
+	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard-scanner/cmd/sbom", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
 
 	addScanFlags(cmd)
 	return cmd

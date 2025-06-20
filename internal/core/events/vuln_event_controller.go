@@ -21,12 +21,12 @@ func NewVulnEventController(vulnEventRepository core.VulnEventRepository, assetV
 }
 
 func (c vulnEventController) ReadAssetEventsByVulnID(ctx core.Context) error {
-	vulnId, vulnType, err := core.GetVulnID(ctx)
+	vulnID, vulnType, err := core.GetVulnID(ctx)
 	if err != nil {
-		return echo.NewHTTPError(400, "vulnId is required").WithInternal(err)
+		return echo.NewHTTPError(400, "vulnID is required").WithInternal(err)
 	}
 
-	events, err := c.vulnEventRepository.ReadAssetEventsByVulnID(vulnId, vulnType)
+	events, err := c.vulnEventRepository.ReadAssetEventsByVulnID(vulnID, vulnType)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get events").WithInternal(err)
 	}
@@ -42,7 +42,7 @@ func convertSingleToDetailedDTO(event models.VulnEventDetail) VulnEventDTO {
 		VulnType:          event.VulnType,
 		UserID:            event.UserID,
 		Justification:     event.Justification,
-		ArbitraryJsonData: event.GetArbitraryJsonData(),
+		ArbitraryJSONData: event.GetArbitraryJSONData(),
 		CreatedAt:         event.CreatedAt,
 		AssetVersionName:  event.AssetVersionName,
 		AssetVersionSlug:  event.Slug,
@@ -63,7 +63,7 @@ func convertToDetailedDTO(event []models.VulnEventDetail) []VulnEventDTO {
 			UserID:                  e.UserID,
 			Justification:           e.Justification,
 			MechanicalJustification: e.MechanicalJustification,
-			ArbitraryJsonData:       e.GetArbitraryJsonData(),
+			ArbitraryJSONData:       e.GetArbitraryJSONData(),
 			CreatedAt:               e.CreatedAt,
 			AssetVersionName:        e.AssetVersionName,
 			AssetVersionSlug:        e.Slug,

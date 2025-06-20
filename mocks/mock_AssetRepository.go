@@ -425,12 +425,12 @@ func (_c *AssetRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB, id
 	return _c
 }
 
-// FindAssetByExternalProviderId provides a mock function for the type AssetRepository
-func (_mock *AssetRepository) FindAssetByExternalProviderId(externalEntityProviderID string, externalEntityID string) (*models.Asset, error) {
+// FindAssetByExternalProviderID provides a mock function for the type AssetRepository
+func (_mock *AssetRepository) FindAssetByExternalProviderID(externalEntityProviderID string, externalEntityID string) (*models.Asset, error) {
 	ret := _mock.Called(externalEntityProviderID, externalEntityID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindAssetByExternalProviderId")
+		panic("no return value specified for FindAssetByExternalProviderID")
 	}
 
 	var r0 *models.Asset
@@ -453,19 +453,19 @@ func (_mock *AssetRepository) FindAssetByExternalProviderId(externalEntityProvid
 	return r0, r1
 }
 
-// AssetRepository_FindAssetByExternalProviderId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindAssetByExternalProviderId'
-type AssetRepository_FindAssetByExternalProviderId_Call struct {
+// AssetRepository_FindAssetByExternalProviderID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindAssetByExternalProviderID'
+type AssetRepository_FindAssetByExternalProviderID_Call struct {
 	*mock.Call
 }
 
-// FindAssetByExternalProviderId is a helper method to define mock.On call
+// FindAssetByExternalProviderID is a helper method to define mock.On call
 //   - externalEntityProviderID string
 //   - externalEntityID string
-func (_e *AssetRepository_Expecter) FindAssetByExternalProviderId(externalEntityProviderID interface{}, externalEntityID interface{}) *AssetRepository_FindAssetByExternalProviderId_Call {
-	return &AssetRepository_FindAssetByExternalProviderId_Call{Call: _e.mock.On("FindAssetByExternalProviderId", externalEntityProviderID, externalEntityID)}
+func (_e *AssetRepository_Expecter) FindAssetByExternalProviderID(externalEntityProviderID interface{}, externalEntityID interface{}) *AssetRepository_FindAssetByExternalProviderID_Call {
+	return &AssetRepository_FindAssetByExternalProviderID_Call{Call: _e.mock.On("FindAssetByExternalProviderID", externalEntityProviderID, externalEntityID)}
 }
 
-func (_c *AssetRepository_FindAssetByExternalProviderId_Call) Run(run func(externalEntityProviderID string, externalEntityID string)) *AssetRepository_FindAssetByExternalProviderId_Call {
+func (_c *AssetRepository_FindAssetByExternalProviderID_Call) Run(run func(externalEntityProviderID string, externalEntityID string)) *AssetRepository_FindAssetByExternalProviderID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -483,12 +483,12 @@ func (_c *AssetRepository_FindAssetByExternalProviderId_Call) Run(run func(exter
 	return _c
 }
 
-func (_c *AssetRepository_FindAssetByExternalProviderId_Call) Return(asset *models.Asset, err error) *AssetRepository_FindAssetByExternalProviderId_Call {
+func (_c *AssetRepository_FindAssetByExternalProviderID_Call) Return(asset *models.Asset, err error) *AssetRepository_FindAssetByExternalProviderID_Call {
 	_c.Call.Return(asset, err)
 	return _c
 }
 
-func (_c *AssetRepository_FindAssetByExternalProviderId_Call) RunAndReturn(run func(externalEntityProviderID string, externalEntityID string) (*models.Asset, error)) *AssetRepository_FindAssetByExternalProviderId_Call {
+func (_c *AssetRepository_FindAssetByExternalProviderID_Call) RunAndReturn(run func(externalEntityProviderID string, externalEntityID string) (*models.Asset, error)) *AssetRepository_FindAssetByExternalProviderID_Call {
 	_c.Call.Return(run)
 	return _c
 }

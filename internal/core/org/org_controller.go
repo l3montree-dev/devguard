@@ -37,7 +37,7 @@ type httpController struct {
 	invitationRepository   core.InvitationRepository
 }
 
-func NewHttpController(repository core.OrganizationRepository, orgService core.OrgService, rbacProvider core.RBACProvider, projectService core.ProjectService, invitationRepository core.InvitationRepository) *httpController {
+func NewHTTPController(repository core.OrganizationRepository, orgService core.OrgService, rbacProvider core.RBACProvider, projectService core.ProjectService, invitationRepository core.InvitationRepository) *httpController {
 	return &httpController{
 		organizationRepository: repository,
 		orgService:             orgService,
@@ -229,9 +229,9 @@ func (c *httpController) ChangeRole(ctx core.Context) error {
 	// get the user id from the request
 	var req changeRoleRequest
 
-	userId := ctx.Param("userId")
-	if userId == "" {
-		return echo.NewHTTPError(400, "userId is required")
+	userID := ctx.Param("userID")
+	if userID == "" {
+		return echo.NewHTTPError(400, "userID is required")
 	}
 
 	if err := ctx.Bind(&req); err != nil {
@@ -246,10 +246,10 @@ func (c *httpController) ChangeRole(ctx core.Context) error {
 	rbac := core.GetRBAC(ctx)
 
 	//
-	rbac.RevokeRole(userId, "member") // nolint:errcheck// we do not care if the user is not a member
-	rbac.RevokeRole(userId, "admin")  // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(userID, "member") // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(userID, "admin")  // nolint:errcheck// we do not care if the user is not a member
 
-	if err := rbac.GrantRole(userId, req.Role); err != nil {
+	if err := rbac.GrantRole(userID, req.Role); err != nil {
 		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
 	}
 
@@ -258,14 +258,14 @@ func (c *httpController) ChangeRole(ctx core.Context) error {
 
 func (c *httpController) RemoveMember(ctx core.Context) error {
 	// get the user id from the request
-	userId := ctx.Param("userId")
+	userID := ctx.Param("userID")
 
 	// get the rbac from the context
 	rbac := core.GetRBAC(ctx)
 
 	//
-	rbac.RevokeRole(userId, "member") // nolint:errcheck// we do not care if the user is not a member
-	rbac.RevokeRole(userId, "admin")  // nolint:errcheck// we do not care if the user is not an admin
+	rbac.RevokeRole(userID, "member") // nolint:errcheck// we do not care if the user is not a member
+	rbac.RevokeRole(userID, "admin")  // nolint:errcheck// we do not care if the user is not an admin
 
 	// remove member from all projects
 	projects, err := c.projectService.ListProjectsByOrganizationID(core.GetOrg(ctx).GetID())
@@ -274,8 +274,8 @@ func (c *httpController) RemoveMember(ctx core.Context) error {
 	}
 
 	for _, project := range projects {
-		rbac.RevokeRoleInProject(userId, "member", project.ID.String()) // nolint:errcheck// we do not care if the user is not a member
-		rbac.RevokeRoleInProject(userId, "admin", project.ID.String())  // nolint:errcheck// we do not care if the user is not an admin
+		rbac.RevokeRoleInProject(userID, "member", project.ID.String()) // nolint:errcheck// we do not care if the user is not a member
+		rbac.RevokeRoleInProject(userID, "admin", project.ID.String())  // nolint:errcheck// we do not care if the user is not an admin
 	}
 
 	return ctx.NoContent(200)

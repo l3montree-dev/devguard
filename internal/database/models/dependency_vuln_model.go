@@ -65,7 +65,7 @@ func (d *DependencyVuln) GetType() VulnType {
 type DependencyVulnRisk struct {
 	DependencyVulnID  string
 	CreatedAt         time.Time
-	ArbitraryJsonData string
+	ArbitraryJSONData string
 	Risk              float64
 	Type              VulnEventType
 }

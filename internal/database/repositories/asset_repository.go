@@ -43,7 +43,7 @@ func NewAssetRepository(db core.DB) *assetRepository {
 	}
 }
 
-func (r *assetRepository) FindAssetByExternalProviderId(externalEntityProviderID string, externalEntityID string) (*models.Asset, error) {
+func (r *assetRepository) FindAssetByExternalProviderID(externalEntityProviderID string, externalEntityID string) (*models.Asset, error) {
 	var asset models.Asset
 	err := r.db.Where("external_entity_provider_id = ? AND external_entity_id = ?", externalEntityProviderID, externalEntityID).First(&asset).Error
 	return &asset, err

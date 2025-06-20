@@ -169,13 +169,13 @@ func (client githubClient) GetRepositoryCollaborators(ctx context.Context, owner
 	return client.Repositories.ListCollaborators(ctx, owner, repoId, opts)
 }
 
-func (client githubClient) IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userId int64, opts *github.ListCollaboratorsOptions) (bool, error) {
+func (client githubClient) IsCollaboratorInRepository(ctx context.Context, owner string, repoId string, userID int64, opts *github.ListCollaboratorsOptions) (bool, error) {
 	collaborators, _, err := client.GetRepositoryCollaborators(ctx, owner, repoId, opts)
 	if err != nil {
 		return false, err
 	}
 	for _, user := range collaborators {
-		if userId == *user.ID {
+		if userID == *user.ID {
 			return true, nil
 		}
 	}

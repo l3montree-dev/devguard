@@ -57,8 +57,8 @@ func verify(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("tag does not contain supply chain id")
 		}
 
-		supplyChainId := imageTagParts[len(imageTagParts)-2]
-		if len(supplyChainId) != 8 {
+		supplyChainID := imageTagParts[len(imageTagParts)-2]
+		if len(supplyChainID) != 8 {
 			return fmt.Errorf("tag does not contain supply chain id. Expected 8 characters")
 		}
 	}
@@ -145,7 +145,7 @@ func NewInTotoVerifyCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 
-	cmd.Flags().String("supplyChainId", "", "Supply chain ID")
+	cmd.Flags().String("supplyChainID", "", "Supply chain ID")
 	cmd.Flags().String("token", "", "Token")
 	cmd.Flags().String("layoutKey", "", "Path to the layout key")
 

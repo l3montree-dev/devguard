@@ -19,19 +19,19 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-func CreateNewVulnEventBasedOnComment(vulnId string, vulnType models.VulnType, userId, comment string, scannerIds string) models.VulnEvent {
+func CreateNewVulnEventBasedOnComment(vulnID string, vulnType models.VulnType, userID, comment string, scannerIDs string) models.VulnEvent {
 
 	event, mechanicalJustification, justification := commentTrimmedFalsePositivePrefix(comment)
 
 	switch event {
 	case models.EventTypeAccepted:
-		return models.NewAcceptedEvent(vulnId, vulnType, userId, justification)
+		return models.NewAcceptedEvent(vulnID, vulnType, userID, justification)
 	case models.EventTypeFalsePositive:
-		return models.NewFalsePositiveEvent(vulnId, vulnType, userId, justification, mechanicalJustification, scannerIds)
+		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, scannerIDs)
 	case models.EventTypeReopened:
-		return models.NewReopenedEvent(vulnId, vulnType, userId, justification)
+		return models.NewReopenedEvent(vulnID, vulnType, userID, justification)
 	case models.EventTypeComment:
-		return models.NewCommentEvent(vulnId, vulnType, userId, comment)
+		return models.NewCommentEvent(vulnID, vulnType, userID, comment)
 	}
 
 	return models.VulnEvent{}

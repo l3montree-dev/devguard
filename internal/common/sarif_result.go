@@ -37,7 +37,7 @@ type Run struct {
 
 type ArtifactLocation struct {
 	URI       string `json:"uri"`
-	URIBaseId string `json:"uriBaseId,omitempty"`
+	URIBaseID string `json:"uriBaseId,omitempty"`
 }
 
 type Region struct {
@@ -65,7 +65,7 @@ type PartialFingerprints struct {
 	CommitMessage string `json:"commitMessage"`
 }
 type Fingerprints struct {
-	MatchBasedId string `json:"matchBasedId/v1"`
+	MatchBasedID string `json:"matchBasedId/v1"`
 }
 
 type Properties struct {
@@ -75,7 +75,7 @@ type Properties struct {
 
 type Result struct {
 	Kind                string `json:"kind"`
-	RuleId              string `json:"ruleId"`
+	RuleID              string `json:"ruleId"`
 	Message             Text
 	Locations           []Location           `json:"locations"`
 	Properties          *Properties          `json:"properties,omitempty"`

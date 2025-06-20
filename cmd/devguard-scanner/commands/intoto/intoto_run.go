@@ -50,7 +50,7 @@ func getCommitHash() (string, error) {
 	return str[:len(str)-1], nil
 }
 
-func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string, filename string) error {
+func readAndUploadMetadata(cmd *cobra.Command, supplyChainID string, step string, filename string) error {
 	// read the metadata.json file and remove it
 	b, err := os.ReadFile(filename)
 	if err != nil {
@@ -67,7 +67,7 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainId string, step string
 	// create the request
 	body := map[string]any{
 		"step":                    step,
-		"supplyChainId":           supplyChainId,
+		"supplyChainID":           supplyChainID,
 		"supplyChainOutputDigest": utils.EmptyThenNil(outputDigest),
 		"payload":                 string(b),
 		"filename":                filename,

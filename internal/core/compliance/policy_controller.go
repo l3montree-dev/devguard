@@ -101,7 +101,7 @@ func (c *policyController) migratePolicies() error {
 func (c *policyController) GetOrganizationPolicies(ctx core.Context) error {
 
 	org := core.GetOrg(ctx)
-	policies, err := c.policyRepository.FindByOrganizationId(org.ID)
+	policies, err := c.policyRepository.FindByOrganizationID(org.ID)
 
 	if err != nil {
 		return err

@@ -41,7 +41,7 @@ type httpController struct {
 	inTotoVerifierService core.InTotoVerifierService
 }
 
-func NewHttpController(repository core.InTotoLinkRepository, supplyChainRepository core.SupplyChainRepository, patRepository core.PersonalAccessTokenRepository, inTotoVerifierService core.InTotoVerifierService) *httpController {
+func NewHTTPController(repository core.InTotoLinkRepository, supplyChainRepository core.SupplyChainRepository, patRepository core.PersonalAccessTokenRepository, inTotoVerifierService core.InTotoVerifierService) *httpController {
 	return &httpController{
 		linkRepository:        repository,
 		supplyChainRepository: supplyChainRepository,
@@ -51,7 +51,7 @@ func NewHttpController(repository core.InTotoLinkRepository, supplyChainReposito
 }
 
 func (a *httpController) VerifySupplyChain(ctx core.Context) error {
-	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainId")
+	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainID")
 	digest := ctx.QueryParam("digest")
 
 	if imageNameOrSupplyChainID == "" {
@@ -75,11 +75,11 @@ func (a *httpController) VerifySupplyChain(ctx core.Context) error {
 	}
 
 	if !valid {
-		slog.Info("could not verify supply chain", "supplyChainId", imageNameOrSupplyChainID)
+		slog.Info("could not verify supply chain", "supplyChainID", imageNameOrSupplyChainID)
 		return echo.NewHTTPError(400, "could not verify supply chain")
 	}
 
-	slog.Info("verified supply chain", "supplyChainId", imageNameOrSupplyChainID)
+	slog.Info("verified supply chain", "supplyChainID", imageNameOrSupplyChainID)
 	return ctx.NoContent(200)
 }
 
@@ -300,7 +300,7 @@ func (a *httpController) RootLayout(ctx core.Context) error {
 func (a *httpController) Read(ctx core.Context) error {
 	app := core.GetAsset(ctx)
 	// find a link with the corresponding opaque id
-	links, err := a.linkRepository.FindByAssetAndSupplyChainId(app.GetID(), ctx.Param("supplyChainId"))
+	links, err := a.linkRepository.FindByAssetAndSupplyChainId(app.GetID(), ctx.Param("supplyChainID"))
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find in-toto link").WithInternal(err)
 	}

@@ -27,7 +27,7 @@ type PatController struct {
 	service       *PatService
 }
 
-func NewHttpController(repository core.PersonalAccessTokenRepository) *PatController {
+func NewHTTPController(repository core.PersonalAccessTokenRepository) *PatController {
 	return &PatController{
 		patRepository: repository,
 		service:       NewPatService(repository),
@@ -60,7 +60,7 @@ func (p *PatController) Create(c core.Context) error {
 	return c.JSON(200, map[string]string{
 		"createdAt":   patStruct.CreatedAt.String(),
 		"description": patStruct.Description,
-		"userId":      patStruct.UserID.String(),
+		"userID":      patStruct.UserID.String(),
 		"pubKey":      patStruct.PubKey,
 		"fingerprint": patStruct.Fingerprint,
 		"scopes":      patStruct.Scopes,

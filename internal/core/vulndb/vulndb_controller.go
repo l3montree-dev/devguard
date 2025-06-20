@@ -6,12 +6,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type cveHttpController struct {
+type cveHTTPController struct {
 	cveRepository core.CveRepository
 }
 
-func NewHttpController(cveRepository core.CveRepository) *cveHttpController {
-	return &cveHttpController{
+func NewHTTPController(cveRepository core.CveRepository) *cveHTTPController {
+	return &cveHTTPController{
 		cveRepository: cveRepository,
 	}
 }
@@ -30,7 +30,7 @@ func NewHttpController(cveRepository core.CveRepository) *cveHttpController {
 // @Success 200 {object} object{pageSize=int,page=int,total=int,data=[]models.CVE} "A paginated list of CVEs"
 // @Failure 500 {object} object{message=string} "Internal server error"
 // @Router /vulndb [get]
-func (c cveHttpController) ListPaged(ctx core.Context) error {
+func (c cveHTTPController) ListPaged(ctx core.Context) error {
 	pagedResp, err := c.cveRepository.FindAllListPaged(
 		nil,
 		core.GetPageInfo(ctx),
@@ -63,7 +63,7 @@ func (c cveHttpController) ListPaged(ctx core.Context) error {
 // @Success 200 {object} models.CVE "Details of the specified CVE"
 // @Failure 500 {object} object{message=string} "Internal server error"
 // @Router /vulndb/{cveID}/ [get]
-func (c cveHttpController) Read(ctx core.Context) error {
+func (c cveHTTPController) Read(ctx core.Context) error {
 	cve, err := c.cveRepository.FindCVE(
 		nil,
 		core.GetParam(ctx, "cveID"),

@@ -35,7 +35,7 @@ type httpController struct {
 	projectService         core.ProjectService
 }
 
-func NewHttpController(statisticsService statisticsService, statisticsRepository core.StatisticsRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, projectService core.ProjectService) *httpController {
+func NewHTTPController(statisticsService statisticsService, statisticsRepository core.StatisticsRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, projectService core.ProjectService) *httpController {
 	return &httpController{
 		statisticsService:      statisticsService,
 		statisticsRepository:   statisticsRepository,

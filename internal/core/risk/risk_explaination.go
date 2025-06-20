@@ -210,7 +210,7 @@ type Explanation struct {
 	cvssBEMessage         string
 	componentDepthMessage string
 	cvssMessage           string
-	dependencyVulnId      string
+	dependencyVulnID      string
 	risk                  float64
 
 	depth int
@@ -274,7 +274,7 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 	str.WriteString(fmt.Sprintf("| CVSS-B | `%.1f` | %s | \n", e.BaseScore, e.cvssMessage))
 	str.WriteString("\n")
 	//TODO: change it
-	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnId))
+	str.WriteString(fmt.Sprintf("More details can be found in [DevGuard](%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s)", baseURL, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnID))
 	str.WriteString("\n\n</details>\n")
 	// add information about slash commands
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
@@ -303,7 +303,7 @@ func Explain(dependencyVuln models.DependencyVuln, asset models.Asset, vector st
 		cvssBEMessage:         cvssBE(asset, cvss),
 		componentDepthMessage: componentDepthMessages(utils.OrDefault(dependencyVuln.ComponentDepth, 0)),
 		cvssMessage:           describeCVSS(cvss),
-		dependencyVulnId:      dependencyVuln.ID,
+		dependencyVulnID:      dependencyVuln.ID,
 
 		risk:  utils.OrDefault(dependencyVuln.RawRiskAssessment, 0),
 		epss:  utils.OrDefault(dependencyVuln.CVE.EPSS, 0),

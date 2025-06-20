@@ -28,7 +28,7 @@ import (
 )
 
 func TestReadAssetEventsByVulnID(t *testing.T) {
-	t.Run("should return 400 if vulnId is missing", func(t *testing.T) {
+	t.Run("should return 400 if vulnID is missing", func(t *testing.T) {
 		// Setup
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/vuln-events", nil)
@@ -47,14 +47,14 @@ func TestReadAssetEventsByVulnID(t *testing.T) {
 
 	t.Run("should return 500 if repository returns an error", func(t *testing.T) {
 		mockRepository := mocks.NewVulnEventRepository(t)
-		mockRepository.On("ReadAssetEventsByVulnID", "vulnId", models.VulnTypeDependencyVuln).Return(nil, assert.AnError)
+		mockRepository.On("ReadAssetEventsByVulnID", "vulnID", models.VulnTypeDependencyVuln).Return(nil, assert.AnError)
 		mocksAssetVersionRepository := mocks.NewAssetVersionRepository(t)
 		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/vuln-events?vulnId=vulnId", nil)
+		req := httptest.NewRequest(http.MethodGet, "/vuln-events?vulnID=vulnID", nil)
 		rec := httptest.NewRecorder()
 		ctx := e.NewContext(req, rec)
-		ctx.SetParamNames("dependencyVulnId")
-		ctx.SetParamValues("vulnId")
+		ctx.SetParamNames("dependencyVulnID")
+		ctx.SetParamValues("vulnID")
 
 		// Execution
 		err := events.NewVulnEventController(mockRepository, mocksAssetVersionRepository).ReadAssetEventsByVulnID(ctx)

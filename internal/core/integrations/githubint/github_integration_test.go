@@ -19,7 +19,7 @@ import (
 )
 
 func TestGithubIntegrationHandleEvent(t *testing.T) {
-	t.Run("it should not be possible to call handle event with a context without dependencyVulnId parameter", func(t *testing.T) {
+	t.Run("it should not be possible to call handle event with a context without dependencyVulnID parameter", func(t *testing.T) {
 
 		githubIntegration := GithubIntegration{}
 
@@ -58,7 +58,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
 		})
-		ctx.SetParamNames("dependencyVulnId", "projectSlug", "orgSlug")
+		ctx.SetParamNames("dependencyVulnID", "projectSlug", "orgSlug")
 		ctx.SetParamValues("1", "test", "test")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -82,7 +82,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			Name: "GenieOderWAHNSINNN",
 		})
 		core.SetProject(ctx, models.Project{})
-		ctx.SetParamNames("dependencyVulnId", "projectSlug", "orgSlug")
+		ctx.SetParamNames("dependencyVulnID", "projectSlug", "orgSlug")
 		ctx.SetParamValues("1", "test", "test")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -118,7 +118,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAssetSlug(ctx, "test")
 		core.SetProject(ctx, models.Project{})
 
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues("1")
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -192,7 +192,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetOrgSlug(ctx, "test")
 		core.SetProjectSlug(ctx, "test")
 		core.SetAssetSlug(ctx, "test")
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues("1")
 
 		authSession := mocks.NewAuthSession(t)
@@ -238,11 +238,11 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			Type:   models.EventTypeMitigate,
 			UserID: "1",
 
-			ArbitraryJsonData: "{\"ticketId\":\"github:0\",\"ticketURL\":\"\"}",
+			ArbitraryJSONData: "{\"ticketId\":\"github:0\",\"ticketURL\":\"\"}",
 
 			Justification: utils.Ptr("that is a justification"),
 		}
-		expectedEvent.GetArbitraryJsonData()
+		expectedEvent.GetArbitraryJSONData()
 
 		githubClientFactory := func(repoId string) (githubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
@@ -277,7 +277,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetOrgSlug(ctx, "test")
 		core.SetProjectSlug(ctx, "test")
 		core.SetAssetSlug(ctx, "test")
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues("1")
 
 		authSession := mocks.NewAuthSession(t)

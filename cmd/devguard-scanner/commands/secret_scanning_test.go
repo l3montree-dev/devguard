@@ -19,7 +19,7 @@ var exampleSarifResult = common.SarifResult{
 			},
 			Results: []common.Result{
 				{
-					RuleId: "EXAMPLE001",
+					RuleID: "EXAMPLE001",
 					Message: common.Text{
 						Text: "This is an example message.",
 					},
@@ -28,7 +28,7 @@ var exampleSarifResult = common.SarifResult{
 							PhysicalLocation: common.PhysicalLocation{
 								ArtifactLocation: common.ArtifactLocation{
 									URI:       "file:///example/path",
-									URIBaseId: "SRCROOT",
+									URIBaseID: "SRCROOT",
 								},
 								Region: common.Region{
 									StartLine:   10,
@@ -47,7 +47,7 @@ var exampleSarifResult = common.SarifResult{
 						Tags:      []string{"example", "test"},
 					},
 					Fingerprints: &common.Fingerprints{
-						MatchBasedId: "12345",
+						MatchBasedID: "12345",
 					},
 					PartialFingerprints: &common.PartialFingerprints{
 						CommitSha:     "abcde12345",

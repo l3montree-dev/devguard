@@ -85,10 +85,10 @@ func (g firstPartyVulnerabilityRepository) Read(id string) (models.FirstPartyVul
 }
 
 // TODO: change it
-func (r *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(tx core.DB, assetVersionNamesSubquery any, assetVersionAssetIdSubquery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
+func (r *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(tx core.DB, assetVersionNamesSubquery any, assetVersionAssetIDSubquery any, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
 	var firstPartyVulns = []models.FirstPartyVuln{}
 
-	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name IN (?) AND first_party_vulnerabilities.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIdSubquery)
+	q := r.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Where("first_party_vulnerabilities.asset_version_name IN (?) AND first_party_vulnerabilities.asset_id IN (?)", assetVersionNamesSubquery, assetVersionAssetIDSubquery)
 
 	var count int64
 
@@ -106,7 +106,7 @@ func (r *firstPartyVulnerabilityRepository) GetFirstPartyVulnsPaged(tx core.DB, 
 	return core.NewPaged(pageInfo, count, firstPartyVulns), nil
 }
 
-func (r *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByProjectIdPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
+func (r *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsByProjectIDPaged(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.FirstPartyVuln], error) {
 	subQueryAssetIDs := r.Repository.GetDB(tx).Model(&models.Asset{}).Select("assets.id").Where("project_id = ?", projectID)
 
 	subQuery := r.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", subQueryAssetIDs, true)

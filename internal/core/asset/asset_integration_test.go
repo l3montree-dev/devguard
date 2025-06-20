@@ -32,7 +32,7 @@ func TestHandleLookup(t *testing.T) {
 		&models.Org{},
 		&models.Project{}))
 
-	controller := asset.NewHttpController(assetRepo, assetVersionRepo, assetService, depVulnService, statsService)
+	controller := asset.NewHTTPController(assetRepo, assetVersionRepo, assetService, depVulnService, statsService)
 
 	// create an organization, project, and asset1 for testing
 	_, _, asset1, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
@@ -94,7 +94,7 @@ func TestAssetUpdate(t *testing.T) {
 		assetVersionRepo := repositories.NewAssetVersionRepository(db)
 		vulnService := inithelper.CreateDependencyVulnService(db, nil, nil, nil)
 
-		controller := asset.NewHttpController(assetRepo, assetVersionRepo, assetService, vulnService, nil)
+		controller := asset.NewHTTPController(assetRepo, assetVersionRepo, assetService, vulnService, nil)
 
 		assert.Nil(t, db.AutoMigrate(
 			&models.Org{},

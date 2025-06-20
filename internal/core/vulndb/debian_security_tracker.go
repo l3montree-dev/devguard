@@ -64,7 +64,7 @@ type debianCVE struct {
 // first key is the package name
 // second key is the cve id
 // value is the cve
-type debianJsonResponse = map[string]map[string]debianCVE
+type debianJSONResponse = map[string]map[string]debianCVE
 
 func NewDebianSecurityTracker(affectedCmpRepository core.AffectedComponentRepository) debianSecurityTracker {
 	return debianSecurityTracker{
@@ -97,18 +97,18 @@ var codenameToVersion = map[string]string{
 	"forky":    "14",
 }
 
-func (s debianSecurityTracker) fetchAllCVEs() (debianJsonResponse, error) {
+func (s debianSecurityTracker) fetchAllCVEs() (debianJSONResponse, error) {
 	resp, err := s.httpClient.Get(debianBaseURL)
 	if err != nil {
-		return debianJsonResponse{}, nil
+		return debianJSONResponse{}, nil
 	}
 
 	defer resp.Body.Close()
 
-	var cves debianJsonResponse
+	var cves debianJSONResponse
 	err = json.NewDecoder(resp.Body).Decode(&cves)
 	if err != nil {
-		return debianJsonResponse{}, err
+		return debianJSONResponse{}, err
 	}
 
 	return cves, nil

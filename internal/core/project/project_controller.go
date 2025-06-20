@@ -33,7 +33,7 @@ type controller struct {
 	projectService    core.ProjectService
 }
 
-func NewHttpController(repository core.ProjectRepository, assetRepository core.AssetRepository, projectService core.ProjectService) *controller {
+func NewHTTPController(repository core.ProjectRepository, assetRepository core.AssetRepository, projectService core.ProjectService) *controller {
 	return &controller{
 		projectRepository: repository,
 		assetRepository:   assetRepository,
@@ -158,14 +158,14 @@ func (p *controller) RemoveMember(c core.Context) error {
 	// get rbac
 	rbac := core.GetRBAC(c)
 
-	userId := c.Param("userId")
-	if userId == "" {
-		return echo.NewHTTPError(400, "userId is required")
+	userID := c.Param("userID")
+	if userID == "" {
+		return echo.NewHTTPError(400, "userID is required")
 	}
 
 	// revoke admin and member role
-	rbac.RevokeRoleInProject(userId, "admin", project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInProject(userId, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(userID, "admin", project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(userID, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	return c.NoContent(200)
 }
@@ -178,9 +178,9 @@ func (p *controller) ChangeRole(c core.Context) error {
 
 	var req changeRoleRequest
 
-	userId := c.Param("userId")
-	if userId == "" {
-		return echo.NewHTTPError(400, "userId is required")
+	userID := c.Param("userID")
+	if userID == "" {
+		return echo.NewHTTPError(400, "userID is required")
 	}
 
 	if err := c.Bind(&req); err != nil {
@@ -201,15 +201,15 @@ func (p *controller) ChangeRole(c core.Context) error {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
-	if !utils.Contains(members, userId) {
+	if !utils.Contains(members, userID) {
 		return echo.NewHTTPError(400, "user is not a member of the organization")
 	}
 
-	rbac.RevokeRoleInProject(userId, "admin", project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(userID, "admin", project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
 
-	rbac.RevokeRoleInProject(userId, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(userID, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
-	if err := rbac.GrantRoleInProject(userId, req.Role, project.ID.String()); err != nil {
+	if err := rbac.GrantRoleInProject(userID, req.Role, project.ID.String()); err != nil {
 		return err
 	}
 

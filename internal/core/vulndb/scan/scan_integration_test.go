@@ -29,7 +29,7 @@ func TestScanning(t *testing.T) {
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	controller, _ := initHttpController(t, db)
+	controller, _ := initHTTPController(t, db)
 
 	// scan the vulnerable sbom
 	app := echo.New()
@@ -232,7 +232,7 @@ func TestTicketHandling(t *testing.T) {
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	controller, gitlabClientFacade := initHttpController(t, db)
+	controller, gitlabClientFacade := initHTTPController(t, db)
 
 	// scan the vulnerable sbom
 	app := echo.New()
@@ -492,7 +492,7 @@ func sbomWithoutVulnerability() *os.File {
 	return file
 }
 
-func initHttpController(t *testing.T, db core.DB) (*scan.HttpController, *mocks.GitlabClientFacade) {
+func initHTTPController(t *testing.T, db core.DB) (*scan.HTTPController, *mocks.GitlabClientFacade) {
 	// there are a lot of repositories and services that need to be initialized...
 	clientfactory, client := integration_tests.NewTestClientFactory(t)
 
@@ -501,7 +501,7 @@ func initHttpController(t *testing.T, db core.DB) (*scan.HttpController, *mocks.
 	depsDevService := mocks.NewDepsDevService(t)
 	depsDevService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.DepsDevVersionResponse{}, nil)
 
-	controller := inithelper.CreateHttpController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, depsDevService)
+	controller := inithelper.CreateHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, depsDevService)
 	// do not use concurrency in this test, because we want to test the ticket creation
 	controller.FireAndForgetSynchronizer = utils.NewSyncFireAndForgetSynchronizer()
 	return controller, client

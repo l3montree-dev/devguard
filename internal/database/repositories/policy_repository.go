@@ -26,11 +26,11 @@ func NewPolicyRepository(db core.DB) *policyRepository {
 	}
 }
 
-func (r *policyRepository) FindByProjectId(projectId uuid.UUID) ([]models.Policy, error) {
+func (r *policyRepository) FindByProjectId(projectID uuid.UUID) ([]models.Policy, error) {
 	// we need to use the project_enabled_policies pivot table to get the policies for a project
 	var policies []models.Policy
 	if err := r.db.Joins("JOIN project_enabled_policies ON project_enabled_policies.policy_id = policies.id").
-		Where("project_enabled_policies.project_id = ?", projectId).
+		Where("project_enabled_policies.project_id = ?", projectID).
 		Find(&policies).Error; err != nil {
 		return nil, err
 	}
@@ -47,9 +47,9 @@ func (r *policyRepository) FindCommunityManagedPolicies() ([]models.Policy, erro
 	return policies, nil
 }
 
-func (r *policyRepository) FindByOrganizationId(organizationId uuid.UUID) ([]models.Policy, error) {
+func (r *policyRepository) FindByOrganizationID(organizationID uuid.UUID) ([]models.Policy, error) {
 	var policies []models.Policy
-	if err := r.db.Find(&policies, "organization_id = ?", organizationId).Error; err != nil {
+	if err := r.db.Find(&policies, "organization_id = ?", organizationID).Error; err != nil {
 		return nil, err
 	}
 	return policies, nil
