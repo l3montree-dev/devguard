@@ -61,26 +61,15 @@ type GithubAppInstallationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
-//   - installationID int
+//   - tx
+//   - installationID
 func (_e *GithubAppInstallationRepository_Expecter) Delete(tx interface{}, installationID interface{}) *GithubAppInstallationRepository_Delete_Call {
 	return &GithubAppInstallationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, installationID)}
 }
 
 func (_c *GithubAppInstallationRepository_Delete_Call) Run(run func(tx core.DB, installationID int)) *GithubAppInstallationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 int
-		if args[1] != nil {
-			arg1 = args[1].(int)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(int))
 	})
 	return _c
 }
@@ -95,12 +84,12 @@ func (_c *GithubAppInstallationRepository_Delete_Call) RunAndReturn(run func(tx 
 	return _c
 }
 
-// FindByOrganizationId provides a mock function for the type GithubAppInstallationRepository
-func (_mock *GithubAppInstallationRepository) FindByOrganizationId(orgID uuid.UUID) ([]models.GithubAppInstallation, error) {
+// FindByOrganizationID provides a mock function for the type GithubAppInstallationRepository
+func (_mock *GithubAppInstallationRepository) FindByOrganizationID(orgID uuid.UUID) ([]models.GithubAppInstallation, error) {
 	ret := _mock.Called(orgID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindByOrganizationId")
+		panic("no return value specified for FindByOrganizationID")
 	}
 
 	var r0 []models.GithubAppInstallation
@@ -123,36 +112,30 @@ func (_mock *GithubAppInstallationRepository) FindByOrganizationId(orgID uuid.UU
 	return r0, r1
 }
 
-// GithubAppInstallationRepository_FindByOrganizationId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByOrganizationId'
-type GithubAppInstallationRepository_FindByOrganizationId_Call struct {
+// GithubAppInstallationRepository_FindByOrganizationID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByOrganizationID'
+type GithubAppInstallationRepository_FindByOrganizationID_Call struct {
 	*mock.Call
 }
 
-// FindByOrganizationId is a helper method to define mock.On call
-//   - orgID uuid.UUID
-func (_e *GithubAppInstallationRepository_Expecter) FindByOrganizationId(orgID interface{}) *GithubAppInstallationRepository_FindByOrganizationId_Call {
-	return &GithubAppInstallationRepository_FindByOrganizationId_Call{Call: _e.mock.On("FindByOrganizationId", orgID)}
+// FindByOrganizationID is a helper method to define mock.On call
+//   - orgID
+func (_e *GithubAppInstallationRepository_Expecter) FindByOrganizationID(orgID interface{}) *GithubAppInstallationRepository_FindByOrganizationID_Call {
+	return &GithubAppInstallationRepository_FindByOrganizationID_Call{Call: _e.mock.On("FindByOrganizationID", orgID)}
 }
 
-func (_c *GithubAppInstallationRepository_FindByOrganizationId_Call) Run(run func(orgID uuid.UUID)) *GithubAppInstallationRepository_FindByOrganizationId_Call {
+func (_c *GithubAppInstallationRepository_FindByOrganizationID_Call) Run(run func(orgID uuid.UUID)) *GithubAppInstallationRepository_FindByOrganizationID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
 
-func (_c *GithubAppInstallationRepository_FindByOrganizationId_Call) Return(githubAppInstallations []models.GithubAppInstallation, err error) *GithubAppInstallationRepository_FindByOrganizationId_Call {
+func (_c *GithubAppInstallationRepository_FindByOrganizationID_Call) Return(githubAppInstallations []models.GithubAppInstallation, err error) *GithubAppInstallationRepository_FindByOrganizationID_Call {
 	_c.Call.Return(githubAppInstallations, err)
 	return _c
 }
 
-func (_c *GithubAppInstallationRepository_FindByOrganizationId_Call) RunAndReturn(run func(orgID uuid.UUID) ([]models.GithubAppInstallation, error)) *GithubAppInstallationRepository_FindByOrganizationId_Call {
+func (_c *GithubAppInstallationRepository_FindByOrganizationID_Call) RunAndReturn(run func(orgID uuid.UUID) ([]models.GithubAppInstallation, error)) *GithubAppInstallationRepository_FindByOrganizationID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -189,20 +172,14 @@ type GithubAppInstallationRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - installationID int
+//   - installationID
 func (_e *GithubAppInstallationRepository_Expecter) Read(installationID interface{}) *GithubAppInstallationRepository_Read_Call {
 	return &GithubAppInstallationRepository_Read_Call{Call: _e.mock.On("Read", installationID)}
 }
 
 func (_c *GithubAppInstallationRepository_Read_Call) Run(run func(installationID int)) *GithubAppInstallationRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 int
-		if args[0] != nil {
-			arg0 = args[0].(int)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(int))
 	})
 	return _c
 }
@@ -240,26 +217,15 @@ type GithubAppInstallationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
-//   - model *models.GithubAppInstallation
+//   - tx
+//   - model
 func (_e *GithubAppInstallationRepository_Expecter) Save(tx interface{}, model interface{}) *GithubAppInstallationRepository_Save_Call {
 	return &GithubAppInstallationRepository_Save_Call{Call: _e.mock.On("Save", tx, model)}
 }
 
 func (_c *GithubAppInstallationRepository_Save_Call) Run(run func(tx core.DB, model *models.GithubAppInstallation)) *GithubAppInstallationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.GithubAppInstallation
-		if args[1] != nil {
-			arg1 = args[1].(*models.GithubAppInstallation)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.GithubAppInstallation))
 	})
 	return _c
 }

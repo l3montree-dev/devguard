@@ -136,7 +136,7 @@ func escapeAtSign(pURL string) string {
 	return strings.ReplaceAll(pURL, "@", "\\@")
 }
 
-func (t *tree) RenderToMermaid() string {
+func (tree *tree) RenderToMermaid() string {
 	//basic string to tell markdown that we have a mermaid flow chart with given parameters
 	mermaidFlowChart := "mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\n"
 
@@ -179,7 +179,7 @@ func (t *tree) RenderToMermaid() string {
 		}
 	}
 
-	renderPaths(t.Root)
+	renderPaths(tree.Root)
 
 	return "```" + builder.String() + "\nclassDef default stroke-width:2px\n```\n"
 }
@@ -198,22 +198,22 @@ func buildDependencyTreePerScanner(elements []models.ComponentDependency) map[st
 	res := make(map[string]tree)
 	scannerDependencyMap := make(map[string][]models.ComponentDependency)
 	for _, element := range elements {
-		scannerIds := element.ScannerIDs
+		scannerIDs := element.ScannerIDs
 		// split at whitespace
-		scannerIdsList := strings.Fields(scannerIds)
-		for _, scannerId := range scannerIdsList {
-			if _, ok := scannerDependencyMap[scannerId]; !ok {
-				scannerDependencyMap[scannerId] = make([]models.ComponentDependency, 0)
+		scannerIDsList := strings.Fields(scannerIDs)
+		for _, scannerID := range scannerIDsList {
+			if _, ok := scannerDependencyMap[scannerID]; !ok {
+				scannerDependencyMap[scannerID] = make([]models.ComponentDependency, 0)
 			}
-			scannerDependencyMap[scannerId] = append(scannerDependencyMap[scannerId], element)
+			scannerDependencyMap[scannerID] = append(scannerDependencyMap[scannerID], element)
 		}
 	}
 
-	for scannerId, elements := range scannerDependencyMap {
+	for scannerID, elements := range scannerDependencyMap {
 		// group the elements by scanner id and build the dependency trees.
 		// for each scanner
-		tree := buildDependencyTree(scannerId, elements)
-		res[scannerId] = tree
+		tree := buildDependencyTree(scannerID, elements)
+		res[scannerID] = tree
 	}
 
 	return res

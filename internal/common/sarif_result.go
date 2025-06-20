@@ -12,11 +12,11 @@ type Text struct {
 }
 
 type Rule struct {
-	Id               string `json:"id"`
+	ID               string `json:"id"`
 	Name             string `json:"name"`
 	FullDescription  Text   `json:"fullDescription"`
 	Help             Text   `json:"help"`
-	HelpUri          string `json:"helpUri"`
+	HelpURI          string `json:"helpURI"`
 	ShortDescription Text   `json:"shortDescription"`
 	Properties       map[string]any
 }
@@ -36,8 +36,8 @@ type Run struct {
 }
 
 type ArtifactLocation struct {
-	Uri       string `json:"uri"`
-	UriBaseId string `json:"uriBaseId,omitempty"`
+	URI       string `json:"uri"`
+	URIBaseID string `json:"uriBaseId,omitempty"`
 }
 
 type Region struct {
@@ -65,7 +65,7 @@ type PartialFingerprints struct {
 	CommitMessage string `json:"commitMessage"`
 }
 type Fingerprints struct {
-	MatchBasedId string `json:"matchBasedId/v1"`
+	MatchBasedID string `json:"matchBasedId/v1"`
 }
 
 type Properties struct {
@@ -75,7 +75,7 @@ type Properties struct {
 
 type Result struct {
 	Kind                string `json:"kind"`
-	RuleId              string `json:"ruleId"`
+	RuleID              string `json:"ruleId"`
 	Message             Text
 	Locations           []Location           `json:"locations"`
 	Properties          *Properties          `json:"properties,omitempty"`

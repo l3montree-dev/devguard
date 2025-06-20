@@ -69,50 +69,19 @@ type FirstPartyVulnService_UpdateFirstPartyVulnState_Call struct {
 }
 
 // UpdateFirstPartyVulnState is a helper method to define mock.On call
-//   - tx core.DB
-//   - userID string
-//   - firstPartyVuln *models.FirstPartyVuln
-//   - statusType string
-//   - justification string
-//   - mechanicalJustification models.MechanicalJustificationType
+//   - tx
+//   - userID
+//   - firstPartyVuln
+//   - statusType
+//   - justification
+//   - mechanicalJustification
 func (_e *FirstPartyVulnService_Expecter) UpdateFirstPartyVulnState(tx interface{}, userID interface{}, firstPartyVuln interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	return &FirstPartyVulnService_UpdateFirstPartyVulnState_Call{Call: _e.mock.On("UpdateFirstPartyVulnState", tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)}
 }
 
 func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) Run(run func(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType)) *FirstPartyVulnService_UpdateFirstPartyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 *models.FirstPartyVuln
-		if args[2] != nil {
-			arg2 = args[2].(*models.FirstPartyVuln)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
-		var arg5 models.MechanicalJustificationType
-		if args[5] != nil {
-			arg5 = args[5].(models.MechanicalJustificationType)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-			arg5,
-		)
+		run(args[0].(core.DB), args[1].(string), args[2].(*models.FirstPartyVuln), args[3].(string), args[4].(string), args[5].(models.MechanicalJustificationType))
 	})
 	return _c
 }
@@ -128,8 +97,8 @@ func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) RunAndReturn(run
 }
 
 // UserDetectedFirstPartyVulns provides a mock function for the type FirstPartyVulnService
-func (_mock *FirstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVuln) error {
-	ret := _mock.Called(tx, userID, scannerId, firstPartyVulns)
+func (_mock *FirstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
+	ret := _mock.Called(tx, userID, scannerID, firstPartyVulns)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserDetectedFirstPartyVulns")
@@ -137,7 +106,7 @@ func (_mock *FirstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, user
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, string, []models.FirstPartyVuln) error); ok {
-		r0 = returnFunc(tx, userID, scannerId, firstPartyVulns)
+		r0 = returnFunc(tx, userID, scannerID, firstPartyVulns)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -150,38 +119,17 @@ type FirstPartyVulnService_UserDetectedFirstPartyVulns_Call struct {
 }
 
 // UserDetectedFirstPartyVulns is a helper method to define mock.On call
-//   - tx core.DB
-//   - userID string
-//   - scannerId string
-//   - firstPartyVulns []models.FirstPartyVuln
-func (_e *FirstPartyVulnService_Expecter) UserDetectedFirstPartyVulns(tx interface{}, userID interface{}, scannerId interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
-	return &FirstPartyVulnService_UserDetectedFirstPartyVulns_Call{Call: _e.mock.On("UserDetectedFirstPartyVulns", tx, userID, scannerId, firstPartyVulns)}
+//   - tx
+//   - userID
+//   - scannerID
+//   - firstPartyVulns
+func (_e *FirstPartyVulnService_Expecter) UserDetectedFirstPartyVulns(tx interface{}, userID interface{}, scannerID interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+	return &FirstPartyVulnService_UserDetectedFirstPartyVulns_Call{Call: _e.mock.On("UserDetectedFirstPartyVulns", tx, userID, scannerID, firstPartyVulns)}
 }
 
-func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Run(run func(tx core.DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Run(run func(tx core.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 []models.FirstPartyVuln
-		if args[3] != nil {
-			arg3 = args[3].([]models.FirstPartyVuln)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
+		run(args[0].(core.DB), args[1].(string), args[2].(string), args[3].([]models.FirstPartyVuln))
 	})
 	return _c
 }
@@ -191,7 +139,7 @@ func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) Return(err err
 	return _c
 }
 
-func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) RunAndReturn(run func(tx core.DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVuln) error) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
+func (_c *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call) RunAndReturn(run func(tx core.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error) *FirstPartyVulnService_UserDetectedFirstPartyVulns_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -219,32 +167,16 @@ type FirstPartyVulnService_UserFixedFirstPartyVulns_Call struct {
 }
 
 // UserFixedFirstPartyVulns is a helper method to define mock.On call
-//   - tx core.DB
-//   - userID string
-//   - firstPartyVulns []models.FirstPartyVuln
+//   - tx
+//   - userID
+//   - firstPartyVulns
 func (_e *FirstPartyVulnService_Expecter) UserFixedFirstPartyVulns(tx interface{}, userID interface{}, firstPartyVulns interface{}) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	return &FirstPartyVulnService_UserFixedFirstPartyVulns_Call{Call: _e.mock.On("UserFixedFirstPartyVulns", tx, userID, firstPartyVulns)}
 }
 
 func (_c *FirstPartyVulnService_UserFixedFirstPartyVulns_Call) Run(run func(tx core.DB, userID string, firstPartyVulns []models.FirstPartyVuln)) *FirstPartyVulnService_UserFixedFirstPartyVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 []models.FirstPartyVuln
-		if args[2] != nil {
-			arg2 = args[2].([]models.FirstPartyVuln)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(core.DB), args[1].(string), args[2].([]models.FirstPartyVuln))
 	})
 	return _c
 }

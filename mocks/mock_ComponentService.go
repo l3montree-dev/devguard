@@ -71,32 +71,16 @@ type ComponentService_GetAndSaveLicenseInformation_Call struct {
 }
 
 // GetAndSaveLicenseInformation is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - scannerID string
+//   - assetVersionName
+//   - assetID
+//   - scannerID
 func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(assetVersionName interface{}, assetID interface{}, scannerID interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
 	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersionName, assetID, scannerID)}
 }
 
 func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scannerID string)) *ComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
 	})
 	return _c
 }
@@ -143,20 +127,14 @@ type ComponentService_GetLicense_Call struct {
 }
 
 // GetLicense is a helper method to define mock.On call
-//   - component models.Component
+//   - component
 func (_e *ComponentService_Expecter) GetLicense(component interface{}) *ComponentService_GetLicense_Call {
 	return &ComponentService_GetLicense_Call{Call: _e.mock.On("GetLicense", component)}
 }
 
 func (_c *ComponentService_GetLicense_Call) Run(run func(component models.Component)) *ComponentService_GetLicense_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Component
-		if args[0] != nil {
-			arg0 = args[0].(models.Component)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(models.Component))
 	})
 	return _c
 }
@@ -183,20 +161,14 @@ type ComponentService_RefreshComponentProjectInformation_Call struct {
 }
 
 // RefreshComponentProjectInformation is a helper method to define mock.On call
-//   - project models.ComponentProject
+//   - project
 func (_e *ComponentService_Expecter) RefreshComponentProjectInformation(project interface{}) *ComponentService_RefreshComponentProjectInformation_Call {
 	return &ComponentService_RefreshComponentProjectInformation_Call{Call: _e.mock.On("RefreshComponentProjectInformation", project)}
 }
 
 func (_c *ComponentService_RefreshComponentProjectInformation_Call) Run(run func(project models.ComponentProject)) *ComponentService_RefreshComponentProjectInformation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.ComponentProject
-		if args[0] != nil {
-			arg0 = args[0].(models.ComponentProject)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(models.ComponentProject))
 	})
 	return _c
 }

@@ -58,9 +58,9 @@ func (g *gormPatRepository) ReadByToken(token string) (models.PAT, error) {
 	return t, err
 }
 
-func (g *gormPatRepository) ListByUserID(userId string) ([]models.PAT, error) {
+func (g *gormPatRepository) ListByUserID(userID string) ([]models.PAT, error) {
 	var pats []models.PAT
-	err := g.db.Where("user_id = ?", userId).Find(&pats).Error
+	err := g.db.Where("user_id = ?", userID).Find(&pats).Error
 	return pats, err
 }
 

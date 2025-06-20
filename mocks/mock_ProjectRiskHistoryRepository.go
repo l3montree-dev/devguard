@@ -40,8 +40,8 @@ func (_m *ProjectRiskHistoryRepository) EXPECT() *ProjectRiskHistoryRepository_E
 }
 
 // GetRiskHistory provides a mock function for the type ProjectRiskHistoryRepository
-func (_mock *ProjectRiskHistoryRepository) GetRiskHistory(projectId uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error) {
-	ret := _mock.Called(projectId, start, end)
+func (_mock *ProjectRiskHistoryRepository) GetRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error) {
+	ret := _mock.Called(projectID, start, end)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetRiskHistory")
@@ -50,17 +50,17 @@ func (_mock *ProjectRiskHistoryRepository) GetRiskHistory(projectId uuid.UUID, s
 	var r0 []models.ProjectRiskHistory
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, time.Time, time.Time) ([]models.ProjectRiskHistory, error)); ok {
-		return returnFunc(projectId, start, end)
+		return returnFunc(projectID, start, end)
 	}
 	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, time.Time, time.Time) []models.ProjectRiskHistory); ok {
-		r0 = returnFunc(projectId, start, end)
+		r0 = returnFunc(projectID, start, end)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ProjectRiskHistory)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, time.Time, time.Time) error); ok {
-		r1 = returnFunc(projectId, start, end)
+		r1 = returnFunc(projectID, start, end)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -73,32 +73,16 @@ type ProjectRiskHistoryRepository_GetRiskHistory_Call struct {
 }
 
 // GetRiskHistory is a helper method to define mock.On call
-//   - projectId uuid.UUID
-//   - start time.Time
-//   - end time.Time
-func (_e *ProjectRiskHistoryRepository_Expecter) GetRiskHistory(projectId interface{}, start interface{}, end interface{}) *ProjectRiskHistoryRepository_GetRiskHistory_Call {
-	return &ProjectRiskHistoryRepository_GetRiskHistory_Call{Call: _e.mock.On("GetRiskHistory", projectId, start, end)}
+//   - projectID
+//   - start
+//   - end
+func (_e *ProjectRiskHistoryRepository_Expecter) GetRiskHistory(projectID interface{}, start interface{}, end interface{}) *ProjectRiskHistoryRepository_GetRiskHistory_Call {
+	return &ProjectRiskHistoryRepository_GetRiskHistory_Call{Call: _e.mock.On("GetRiskHistory", projectID, start, end)}
 }
 
-func (_c *ProjectRiskHistoryRepository_GetRiskHistory_Call) Run(run func(projectId uuid.UUID, start time.Time, end time.Time)) *ProjectRiskHistoryRepository_GetRiskHistory_Call {
+func (_c *ProjectRiskHistoryRepository_GetRiskHistory_Call) Run(run func(projectID uuid.UUID, start time.Time, end time.Time)) *ProjectRiskHistoryRepository_GetRiskHistory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 time.Time
-		if args[1] != nil {
-			arg1 = args[1].(time.Time)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(uuid.UUID), args[1].(time.Time), args[2].(time.Time))
 	})
 	return _c
 }
@@ -108,7 +92,7 @@ func (_c *ProjectRiskHistoryRepository_GetRiskHistory_Call) Return(projectRiskHi
 	return _c
 }
 
-func (_c *ProjectRiskHistoryRepository_GetRiskHistory_Call) RunAndReturn(run func(projectId uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)) *ProjectRiskHistoryRepository_GetRiskHistory_Call {
+func (_c *ProjectRiskHistoryRepository_GetRiskHistory_Call) RunAndReturn(run func(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)) *ProjectRiskHistoryRepository_GetRiskHistory_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -136,20 +120,14 @@ type ProjectRiskHistoryRepository_UpdateRiskAggregation_Call struct {
 }
 
 // UpdateRiskAggregation is a helper method to define mock.On call
-//   - projectRisk *models.ProjectRiskHistory
+//   - projectRisk
 func (_e *ProjectRiskHistoryRepository_Expecter) UpdateRiskAggregation(projectRisk interface{}) *ProjectRiskHistoryRepository_UpdateRiskAggregation_Call {
 	return &ProjectRiskHistoryRepository_UpdateRiskAggregation_Call{Call: _e.mock.On("UpdateRiskAggregation", projectRisk)}
 }
 
 func (_c *ProjectRiskHistoryRepository_UpdateRiskAggregation_Call) Run(run func(projectRisk *models.ProjectRiskHistory)) *ProjectRiskHistoryRepository_UpdateRiskAggregation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.ProjectRiskHistory
-		if args[0] != nil {
-			arg0 = args[0].(*models.ProjectRiskHistory)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(*models.ProjectRiskHistory))
 	})
 	return _c
 }

@@ -111,20 +111,14 @@ type CvssInterface_Get_Call struct {
 }
 
 // Get is a helper method to define mock.On call
-//   - key string
+//   - key
 func (_e *CvssInterface_Expecter) Get(key interface{}) *CvssInterface_Get_Call {
 	return &CvssInterface_Get_Call{Call: _e.mock.On("Get", key)}
 }
 
 func (_c *CvssInterface_Get_Call) Run(run func(key string)) *CvssInterface_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(string))
 	})
 	return _c
 }
@@ -162,26 +156,15 @@ type CvssInterface_Set_Call struct {
 }
 
 // Set is a helper method to define mock.On call
-//   - key string
-//   - value string
+//   - key
+//   - value
 func (_e *CvssInterface_Expecter) Set(key interface{}, value interface{}) *CvssInterface_Set_Call {
 	return &CvssInterface_Set_Call{Call: _e.mock.On("Set", key, value)}
 }
 
 func (_c *CvssInterface_Set_Call) Run(run func(key string, value string)) *CvssInterface_Set_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(string), args[1].(string))
 	})
 	return _c
 }

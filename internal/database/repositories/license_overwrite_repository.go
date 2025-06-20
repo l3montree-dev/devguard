@@ -46,6 +46,6 @@ func (repository *LicenseOverwriteRepository) MaybeGetOverwriteForComponent(orgI
 	return result, nil
 }
 
-func (r *LicenseOverwriteRepository) DeleteByComponentPurlAndOrgID(orgID uuid.UUID, pURL string) error {
-	return r.db.Where("organization_id = ? AND component_purl = ?", orgID, pURL).Delete(&models.LicenseOverwrite{}).Error
+func (repository *LicenseOverwriteRepository) DeleteByComponentPurlAndOrgID(orgID uuid.UUID, pURL string) error {
+	return repository.db.Where("organization_id = ? AND component_purl = ?", orgID, pURL).Delete(&models.LicenseOverwrite{}).Error
 }

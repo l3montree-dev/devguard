@@ -20,8 +20,8 @@ func TestGetProject(t *testing.T) {
 		}))
 		defer mockServer.Close()
 
-		// Override the depsDevApiURL to point to the mock server
-		depsDevApiURL = mockServer.URL
+		// Override the depsDevAPIURL to point to the mock server
+		depsDevAPIURL = mockServer.URL
 
 		service := NewDepsDevService()
 		ctx := context.Background()
@@ -47,8 +47,8 @@ func TestGetVersion(t *testing.T) {
 		}))
 		defer mockServer.Close()
 
-		// Override the depsDevApiURL to point to the mock server
-		depsDevApiURL = mockServer.URL
+		// Override the depsDevAPIURL to point to the mock server
+		depsDevAPIURL = mockServer.URL
 
 		service := NewDepsDevService()
 		ctx := context.Background()

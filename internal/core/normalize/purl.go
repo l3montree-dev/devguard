@@ -65,7 +65,7 @@ func Purl(component cdx.Component) string {
 
 // PURL conversion utilities
 
-var PURL_ECOSYSTEMS = map[string]string{
+var PURLEcosystems = map[string]string{
 	"Alpine":    "apk",
 	"crates.io": "cargo",
 	"Debian":    "deb",
@@ -91,7 +91,7 @@ func urlEncode(packageName string) string {
 }
 
 func PackageToPurl(ecosystem, packageName string) string {
-	purlType, exists := PURL_ECOSYSTEMS[ecosystem]
+	purlType, exists := PURLEcosystems[ecosystem]
 	if !exists {
 		return ""
 	}
@@ -118,7 +118,7 @@ func PackageToPurl(ecosystem, packageName string) string {
 }
 
 func PurlToEcosystem(purlType string) string {
-	for key, value := range PURL_ECOSYSTEMS {
+	for key, value := range PURLEcosystems {
 		if value == purlType {
 			return key
 		}

@@ -1,7 +1,7 @@
 // Copyright 2025 l3montree UG (haftungsbeschraenkt).
 // SPDX-License-Identifier: 	AGPL-3.0-or-later
 
-package integration_tests
+package integrationtestutil
 
 import (
 	"github.com/l3montree-dev/devguard/internal/core"

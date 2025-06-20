@@ -47,20 +47,14 @@ type FireAndForgetSynchronizer_FireAndForget_Call struct {
 }
 
 // FireAndForget is a helper method to define mock.On call
-//   - fn func()
+//   - fn
 func (_e *FireAndForgetSynchronizer_Expecter) FireAndForget(fn interface{}) *FireAndForgetSynchronizer_FireAndForget_Call {
 	return &FireAndForgetSynchronizer_FireAndForget_Call{Call: _e.mock.On("FireAndForget", fn)}
 }
 
 func (_c *FireAndForgetSynchronizer_FireAndForget_Call) Run(run func(fn func())) *FireAndForgetSynchronizer_FireAndForget_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func()
-		if args[0] != nil {
-			arg0 = args[0].(func())
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(func()))
 	})
 	return _c
 }

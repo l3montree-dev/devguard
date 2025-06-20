@@ -57,7 +57,7 @@ func sarifCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan", config.RuntimeBaseConfig.ApiUrl), bytes.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
 
 	if err != nil {
 		return err
@@ -111,7 +111,7 @@ func NewSarifCommand() *cobra.Command {
 		RunE:  sarifCmd,
 	}
 
-	cmd.Flags().String("scannerId", "github.com/l3montree-dev/devguard-scanner/cmd/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerId.")
+	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard-scanner/cmd/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
 
 	addScanFlags(cmd)
 	return cmd
@@ -132,14 +132,14 @@ func expandAndObfuscateSnippet(sarifScan *common.SarifResult, path string) {
 				// read the file from git - if there is a partial fingerprint which looks like a commit sha
 				// this is a bit of a hack, but we need to read the file from git to expand the snippet
 				if sarifScan.Runs[ru].Results[re].PartialFingerprints != nil && len(sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha) > 0 {
-					fileContent, err = utils.ReadFileFromGitRef(path, sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha, location.PhysicalLocation.ArtifactLocation.Uri)
+					fileContent, err = utils.ReadFileFromGitRef(path, sarifScan.Runs[ru].Results[re].PartialFingerprints.CommitSha, location.PhysicalLocation.ArtifactLocation.URI)
 					if err != nil {
 						slog.Error("could not read file", "err", err)
 						continue
 					}
 				} else {
 					// read the file from the filesystem
-					fileContent, err = os.ReadFile(location.PhysicalLocation.ArtifactLocation.Uri)
+					fileContent, err = os.ReadFile(location.PhysicalLocation.ArtifactLocation.URI)
 					if err != nil {
 						slog.Error("could not read file", "err", err)
 						continue
@@ -300,7 +300,7 @@ func sarifCommandFactory(scannerID string) func(cmd *cobra.Command, args []strin
 			return errors.Wrap(err, "could not marshal sarif result")
 		}
 
-		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.ApiUrl), bytes.NewReader(b))
+		req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/sarif-scan/", config.RuntimeBaseConfig.APIURL), bytes.NewReader(b))
 		if err != nil {
 			return errors.Wrap(err, "could not create request")
 		}

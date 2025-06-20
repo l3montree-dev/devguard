@@ -4,7 +4,7 @@
     "licenser.projectName": "DevGuard",
     "licenser.author": "l3montree GmbH",
     "licenser.disableAutoHeaderInsertion": false,
-    "go.lintTool": "golangci-lint",
+    "go.lintTool": "golangci-lint-v2",
     "cSpell.words": [
         "devguard",
         "ghinstallation",

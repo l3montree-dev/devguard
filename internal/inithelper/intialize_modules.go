@@ -81,8 +81,8 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 	)
 }
 
-func CreateHttpController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) *scan.HttpController {
-	return scan.NewHttpController(
+func CreateHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) *scan.HTTPController {
+	return scan.NewHTTPController(
 		db,
 		repositories.NewCVERepository(db),
 		repositories.NewComponentRepository(db),

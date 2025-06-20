@@ -75,12 +75,12 @@ func (c *httpController) getChildrenProjectIDs(projectID uuid.UUID) ([]uuid.UUID
 
 func (c *httpController) getProjectRiskDistribution(projectID uuid.UUID) ([]models.AssetRiskDistribution, error) {
 	// fetch all assets
-	projectIds, err := c.getChildrenProjectIDs(projectID)
+	projectIDs, err := c.getChildrenProjectIDs(projectID)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch child projects")
 	}
 
-	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectIDs(projectIds)
+	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectIDs(projectIDs)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch assets by project id")
 	}

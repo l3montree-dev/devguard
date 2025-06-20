@@ -57,7 +57,7 @@ func TestFromOSV(t *testing.T) {
 			Affected: []common.Affected{
 				{
 					Package: common.Pkg{
-						Purl: "invalid_purl",
+						Purl: "invalidPURL",
 					},
 					Ranges: []common.Rng{},
 				},

@@ -228,7 +228,7 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 func addDefaultFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
 	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-	cmd.PersistentFlags().String("apiUrl", "https://api.devguard.dev", "The url of the API to send the scan request to")
+	cmd.PersistentFlags().String("apiURL", "https://api.devguard.dev", "The url of the API to send the scan request to")
 }
 
 func addAssetRefFlags(cmd *cobra.Command) {
@@ -284,7 +284,7 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.ApiUrl), file)
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), file)
 	if err != nil {
 		return errors.Wrap(err, "could not create request")
 	}

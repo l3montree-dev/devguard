@@ -30,7 +30,7 @@ type DependencyVulnDTO struct {
 	AssetID               string           `json:"assetId"`
 	State                 models.VulnState `json:"state"`
 	CVE                   *models.CVE      `json:"cve"`
-	CVEID                 *string          `json:"cveId"`
+	CVEID                 *string          `json:"cveID"`
 	ComponentPurl         *string          `json:"componentPurl"`
 	ComponentDepth        *int             `json:"componentDepth"`
 	ComponentFixedVersion *string          `json:"componentFixedVersion"`
@@ -40,7 +40,7 @@ type DependencyVulnDTO struct {
 	Priority              *int             `json:"priority"`
 	LastDetected          time.Time        `json:"lastDetected"`
 	CreatedAt             time.Time        `json:"createdAt"`
-	TicketID              *string          `json:"ticketId"`
+	TicketID              *string          `json:"ticketID"`
 	TicketURL             *string          `json:"ticketUrl"`
 	ManualTicketCreation  bool             `json:"manualTicketCreation"`
 

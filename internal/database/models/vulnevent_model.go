@@ -58,8 +58,8 @@ type VulnEvent struct {
 	UserID                   string                      `json:"userId"`
 	Justification            *string                     `json:"justification" gorm:"type:text;"`
 	MechanicalJustification  MechanicalJustificationType `json:"mechanicalJustification" gorm:"type:text;"`
-	ArbitraryJsonData        string                      `json:"arbitraryJsonData" gorm:"type:text;"`
-	arbitraryJsonData        map[string]any
+	ArbitraryJSONData        string                      `json:"arbitraryJSONData" gorm:"type:text;"`
+	arbitraryJSONData        map[string]any
 	OriginalAssetVersionName *string `json:"originalAssetVersionName" gorm:"column:original_asset_version_name;type:text;default:null;"`
 }
 
@@ -68,55 +68,55 @@ type VulnEventDetail struct {
 
 	AssetVersionName string `json:"assetVersionName" gorm:"column:asset_version_name"`
 	Slug             string `json:"assetVersionSlug" gorm:"column:slug"`
-	CVEID            string `json:"cveId" gorm:"column:cve_id"`
+	CVEID            string `json:"cveID" gorm:"column:cve_id"`
 	ComponentPurl    string `json:"packageName"`
-	Uri              string `json:"uri"`
+	URI              string `json:"uri"`
 }
 
-func (e *VulnEvent) GetArbitraryJsonData() map[string]any {
+func (event *VulnEvent) GetArbitraryJSONData() map[string]any {
 	// parse the additional data
-	if e.ArbitraryJsonData == "" {
+	if event.ArbitraryJSONData == "" {
 		return make(map[string]any)
 	}
-	if e.arbitraryJsonData == nil {
-		e.arbitraryJsonData = make(map[string]any)
-		err := json.Unmarshal([]byte(e.ArbitraryJsonData), &e.arbitraryJsonData)
+	if event.arbitraryJSONData == nil {
+		event.arbitraryJSONData = make(map[string]any)
+		err := json.Unmarshal([]byte(event.ArbitraryJSONData), &event.arbitraryJSONData)
 		if err != nil {
-			slog.Error("could not parse additional data", "err", err, "dependencyVulnId", e.ID)
+			slog.Error("could not parse additional data", "err", err, "dependencyVulnID", event.ID)
 		}
 	}
-	return e.arbitraryJsonData
+	return event.arbitraryJSONData
 }
 
-func (e *VulnEvent) SetArbitraryJsonData(data map[string]any) {
-	e.arbitraryJsonData = data
+func (event *VulnEvent) SetArbitraryJSONData(data map[string]any) {
+	event.arbitraryJSONData = data
 	// parse the additional data
-	dataBytes, err := json.Marshal(e.arbitraryJsonData)
+	dataBytes, err := json.Marshal(event.arbitraryJSONData)
 	if err != nil {
-		slog.Error("could not marshal additional data", "err", err, "dependencyVulnId", e.ID)
+		slog.Error("could not marshal additional data", "err", err, "dependencyVulnID", event.ID)
 	}
-	e.ArbitraryJsonData = string(dataBytes)
+	event.ArbitraryJSONData = string(dataBytes)
 }
-func (m VulnEvent) TableName() string {
+func (event VulnEvent) TableName() string {
 	return "vuln_events"
 }
 
-func (e VulnEvent) Apply(vuln Vuln) {
-	switch e.Type {
+func (event VulnEvent) Apply(vuln Vuln) {
+	switch event.Type {
 	case EventTypeDetectedOnAnotherBranch:
 		// do nothing
 		return
 	case EventTypeAddedScanner:
-		scannerID, ok := (e.GetArbitraryJsonData()["scannerIds"]).(string)
+		scannerID, ok := (event.GetArbitraryJSONData()["scannerIDs"]).(string)
 		if !ok {
-			slog.Error("could not parse scanner id", "dependencyVulnId", e.VulnID)
+			slog.Error("could not parse scanner id", "dependencyVulnID", event.VulnID)
 			return
 		}
 		vuln.AddScannerID(scannerID)
 	case EventTypeRemovedScanner:
-		scannerID, ok := (e.GetArbitraryJsonData()["scannerIds"]).(string)
+		scannerID, ok := (event.GetArbitraryJSONData()["scannerIDs"]).(string)
 		if !ok {
-			slog.Error("could not parse scanner id", "dependencyVulnId", e.VulnID)
+			slog.Error("could not parse scanner id", "dependencyVulnID", event.VulnID)
 			return
 		}
 		vuln.RemoveScannerID(scannerID)
@@ -126,9 +126,9 @@ func (e VulnEvent) Apply(vuln Vuln) {
 		vuln.SetState(VulnStateOpen)
 	case EventTypeDetected:
 		vuln.SetState(VulnStateOpen)
-		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
+		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
 		if !ok {
-			slog.Error("could not parse risk assessment", "dependencyVulnId", e.VulnID)
+			slog.Error("could not parse risk assessment", "dependencyVulnID", event.VulnID)
 			return
 		}
 		vuln.SetRawRiskAssessment(f)
@@ -140,9 +140,9 @@ func (e VulnEvent) Apply(vuln Vuln) {
 	case EventTypeMarkedForTransfer:
 		vuln.SetState(VulnStateMarkedForTransfer)
 	case EventTypeRawRiskAssessmentUpdated:
-		f, ok := (e.GetArbitraryJsonData()["risk"]).(float64)
+		f, ok := (event.GetArbitraryJSONData()["risk"]).(float64)
 		if !ok {
-			slog.Error("could not parse risk assessment", "dependencyVulnId", e.VulnID)
+			slog.Error("could not parse risk assessment", "dependencyVulnID", event.VulnID)
 			return
 		}
 		vuln.SetRawRiskAssessment(f)
@@ -190,7 +190,7 @@ func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justificati
 		Justification:           &justification,
 		MechanicalJustification: mechanicalJustification,
 	}
-	ev.SetArbitraryJsonData(map[string]any{"scannerIds": scannerID})
+	ev.SetArbitraryJSONData(map[string]any{"scannerIDs": scannerID})
 	return ev
 }
 
@@ -201,7 +201,7 @@ func NewFixedEvent(vulnID string, vulnType VulnType, userID string, scannerID st
 		VulnID:   vulnID,
 		UserID:   userID,
 	}
-	ev.SetArbitraryJsonData(map[string]any{"scannerIds": scannerID})
+	ev.SetArbitraryJSONData(map[string]any{"scannerIDs": scannerID})
 	return ev
 }
 
@@ -214,9 +214,9 @@ func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalcu
 	}
 
 	m := riskCalculationReport.Map()
-	m["scannerIds"] = scannerID
+	m["scannerIDs"] = scannerID
 
-	ev.SetArbitraryJsonData(m)
+	ev.SetArbitraryJSONData(m)
 
 	return ev
 }
@@ -230,10 +230,10 @@ func NewDetectedOnAnotherBranchEvent(vulnID string, vulnType VulnType, userID st
 	}
 
 	m := riskCalculationReport.Map()
-	m["scannerIds"] = scannerID
+	m["scannerIDs"] = scannerID
 	m["assetVersionName"] = assetVersionName
 
-	ev.SetArbitraryJsonData(m)
+	ev.SetArbitraryJSONData(m)
 
 	return ev
 }
@@ -246,7 +246,7 @@ func NewMitigateEvent(vulnID string, vulnType VulnType, userID string, justifica
 		UserID:        userID,
 		Justification: &justification,
 	}
-	ev.SetArbitraryJsonData(arbitraryData)
+	ev.SetArbitraryJSONData(arbitraryData)
 	return ev
 }
 
@@ -263,7 +263,7 @@ func NewRawRiskAssessmentUpdatedEvent(vulnID string, vulnType VulnType, userID s
 		m["oldRisk"] = *oldRisk
 	}
 
-	event.SetArbitraryJsonData(m)
+	event.SetArbitraryJSONData(m)
 	return event
 }
 
@@ -275,7 +275,7 @@ func NewAddedScannerEvent(vulnID string, vulnType VulnType, userID string, scann
 		UserID:   userID,
 	}
 
-	ev.SetArbitraryJsonData(map[string]any{"scannerIds": scannerID})
+	ev.SetArbitraryJSONData(map[string]any{"scannerIDs": scannerID})
 	return ev
 }
 
@@ -287,12 +287,12 @@ func NewRemovedScannerEvent(vulnID string, vulnType VulnType, userID string, sca
 		UserID:   userID,
 	}
 
-	ev.SetArbitraryJsonData(map[string]any{"scannerIds": scannerID})
+	ev.SetArbitraryJSONData(map[string]any{"scannerIDs": scannerID})
 	return ev
 }
 
-func (ev VulnEvent) IsScanUnreleatedEvent() bool {
-	switch ev.Type {
+func (event VulnEvent) IsScanUnreleatedEvent() bool {
+	switch event.Type {
 	case EventTypeAddedScanner, EventTypeRemovedScanner, EventTypeDetectedOnAnotherBranch, EventTypeRawRiskAssessmentUpdated:
 		return false
 	default:

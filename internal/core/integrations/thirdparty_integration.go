@@ -90,11 +90,11 @@ func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx core.Cont
 	return false, nil
 }
 
-func (t *thirdPartyIntegrations) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupId string) (string, error) {
+func (t *thirdPartyIntegrations) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
 	for _, i := range t.integrations {
-		role, err := i.GetRoleInGroup(ctx, userID, providerID, groupId)
+		role, err := i.GetRoleInGroup(ctx, userID, providerID, groupID)
 		if err != nil {
-			slog.Error("error while getting role in org", "err", err, "providerID", providerID, "orgID", groupId)
+			slog.Error("error while getting role in org", "err", err, "providerID", providerID, "orgID", groupID)
 			// swallow error
 			continue
 		}
@@ -102,7 +102,7 @@ func (t *thirdPartyIntegrations) GetRoleInGroup(ctx context.Context, userID stri
 			return role, nil
 		}
 	}
-	return "", fmt.Errorf("no role found for user %s in org %s with providerID %s", userID, groupId, providerID)
+	return "", fmt.Errorf("no role found for user %s in org %s with providerID %s", userID, groupID, providerID)
 }
 
 func (t *thirdPartyIntegrations) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {

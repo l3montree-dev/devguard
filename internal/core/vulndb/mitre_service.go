@@ -25,10 +25,10 @@ func (mitreService) parseCWEs(xmlBytes []byte) ([]*WeaknessType, error) {
 	return cweList.Weaknesses.Weakness, nil
 }
 
-var cweXMLUrl = "https://cwe.mitre.org/data/xml/cwec_latest.xml.zip"
+var cweXMLURL = "https://cwe.mitre.org/data/xml/cwec_latest.xml.zip"
 
 func (mitreService mitreService) fetchCWEXML() ([]*WeaknessType, error) {
-	resp, err := mitreService.httpClient.Get(cweXMLUrl)
+	resp, err := mitreService.httpClient.Get(cweXMLURL)
 
 	if err != nil {
 		return nil, err

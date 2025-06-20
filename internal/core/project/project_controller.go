@@ -33,7 +33,7 @@ type controller struct {
 	projectService    core.ProjectService
 }
 
-func NewHttpController(repository core.ProjectRepository, assetRepository core.AssetRepository, projectService core.ProjectService) *controller {
+func NewHTTPController(repository core.ProjectRepository, assetRepository core.AssetRepository, projectService core.ProjectService) *controller {
 	return &controller{
 		projectRepository: repository,
 		assetRepository:   assetRepository,
@@ -41,7 +41,7 @@ func NewHttpController(repository core.ProjectRepository, assetRepository core.A
 	}
 }
 
-func (p *controller) Create(ctx core.Context) error {
+func (projectController *controller) Create(ctx core.Context) error {
 	var req CreateRequest
 	if err := ctx.Bind(&req); err != nil {
 		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
@@ -56,7 +56,7 @@ func (p *controller) Create(ctx core.Context) error {
 	// add the organization id
 	newProject.OrganizationID = core.GetOrg(ctx).GetID()
 
-	err := p.projectService.CreateProject(ctx, &newProject)
+	err := projectController.projectService.CreateProject(ctx, &newProject)
 	if err != nil {
 		return echo.NewHTTPError(409, "could not create project").WithInternal(err)
 	}
@@ -111,7 +111,7 @@ func FetchMembersOfProject(ctx core.Context) ([]core.User, error) {
 	return users, nil
 }
 
-func (p *controller) Members(c core.Context) error {
+func (projectController *controller) Members(c core.Context) error {
 	members, err := FetchMembersOfProject(c)
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func (p *controller) Members(c core.Context) error {
 	return c.JSON(200, members)
 }
 
-func (p *controller) InviteMembers(c core.Context) error {
+func (projectController *controller) InviteMembers(c core.Context) error {
 	project := core.GetProject(c)
 
 	// get rbac
@@ -140,37 +140,37 @@ func (p *controller) InviteMembers(c core.Context) error {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
-	for _, newMemberId := range req.Ids {
-		if !utils.Contains(members, newMemberId) {
+	for _, newMemberID := range req.Ids {
+		if !utils.Contains(members, newMemberID) {
 			return echo.NewHTTPError(400, "user is not a member of the organization")
 		}
 
-		if err := rbac.GrantRoleInProject(newMemberId, "member", project.ID.String()); err != nil {
+		if err := rbac.GrantRoleInProject(newMemberID, "member", project.ID.String()); err != nil {
 			return err
 		}
 	}
 	return c.NoContent(200)
 }
 
-func (p *controller) RemoveMember(c core.Context) error {
+func (projectController *controller) RemoveMember(c core.Context) error {
 	project := core.GetProject(c)
 
 	// get rbac
 	rbac := core.GetRBAC(c)
 
-	userId := c.Param("userId")
-	if userId == "" {
-		return echo.NewHTTPError(400, "userId is required")
+	userID := c.Param("userID")
+	if userID == "" {
+		return echo.NewHTTPError(400, "userID is required")
 	}
 
 	// revoke admin and member role
-	rbac.RevokeRoleInProject(userId, "admin", project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
-	rbac.RevokeRoleInProject(userId, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(userID, "admin", project.ID.String())  // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(userID, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
 	return c.NoContent(200)
 }
 
-func (p *controller) ChangeRole(c core.Context) error {
+func (projectController *controller) ChangeRole(c core.Context) error {
 	project := core.GetProject(c)
 
 	// get rbac
@@ -178,9 +178,9 @@ func (p *controller) ChangeRole(c core.Context) error {
 
 	var req changeRoleRequest
 
-	userId := c.Param("userId")
-	if userId == "" {
-		return echo.NewHTTPError(400, "userId is required")
+	userID := c.Param("userID")
+	if userID == "" {
+		return echo.NewHTTPError(400, "userID is required")
 	}
 
 	if err := c.Bind(&req); err != nil {
@@ -201,25 +201,25 @@ func (p *controller) ChangeRole(c core.Context) error {
 		return echo.NewHTTPError(500, "could not get members of organization").WithInternal(err)
 	}
 
-	if !utils.Contains(members, userId) {
+	if !utils.Contains(members, userID) {
 		return echo.NewHTTPError(400, "user is not a member of the organization")
 	}
 
-	rbac.RevokeRoleInProject(userId, "admin", project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
+	rbac.RevokeRoleInProject(userID, "admin", project.ID.String()) // nolint:errcheck // we don't care if the user is not an admin
 
-	rbac.RevokeRoleInProject(userId, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
+	rbac.RevokeRoleInProject(userID, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
-	if err := rbac.GrantRoleInProject(userId, req.Role, project.ID.String()); err != nil {
+	if err := rbac.GrantRoleInProject(userID, req.Role, project.ID.String()); err != nil {
 		return err
 	}
 
 	return c.NoContent(200)
 }
 
-func (p *controller) Delete(c core.Context) error {
+func (projectController *controller) Delete(c core.Context) error {
 	project := core.GetProject(c)
 
-	err := p.projectRepository.Delete(nil, project.ID)
+	err := projectController.projectRepository.Delete(nil, project.ID)
 	if err != nil {
 		return err
 	}
@@ -227,7 +227,7 @@ func (p *controller) Delete(c core.Context) error {
 	return c.NoContent(200)
 }
 
-func (p *controller) Read(c core.Context) error {
+func (projectController *controller) Read(c core.Context) error {
 	// just get the project from the context
 	project := core.GetProject(c)
 	if project.IsExternalEntity() {
@@ -244,7 +244,7 @@ func (p *controller) Read(c core.Context) error {
 			toUpsert = append(toUpsert, &assets[i])
 		}
 
-		if err := p.assetRepository.Upsert(&toUpsert, []clause.Column{
+		if err := projectController.assetRepository.Upsert(&toUpsert, []clause.Column{
 			{Name: "external_entity_provider_id"},
 			{Name: "external_entity_id"},
 		}, []string{"project_id", "slug", "description", "name"}); err != nil {
@@ -254,7 +254,7 @@ func (p *controller) Read(c core.Context) error {
 		project.Assets = assets
 	} else {
 		// lets fetch the assets related to this project
-		assets, err := p.assetRepository.GetByProjectID(project.ID)
+		assets, err := projectController.assetRepository.GetByProjectID(project.ID)
 		if err != nil {
 			return err
 		}
@@ -276,9 +276,9 @@ func (p *controller) Read(c core.Context) error {
 	return c.JSON(200, resp)
 }
 
-func (p *controller) List(c core.Context) error {
+func (projectController *controller) List(c core.Context) error {
 	// get all projects the user has at least read access to - might be public projects as well
-	projects, err := p.projectService.ListAllowedProjects(c)
+	projects, err := projectController.projectService.ListAllowedProjects(c)
 
 	if err != nil {
 		return err
@@ -287,7 +287,7 @@ func (p *controller) List(c core.Context) error {
 	return c.JSON(200, projects)
 }
 
-func (p *controller) Update(c core.Context) error {
+func (projectController *controller) Update(c core.Context) error {
 	req := c.Request().Body
 	defer req.Close()
 	var patchRequest patchRequest
@@ -305,13 +305,13 @@ func (p *controller) Update(c core.Context) error {
 	}
 
 	if updated {
-		err = p.projectRepository.Update(nil, &project)
+		err = projectController.projectRepository.Update(nil, &project)
 		if err != nil {
 			return fmt.Errorf("could not update project: %w", err)
 		}
 	}
 	// lets fetch the assets related to this project
-	assets, err := p.assetRepository.GetByProjectID(project.ID)
+	assets, err := projectController.assetRepository.GetByProjectID(project.ID)
 	if err != nil {
 		return err
 	}
@@ -331,7 +331,7 @@ func (p *controller) Update(c core.Context) error {
 	return c.JSON(200, resp)
 }
 
-func (o *controller) GetConfigFile(ctx core.Context) error {
+func (projectController *controller) GetConfigFile(ctx core.Context) error {
 	organization := core.GetOrg(ctx)
 	project := core.GetProject(ctx)
 	configID := ctx.Param("config-file")

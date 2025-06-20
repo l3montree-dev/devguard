@@ -298,9 +298,9 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 
 func (a *AssetVersionController) Metrics(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	scannerIds := []string{}
+	scannerIDs := []string{}
 	// get the latest events of this asset per scan type
-	err := a.assetVersionRepository.GetDB(nil).Table("dependency_vulns").Select("DISTINCT scanner_ids").Where("asset_version_name  = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_ids", &scannerIds).Error
+	err := a.assetVersionRepository.GetDB(nil).Table("dependency_vulns").Select("DISTINCT scanner_ids").Where("asset_version_name  = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_ids", &scannerIDs).Error
 
 	if err != nil {
 		return err
@@ -310,11 +310,11 @@ func (a *AssetVersionController) Metrics(ctx core.Context) error {
 	var enabledContainerScanning = false
 	var enabledImageSigning = assetVersion.SigningPubKey != nil
 
-	for _, scannerId := range scannerIds {
-		if scannerId == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca" {
+	for _, scannerID := range scannerIDs {
+		if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca" {
 			enabledSca = true
 		}
-		if scannerId == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning" {
+		if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning" {
 			enabledContainerScanning = true
 		}
 	}

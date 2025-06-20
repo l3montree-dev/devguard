@@ -25,7 +25,7 @@ func TestNewRawRiskAssessmentUpdatedEvent(t *testing.T) {
 		assert.Equal(t, userID, event.UserID)
 		assert.Equal(t, justification, *event.Justification)
 
-		arbitraryData := event.GetArbitraryJsonData()
+		arbitraryData := event.GetArbitraryJSONData()
 		assert.Equal(t, oldRisk, arbitraryData["oldRisk"])
 		// Add more assertions based on the fields in RiskCalculationReport
 	})
@@ -52,7 +52,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{
 			Type:              models.EventTypeRawRiskAssessmentUpdated,
-			ArbitraryJsonData: `{"risk": 0.5 }`,
+			ArbitraryJSONData: `{"risk": 0.5 }`,
 		}
 
 		event.Apply(&vuln)
@@ -64,7 +64,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{
 			Type:              models.EventTypeRawRiskAssessmentUpdated,
-			ArbitraryJsonData: `{"risk": 0.5 }`,
+			ArbitraryJSONData: `{"risk": 0.5 }`,
 		}
 
 		event.Apply(&vuln)
@@ -84,7 +84,7 @@ func TestVulnEvent_Apply(t *testing.T) {
 		vuln := models.DependencyVuln{}
 		event := models.VulnEvent{
 			Type:              models.EventTypeDetected,
-			ArbitraryJsonData: `{"risk": 0.5 }`,
+			ArbitraryJSONData: `{"risk": 0.5 }`,
 		}
 
 		event.Apply(&vuln)

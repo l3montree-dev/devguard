@@ -42,9 +42,9 @@ func NewGitLabIntegrationRepository(db core.DB) *gitlabIntegrationRepository {
 	}
 }
 
-func (r *gitlabIntegrationRepository) FindByOrganizationId(orgId uuid.UUID) ([]models.GitLabIntegration, error) {
+func (r *gitlabIntegrationRepository) FindByOrganizationID(orgID uuid.UUID) ([]models.GitLabIntegration, error) {
 	var integrations []models.GitLabIntegration
-	if err := r.db.Find(&integrations, "org_id = ?", orgId).Error; err != nil {
+	if err := r.db.Find(&integrations, "orgID = ?", orgID).Error; err != nil {
 		return nil, err
 	}
 	return integrations, nil
@@ -84,17 +84,17 @@ func (r *gitlabOauth2TokenRepository) Upsert(tx core.DB, token *models.GitLabOau
 	return nil
 }
 
-func (r *gitlabOauth2TokenRepository) FindByUserIdAndProviderId(userId string, providerId string) (*models.GitLabOauth2Token, error) {
+func (r *gitlabOauth2TokenRepository) FindByUserIDAndProviderID(userID string, providerID string) (*models.GitLabOauth2Token, error) {
 	var token models.GitLabOauth2Token
-	if err := r.db.Where("user_id = ? AND provider_id = ?", userId, providerId).First(&token).Error; err != nil {
+	if err := r.db.Where("user_id = ? AND provider_id = ?", userID, providerID).First(&token).Error; err != nil {
 		return nil, err
 	}
 	return &token, nil
 }
 
-func (r *gitlabOauth2TokenRepository) FindByUserId(userId string) ([]models.GitLabOauth2Token, error) {
+func (r *gitlabOauth2TokenRepository) FindByUserID(userID string) ([]models.GitLabOauth2Token, error) {
 	var tokens []models.GitLabOauth2Token
-	if err := r.db.Where("user_id = ?", userId).Find(&tokens).Error; err != nil {
+	if err := r.db.Where("user_id = ?", userID).Find(&tokens).Error; err != nil {
 		return nil, err
 	}
 	return tokens, nil
@@ -107,8 +107,8 @@ func (r *gitlabOauth2TokenRepository) Delete(tx core.DB, tokens []models.GitLabO
 	return nil
 }
 
-func (r *gitlabOauth2TokenRepository) DeleteByUserIdAndProviderId(userId string, providerId string) error {
-	return r.db.Where("user_id = ? AND provider_id = ?", userId, providerId).Delete(&models.GitLabOauth2Token{}).Error
+func (r *gitlabOauth2TokenRepository) DeleteByUserIDAndProviderID(userID string, providerID string) error {
+	return r.db.Where("user_id = ? AND provider_id = ?", userID, providerID).Delete(&models.GitLabOauth2Token{}).Error
 }
 
 func (r *gitlabOauth2TokenRepository) CreateIfNotExists(tokens []*models.GitLabOauth2Token) error {
