@@ -97,7 +97,7 @@ func (event *VulnEvent) SetArbitraryJSONData(data map[string]any) {
 	}
 	event.ArbitraryJSONData = string(dataBytes)
 }
-func (m VulnEvent) TableName() string {
+func (event VulnEvent) TableName() string {
 	return "vuln_events"
 }
 

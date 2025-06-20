@@ -42,14 +42,14 @@ func (firstPartyVuln FirstPartyVuln) TableName() string {
 	return "first_party_vulnerabilities"
 }
 
-func (m *FirstPartyVuln) CalculateHash() string {
-	startLineStr := strconv.Itoa(m.StartLine)
-	endLineStr := strconv.Itoa(m.EndLine)
-	startColumnStr := strconv.Itoa(m.StartColumn)
-	endColumnStr := strconv.Itoa(m.EndColumn)
-	stringToHash := startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + m.RuleID + "/" + m.URI + "/" + m.ScannerIDs + "/" + m.AssetID.String() + "/" + m.AssetVersionName
+func (firstPartyVuln *FirstPartyVuln) CalculateHash() string {
+	startLineStr := strconv.Itoa(firstPartyVuln.StartLine)
+	endLineStr := strconv.Itoa(firstPartyVuln.EndLine)
+	startColumnStr := strconv.Itoa(firstPartyVuln.StartColumn)
+	endColumnStr := strconv.Itoa(firstPartyVuln.EndColumn)
+	stringToHash := startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName
 	hash := utils.HashString(stringToHash)
-	m.ID = hash
+	firstPartyVuln.ID = hash
 	return hash
 }
 
