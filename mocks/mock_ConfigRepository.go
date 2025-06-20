@@ -62,20 +62,14 @@ type ConfigRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx
 func (_e *ConfigRepository_Expecter) GetDB(tx interface{}) *ConfigRepository_GetDB_Call {
 	return &ConfigRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *ConfigRepository_GetDB_Call) Run(run func(tx core.DB)) *ConfigRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(core.DB))
 	})
 	return _c
 }
@@ -113,26 +107,15 @@ type ConfigRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
-//   - config *models.Config
+//   - tx
+//   - config
 func (_e *ConfigRepository_Expecter) Save(tx interface{}, config interface{}) *ConfigRepository_Save_Call {
 	return &ConfigRepository_Save_Call{Call: _e.mock.On("Save", tx, config)}
 }
 
 func (_c *ConfigRepository_Save_Call) Run(run func(tx core.DB, config *models.Config)) *ConfigRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Config
-		if args[1] != nil {
-			arg1 = args[1].(*models.Config)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Config))
 	})
 	return _c
 }

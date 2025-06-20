@@ -47,7 +47,7 @@ func (r *statisticsRepository) TimeTravelDependencyVulnState(assetVersionName st
 	return dependencyVulns, nil
 }
 
-func (r *statisticsRepository) GetDependencyVulnCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+func (r *statisticsRepository) GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
 	var results []struct {
 		ScannerID string `gorm:"column:scanner_ids"`
 		Count     int    `gorm:"column:count"`

@@ -71,38 +71,17 @@ type StatisticsRepository_AverageFixingTime_Call struct {
 }
 
 // AverageFixingTime is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - riskIntervalStart float64
-//   - riskIntervalEnd float64
+//   - assetVersionName
+//   - assetID
+//   - riskIntervalStart
+//   - riskIntervalEnd
 func (_e *StatisticsRepository_Expecter) AverageFixingTime(assetVersionName interface{}, assetID interface{}, riskIntervalStart interface{}, riskIntervalEnd interface{}) *StatisticsRepository_AverageFixingTime_Call {
 	return &StatisticsRepository_AverageFixingTime_Call{Call: _e.mock.On("AverageFixingTime", assetVersionName, assetID, riskIntervalStart, riskIntervalEnd)}
 }
 
 func (_c *StatisticsRepository_AverageFixingTime_Call) Run(run func(assetVersionName string, assetID uuid.UUID, riskIntervalStart float64, riskIntervalEnd float64)) *StatisticsRepository_AverageFixingTime_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 float64
-		if args[2] != nil {
-			arg2 = args[2].(float64)
-		}
-		var arg3 float64
-		if args[3] != nil {
-			arg3 = args[3].(float64)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(float64), args[3].(float64))
 	})
 	return _c
 }
@@ -151,20 +130,14 @@ type StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call struct {
 }
 
 // CVESWithKnownExploitsInAssetVersion is a helper method to define mock.On call
-//   - assetVersion models.AssetVersion
+//   - assetVersion
 func (_e *StatisticsRepository_Expecter) CVESWithKnownExploitsInAssetVersion(assetVersion interface{}) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
 	return &StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call{Call: _e.mock.On("CVESWithKnownExploitsInAssetVersion", assetVersion)}
 }
 
 func (_c *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call) Run(run func(assetVersion models.AssetVersion)) *StatisticsRepository_CVESWithKnownExploitsInAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.AssetVersion
-		if args[0] != nil {
-			arg0 = args[0].(models.AssetVersion)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(models.AssetVersion))
 	})
 	return _c
 }
@@ -211,32 +184,16 @@ type StatisticsRepository_GetAssetCvssDistribution_Call struct {
 }
 
 // GetAssetCvssDistribution is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - assetName string
+//   - assetVersionName
+//   - assetID
+//   - assetName
 func (_e *StatisticsRepository_Expecter) GetAssetCvssDistribution(assetVersionName interface{}, assetID interface{}, assetName interface{}) *StatisticsRepository_GetAssetCvssDistribution_Call {
 	return &StatisticsRepository_GetAssetCvssDistribution_Call{Call: _e.mock.On("GetAssetCvssDistribution", assetVersionName, assetID, assetName)}
 }
 
 func (_c *StatisticsRepository_GetAssetCvssDistribution_Call) Run(run func(assetVersionName string, assetID uuid.UUID, assetName string)) *StatisticsRepository_GetAssetCvssDistribution_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
 	})
 	return _c
 }
@@ -283,32 +240,16 @@ type StatisticsRepository_GetAssetRiskDistribution_Call struct {
 }
 
 // GetAssetRiskDistribution is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - assetName string
+//   - assetVersionName
+//   - assetID
+//   - assetName
 func (_e *StatisticsRepository_Expecter) GetAssetRiskDistribution(assetVersionName interface{}, assetID interface{}, assetName interface{}) *StatisticsRepository_GetAssetRiskDistribution_Call {
 	return &StatisticsRepository_GetAssetRiskDistribution_Call{Call: _e.mock.On("GetAssetRiskDistribution", assetVersionName, assetID, assetName)}
 }
 
 func (_c *StatisticsRepository_GetAssetRiskDistribution_Call) Run(run func(assetVersionName string, assetID uuid.UUID, assetName string)) *StatisticsRepository_GetAssetRiskDistribution_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
 	})
 	return _c
 }
@@ -323,12 +264,12 @@ func (_c *StatisticsRepository_GetAssetRiskDistribution_Call) RunAndReturn(run f
 	return _c
 }
 
-// GetDependencyVulnCountByScannerId provides a mock function for the type StatisticsRepository
-func (_mock *StatisticsRepository) GetDependencyVulnCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+// GetDependencyVulnCountByScannerID provides a mock function for the type StatisticsRepository
+func (_mock *StatisticsRepository) GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
 	ret := _mock.Called(assetVersionName, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetDependencyVulnCountByScannerId")
+		panic("no return value specified for GetDependencyVulnCountByScannerID")
 	}
 
 	var r0 map[string]int
@@ -351,42 +292,31 @@ func (_mock *StatisticsRepository) GetDependencyVulnCountByScannerId(assetVersio
 	return r0, r1
 }
 
-// StatisticsRepository_GetDependencyVulnCountByScannerId_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyVulnCountByScannerId'
-type StatisticsRepository_GetDependencyVulnCountByScannerId_Call struct {
+// StatisticsRepository_GetDependencyVulnCountByScannerID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyVulnCountByScannerID'
+type StatisticsRepository_GetDependencyVulnCountByScannerID_Call struct {
 	*mock.Call
 }
 
-// GetDependencyVulnCountByScannerId is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-func (_e *StatisticsRepository_Expecter) GetDependencyVulnCountByScannerId(assetVersionName interface{}, assetID interface{}) *StatisticsRepository_GetDependencyVulnCountByScannerId_Call {
-	return &StatisticsRepository_GetDependencyVulnCountByScannerId_Call{Call: _e.mock.On("GetDependencyVulnCountByScannerId", assetVersionName, assetID)}
+// GetDependencyVulnCountByScannerID is a helper method to define mock.On call
+//   - assetVersionName
+//   - assetID
+func (_e *StatisticsRepository_Expecter) GetDependencyVulnCountByScannerID(assetVersionName interface{}, assetID interface{}) *StatisticsRepository_GetDependencyVulnCountByScannerID_Call {
+	return &StatisticsRepository_GetDependencyVulnCountByScannerID_Call{Call: _e.mock.On("GetDependencyVulnCountByScannerID", assetVersionName, assetID)}
 }
 
-func (_c *StatisticsRepository_GetDependencyVulnCountByScannerId_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *StatisticsRepository_GetDependencyVulnCountByScannerId_Call {
+func (_c *StatisticsRepository_GetDependencyVulnCountByScannerID_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *StatisticsRepository_GetDependencyVulnCountByScannerID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(string), args[1].(uuid.UUID))
 	})
 	return _c
 }
 
-func (_c *StatisticsRepository_GetDependencyVulnCountByScannerId_Call) Return(stringToInt map[string]int, err error) *StatisticsRepository_GetDependencyVulnCountByScannerId_Call {
+func (_c *StatisticsRepository_GetDependencyVulnCountByScannerID_Call) Return(stringToInt map[string]int, err error) *StatisticsRepository_GetDependencyVulnCountByScannerID_Call {
 	_c.Call.Return(stringToInt, err)
 	return _c
 }
 
-func (_c *StatisticsRepository_GetDependencyVulnCountByScannerId_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID) (map[string]int, error)) *StatisticsRepository_GetDependencyVulnCountByScannerId_Call {
+func (_c *StatisticsRepository_GetDependencyVulnCountByScannerID_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID) (map[string]int, error)) *StatisticsRepository_GetDependencyVulnCountByScannerID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -425,32 +355,16 @@ type StatisticsRepository_TimeTravelDependencyVulnState_Call struct {
 }
 
 // TimeTravelDependencyVulnState is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - time1 time.Time
+//   - assetVersionName
+//   - assetID
+//   - time1
 func (_e *StatisticsRepository_Expecter) TimeTravelDependencyVulnState(assetVersionName interface{}, assetID interface{}, time1 interface{}) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	return &StatisticsRepository_TimeTravelDependencyVulnState_Call{Call: _e.mock.On("TimeTravelDependencyVulnState", assetVersionName, assetID, time1)}
 }
 
 func (_c *StatisticsRepository_TimeTravelDependencyVulnState_Call) Run(run func(assetVersionName string, assetID uuid.UUID, time1 time.Time)) *StatisticsRepository_TimeTravelDependencyVulnState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(time.Time))
 	})
 	return _c
 }

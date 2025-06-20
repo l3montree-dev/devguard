@@ -71,32 +71,16 @@ type StatisticsService_GetAssetVersionCvssDistribution_Call struct {
 }
 
 // GetAssetVersionCvssDistribution is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - assetName string
+//   - assetVersionName
+//   - assetID
+//   - assetName
 func (_e *StatisticsService_Expecter) GetAssetVersionCvssDistribution(assetVersionName interface{}, assetID interface{}, assetName interface{}) *StatisticsService_GetAssetVersionCvssDistribution_Call {
 	return &StatisticsService_GetAssetVersionCvssDistribution_Call{Call: _e.mock.On("GetAssetVersionCvssDistribution", assetVersionName, assetID, assetName)}
 }
 
 func (_c *StatisticsService_GetAssetVersionCvssDistribution_Call) Run(run func(assetVersionName string, assetID uuid.UUID, assetName string)) *StatisticsService_GetAssetVersionCvssDistribution_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
 	})
 	return _c
 }
@@ -134,44 +118,18 @@ type StatisticsService_UpdateAssetRiskAggregation_Call struct {
 }
 
 // UpdateAssetRiskAggregation is a helper method to define mock.On call
-//   - assetVersion *models.AssetVersion
-//   - assetID uuid.UUID
-//   - begin time.Time
-//   - end time.Time
-//   - propagateToProject bool
+//   - assetVersion
+//   - assetID
+//   - begin
+//   - end
+//   - propagateToProject
 func (_e *StatisticsService_Expecter) UpdateAssetRiskAggregation(assetVersion interface{}, assetID interface{}, begin interface{}, end interface{}, propagateToProject interface{}) *StatisticsService_UpdateAssetRiskAggregation_Call {
 	return &StatisticsService_UpdateAssetRiskAggregation_Call{Call: _e.mock.On("UpdateAssetRiskAggregation", assetVersion, assetID, begin, end, propagateToProject)}
 }
 
 func (_c *StatisticsService_UpdateAssetRiskAggregation_Call) Run(run func(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool)) *StatisticsService_UpdateAssetRiskAggregation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.AssetVersion
-		if args[0] != nil {
-			arg0 = args[0].(*models.AssetVersion)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
-		}
-		var arg3 time.Time
-		if args[3] != nil {
-			arg3 = args[3].(time.Time)
-		}
-		var arg4 bool
-		if args[4] != nil {
-			arg4 = args[4].(bool)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
+		run(args[0].(*models.AssetVersion), args[1].(uuid.UUID), args[2].(time.Time), args[3].(time.Time), args[4].(bool))
 	})
 	return _c
 }

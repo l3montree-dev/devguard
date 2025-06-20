@@ -62,26 +62,15 @@ type AssetRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx core.DB
-//   - id uuid.UUID
+//   - tx
+//   - id
 func (_e *AssetRepository_Expecter) Activate(tx interface{}, id interface{}) *AssetRepository_Activate_Call {
 	return &AssetRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *AssetRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *AssetRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -220,26 +209,15 @@ type AssetRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx core.DB
-//   - t *models.Asset
+//   - tx
+//   - t
 func (_e *AssetRepository_Expecter) Create(tx interface{}, t interface{}) *AssetRepository_Create_Call {
 	return &AssetRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *AssetRepository_Create_Call) Run(run func(tx core.DB, t *models.Asset)) *AssetRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Asset
-		if args[1] != nil {
-			arg1 = args[1].(*models.Asset)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Asset))
 	})
 	return _c
 }
@@ -277,26 +255,15 @@ type AssetRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ts []models.Asset
+//   - tx
+//   - ts
 func (_e *AssetRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *AssetRepository_CreateBatch_Call {
 	return &AssetRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *AssetRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.Asset)) *AssetRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Asset
-		if args[1] != nil {
-			arg1 = args[1].([]models.Asset)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Asset))
 	})
 	return _c
 }
@@ -334,26 +301,15 @@ type AssetRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx core.DB
-//   - id uuid.UUID
+//   - tx
+//   - id
 func (_e *AssetRepository_Expecter) Delete(tx interface{}, id interface{}) *AssetRepository_Delete_Call {
 	return &AssetRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *AssetRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *AssetRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -391,26 +347,15 @@ type AssetRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ids []models.Asset
+//   - tx
+//   - ids
 func (_e *AssetRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *AssetRepository_DeleteBatch_Call {
 	return &AssetRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *AssetRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.Asset)) *AssetRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Asset
-		if args[1] != nil {
-			arg1 = args[1].([]models.Asset)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Asset))
 	})
 	return _c
 }
@@ -459,26 +404,15 @@ type AssetRepository_FindAssetByExternalProviderID_Call struct {
 }
 
 // FindAssetByExternalProviderID is a helper method to define mock.On call
-//   - externalEntityProviderID string
-//   - externalEntityID string
+//   - externalEntityProviderID
+//   - externalEntityID
 func (_e *AssetRepository_Expecter) FindAssetByExternalProviderID(externalEntityProviderID interface{}, externalEntityID interface{}) *AssetRepository_FindAssetByExternalProviderID_Call {
 	return &AssetRepository_FindAssetByExternalProviderID_Call{Call: _e.mock.On("FindAssetByExternalProviderID", externalEntityProviderID, externalEntityID)}
 }
 
 func (_c *AssetRepository_FindAssetByExternalProviderID_Call) Run(run func(externalEntityProviderID string, externalEntityID string)) *AssetRepository_FindAssetByExternalProviderID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(string), args[1].(string))
 	})
 	return _c
 }
@@ -525,20 +459,14 @@ type AssetRepository_FindByName_Call struct {
 }
 
 // FindByName is a helper method to define mock.On call
-//   - name string
+//   - name
 func (_e *AssetRepository_Expecter) FindByName(name interface{}) *AssetRepository_FindByName_Call {
 	return &AssetRepository_FindByName_Call{Call: _e.mock.On("FindByName", name)}
 }
 
 func (_c *AssetRepository_FindByName_Call) Run(run func(name string)) *AssetRepository_FindByName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(string))
 	})
 	return _c
 }
@@ -585,26 +513,15 @@ type AssetRepository_FindOrCreate_Call struct {
 }
 
 // FindOrCreate is a helper method to define mock.On call
-//   - tx core.DB
-//   - name string
+//   - tx
+//   - name
 func (_e *AssetRepository_Expecter) FindOrCreate(tx interface{}, name interface{}) *AssetRepository_FindOrCreate_Call {
 	return &AssetRepository_FindOrCreate_Call{Call: _e.mock.On("FindOrCreate", tx, name)}
 }
 
 func (_c *AssetRepository_FindOrCreate_Call) Run(run func(tx core.DB, name string)) *AssetRepository_FindOrCreate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(string))
 	})
 	return _c
 }
@@ -706,20 +623,14 @@ type AssetRepository_GetAssetIDByBadgeSecret_Call struct {
 }
 
 // GetAssetIDByBadgeSecret is a helper method to define mock.On call
-//   - badgeSecret uuid.UUID
+//   - badgeSecret
 func (_e *AssetRepository_Expecter) GetAssetIDByBadgeSecret(badgeSecret interface{}) *AssetRepository_GetAssetIDByBadgeSecret_Call {
 	return &AssetRepository_GetAssetIDByBadgeSecret_Call{Call: _e.mock.On("GetAssetIDByBadgeSecret", badgeSecret)}
 }
 
 func (_c *AssetRepository_GetAssetIDByBadgeSecret_Call) Run(run func(badgeSecret uuid.UUID)) *AssetRepository_GetAssetIDByBadgeSecret_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -768,26 +679,15 @@ type AssetRepository_GetAssetIDBySlug_Call struct {
 }
 
 // GetAssetIDBySlug is a helper method to define mock.On call
-//   - projectID uuid.UUID
-//   - slug string
+//   - projectID
+//   - slug
 func (_e *AssetRepository_Expecter) GetAssetIDBySlug(projectID interface{}, slug interface{}) *AssetRepository_GetAssetIDBySlug_Call {
 	return &AssetRepository_GetAssetIDBySlug_Call{Call: _e.mock.On("GetAssetIDBySlug", projectID, slug)}
 }
 
 func (_c *AssetRepository_GetAssetIDBySlug_Call) Run(run func(projectID uuid.UUID, slug string)) *AssetRepository_GetAssetIDBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(uuid.UUID), args[1].(string))
 	})
 	return _c
 }
@@ -836,20 +736,14 @@ type AssetRepository_GetByOrgID_Call struct {
 }
 
 // GetByOrgID is a helper method to define mock.On call
-//   - organizationID uuid.UUID
+//   - organizationID
 func (_e *AssetRepository_Expecter) GetByOrgID(organizationID interface{}) *AssetRepository_GetByOrgID_Call {
 	return &AssetRepository_GetByOrgID_Call{Call: _e.mock.On("GetByOrgID", organizationID)}
 }
 
 func (_c *AssetRepository_GetByOrgID_Call) Run(run func(organizationID uuid.UUID)) *AssetRepository_GetByOrgID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -898,20 +792,14 @@ type AssetRepository_GetByProjectID_Call struct {
 }
 
 // GetByProjectID is a helper method to define mock.On call
-//   - projectID uuid.UUID
+//   - projectID
 func (_e *AssetRepository_Expecter) GetByProjectID(projectID interface{}) *AssetRepository_GetByProjectID_Call {
 	return &AssetRepository_GetByProjectID_Call{Call: _e.mock.On("GetByProjectID", projectID)}
 }
 
 func (_c *AssetRepository_GetByProjectID_Call) Run(run func(projectID uuid.UUID)) *AssetRepository_GetByProjectID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -951,20 +839,14 @@ type AssetRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx
 func (_e *AssetRepository_Expecter) GetDB(tx interface{}) *AssetRepository_GetDB_Call {
 	return &AssetRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *AssetRepository_GetDB_Call) Run(run func(tx core.DB)) *AssetRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(core.DB))
 	})
 	return _c
 }
@@ -1011,20 +893,14 @@ type AssetRepository_GetFQNByID_Call struct {
 }
 
 // GetFQNByID is a helper method to define mock.On call
-//   - id uuid.UUID
+//   - id
 func (_e *AssetRepository_Expecter) GetFQNByID(id interface{}) *AssetRepository_GetFQNByID_Call {
 	return &AssetRepository_GetFQNByID_Call{Call: _e.mock.On("GetFQNByID", id)}
 }
 
 func (_c *AssetRepository_GetFQNByID_Call) Run(run func(id uuid.UUID)) *AssetRepository_GetFQNByID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -1073,20 +949,14 @@ type AssetRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids []uuid.UUID
+//   - ids
 func (_e *AssetRepository_Expecter) List(ids interface{}) *AssetRepository_List_Call {
 	return &AssetRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *AssetRepository_List_Call) Run(run func(ids []uuid.UUID)) *AssetRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].([]uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].([]uuid.UUID))
 	})
 	return _c
 }
@@ -1133,20 +1003,14 @@ type AssetRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id uuid.UUID
+//   - id
 func (_e *AssetRepository_Expecter) Read(id interface{}) *AssetRepository_Read_Call {
 	return &AssetRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *AssetRepository_Read_Call) Run(run func(id uuid.UUID)) *AssetRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -1193,26 +1057,15 @@ type AssetRepository_ReadBySlug_Call struct {
 }
 
 // ReadBySlug is a helper method to define mock.On call
-//   - projectID uuid.UUID
-//   - slug string
+//   - projectID
+//   - slug
 func (_e *AssetRepository_Expecter) ReadBySlug(projectID interface{}, slug interface{}) *AssetRepository_ReadBySlug_Call {
 	return &AssetRepository_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", projectID, slug)}
 }
 
 func (_c *AssetRepository_ReadBySlug_Call) Run(run func(projectID uuid.UUID, slug string)) *AssetRepository_ReadBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(uuid.UUID), args[1].(string))
 	})
 	return _c
 }
@@ -1259,26 +1112,15 @@ type AssetRepository_ReadBySlugUnscoped_Call struct {
 }
 
 // ReadBySlugUnscoped is a helper method to define mock.On call
-//   - projectID uuid.UUID
-//   - slug string
+//   - projectID
+//   - slug
 func (_e *AssetRepository_Expecter) ReadBySlugUnscoped(projectID interface{}, slug interface{}) *AssetRepository_ReadBySlugUnscoped_Call {
 	return &AssetRepository_ReadBySlugUnscoped_Call{Call: _e.mock.On("ReadBySlugUnscoped", projectID, slug)}
 }
 
 func (_c *AssetRepository_ReadBySlugUnscoped_Call) Run(run func(projectID uuid.UUID, slug string)) *AssetRepository_ReadBySlugUnscoped_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(uuid.UUID), args[1].(string))
 	})
 	return _c
 }
@@ -1325,20 +1167,14 @@ type AssetRepository_ReadWithAssetVersions_Call struct {
 }
 
 // ReadWithAssetVersions is a helper method to define mock.On call
-//   - assetID uuid.UUID
+//   - assetID
 func (_e *AssetRepository_Expecter) ReadWithAssetVersions(assetID interface{}) *AssetRepository_ReadWithAssetVersions_Call {
 	return &AssetRepository_ReadWithAssetVersions_Call{Call: _e.mock.On("ReadWithAssetVersions", assetID)}
 }
 
 func (_c *AssetRepository_ReadWithAssetVersions_Call) Run(run func(assetID uuid.UUID)) *AssetRepository_ReadWithAssetVersions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -1376,26 +1212,15 @@ type AssetRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx core.DB
-//   - t *models.Asset
+//   - tx
+//   - t
 func (_e *AssetRepository_Expecter) Save(tx interface{}, t interface{}) *AssetRepository_Save_Call {
 	return &AssetRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *AssetRepository_Save_Call) Run(run func(tx core.DB, t *models.Asset)) *AssetRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Asset
-		if args[1] != nil {
-			arg1 = args[1].(*models.Asset)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Asset))
 	})
 	return _c
 }
@@ -1433,26 +1258,15 @@ type AssetRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx core.DB
-//   - ts []models.Asset
+//   - tx
+//   - ts
 func (_e *AssetRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *AssetRepository_SaveBatch_Call {
 	return &AssetRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *AssetRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.Asset)) *AssetRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 []models.Asset
-		if args[1] != nil {
-			arg1 = args[1].([]models.Asset)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].([]models.Asset))
 	})
 	return _c
 }
@@ -1490,20 +1304,14 @@ type AssetRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn func(tx core.DB) error
+//   - fn
 func (_e *AssetRepository_Expecter) Transaction(fn interface{}) *AssetRepository_Transaction_Call {
 	return &AssetRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *AssetRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *AssetRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx core.DB) error
-		if args[0] != nil {
-			arg0 = args[0].(func(tx core.DB) error)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(func(tx core.DB) error))
 	})
 	return _c
 }
@@ -1541,26 +1349,15 @@ type AssetRepository_Update_Call struct {
 }
 
 // Update is a helper method to define mock.On call
-//   - tx core.DB
-//   - asset *models.Asset
+//   - tx
+//   - asset
 func (_e *AssetRepository_Expecter) Update(tx interface{}, asset interface{}) *AssetRepository_Update_Call {
 	return &AssetRepository_Update_Call{Call: _e.mock.On("Update", tx, asset)}
 }
 
 func (_c *AssetRepository_Update_Call) Run(run func(tx core.DB, asset *models.Asset)) *AssetRepository_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Asset
-		if args[1] != nil {
-			arg1 = args[1].(*models.Asset)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Asset))
 	})
 	return _c
 }
@@ -1598,32 +1395,16 @@ type AssetRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
-//   - t *[]*models.Asset
-//   - conflictingColumns []clause.Column
-//   - updateOnly []string
+//   - t
+//   - conflictingColumns
+//   - updateOnly
 func (_e *AssetRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *AssetRepository_Upsert_Call {
 	return &AssetRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
 func (_c *AssetRepository_Upsert_Call) Run(run func(t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string)) *AssetRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *[]*models.Asset
-		if args[0] != nil {
-			arg0 = args[0].(*[]*models.Asset)
-		}
-		var arg1 []clause.Column
-		if args[1] != nil {
-			arg1 = args[1].([]clause.Column)
-		}
-		var arg2 []string
-		if args[2] != nil {
-			arg2 = args[2].([]string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(*[]*models.Asset), args[1].([]clause.Column), args[2].([]string))
 	})
 	return _c
 }

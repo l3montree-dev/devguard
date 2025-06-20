@@ -305,8 +305,8 @@ func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (
 	return totalRiskPerComponent, nil
 }
 
-func (s *service) GetDependencyVulnCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
-	return s.statisticsRepository.GetDependencyVulnCountByScannerId(assetVersionName, assetID)
+func (s *service) GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+	return s.statisticsRepository.GetDependencyVulnCountByScannerID(assetVersionName, assetID)
 }
 
 func (s *service) GetDependencyCountPerscanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
