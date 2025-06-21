@@ -217,3 +217,28 @@ func (repository *assetVersionRepository) GetAllAssetsVersionFromDBByAssetID(tx 
 	err := repository.db.Where("asset_id = ?", assetID).Find(&assets).Error
 	return assets, err
 }
+
+func (g *assetVersionRepository) DeleteOldAssetVersions(day int) (int64, error) {
+
+	//this is not exploitable because the day is an int and golang is statically typed
+	interval := fmt.Sprintf("INTERVAL '%d days'", day)
+	query := fmt.Sprintf("updated_at < NOW() - %s AND default_branch = false", interval)
+
+	var count int64
+	err := g.db.Model(&models.AssetVersion{}).
+		Where(query).
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	if count > 0 {
+		err = g.db.Unscoped().Where(query).
+			Delete(&models.AssetVersion{}).Error
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return count, nil
+}

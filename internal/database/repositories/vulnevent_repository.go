@@ -130,3 +130,16 @@ func (r *eventRepository) ReadEventsByAssetIDAndAssetVersionName(assetID uuid.UU
 
 	return core.NewPaged(pageInfo, count, events), err
 }
+func (r *eventRepository) DeleteEventsWithNotExistingVulnID() error {
+
+	err := r.db.Unscoped().
+		Where(`NOT EXISTS (
+		SELECT 1 FROM dependency_vulns UNION SELECT 1 FROM first_party_vulnerabilities)`).
+		Delete(&models.VulnEvent{}).Error
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
