@@ -32,3 +32,11 @@ func (r *jiraIntegrationRepository) FindByOrganizationId(orgId uuid.UUID) ([]mod
 	}
 	return integrations, nil
 }
+
+func (r *jiraIntegrationRepository) GetClientByIntegrationID(integrationID uuid.UUID) (models.JiraIntegration, error) {
+	var integration models.JiraIntegration
+	if err := r.db.First(&integration, "id = ?", integrationID).Error; err != nil {
+		return models.JiraIntegration{}, err
+	}
+	return integration, nil
+}
