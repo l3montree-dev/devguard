@@ -927,46 +927,46 @@ func createTitlesFromProjectName(projectName string) (string, string) {
 	//Crop and divide the project name into two max 14 characters long strings, there is probably a more elegant way to do this
 	title1 := ""
 	title2 := ""
-	title1Full := false
-	fields := strings.Fields(projectName)
+	title1Full := false                   //once a field has exceeded the length of title1 we can ignore title1 from there on
+	fields := strings.Fields(projectName) //separate the words divided by white spaces
 	for _, field := range fields {
-		if title1 == "" {
-			if len(field) <= 14 {
+		if title1 == "" { //we have to differentiate if A tittle is empty or not before using, because of the white spaces between words in a title
+			if len(field) <= 14 { //if it fits the 14 char limit we can just write it and move to the next
 				title1 = field
-			} else {
-				title1 = field[:14] + "-"
-				title1Full = true
-				if len(field[14:]) <= 14 {
-					title2 = field[14:]
+			} else { //if not we know it won't fit the second one as well so we break the word up using "-"
+				title1 = field[:13] + "-"
+				title1Full = true          //we flag title1 as full
+				if len(field[13:]) <= 14 { //now we need to append the rest of the word after "-"
+					title2 = field[13:] //if the rest fits into the 14 char limit we just write it there
 				} else {
-					title2 = field[14:27] + ".."
-					break
+					title2 = field[13:26] + ".." //if not we need to truncate the last 2 chars and put a .. to symbolize the ending
+					break                        //then we are done since we know nothing fits anymore
 				}
 			}
-		} else { //title 1 not empty
-			//if its not empty we need to add a whitespace to separate the fields there we add +1
-			//Title1 full
-			if !title1Full && len(title1)+1+len(field) <= 14 {
+		} else { //title1 is not empty so we now work with whitespaces
+			if !title1Full && len(title1)+1+len(field) <= 14 { //add +1 because we need to account for an inserted white space
 				title1 = title1 + " " + field
-			} else {
+			} else { //if the field does not fit we move to the second title2 and here we again have to first check if its empty
 				if title2 == "" {
-					if len(field) <= 14 {
+					if len(field) <= 14 { //same as above
 						title2 = field
 					} else {
-						title2 = field[:13] + ".."
+						title2 = field[:12] + ".." //same as above
 						break
 					}
-				} else {
-					if len(title2)+1+len(field) <= 14 {
+				} else { //if its not empty we again try to put new fields into title2 until we are full
+					if len(title2)+1+len(field) <= 14 { //it fits so we just write it in the title
 						title2 = title2 + " " + field
 					} else {
-						title2 = title2 + " " + field[:(14-2-len(title2))] + ".."
-						break
+						if 14-len(title2) <= 3 { //if it doesn't fit we can only truncate like before if there are more than 3 remaining chars because we need 2 for the .. and 1 whitespace
+							title2 = title2 + " " + field[:(14-2-len(title2))] + ".."
+						}
+						break //in either case we are done after this field
 					}
 				}
 			}
 		}
 	}
-
+	//now we return the two titles formatted correctly for the yaml file
 	return "  app_title_part_one: " + title1 + "\n", "  app_title_part_two: " + title2 + "\n"
 }
