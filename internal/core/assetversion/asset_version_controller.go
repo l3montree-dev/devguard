@@ -345,6 +345,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 
 	//Create a new file to write the markdown to
 	markdownFile, err := os.Create("/report-templates/sbom/markdown/sbom.md")
+
 	if err != nil {
 		return err
 	}

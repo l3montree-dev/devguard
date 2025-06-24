@@ -132,7 +132,7 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		fmt.Printf("----------------project-----------------\n%s\n", metaData)
 		metaData = createYAMLMetadata("testOrga", "projectProjectproject api api api", "main")
 		fmt.Printf("----------------project-----------------\n%s\n", metaData)
-		metaData = createYAMLMetadata("testOrga", "project projectprojectproject", "main")
+		metaData = createYAMLMetadata("testOrga", "verylongsented ncewithshould.", "main")
 		fmt.Printf("----------------project-----------------\n%s\n", metaData)
 		_, err = metaDataFile.Write([]byte(metaData))
 		if err != nil {

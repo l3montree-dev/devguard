@@ -939,7 +939,7 @@ func createTitlesFromProjectName(projectName string) (string, string) {
 				if len(field[13:]) <= 14 { //now we need to append the rest of the word after "-"
 					title2 = field[13:] //if the rest fits into the 14 char limit we just write it there
 				} else {
-					title2 = field[13:26] + ".." //if not we need to truncate the last 2 chars and put a .. to symbolize the ending
+					title2 = field[13:25] + ".." //if not we need to truncate the last 2 chars and put a .. to symbolize the ending
 					break                        //then we are done since we know nothing fits anymore
 				}
 			}
@@ -958,7 +958,7 @@ func createTitlesFromProjectName(projectName string) (string, string) {
 					if len(title2)+1+len(field) <= 14 { //it fits so we just write it in the title
 						title2 = title2 + " " + field
 					} else {
-						if 14-len(title2) <= 3 { //if it doesn't fit we can only truncate like before if there are more than 3 remaining chars because we need 2 for the .. and 1 whitespace
+						if 14-len(title2)-1 <= 3 { //if it doesn't fit we can only truncate like before if there are more than 3 remaining chars because we need 2 for the .. and 1 whitespace
 							title2 = title2 + " " + field[:(14-2-len(title2))] + ".."
 						}
 						break //in either case we are done after this field
