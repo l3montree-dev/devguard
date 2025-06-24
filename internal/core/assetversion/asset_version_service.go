@@ -882,8 +882,9 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 	return firstIssued, lastUpdated, firstResponded
 }
 
-func (s *service) MarkdownTableFromSBOM(bom *cdx.BOM) (string, error) {
+func (s *service) MarkdownTableFromSBOM(bom *cdx.BOM) string {
 	var markdownText strings.Builder
+	markdownText.WriteString("# SBOM {.unlisted .unnumbered}\n\n")
 	markdownText.WriteString("| PURL | Name | Version | Licenses  | Type |\n")
 	markdownText.WriteString("|-------------------|---------|---------|--------|-------|\n")
 	for _, component := range *bom.Components {
@@ -895,8 +896,39 @@ func (s *service) MarkdownTableFromSBOM(bom *cdx.BOM) (string, error) {
 				licenseString = licenseString + ", " + license.License.ID
 			}
 		}
-		tableRow := "| " + component.BOMRef + " | " + component.Name + " | " + component.Version + " | " + licenseString + " | " + string(component.Type) + " |"
+		tableRow := "| " + component.BOMRef + " | " + component.Name + " | " + component.Version + " | " + licenseString + " | " + string(component.Type) + " |\n"
 		markdownText.WriteString(tableRow)
 	}
-	return markdownText.String(), nil
+	return markdownText.String()
+}
+
+func (s *service) CreateYAMLMetadata(orgName string, projectName string, assetVersionName string) string {
+	var yamlText strings.Builder
+	today := time.Now()
+	title1 := "  app_title_part_one: "
+	title2 := "  app_title_part_two: "
+
+	//Crop and divide the project name into two max 14 characters long strings
+	if len(projectName) <= 14 {
+		title1 = title1 + projectName + "\n"
+	} else {
+		title1 = title1 + projectName[0:13] + "\n"
+		if len(projectName) <= 28 {
+			title2 = title2 + projectName[14:] + "\n"
+		} else {
+			title2 = title2 + projectName[14:27] + "\n"
+		}
+	}
+
+	yamlText.WriteString("metadata_vars:\n")
+	yamlText.WriteString("  document_title: DevGuard Report\n")
+	yamlText.WriteString("  primary_color: \"#FF5733\"\n")
+	yamlText.WriteString(fmt.Sprintf("  version: %s\n", assetVersionName))
+	yamlText.WriteString(fmt.Sprintf("  generation_date: %s. %s %s\n", today.Day(), today.Month(), today.Year()))
+	yamlText.WriteString(title1)
+	yamlText.WriteString(title2)
+	yamlText.WriteString(fmt.Sprintf("  organization_name: %s\n", orgName))
+	// TO-DO: add sha hash to test the integrity
+	yamlText.WriteString("  sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d\n")
+	return yamlText.String()
 }
