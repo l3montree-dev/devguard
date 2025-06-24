@@ -881,3 +881,22 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 
 	return firstIssued, lastUpdated, firstResponded
 }
+
+func (s *service) MarkdownTableFromSBOM(bom *cdx.BOM) (string, error) {
+	var markdownText strings.Builder
+	markdownText.WriteString("| PURL | Name | Version | Licenses  | Type |\n")
+	markdownText.WriteString("|-------------------|---------|---------|--------|-------|\n")
+	for _, component := range *bom.Components {
+		licenseString := "Unknown"
+		for _, license := range *component.Licenses {
+			if licenseString == "Unknown" {
+				licenseString = license.License.ID
+			} else {
+				licenseString = licenseString + ", " + license.License.ID
+			}
+		}
+		tableRow := "| " + component.BOMRef + " | " + component.Name + " | " + component.Version + " | " + licenseString + " | " + string(component.Type) + " |"
+		markdownText.WriteString(tableRow)
+	}
+	return markdownText.String(), nil
+}
