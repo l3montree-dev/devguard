@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -908,7 +909,7 @@ func (s *service) CreateYAMLMetadata(orgName string, projectName string, assetVe
 	title1 := "  app_title_part_one: "
 	title2 := "  app_title_part_two: "
 
-	//Crop and divide the project name into two max 14 characters long strings
+	//Crop and divide the project name into two max 14 characters long strings, there is probably a more elegant way to do this
 	if len(projectName) <= 14 {
 		title1 = title1 + projectName + "\n"
 	} else {
@@ -924,7 +925,7 @@ func (s *service) CreateYAMLMetadata(orgName string, projectName string, assetVe
 	yamlText.WriteString("  document_title: DevGuard Report\n")
 	yamlText.WriteString("  primary_color: \"#FF5733\"\n")
 	yamlText.WriteString(fmt.Sprintf("  version: %s\n", assetVersionName))
-	yamlText.WriteString(fmt.Sprintf("  generation_date: %s. %s %s\n", today.Day(), today.Month(), today.Year()))
+	yamlText.WriteString(fmt.Sprintf("  generation_date: %s. %s %s\n", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())))
 	yamlText.WriteString(title1)
 	yamlText.WriteString(title2)
 	yamlText.WriteString(fmt.Sprintf("  organization_name: %s\n", orgName))

@@ -2,6 +2,7 @@ package assetversion
 
 import (
 	"net/url"
+	"os"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -331,4 +332,39 @@ func (a *AssetVersionController) Metrics(ctx core.Context) error {
 		EnabledImageSigning:            enabledImageSigning,
 		VerifiedSupplyChainsPercentage: verifiedSupplyChainsPercentage,
 	})
+}
+
+func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
+	//buildSBOM of Project
+	bom, err := a.buildSBOM(ctx)
+	if err != nil {
+		return err
+	}
+	//Convert SBOM to Markdown string
+	markdownTable := a.assetVersionService.MarkdownTableFromSBOM(bom)
+
+	//Create a new file to write the markdown to
+	markdownFile, err := os.Create("report-templates/sbom/markdown/sbom.md")
+	if err != nil {
+		return err
+	}
+	_, err = markdownFile.Write([]byte(markdownTable))
+	if err != nil {
+		return err
+	}
+	//Create metadata.yaml
+	metaDataFile, err := os.Create("report-templates/sbom/template/metadata.yaml")
+	if err != nil {
+		return err
+	}
+	//Build the meta data for the yaml file
+	metaData := a.assetVersionService.CreateYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
+	_, err = metaDataFile.Write([]byte(metaData))
+	if err != nil {
+		return err
+	}
+
+	//Create zip of all the necessary files
+
+	return nil
 }
