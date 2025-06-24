@@ -624,6 +624,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
 	assetVersionRouter.GET("/vex.xml/", assetVersionController.VEXXML)
 	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
+	assetVersionRouter.GET("/sbom-pdf/", assetVersionController.BuildPDFFromSBOM)
 
 	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
