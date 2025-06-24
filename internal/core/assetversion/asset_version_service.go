@@ -883,18 +883,20 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 	return firstIssued, lastUpdated, firstResponded
 }
 
-func (s *service) MarkdownTableFromSBOM(bom *cdx.BOM) string {
+func markdownTableFromSBOM(bom *cdx.BOM) string {
 	var markdownText strings.Builder
 	markdownText.WriteString("# SBOM {.unlisted .unnumbered}\n\n")
 	markdownText.WriteString("| PURL | Name | Version | Licenses  | Type |\n")
 	markdownText.WriteString("|-------------------|---------|---------|--------|-------|\n")
 	for _, component := range *bom.Components {
 		licenseString := "Unknown"
-		for _, license := range *component.Licenses {
-			if licenseString == "Unknown" {
-				licenseString = license.License.ID
-			} else {
-				licenseString = licenseString + ", " + license.License.ID
+		if component.Licenses != nil {
+			for _, license := range *component.Licenses {
+				if licenseString == "Unknown" {
+					licenseString = license.License.ID
+				} else {
+					licenseString = licenseString + ", " + license.License.ID
+				}
 			}
 		}
 		tableRow := "| " + component.BOMRef + " | " + component.Name + " | " + component.Version + " | " + licenseString + " | " + string(component.Type) + " |\n"
@@ -903,23 +905,10 @@ func (s *service) MarkdownTableFromSBOM(bom *cdx.BOM) string {
 	return markdownText.String()
 }
 
-func (s *service) CreateYAMLMetadata(orgName string, projectName string, assetVersionName string) string {
+func createYAMLMetadata(orgName string, projectName string, assetVersionName string) string {
 	var yamlText strings.Builder
 	today := time.Now()
-	title1 := "  app_title_part_one: "
-	title2 := "  app_title_part_two: "
-
-	//Crop and divide the project name into two max 14 characters long strings, there is probably a more elegant way to do this
-	if len(projectName) <= 14 {
-		title1 = title1 + projectName + "\n"
-	} else {
-		title1 = title1 + projectName[0:13] + "\n"
-		if len(projectName) <= 28 {
-			title2 = title2 + projectName[14:] + "\n"
-		} else {
-			title2 = title2 + projectName[14:27] + "\n"
-		}
-	}
+	title1, title2 := createTitlesFromProjectName(projectName)
 
 	yamlText.WriteString("metadata_vars:\n")
 	yamlText.WriteString("  document_title: DevGuard Report\n")
@@ -930,6 +919,54 @@ func (s *service) CreateYAMLMetadata(orgName string, projectName string, assetVe
 	yamlText.WriteString(title2)
 	yamlText.WriteString(fmt.Sprintf("  organization_name: %s\n", orgName))
 	// TO-DO: add sha hash to test the integrity
-	yamlText.WriteString("  sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d\n")
+	yamlText.WriteString("  integrity: sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d\n")
 	return yamlText.String()
+}
+
+func createTitlesFromProjectName(projectName string) (string, string) {
+	//Crop and divide the project name into two max 14 characters long strings, there is probably a more elegant way to do this
+	title1 := ""
+	title2 := ""
+	title1Full := false
+	fields := strings.Fields(projectName)
+	for _, field := range fields {
+		if title1 == "" {
+			if len(field) <= 14 {
+				title1 = field
+			} else {
+				title1 = field[:14] + "-"
+				title1Full = true
+				if len(field[14:]) <= 14 {
+					title2 = field[14:]
+				} else {
+					title2 = field[14:27] + ".."
+					break
+				}
+			}
+		} else { //title 1 not empty
+			//if its not empty we need to add a whitespace to separate the fields there we add +1
+			//Title1 full
+			if !title1Full && len(title1)+1+len(field) <= 14 {
+				title1 = title1 + " " + field
+			} else {
+				if title2 == "" {
+					if len(field) <= 14 {
+						title2 = field
+					} else {
+						title2 = field[:13] + ".."
+						break
+					}
+				} else {
+					if len(title2)+1+len(field) <= 14 {
+						title2 = title2 + " " + field
+					} else {
+						title2 = title2 + " " + field[:(14-2-len(title2))] + ".."
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return "  app_title_part_one: " + title1 + "\n", "  app_title_part_two: " + title2 + "\n"
 }

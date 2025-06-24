@@ -341,10 +341,10 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 	//Convert SBOM to Markdown string
-	markdownTable := a.assetVersionService.MarkdownTableFromSBOM(bom)
+	markdownTable := markdownTableFromSBOM(bom)
 
 	//Create a new file to write the markdown to
-	markdownFile, err := os.Create("report-templates/sbom/markdown/sbom.md")
+	markdownFile, err := os.Create("/report-templates/sbom/markdown/sbom.md")
 	if err != nil {
 		return err
 	}
@@ -358,7 +358,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 	//Build the meta data for the yaml file
-	metaData := a.assetVersionService.CreateYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
+	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
 	_, err = metaDataFile.Write([]byte(metaData))
 	if err != nil {
 		return err

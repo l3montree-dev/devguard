@@ -2,8 +2,8 @@ metadata_vars:
   document_title: DevGuard Report
   primary_color: "#FF5733"
   version: main
-  generation_date: 11. June 2025
-  app_title_part_one: OPENCODE BADGE # unfortunately max 14 characters
-  app_title_part_two: API PROJECT # unfortunately max 14 characters
-  organization_name: ZenDiS GmbH
+  generation_date: 24. June 2025
+  app_title_part_one: project
+  app_title_part_two: projectprojec..
+  organization_name: testOrga
   integrity: sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d
