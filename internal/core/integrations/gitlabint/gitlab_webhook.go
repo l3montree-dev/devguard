@@ -41,8 +41,8 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 	var vulnEvent models.VulnEvent
 	var client core.GitlabClientFacade
 	var vuln models.Vuln
-	var issueId int
-	var projectId int
+	var issueID int
+	var projectID int
 
 	switch event := event.(type) {
 	case *gitlab.IssueEvent:
@@ -50,17 +50,17 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 		// WE only want to handle tickets created by devguard right here.
 		// thus, if the event user id is the same it HAS to be devguard as well.
 		if event.User.ID == event.ObjectAttributes.AuthorID {
-			slog.Debug("ignoring gitlab issue event created by devguard", "userId", event.User.ID, "authorId", event.ObjectAttributes.AuthorID)
+			slog.Debug("ignoring gitlab issue event created by devguard", "userID", event.User.ID, "authorId", event.ObjectAttributes.AuthorID)
 			return nil
 		}
 
-		issueId = event.ObjectAttributes.IID
-		projectId = event.Project.ID
+		issueID = event.ObjectAttributes.IID
+		projectID = event.Project.ID
 
 		// look for a dependencyVuln with such a github ticket id
-		vuln, err = g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.Project.ID, issueId))
+		vuln, err = g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.Project.ID, issueID))
 		if err != nil {
-			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
+			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketID", issueID)
 			return nil
 		}
 
@@ -135,12 +135,12 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 	case *gitlab.IssueCommentEvent:
 		// check if the issue is a devguard issue
-		issueId = event.Issue.IID
-		projectId = event.ProjectID
+		issueID = event.Issue.IID
+		projectID = event.ProjectID
 		// look for a dependencyVuln with such a github ticket id
-		vuln, err = g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueId))
+		vuln, err = g.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("gitlab:%d/%d", event.ProjectID, issueID))
 		if err != nil {
-			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketId", issueId)
+			slog.Debug("could not find dependencyVuln by ticket id", "err", err, "ticketID", issueID)
 			return nil
 		}
 
@@ -235,14 +235,14 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 	switch vulnEvent.Type {
 	case models.EventTypeAccepted, models.EventTypeFalsePositive:
 		labels := commonint.GetLabels(vuln)
-		_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
+		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
 			StateEvent: gitlab.Ptr("close"),
 			Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 		})
 		return err
 	case models.EventTypeReopened:
 		labels := commonint.GetLabels(vuln)
-		_, _, err = client.EditIssue(ctx.Request().Context(), projectId, issueId, &gitlab.UpdateIssueOptions{
+		_, _, err = client.EditIssue(ctx.Request().Context(), projectID, issueID, &gitlab.UpdateIssueOptions{
 			StateEvent: gitlab.Ptr("reopen"),
 			Labels:     gitlab.Ptr(gitlab.LabelOptions(labels)),
 		})

@@ -41,18 +41,18 @@ type githubRepository struct {
 	GithubAppInstallationID int `json:"githubAppInstallationId"`
 }
 
-func (g githubRepository) toRepository() core.Repository {
+func (githubIntegration githubRepository) toRepository() core.Repository {
 	var image string
-	if g.Organization != nil && g.Organization.AvatarURL != nil {
-		image = utils.SafeDereference(g.Organization.AvatarURL)
-	} else if g.Owner != nil && g.Owner.AvatarURL != nil {
-		image = utils.SafeDereference(g.Owner.AvatarURL)
+	if githubIntegration.Organization != nil && githubIntegration.Organization.AvatarURL != nil {
+		image = utils.SafeDereference(githubIntegration.Organization.AvatarURL)
+	} else if githubIntegration.Owner != nil && githubIntegration.Owner.AvatarURL != nil {
+		image = utils.SafeDereference(githubIntegration.Owner.AvatarURL)
 	}
 	return core.Repository{
-		ID:          fmt.Sprintf("github:%d:%s", g.GithubAppInstallationID, utils.SafeDereference(g.FullName)),
-		Label:       utils.SafeDereference(g.FullName),
+		ID:          fmt.Sprintf("github:%d:%s", githubIntegration.GithubAppInstallationID, utils.SafeDereference(githubIntegration.FullName)),
+		Label:       utils.SafeDereference(githubIntegration.FullName),
 		Image:       image,
-		Description: utils.SafeDereference(g.Description),
+		Description: utils.SafeDereference(githubIntegration.Description),
 	}
 }
 
@@ -63,14 +63,14 @@ type GithubIntegration struct {
 	firstPartyVulnRepository        core.FirstPartyVulnRepository
 	vulnEventRepository             core.VulnEventRepository
 	aggregatedVulnRepository        core.VulnRepository
-	frontendUrl                     string
+	frontendURL                     string
 	assetRepository                 core.AssetRepository
 	assetVersionRepository          core.AssetVersionRepository
 	componentRepository             core.ComponentRepository
 
 	orgRepository       core.OrganizationRepository
 	projectRepository   core.ProjectRepository
-	githubClientFactory func(repoId string) (githubClientFacade, error)
+	githubClientFactory func(repoID string) (githubClientFacade, error)
 }
 
 var _ core.ThirdPartyIntegration = &GithubIntegration{}
@@ -88,8 +88,8 @@ func NewGithubIntegration(db core.DB) *GithubIntegration {
 	orgRepository := repositories.NewOrgRepository(db)
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
 
-	frontendUrl := os.Getenv("FRONTEND_URL")
-	if frontendUrl == "" {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
 		panic("FRONTEND_URL is not set")
 	}
 
@@ -100,15 +100,15 @@ func NewGithubIntegration(db core.DB) *GithubIntegration {
 		dependencyVulnRepository:        dependencyVulnRepository,
 		firstPartyVulnRepository:        firstPartyVulnRepository,
 		vulnEventRepository:             vulnEventRepository,
-		frontendUrl:                     frontendUrl,
+		frontendURL:                     frontendURL,
 		assetRepository:                 repositories.NewAssetRepository(db),
 		assetVersionRepository:          repositories.NewAssetVersionRepository(db),
 		componentRepository:             componentRepository,
 		projectRepository:               projectRepository,
 		orgRepository:                   orgRepository,
 
-		githubClientFactory: func(repoId string) (githubClientFacade, error) {
-			return NewGithubClient(installationIdFromRepositoryID(repoId))
+		githubClientFactory: func(repoID string) (githubClientFacade, error) {
+			return NewGithubClient(installationIDFromRepositoryID(repoID))
 		},
 	}
 }
@@ -229,7 +229,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 		// look for a vuln with such a github ticket id
 		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 		if err != nil {
-			slog.Debug("could not find vuln by ticket id", "err", err, "ticketId", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
+			slog.Debug("could not find vuln by ticket id", "err", err, "ticketID", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 			return nil
 		}
 		action := *event.Action
@@ -296,7 +296,7 @@ func (githubIntegration *GithubIntegration) HandleWebhook(ctx core.Context) erro
 		// look for a vuln with such a github ticket id
 		vuln, err := githubIntegration.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 		if err != nil {
-			slog.Debug("could not find vuln by ticket id", "err", err, "ticketId", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
+			slog.Debug("could not find vuln by ticket id", "err", err, "ticketID", fmt.Sprintf("github:%d/%d", issueID, issueNumber))
 			return nil
 		}
 
@@ -468,8 +468,8 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx core.Context)
 	}
 
 	// add the organization id to the installation
-	orgId := organization.GetID()
-	appInstallation.OrgID = &orgId
+	orgID := organization.GetID()
+	appInstallation.OrgID = &orgID
 	// save the installation to the database
 	err = githubIntegration.githubAppInstallationRepository.Save(nil, &appInstallation)
 	if err != nil {
@@ -482,7 +482,7 @@ func (githubIntegration *GithubIntegration) FinishInstallation(ctx core.Context)
 	return ctx.JSON(200, "ok")
 }
 
-func installationIdFromRepositoryID(repositoryID string) int {
+func installationIDFromRepositoryID(repositoryID string) int {
 	split := strings.Split(repositoryID, ":")
 	if len(split) != 3 {
 		return 0
@@ -509,7 +509,7 @@ func ownerAndRepoFromRepositoryID(repositoryID string) (string, string, error) {
 }
 
 // the first return value is the global ticket id - a huge number, the second is the ticket number - like #386 you find in github links
-func githubTicketIdToIdAndNumber(id string) (int, int) {
+func githubTicketIDToIDAndNumber(id string) (int, int) {
 	// format: github:123456789/123
 	split := strings.Split(id, "/")
 
@@ -517,7 +517,7 @@ func githubTicketIdToIdAndNumber(id string) (int, int) {
 		return 0, 0
 	}
 
-	ticketId, err := strconv.Atoi(strings.TrimPrefix(split[0], "github:"))
+	ticketID, err := strconv.Atoi(strings.TrimPrefix(split[0], "github:"))
 	if err != nil {
 		return 0, 0
 	}
@@ -527,17 +527,17 @@ func githubTicketIdToIdAndNumber(id string) (int, int) {
 		return 0, 0
 	}
 
-	return ticketId, ticketNumber
+	return ticketID, ticketNumber
 }
 
-func (g *GithubIntegration) HandleEvent(event any) error {
+func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
 
-		repoId, err := core.GetRepositoryID(&asset)
+		repoID, err := core.GetRepositoryID(&asset)
 
-		if !strings.HasPrefix(repoId, "github:") {
+		if !strings.HasPrefix(repoID, "github:") {
 			// this integration only handles github repositories.
 			return nil
 		}
@@ -563,13 +563,13 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 		switch vulnType {
 		case models.VulnTypeDependencyVuln:
 			// we have a dependency vuln
-			v, err := g.dependencyVulnRepository.Read(vulnID)
+			v, err := githubIntegration.dependencyVulnRepository.Read(vulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case models.VulnTypeFirstPartyVuln:
-			v, err := g.firstPartyVulnRepository.Read(vulnID)
+			v, err := githubIntegration.firstPartyVulnRepository.Read(vulnID)
 			if err != nil {
 				return err
 			}
@@ -583,7 +583,7 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 
 		session := core.GetSession(event.Ctx)
 
-		return g.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
+		return githubIntegration.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, event.Justification, session.GetUserID())
 	case core.VulnEvent:
 		ev := event.Event
 
@@ -593,13 +593,13 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 		var vuln models.Vuln
 		switch vulnType {
 		case models.VulnTypeDependencyVuln:
-			v, err := g.dependencyVulnRepository.Read(ev.VulnID)
+			v, err := githubIntegration.dependencyVulnRepository.Read(ev.VulnID)
 			if err != nil {
 				return err
 			}
 			vuln = &v
 		case models.VulnTypeFirstPartyVuln:
-			v, err := g.firstPartyVulnRepository.Read(ev.VulnID)
+			v, err := githubIntegration.firstPartyVulnRepository.Read(ev.VulnID)
 			if err != nil {
 				return err
 			}
@@ -611,23 +611,23 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 			return nil
 		}
 
-		repoId := utils.SafeDereference(asset.RepositoryID)
-		if !strings.HasPrefix(repoId, "github:") || !strings.HasPrefix(*vuln.GetTicketID(), "github:") {
+		repoID := utils.SafeDereference(asset.RepositoryID)
+		if !strings.HasPrefix(repoID, "github:") || !strings.HasPrefix(*vuln.GetTicketID(), "github:") {
 			// this integration only handles github repositories.
 			return nil
 		}
 		// we create a new ticket in github
-		client, err := g.githubClientFactory(repoId)
+		client, err := githubIntegration.githubClientFactory(repoID)
 		if err != nil {
 			return err
 		}
 
-		owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
+		owner, repo, err := ownerAndRepoFromRepositoryID(repoID)
 		if err != nil {
 			return err
 		}
 
-		_, githubTicketNumber := githubTicketIdToIdAndNumber(*vuln.GetTicketID())
+		_, githubTicketNumber := githubTicketIDToIDAndNumber(*vuln.GetTicketID())
 
 		members, err := org.FetchMembersOfOrganization(event.Ctx)
 		if err != nil {
@@ -679,35 +679,35 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 			})
 			return err
 		}
-		return g.UpdateIssue(context.Background(), asset, vuln)
+		return githubIntegration.UpdateIssue(context.Background(), asset, vuln)
 	}
 	return nil
 }
 
-func (g *GithubIntegration) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
-	repoId := utils.SafeDereference(asset.RepositoryID)
-	if !strings.HasPrefix(repoId, "github:") {
+func (githubIntegration *GithubIntegration) UpdateIssue(ctx context.Context, asset models.Asset, vuln models.Vuln) error {
+	repoID := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoID, "github:") {
 		// this integration only handles github repositories.
 		return nil
 	}
 
-	owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
+	owner, repo, err := ownerAndRepoFromRepositoryID(repoID)
 	if err != nil {
 		return err
 	}
 
-	client, err := g.githubClientFactory(repoId)
+	client, err := githubIntegration.githubClientFactory(repoID)
 	if err != nil {
 		return err
 	}
 
-	project, err := g.projectRepository.GetProjectByAssetID(asset.ID)
+	project, err := githubIntegration.projectRepository.GetProjectByAssetID(asset.ID)
 	if err != nil {
 		slog.Error("could not get project by asset id", "err", err)
 		return err
 	}
 
-	org, err := g.orgRepository.Read(project.OrganizationID)
+	org, err := githubIntegration.orgRepository.Read(project.OrganizationID)
 	if err != nil {
 		slog.Error("could not get org by id", "err", err)
 		return err
@@ -715,9 +715,9 @@ func (g *GithubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 
 	switch v := vuln.(type) {
 	case *models.DependencyVuln:
-		err = g.updateDependencyVulnTicket(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, owner, repo)
+		err = githubIntegration.updateDependencyVulnTicket(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, owner, repo)
 	case *models.FirstPartyVuln:
-		err = g.updateFirstPartyVulnTicket(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, owner, repo)
+		err = githubIntegration.updateFirstPartyVulnTicket(ctx, v, asset, client, vuln.GetAssetVersionName(), org.Slug, project.Slug, owner, repo)
 	}
 
 	if err != nil {
@@ -726,7 +726,7 @@ func (g *GithubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 			// we can not reopen the issue - it is deleted
 			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDs())
 			// save the event
-			err = g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+			err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
@@ -738,8 +738,8 @@ func (g *GithubIntegration) UpdateIssue(ctx context.Context, asset models.Asset,
 	return nil
 }
 
-func (g *GithubIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client githubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
-	_, ticketNumber := githubTicketIdToIdAndNumber(*firstPartyVuln.TicketID)
+func (githubIntegration *GithubIntegration) updateFirstPartyVulnTicket(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client githubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
+	_, ticketNumber := githubTicketIDToIDAndNumber(*firstPartyVuln.TicketID)
 
 	expectedIssueState := "closed"
 	if firstPartyVuln.State == models.VulnStateOpen {
@@ -758,18 +758,18 @@ func (g *GithubIntegration) updateFirstPartyVulnTicket(ctx context.Context, firs
 	return err
 }
 
-func (g *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client githubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
+func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client githubClientFacade, assetVersionName, orgSlug, projectSlug, owner, repo string) error {
 
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
 
-	_, ticketNumber := githubTicketIdToIdAndNumber(*dependencyVuln.TicketID)
+	_, ticketNumber := githubTicketIDToIDAndNumber(*dependencyVuln.TicketID)
 
 	expectedIssueState := vuln.GetExpectedIssueState(asset, dependencyVuln)
 
@@ -777,7 +777,7 @@ func (g *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, depe
 	issueRequest := &github.IssueRequest{
 		State:  github.String(expectedIssueState.ToGithub()),
 		Title:  github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
-		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
+		Body:   github.String(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, asset.Slug, dependencyVuln.AssetVersionName, componentTree)),
 		Labels: &labels,
 	}
 
@@ -785,20 +785,20 @@ func (g *GithubIntegration) updateDependencyVulnTicket(ctx context.Context, depe
 	return err
 }
 
-func (g *GithubIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
-	repoId := utils.SafeDereference(asset.RepositoryID)
-	if !strings.HasPrefix(repoId, "github:") {
+func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error {
+	repoID := utils.SafeDereference(asset.RepositoryID)
+	if !strings.HasPrefix(repoID, "github:") {
 		// this integration only handles github repositories.
 		return nil
 	}
 
-	owner, repo, err := ownerAndRepoFromRepositoryID(repoId)
+	owner, repo, err := ownerAndRepoFromRepositoryID(repoID)
 	if err != nil {
 		return err
 	}
 
 	// we create a new ticket in github
-	client, err := g.githubClientFactory(repoId)
+	client, err := githubIntegration.githubClientFactory(repoID)
 	if err != nil {
 		return err
 	}
@@ -807,12 +807,12 @@ func (g *GithubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	switch v := vuln.(type) {
 	case *models.DependencyVuln:
-		createdIssue, err = g.createDependencyVulnIssue(ctx, v, asset, client, assetVersionName, justification, orgSlug, projectSlug, owner, repo)
+		createdIssue, err = githubIntegration.createDependencyVulnIssue(ctx, v, asset, client, assetVersionName, justification, orgSlug, projectSlug, owner, repo)
 		if err != nil {
 			return err
 		}
 	case *models.FirstPartyVuln:
-		createdIssue, err = g.createFirstPartyVulnIssue(ctx, v, asset, client, assetVersionName, justification, orgSlug, projectSlug, owner, repo)
+		createdIssue, err = githubIntegration.createFirstPartyVulnIssue(ctx, v, asset, client, assetVersionName, justification, orgSlug, projectSlug, owner, repo)
 		if err != nil {
 			return err
 		}
@@ -825,11 +825,11 @@ func (g *GithubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 
 	// create an event
 	vulnEvent := models.NewMitigateEvent(vuln.GetID(), vuln.GetType(), userID, justification, map[string]any{
-		"ticketId":  vuln.GetTicketID(),
-		"ticketUrl": vuln.GetTicketURL(),
+		"ticketID":  vuln.GetTicketID(),
+		"ticketURL": vuln.GetTicketURL(),
 	})
 	// save the dependencyVuln and the event in a transaction
-	err = g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+	err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 	// if an error did happen, delete the issue from github
 	if err != nil {
 		_, _, err := client.EditIssue(context.TODO(), owner, repo, createdIssue.GetNumber(), &github.IssueRequest{
@@ -844,7 +844,7 @@ func (g *GithubIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 	return nil
 }
 
-func (g *GithubIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client githubClientFacade, assetVersionName, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
+func (githubIntegration *GithubIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPartyVuln *models.FirstPartyVuln, asset models.Asset, client githubClientFacade, assetVersionName, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
 	labels := commonint.GetLabels(firstPartyVuln)
 	issue := &github.IssueRequest{
 		Title:  github.String(firstPartyVuln.Title()),
@@ -876,14 +876,14 @@ func (g *GithubIntegration) createFirstPartyVulnIssue(ctx context.Context, first
 	return createdIssue, nil
 }
 
-func (g *GithubIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client githubClientFacade, assetVersionName, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
+func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client githubClientFacade, assetVersionName, justification, orgSlug, projectSlug, owner, repo string) (*github.Issue, error) {
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}
@@ -891,7 +891,7 @@ func (g *GithubIntegration) createDependencyVulnIssue(ctx context.Context, depen
 	issue := &github.IssueRequest{
 		Title: github.String(fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID),
 			utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:"))),
-		Body:   github.String(exp.Markdown(g.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)),
+		Body:   github.String(exp.Markdown(githubIntegration.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)),
 		Labels: &labels,
 	}
 

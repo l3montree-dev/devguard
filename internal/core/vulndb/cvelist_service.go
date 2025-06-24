@@ -18,7 +18,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type cvelistJson struct {
+type cvelistJSON struct {
 	DataType    string `json:"dataType"`
 	CveMetadata struct {
 		CveID             string `json:"cveId"`
@@ -159,8 +159,8 @@ func (s *cvelistService) downloadZip() (*zip.Reader, error) {
 	return utils.ZipReaderFromResponse(res)
 }
 
-func (s *cvelistService) ImportCVE(cveId string) ([]models.CPEMatch, error) {
-	resp, err := s.httpClient.Get(fmt.Sprintf("https://cveawg.mitre.org/api/cve/%s", cveId))
+func (s *cvelistService) ImportCVE(cveID string) ([]models.CPEMatch, error) {
+	resp, err := s.httpClient.Get(fmt.Sprintf("https://cveawg.mitre.org/api/cve/%s", cveID))
 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cve")
@@ -171,7 +171,7 @@ func (s *cvelistService) ImportCVE(cveId string) ([]models.CPEMatch, error) {
 	}
 	defer resp.Body.Close()
 
-	var cvelist cvelistJson
+	var cvelist cvelistJSON
 	if err := json.NewDecoder(resp.Body).Decode(&cvelist); err != nil {
 		return nil, errors.Wrap(err, "could not decode json")
 	}
@@ -183,7 +183,7 @@ func (s *cvelistService) ImportCVE(cveId string) ([]models.CPEMatch, error) {
 	}
 
 	if err := s.cveRepository.GetDB(nil).Model(&models.CVE{
-		CVE: cveId,
+		CVE: cveID,
 		// unique the cpeIds
 	}).Association("Configurations").Append(utils.Map(matches, func(el models.CPEMatch) models.CPEMatch {
 		return models.CPEMatch{
@@ -224,7 +224,7 @@ func (s *cvelistService) Mirror() error {
 
 		batch := zipReader.File[i:end]
 		group.Go(func() error {
-			cve2cpeId := make(map[string][]string)
+			cve2cpeID := make(map[string][]string)
 			cpeMatch := make([]models.CPEMatch, 0)
 
 			for _, file := range batch {
@@ -239,20 +239,20 @@ func (s *cvelistService) Mirror() error {
 					continue
 				}
 
-				var cvelistJson cvelistJson
-				if err := json.Unmarshal(unzippedFileBytes, &cvelistJson); err != nil {
+				var cvelistJSON cvelistJSON
+				if err := json.Unmarshal(unzippedFileBytes, &cvelistJSON); err != nil {
 					slog.Error("could not unmarshal json", "err", err)
 					continue
 				}
 
-				matches := generateCPE(cvelistJson)
+				matches := generateCPE(cvelistJSON)
 				cpeMatch = append(cpeMatch, matches...)
 				for _, match := range matches {
-					if _, ok := cve2cpeId[cvelistJson.CveMetadata.CveID]; !ok {
-						cve2cpeId[cvelistJson.CveMetadata.CveID] = make([]string, 0)
+					if _, ok := cve2cpeID[cvelistJSON.CveMetadata.CveID]; !ok {
+						cve2cpeID[cvelistJSON.CveMetadata.CveID] = make([]string, 0)
 					}
 					// check if id is already in the list
-					cve2cpeId[cvelistJson.CveMetadata.CveID] = append(cve2cpeId[cvelistJson.CveMetadata.CveID], match.CalculateHash())
+					cve2cpeID[cvelistJSON.CveMetadata.CveID] = append(cve2cpeID[cvelistJSON.CveMetadata.CveID], match.CalculateHash())
 				}
 			}
 
@@ -275,7 +275,7 @@ func (s *cvelistService) Mirror() error {
 			}
 
 			// save the cve to cpe mapping
-			for cveId, cpeIds := range cve2cpeId {
+			for cveID, cpeIds := range cve2cpeID {
 				for i := 0; i < len(cpeIds); i += 1000 {
 					end := i + 1000
 					if end > len(cpeIds) {
@@ -286,14 +286,14 @@ func (s *cvelistService) Mirror() error {
 						// it might log slow queries or a missing cve.
 						Logger: logger.Default.LogMode(logger.Silent),
 					}).Model(&models.CVE{
-						CVE: cveId,
+						CVE: cveID,
 						// unique the cpeIds
 					}).Association("Configurations").Append(utils.Map(utils.UniqBy(cpeIds[i:end], func(el string) string {
 						return el
 					}), func(el string) models.CPEMatch {
 						return models.CPEMatch{MatchCriteriaID: el}
 					})); err != nil {
-						slog.Error("could not save cve to cpe mapping", "err", err, "cveId", cveId)
+						slog.Error("could not save cve to cpe mapping", "err", err, "cveID", cveID)
 					}
 				}
 			}
@@ -309,7 +309,7 @@ func isCVEFile(fileName string) bool {
 	return strings.Contains(fileName, "CVE-") && strings.HasSuffix(fileName, ".json")
 }
 
-func generateCPE(cve cvelistJson) []models.CPEMatch {
+func generateCPE(cve cvelistJSON) []models.CPEMatch {
 	cpeCriteria := make([]models.CPEMatch, 0)
 
 	for _, product := range cve.Containers.Cna.Affected {

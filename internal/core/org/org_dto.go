@@ -188,7 +188,7 @@ func obfuscateGitLabIntegrations(integration models.GitLabIntegration) common.Gi
 		ID:              integration.ID.String(),
 		Name:            integration.Name,
 		ObfuscatedToken: integration.AccessToken[:4] + "************" + integration.AccessToken[len(integration.AccessToken)-4:],
-		Url:             integration.GitLabUrl,
+		URL:             integration.GitLabURL,
 	}
 }
 

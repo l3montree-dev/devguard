@@ -26,7 +26,7 @@ type dependencyVulnsByPackage struct {
 	DependencyVulns []DependencyVulnDTO `json:"vulns"`
 }
 
-type dependencyVulnHttpController struct {
+type dependencyVulnHTTPController struct {
 	dependencyVulnRepository core.DependencyVulnRepository
 	dependencyVulnService    core.DependencyVulnService
 	projectService           core.ProjectService
@@ -38,22 +38,22 @@ type DependencyVulnStatus struct {
 	MechanicalJustification models.MechanicalJustificationType `json:"mechanicalJustification"`
 }
 
-func NewHttpController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService) *dependencyVulnHttpController {
-	return &dependencyVulnHttpController{
+func NewHTTPController(dependencyVulnRepository core.DependencyVulnRepository, dependencyVulnService core.DependencyVulnService, projectService core.ProjectService) *dependencyVulnHTTPController {
+	return &dependencyVulnHTTPController{
 		dependencyVulnRepository: dependencyVulnRepository,
 		dependencyVulnService:    dependencyVulnService,
 		projectService:           projectService,
 	}
 }
 
-func (c dependencyVulnHttpController) ListByOrgPaged(ctx core.Context) error {
+func (c dependencyVulnHTTPController) ListByOrgPaged(ctx core.Context) error {
 
 	userAllowedProjectIds, err := c.projectService.ListAllowedProjects(ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
 
-	pagedResp, err := c.dependencyVulnRepository.GetDefaultDependencyVulnsByOrgIdPaged(
+	pagedResp, err := c.dependencyVulnRepository.GetDefaultDependencyVulnsByOrgIDPaged(
 		nil,
 
 		utils.Map(userAllowedProjectIds, func(p models.Project) string {
@@ -73,10 +73,10 @@ func (c dependencyVulnHttpController) ListByOrgPaged(ctx core.Context) error {
 	}))
 }
 
-func (c dependencyVulnHttpController) ListByProjectPaged(ctx core.Context) error {
+func (c dependencyVulnHTTPController) ListByProjectPaged(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
-	pagedResp, err := c.dependencyVulnRepository.GetDefaultDependencyVulnsByProjectIdPaged(
+	pagedResp, err := c.dependencyVulnRepository.GetDefaultDependencyVulnsByProjectIDPaged(
 		nil,
 		project.ID,
 
@@ -95,7 +95,7 @@ func (c dependencyVulnHttpController) ListByProjectPaged(ctx core.Context) error
 	}))
 }
 
-func (c dependencyVulnHttpController) ListPaged(ctx core.Context) error {
+func (c dependencyVulnHTTPController) ListPaged(ctx core.Context) error {
 	// get the asset
 	assetVersion := core.GetAssetVersion(ctx)
 
@@ -191,7 +191,7 @@ func (c dependencyVulnHttpController) ListPaged(ctx core.Context) error {
 	return ctx.JSON(200, core.NewPaged(core.GetPageInfo(ctx), pagedResp.Total, values))
 }
 
-func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
+func (c dependencyVulnHTTPController) Mitigate(ctx core.Context) error {
 	type justification struct {
 		Comment string `json:"comment"`
 	}
@@ -203,7 +203,7 @@ func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
 		slog.Error("could not bind justification", "err", err)
 	}
 
-	dependencyVulnId, _, err := core.GetVulnID(ctx)
+	dependencyVulnID, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
@@ -218,7 +218,7 @@ func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
 	}
 
 	// fetch the dependencyVuln again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the dependency_vuln.
-	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnId)
+	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
@@ -226,15 +226,15 @@ func (c dependencyVulnHttpController) Mitigate(ctx core.Context) error {
 	return ctx.JSON(200, convertToDetailedDTO(dependencyVuln))
 }
 
-func (c dependencyVulnHttpController) Read(ctx core.Context) error {
+func (c dependencyVulnHTTPController) Read(ctx core.Context) error {
 
-	dependencyVulnId, _, err := core.GetVulnID(ctx)
+	dependencyVulnID, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
 	asset := core.GetAsset(ctx)
 
-	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnId)
+	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
@@ -246,16 +246,16 @@ func (c dependencyVulnHttpController) Read(ctx core.Context) error {
 	return ctx.JSON(200, convertToDetailedDTO(dependencyVuln))
 }
 
-func (c dependencyVulnHttpController) CreateEvent(ctx core.Context) error {
+func (c dependencyVulnHTTPController) CreateEvent(ctx core.Context) error {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	dependencyVulnId, _, err := core.GetVulnID(ctx)
+	dependencyVulnID, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
 
-	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnId)
+	dependencyVuln, err := c.dependencyVulnRepository.Read(dependencyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
@@ -330,7 +330,7 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 				Justification:           ev.Justification,
 				MechanicalJustification: ev.MechanicalJustification,
 				AssetVersionName:        getAssetVersionName(dependencyVuln, ev),
-				ArbitraryJsonData:       ev.GetArbitraryJsonData(),
+				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
 				CreatedAt:               ev.CreatedAt,
 			}
 		}),

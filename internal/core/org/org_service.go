@@ -76,9 +76,9 @@ func (o *orgService) CreateOrganization(ctx core.Context, organization models.Or
 func (o *orgService) bootstrapOrg(ctx core.Context, organization models.Org) error {
 	// create the permissions for the organization
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
-	userId := core.GetSession(ctx).GetUserID()
+	userID := core.GetSession(ctx).GetUserID()
 
-	if err := rbac.GrantRole(userId, "owner"); err != nil {
+	if err := rbac.GrantRole(userID, "owner"); err != nil {
 		return err
 	}
 	if err := rbac.InheritRole("owner", "admin"); err != nil { // an owner is an admin

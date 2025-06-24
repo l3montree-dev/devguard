@@ -93,7 +93,7 @@ func uploadAttestation(ctx context.Context, predicate string) error {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/attestations", config.RuntimeBaseConfig.ApiUrl), bytes.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/attestations", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
 	if err != nil {
 		slog.Error("could not create request", "err", err)
 		return err
@@ -104,7 +104,7 @@ func uploadAttestation(ctx context.Context, predicate string) error {
 		return err
 	}
 
-	req.Header.Set("X-Attestation-Name", config.RuntimeAttestationConfig.PredicateType)
+	req.Header.Set("X-Predicate-Type", config.RuntimeAttestationConfig.PredicateType)
 	// set the headers
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)

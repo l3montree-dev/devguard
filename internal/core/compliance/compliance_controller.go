@@ -69,7 +69,7 @@ func (c *httpController) getAssetVersionCompliance(projectID uuid.UUID, assetVer
 		return nil, err
 	}
 
-	policies, err := c.policyRepository.FindByProjectId(projectID)
+	policies, err := c.policyRepository.FindByProjectID(projectID)
 	if err != nil {
 		return nil, err
 	}

@@ -39,8 +39,8 @@ func (_m *GitlabClientFactory) EXPECT() *GitlabClientFactory_Expecter {
 }
 
 // FromAccessToken provides a mock function for the type GitlabClientFactory
-func (_mock *GitlabClientFactory) FromAccessToken(accessToken string, baseUrl string) (core.GitlabClientFacade, error) {
-	ret := _mock.Called(accessToken, baseUrl)
+func (_mock *GitlabClientFactory) FromAccessToken(accessToken string, baseURL string) (core.GitlabClientFacade, error) {
+	ret := _mock.Called(accessToken, baseURL)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FromAccessToken")
@@ -49,17 +49,17 @@ func (_mock *GitlabClientFactory) FromAccessToken(accessToken string, baseUrl st
 	var r0 core.GitlabClientFacade
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(string, string) (core.GitlabClientFacade, error)); ok {
-		return returnFunc(accessToken, baseUrl)
+		return returnFunc(accessToken, baseURL)
 	}
 	if returnFunc, ok := ret.Get(0).(func(string, string) core.GitlabClientFacade); ok {
-		r0 = returnFunc(accessToken, baseUrl)
+		r0 = returnFunc(accessToken, baseURL)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(core.GitlabClientFacade)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(string, string) error); ok {
-		r1 = returnFunc(accessToken, baseUrl)
+		r1 = returnFunc(accessToken, baseURL)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -72,26 +72,15 @@ type GitlabClientFactory_FromAccessToken_Call struct {
 }
 
 // FromAccessToken is a helper method to define mock.On call
-//   - accessToken string
-//   - baseUrl string
-func (_e *GitlabClientFactory_Expecter) FromAccessToken(accessToken interface{}, baseUrl interface{}) *GitlabClientFactory_FromAccessToken_Call {
-	return &GitlabClientFactory_FromAccessToken_Call{Call: _e.mock.On("FromAccessToken", accessToken, baseUrl)}
+//   - accessToken
+//   - baseURL
+func (_e *GitlabClientFactory_Expecter) FromAccessToken(accessToken interface{}, baseURL interface{}) *GitlabClientFactory_FromAccessToken_Call {
+	return &GitlabClientFactory_FromAccessToken_Call{Call: _e.mock.On("FromAccessToken", accessToken, baseURL)}
 }
 
-func (_c *GitlabClientFactory_FromAccessToken_Call) Run(run func(accessToken string, baseUrl string)) *GitlabClientFactory_FromAccessToken_Call {
+func (_c *GitlabClientFactory_FromAccessToken_Call) Run(run func(accessToken string, baseURL string)) *GitlabClientFactory_FromAccessToken_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(string), args[1].(string))
 	})
 	return _c
 }
@@ -101,7 +90,7 @@ func (_c *GitlabClientFactory_FromAccessToken_Call) Return(gitlabClientFacade co
 	return _c
 }
 
-func (_c *GitlabClientFactory_FromAccessToken_Call) RunAndReturn(run func(accessToken string, baseUrl string) (core.GitlabClientFacade, error)) *GitlabClientFactory_FromAccessToken_Call {
+func (_c *GitlabClientFactory_FromAccessToken_Call) RunAndReturn(run func(accessToken string, baseURL string) (core.GitlabClientFacade, error)) *GitlabClientFactory_FromAccessToken_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -140,20 +129,14 @@ type GitlabClientFactory_FromIntegration_Call struct {
 }
 
 // FromIntegration is a helper method to define mock.On call
-//   - integration models.GitLabIntegration
+//   - integration
 func (_e *GitlabClientFactory_Expecter) FromIntegration(integration interface{}) *GitlabClientFactory_FromIntegration_Call {
 	return &GitlabClientFactory_FromIntegration_Call{Call: _e.mock.On("FromIntegration", integration)}
 }
 
 func (_c *GitlabClientFactory_FromIntegration_Call) Run(run func(integration models.GitLabIntegration)) *GitlabClientFactory_FromIntegration_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.GitLabIntegration
-		if args[0] != nil {
-			arg0 = args[0].(models.GitLabIntegration)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(models.GitLabIntegration))
 	})
 	return _c
 }
@@ -202,20 +185,14 @@ type GitlabClientFactory_FromIntegrationUUID_Call struct {
 }
 
 // FromIntegrationUUID is a helper method to define mock.On call
-//   - id uuid.UUID
+//   - id
 func (_e *GitlabClientFactory_Expecter) FromIntegrationUUID(id interface{}) *GitlabClientFactory_FromIntegrationUUID_Call {
 	return &GitlabClientFactory_FromIntegrationUUID_Call{Call: _e.mock.On("FromIntegrationUUID", id)}
 }
 
 func (_c *GitlabClientFactory_FromIntegrationUUID_Call) Run(run func(id uuid.UUID)) *GitlabClientFactory_FromIntegrationUUID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -264,26 +241,15 @@ type GitlabClientFactory_FromOauth2Token_Call struct {
 }
 
 // FromOauth2Token is a helper method to define mock.On call
-//   - token models.GitLabOauth2Token
-//   - enableClientCache bool
+//   - token
+//   - enableClientCache
 func (_e *GitlabClientFactory_Expecter) FromOauth2Token(token interface{}, enableClientCache interface{}) *GitlabClientFactory_FromOauth2Token_Call {
 	return &GitlabClientFactory_FromOauth2Token_Call{Call: _e.mock.On("FromOauth2Token", token, enableClientCache)}
 }
 
 func (_c *GitlabClientFactory_FromOauth2Token_Call) Run(run func(token models.GitLabOauth2Token, enableClientCache bool)) *GitlabClientFactory_FromOauth2Token_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.GitLabOauth2Token
-		if args[0] != nil {
-			arg0 = args[0].(models.GitLabOauth2Token)
-		}
-		var arg1 bool
-		if args[1] != nil {
-			arg1 = args[1].(bool)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(models.GitLabOauth2Token), args[1].(bool))
 	})
 	return _c
 }

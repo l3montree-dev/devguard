@@ -43,7 +43,7 @@ func NewLoginCommand() *cobra.Command {
 	return cmd
 }
 
-func login(ctx context.Context, username, password, registryUrl string) error {
+func login(ctx context.Context, username, password, registryURL string) error {
 	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{
 		AllowPlaintextPut:        true,
 		DetectDefaultNativeStore: true,
@@ -55,7 +55,7 @@ func login(ctx context.Context, username, password, registryUrl string) error {
 	return credentials.Login(ctx, store, &remote.Registry{
 		RepositoryOptions: remote.RepositoryOptions{
 			Reference: registry.Reference{
-				Registry: registryUrl,
+				Registry: registryURL,
 			},
 		},
 	}, auth.Credential{
@@ -67,9 +67,9 @@ func login(ctx context.Context, username, password, registryUrl string) error {
 func runLogin(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	registryUrl := args[0]
+	registryURL := args[0]
 
-	err := login(ctx, config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, registryUrl)
+	err := login(ctx, config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, registryURL)
 	if err != nil {
 		slog.Error("login failed", "err", err)
 	}

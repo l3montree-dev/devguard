@@ -38,13 +38,13 @@ func setEmptyEnvVars(t *testing.T) {
 func TestParseBaseConfig(t *testing.T) {
 	setEmptyEnvVars(t)
 	t.Run("should use the provided config values if passed directly", func(t *testing.T) {
-		viper.Set("apiUrl", "http://example.com")
+		viper.Set("apiURL", "http://example.com")
 		viper.Set("path", ".")
 		viper.Set("ref", "myref")
 		viper.Set("defaultRef", "mydefaultref")
 
 		ParseBaseConfig()
-		assert.Equal(t, "http://example.com", RuntimeBaseConfig.ApiUrl)
+		assert.Equal(t, "http://example.com", RuntimeBaseConfig.APIURL)
 		assert.Equal(t, ".", RuntimeBaseConfig.Path)
 		assert.Equal(t, "myref", RuntimeBaseConfig.Ref)
 		assert.Equal(t, "mydefaultref", RuntimeBaseConfig.DefaultBranch)
@@ -57,18 +57,18 @@ func TestParseBaseConfig(t *testing.T) {
 		}, "Expected panic due to invalid path")
 	})
 
-	t.Run("should sanitize the provided apiUrl like adding the protocol", func(t *testing.T) {
-		viper.Set("apiUrl", "example.com/api")
+	t.Run("should sanitize the provided apiURL like adding the protocol", func(t *testing.T) {
+		viper.Set("apiURL", "example.com/api")
 		viper.Set("path", ".")
 		ParseBaseConfig()
-		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.ApiUrl)
+		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.APIURL)
 	})
 
-	t.Run("should remove a trailing slash from the apiUrl", func(t *testing.T) {
-		viper.Set("apiUrl", "https://example.com/api/")
+	t.Run("should remove a trailing slash from the apiURL", func(t *testing.T) {
+		viper.Set("apiURL", "https://example.com/api/")
 		viper.Set("path", ".")
 		ParseBaseConfig()
-		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.ApiUrl)
+		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.APIURL)
 	})
 
 	t.Run("should use the git version info if ref is NOT set", func(t *testing.T) {
@@ -76,7 +76,7 @@ func TestParseBaseConfig(t *testing.T) {
 		viper.Set("ref", "")
 		viper.Set("defaultRef", "main")
 		viper.Set("path", ".")
-		viper.Set("apiUrl", "https://example.com/api")
+		viper.Set("apiURL", "https://example.com/api")
 
 		m := mocks.NewGitLister(t)
 		m.On("GetTags", ".").Return([]string{"v1.0.0", "v1.0.5", "v2.0.9"}, nil)
@@ -88,7 +88,7 @@ func TestParseBaseConfig(t *testing.T) {
 
 		ParseBaseConfig()
 
-		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.ApiUrl)
+		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.APIURL)
 		assert.Equal(t, ".", RuntimeBaseConfig.Path)
 		assert.Equal(t, "2.0.9", RuntimeBaseConfig.Ref)
 		assert.Equal(t, "main", RuntimeBaseConfig.DefaultBranch)
@@ -99,7 +99,7 @@ func TestParseBaseConfig(t *testing.T) {
 		viper.Set("ref", "v1.0.0")
 		viper.Set("defaultRef", "")
 		viper.Set("path", ".")
-		viper.Set("apiUrl", "https://example.com/api")
+		viper.Set("apiURL", "https://example.com/api")
 
 		m := mocks.NewGitLister(t)
 		m.On("GetTags", ".").Return([]string{"v1.0.0", "v1.0.5", "v2.0.9"}, nil)
@@ -111,7 +111,7 @@ func TestParseBaseConfig(t *testing.T) {
 
 		ParseBaseConfig()
 
-		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.ApiUrl)
+		assert.Equal(t, "https://example.com/api", RuntimeBaseConfig.APIURL)
 		assert.Equal(t, ".", RuntimeBaseConfig.Path)
 		assert.Equal(t, "v1.0.0", RuntimeBaseConfig.Ref)
 		assert.Equal(t, "main", RuntimeBaseConfig.DefaultBranch)

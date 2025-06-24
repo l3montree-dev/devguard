@@ -20,7 +20,7 @@ type httpController struct {
 	statisticsService      core.StatisticsService
 }
 
-func NewHttpController(repository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetService core.AssetService, dependencyVulnService core.DependencyVulnService, statisticsService core.StatisticsService) *httpController {
+func NewHTTPController(repository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetService core.AssetService, dependencyVulnService core.DependencyVulnService, statisticsService core.StatisticsService) *httpController {
 	return &httpController{
 		assetRepository:        repository,
 		assetVersionRepository: assetVersionRepository,
@@ -41,7 +41,7 @@ func (a *httpController) HandleLookup(ctx core.Context) error {
 		return echo.NewHTTPError(400, "missing repositoryId")
 	}
 
-	asset, err := a.assetRepository.FindAssetByExternalProviderId(provider, id)
+	asset, err := a.assetRepository.FindAssetByExternalProviderID(provider, id)
 
 	if err != nil {
 		return echo.NewHTTPError(404, "asset not found").WithInternal(err)

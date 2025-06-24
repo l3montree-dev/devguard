@@ -70,20 +70,14 @@ type AssetService_CreateAsset_Call struct {
 }
 
 // CreateAsset is a helper method to define mock.On call
-//   - asset models.Asset
+//   - asset
 func (_e *AssetService_Expecter) CreateAsset(asset interface{}) *AssetService_CreateAsset_Call {
 	return &AssetService_CreateAsset_Call{Call: _e.mock.On("CreateAsset", asset)}
 }
 
 func (_c *AssetService_CreateAsset_Call) Run(run func(asset models.Asset)) *AssetService_CreateAsset_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
-		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(models.Asset))
 	})
 	return _c
 }
@@ -121,20 +115,14 @@ type AssetService_GetCVSSBadgeSVG_Call struct {
 }
 
 // GetCVSSBadgeSVG is a helper method to define mock.On call
-//   - CVSS models.AssetRiskDistribution
+//   - CVSS
 func (_e *AssetService_Expecter) GetCVSSBadgeSVG(CVSS interface{}) *AssetService_GetCVSSBadgeSVG_Call {
 	return &AssetService_GetCVSSBadgeSVG_Call{Call: _e.mock.On("GetCVSSBadgeSVG", CVSS)}
 }
 
 func (_c *AssetService_GetCVSSBadgeSVG_Call) Run(run func(CVSS models.AssetRiskDistribution)) *AssetService_GetCVSSBadgeSVG_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.AssetRiskDistribution
-		if args[0] != nil {
-			arg0 = args[0].(models.AssetRiskDistribution)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(models.AssetRiskDistribution))
 	})
 	return _c
 }
@@ -172,32 +160,16 @@ type AssetService_UpdateAssetRequirements_Call struct {
 }
 
 // UpdateAssetRequirements is a helper method to define mock.On call
-//   - asset models.Asset
-//   - responsible string
-//   - justification string
+//   - asset
+//   - responsible
+//   - justification
 func (_e *AssetService_Expecter) UpdateAssetRequirements(asset interface{}, responsible interface{}, justification interface{}) *AssetService_UpdateAssetRequirements_Call {
 	return &AssetService_UpdateAssetRequirements_Call{Call: _e.mock.On("UpdateAssetRequirements", asset, responsible, justification)}
 }
 
 func (_c *AssetService_UpdateAssetRequirements_Call) Run(run func(asset models.Asset, responsible string, justification string)) *AssetService_UpdateAssetRequirements_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
-		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(models.Asset), args[1].(string), args[2].(string))
 	})
 	return _c
 }

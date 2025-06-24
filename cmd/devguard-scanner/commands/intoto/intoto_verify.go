@@ -57,16 +57,16 @@ func verify(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("tag does not contain supply chain id")
 		}
 
-		supplyChainId := imageTagParts[len(imageTagParts)-2]
-		if len(supplyChainId) != 8 {
+		supplyChainID := imageTagParts[len(imageTagParts)-2]
+		if len(supplyChainID) != 8 {
 			return fmt.Errorf("tag does not contain supply chain id. Expected 8 characters")
 		}
 	}
 
 	// download the layout
-	c := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.ApiUrl)
+	c := devguard.NewHTTPClient(config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL)
 
-	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/root.layout.json", config.RuntimeBaseConfig.ApiUrl, config.RuntimeBaseConfig.AssetName), nil)
+	req, err := http.NewRequestWithContext(cmd.Context(), http.MethodGet, fmt.Sprintf("%s/api/v1/organizations/%s/in-toto/root.layout.json", config.RuntimeBaseConfig.APIURL, config.RuntimeBaseConfig.AssetName), nil)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func verify(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not create temp dir")
 	}
 
-	err = downloadSupplyChainLinks(cmd.Context(), c, linkDir, config.RuntimeBaseConfig.ApiUrl, config.RuntimeBaseConfig.AssetName, config.RuntimeInTotoConfig.SupplyChainID)
+	err = downloadSupplyChainLinks(cmd.Context(), c, linkDir, config.RuntimeBaseConfig.APIURL, config.RuntimeBaseConfig.AssetName, config.RuntimeInTotoConfig.SupplyChainID)
 	if err != nil {
 		return errors.Wrap(err, "could not download supply chain links")
 	}
@@ -145,7 +145,7 @@ func NewInTotoVerifyCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 
-	cmd.Flags().String("supplyChainId", "", "Supply chain ID")
+	cmd.Flags().String("supplyChainID", "", "Supply chain ID")
 	cmd.Flags().String("token", "", "Token")
 	cmd.Flags().String("layoutKey", "", "Path to the layout key")
 

@@ -44,7 +44,7 @@ func (r *assetRiskHistoryRepository) UpdateRiskAggregation(assetRisk *models.Ass
 	return r.Repository.GetDB(r.db).Save(assetRisk).Error
 }
 
-func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectId uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error) {
+func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectID uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error) {
 	var assetRisk = []models.AssetRiskHistory{}
 
 	projectAndChildProjectsQuery := r.Repository.GetDB(r.db).Raw(`
@@ -59,7 +59,7 @@ func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectId uuid.UUID
 		)
 		SELECT id
 		FROM project_tree
-	`, projectId)
+	`, projectID)
 
 	// get all assetRisk of the project
 	db := r.GetDB(r.db)

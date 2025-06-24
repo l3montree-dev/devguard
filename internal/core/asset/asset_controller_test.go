@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHttpControllerGetConfigFile(t *testing.T) {
+func TestHTTPControllerGetConfigFile(t *testing.T) {
 	e := echo.New()
 
 	t.Run("returns 200 with asset config file", func(t *testing.T) {

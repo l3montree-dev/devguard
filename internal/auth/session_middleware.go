@@ -35,14 +35,14 @@ func getCookie(name string, cookies []*http.Cookie) *http.Cookie {
 	return nil
 }
 
-func cookieAuth(ctx context.Context, oryApiClient core.AdminClient, oryKratosSessionCookie string) (string, error) {
+func cookieAuth(ctx context.Context, oryAPIClient core.AdminClient, oryKratosSessionCookie string) (string, error) {
 	// check if we have a session
 	unescaped, err := url.QueryUnescape(oryKratosSessionCookie)
 	if err != nil {
 		return "", err
 	}
 
-	session, err := oryApiClient.GetIdentityFromCookie(ctx, unescaped)
+	session, err := oryAPIClient.GetIdentityFromCookie(ctx, unescaped)
 	if err != nil {
 		return "", err
 	}
@@ -50,7 +50,7 @@ func cookieAuth(ctx context.Context, oryApiClient core.AdminClient, oryKratosSes
 	return session.Id, nil
 }
 
-func SessionMiddleware(oryApiClient core.AdminClient, verifier core.Verifier) echo.MiddlewareFunc {
+func SessionMiddleware(oryAPIClient core.AdminClient, verifier core.Verifier) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			oryKratosSessionCookie := getCookie("ory_kratos_session", ctx.Cookies())
@@ -62,7 +62,7 @@ func SessionMiddleware(oryApiClient core.AdminClient, verifier core.Verifier) ec
 			adminTokenHeader := ctx.Request().Header.Get("X-Admin-Token")
 
 			if oryKratosSessionCookie != nil {
-				userID, err = cookieAuth(ctx.Request().Context(), oryApiClient, oryKratosSessionCookie.String())
+				userID, err = cookieAuth(ctx.Request().Context(), oryAPIClient, oryKratosSessionCookie.String())
 				if err != nil {
 					// user is not authenticated
 					// set a special session - it might be that the user is still allowed todo the request

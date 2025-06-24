@@ -70,32 +70,16 @@ type Comparer_GetVulns_Call struct {
 }
 
 // GetVulns is a helper method to define mock.On call
-//   - purl string
-//   - notASemverVersion string
-//   - componentType string
+//   - purl
+//   - notASemverVersion
+//   - componentType
 func (_e *Comparer_Expecter) GetVulns(purl interface{}, notASemverVersion interface{}, componentType interface{}) *Comparer_GetVulns_Call {
 	return &Comparer_GetVulns_Call{Call: _e.mock.On("GetVulns", purl, notASemverVersion, componentType)}
 }
 
 func (_c *Comparer_GetVulns_Call) Run(run func(purl string, notASemverVersion string, componentType string)) *Comparer_GetVulns_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(string), args[1].(string), args[2].(string))
 	})
 	return _c
 }

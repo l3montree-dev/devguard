@@ -25,7 +25,7 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		h := org.NewHttpController(nil, nil, nil, nil, nil)
+		h := org.NewHTTPController(nil, nil, nil, nil, nil)
 
 		err := h.Create(ctx)
 		if err == nil {
@@ -40,7 +40,7 @@ func TestCreate(t *testing.T) {
 
 		core.SetOrg(ctx, models.Org{Name: "fantasy", Slug: "fantasy"})
 
-		h := org.NewHttpController(nil, nil, nil, nil, nil)
+		h := org.NewHTTPController(nil, nil, nil, nil, nil)
 
 		err := h.Create(ctx)
 		if err == nil {
@@ -54,7 +54,7 @@ func TestCreate(t *testing.T) {
 		e := echo.New()
 		ctx := e.NewContext(req, httptest.NewRecorder())
 
-		h := org.NewHttpController(nil, nil, nil, nil, nil)
+		h := org.NewHTTPController(nil, nil, nil, nil, nil)
 
 		err := h.Create(ctx)
 		if err == nil {

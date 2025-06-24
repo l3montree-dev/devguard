@@ -64,38 +64,17 @@ type AssetVersionService_BuildOpenVeX_Call struct {
 }
 
 // BuildOpenVeX is a helper method to define mock.On call
-//   - asset models.Asset
-//   - assetVersion models.AssetVersion
-//   - organizationSlug string
-//   - dependencyVulns []models.DependencyVuln
+//   - asset
+//   - assetVersion
+//   - organizationSlug
+//   - dependencyVulns
 func (_e *AssetVersionService_Expecter) BuildOpenVeX(asset interface{}, assetVersion interface{}, organizationSlug interface{}, dependencyVulns interface{}) *AssetVersionService_BuildOpenVeX_Call {
 	return &AssetVersionService_BuildOpenVeX_Call{Call: _e.mock.On("BuildOpenVeX", asset, assetVersion, organizationSlug, dependencyVulns)}
 }
 
 func (_c *AssetVersionService_BuildOpenVeX_Call) Run(run func(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln)) *AssetVersionService_BuildOpenVeX_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
-		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
-		}
-		var arg1 models.AssetVersion
-		if args[1] != nil {
-			arg1 = args[1].(models.AssetVersion)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 []models.DependencyVuln
-		if args[3] != nil {
-			arg3 = args[3].([]models.DependencyVuln)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
+		run(args[0].(models.Asset), args[1].(models.AssetVersion), args[2].(string), args[3].([]models.DependencyVuln))
 	})
 	return _c
 }
@@ -135,38 +114,17 @@ type AssetVersionService_BuildSBOM_Call struct {
 }
 
 // BuildSBOM is a helper method to define mock.On call
-//   - assetVersion models.AssetVersion
-//   - version string
-//   - orgName string
-//   - components []models.ComponentDependency
+//   - assetVersion
+//   - version
+//   - orgName
+//   - components
 func (_e *AssetVersionService_Expecter) BuildSBOM(assetVersion interface{}, version interface{}, orgName interface{}, components interface{}) *AssetVersionService_BuildSBOM_Call {
 	return &AssetVersionService_BuildSBOM_Call{Call: _e.mock.On("BuildSBOM", assetVersion, version, orgName, components)}
 }
 
 func (_c *AssetVersionService_BuildSBOM_Call) Run(run func(assetVersion models.AssetVersion, version string, orgName string, components []models.ComponentDependency)) *AssetVersionService_BuildSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.AssetVersion
-		if args[0] != nil {
-			arg0 = args[0].(models.AssetVersion)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 []models.ComponentDependency
-		if args[3] != nil {
-			arg3 = args[3].([]models.ComponentDependency)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
+		run(args[0].(models.AssetVersion), args[1].(string), args[2].(string), args[3].([]models.ComponentDependency))
 	})
 	return _c
 }
@@ -206,38 +164,17 @@ type AssetVersionService_BuildVeX_Call struct {
 }
 
 // BuildVeX is a helper method to define mock.On call
-//   - asset models.Asset
-//   - assetVersion models.AssetVersion
-//   - orgName string
-//   - dependencyVulns []models.DependencyVuln
+//   - asset
+//   - assetVersion
+//   - orgName
+//   - dependencyVulns
 func (_e *AssetVersionService_Expecter) BuildVeX(asset interface{}, assetVersion interface{}, orgName interface{}, dependencyVulns interface{}) *AssetVersionService_BuildVeX_Call {
 	return &AssetVersionService_BuildVeX_Call{Call: _e.mock.On("BuildVeX", asset, assetVersion, orgName, dependencyVulns)}
 }
 
 func (_c *AssetVersionService_BuildVeX_Call) Run(run func(asset models.Asset, assetVersion models.AssetVersion, orgName string, dependencyVulns []models.DependencyVuln)) *AssetVersionService_BuildVeX_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
-		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
-		}
-		var arg1 models.AssetVersion
-		if args[1] != nil {
-			arg1 = args[1].(models.AssetVersion)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 []models.DependencyVuln
-		if args[3] != nil {
-			arg3 = args[3].([]models.DependencyVuln)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
+		run(args[0].(models.Asset), args[1].(models.AssetVersion), args[2].(string), args[3].([]models.DependencyVuln))
 	})
 	return _c
 }
@@ -286,20 +223,14 @@ type AssetVersionService_GetAssetVersionsByAssetID_Call struct {
 }
 
 // GetAssetVersionsByAssetID is a helper method to define mock.On call
-//   - assetID uuid.UUID
+//   - assetID
 func (_e *AssetVersionService_Expecter) GetAssetVersionsByAssetID(assetID interface{}) *AssetVersionService_GetAssetVersionsByAssetID_Call {
 	return &AssetVersionService_GetAssetVersionsByAssetID_Call{Call: _e.mock.On("GetAssetVersionsByAssetID", assetID)}
 }
 
 func (_c *AssetVersionService_GetAssetVersionsByAssetID_Call) Run(run func(assetID uuid.UUID)) *AssetVersionService_GetAssetVersionsByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(uuid.UUID))
 	})
 	return _c
 }
@@ -360,44 +291,18 @@ type AssetVersionService_HandleFirstPartyVulnResult_Call struct {
 }
 
 // HandleFirstPartyVulnResult is a helper method to define mock.On call
-//   - asset models.Asset
-//   - assetVersion *models.AssetVersion
-//   - sarifScan common.SarifResult
-//   - scannerID string
-//   - userID string
+//   - asset
+//   - assetVersion
+//   - sarifScan
+//   - scannerID
+//   - userID
 func (_e *AssetVersionService_Expecter) HandleFirstPartyVulnResult(asset interface{}, assetVersion interface{}, sarifScan interface{}, scannerID interface{}, userID interface{}) *AssetVersionService_HandleFirstPartyVulnResult_Call {
 	return &AssetVersionService_HandleFirstPartyVulnResult_Call{Call: _e.mock.On("HandleFirstPartyVulnResult", asset, assetVersion, sarifScan, scannerID, userID)}
 }
 
 func (_c *AssetVersionService_HandleFirstPartyVulnResult_Call) Run(run func(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string)) *AssetVersionService_HandleFirstPartyVulnResult_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
-		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
-		}
-		var arg1 *models.AssetVersion
-		if args[1] != nil {
-			arg1 = args[1].(*models.AssetVersion)
-		}
-		var arg2 common.SarifResult
-		if args[2] != nil {
-			arg2 = args[2].(common.SarifResult)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
+		run(args[0].(models.Asset), args[1].(*models.AssetVersion), args[2].(common.SarifResult), args[3].(string), args[4].(string))
 	})
 	return _c
 }
@@ -462,44 +367,18 @@ type AssetVersionService_HandleScanResult_Call struct {
 }
 
 // HandleScanResult is a helper method to define mock.On call
-//   - asset models.Asset
-//   - assetVersion *models.AssetVersion
-//   - vulns []models.VulnInPackage
-//   - scannerID string
-//   - userID string
+//   - asset
+//   - assetVersion
+//   - vulns
+//   - scannerID
+//   - userID
 func (_e *AssetVersionService_Expecter) HandleScanResult(asset interface{}, assetVersion interface{}, vulns interface{}, scannerID interface{}, userID interface{}) *AssetVersionService_HandleScanResult_Call {
 	return &AssetVersionService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", asset, assetVersion, vulns, scannerID, userID)}
 }
 
 func (_c *AssetVersionService_HandleScanResult_Call) Run(run func(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string)) *AssetVersionService_HandleScanResult_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Asset
-		if args[0] != nil {
-			arg0 = args[0].(models.Asset)
-		}
-		var arg1 *models.AssetVersion
-		if args[1] != nil {
-			arg1 = args[1].(*models.AssetVersion)
-		}
-		var arg2 []models.VulnInPackage
-		if args[2] != nil {
-			arg2 = args[2].([]models.VulnInPackage)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
+		run(args[0].(models.Asset), args[1].(*models.AssetVersion), args[2].([]models.VulnInPackage), args[3].(string), args[4].(string))
 	})
 	return _c
 }
@@ -537,32 +416,16 @@ type AssetVersionService_UpdateSBOM_Call struct {
 }
 
 // UpdateSBOM is a helper method to define mock.On call
-//   - assetVersion models.AssetVersion
-//   - scannerID string
-//   - sbom normalize.SBOM
+//   - assetVersion
+//   - scannerID
+//   - sbom
 func (_e *AssetVersionService_Expecter) UpdateSBOM(assetVersion interface{}, scannerID interface{}, sbom interface{}) *AssetVersionService_UpdateSBOM_Call {
 	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", assetVersion, scannerID, sbom)}
 }
 
 func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM)) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.AssetVersion
-		if args[0] != nil {
-			arg0 = args[0].(models.AssetVersion)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 normalize.SBOM
-		if args[2] != nil {
-			arg2 = args[2].(normalize.SBOM)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(models.AssetVersion), args[1].(string), args[2].(normalize.SBOM))
 	})
 	return _c
 }

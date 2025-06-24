@@ -53,7 +53,7 @@ func (jsonField *JSONB) Scan(value any) error {
 	return json.Unmarshal(data, &jsonField)
 }
 
-func JsonbFromStruct(m any) (JSONB, error) {
+func JSONbFromStruct(m any) (JSONB, error) {
 	data, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -66,8 +66,8 @@ func JsonbFromStruct(m any) (JSONB, error) {
 	return jsonb, nil
 }
 
-func MustJsonBFromStruct(m any) JSONB {
-	jsonb, err := JsonbFromStruct(m)
+func MustJSONBFromStruct(m any) JSONB {
+	jsonb, err := JSONbFromStruct(m)
 	if err != nil {
 		panic(err)
 	}

@@ -15,7 +15,7 @@ import (
 )
 
 func TestSessionMiddleware(t *testing.T) {
-	t.Run("should set the correct scopes and userId using PAT-Auth", func(t *testing.T) {
+	t.Run("should set the correct scopes and userID using PAT-Auth", func(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
@@ -65,7 +65,7 @@ func TestSessionMiddleware(t *testing.T) {
 		verifier.AssertExpectations(t)
 	})
 
-	t.Run("should set the correct scopes and userId using cookie auth", func(t *testing.T) {
+	t.Run("should set the correct scopes and userID using cookie auth", func(t *testing.T) {
 		e := echo.New()
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		// sat an ory_kratos_session cookie

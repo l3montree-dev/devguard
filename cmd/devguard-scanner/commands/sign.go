@@ -36,8 +36,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func uploadPublicKey(ctx context.Context, token, apiUrl, publicKeyPath, assetName string) error {
-	devGuardClient := devguard.NewHTTPClient(token, apiUrl)
+func uploadPublicKey(ctx context.Context, token, apiURL, publicKeyPath, assetName string) error {
+	devGuardClient := devguard.NewHTTPClient(token, apiURL)
 
 	var body = make(map[string]string)
 
@@ -158,7 +158,7 @@ func signCmd(cmd *cobra.Command, args []string) error {
 	defer os.RemoveAll(path.Dir(keyPath))
 
 	// upload the public key to the backend
-	err = uploadPublicKey(cmd.Context(), config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.ApiUrl, publicKeyPath, config.RuntimeBaseConfig.AssetName)
+	err = uploadPublicKey(cmd.Context(), config.RuntimeBaseConfig.Token, config.RuntimeBaseConfig.APIURL, publicKeyPath, config.RuntimeBaseConfig.AssetName)
 	if err != nil {
 		slog.Error("could not upload public key", "err", err)
 		return err

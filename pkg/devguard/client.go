@@ -11,18 +11,18 @@ type HTTPClient struct {
 	httpClient *http.Client
 
 	token  string
-	apiUrl *url.URL
+	apiURL *url.URL
 }
 
-func NewHTTPClient(token, apiUrl string) HTTPClient {
-	u, err := url.Parse(apiUrl)
+func NewHTTPClient(token, apiURL string) HTTPClient {
+	u, err := url.Parse(apiURL)
 	if err != nil {
 		panic(err)
 	}
 
 	return HTTPClient{
 		token:  token,
-		apiUrl: u,
+		apiURL: u,
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				MaxIdleConnsPerHost: 10,
@@ -38,8 +38,8 @@ func (c HTTPClient) Do(req *http.Request) (*http.Response, error) {
 	}
 
 	// prepend the api url to the request url
-	req.URL.Scheme = c.apiUrl.Scheme
-	req.URL.Host = c.apiUrl.Host
+	req.URL.Scheme = c.apiURL.Scheme
+	req.URL.Host = c.apiURL.Host
 
 	return c.httpClient.Do(req)
 }

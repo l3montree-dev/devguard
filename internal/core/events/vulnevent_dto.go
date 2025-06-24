@@ -17,7 +17,7 @@ type VulnEventDTO struct {
 	Justification           *string                            `json:"justification"`
 	MechanicalJustification models.MechanicalJustificationType `json:"mechanicalJustification"`
 
-	ArbitraryJsonData map[string]any `json:"arbitraryJsonData"`
+	ArbitraryJSONData map[string]any `json:"arbitraryJSONData"`
 
 	CreatedAt time.Time `json:"createdAt"`
 
@@ -25,17 +25,17 @@ type VulnEventDTO struct {
 	AssetVersionSlug  string `json:"assetVersionSlug"`
 	VulnerabilityName string `json:"vulnerabilityName"`
 	PackageName       string `json:"packageName"`
-	Uri               string `json:"uri"`
+	URI               string `json:"uri"`
 }
 
 func (dto VulnEventDTO) ToModel() models.VulnEvent {
-	vulnId := dto.VulnID
-	userId := dto.UserID
+	vulnID := dto.VulnID
+	userID := dto.UserID
 
 	return models.VulnEvent{
 		Type:          dto.Type,
-		VulnID:        vulnId,
-		UserID:        userId,
+		VulnID:        vulnID,
+		UserID:        userID,
 		Justification: dto.Justification,
 		VulnType:      dto.VulnType,
 	}

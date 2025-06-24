@@ -133,7 +133,7 @@ func SignRequest(hexPrivKey string, req *http.Request) error {
 	return nil
 }
 
-func (p *PatService) getPubKeyAndUserIdUsingFingerprint(fingerprint string) (ecdsa.PublicKey, uuid.UUID, string, error) {
+func (p *PatService) getPubKeyAndUserIDUsingFingerprint(fingerprint string) (ecdsa.PublicKey, uuid.UUID, string, error) {
 	pat, err := p.patRepository.GetByFingerprint(fingerprint)
 	if err != nil {
 		return ecdsa.PublicKey{}, uuid.New(), "", fmt.Errorf("could not get public key using fingerprint: %v", err)
@@ -159,7 +159,7 @@ func (p *PatService) markAsLastUsedNow(fingerprint string) error {
 
 func (p *PatService) VerifyRequestSignature(req *http.Request) (string, string, error) {
 	fingerprint := req.Header.Get("X-Fingerprint")
-	pubKey, userId, scopes, err := p.getPubKeyAndUserIdUsingFingerprint(fingerprint)
+	pubKey, userID, scopes, err := p.getPubKeyAndUserIDUsingFingerprint(fingerprint)
 
 	if err != nil {
 		return "", "", fmt.Errorf("could not get public key using fingerprint: %v", err)
@@ -176,7 +176,7 @@ func (p *PatService) VerifyRequestSignature(req *http.Request) (string, string, 
 
 	p.markAsLastUsedNow(fingerprint) //nolint:errcheck// we don't care if this fails
 
-	return userId.String(), scopes, nil
+	return userID.String(), scopes, nil
 }
 
 func (p *PatService) RevokeByPrivateKey(privKey string) error {
