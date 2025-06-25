@@ -2,12 +2,18 @@ package assetversion
 
 import (
 	"archive/zip"
+	"context"
+	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
@@ -381,11 +387,33 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	}
 
 	//Create zip of all the necessary files
-	_, err = buildZIPForPDF(workingDir + "/report-templates/sbom/")
+	zipBomb, err := buildZIPForPDF(workingDir + "/report-templates/sbom/")
 	if err != nil {
 		return err
 	}
+	httpContext, cancel := context.WithTimeout(context.Background(), 600*time.Second)
+	defer cancel()
 
+	req, err := http.NewRequestWithContext(httpContext, "POST", "https://dwt-api.dev-l3montree.cloud/pdf", zipBomb)
+	if err != nil {
+		slog.Error("could not create request")
+		return err
+	}
+	req.Header.Set("Content-Type", "application/zip")
+	config.SetXAssetHeaders(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		slog.Error("could not send request", err)
+		return err
+	}
+	defer resp.Body.Close()
+	slog.Info("Received Status Code: %s", resp.StatusCode)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("\n\nThis is the body as bytes:\n%s", body)
 	return nil
 }
 
@@ -407,7 +435,8 @@ func buildZIPForPDF(path string) (*os.File, error) {
 		if err != nil {
 			return nil, err
 		}
-		zipFileDescriptor, err := zipWriter.Create(file)
+		localFilePath, _ := strings.CutPrefix(file, path)
+		zipFileDescriptor, err := zipWriter.Create(localFilePath)
 		if err != nil {
 			return nil, err
 		}

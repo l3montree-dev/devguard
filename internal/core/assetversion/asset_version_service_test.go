@@ -1,13 +1,18 @@
 package assetversion
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/stretchr/testify/assert"
@@ -122,22 +127,39 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		//Create metadata.yaml
 		metaDataFile, err := os.Create(filePath2)
 		if err != nil {
+			fmt.Printf("////////////////////////")
 			slog.Error(err.Error())
+			fmt.Printf("////////////////////////")
 			t.Fail()
 		}
 
-		//Build the meta data for the yaml file
-		var metaData string
-		metaData = createYAMLMetadata("testOrga", "verylongsentencewithshouldnotbeserpratedbyanymeans", "main")
-		fmt.Printf("----------------project-----------------\n%s\n", metaData)
-		metaData = createYAMLMetadata("testOrga", "projectProjectproject api api api", "main")
-		fmt.Printf("----------------project-----------------\n%s\n", metaData)
-		metaData = createYAMLMetadata("testOrga", "verylongsented ncewithshould.", "main")
-		fmt.Printf("----------------project-----------------\n%s\n", metaData)
+		metaData := createYAMLMetadata("testOrga", "OPENCODE BADGE API PROJECT", "main")
 		_, err = metaDataFile.Write([]byte(metaData))
 		if err != nil {
 			slog.Error(err.Error())
 			t.Fail()
 		}
+
+		//Create zip of all the necessary files
+		zipBomb, err := buildZIPForPDF(workingDir + "/report-templates/sbom/")
+		assert.Nil(t, err)
+		httpContext, cancel := context.WithTimeout(context.Background(), 600*time.Second)
+		defer cancel()
+
+		req, err := http.NewRequestWithContext(httpContext, "POST", "https://dwt-api.dev-l3montree.cloud/pdf", zipBomb)
+		assert.Nil(t, err)
+		req.Header.Set("Content-Type", "application/zip")
+		config.SetXAssetHeaders(req)
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			slog.Error(err.Error())
+			t.Fail()
+		}
+		defer resp.Body.Close()
+		fmt.Printf("Received Status Code: %s", resp.Status)
+		body, err := io.ReadAll(resp.Body)
+		assert.Nil(t, err)
+		fmt.Printf("\n\nThis is the body as bytes:\n%s", body)
 	})
 }
