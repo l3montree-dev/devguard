@@ -1,8 +1,11 @@
 package assetversion
 
 import (
+	"archive/zip"
+	"io"
 	"net/url"
 	"os"
+	"path/filepath"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -335,29 +338,41 @@ func (a *AssetVersionController) Metrics(ctx core.Context) error {
 }
 
 func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
-	//buildSBOM of Project
+	//build the SBOM of this asset version
 	bom, err := a.buildSBOM(ctx)
 	if err != nil {
 		return err
 	}
-	//Convert SBOM to Markdown string
-	markdownTable := markdownTableFromSBOM(bom)
-
-	//Create a new file to write the markdown to
-	markdownFile, err := os.Create("/report-templates/sbom/markdown/sbom.md")
-
+	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
+	//WARNING if we change the hierarchy of the project we need to change this as well
+	workingDir = filepath.Join(filepath.Join(filepath.Join(workingDir, ".."), ".."), "..") //go up 3 folders
+	filePathMarkdown := workingDir + "/report-templates/sbom/markdown/sbom.md"
+	filePathMetaData := workingDir + "/report-templates/sbom/template/metadata.yaml"
+
+	//Create a new file to write the markdown to
+	markdownFile, err := os.Create(filePathMarkdown)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(filePathMarkdown) //since we generate new files every time we can delete them after use
+
+	//Convert SBOM to Markdown string
+	markdownTable := markdownTableFromSBOM(bom)
 	_, err = markdownFile.Write([]byte(markdownTable))
 	if err != nil {
 		return err
 	}
+
 	//Create metadata.yaml
-	metaDataFile, err := os.Create("report-templates/sbom/template/metadata.yaml")
+	metaDataFile, err := os.Create(filePathMetaData)
 	if err != nil {
 		return err
 	}
+	defer os.Remove(filePathMetaData)
+
 	//Build the meta data for the yaml file
 	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
 	_, err = metaDataFile.Write([]byte(metaData))
@@ -366,6 +381,41 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	}
 
 	//Create zip of all the necessary files
+	_, err = buildZIPForPDF(workingDir + "/report-templates/sbom/")
+	if err != nil {
+		return err
+	}
 
 	return nil
+}
+
+func buildZIPForPDF(path string) (*os.File, error) {
+	archive, err := os.Create(path + "archive.zip")
+	if err != nil {
+		return nil, err
+	}
+	defer archive.Close()
+	zipWriter := zip.NewWriter(archive)
+	defer zipWriter.Close()
+	fileNames := []string{
+		path + "markdown/abkuerzungen.yaml", path + "markdown/glossar.yaml", path + "markdown/sbom.md",
+		path + "template/metadata.yaml", path + "template/template.tex", path + "template/assets/background.png", path + "template/assets/qr.png",
+		path + "template/assets/font/Inter-Bold.ttf", path + "template/assets/font/Inter-BoldItalic.ttf", path + "template/assets/font/Inter-Italic-VariableFont_opsz,wght.ttf", path + "template/assets/font/Inter-Italic.ttf", path + "template/assets/font/Inter-Regular.ttf", path + "template/assets/font/Inter-VariableFont_opsz,wght.ttf",
+	}
+	for _, file := range fileNames {
+		fileDescriptor, err := os.Open(file)
+		if err != nil {
+			return nil, err
+		}
+		zipFileDescriptor, err := zipWriter.Create(file)
+		if err != nil {
+			return nil, err
+		}
+		_, err = io.Copy(zipFileDescriptor, fileDescriptor)
+		if err != nil {
+			return nil, err
+		}
+		fileDescriptor.Close()
+	}
+	return archive, nil
 }
