@@ -15,6 +15,7 @@ type JiraIntegration struct {
 	AccessToken string `json:"accessToken"`
 	URL         string `json:"url" gorm:"type:text;not null"`
 	UserEmail   string `json:"userEmail" gorm:"column:user_email"`
+	AccountID   string `json:"accountId" gorm:"column:account_id"`
 }
 
 func (JiraIntegration) TableName() string {

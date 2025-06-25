@@ -536,6 +536,9 @@ func (g *GithubIntegration) HandleEvent(event any) error {
 		asset := core.GetAsset(event.Ctx)
 
 		repoId, err := core.GetRepositoryID(&asset)
+		if err != nil {
+			return err
+		}
 
 		if !strings.HasPrefix(repoId, "github:") {
 			// this integration only handles github repositories.

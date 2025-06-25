@@ -1,4 +1,4 @@
-package jiraint
+package jira
 
 import (
 	"time"
@@ -216,25 +216,25 @@ type IssueFields struct {
 	//      * "workratio": -1,
 	//      * "lastViewed": null,
 	//      * "environment": null,
-	Expand                        string            `json:"expand,omitempty" structs:"expand,omitempty"`
-	Type                          IssueType         `json:"issuetype,omitempty" structs:"issuetype,omitempty"`
-	Project                       Project           `json:"project,omitempty" structs:"project,omitempty"`
-	Environment                   string            `json:"environment,omitempty" structs:"environment,omitempty"`
-	Resolution                    *Resolution       `json:"resolution,omitempty" structs:"resolution,omitempty"`
-	Priority                      *Priority         `json:"priority,omitempty" structs:"priority,omitempty"`
-	Resolutiondate                Time              `json:"resolutiondate,omitempty" structs:"resolutiondate,omitempty"`
-	Created                       Time              `json:"created,omitempty" structs:"created,omitempty"`
-	Duedate                       Date              `json:"duedate,omitempty" structs:"duedate,omitempty"`
-	Watches                       *Watches          `json:"watches,omitempty" structs:"watches,omitempty"`
-	Assignee                      *User             `json:"assignee,omitempty" structs:"assignee,omitempty"`
-	Updated                       Time              `json:"updated,omitempty" structs:"updated,omitempty"`
-	Description                   string            `json:"description,omitempty" structs:"description,omitempty"`
-	Summary                       string            `json:"summary,omitempty" structs:"summary,omitempty"`
-	Creator                       *User             `json:"creator,omitempty" structs:"creator,omitempty"`
-	Reporter                      *User             `json:"reporter,omitempty" structs:"reporter,omitempty"`
-	Components                    []*Component      `json:"components,omitempty" structs:"components,omitempty"`
-	Status                        *Status           `json:"status,omitempty" structs:"status,omitempty"`
-	StatusCategoryChangeDate      Time              `json:"statuscategorychangedate,omitempty" structs:"statuscategorychangedate,omitempty"`
+	Expand      string      `json:"expand,omitempty" structs:"expand,omitempty"`
+	Type        IssueType   `json:"issuetype,omitempty" structs:"issuetype,omitempty"`
+	Project     Project     `json:"project,omitempty" structs:"project,omitempty"`
+	Environment string      `json:"environment,omitempty" structs:"environment,omitempty"`
+	Resolution  *Resolution `json:"resolution,omitempty" structs:"resolution,omitempty"`
+	Priority    *Priority   `json:"priority,omitempty" structs:"priority,omitempty"`
+	//Resolutiondate                Time              `json:"resolutiondate,omitempty" structs:"resolutiondate,omitempty"`
+	//Created                       Time              `json:"created,omitempty" structs:"created,omitempty"`
+	//Duedate                       Date              `json:"duedate,omitempty" structs:"duedate,omitempty"`
+	Watches  *Watches `json:"watches,omitempty" structs:"watches,omitempty"`
+	Assignee *User    `json:"assignee,omitempty" structs:"assignee,omitempty"`
+	//Updated                       Time              `json:"updated,omitempty" structs:"updated,omitempty"`
+	Description ADF          `json:"description,omitempty" structs:"description,omitempty"`
+	Summary     string       `json:"summary,omitempty" structs:"summary,omitempty"`
+	Creator     *User        `json:"creator,omitempty" structs:"creator,omitempty"`
+	Reporter    *User        `json:"reporter,omitempty" structs:"reporter,omitempty"`
+	Components  []*Component `json:"components,omitempty" structs:"components,omitempty"`
+	Status      *Status      `json:"status,omitempty" structs:"status,omitempty"`
+	//StatusCategoryChangeDate      Time              `json:"statuscategorychangedate,omitempty" structs:"statuscategorychangedate,omitempty"`
 	Progress                      *Progress         `json:"progress,omitempty" structs:"progress,omitempty"`
 	AggregateProgress             *Progress         `json:"aggregateprogress,omitempty" structs:"aggregateprogress,omitempty"`
 	TimeTracking                  *TimeTracking     `json:"timetracking,omitempty" structs:"timetracking,omitempty"`
@@ -421,4 +421,31 @@ type CommentVisibility struct {
 type EntityProperty struct {
 	Key   string      `json:"key"`
 	Value interface{} `json:"value"`
+}
+
+//
+
+type ADF struct {
+	Version int          `json:"version"`
+	Type    string       `json:"type"`
+	Content []ADFContent `json:"content"`
+}
+
+type ADFContent struct {
+	Type    string             `json:"type"`
+	Text    string             `json:"text,omitempty"`
+	Marks   []ADFMark          `json:"marks,omitempty"`
+	Content []ADFContent       `json:"content,omitempty"`
+	Attrs   *ADFMarkAttributes `json:"attrs,omitempty"`
+}
+
+type ADFMark struct {
+	Type  string             `json:"type"`
+	Attrs *ADFMarkAttributes `json:"attrs,omitempty"`
+}
+
+type ADFMarkAttributes struct {
+	Level    int    `json:"level,omitempty"`
+	Href     string `json:"href,omitempty"`
+	Language string `json:"language,omitempty"`
 }
