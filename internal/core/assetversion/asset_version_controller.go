@@ -428,6 +428,9 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 
 	//create the pdf and write the data to it
 	pdf, err := os.Create("sbom.pdf")
+	if err != nil {
+		return err
+	}
 	defer pdf.Close()
 	_, err = io.Copy(pdf, resp.Body)
 	if err != nil {

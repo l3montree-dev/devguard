@@ -165,6 +165,7 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		fmt.Printf("Received Status Code: %d", resp.StatusCode)
 		assert.Nil(t, err)
 		pdf, err := os.Create("sbom.pdf")
+		assert.Nil(t, err)
 		defer pdf.Close()
 		_, err = io.Copy(pdf, resp.Body)
 		assert.Nil(t, err)
