@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -352,8 +351,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	//WARNING if we change the hierarchy of the project we need to change this as well!!!
-	workingDir = filepath.Join(filepath.Join(filepath.Join(workingDir, ".."), ".."), "..") //go up 3 folders
+	//WARNING if we change the hierarchy of the project we need to change this as well!! (workingDir needs to be root folder of the devguard backend)
 	filePathMarkdown := workingDir + "/report-templates/sbom/markdown/sbom.md"
 	filePathMetaData := workingDir + "/report-templates/sbom/template/metadata.yaml"
 
@@ -362,8 +360,8 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	defer markdownFile.Close().Error()
-	defer os.Remove(filePathMarkdown).Error() //since we generate new files every time we can delete them after use
+	defer markdownFile.Close()
+	defer os.Remove(filePathMarkdown) //since we generate new files every time we can delete them after use
 
 	//Convert SBOM to Markdown string
 	markdownTable := markdownTableFromSBOM(bom)
@@ -377,8 +375,8 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	defer metaDataFile.Close().Error()
-	defer os.Remove(filePathMetaData).Error()
+	defer metaDataFile.Close()
+	defer os.Remove(filePathMetaData)
 
 	//Build the meta data for the yaml file
 	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
@@ -393,6 +391,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 	defer zipBomb.Close()
+	defer os.Remove(workingDir + "/report-templates/sbom/archive.zip")
 
 	//prepare the http request as multipart form data
 	var buf bytes.Buffer
@@ -436,6 +435,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 	defer pdf.Close()
+	defer os.Remove("sbom.pdf")
 	_, err = io.Copy(pdf, resp.Body)
 	if err != nil {
 		return err
