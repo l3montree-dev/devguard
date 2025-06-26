@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -420,6 +421,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 
 	//do the http request
 	client := &http.Client{}
+	client.Timeout = 5 * time.Minute
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
