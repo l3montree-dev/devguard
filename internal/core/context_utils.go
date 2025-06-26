@@ -1,5 +1,3 @@
-// Copyright (C) 2023 Tim Bastin, l3montree GmbH
-//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
 // published by the Free Software Foundation, either version 3 of the
@@ -326,6 +324,7 @@ type FilterQuery struct {
 	field    string
 	value    string
 	operator string
+	between  string
 }
 
 func GetFilterQuery(ctx Context) []FilterQuery {
@@ -353,10 +352,14 @@ func GetFilterQuery(ctx Context) []FilterQuery {
 		operator := strings.Split(key, "[")[2]
 		operator = strings.TrimSuffix(operator, "]")
 
+		between := strings.Split(key, "[")[2]
+		between = strings.TrimSuffix(operator, "]")
+
 		filterQuerys = append(filterQuerys, FilterQuery{
 			field:    field,
 			value:    value,
 			operator: operator,
+			between:  between,
 		})
 	}
 
@@ -441,6 +444,8 @@ func (f FilterQuery) SQL() string {
 		return field + " < ?"
 	case "like":
 		return field + " LIKE ?"
+	case "between":
+		return field + "BETWEEN ? AND ?"
 
 	default:
 		// default do an equals
@@ -450,12 +455,19 @@ func (f FilterQuery) SQL() string {
 
 func (f FilterQuery) Value() any {
 	// convert the value to the correct type
+
+	// fmt.Printf("field : %s", f.field)
+	// fmt.Printf("between : %s", f.between)
+
 	switch f.operator {
 	case "like":
 		return "%" + f.value + "%"
+	case "between":
+		return f.value + ", " + f.between
 	default:
 		return f.value
 	}
+
 }
 
 func (s SortQuery) SQL() string {

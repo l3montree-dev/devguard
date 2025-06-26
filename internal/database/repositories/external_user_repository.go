@@ -43,7 +43,7 @@ func NewExternalUserRepository(db core.DB) *externalUserRepository {
 
 func (r *externalUserRepository) FindByOrgID(tx core.DB, orgID uuid.UUID) ([]models.ExternalUser, error) {
 	var users []models.ExternalUser
-	if err := r.GetDB(tx).Raw("SELECT gh.* FROM external_users gh WHERE EXISTS(SELECT 1 from external_user_orgs where external_user_id = gh.id AND orgID = ?)", orgID).Scan(&users).Error; err != nil {
+	if err := r.GetDB(tx).Raw("SELECT gh.* FROM external_users gh WHERE EXISTS(SELECT 1 from external_user_orgs where external_user_id = gh.id AND org_id = ?)", orgID).Scan(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil
