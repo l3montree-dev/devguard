@@ -1,18 +1,17 @@
 package assetversion
 
 import (
-	"context"
+	"bytes"
 	"fmt"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/stretchr/testify/assert"
@@ -106,9 +105,7 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		//Create a new file to write the markdown to
 		workingDir, err := os.Getwd()
 		assert.Nil(t, err)
-		workingDir = filepath.Join(workingDir, "..")
-		workingDir = filepath.Join(workingDir, "..")
-		workingDir = filepath.Join(workingDir, "..")
+		workingDir = filepath.Join(filepath.Join(filepath.Join(workingDir, ".."), ".."), "..")
 		filePath1 := workingDir + "/report-templates/sbom/markdown/sbom.md"
 		filePath2 := workingDir + "/report-templates/sbom/template/metadata.yaml"
 
@@ -127,9 +124,7 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		//Create metadata.yaml
 		metaDataFile, err := os.Create(filePath2)
 		if err != nil {
-			fmt.Printf("////////////////////////")
 			slog.Error(err.Error())
-			fmt.Printf("////////////////////////")
 			t.Fail()
 		}
 
@@ -143,23 +138,36 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		//Create zip of all the necessary files
 		zipBomb, err := buildZIPForPDF(workingDir + "/report-templates/sbom/")
 		assert.Nil(t, err)
-		httpContext, cancel := context.WithTimeout(context.Background(), 600*time.Second)
-		defer cancel()
-
-		req, err := http.NewRequestWithContext(httpContext, "POST", "https://dwt-api.dev-l3montree.cloud/pdf", zipBomb)
+		defer zipBomb.Close()
 		assert.Nil(t, err)
-		req.Header.Set("Content-Type", "application/zip")
-		config.SetXAssetHeaders(req)
+		fileInfo, err := zipBomb.Stat()
+		assert.Nil(t, err)
+		fmt.Printf("\n---------------Zip Bomb Stats:\nName: %s\nSize: %d\nModTime:%s\n", fileInfo.Name(), fileInfo.Size(), fileInfo.ModTime().String())
 
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			slog.Error(err.Error())
+		var buf bytes.Buffer
+		mpw := multipart.NewWriter(&buf)
+		fileWriter, err := mpw.CreateFormFile("file", "archive.zip")
+		assert.Nil(t, err)
+		_, err = io.Copy(fileWriter, zipBomb)
+		assert.Nil(t, err)
+		err = mpw.Close()
+		assert.Nil(t, err)
+		req, err := http.NewRequest("POST", "https://dwt-api.dev-l3montree.cloud/pdf", &buf)
+		assert.Nil(t, err)
+		req.Header.Set("Content-Type", mpw.FormDataContentType())
+		client := &http.Client{}
+
+		resp, err := client.Do(req)
+		if !assert.Nil(t, err) {
 			t.Fail()
 		}
 		defer resp.Body.Close()
-		fmt.Printf("Received Status Code: %s", resp.Status)
-		body, err := io.ReadAll(resp.Body)
+		fmt.Printf("Received Status Code: %d", resp.StatusCode)
 		assert.Nil(t, err)
-		fmt.Printf("\n\nThis is the body as bytes:\n%s", body)
+		pdf, err := os.Create("sbom.pdf")
+		defer pdf.Close()
+		_, err = io.Copy(pdf, resp.Body)
+		assert.Nil(t, err)
+
 	})
 }

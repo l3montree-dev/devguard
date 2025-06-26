@@ -2,18 +2,17 @@ package assetversion
 
 import (
 	"archive/zip"
-	"context"
+	"bytes"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
-	"github.com/l3montree-dev/devguard/cmd/devguard-scanner/config"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
@@ -353,7 +352,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	//WARNING if we change the hierarchy of the project we need to change this as well
+	//WARNING if we change the hierarchy of the project we need to change this as well!!!
 	workingDir = filepath.Join(filepath.Join(filepath.Join(workingDir, ".."), ".."), "..") //go up 3 folders
 	filePathMarkdown := workingDir + "/report-templates/sbom/markdown/sbom.md"
 	filePathMetaData := workingDir + "/report-templates/sbom/template/metadata.yaml"
@@ -363,7 +362,8 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(filePathMarkdown) //since we generate new files every time we can delete them after use
+	defer markdownFile.Close().Error()
+	defer os.Remove(filePathMarkdown).Error() //since we generate new files every time we can delete them after use
 
 	//Convert SBOM to Markdown string
 	markdownTable := markdownTableFromSBOM(bom)
@@ -377,7 +377,8 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(filePathMetaData)
+	defer metaDataFile.Close().Error()
+	defer os.Remove(filePathMetaData).Error()
 
 	//Build the meta data for the yaml file
 	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
@@ -391,38 +392,54 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	httpContext, cancel := context.WithTimeout(context.Background(), 600*time.Second)
-	defer cancel()
+	defer zipBomb.Close()
 
-	req, err := http.NewRequestWithContext(httpContext, "POST", "https://dwt-api.dev-l3montree.cloud/pdf", zipBomb)
+	//prepare the http request as multipart form data
+	var buf bytes.Buffer
+	mpw := multipart.NewWriter(&buf)
+	fileWriter, err := mpw.CreateFormFile("file", "archive.zip")
 	if err != nil {
-		slog.Error("could not create request")
 		return err
 	}
-	req.Header.Set("Content-Type", "application/zip")
-	config.SetXAssetHeaders(req)
-
-	resp, err := http.DefaultClient.Do(req)
+	_, err = io.Copy(fileWriter, zipBomb)
 	if err != nil {
-		slog.Error("could not send request", err)
+		return err
+	}
+	err = mpw.Close()
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", "https://dwt-api.dev-l3montree.cloud/pdf", &buf)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", mpw.FormDataContentType())
+
+	//do the http request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	slog.Info("Received Status Code: %s", resp.StatusCode)
-	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("http request to https://dwt-api.dev-l3montree.cloud/pdf was unsuccessful")
+	}
+
+	//create the pdf and write the data to it
+	pdf, err := os.Create("sbom.pdf")
+	defer pdf.Close()
+	_, err = io.Copy(pdf, resp.Body)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("\n\nThis is the body as bytes:\n%s", body)
-	return nil
+	return ctx.Attachment("sbom.pdf", "Portable Document Format of the SBOM")
 }
-
 func buildZIPForPDF(path string) (*os.File, error) {
 	archive, err := os.Create(path + "archive.zip")
 	if err != nil {
 		return nil, err
 	}
-	defer archive.Close()
 	zipWriter := zip.NewWriter(archive)
 	defer zipWriter.Close()
 	fileNames := []string{
@@ -446,5 +463,5 @@ func buildZIPForPDF(path string) (*os.File, error) {
 		}
 		fileDescriptor.Close()
 	}
-	return archive, nil
+	return os.Open(path + "archive.zip")
 }
