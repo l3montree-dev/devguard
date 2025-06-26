@@ -409,7 +409,11 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", "https://dwt-api.dev-l3montree.cloud/pdf", &buf)
+	pdfAPIURL := os.Getenv("PDF_GENERATION_API")
+	if pdfAPIURL == "" {
+		return fmt.Errorf("missing env variable for the pdf endpoint")
+	}
+	req, err := http.NewRequest("POST", pdfAPIURL, &buf)
 	if err != nil {
 		return err
 	}
@@ -423,7 +427,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("http request to https://dwt-api.dev-l3montree.cloud/pdf was unsuccessful")
+		return fmt.Errorf("http request to %s was unsuccessful", req.URL)
 	}
 
 	//create the pdf and write the data to it
@@ -436,7 +440,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	return ctx.Attachment("sbom.pdf", "Portable Document Format of the SBOM")
+	return ctx.Attachment("sbom.pdf", "sbom.pdf")
 }
 func buildZIPForPDF(path string) (*os.File, error) {
 	archive, err := os.Create(path + "archive.zip")

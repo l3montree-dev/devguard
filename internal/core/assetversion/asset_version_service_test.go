@@ -120,7 +120,9 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 			slog.Error(err.Error())
 			t.Fail()
 		}
-
+		wd, err := os.Getwd()
+		assert.Nil(t, err)
+		fmt.Printf("Current working Dir in Test: %s\n", wd)
 		//Create metadata.yaml
 		metaDataFile, err := os.Create(filePath2)
 		if err != nil {
@@ -152,7 +154,14 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		assert.Nil(t, err)
 		err = mpw.Close()
 		assert.Nil(t, err)
-		req, err := http.NewRequest("POST", "https://dwt-api.dev-l3montree.cloud/pdf", &buf)
+		os.Setenv("PDF_GENERATION_API", "https://dwt-api.dev-l3montree.cloud/pdf")
+		pdfAPIURL := os.Getenv("PDF_GENERATION_API")
+		if pdfAPIURL == "" {
+			slog.Error("URL of the pdf api is missing")
+			t.Fail()
+		}
+		fmt.Printf("URL = %s", pdfAPIURL)
+		req, err := http.NewRequest("POST", pdfAPIURL, &buf)
 		assert.Nil(t, err)
 		req.Header.Set("Content-Type", mpw.FormDataContentType())
 		client := &http.Client{}
@@ -161,6 +170,7 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		if !assert.Nil(t, err) {
 			t.Fail()
 		}
+		fmt.Printf("Request url: %s", req.URL)
 		defer resp.Body.Close()
 		fmt.Printf("Received Status Code: %d", resp.StatusCode)
 		assert.Nil(t, err)
