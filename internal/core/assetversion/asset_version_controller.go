@@ -1,7 +1,16 @@
 package assetversion
 
 import (
+	"archive/zip"
+	"bytes"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
 	"net/url"
+	"os"
+	"strings"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -331,4 +340,137 @@ func (a *AssetVersionController) Metrics(ctx core.Context) error {
 		EnabledImageSigning:            enabledImageSigning,
 		VerifiedSupplyChainsPercentage: verifiedSupplyChainsPercentage,
 	})
+}
+
+func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
+	//build the SBOM of this asset version
+	bom, err := a.buildSBOM(ctx)
+	if err != nil {
+		return err
+	}
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	//WARNING if we change the hierarchy of the project we need to change this as well!! (workingDir needs to be root folder of the devguard backend)
+	filePathMarkdown := workingDir + "/report-templates/sbom/markdown/sbom.md"
+	filePathMetaData := workingDir + "/report-templates/sbom/template/metadata.yaml"
+
+	//Create a new file to write the markdown to
+	markdownFile, err := os.Create(filePathMarkdown)
+	if err != nil {
+		return err
+	}
+	defer markdownFile.Close()
+	defer os.Remove(filePathMarkdown) //since we generate new files every time we can delete them after use
+
+	//Convert SBOM to Markdown string
+	markdownTable := markdownTableFromSBOM(bom)
+	_, err = markdownFile.Write([]byte(markdownTable))
+	if err != nil {
+		return err
+	}
+
+	//Create metadata.yaml
+	metaDataFile, err := os.Create(filePathMetaData)
+	if err != nil {
+		return err
+	}
+	defer metaDataFile.Close()
+	defer os.Remove(filePathMetaData)
+
+	//Build the meta data for the yaml file
+	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
+	_, err = metaDataFile.Write([]byte(metaData))
+	if err != nil {
+		return err
+	}
+
+	//Create zip of all the necessary files
+	zipBomb, err := buildZIPForPDF(workingDir + "/report-templates/sbom/")
+	if err != nil {
+		return err
+	}
+	defer zipBomb.Close()
+	defer os.Remove(workingDir + "/report-templates/sbom/archive.zip")
+
+	//prepare the http request as multipart form data
+	var buf bytes.Buffer
+	mpw := multipart.NewWriter(&buf)
+	fileWriter, err := mpw.CreateFormFile("file", "archive.zip")
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(fileWriter, zipBomb)
+	if err != nil {
+		return err
+	}
+	err = mpw.Close()
+	if err != nil {
+		return err
+	}
+	pdfAPIURL := os.Getenv("PDF_GENERATION_API")
+	if pdfAPIURL == "" {
+		return fmt.Errorf("missing env variable for the pdf endpoint")
+	}
+	req, err := http.NewRequest("POST", pdfAPIURL, &buf)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", mpw.FormDataContentType())
+
+	//do the http request
+	client := &http.Client{}
+	client.Timeout = 5 * time.Minute
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("http request to %s was unsuccessful", req.URL)
+	}
+
+	//create the pdf and write the data to it
+	pdf, err := os.Create("sbom.pdf")
+	if err != nil {
+		return err
+	}
+	defer pdf.Close()
+	defer os.Remove("sbom.pdf")
+	_, err = io.Copy(pdf, resp.Body)
+	if err != nil {
+		return err
+	}
+	return ctx.Attachment("sbom.pdf", "sbom.pdf")
+}
+func buildZIPForPDF(path string) (*os.File, error) {
+	archive, err := os.Create(path + "archive.zip")
+	if err != nil {
+		return nil, err
+	}
+	zipWriter := zip.NewWriter(archive)
+	defer zipWriter.Close()
+	fileNames := []string{
+		path + "markdown/abkuerzungen.yaml", path + "markdown/glossar.yaml", path + "markdown/sbom.md",
+		path + "template/metadata.yaml", path + "template/template.tex", path + "template/assets/background.png", path + "template/assets/qr.png",
+		path + "template/assets/font/Inter-Bold.ttf", path + "template/assets/font/Inter-BoldItalic.ttf", path + "template/assets/font/Inter-Italic-VariableFont_opsz,wght.ttf", path + "template/assets/font/Inter-Italic.ttf", path + "template/assets/font/Inter-Regular.ttf", path + "template/assets/font/Inter-VariableFont_opsz,wght.ttf",
+	}
+	for _, file := range fileNames {
+		fileDescriptor, err := os.Open(file)
+		if err != nil {
+			return nil, err
+		}
+		localFilePath, _ := strings.CutPrefix(file, path)
+		zipFileDescriptor, err := zipWriter.Create(localFilePath)
+		if err != nil {
+			return nil, err
+		}
+		_, err = io.Copy(zipFileDescriptor, fileDescriptor)
+		if err != nil {
+			return nil, err
+		}
+		fileDescriptor.Close()
+	}
+	return os.Open(path + "archive.zip")
 }

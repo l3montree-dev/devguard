@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -880,4 +881,92 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 	}
 
 	return firstIssued, lastUpdated, firstResponded
+}
+
+func markdownTableFromSBOM(bom *cdx.BOM) string {
+	var markdownText strings.Builder
+	markdownText.WriteString("# SBOM {.unlisted .unnumbered}\n\n")
+	markdownText.WriteString("| PURL | Name | Version | Licenses  | Type |\n")
+	markdownText.WriteString("|-------------------|---------|---------|--------|-------|\n")
+	for _, component := range *bom.Components {
+		licenseString := "Unknown"
+		if component.Licenses != nil {
+			for _, license := range *component.Licenses {
+				if licenseString == "Unknown" {
+					licenseString = license.License.ID
+				} else {
+					licenseString = licenseString + ", " + license.License.ID
+				}
+			}
+		}
+		tableRow := "| " + component.BOMRef + " | " + component.Name + " | " + component.Version + " | " + licenseString + " | " + string(component.Type) + " |\n"
+		markdownText.WriteString(tableRow)
+	}
+	return markdownText.String()
+}
+
+func createYAMLMetadata(orgName string, projectName string, assetVersionName string) string {
+	var yamlText strings.Builder
+	today := time.Now()
+	title1, title2 := createTitlesFromProjectName(projectName)
+
+	yamlText.WriteString("metadata_vars:\n")
+	yamlText.WriteString("  document_title: DevGuard Report\n")
+	yamlText.WriteString("  primary_color: \"#FF5733\"\n")
+	yamlText.WriteString(fmt.Sprintf("  version: %s\n", assetVersionName))
+	yamlText.WriteString(fmt.Sprintf("  generation_date: %s. %s %s\n", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())))
+	yamlText.WriteString(title1)
+	yamlText.WriteString(title2)
+	yamlText.WriteString(fmt.Sprintf("  organization_name: %s\n", orgName))
+	// TO-DO: add sha hash to test the integrity
+	yamlText.WriteString("  integrity: sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d\n")
+	return yamlText.String()
+}
+
+func createTitlesFromProjectName(projectName string) (string, string) {
+	//Crop and divide the project name into two max 14 characters long strings, there is probably a more elegant way to do this
+	title1 := ""
+	title2 := ""
+	title1Full := false                   //once a field has exceeded the length of title1 we can ignore title1 from there on
+	fields := strings.Fields(projectName) //separate the words divided by white spaces
+	for _, field := range fields {
+		if title1 == "" { //we have to differentiate if A tittle is empty or not before using, because of the white spaces between words in a title
+			if len(field) <= 14 { //if it fits the 14 char limit we can just write it and move to the next
+				title1 = field
+			} else { //if not we know it won't fit the second one as well so we break the word up using "-"
+				title1 = field[:13] + "-"
+				title1Full = true          //we flag title1 as full
+				if len(field[13:]) <= 14 { //now we need to append the rest of the word after "-"
+					title2 = field[13:] //if the rest fits into the 14 char limit we just write it there
+				} else {
+					title2 = field[13:25] + ".." //if not we need to truncate the last 2 chars and put a .. to symbolize the ending
+					break                        //then we are done since we know nothing fits anymore
+				}
+			}
+		} else { //title1 is not empty so we now work with whitespaces
+			if !title1Full && len(title1)+1+len(field) <= 14 { //add +1 because we need to account for an inserted white space
+				title1 = title1 + " " + field
+			} else { //if the field does not fit we move to the second title2 and here we again have to first check if its empty
+				if title2 == "" {
+					if len(field) <= 14 { //same as above
+						title2 = field
+					} else {
+						title2 = field[:12] + ".." //same as above
+						break
+					}
+				} else { //if its not empty we again try to put new fields into title2 until we are full
+					if len(title2)+1+len(field) <= 14 { //it fits so we just write it in the title
+						title2 = title2 + " " + field
+					} else {
+						if 14-len(title2)-1 >= 4 { //if it doesn't fit we can only truncate like before if there are more than 3 remaining chars because we need 2 for the .. and 1 whitespace
+							title2 = title2 + " " + field[:(14-2-len(title2))] + ".."
+						}
+						break //in either case we are done after this field
+					}
+				}
+			}
+		}
+	}
+	//now we return the two titles formatted correctly for the yaml file
+	return "  app_title_part_one: " + title1 + "\n", "  app_title_part_two: " + title2 + "\n"
 }
