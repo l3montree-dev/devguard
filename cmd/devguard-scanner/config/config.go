@@ -56,7 +56,7 @@ type InTotoConfig struct {
 	Products  []string `mapstructure:"products"`
 	Ignore    []string `mapstructure:"ignore"`
 
-	SupplyChainID          string `mapstructure:"supplyChainID"`
+	SupplyChainID          string `mapstructure:"supplyChainId"`
 	GenerateSlsaProvenance bool   `mapstructure:"generateSlsaProvenance"`
 
 	LayoutKeyPath string `mapstructure:"layoutKey"`

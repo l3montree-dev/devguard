@@ -67,7 +67,7 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainID string, step string
 	// create the request
 	body := map[string]any{
 		"step":                    step,
-		"supplyChainID":           supplyChainID,
+		"supplyChainId":           supplyChainID,
 		"supplyChainOutputDigest": utils.EmptyThenNil(outputDigest),
 		"payload":                 string(b),
 		"filename":                filename,

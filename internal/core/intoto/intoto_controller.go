@@ -51,7 +51,7 @@ func NewHTTPController(repository core.InTotoLinkRepository, supplyChainReposito
 }
 
 func (a *httpController) VerifySupplyChain(ctx core.Context) error {
-	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainID")
+	imageNameOrSupplyChainID := ctx.QueryParam("supplyChainId")
 	digest := ctx.QueryParam("digest")
 
 	if imageNameOrSupplyChainID == "" {
