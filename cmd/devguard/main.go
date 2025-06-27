@@ -73,7 +73,7 @@ func main() {
 }
 
 func initSentry() {
-	sentry.Init(sentry.ClientOptions{
+	err := sentry.Init(sentry.ClientOptions{
 		Dsn:         "https://3c5ae6e686b54ee39057194b6e6f6b8b@error-tracking.devguard.org/1",
 		Environment: os.Getenv("ENVIRONMENT"),
 		Release:     release,
@@ -90,4 +90,7 @@ func initSentry() {
 		// By default, no such data is sent.
 		SendDefaultPII: false,
 	})
+	if err != nil {
+		slog.Error("Failed to init logger", err)
+	}
 }
