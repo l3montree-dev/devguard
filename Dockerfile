@@ -21,6 +21,8 @@ COPY . .
 
 RUN go mod download
 ENV FLAGS="ldflags='-X main.release=devguard@${GITHUB_REF_NAME}'"
+RUN echo "$GITHUB_REF_NAME"
+RUN echo "$FLAGS"
 RUN CGO_ENABLED=0 make devguard
 RUN CGO_ENABLED=0 make devguard-cli
 
