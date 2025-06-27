@@ -14,11 +14,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 FROM golang:1.24.3-bookworm@sha256:89a04cc2e2fbafef82d4a45523d4d4ae4ecaf11a197689036df35fef3bde444a as build
+ARG GITHUB_REF_NAME
 
 WORKDIR /go/src/app
 COPY . .
 
 RUN go mod download
+ENV FLAGS="ldflags='-X main.release=devguard@${GITHUB_REF_NAME}'"
 RUN CGO_ENABLED=0 make devguard
 RUN CGO_ENABLED=0 make devguard-cli
 

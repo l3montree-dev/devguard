@@ -89,6 +89,7 @@ jobs:
       api-url: https://api.main.devguard.org
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
+      build-args: "--context=. --dockerfile=Dockerfile --build-arg GITHUB_REF_NAME=$GITHUB_REF_NAME"
 
   build-scanner-image:
     uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
