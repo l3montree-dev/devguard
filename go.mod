@@ -91,6 +91,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
+	github.com/getsentry/sentry-go v0.34.0 // indirect
 	github.com/glebarez/go-sqlite v1.22.0 // indirect
 	github.com/glebarez/sqlite v1.11.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
