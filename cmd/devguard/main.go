@@ -48,12 +48,13 @@ func main() {
 	core.LoadConfig() // nolint: errcheck
 	core.InitLogger()
 
-	if os.Getenv("ENABLE_ERROR_TRACKING") == "true" {
+	if os.Getenv("ERROR_TRACKING_DSN") != "" {
 		initSentry()
 
 		// Catch panics
 		defer func() {
 			if err := recover(); err != nil {
+				// This is a catch-all. To see the stack trace in GlitchTip open the Stacktrace below
 				sentry.CurrentHub().Recover(err)
 				// Wait for events to be send to server
 				sentry.Flush(time.Second * 5)
@@ -74,8 +75,8 @@ func main() {
 
 func initSentry() {
 	err := sentry.Init(sentry.ClientOptions{
-		Dsn:         "https://3c5ae6e686b54ee39057194b6e6f6b8b@error-tracking.devguard.org/1",
-		Environment: os.Getenv("ENVIRONMENT"),
+		Dsn:         os.Getenv("ERROR_TRACKING_DSN"),
+		Environment: os.Getenv("ENVIRONMENT"), // TODO.. default... dev???
 		Release:     release,
 
 		// In debug mode, the debug information is printed to stdout to help you
