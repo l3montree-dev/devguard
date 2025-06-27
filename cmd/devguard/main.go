@@ -74,14 +74,20 @@ func main() {
 }
 
 func initSentry() {
+
+	environment := os.Getenv("ENVIRONMENT")
+	if environment == "" {
+		environment = "dev"
+	}
+
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn:         os.Getenv("ERROR_TRACKING_DSN"),
-		Environment: os.Getenv("ENVIRONMENT"), // TODO.. default... dev???
+		Environment: environment,
 		Release:     release,
 
 		// In debug mode, the debug information is printed to stdout to help you
 		// understand what Sentry is doing.
-		Debug: true,
+		Debug: environment == "dev",
 
 		// Configures whether SDK should generate and attach stack traces to pure
 		// capture message calls.
