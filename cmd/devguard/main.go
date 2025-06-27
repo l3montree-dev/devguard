@@ -91,6 +91,6 @@ func initSentry() {
 		SendDefaultPII: false,
 	})
 	if err != nil {
-		slog.Error("Failed to init logger", err)
+		slog.Error("Failed to init logger", "err", err)
 	}
 }
