@@ -118,7 +118,7 @@ func ParseBaseConfig() {
 
 	slog.Info("running with config",
 		"assetName", RuntimeBaseConfig.AssetName,
-		"apiURL", RuntimeBaseConfig.APIURL,
+		"apiUrl", RuntimeBaseConfig.APIURL,
 		"path", RuntimeBaseConfig.Path,
 		"ref", RuntimeBaseConfig.Ref,
 		"defaultBranch", RuntimeBaseConfig.DefaultBranch,
