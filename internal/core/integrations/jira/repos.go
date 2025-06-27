@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-//based on https://pkg.go.dev/github.com/andygrunwald/go-jira
+//these structs are based on https://pkg.go.dev/github.com/andygrunwald/go-jira
 
 type Project struct {
 	Expand          string             `json:"expand,omitempty" structs:"expand,omitempty"`
@@ -373,11 +373,11 @@ type Status struct {
 }
 
 type StatusCategory struct {
-	Self      string `json:"self" structs:"self"`
-	ID        int    `json:"id" structs:"id"`
-	Name      string `json:"name" structs:"name"`
-	Key       string `json:"key" structs:"key"`
-	ColorName string `json:"colorName" structs:"colorName"`
+	Self      string           `json:"self" structs:"self"`
+	ID        StatusCategoryID `json:"id" structs:"id"`
+	Name      string           `json:"name" structs:"name"`
+	Key       string           `json:"key" structs:"key"`
+	ColorName string           `json:"colorName" structs:"colorName"`
 }
 
 // IssueLinkType represents a type of a link between to issues in Jira.
@@ -423,8 +423,7 @@ type EntityProperty struct {
 	Value interface{} `json:"value"`
 }
 
-//
-
+// These structs are new und do not exist in the go-jira library.
 type ADF struct {
 	Version int          `json:"version"`
 	Type    string       `json:"type"`
@@ -449,3 +448,67 @@ type ADFMarkAttributes struct {
 	Href     string `json:"href,omitempty"`
 	Language string `json:"language,omitempty"`
 }
+
+type CreateIssueResponse struct {
+	ID         string `json:"id"`
+	Key        string `json:"key"`
+	Transition struct {
+		Status string `json:"status"`
+		Errors struct {
+		} `json:"errorCollection"`
+	} `json:"transition"`
+}
+
+func (i *CreateIssueResponse) GetID() string {
+	if i == nil || i.ID == "" {
+		return ""
+	}
+	return i.ID
+}
+
+type WebhookEvent struct {
+	Timestamp int           `json:"timestamp"`
+	Event     Event         `json:"webhookEvent"`
+	Issue     *IssueWebhook `json:"issue"`
+	Comment   *Comment      `json:"comment,omitempty"`
+	User      *User         `json:"user,omitempty"`
+}
+
+type IssueWebhook struct {
+	ID     string `json:"id"`
+	Key    string `json:"key"`
+	Fields struct {
+		Summary     string  `json:"summary"`
+		Description string  `json:"description"`
+		Project     Project `json:"project"`
+		Status      Status  `json:"status"`
+	} `json:"fields"`
+}
+
+type Event string
+
+const (
+	EventIssueCreated Event = "jira:issue_created"
+	EventIssueUpdated Event = "jira:issue_updated"
+	EventIssueDeleted Event = "jira:issue_deleted"
+
+	CommentCreated Event = "comment_created"
+	CommentUpdated Event = "comment_updated"
+	CommentDeleted Event = "comment_deleted"
+)
+
+type StatusCategoryName string
+
+/* const (
+	StatusCategoryToDo       StatusCategoryName = "New" // "To Do"
+	StatusCategoryInProgress StatusCategoryName = "In Progress"
+	StatusCategoryDone       StatusCategoryName = "Complete"
+) */
+
+type StatusCategoryID int
+
+const (
+	StatusCategoryToDo       StatusCategoryID = 2 // "New" or "To Do"
+	StatusCategoryDone       StatusCategoryID = 3 // "Complete" or "done"
+	StatusCategoryInProgress StatusCategoryID = 4 // "In Progress"
+)

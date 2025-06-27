@@ -6,6 +6,8 @@ package jiraint
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -42,6 +44,10 @@ type JiraIntegration struct {
 	dependencyVulnRepository  core.DependencyVulnRepository
 	firstPartyVulnRepository  core.FirstPartyVulnRepository
 	componentRepository       core.ComponentRepository
+	externalUserRepository    core.ExternalUserRepository
+	vulnEventRepository       core.VulnEventRepository
+	assetVersionRepository    core.AssetVersionRepository
+	assetRepository           core.AssetRepository
 	frontendUrl               string
 }
 
@@ -53,6 +59,8 @@ func NewJiraIntegration(db core.DB) *JiraIntegration {
 	dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
 	componentRepository := repositories.NewComponentRepository(db)
+	externalUserRepository := repositories.NewExternalUserRepository(db)
+	vulnEventRepository := repositories.NewVulnEventRepository(db)
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	if frontendUrl == "" {
 		panic("FRONTEND_URL is not set")
@@ -63,17 +71,192 @@ func NewJiraIntegration(db core.DB) *JiraIntegration {
 		aggregatedVulnRepository:  aggregatedVulnRepository,
 		dependencyVulnRepository:  dependencyVulnRepository,
 		firstPartyVulnRepository:  firstPartyVulnRepository,
+		vulnEventRepository:       vulnEventRepository,
+		externalUserRepository:    externalUserRepository,
+		assetRepository:           repositories.NewAssetRepository(db),
+		assetVersionRepository:    repositories.NewAssetVersionRepository(db),
 		componentRepository:       componentRepository,
 		frontendUrl:               frontendUrl,
 	}
 }
 
 func (i *JiraIntegration) WantsToHandleWebhook(ctx core.Context) bool {
-	// Jira integration does not handle webhooks directly
-	return false
+	return true
 }
 func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
-	// Jira integration does not handle webhooks directly
+
+	//TODO dont save the comment if it was created by devguard
+
+	//TODO: add webhooksecret
+	req := ctx.Request()
+	if req.Method != "POST" {
+		return ctx.JSON(405, "Method Not Allowed")
+	}
+
+	payload, err := io.ReadAll(req.Body)
+	if err != nil {
+		slog.Error("failed to read request body", "err", err)
+		return ctx.JSON(400, "Invalid request body")
+	}
+
+	defer req.Body.Close()
+	event, err := jira.ParseWebHook(payload)
+	if err != nil {
+		slog.Error("failed to parse Jira webhook event", "err", err)
+		return ctx.JSON(400, fmt.Sprintf("Invalid Jira webhook event: %v", err))
+	}
+
+	fmt.Println("Received Jira webhook event:", event)
+
+	var vulnEvent models.VulnEvent
+	var vuln models.Vuln
+	var issueID string
+	var projectID string
+
+	issueID = event.Issue.ID
+	projectID = event.Issue.Fields.Project.ID
+
+	vuln, err = i.aggregatedVulnRepository.FindByTicketID(nil, fmt.Sprintf("jira:%s:%s", projectID, issueID))
+	if err != nil {
+		slog.Error("failed to find vulnerability by ticket ID", "err", err, "ticketID", fmt.Sprintf("jira:%d:%d", projectID, issueID))
+		return ctx.JSON(404, fmt.Sprintf("Vulnerability not found for ticket ID: jira:%d:%d", projectID, issueID))
+	}
+
+	userID := ""
+	username := ""
+	userAvatarUrl := ""
+	if event.User != nil {
+		userID = fmt.Sprintf("jira:%s", event.User.AccountID)
+		username = event.User.DisplayName
+		userAvatarUrl = event.User.AvatarUrls.Two4X24
+	} else if event.Comment != nil && event.Comment.Author != nil {
+		userID = fmt.Sprintf("jira:%s", event.Comment.Author.AccountID)
+		username = event.Comment.Author.DisplayName
+		userAvatarUrl = event.Comment.Author.AvatarUrls.Two4X24
+	} else {
+		slog.Error("no user information found in Jira webhook event")
+
+	}
+	// make sure to save the user - it might be a new user or it might have new values defined.
+	// we do not care about any error - and we want speed, thus do it on a goroutine
+	go func() {
+		org, err := i.aggregatedVulnRepository.GetOrgFromVuln(vuln)
+		if err != nil {
+			slog.Error("could not get org from dependencyVuln id", "err", err)
+			return
+		}
+		// save the user in the database
+		user := models.ExternalUser{
+			ID:        fmt.Sprintf("jira:%s", userID),
+			Username:  username,
+			AvatarURL: userAvatarUrl,
+		}
+
+		err = i.externalUserRepository.Save(nil, &user)
+		if err != nil {
+			slog.Error("could not save github user", "err", err)
+			return
+		}
+
+		if err = i.externalUserRepository.GetDB(nil).Model(&user).Association("Organizations").Append([]models.Org{org}); err != nil {
+			slog.Error("could not append user to organization", "err", err)
+		}
+	}()
+
+	fmt.Println("statusCategory", event.Issue.Fields.Status.StatusCategory)
+
+	statusCategory := event.Issue.Fields.Status.StatusCategory.ID
+
+	switch event.Event {
+	case jira.CommentCreated:
+		// Handle comment created event
+		slog.Info("Handling comment created event", "event", event.Event)
+
+		// get the asset
+		assetVersion, err := i.assetVersionRepository.Read(vuln.GetAssetVersionName(), vuln.GetAssetID())
+		if err != nil {
+			slog.Error("could not read asset version", "err", err)
+			return err
+		}
+
+		asset, err := i.assetRepository.Read(assetVersion.AssetID)
+		if err != nil {
+			slog.Error("could not read asset", "err", err)
+			return err
+		}
+
+		comment := event.Comment.Body
+		//jira adds {{ and }} around the comment, which starts with /
+		comment = strings.ReplaceAll(comment, "{{", "")
+		comment = strings.ReplaceAll(comment, "}}", "")
+
+		// create a new event based on the comment
+		vulnEvent := commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), comment, vuln.GetScannerIDs())
+
+		vulnEvent.Apply(vuln)
+		// save the vuln and the event in a transaction
+		err = i.aggregatedVulnRepository.Transaction(func(tx core.DB) error {
+			err := i.aggregatedVulnRepository.Save(tx, &vuln)
+			if err != nil {
+				return err
+			}
+			err = i.vulnEventRepository.Save(tx, &vulnEvent)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			slog.Error("could not save the vulnerability and the event", "err", err)
+			return err
+		}
+
+		err = i.UpdateIssue(ctx.Request().Context(), asset, vuln)
+
+		if err != nil {
+			slog.Error("could not update issue", "err", err)
+			return err
+		}
+
+	case jira.EventIssueUpdated:
+		// Handle issue updated event
+		switch statusCategory {
+		case jira.StatusCategoryDone:
+			if vuln.GetState() == models.VulnStateAccepted || vuln.GetState() == models.VulnStateFalsePositive {
+				return nil
+			}
+			vulnDependencyVuln := vuln.(*models.DependencyVuln)
+			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the jira ticket.", username))
+
+			err = i.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
+			if err != nil {
+				slog.Error("could not save dependencyVuln and event", "err", err)
+			}
+		case jira.StatusCategoryToDo, jira.StatusCategoryInProgress:
+			if vuln.GetState() == models.VulnStateOpen || vuln.GetState() == models.VulnStateFixed {
+				return nil
+			}
+			vulnDependencyVuln := vuln.(*models.DependencyVuln)
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability was reopened by %s", username))
+
+			err := i.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
+			if err != nil {
+				slog.Error("could not save dependencyVuln and event", "err", err)
+			}
+
+		}
+	case jira.EventIssueDeleted:
+		if vuln.GetState() == models.VulnStateFalsePositive {
+			return nil
+		}
+		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDs())
+
+		err := i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
+		if err != nil {
+			slog.Error("could not save vuln and event", "err", err)
+		}
+	}
+
 	return nil
 }
 func (i *JiraIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
@@ -89,8 +272,6 @@ func (i *JiraIntegration) ListProjects(ctx core.Context, userID string, provider
 	return nil, fmt.Errorf("Jira integration does not support listing projects")
 }
 func (i *JiraIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
-
-	fmt.Println("es wurde aufgerufen!!!!")
 
 	if !core.HasOrganization(ctx) {
 		return nil, fmt.Errorf("organization is required to list repositories")
@@ -240,23 +421,78 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 				Name: "unknown",
 			}
 		}
+
+		ticketID := utils.SafeDereference(vuln.GetTicketID())
+		if !strings.HasPrefix(ticketID, "jira:") {
+			return fmt.Errorf("vulnerability %s does not have a Jira ticket ID", vuln.GetID())
+		}
+		ticketID = strings.TrimPrefix(ticketID, "jira:")
+		ticketIDParts := strings.Split(ticketID, ":")
+		if len(ticketIDParts) != 2 {
+			return fmt.Errorf("vulnerability %s has an invalid Jira ticket ID format", vuln.GetID())
+		}
+		ticketID = ticketIDParts[1]
+
 		switch ev.Type {
 		case models.EventTypeAccepted:
 			_, _, err = client.CreateIssueComment(
-				event.Ctx.Request().Context(), asset, vuln, *vuln.GetTicketID(), strconv.Itoa(projectId), fmt.Sprintf("Accepted by %s: %s", member.Name, ev.Justification))
+				event.Ctx.Request().Context(),
+				ticketID,
+				strconv.Itoa(projectId),
+				fmt.Sprintf("%s\n----\n%s", member.Name+" accepted the vulnerability", utils.SafeDereference(ev.Justification)))
 
+			if err != nil {
+				slog.Error("failed to create Jira issue comment", "err", err, "issue", vuln.GetTicketID())
+				return fmt.Errorf("failed to create Jira issue comment: %w", err)
+			}
 		case models.EventTypeFalsePositive:
+			justification := fmt.Sprintf("%s\n----\n%s", member.Name+"  commented on the vulnerability", utils.SafeDereference(ev.Justification))
+
+			_, _, err = client.CreateIssueComment(
+				event.Ctx.Request().Context(),
+				ticketID,
+				strconv.Itoa(projectId),
+				justification)
+			if err != nil {
+				slog.Error("failed to create Jira issue comment", "err", err, "issue", vuln.GetTicketID())
+				return fmt.Errorf("failed to create Jira issue comment: %w", err)
+			}
 
 		case models.EventTypeReopened:
+			justification := fmt.Sprintf("%s\n----\n%s", member.Name+" reopened the vulnerability", utils.SafeDereference(ev.Justification))
+
+			_, _, err = client.CreateIssueComment(
+				event.Ctx.Request().Context(),
+				ticketID,
+				strconv.Itoa(projectId),
+				justification)
+
+			if err != nil {
+
+				slog.Error("failed to create Jira issue comment", "err", err, "issue", vuln.GetTicketID())
+				return fmt.Errorf("failed to create Jira issue comment: %w", err)
+			}
 
 		case models.EventTypeComment:
+			justification := fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))
 
-			//return i.UpdateIssue(context.Background(), asset, vuln)
+			_, _, err = client.CreateIssueComment(
+				event.Ctx.Request().Context(),
+				ticketID,
+				strconv.Itoa(projectId),
+				justification)
+
+			if err != nil {
+				slog.Error("failed to create Jira issue comment", "err", err, "issue", vuln.GetTicketID())
+				return fmt.Errorf("failed to create Jira issue comment: %w", err)
+			}
 		}
-		return nil
-	}
 
+		//TODO
+		//return i.UpdateIssue(context.Background(), asset, vuln)
+	}
 	return nil
+
 }
 
 func extractIntegrationIdFromRepoId(repoId string) (uuid.UUID, error) {
@@ -301,7 +537,7 @@ func (i *JiraIntegration) getClientBasedOnAsset(asset models.Asset) (*jira.Clien
 	return client, projectId, nil
 }
 
-func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *jira.Client, assetVersionName string, justification string, orgSlug string, projectSlug string, projectId int) (*jira.Issue, error) {
+func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, dependencyVuln *models.DependencyVuln, asset models.Asset, client *jira.Client, assetVersionName string, justification string, orgSlug string, projectSlug string, projectId int) (*jira.CreateIssueResponse, error) {
 
 	riskMetrics, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 
@@ -319,15 +555,12 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
-	fmt.Println("Jira client:", jiraClient.JiraIntegrationID)
 	jiraIntegration, err := i.jiraIntegrationRepository.GetClientByIntegrationID(jiraClient.JiraIntegrationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
 
 	description := exp.GenerateADF(client.BaseURL, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)
-
-	fmt.Println("Description:!!!!!!!!!!!", description)
 
 	issue := &jira.Issue{
 		Fields: &jira.IssueFields{
@@ -340,21 +573,6 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 			Reporter: &jira.User{
 				AccountID: jiraIntegration.AccountID,
 			},
-			/* 			Description: ADF{
-				Type:    "doc",
-				Version: 1,
-				Content: []ADFContent{
-					{
-						Type: "paragraph",
-						Content: []ADFContent{
-							{
-								Type: "text",
-								Text: fmt.Sprintf("This is a vulnerability issue for asset %s, version %s, in project %s. Justification: %s", asset.ID, assetVersionName, projectSlug, justification),
-							},
-						},
-					},
-				},
-			}, */
 			Description: description,
 			Labels:      labels,
 			Summary:     fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:")),
@@ -376,15 +594,22 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 		}
 	}
 
-	_, _, err = client.CreateIssue(ctx, issue)
+	createdIssue, _, err := client.CreateIssue(ctx, issue)
 	if err != nil {
+		slog.Error("failed to create Jira issue", "err", err, "issue", issue)
 		return nil, fmt.Errorf("failed to create Jira issue: %w", err)
 	}
 
-	return nil, fmt.Errorf("createDependencyVulnIssue not implemented")
+	_, _, err = client.CreateIssueComment(ctx, createdIssue.ID, strconv.Itoa(projectId), justification)
+	if err != nil {
+		slog.Error("failed to create Jira issue comment", "err", err, "issue", createdIssue)
+		return nil, fmt.Errorf("failed to create Jira issue comment: %w", err)
+	}
+
+	return createdIssue, nil
 }
 
-func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client *jira.Client, assetVersionName string, justification string, orgSlug string, projectSlug string, projectId int) (*jira.Issue, error) {
+func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, vuln *models.FirstPartyVuln, asset models.Asset, client *jira.Client, assetVersionName string, justification string, orgSlug string, projectSlug string, projectId int) (*jira.CreateIssueResponse, error) {
 	// Implementation for creating a first-party vulnerability issue in Jira
 	return nil, fmt.Errorf("createFirstPartyVulnIssue not implemented")
 }
@@ -399,7 +624,7 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 	if err != nil {
 		return fmt.Errorf("failed to get Jira client for asset %s: %w", asset.ID, err)
 	}
-	var createdIssue *jira.Issue
+	var createdIssue *jira.CreateIssueResponse
 
 	switch v := vuln.(type) {
 	case *models.DependencyVuln:
@@ -414,7 +639,7 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 		}
 	}
 
-	vuln.SetTicketID(fmt.Sprintf("jira:%s:%d", projectId, createdIssue.ID))
+	vuln.SetTicketID(fmt.Sprintf("jira:%d:%s", projectId, createdIssue.GetID()))
 	vuln.SetTicketURL(fmt.Sprintf("%s/browse/%s", client.BaseURL, createdIssue.Key))
 	vuln.SetManualTicketCreation(userID != "system")
 
@@ -425,12 +650,13 @@ func (i *JiraIntegration) CreateIssue(ctx context.Context, asset models.Asset, a
 		justification,
 		map[string]any{
 			"ticketId": vuln.GetTicketID(),
-			//TODO: set the ticket URL
-			//	"ticketUrl": createdIssue.WebURL,
+			//TODO: set the right ticket URL
+			"ticketUrl": vuln.GetTicketURL(),
 		})
 
 	err = i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 	if err != nil {
+		slog.Error("failed to save vulnerability with ticket information", "err", err, "vuln", vuln)
 		//TODO: if error did happen, we should remove the issue from Jira
 		return fmt.Errorf("failed to save vulnerability with ticket information: %w", err)
 	}
@@ -474,12 +700,13 @@ func (i *JiraIntegration) TestAndSave(ctx core.Context) error {
 	// check if the token valid and get the account ID
 	client, err := jira.NewJiraClient(data.Token, data.Url, data.UserEmail)
 	if err != nil {
-		fmt.Println("Failed to create Jira client:", err)
+		slog.Error("failed to create Jira client", "err", err)
 		return ctx.JSON(400, fmt.Sprintf("invalid Jira integration data: %v", err))
 	}
 
 	accountID, err := client.GetAccountIDByEmail(ctx.Request().Context(), data.UserEmail)
 	if err != nil {
+		slog.Error("failed to get account ID for email", "email", data.UserEmail, "err", err)
 		return ctx.JSON(400, fmt.Sprintf("failed to get account ID for email %s: %v", data.UserEmail, err))
 	}
 
