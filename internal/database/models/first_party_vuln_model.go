@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
@@ -57,6 +58,54 @@ func (f *FirstPartyVuln) BeforeSave(tx *gorm.DB) (err error) {
 	hash := f.CalculateHash()
 	f.ID = hash
 	return nil
+}
+
+func (f *FirstPartyVuln) RenderADF() jira.ADF {
+	adf := jira.ADF{
+		Version: 1,
+		Type:    "doc",
+		Content: []jira.ADFContent{
+			{
+				Type: "paragraph",
+				Content: []jira.ADFContent{
+					{
+						Type: "text",
+						Text: *f.Message,
+					},
+				},
+			},
+		},
+	}
+
+	if f.Snippet != "" {
+		adf.Content = append(adf.Content, jira.ADFContent{
+			Type: "codeBlock",
+			Content: []jira.ADFContent{
+				{
+					Type: "text",
+					Text: f.Snippet,
+				},
+			},
+		})
+	}
+
+	if f.Uri != "" {
+		link := fmt.Sprintf(strings.TrimPrefix(f.Uri, "/"))
+		if f.StartLine != 0 {
+			link += fmt.Sprintf("#L%d", f.StartLine)
+		}
+		adf.Content = append(adf.Content, jira.ADFContent{
+			Type: "paragraph",
+			Content: []jira.ADFContent{
+				{
+					Type: "text",
+					Text: "File: " + link,
+				},
+			},
+		})
+	}
+
+	return adf
 }
 
 func (f *FirstPartyVuln) RenderMarkdown() string {

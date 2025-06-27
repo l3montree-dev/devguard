@@ -397,11 +397,11 @@ type Comments struct {
 
 // Comment represents a comment by a person to an issue in Jira.
 type Comment struct {
-	ID           string             `json:"id,omitempty" structs:"id,omitempty"`
-	Self         string             `json:"self,omitempty" structs:"self,omitempty"`
-	Name         string             `json:"name,omitempty" structs:"name,omitempty"`
-	Author       *User              `json:"author,omitempty" structs:"author,omitempty"`
-	Body         string             `json:"body,omitempty" structs:"body,omitempty"`
+	ID     string `json:"id,omitempty" structs:"id,omitempty"`
+	Self   string `json:"self,omitempty" structs:"self,omitempty"`
+	Name   string `json:"name,omitempty" structs:"name,omitempty"`
+	Author *User  `json:"author,omitempty" structs:"author,omitempty"`
+	//Body         ADF                `json:"body,omitempty" structs:"body,omitempty"`
 	UpdateAuthor *User              `json:"updateAuthor,omitempty" structs:"updateAuthor,omitempty"`
 	Updated      string             `json:"updated,omitempty" structs:"updated,omitempty"`
 	Created      string             `json:"created,omitempty" structs:"created,omitempty"`
@@ -470,8 +470,23 @@ type WebhookEvent struct {
 	Timestamp int           `json:"timestamp"`
 	Event     Event         `json:"webhookEvent"`
 	Issue     *IssueWebhook `json:"issue"`
-	Comment   *Comment      `json:"comment,omitempty"`
+	Comment   *IssueComment `json:"comment,omitempty"`
 	User      *User         `json:"user,omitempty"`
+}
+
+type IssueComment struct {
+	ID           string             `json:"id,omitempty" structs:"id,omitempty"`
+	Self         string             `json:"self,omitempty" structs:"self,omitempty"`
+	Name         string             `json:"name,omitempty" structs:"name,omitempty"`
+	Author       *User              `json:"author,omitempty" structs:"author,omitempty"`
+	Body         string             `json:"body,omitempty" structs:"body,omitempty"`
+	UpdateAuthor *User              `json:"updateAuthor,omitempty" structs:"updateAuthor,omitempty"`
+	Updated      string             `json:"updated,omitempty" structs:"updated,omitempty"`
+	Created      string             `json:"created,omitempty" structs:"created,omitempty"`
+	Visibility   *CommentVisibility `json:"visibility,omitempty" structs:"visibility,omitempty"`
+
+	// A list of comment properties. Optional on create and update.
+	Properties []EntityProperty `json:"properties,omitempty" structs:"properties,omitempty"`
 }
 
 type IssueWebhook struct {
@@ -512,3 +527,21 @@ const (
 	StatusCategoryDone       StatusCategoryID = 3 // "Complete" or "done"
 	StatusCategoryInProgress StatusCategoryID = 4 // "In Progress"
 )
+
+type TransitionsResponse struct {
+	Expand      string       `json:"expand,omitempty" structs:"expand,omitempty"`
+	Transitions []Transition `json:"transitions,omitempty" structs:"transitions,omitempty"`
+}
+
+func (s StatusCategoryID) String() string {
+	switch s {
+	case StatusCategoryToDo:
+		return "2"
+	case StatusCategoryDone:
+		return "3"
+	case StatusCategoryInProgress:
+		return "4"
+	default:
+		return "2" // default to "To Do" if not specified
+	}
+}

@@ -1,6 +1,8 @@
 package vuln
 
-import "github.com/l3montree-dev/devguard/internal/database/models"
+import (
+	"github.com/l3montree-dev/devguard/internal/database/models"
+)
 
 type ExpectedIssueState string
 
