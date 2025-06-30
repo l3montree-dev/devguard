@@ -20,16 +20,16 @@ func containsRune(s string, r rune) bool {
 	return false
 }
 
-func sanitizeApiUrl(apiUrl string) string {
+func sanitizeAPIURL(apiURL string) string {
 	// check if the url has a trailing slash
-	apiUrl = strings.TrimSuffix(apiUrl, "/")
+	apiURL = strings.TrimSuffix(apiURL, "/")
 
 	// check if the url has a protocol
-	if !strings.HasPrefix(apiUrl, "http://") && !strings.HasPrefix(apiUrl, "https://") {
-		apiUrl = "https://" + apiUrl
+	if !strings.HasPrefix(apiURL, "http://") && !strings.HasPrefix(apiURL, "https://") {
+		apiURL = "https://" + apiURL
 	}
 
-	return apiUrl
+	return apiURL
 }
 
 // IsValidPath checks if a string is a valid file path

@@ -113,10 +113,10 @@ func (g *projectRepository) Update(tx core.DB, project *models.Project) error {
 	return g.db.Save(project).Error
 }
 
-func (g *projectRepository) List(projectIDs []uuid.UUID, parentId *uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {
+func (g *projectRepository) List(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
-	if parentId != nil {
-		err := g.db.Where("id IN ? AND parent_id = ?", projectIDs, parentId).Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentId).Find(&projects).Error
+	if parentID != nil {
+		err := g.db.Where("id IN ? AND parent_id = ?", projectIDs, parentID).Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentID).Find(&projects).Error
 		return projects, err
 	}
 	err := g.db.Where("id IN ? AND parent_id IS NULL", projectIDs).Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID).Find(&projects).Error

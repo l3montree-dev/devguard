@@ -20,13 +20,13 @@ func NewLicenseOverwriteController(licenseOverwriteRepository core.LicenseOverwr
 	}
 }
 
-func (controller LicenseOverwriteController) GetComponentOverwriteForOrganization(org_id uuid.UUID, pURL string) (models.LicenseOverwrite, error) {
+func (controller LicenseOverwriteController) GetComponentOverwriteForOrganization(orgID uuid.UUID, pURL string) (models.LicenseOverwrite, error) {
 	var result models.LicenseOverwrite
-	valid_purl, err := packageurl.FromString(pURL)
+	validPURL, err := packageurl.FromString(pURL)
 	if err != nil {
 		return result, err
 	}
-	result, err = controller.LicenseOverwriteRepository.MaybeGetOverwriteForComponent(org_id, valid_purl)
+	result, err = controller.LicenseOverwriteRepository.MaybeGetOverwriteForComponent(orgID, validPURL)
 	if err != nil {
 		return result, err
 	}

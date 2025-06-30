@@ -37,7 +37,7 @@ type SBOMScanner interface {
 type ProjectRepository interface {
 	Read(projectID uuid.UUID) (models.Project, error)
 	ReadBySlug(organizationID uuid.UUID, slug string) (models.Project, error)
-	ReadBySlugUnscoped(organizationId uuid.UUID, slug string) (models.Project, error)
+	ReadBySlugUnscoped(organizationID uuid.UUID, slug string) (models.Project, error)
 	Update(tx DB, project *models.Project) error
 	Delete(tx DB, projectID uuid.UUID) error
 	Create(tx DB, project *models.Project) error
@@ -60,8 +60,8 @@ type Verifier interface {
 
 type PolicyRepository interface {
 	common.Repository[uuid.UUID, models.Policy, DB]
-	FindByProjectId(projectId uuid.UUID) ([]models.Policy, error)
-	FindByOrganizationId(organizationId uuid.UUID) ([]models.Policy, error)
+	FindByProjectID(projectID uuid.UUID) ([]models.Policy, error)
+	FindByOrganizationID(organizationID uuid.UUID) ([]models.Policy, error)
 	FindCommunityManagedPolicies() ([]models.Policy, error)
 }
 
@@ -70,7 +70,7 @@ type AssetRepository interface {
 	GetByProjectID(projectID uuid.UUID) ([]models.Asset, error)
 	GetByOrgID(organizationID uuid.UUID) ([]models.Asset, error)
 	FindByName(name string) (models.Asset, error)
-	FindAssetByExternalProviderId(externalEntityProviderID string, externalEntityID string) (*models.Asset, error)
+	FindAssetByExternalProviderID(externalEntityProviderID string, externalEntityID string) (*models.Asset, error)
 	GetFQNByID(id uuid.UUID) (string, error)
 	FindOrCreate(tx DB, name string) (models.Asset, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
@@ -97,7 +97,7 @@ type CveRepository interface {
 	GetAllCVEsID() ([]string, error)
 	GetAllCPEMatchesID() ([]string, error)
 	Save(tx DB, cve *models.CVE) error
-	SaveCveAffectedComponents(tx DB, cveId string, affectedComponentHashes []string) error
+	SaveCveAffectedComponents(tx DB, cveID string, affectedComponentHashes []string) error
 	FindCVE(tx DB, id string) (models.CVE, error)
 	FindCVEs(tx DB, ids []string) ([]models.CVE, error)
 	FindAllListPaged(tx DB, pageInfo PageInfo, filter []FilterQuery, sort []SortQuery) (Paged[models.CVE], error)
@@ -137,11 +137,11 @@ type DependencyVulnRepository interface {
 	common.Repository[string, models.DependencyVuln, DB]
 
 	GetAllVulnsByAssetID(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	GetAllOpenVulnsByAssetVersionNameAndAssetId(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
+	GetAllOpenVulnsByAssetVersionNameAndAssetID(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], map[string]int, error)
-	GetDefaultDependencyVulnsByOrgIdPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
-	GetDefaultDependencyVulnsByProjectIdPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
+	GetDefaultDependencyVulnsByOrgIDPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
+	GetDefaultDependencyVulnsByProjectIDPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDependencyVulnsByAssetVersionPagedAndFlat(tx DB, assetVersionName string, assetVersionID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	ListByAssetAndAssetVersion(assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByPurl(tx DB, purls []string) ([]models.DependencyVuln, error)
@@ -156,9 +156,9 @@ type FirstPartyVulnRepository interface {
 	Save(tx DB, vuln *models.FirstPartyVuln) error
 	Transaction(txFunc func(DB) error) error
 	Begin() DB
-	GetDefaultFirstPartyVulnsByProjectIdPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
-	GetDefaultFirstPartyVulnsByOrgIdPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
-	GetByAssetId(tx DB, assetId uuid.UUID) ([]models.FirstPartyVuln, error)
+	GetDefaultFirstPartyVulnsByProjectIDPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
+	GetDefaultFirstPartyVulnsByOrgIDPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], error)
+	GetByAssetID(tx DB, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
 	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.FirstPartyVuln], map[string]int, error)
 	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error
@@ -167,7 +167,7 @@ type FirstPartyVulnRepository interface {
 
 type InTotoLinkRepository interface {
 	common.Repository[uuid.UUID, models.InTotoLink, DB]
-	FindByAssetAndSupplyChainId(assetID uuid.UUID, supplyChainId string) ([]models.InTotoLink, error)
+	FindByAssetAndSupplyChainID(assetID uuid.UUID, supplyChainID string) ([]models.InTotoLink, error)
 	Save(tx DB, model *models.InTotoLink) error
 	FindBySupplyChainID(supplyChainID string) ([]models.InTotoLink, error)
 }
@@ -274,7 +274,7 @@ type AssetVersionRepository interface {
 
 type FirstPartyVulnService interface {
 	UserFixedFirstPartyVulns(tx DB, userID string, firstPartyVulns []models.FirstPartyVuln) error
-	UserDetectedFirstPartyVulns(tx DB, userID string, scannerId string, firstPartyVulns []models.FirstPartyVuln) error
+	UserDetectedFirstPartyVulns(tx DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error
 	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error)
 }
 
@@ -293,7 +293,7 @@ type VulnEventRepository interface {
 type GithubAppInstallationRepository interface {
 	Save(tx DB, model *models.GithubAppInstallation) error
 	Read(installationID int) (models.GithubAppInstallation, error)
-	FindByOrganizationId(orgID uuid.UUID) ([]models.GithubAppInstallation, error)
+	FindByOrganizationID(orgID uuid.UUID) ([]models.GithubAppInstallation, error)
 	Delete(tx DB, installationID int) error
 }
 
@@ -329,16 +329,16 @@ type JiraIntegrationRepository interface {
 type GitlabIntegrationRepository interface {
 	Save(tx DB, model *models.GitLabIntegration) error
 	Read(id uuid.UUID) (models.GitLabIntegration, error)
-	FindByOrganizationId(orgID uuid.UUID) ([]models.GitLabIntegration, error)
+	FindByOrganizationID(orgID uuid.UUID) ([]models.GitLabIntegration, error)
 	Delete(tx DB, id uuid.UUID) error
 }
 
 type GitLabOauth2TokenRepository interface {
 	Save(tx DB, model ...*models.GitLabOauth2Token) error
-	FindByUserIdAndProviderId(userId string, providerId string) (*models.GitLabOauth2Token, error)
-	FindByUserId(userId string) ([]models.GitLabOauth2Token, error)
+	FindByUserIDAndProviderID(userID string, providerID string) (*models.GitLabOauth2Token, error)
+	FindByUserID(userID string) ([]models.GitLabOauth2Token, error)
 	Delete(tx DB, tokens []models.GitLabOauth2Token) error
-	DeleteByUserIdAndProviderId(userId string, providerId string) error
+	DeleteByUserIDAndProviderID(userID string, providerID string) error
 	CreateIfNotExists(tokens []*models.GitLabOauth2Token) error
 }
 
@@ -351,19 +351,19 @@ type StatisticsRepository interface {
 	TimeTravelDependencyVulnState(assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error)
 	GetAssetRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
-	GetDependencyVulnCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
+	GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	AverageFixingTime(assetVersionName string, assetID uuid.UUID, riskIntervalStart, riskIntervalEnd float64) (time.Duration, error)
 	CVESWithKnownExploitsInAssetVersion(assetVersion models.AssetVersion) ([]models.CVE, error)
 }
 
 type AssetRiskHistoryRepository interface {
 	GetRiskHistory(assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error)
-	GetRiskHistoryByProject(projectId uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error)
+	GetRiskHistoryByProject(projectID uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error)
 	UpdateRiskAggregation(assetRisk *models.AssetRiskHistory) error
 }
 
 type ProjectRiskHistoryRepository interface {
-	GetRiskHistory(projectId uuid.UUID, start, end time.Time) ([]models.ProjectRiskHistory, error)
+	GetRiskHistory(projectID uuid.UUID, start, end time.Time) ([]models.ProjectRiskHistory, error)
 	UpdateRiskAggregation(projectRisk *models.ProjectRiskHistory) error
 }
 

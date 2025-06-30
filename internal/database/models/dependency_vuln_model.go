@@ -42,46 +42,46 @@ type DependencyVuln struct {
 
 var _ Vuln = &DependencyVuln{}
 
-func (d *DependencyVuln) SetRawRiskAssessment(risk float64) {
-	d.RawRiskAssessment = &risk
+func (vuln *DependencyVuln) SetRawRiskAssessment(risk float64) {
+	vuln.RawRiskAssessment = &risk
 }
 
-func (d *DependencyVuln) GetRawRiskAssessment() float64 {
-	if d.RawRiskAssessment == nil {
+func (vuln *DependencyVuln) GetRawRiskAssessment() float64 {
+	if vuln.RawRiskAssessment == nil {
 		return 0.0
 	}
 
-	return *d.RawRiskAssessment
+	return *vuln.RawRiskAssessment
 }
 
-func (d *DependencyVuln) SetRiskRecalculatedAt(t time.Time) {
-	d.RiskRecalculatedAt = t
+func (vuln *DependencyVuln) SetRiskRecalculatedAt(t time.Time) {
+	vuln.RiskRecalculatedAt = t
 }
 
-func (d *DependencyVuln) GetType() VulnType {
+func (vuln *DependencyVuln) GetType() VulnType {
 	return VulnTypeDependencyVuln
 }
 
 type DependencyVulnRisk struct {
 	DependencyVulnID  string
 	CreatedAt         time.Time
-	ArbitraryJsonData string
+	ArbitraryJSONData string
 	Risk              float64
 	Type              VulnEventType
 }
 
-func (m DependencyVuln) TableName() string {
+func (vuln DependencyVuln) TableName() string {
 	return "dependency_vulns"
 }
 
-func (m *DependencyVuln) CalculateHash() string {
-	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", utils.OrDefault(m.CVEID, ""), utils.OrDefault(m.ComponentPurl, ""), m.AssetVersionName, m.AssetID))
+func (vuln *DependencyVuln) CalculateHash() string {
+	hash := utils.HashString(fmt.Sprintf("%s/%s/%s/%s", utils.OrDefault(vuln.CVEID, ""), utils.OrDefault(vuln.ComponentPurl, ""), vuln.AssetVersionName, vuln.AssetID))
 	return hash
 }
 
 // hook to calculate the hash before creating the dependencyVuln
-func (f *DependencyVuln) BeforeSave(tx *gorm.DB) (err error) {
-	hash := f.CalculateHash()
-	f.ID = hash
+func (vuln *DependencyVuln) BeforeSave(tx *gorm.DB) (err error) {
+	hash := vuln.CalculateHash()
+	vuln.ID = hash
 	return nil
 }

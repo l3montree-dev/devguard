@@ -30,7 +30,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
-type HttpController struct {
+type HTTPController struct {
 	db                     core.DB
 	sbomScanner            core.SBOMScanner
 	cveRepository          core.CveRepository
@@ -46,12 +46,12 @@ type HttpController struct {
 	core.FireAndForgetSynchronizer
 }
 
-func NewHttpController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *HttpController {
+func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *HTTPController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
 	scanner := NewSBOMScanner(cpeComparer, purlComparer, cveRepository)
-	return &HttpController{
+	return &HTTPController{
 		db:                        db,
 		sbomScanner:               scanner,
 		cveRepository:             cveRepository,
@@ -77,7 +77,7 @@ type FirstPartyScanResponse struct {
 	FirstPartyVulns []vuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
 }
 
-func (s *HttpController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {
+func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {
 	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
@@ -120,7 +120,7 @@ func (s *HttpController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
 }
 
-func (s *HttpController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
+func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
@@ -164,7 +164,7 @@ func (s *HttpController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	return scanResults, nil
 }
 
-func (s *HttpController) FirstPartyVulnScan(c core.Context) error {
+func (s *HTTPController) FirstPartyVulnScan(c core.Context) error {
 
 	monitoring.FirstPartyScanAmount.Inc()
 	startTime := time.Now()
@@ -226,7 +226,7 @@ func (s *HttpController) FirstPartyVulnScan(c core.Context) error {
 	})
 }
 
-func (s *HttpController) ScanDependencyVulnFromProject(c core.Context) error {
+func (s *HTTPController) ScanDependencyVulnFromProject(c core.Context) error {
 	bom := new(cdx.BOM)
 	decoder := cdx.NewBOMDecoder(c.Request().Body, cdx.BOMFileFormatJSON)
 	defer c.Request().Body.Close()
@@ -241,7 +241,7 @@ func (s *HttpController) ScanDependencyVulnFromProject(c core.Context) error {
 	return c.JSON(200, scanResults)
 }
 
-func (s *HttpController) ScanSbomFile(c core.Context) error {
+func (s *HTTPController) ScanSbomFile(c core.Context) error {
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
 	err := c.Request().ParseMultipartForm(maxSize)
 	if err != nil {

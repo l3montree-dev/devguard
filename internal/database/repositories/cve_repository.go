@@ -70,7 +70,7 @@ func (g *cveRepository) FindAll(cveIDs []string) ([]models.CVE, error) {
 	return cves, err
 }
 
-func (g *cveRepository) SaveCveAffectedComponents(tx core.DB, cveId string, affectedComponentHashes []string) error {
+func (g *cveRepository) SaveCveAffectedComponents(tx core.DB, cveID string, affectedComponentHashes []string) error {
 
 	affectedComponents := utils.Map(utils.UniqBy(affectedComponentHashes, func(c string) string {
 		return c
@@ -87,7 +87,7 @@ func (g *cveRepository) SaveCveAffectedComponents(tx core.DB, cveId string, affe
 		Logger:               logger.Default.LogMode(logger.Silent),
 		FullSaveAssociations: false,
 	}).Model(&models.CVE{
-		CVE: cveId,
+		CVE: cveID,
 	})
 	assoc := m.Association("AffectedComponents")
 	return assoc.Append(&affectedComponents)
@@ -228,13 +228,13 @@ func (g *cveRepository) FindAllListPaged(tx core.DB, pageInfo core.PageInfo, fil
 	return core.NewPaged(pageInfo, count, cves), nil
 }
 
-func (g *cveRepository) FindCVE(tx core.DB, cveId string) (models.CVE, error) {
+func (g *cveRepository) FindCVE(tx core.DB, cveID string) (models.CVE, error) {
 
 	var cves models.CVE
 
 	q := g.GetDB(tx).Model(&models.CVE{})
 
-	q = q.Where("cve = ?", cveId)
+	q = q.Where("cve = ?", cveID)
 
 	err := q.Preload("AffectedComponents").Preload("Exploits").First(&cves).Error
 	if err != nil {

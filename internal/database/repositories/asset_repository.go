@@ -43,19 +43,19 @@ func NewAssetRepository(db core.DB) *assetRepository {
 	}
 }
 
-func (r *assetRepository) FindAssetByExternalProviderId(externalEntityProviderID string, externalEntityID string) (*models.Asset, error) {
+func (repository *assetRepository) FindAssetByExternalProviderID(externalEntityProviderID string, externalEntityID string) (*models.Asset, error) {
 	var asset models.Asset
-	err := r.db.Where("external_entity_provider_id = ? AND external_entity_id = ?", externalEntityProviderID, externalEntityID).First(&asset).Error
+	err := repository.db.Where("external_entity_provider_id = ? AND external_entity_id = ?", externalEntityProviderID, externalEntityID).First(&asset).Error
 	return &asset, err
 }
 
-func (a *assetRepository) GetFQNByID(id uuid.UUID) (string, error) {
+func (repository *assetRepository) GetFQNByID(id uuid.UUID) (string, error) {
 	var fqn struct {
 		FQN string `gorm:"column:fqn"`
 	}
 	// the fully qualified name (FQN) is the slug of the asset - including the project slug and the organization slug
 	// using the fqn an asset is addressable through the API
-	err := a.db.Model(&models.Asset{}).
+	err := repository.db.Model(&models.Asset{}).
 		Select("CONCAT(organizations.slug, '/', projects.slug, '/', assets.slug) AS fqn").
 		Joins("JOIN projects ON assets.project_id = projects.id").
 		Joins("JOIN organizations ON projects.organization_id = organizations.id").
@@ -67,20 +67,20 @@ func (a *assetRepository) GetFQNByID(id uuid.UUID) (string, error) {
 	return fqn.FQN, nil
 }
 
-func (a *assetRepository) FindByName(name string) (models.Asset, error) {
+func (repository *assetRepository) FindByName(name string) (models.Asset, error) {
 	var app models.Asset
-	err := a.db.Where("name = ?", name).First(&app).Error
+	err := repository.db.Where("name = ?", name).First(&app).Error
 	if err != nil {
 		return app, err
 	}
 	return app, nil
 }
 
-func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, error) {
-	app, err := a.FindByName(name)
+func (repository *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, error) {
+	app, err := repository.FindByName(name)
 	if err != nil {
 		app = models.Asset{Name: name}
-		err = a.Create(tx, &app)
+		err = repository.Create(tx, &app)
 		if err != nil {
 			return app, err
 		}
@@ -88,66 +88,66 @@ func (a *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, e
 	return app, nil
 }
 
-func (a *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, error) {
+func (repository *assetRepository) GetByProjectID(projectID uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
-	err := a.db.Where("project_id = ?", projectID).Find(&apps).Error
+	err := repository.db.Where("project_id = ?", projectID).Find(&apps).Error
 	if err != nil {
 		return nil, err
 	}
 	return apps, nil
 }
 
-func (a *assetRepository) GetByOrgID(orgID uuid.UUID) ([]models.Asset, error) {
+func (repository *assetRepository) GetByOrgID(orgID uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
-	err := a.db.Where("project_id IN (SELECT id from projects where organization_id = ?)", orgID).Preload("AssetVersions").Find(&apps).Error
+	err := repository.db.Where("project_id IN (SELECT id from projects where organization_id = ?)", orgID).Preload("AssetVersions").Find(&apps).Error
 	if err != nil {
 		return nil, err
 	}
 	return apps, nil
 }
 
-func (a *assetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asset, error) {
+func (repository *assetRepository) GetByProjectIDs(projectIDs []uuid.UUID) ([]models.Asset, error) {
 	var apps []models.Asset
-	err := a.db.Where("project_id IN (?)", projectIDs).Find(&apps).Error
+	err := repository.db.Where("project_id IN (?)", projectIDs).Find(&apps).Error
 	if err != nil {
 		return nil, err
 	}
 	return apps, nil
 }
 
-func (g *assetRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error) {
+func (repository *assetRepository) ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error) {
 	var t models.Asset
-	err := g.db.Where("slug = ? AND project_id = ?", slug, projectID).Preload("AssetVersions").First(&t).Error
+	err := repository.db.Where("slug = ? AND project_id = ?", slug, projectID).Preload("AssetVersions").First(&t).Error
 	return t, err
 }
 
-func (g *assetRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error) {
+func (repository *assetRepository) ReadBySlugUnscoped(projectID uuid.UUID, slug string) (models.Asset, error) {
 	var asset models.Asset
-	err := g.db.Unscoped().Where("slug = ? AND project_id = ?", slug, projectID).First(&asset).Error
+	err := repository.db.Unscoped().Where("slug = ? AND project_id = ?", slug, projectID).First(&asset).Error
 	return asset, err
 }
 
-func (g *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
-	app, err := g.ReadBySlug(projectID, slug)
+func (repository *assetRepository) GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error) {
+	app, err := repository.ReadBySlug(projectID, slug)
 	if err != nil {
 		return uuid.UUID{}, err
 	}
 	return app.ID, nil
 }
 
-func (g *assetRepository) Update(tx core.DB, asset *models.Asset) error {
-	return g.db.Save(asset).Error
+func (repository *assetRepository) Update(tx core.DB, asset *models.Asset) error {
+	return repository.db.Save(asset).Error
 }
 
-func (g *assetRepository) GetAllAssetsFromDB() ([]models.Asset, error) {
+func (repository *assetRepository) GetAllAssetsFromDB() ([]models.Asset, error) {
 	var assets []models.Asset
-	err := g.db.Preload("AssetVersions").Find(&assets).Error
+	err := repository.db.Preload("AssetVersions").Find(&assets).Error
 	return assets, err
 }
 
-func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (models.Asset, error) {
+func (repository *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (models.Asset, error) {
 	var asset models.Asset
-	err := g.db.Model(&models.AssetVersion{}).
+	err := repository.db.Model(&models.AssetVersion{}).
 		Select("assets.*").
 		Joins("JOIN assets ON assets.id = asset_versions.asset_id").
 		Where("asset_versions.id = ?", assetVersionID).
@@ -155,23 +155,23 @@ func (g *assetRepository) GetAssetByAssetVersionID(assetVersionID uuid.UUID) (mo
 	return asset, err
 }
 
-func (g *assetRepository) Delete(tx core.DB, id uuid.UUID) error {
+func (repository *assetRepository) Delete(tx core.DB, id uuid.UUID) error {
 	asset := models.Asset{Model: models.Model{ID: id}}
-	return g.db.Select("AssetVersions").Delete(&asset).Error
+	return repository.db.Select("AssetVersions").Delete(&asset).Error
 }
 
-func (g *assetRepository) GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error) {
+func (repository *assetRepository) GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error) {
 	var asset models.Asset
-	err := g.db.Where("badge_secret = ?", badgeSecret).First(&asset).Error
+	err := repository.db.Where("badge_secret = ?", badgeSecret).First(&asset).Error
 	if err != nil {
 		return models.Asset{}, err
 	}
 	return asset, nil
 }
 
-func (g *assetRepository) ReadWithAssetVersions(assetID uuid.UUID) (models.Asset, error) {
+func (repository *assetRepository) ReadWithAssetVersions(assetID uuid.UUID) (models.Asset, error) {
 	var asset models.Asset
-	err := g.db.Preload("AssetVersions").Where("id = ?", assetID).First(&asset).Error
+	err := repository.db.Preload("AssetVersions").Where("id = ?", assetID).First(&asset).Error
 	if err != nil {
 		return models.Asset{}, err
 	}

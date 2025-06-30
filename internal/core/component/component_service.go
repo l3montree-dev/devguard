@@ -46,7 +46,7 @@ func (s *service) RefreshComponentProjectInformation(project models.ComponentPro
 
 	var jsonbScorecard *database.JSONB = nil
 	if projectResp.Scorecard != nil {
-		jsonb, err := database.JsonbFromStruct(*projectResp.Scorecard)
+		jsonb, err := database.JSONbFromStruct(*projectResp.Scorecard)
 		if err != nil {
 			slog.Warn("could not convert scorecard to jsonb", "err", err)
 		} else {
@@ -118,7 +118,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 				var jsonbScorecard *database.JSONB = nil
 				var scoreCardScore *float64 = nil
 				if projectResp.Scorecard != nil {
-					jsonb, err := database.JsonbFromStruct(*projectResp.Scorecard)
+					jsonb, err := database.JSONbFromStruct(*projectResp.Scorecard)
 					scoreCardScore = &projectResp.Scorecard.OverallScore
 
 					if err != nil {

@@ -154,14 +154,14 @@ func (s *service) ListProjectsByOrganizationID(organizationID uuid.UUID) ([]mode
 func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) {
 	// get all projects the user has at least read access to
 	rbac := core.GetRBAC(c)
-	projectSliceOrProjectIdSlice, err := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
+	projectSliceOrProjectIDSlice, err := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
 	if err != nil {
 		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
 	}
 
-	if slice, ok := projectSliceOrProjectIdSlice.([]models.Project); ok {
+	if slice, ok := projectSliceOrProjectIDSlice.([]models.Project); ok {
 		// if the user is looking for projects which have a parent id set, we return an empty slice
-		if c.QueryParam("parentId") != "" {
+		if c.QueryParam("parentID") != "" {
 			return []models.Project{}, nil
 		}
 		// make sure the projects exist inside the database
@@ -185,9 +185,9 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 
 		return slice, err
 	}
-	projectsIdsStr, ok := projectSliceOrProjectIdSlice.([]string)
+	projectsIdsStr, ok := projectSliceOrProjectIDSlice.([]string)
 	if !ok {
-		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(fmt.Errorf("expected []string but got %T", projectSliceOrProjectIdSlice))
+		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(fmt.Errorf("expected []string but got %T", projectSliceOrProjectIDSlice))
 	}
 
 	// extract the project ids from the roles
@@ -198,11 +198,11 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 		projectIDs[projectID] = struct{}{}
 	}
 
-	// check if parentId is set
-	parentId := c.QueryParam("parentId")
+	// check if parentID is set
+	queryParentID := c.QueryParam("parentID")
 	var parentID *uuid.UUID = nil
-	if parentId != "" {
-		tmp, err := uuid.Parse(parentId)
+	if queryParentID != "" {
+		tmp, err := uuid.Parse(queryParentID)
 		if err != nil {
 			return nil, err
 		}

@@ -6,12 +6,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type cveHttpController struct {
+type cveHTTPController struct {
 	cveRepository core.CveRepository
 }
 
-func NewHttpController(cveRepository core.CveRepository) *cveHttpController {
-	return &cveHttpController{
+func NewHTTPController(cveRepository core.CveRepository) *cveHTTPController {
+	return &cveHTTPController{
 		cveRepository: cveRepository,
 	}
 }
@@ -30,7 +30,7 @@ func NewHttpController(cveRepository core.CveRepository) *cveHttpController {
 // @Success 200 {object} object{pageSize=int,page=int,total=int,data=[]models.CVE} "A paginated list of CVEs"
 // @Failure 500 {object} object{message=string} "Internal server error"
 // @Router /vulndb [get]
-func (c cveHttpController) ListPaged(ctx core.Context) error {
+func (c cveHTTPController) ListPaged(ctx core.Context) error {
 	pagedResp, err := c.cveRepository.FindAllListPaged(
 		nil,
 		core.GetPageInfo(ctx),
@@ -56,17 +56,17 @@ func (c cveHttpController) ListPaged(ctx core.Context) error {
 // @Description Retrieve details of a specific CVE by its ID, including risk and vector calculations
 // @Tags CVE
 // @Produce json
-// @Param cveId path string true "CVE ID"
+// @Param cveID path string true "CVE ID"
 // @Param confidentialityRequirements query string false "Confidentiality Requirements (low, medium, high), default is medium"
 // @Param integrityRequirements query string false "Integrity Requirements (low, medium, high), default is medium"
 // @Param availabilityRequirements query string false "Availability Requirements (low, medium, high), default is medium"
 // @Success 200 {object} models.CVE "Details of the specified CVE"
 // @Failure 500 {object} object{message=string} "Internal server error"
-// @Router /vulndb/{cveId}/ [get]
-func (c cveHttpController) Read(ctx core.Context) error {
+// @Router /vulndb/{cveID}/ [get]
+func (c cveHTTPController) Read(ctx core.Context) error {
 	cve, err := c.cveRepository.FindCVE(
 		nil,
-		core.GetParam(ctx, "cveId"),
+		core.GetParam(ctx, "cveID"),
 	)
 
 	if err != nil {

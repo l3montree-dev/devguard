@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/l3montree-dev/devguard/integration_tests"
+	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"

@@ -98,20 +98,20 @@ func GetAuthAdminClient(ctx Context) AdminClient {
 }
 
 func GetVulnID(ctx Context) (string, models.VulnType, error) {
-	dependencyVulnID := ctx.Param("dependencyVulnId")
+	dependencyVulnID := ctx.Param("dependencyVulnID")
 	if dependencyVulnID != "" {
 		return dependencyVulnID, models.VulnTypeDependencyVuln, nil
 	}
 
-	dependencyVulnIDFromGet, ok := ctx.Get("dependencyVulnId").(string)
+	dependencyVulnIDFromGet, ok := ctx.Get("dependencyVulnID").(string)
 	if ok && dependencyVulnIDFromGet != "" {
 		return dependencyVulnIDFromGet, models.VulnTypeDependencyVuln, nil
 	}
-	firstPartyVulnID := ctx.Param("firstPartyVulnId")
+	firstPartyVulnID := ctx.Param("firstPartyVulnID")
 	if firstPartyVulnID != "" {
 		return firstPartyVulnID, models.VulnTypeFirstPartyVuln, nil
 	}
-	firstPartyVulnIDFromGet, ok := ctx.Get("firstPartyVulnId").(string)
+	firstPartyVulnIDFromGet, ok := ctx.Get("firstPartyVulnID").(string)
 	if ok && firstPartyVulnIDFromGet != "" {
 		return firstPartyVulnIDFromGet, models.VulnTypeFirstPartyVuln, nil
 	}

@@ -26,7 +26,7 @@ func NewGitlabClientFactory(gitlabIntegrationRepository core.GitlabIntegrationRe
 
 func (factory SimpleGitlabClientFactory) FromIntegration(integration models.GitLabIntegration) (core.GitlabClientFacade, error) {
 	// Use installation transport with client.
-	client, err := gitlab.NewClient(integration.AccessToken, gitlab.WithBaseURL(integration.GitLabUrl))
+	client, err := gitlab.NewClient(integration.AccessToken, gitlab.WithBaseURL(integration.GitLabURL))
 	if err != nil {
 		return gitlabClient{}, err
 	}
@@ -68,14 +68,14 @@ func (factory SimpleGitlabClientFactory) FromOauth2Token(token models.GitLabOaut
 	return nil, errors.New("could not find gitlab oauth2 integration")
 }
 
-func (factory SimpleGitlabClientFactory) FromAccessToken(accessToken string, baseUrl string) (core.GitlabClientFacade, error) {
+func (factory SimpleGitlabClientFactory) FromAccessToken(accessToken string, baseURL string) (core.GitlabClientFacade, error) {
 	if accessToken == "" {
 		return nil, errors.New("access token is empty")
 	}
-	if baseUrl == "" {
+	if baseURL == "" {
 		return nil, errors.New("base URL is empty")
 	}
-	client, err := gitlab.NewClient(accessToken, gitlab.WithBaseURL(baseUrl))
+	client, err := gitlab.NewClient(accessToken, gitlab.WithBaseURL(baseURL))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create gitlab client")
 	}

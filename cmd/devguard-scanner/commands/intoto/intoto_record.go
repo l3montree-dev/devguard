@@ -132,8 +132,8 @@ func startInTotoRecording(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	keyId := config.RuntimeInTotoConfig.Key.KeyID
-	return metdata.Dump(fmt.Sprintf("%s.%s.link.unfinished", config.RuntimeInTotoConfig.Step, keyId[:8]))
+	keyID := config.RuntimeInTotoConfig.Key.KeyID
+	return metdata.Dump(fmt.Sprintf("%s.%s.link.unfinished", config.RuntimeInTotoConfig.Step, keyID[:8]))
 }
 
 func NewInTotoRecordStartCommand() *cobra.Command {

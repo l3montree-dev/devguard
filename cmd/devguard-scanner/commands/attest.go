@@ -31,6 +31,17 @@ import (
 )
 
 func attestCmd(cmd *cobra.Command, args []string) error {
+	if config.RuntimeBaseConfig.Username != "" && config.RuntimeBaseConfig.Password != "" && config.RuntimeBaseConfig.Registry != "" {
+		// login to the registry
+		err := login(cmd.Context(), config.RuntimeBaseConfig.Username, config.RuntimeBaseConfig.Password, config.RuntimeBaseConfig.Registry)
+		if err != nil {
+			slog.Error("login failed", "err", err)
+			return err
+		}
+
+		slog.Info("logged in", "registry", config.RuntimeBaseConfig.Registry)
+	}
+
 	// transform the hex private key to an ecdsa private key
 	keyPath, _, err := tokenToKey(config.RuntimeBaseConfig.Token)
 	if err != nil {
@@ -93,7 +104,7 @@ func uploadAttestation(ctx context.Context, predicate string) error {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/attestations", config.RuntimeBaseConfig.ApiUrl), bytes.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/attestations", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
 	if err != nil {
 		slog.Error("could not create request", "err", err)
 		return err
@@ -104,7 +115,7 @@ func uploadAttestation(ctx context.Context, predicate string) error {
 		return err
 	}
 
-	req.Header.Set("X-Attestation-Name", config.RuntimeAttestationConfig.PredicateType)
+	req.Header.Set("X-Predicate-Type", config.RuntimeAttestationConfig.PredicateType)
 	// set the headers
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
@@ -148,5 +159,11 @@ func NewAttestCommand() *cobra.Command {
 	addAssetRefFlags(cmd)
 	cmd.Flags().StringP("predicateType", "a", "", "The type of the attestation")
 	cmd.MarkFlagRequired("predicateType") //nolint:errcheck
+
+	// allow username, password and registry to be provided as well as flags
+	cmd.Flags().StringP("username", "u", "", "The username to authenticate the request")
+	cmd.Flags().StringP("password", "p", "", "The password to authenticate the request")
+	cmd.Flags().StringP("registry", "r", "", "The registry to authenticate to")
+
 	return cmd
 }

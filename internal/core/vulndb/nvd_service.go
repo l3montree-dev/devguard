@@ -61,7 +61,7 @@ func (nvdService NVDService) ImportCVE(cveID string) (models.CVE, error) {
 	// make a copy of the base url
 	u := baseURL
 	q := u.Query()
-	q.Add("cveId", cveID)
+	q.Add("cveID", cveID)
 	u.RawQuery = q.Encode()
 
 	resp, err := nvdService.fetchJSONFromNVD(u, 1)

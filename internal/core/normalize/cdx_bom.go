@@ -40,7 +40,7 @@ func FromCdxBom(bom *cdx.BOM, convertComponentType bool) *cdxBom {
 
 			// will be exactly the string we need to replace inside the purl
 			// please do not ask me why
-			pkgId := ""
+			pkgID := ""
 			for _, property := range *component.Properties {
 				if property.Name == "aquasecurity:trivy:SrcName" {
 					// never expand to whole linux - this might happen - not sure why
@@ -51,14 +51,14 @@ func FromCdxBom(bom *cdx.BOM, convertComponentType bool) *cdxBom {
 					srcName = property.Value
 				} else if property.Name == "aquasecurity:trivy:SrcVersion" {
 					srcVersion = property.Value
-				} else if property.Name == "aquasecurity:trivy:PkgID" {
-					pkgId = property.Value
+				} else if property.Name == "aquasecurity:trivy:pkgID" {
+					pkgID = property.Value
 				}
 			}
 
 			// if both are defined - we can replace the package url with the new name and version
-			if srcName != "" && srcVersion != "" && pkgId != "" {
-				component.PackageURL = strings.ReplaceAll(component.PackageURL, pkgId, srcName+"@"+srcVersion)
+			if srcName != "" && srcVersion != "" && pkgID != "" {
+				component.PackageURL = strings.ReplaceAll(component.PackageURL, pkgID, srcName+"@"+srcVersion)
 			}
 		}
 

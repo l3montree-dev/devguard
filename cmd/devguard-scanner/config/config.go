@@ -33,7 +33,7 @@ import (
 type baseConfig struct {
 	Token     string `json:"token" mapstructure:"token"`
 	AssetName string `json:"assetName" mapstructure:"assetName"`
-	ApiUrl    string `json:"apiUrl" mapstructure:"apiUrl"`
+	APIURL    string `json:"apiUrl" mapstructure:"apiUrl"`
 
 	Path       string `json:"path" mapstructure:"path"`
 	FailOnRisk string `json:"failOnRisk" mapstructure:"failOnRisk"`
@@ -44,7 +44,7 @@ type baseConfig struct {
 	Registry string `json:"registry" mapstructure:"registry"`
 
 	// used in SbomCMD
-	ScannerID     string `json:"scannerId" mapstructure:"scannerId"`
+	ScannerID     string `json:"scannerId" mapstructure:"scannerID"`
 	Ref           string `json:"ref" mapstructure:"ref"`
 	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
 	IsTag         bool   `json:"isTag" mapstructure:"isTag"`
@@ -79,8 +79,8 @@ func ParseBaseConfig() {
 		panic(err)
 	}
 
-	if RuntimeBaseConfig.ApiUrl != "" {
-		RuntimeBaseConfig.ApiUrl = sanitizeApiUrl(RuntimeBaseConfig.ApiUrl)
+	if RuntimeBaseConfig.APIURL != "" {
+		RuntimeBaseConfig.APIURL = sanitizeAPIURL(RuntimeBaseConfig.APIURL)
 	}
 
 	if RuntimeBaseConfig.Path != "" {
@@ -118,12 +118,12 @@ func ParseBaseConfig() {
 
 	slog.Info("running with config",
 		"assetName", RuntimeBaseConfig.AssetName,
-		"apiUrl", RuntimeBaseConfig.ApiUrl,
+		"apiUrl", RuntimeBaseConfig.APIURL,
 		"path", RuntimeBaseConfig.Path,
 		"ref", RuntimeBaseConfig.Ref,
 		"defaultBranch", RuntimeBaseConfig.DefaultBranch,
 		"isTag", RuntimeBaseConfig.IsTag,
-		"scannerId", RuntimeBaseConfig.ScannerID,
+		"scannerID", RuntimeBaseConfig.ScannerID,
 		"webUI", RuntimeBaseConfig.WebUI,
 		"failOnRisk", RuntimeBaseConfig.FailOnRisk,
 		"registry", RuntimeBaseConfig.Registry,

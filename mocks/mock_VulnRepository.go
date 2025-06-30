@@ -60,32 +60,16 @@ type VulnRepository_ApplyAndSave_Call struct {
 }
 
 // ApplyAndSave is a helper method to define mock.On call
-//   - tx core.DB
-//   - dependencyVuln models.Vuln
-//   - vulnEvent *models.VulnEvent
+//   - tx
+//   - dependencyVuln
+//   - vulnEvent
 func (_e *VulnRepository_Expecter) ApplyAndSave(tx interface{}, dependencyVuln interface{}, vulnEvent interface{}) *VulnRepository_ApplyAndSave_Call {
 	return &VulnRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", tx, dependencyVuln, vulnEvent)}
 }
 
 func (_c *VulnRepository_ApplyAndSave_Call) Run(run func(tx core.DB, dependencyVuln models.Vuln, vulnEvent *models.VulnEvent)) *VulnRepository_ApplyAndSave_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 models.Vuln
-		if args[1] != nil {
-			arg1 = args[1].(models.Vuln)
-		}
-		var arg2 *models.VulnEvent
-		if args[2] != nil {
-			arg2 = args[2].(*models.VulnEvent)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(core.DB), args[1].(models.Vuln), args[2].(*models.VulnEvent))
 	})
 	return _c
 }
@@ -134,26 +118,15 @@ type VulnRepository_FindByTicketID_Call struct {
 }
 
 // FindByTicketID is a helper method to define mock.On call
-//   - tx core.DB
-//   - ticketID string
+//   - tx
+//   - ticketID
 func (_e *VulnRepository_Expecter) FindByTicketID(tx interface{}, ticketID interface{}) *VulnRepository_FindByTicketID_Call {
 	return &VulnRepository_FindByTicketID_Call{Call: _e.mock.On("FindByTicketID", tx, ticketID)}
 }
 
 func (_c *VulnRepository_FindByTicketID_Call) Run(run func(tx core.DB, ticketID string)) *VulnRepository_FindByTicketID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(string))
 	})
 	return _c
 }
@@ -200,20 +173,14 @@ type VulnRepository_GetOrgFromVuln_Call struct {
 }
 
 // GetOrgFromVuln is a helper method to define mock.On call
-//   - vuln models.Vuln
+//   - vuln
 func (_e *VulnRepository_Expecter) GetOrgFromVuln(vuln interface{}) *VulnRepository_GetOrgFromVuln_Call {
 	return &VulnRepository_GetOrgFromVuln_Call{Call: _e.mock.On("GetOrgFromVuln", vuln)}
 }
 
 func (_c *VulnRepository_GetOrgFromVuln_Call) Run(run func(vuln models.Vuln)) *VulnRepository_GetOrgFromVuln_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 models.Vuln
-		if args[0] != nil {
-			arg0 = args[0].(models.Vuln)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(models.Vuln))
 	})
 	return _c
 }
@@ -251,26 +218,15 @@ type VulnRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - db core.DB
-//   - vuln *models.Vuln
+//   - db
+//   - vuln
 func (_e *VulnRepository_Expecter) Save(db interface{}, vuln interface{}) *VulnRepository_Save_Call {
 	return &VulnRepository_Save_Call{Call: _e.mock.On("Save", db, vuln)}
 }
 
 func (_c *VulnRepository_Save_Call) Run(run func(db core.DB, vuln *models.Vuln)) *VulnRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.Vuln
-		if args[1] != nil {
-			arg1 = args[1].(*models.Vuln)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.Vuln))
 	})
 	return _c
 }
@@ -308,20 +264,14 @@ type VulnRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn func(tx core.DB) error
+//   - fn
 func (_e *VulnRepository_Expecter) Transaction(fn interface{}) *VulnRepository_Transaction_Call {
 	return &VulnRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *VulnRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *VulnRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 func(tx core.DB) error
-		if args[0] != nil {
-			arg0 = args[0].(func(tx core.DB) error)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(func(tx core.DB) error))
 	})
 	return _c
 }

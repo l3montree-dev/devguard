@@ -129,7 +129,7 @@ func TestHandleProject(t *testing.T) {
 			},
 		}
 
-		jsonB := database.MustJsonBFromStruct(scoreCard)
+		jsonB := database.MustJSONBFromStruct(scoreCard)
 		expectedProject := models.ComponentProject{
 			ProjectKey:  "github/test/project",
 			ScoreCard:   &jsonB,

@@ -18,10 +18,10 @@ type FirstPartyVuln struct {
 	RuleName        string         `json:"ruleName"`
 	RuleDescription string         `json:"ruleDescription"`
 	RuleHelp        string         `json:"ruleHelp"`
-	RuleHelpUri     string         `json:"ruleHelpUri"`
+	RuleHelpURI     string         `json:"ruleHelpUri"`
 	RuleProperties  database.JSONB `json:"ruleProperties" gorm:"type:jsonb"`
 
-	Uri         string `json:"uri"`
+	URI         string `json:"uri"`
 	StartLine   int    `json:"startLine" `
 	StartColumn int    `json:"startColumn"`
 	EndLine     int    `json:"endLine"`
@@ -35,32 +35,32 @@ type FirstPartyVuln struct {
 
 var _ Vuln = &FirstPartyVuln{}
 
-func (f *FirstPartyVuln) GetType() VulnType {
+func (firstPartyVuln *FirstPartyVuln) GetType() VulnType {
 	return VulnTypeFirstPartyVuln
 }
 
-func (f FirstPartyVuln) TableName() string {
+func (firstPartyVuln FirstPartyVuln) TableName() string {
 	return "first_party_vulnerabilities"
 }
 
-func (m *FirstPartyVuln) CalculateHash() string {
-	startLineStr := strconv.Itoa(m.StartLine)
-	endLineStr := strconv.Itoa(m.EndLine)
-	startColumnStr := strconv.Itoa(m.StartColumn)
-	endColumnStr := strconv.Itoa(m.EndColumn)
-	stringToHash := startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + m.RuleID + "/" + m.Uri + "/" + m.ScannerIDs + "/" + m.AssetID.String() + "/" + m.AssetVersionName
+func (firstPartyVuln *FirstPartyVuln) CalculateHash() string {
+	startLineStr := strconv.Itoa(firstPartyVuln.StartLine)
+	endLineStr := strconv.Itoa(firstPartyVuln.EndLine)
+	startColumnStr := strconv.Itoa(firstPartyVuln.StartColumn)
+	endColumnStr := strconv.Itoa(firstPartyVuln.EndColumn)
+	stringToHash := startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName
 	hash := utils.HashString(stringToHash)
-	m.ID = hash
+	firstPartyVuln.ID = hash
 	return hash
 }
 
-func (f *FirstPartyVuln) BeforeSave(tx *gorm.DB) (err error) {
-	hash := f.CalculateHash()
-	f.ID = hash
+func (firstPartyVuln *FirstPartyVuln) BeforeSave(tx *gorm.DB) (err error) {
+	hash := firstPartyVuln.CalculateHash()
+	firstPartyVuln.ID = hash
 	return nil
 }
 
-func (f *FirstPartyVuln) RenderADF() jira.ADF {
+func (firstPartyVuln *FirstPartyVuln) RenderADF() jira.ADF {
 	adf := jira.ADF{
 		Version: 1,
 		Type:    "doc",
@@ -70,29 +70,29 @@ func (f *FirstPartyVuln) RenderADF() jira.ADF {
 				Content: []jira.ADFContent{
 					{
 						Type: "text",
-						Text: *f.Message,
+						Text: *firstPartyVuln.Message,
 					},
 				},
 			},
 		},
 	}
 
-	if f.Snippet != "" {
+	if firstPartyVuln.Snippet != "" {
 		adf.Content = append(adf.Content, jira.ADFContent{
 			Type: "codeBlock",
 			Content: []jira.ADFContent{
 				{
 					Type: "text",
-					Text: f.Snippet,
+					Text: firstPartyVuln.Snippet,
 				},
 			},
 		})
 	}
 
-	if f.Uri != "" {
-		link := fmt.Sprintf(strings.TrimPrefix(f.Uri, "/"))
-		if f.StartLine != 0 {
-			link += fmt.Sprintf("#L%d", f.StartLine)
+	if firstPartyVuln.URI != "" {
+		link := fmt.Sprintf(strings.TrimPrefix(firstPartyVuln.URI, "/"))
+		if firstPartyVuln.StartLine != 0 {
+			link += fmt.Sprintf("#L%d", firstPartyVuln.StartLine)
 		}
 		adf.Content = append(adf.Content, jira.ADFContent{
 			Type: "paragraph",
@@ -111,27 +111,27 @@ func (f *FirstPartyVuln) RenderADF() jira.ADF {
 	return adf
 }
 
-func (f *FirstPartyVuln) RenderMarkdown() string {
+func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {
 	var str strings.Builder
-	str.WriteString(*f.Message)
+	str.WriteString(*firstPartyVuln.Message)
 	// check if there is a filename and snippet - if so, we can render that as well
-	if f.Snippet != "" {
+	if firstPartyVuln.Snippet != "" {
 		str.WriteString("\n\n")
 		str.WriteString("```")
 		str.WriteString("\n")
-		str.WriteString(f.Snippet)
+		str.WriteString(firstPartyVuln.Snippet)
 		str.WriteString("\n")
 		str.WriteString("```")
 	}
 
-	if f.Uri != "" {
+	if firstPartyVuln.URI != "" {
 		str.WriteString("\n\n")
 		str.WriteString("File: ")
 		var link string
-		if f.StartLine != 0 {
-			link = fmt.Sprintf("[%s](%s%s)", f.Uri, strings.TrimPrefix(f.Uri, "/"), fmt.Sprintf("#L%d", f.StartLine))
+		if firstPartyVuln.StartLine != 0 {
+			link = fmt.Sprintf("[%s](%s%s)", firstPartyVuln.URI, strings.TrimPrefix(firstPartyVuln.URI, "/"), fmt.Sprintf("#L%d", firstPartyVuln.StartLine))
 		} else {
-			link = fmt.Sprintf("[%s](%s)", f.Uri, strings.TrimPrefix(f.Uri, "/"))
+			link = fmt.Sprintf("[%s](%s)", firstPartyVuln.URI, strings.TrimPrefix(firstPartyVuln.URI, "/"))
 		}
 
 		str.WriteString(link)
@@ -143,10 +143,10 @@ func (f *FirstPartyVuln) RenderMarkdown() string {
 	return str.String()
 }
 
-func (f *FirstPartyVuln) Title() string {
-	if f.Uri == "" {
-		return f.RuleName
+func (firstPartyVuln *FirstPartyVuln) Title() string {
+	if firstPartyVuln.URI == "" {
+		return firstPartyVuln.RuleName
 	}
 
-	return fmt.Sprintf("%s found in %s", f.RuleName, f.Uri)
+	return fmt.Sprintf("%s found in %s", firstPartyVuln.RuleName, firstPartyVuln.URI)
 }

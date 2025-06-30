@@ -38,7 +38,7 @@ type GitLabOauth2Token struct {
 	CreatedAt    time.Time `json:"createdAt" gorm:"column:created_at"`
 	UpdatedAt    time.Time `json:"updatedAt" gorm:"column:updated_at"`
 
-	ProviderID string `json:"providerId" gorm:"column:provider_id;uniqueIndex:single-provider-token"` // the id of the provider - what you define in the env variables GITLAB_<PROVIDERID>_BASEURL...
+	ProviderID string `json:"providerID" gorm:"column:provider_id;uniqueIndex:single-provider-token"` // the id of the provider - what you define in the env variables GITLAB_<PROVIDERID>_BASEURL...
 }
 
 func (GitLabOauth2Token) TableName() string {
@@ -51,7 +51,7 @@ type GitLabIntegration struct {
 	Name string `json:"name"`
 
 	AccessToken string `json:"accessToken"`
-	GitLabUrl   string `json:"gitLabUrl" gorm:"column:gitlab_url"`
+	GitLabURL   string `json:"gitLabUrl" gorm:"column:gitlab_url"`
 
 	Org   Org       `json:"org" gorm:"foreignKey:OrgID;constraint:OnDelete:CASCADE;"`
 	OrgID uuid.UUID `json:"orgId" gorm:"column:org_id"`

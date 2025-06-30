@@ -147,13 +147,13 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 
 func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, gitlabOauth2ClientSecret, gitlabOauth2Scopes string, botUserID int, botUserAccessToken string, adminToken *string) *GitlabOauth2Config {
 
-	frontendUrl := os.Getenv("FRONTEND_URL")
-	if frontendUrl == "" {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
 		panic("FRONTEND_URL is not set")
 	}
 
-	apiUrl := os.Getenv("API_URL")
-	if apiUrl == "" {
+	apiURL := os.Getenv("API_URL")
+	if apiURL == "" {
 		panic("API_URL is not set")
 	}
 
@@ -166,7 +166,7 @@ func NewGitLabOauth2Config(db core.DB, id, gitlabBaseURL, gitlabOauth2ClientID, 
 		Oauth2Conf: &oauth2.Config{
 			ClientID:     gitlabOauth2ClientID,
 			ClientSecret: gitlabOauth2ClientSecret,
-			RedirectURL:  fmt.Sprintf("%s/api/devguard-tunnel/api/v1/oauth2/gitlab/callback/%s", frontendUrl, id),
+			RedirectURL:  fmt.Sprintf("%s/api/devguard-tunnel/api/v1/oauth2/gitlab/callback/%s", frontendURL, id),
 			Endpoint: oauth2.Endpoint{
 				AuthURL:  fmt.Sprintf("%s/oauth/authorize", gitlabBaseURL),
 				TokenURL: fmt.Sprintf("%s/oauth/token", gitlabBaseURL),
@@ -247,7 +247,7 @@ func (c *GitlabOauth2Config) Oauth2Callback(ctx core.Context) error {
 	}
 
 	// fetch the token model from the database
-	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, c.ProviderID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, c.ProviderID)
 	if err != nil {
 		return ctx.JSON(404, map[string]any{
 			"message": "token model not found",
@@ -339,7 +339,7 @@ func (c *GitlabOauth2Config) Oauth2Login(ctx core.Context) error {
 	url := c.Oauth2Conf.AuthCodeURL(redirectTo, oauth2.AccessTypeOffline, oauth2.S256ChallengeOption(verifier))
 
 	// check if a token model already exists
-	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIdAndProviderId(userID, c.ProviderID)
+	tokenModel, err := c.GitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, c.ProviderID)
 	if err == nil {
 		// it does exist - update the verifier
 		tokenModel.Verifier = utils.Ptr(verifier)
@@ -404,7 +404,7 @@ func getGitlabAccessTokenFromOryIdentity(oauth2Endpoints map[string]*GitlabOauth
 			continue
 		}
 
-		gitlabUserIdInt, err := strconv.Atoi(provider["subject"].(string))
+		gitlabUserIDInt, err := strconv.Atoi(provider["subject"].(string))
 		if err != nil {
 			slog.Error("could not convert gitlab user id to int", "err", err)
 			continue
@@ -414,7 +414,7 @@ func getGitlabAccessTokenFromOryIdentity(oauth2Endpoints map[string]*GitlabOauth
 			AccessToken:  provider["initial_access_token"].(string),
 			RefreshToken: provider["initial_refresh_token"].(string),
 			BaseURL:      conf.GitlabBaseURL,
-			GitLabUserID: gitlabUserIdInt,
+			GitLabUserID: gitlabUserIDInt,
 			Scopes:       "read_api",                         // I know that!
 			Expiry:       creds.UpdatedAt.Add(2 * time.Hour), // this is a guess, we don't know the expiry time
 		}

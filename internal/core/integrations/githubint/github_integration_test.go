@@ -19,7 +19,7 @@ import (
 )
 
 func TestGithubIntegrationHandleEvent(t *testing.T) {
-	t.Run("it should not be possible to call handle event with a context without dependencyVulnId parameter", func(t *testing.T) {
+	t.Run("it should not be possible to call handle event with a context without dependencyVulnID parameter", func(t *testing.T) {
 
 		githubIntegration := GithubIntegration{}
 
@@ -58,7 +58,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAssetVersion(ctx, models.AssetVersion{
 			Name: "GenieOderWAHNSINNN",
 		})
-		ctx.SetParamNames("dependencyVulnId", "projectSlug", "orgSlug")
+		ctx.SetParamNames("dependencyVulnID", "projectSlug", "orgSlug")
 		ctx.SetParamValues("1", "test", "test")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -82,7 +82,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			Name: "GenieOderWAHNSINNN",
 		})
 		core.SetProject(ctx, models.Project{})
-		ctx.SetParamNames("dependencyVulnId", "projectSlug", "orgSlug")
+		ctx.SetParamNames("dependencyVulnID", "projectSlug", "orgSlug")
 		ctx.SetParamValues("1", "test", "test")
 
 		err := githubIntegration.HandleEvent(core.ManualMitigateEvent{
@@ -97,10 +97,10 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
-			githubClientFactory: func(repoId string) (githubClientFacade, error) {
+			githubClientFactory: func(repoID string) (githubClientFacade, error) {
 				return mocks.NewGithubClientFacade(t), nil
 			},
-			frontendUrl: "http://localhost:3000",
+			frontendURL: "http://localhost:3000",
 		}
 
 		// create echo context
@@ -118,7 +118,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetAssetSlug(ctx, "test")
 		core.SetProject(ctx, models.Project{})
 
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues("1")
 		authSession := mocks.NewAuthSession(t)
 		authSession.On("GetUserID").Return("abc")
@@ -156,7 +156,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		}, nil)
 		aggregatedVulnRepository.On("ApplyAndSave", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("could not save dependencyVuln"))
 
-		githubClientFactory := func(repoId string) (githubClientFacade, error) {
+		githubClientFactory := func(repoID string) (githubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
@@ -178,7 +178,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
-			frontendUrl:              "http://localhost:3000",
+			frontendURL:              "http://localhost:3000",
 			componentRepository:      componentRepository,
 			aggregatedVulnRepository: aggregatedVulnRepository,
 		}
@@ -192,7 +192,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetOrgSlug(ctx, "test")
 		core.SetProjectSlug(ctx, "test")
 		core.SetAssetSlug(ctx, "test")
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues("1")
 
 		authSession := mocks.NewAuthSession(t)
@@ -238,13 +238,13 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 			Type:   models.EventTypeMitigate,
 			UserID: "1",
 
-			ArbitraryJsonData: "{\"ticketId\":\"github:0\",\"ticketUrl\":\"\"}",
+			ArbitraryJSONData: "{\"ticketId\":\"github:0\",\"ticketURL\":\"\"}",
 
 			Justification: utils.Ptr("that is a justification"),
 		}
-		expectedEvent.GetArbitraryJsonData()
+		expectedEvent.GetArbitraryJSONData()
 
-		githubClientFactory := func(repoId string) (githubClientFacade, error) {
+		githubClientFactory := func(repoID string) (githubClientFacade, error) {
 			facade := mocks.NewGithubClientFacade(t)
 
 			facade.On("CreateIssue", context.Background(), "repo", "1", mock.Anything).Return(&github.Issue{}, &github.Response{}, nil)
@@ -263,7 +263,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		githubIntegration := GithubIntegration{
 			dependencyVulnRepository: dependencyVulnRepository,
 			githubClientFactory:      githubClientFactory,
-			frontendUrl:              "http://localhost:3000",
+			frontendURL:              "http://localhost:3000",
 			componentRepository:      componentRepository,
 			aggregatedVulnRepository: aggregatedVulnRepository,
 		}
@@ -277,7 +277,7 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 		core.SetOrgSlug(ctx, "test")
 		core.SetProjectSlug(ctx, "test")
 		core.SetAssetSlug(ctx, "test")
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues("1")
 
 		authSession := mocks.NewAuthSession(t)
@@ -294,49 +294,49 @@ func TestGithubIntegrationHandleEvent(t *testing.T) {
 func TestGithubTicketIdToIdAndNumber(t *testing.T) {
 	t.Run("it should return the correct ticket ID and number for a valid input", func(t *testing.T) {
 		id := "github:123456789/123"
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 123456789, ticketId)
+		assert.Equal(t, 123456789, ticketID)
 		assert.Equal(t, 123, ticketNumber)
 	})
 
 	t.Run("it should return 0, 0 if the input format is invalid (missing slash)", func(t *testing.T) {
 		id := "github:123456789"
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketID)
 		assert.Equal(t, 0, ticketNumber)
 	})
 
 	t.Run("it should return the correct values, even if the prefix is missing", func(t *testing.T) {
 		id := "123456789/123"
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 123456789, ticketId)
+		assert.Equal(t, 123456789, ticketID)
 		assert.Equal(t, 123, ticketNumber)
 	})
 
 	t.Run("it should return 0, 0 if the ticket ID is not a valid integer", func(t *testing.T) {
 		id := "github:abc/123"
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketID)
 		assert.Equal(t, 0, ticketNumber)
 	})
 
 	t.Run("it should return 0, 0 if the ticket number is not a valid integer", func(t *testing.T) {
 		id := "github:123456789/abc"
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketID)
 		assert.Equal(t, 0, ticketNumber)
 	})
 
 	t.Run("it should return 0, 0 if the input is empty", func(t *testing.T) {
 		id := ""
-		ticketId, ticketNumber := githubTicketIdToIdAndNumber(id)
+		ticketID, ticketNumber := githubTicketIDToIDAndNumber(id)
 
-		assert.Equal(t, 0, ticketId)
+		assert.Equal(t, 0, ticketID)
 		assert.Equal(t, 0, ticketNumber)
 	})
 }

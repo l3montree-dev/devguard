@@ -64,7 +64,7 @@ type debianCVE struct {
 // first key is the package name
 // second key is the cve id
 // value is the cve
-type debianJsonResponse = map[string]map[string]debianCVE
+type debianJSONResponse = map[string]map[string]debianCVE
 
 func NewDebianSecurityTracker(affectedCmpRepository core.AffectedComponentRepository) debianSecurityTracker {
 	return debianSecurityTracker{
@@ -73,7 +73,7 @@ func NewDebianSecurityTracker(affectedCmpRepository core.AffectedComponentReposi
 	}
 }
 
-var debianBaseUrl = "https://security-tracker.debian.org/tracker/data/json"
+var debianBaseURL = "https://security-tracker.debian.org/tracker/data/json"
 
 var codenameToVersion = map[string]string{
 	"buzz":     "1.1",
@@ -97,18 +97,18 @@ var codenameToVersion = map[string]string{
 	"forky":    "14",
 }
 
-func (s debianSecurityTracker) fetchAllCVEs() (debianJsonResponse, error) {
-	resp, err := s.httpClient.Get(debianBaseUrl)
+func (s debianSecurityTracker) fetchAllCVEs() (debianJSONResponse, error) {
+	resp, err := s.httpClient.Get(debianBaseURL)
 	if err != nil {
-		return debianJsonResponse{}, nil
+		return debianJSONResponse{}, nil
 	}
 
 	defer resp.Body.Close()
 
-	var cves debianJsonResponse
+	var cves debianJSONResponse
 	err = json.NewDecoder(resp.Body).Decode(&cves)
 	if err != nil {
-		return debianJsonResponse{}, err
+		return debianJSONResponse{}, err
 	}
 
 	return cves, nil
@@ -118,7 +118,7 @@ func convertToPurl(packageName string) string {
 	return "pkg:deb/debian/" + packageName
 }
 
-func debianCveToAffectedComponent(packageName, cveId string, debianCVE debianCVE) []models.AffectedComponent {
+func debianCveToAffectedComponent(packageName, cveID string, debianCVE debianCVE) []models.AffectedComponent {
 
 	affectedComponents := make([]models.AffectedComponent, 0)
 
@@ -153,7 +153,7 @@ func debianCveToAffectedComponent(packageName, cveId string, debianCVE debianCVE
 			// this version is affected
 			affectedComponent := models.AffectedComponent{
 				PurlWithoutVersion: purl,
-				CVE:                []models.CVE{{CVE: cveId}},
+				CVE:                []models.CVE{{CVE: cveID}},
 				Ecosystem:          "Debian:" + codenameToVersion[strings.ToLower(debianVersion)],
 				Scheme:             "pkg",
 				Type:               "deb",
@@ -187,8 +187,8 @@ func (s debianSecurityTracker) Mirror() error {
 
 	affectedComponents := make([]models.AffectedComponent, 0)
 	for packageName, packageCves := range cves {
-		for cveId, cve := range packageCves {
-			affectedComponents = append(affectedComponents, debianCveToAffectedComponent(packageName, cveId, cve)...)
+		for cveID, cve := range packageCves {
+			affectedComponents = append(affectedComponents, debianCveToAffectedComponent(packageName, cveID, cve)...)
 		}
 	}
 

@@ -31,10 +31,10 @@ func getFixedVersion(purlComparer *scan.PurlComparer, dependencyVuln models.Depe
 		}
 
 		if c.SemverFixed != nil {
-			slog.Info("found fixed version", "purl", *dependencyVuln.ComponentPurl, "fixedVersion", *c.SemverFixed, "dependencyVulnId", dependencyVuln.ID)
+			slog.Info("found fixed version", "purl", *dependencyVuln.ComponentPurl, "fixedVersion", *c.SemverFixed, "dependencyVulnID", dependencyVuln.ID)
 			return normalize.FixFixedVersion(utils.SafeDereference(dependencyVuln.ComponentPurl), c.SemverFixed), nil
 		} else if c.VersionFixed != nil && *c.VersionFixed != "" {
-			slog.Info("found fixed version", "purl", *dependencyVuln.ComponentPurl, "fixedVersion", *c.VersionFixed, "dependencyVulnId", dependencyVuln.ID)
+			slog.Info("found fixed version", "purl", *dependencyVuln.ComponentPurl, "fixedVersion", *c.VersionFixed, "dependencyVulnID", dependencyVuln.ID)
 			return normalize.FixFixedVersion(utils.SafeDereference(dependencyVuln.ComponentPurl), c.VersionFixed), nil
 		}
 	}

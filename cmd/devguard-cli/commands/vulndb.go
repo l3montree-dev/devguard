@@ -36,19 +36,19 @@ func emptyOrContains(s []string, e string) bool {
 	return false
 }
 
-func isValidCVE(cveId string) bool {
+func isValidCVE(cveID string) bool {
 	// should either be just 2023-1234 or cve-2023-1234
-	if len(cveId) == 0 {
+	if len(cveID) == 0 {
 		return false
 	}
 
 	r := regexp.MustCompile(`^CVE-\d{4}-\d{4,7}$`)
-	if r.MatchString(cveId) {
+	if r.MatchString(cveID) {
 		return true
 	}
 
 	r = regexp.MustCompile(`^\d{4}-\d{4,7}$`)
-	return r.MatchString(cveId)
+	return r.MatchString(cveID)
 }
 
 func newImportCVECommand() *cobra.Command {
@@ -64,11 +64,11 @@ func newImportCVECommand() *cobra.Command {
 				return
 			}
 
-			cveId := args[0]
-			cveId = strings.TrimSpace(strings.ToUpper(cveId))
+			cveID := args[0]
+			cveID = strings.TrimSpace(strings.ToUpper(cveID))
 			// check if first argument is valid cve
-			if !isValidCVE(cveId) {
-				slog.Error("invalid cve id", "cve", cveId)
+			if !isValidCVE(cveID) {
+				slog.Error("invalid cve id", "cve", cveID)
 				return
 			}
 
@@ -76,32 +76,32 @@ func newImportCVECommand() *cobra.Command {
 			nvdService := vulndb.NewNVDService(cveRepository)
 			osvService := vulndb.NewOSVService(repositories.NewAffectedComponentRepository(database))
 
-			cve, err := nvdService.ImportCVE(cveId)
+			cve, err := nvdService.ImportCVE(cveID)
 
 			if err != nil {
 				slog.Error("could not import cve", "err", err)
 				return
 			}
-			slog.Info("successfully imported cve", "cveId", cve.CVE)
+			slog.Info("successfully imported cve", "cveID", cve.CVE)
 
 			// the cvelist does provide additional cpe matches.
 			cvelistService := vulndb.NewCVEListService(cveRepository)
-			cpeMatches, err := cvelistService.ImportCVE(cveId)
+			cpeMatches, err := cvelistService.ImportCVE(cveID)
 			if err != nil {
 				slog.Error("could not import cve from cvelist", "err", err)
 				return
 			}
 
-			slog.Info("successfully imported cpe matches", "cveId", cve.CVE, "cpeMatches", len(cpeMatches))
+			slog.Info("successfully imported cpe matches", "cveID", cve.CVE, "cpeMatches", len(cpeMatches))
 
 			// the osv database provides additional information about affected packages
-			affectedPackages, err := osvService.ImportCVE(cveId)
+			affectedPackages, err := osvService.ImportCVE(cveID)
 			if err != nil {
 				slog.Error("could not import cve from osv", "err", err)
 				return
 			}
 
-			slog.Info("successfully imported affected packages", "cveId", cve.CVE, "affectedPackages", len(affectedPackages))
+			slog.Info("successfully imported affected packages", "cveID", cve.CVE, "affectedPackages", len(affectedPackages))
 		},
 	}
 

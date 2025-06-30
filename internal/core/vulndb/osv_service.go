@@ -130,8 +130,8 @@ func (s osvService) getEcosystems() ([]string, error) {
 	return ecosystems, nil
 }
 
-func (s osvService) ImportCVE(cveId string) ([]models.AffectedComponent, error) {
-	resp, err := s.httpClient.Get(fmt.Sprintf("https://api.osv.dev/v1/vulns/%s", cveId))
+func (s osvService) ImportCVE(cveID string) ([]models.AffectedComponent, error) {
+	resp, err := s.httpClient.Get(fmt.Sprintf("https://api.osv.dev/v1/vulns/%s", cveID))
 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cve")

@@ -288,7 +288,7 @@ func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, en
 
 func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error) {
 
-	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetId(nil, assetVersionName, assetID)
+	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(nil, assetVersionName, assetID)
 	if err != nil {
 		return nil, err
 	}
@@ -305,8 +305,8 @@ func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (
 	return totalRiskPerComponent, nil
 }
 
-func (s *service) GetDependencyVulnCountByScannerId(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
-	return s.statisticsRepository.GetDependencyVulnCountByScannerId(assetVersionName, assetID)
+func (s *service) GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+	return s.statisticsRepository.GetDependencyVulnCountByScannerID(assetVersionName, assetID)
 }
 
 func (s *service) GetDependencyCountPerscanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {

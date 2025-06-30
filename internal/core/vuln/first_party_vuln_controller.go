@@ -40,7 +40,7 @@ func (c firstPartyVulnController) ListByOrgPaged(ctx core.Context) error {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
 
-	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByOrgIdPaged(
+	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByOrgIDPaged(
 		nil,
 
 		utils.Map(userAllowedProjectIds, func(p models.Project) string {
@@ -63,7 +63,7 @@ func (c firstPartyVulnController) ListByOrgPaged(ctx core.Context) error {
 func (c firstPartyVulnController) ListByProjectPaged(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
-	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByProjectIdPaged(
+	pagedResp, err := c.firstPartyVulnRepository.GetDefaultFirstPartyVulnsByProjectIDPaged(
 		nil,
 		project.ID,
 
@@ -82,9 +82,9 @@ func (c firstPartyVulnController) ListByProjectPaged(ctx core.Context) error {
 }
 
 func (c firstPartyVulnController) Mitigate(ctx core.Context) error {
-	firstPartyVulnId, _, err := core.GetVulnID(ctx)
+	firstPartyVulnID, _, err := core.GetVulnID(ctx)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid firstPartyVulnId")
+		return echo.NewHTTPError(400, "invalid firstPartyVulnID")
 	}
 
 	thirdPartyIntegrations := core.GetThirdPartyIntegration(ctx)
@@ -106,7 +106,7 @@ func (c firstPartyVulnController) Mitigate(ctx core.Context) error {
 	}
 
 	// fetch the firstPartyVuln again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the vuln.
-	firstPartyVuln, err := c.firstPartyVulnRepository.Read(firstPartyVulnId)
+	firstPartyVuln, err := c.firstPartyVulnRepository.Read(firstPartyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find dependencyVuln")
 	}
@@ -115,12 +115,12 @@ func (c firstPartyVulnController) Mitigate(ctx core.Context) error {
 }
 
 func (c firstPartyVulnController) Read(ctx core.Context) error {
-	firstPartyVulnId, _, err := core.GetVulnID(ctx)
+	firstPartyVulnID, _, err := core.GetVulnID(ctx)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid firstPartyVulnId")
+		return echo.NewHTTPError(400, "invalid firstPartyVulnID")
 	}
 
-	firstPartyVuln, err := c.firstPartyVulnRepository.Read(firstPartyVulnId)
+	firstPartyVuln, err := c.firstPartyVulnRepository.Read(firstPartyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find firstPartyVuln")
 	}
@@ -129,12 +129,12 @@ func (c firstPartyVulnController) Read(ctx core.Context) error {
 }
 func (c firstPartyVulnController) CreateEvent(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	firstPartyVulnId, _, err := core.GetVulnID(ctx)
+	firstPartyVulnID, _, err := core.GetVulnID(ctx)
 	if err != nil {
-		return echo.NewHTTPError(400, "invalid firstPartyVulnId")
+		return echo.NewHTTPError(400, "invalid firstPartyVulnID")
 	}
 
-	firstPartyVuln, err := c.firstPartyVulnRepository.Read(firstPartyVulnId)
+	firstPartyVuln, err := c.firstPartyVulnRepository.Read(firstPartyVulnID)
 	if err != nil {
 		return echo.NewHTTPError(404, "could not find firstPartyVuln")
 	}
@@ -251,11 +251,11 @@ func (c firstPartyVulnController) Sarif(ctx core.Context) error {
 		for _, vuln := range vulns {
 			if _, exists := addedRuleIDs[vuln.RuleID]; !exists {
 				rule := common.Rule{
-					Id:               vuln.RuleID,
+					ID:               vuln.RuleID,
 					Name:             vuln.RuleName,
 					FullDescription:  common.Text{Text: vuln.RuleDescription},
 					Help:             common.Text{Text: vuln.RuleHelp},
-					HelpUri:          vuln.RuleHelpUri,
+					HelpURI:          vuln.RuleHelpURI,
 					ShortDescription: common.Text{Text: vuln.RuleName},
 					Properties:       vuln.RuleProperties,
 				}
@@ -264,7 +264,7 @@ func (c firstPartyVulnController) Sarif(ctx core.Context) error {
 			}
 			result := common.Result{
 				Kind:   "issue",
-				RuleId: vuln.RuleID,
+				RuleID: vuln.RuleID,
 				Message: common.Text{
 					Text: vuln.RuleDescription,
 				},
@@ -272,7 +272,7 @@ func (c firstPartyVulnController) Sarif(ctx core.Context) error {
 					{
 						PhysicalLocation: common.PhysicalLocation{
 							ArtifactLocation: common.ArtifactLocation{
-								Uri: vuln.Uri,
+								URI: vuln.URI,
 							},
 							Region: common.Region{
 								StartLine:   vuln.StartLine,
@@ -308,7 +308,7 @@ func convertFirstPartyVulnToDetailedDTO(firstPartyVuln models.FirstPartyVuln) de
 				MechanicalJustification: ev.MechanicalJustification,
 				AssetVersionName:        firstPartyVuln.AssetVersionName,
 				VulnerabilityName:       firstPartyVuln.RuleName,
-				ArbitraryJsonData:       ev.GetArbitraryJsonData(),
+				ArbitraryJSONData:       ev.GetArbitraryJSONData(),
 				CreatedAt:               ev.CreatedAt,
 			}
 		}),

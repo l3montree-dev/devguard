@@ -61,7 +61,7 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, projectRiskHistoryRepository)
 
-	s := scan.NewHttpController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
+	s := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 
 	orgs, err := orgRepository.All()
 	if err != nil {

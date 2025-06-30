@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/l3montree-dev/devguard/integration_tests"
+	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
@@ -53,7 +53,7 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 	)
 	projectService := mocks.NewProjectService(t)
 
-	controller := vuln.NewHttpController(depVulnRepo, depVulnService, projectService)
+	controller := vuln.NewHTTPController(depVulnRepo, depVulnService, projectService)
 
 	assert.Nil(t, db.AutoMigrate(
 		&models.Org{},
@@ -113,7 +113,7 @@ func TestDependencyVulnController_CreateEvent(t *testing.T) {
 		core.SetProject(ctx, project)
 		core.SetOrg(ctx, org)
 		core.SetAssetVersion(ctx, assetVersion)
-		ctx.SetParamNames("dependencyVulnId")
+		ctx.SetParamNames("dependencyVulnID")
 		ctx.SetParamValues(depVuln.ID)
 		rbac := mocks.NewAccessControl(t)
 		rbac.On("GetAllMembersOfOrganization").Return(nil, nil)

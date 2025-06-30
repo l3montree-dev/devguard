@@ -16,12 +16,20 @@
 package main
 
 import (
+	"errors"
+	"log/slog"
+	"os"
+	"time"
+
+	"github.com/getsentry/sentry-go"
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
 
 	_ "github.com/lib/pq"
 )
+
+var release string // Will be filled at build time
 
 //	@title			devguard API
 //	@version		v1
@@ -40,13 +48,56 @@ func main() {
 	core.LoadConfig() // nolint: errcheck
 	core.InitLogger()
 
-	db, err := core.DatabaseFactory()
+	if os.Getenv("ERROR_TRACKING_DSN") != "" {
+		initSentry()
 
+		// Catch panics
+		defer func() {
+			if err := recover(); err != nil {
+				// This is a catch-all. To see the stack trace in GlitchTip open the Stacktrace below
+				sentry.CurrentHub().Recover(err)
+				// Wait for events to be send to server
+				sentry.Flush(time.Second * 5)
+			}
+		}()
+	}
+
+	db, err := core.DatabaseFactory()
 	if err != nil {
-		panic(err)
+		slog.Error(err.Error()) // print detailed error message to stdout
+		panic(errors.New("Failed to setup database connection"))
 	}
 
 	daemon.Start(db)
 
 	api.Start(db)
+}
+
+func initSentry() {
+
+	environment := os.Getenv("ENVIRONMENT")
+	if environment == "" {
+		environment = "dev"
+	}
+
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn:         os.Getenv("ERROR_TRACKING_DSN"),
+		Environment: environment,
+		Release:     release,
+
+		// In debug mode, the debug information is printed to stdout to help you
+		// understand what Sentry is doing.
+		Debug: environment == "dev",
+
+		// Configures whether SDK should generate and attach stack traces to pure
+		// capture message calls.
+		AttachStacktrace: true,
+
+		// If this flag is enabled, certain personally identifiable information (PII) is added by active integrations.
+		// By default, no such data is sent.
+		SendDefaultPII: false,
+	})
+	if err != nil {
+		slog.Error("Failed to init logger", "err", err)
+	}
 }

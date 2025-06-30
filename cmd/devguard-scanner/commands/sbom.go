@@ -50,7 +50,7 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(cmd.Context(), 60*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.ApiUrl), bytes.NewReader(file))
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/scan", config.RuntimeBaseConfig.APIURL), bytes.NewReader(file))
 
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func NewSbomCommand() *cobra.Command {
 		RunE:  sbomCmd,
 	}
 
-	cmd.Flags().String("scannerId", "github.com/l3montree-dev/devguard-scanner/cmd/sbom", "Name of the scanner. DevGuard will compare new and old results based on the scannerId.")
+	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard-scanner/cmd/sbom", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
 
 	addScanFlags(cmd)
 	return cmd
