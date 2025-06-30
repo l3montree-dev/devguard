@@ -825,8 +825,8 @@ func (githubIntegration *GithubIntegration) CreateIssue(ctx context.Context, ass
 
 	// create an event
 	vulnEvent := models.NewMitigateEvent(vuln.GetID(), vuln.GetType(), userID, justification, map[string]any{
-		"ticketID":  vuln.GetTicketID(),
-		"ticketURL": vuln.GetTicketURL(),
+		"ticketId":  vuln.GetTicketID(),
+		"ticketUrl": vuln.GetTicketURL(),
 	})
 	// save the dependencyVuln and the event in a transaction
 	err = githubIntegration.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
