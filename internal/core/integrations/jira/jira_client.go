@@ -249,10 +249,10 @@ func (c *Client) CreateIssue(ctx context.Context, issue *Issue) (*CreateIssueRes
 
 		return nil, "", fmt.Errorf("failed to decode issue creation response: %w", err)
 	}
+
 	if resp.StatusCode != http.StatusCreated {
-		bodyContent, _ := io.ReadAll(resp.Body)
-		slog.Error("Failed to create issue", "status_code", resp.StatusCode, "response_body", string(bodyContent))
-		return nil, "", fmt.Errorf("failed to create issue, status code: %d, response: %s", resp.StatusCode, string(bodyContent))
+		slog.Error("Failed to create issue", "status_code", resp.StatusCode, "error_message", response.ErrorMessages)
+		return nil, "", fmt.Errorf("failed to create issue, status code: %d, response: %s", resp.StatusCode, response.ErrorMessages)
 	}
 
 	return &response, response.ID, nil

@@ -610,7 +610,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 
 	createdIssue, _, err := client.CreateIssue(ctx, issue)
 	if err != nil {
-		slog.Error("failed to create Jira issue", "err", err, "issue", issue)
+		slog.Error("failed to create Jira issue", "err", err)
 		return nil, fmt.Errorf("failed to create Jira issue: %w", err)
 	}
 

@@ -234,6 +234,7 @@ func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, asset
 		scanners[i] = fmt.Sprintf("`%s`", s)
 	}
 
+	//add the description of the vulnerability
 	adf := jira.ADF{
 		Version: 1,
 		Type:    "doc",
@@ -247,43 +248,45 @@ func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, asset
 					},
 				},
 			},
-			{
-				Type: "heading",
-				Attrs: &jira.ADFMarkAttributes{
-					Level: 3,
-				},
-				Content: []jira.ADFContent{
-					{
-						Type: "text",
-						Text: "Affected component",
-					},
-				},
-			},
-			{
-				Type: "paragraph",
-				Content: []jira.ADFContent{
-					{
-						Type: "text",
-						Text: fmt.Sprintf("The vulnerability is in `%s`, detected by %s.\n", e.ComponentPurl, strings.Join(scanners, ", ")),
-					},
-				},
-			},
-			{
-				Type: "heading",
-				Attrs: &jira.ADFMarkAttributes{
-					Level: 3,
-				},
-				Content: []jira.ADFContent{
-					{
-						Type: "text",
-						Text: "Recommended fix",
-					},
-				},
-			},
 		},
 	}
 
+	//add the affected component
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "heading",
+		Attrs: &jira.ADFMarkAttributes{
+			Level: 3,
+		},
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: "Affected component",
+			},
+		},
+	})
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "paragraph",
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: fmt.Sprintf("The vulnerability is in `%s`, detected by %s.\n", e.ComponentPurl, strings.Join(scanners, ", ")),
+			},
+		},
+	})
+
 	//add fixed version and commands to fix the package
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "heading",
+		Attrs: &jira.ADFMarkAttributes{
+			Level: 3,
+		},
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: "Recommended fix",
+			},
+		},
+	})
 	if e.fixedVersion != nil {
 		adf.Content = append(adf.Content, jira.ADFContent{
 			Type: "paragraph",
@@ -320,6 +323,7 @@ func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, asset
 		})
 
 	}
+	//add additional guidance for mitigating vulnerabilities
 	adf.Content = append(adf.Content, jira.ADFContent{
 		Type: "heading",
 		Attrs: &jira.ADFMarkAttributes{
@@ -332,7 +336,6 @@ func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, asset
 			},
 		},
 	})
-
 	adf.Content = append(adf.Content, jira.ADFContent{
 		Type: "paragraph",
 		Content: []jira.ADFContent{
@@ -358,6 +361,7 @@ func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, asset
 		},
 	})
 
+	//add table with risk factors
 	adf.Content = append(adf.Content, jira.ADFContent{
 		Type:  "table",
 		Attrs: &jira.ADFMarkAttributes{},
@@ -665,6 +669,7 @@ func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, asset
 		},
 	})
 
+	// add information about the path to the component
 	adf.Content = append(adf.Content, jira.ADFContent{
 		Type: "paragraph",
 		Content: []jira.ADFContent{
@@ -690,149 +695,8 @@ func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, asset
 		},
 	})
 
-	adf.Content = append(adf.Content,
-		jira.ADFContent{
-			Type: "heading",
-			Attrs: &jira.ADFMarkAttributes{
-				Level: 3,
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "Interact with this vulnerability",
-				},
-			},
-		},
-		jira.ADFContent{
-			Type: "paragraph",
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "You can use the following slash commands to interact with this vulnerability:",
-				},
-			},
-		},
-		jira.ADFContent{
-			Type: "heading",
-			Attrs: &jira.ADFMarkAttributes{
-				Level: 4,
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "👍   Reply with this to acknowledge and accept the identified risk.",
-				},
-			},
-		},
-		jira.ADFContent{
-			Type: "codeBlock",
-			Attrs: &jira.ADFMarkAttributes{
-				Language: "text",
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "/accept I accept the risk of this vulnerability, because ...",
-				},
-			},
-		},
-		jira.ADFContent{
-			Type: "heading",
-			Attrs: &jira.ADFMarkAttributes{
-				Level: 4,
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "⚠️ Mark the risk as false positive: Use one of these commands if you believe the reported vulnerability is not actually a valid issue.",
-				},
-			},
-		},
-		jira.ADFContent{
-			Type: "codeBlock",
-			Attrs: &jira.ADFMarkAttributes{
-				Language: "text",
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "/component-not-present The vulnerable component is not included in the artifact.",
-				},
-			},
-		},
-		jira.ADFContent{
-			Type: "codeBlock",
-			Attrs: &jira.ADFMarkAttributes{
-				Language: "text",
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "/vulnerable-code-not-present The component is present, but the vulnerable code is not included or compiled.",
-				},
-			},
-		},
-		jira.ADFContent{
-			Type: "codeBlock",
-			Attrs: &jira.ADFMarkAttributes{
-				Language: "text",
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "/vulnerable-code-not-in-execute-path The vulnerable code exists, but is never executed at runtime.",
-				},
-			},
-		},
-		jira.ADFContent{
-			Type: "codeBlock",
-			Attrs: &jira.ADFMarkAttributes{
-				Language: "text",
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "/vulnerable-code-cannot-be-controlled-by-adversary Built-in protections prevent exploitation of this vulnerability.",
-				},
-			},
-		},
-		jira.ADFContent{
-			Type: "codeBlock",
-			Attrs: &jira.ADFMarkAttributes{
-				Language: "text",
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "/inline-mitigations-already-exist The vulnerable code cannot be controlled or influenced by an attacker.",
-				},
-			},
-		},
-		jira.ADFContent{
-			Type: "heading",
-			Attrs: &jira.ADFMarkAttributes{
-				Level: 4,
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "🔁  Reopen the risk: Use this command to reopen a previously closed or accepted vulnerability.",
-				},
-			},
-		},
-		jira.ADFContent{
-			Type: "codeBlock",
-			Attrs: &jira.ADFMarkAttributes{
-				Language: "text",
-			},
-			Content: []jira.ADFContent{
-				{
-					Type: "text",
-					Text: "/reopen ...",
-				},
-			},
-		},
-	)
+	// add the commands to interact with the vulnerability
+	common.AddSlashCommandsToADF(&adf)
 
 	return adf
 }

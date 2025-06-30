@@ -457,6 +457,8 @@ type CreateIssueResponse struct {
 		Errors struct {
 		} `json:"errorCollection"`
 	} `json:"transition"`
+	ErrorMessages []string          `json:"errorMessages,omitempty"`
+	Errors        map[string]string `json:"errors,omitempty"`
 }
 
 func (i *CreateIssueResponse) GetID() string {
@@ -512,14 +514,6 @@ const (
 	CommentDeleted Event = "comment_deleted"
 )
 
-type StatusCategoryName string
-
-/* const (
-	StatusCategoryToDo       StatusCategoryName = "New" // "To Do"
-	StatusCategoryInProgress StatusCategoryName = "In Progress"
-	StatusCategoryDone       StatusCategoryName = "Complete"
-) */
-
 type StatusCategoryID int
 
 const (
@@ -531,17 +525,4 @@ const (
 type TransitionsResponse struct {
 	Expand      string       `json:"expand,omitempty" structs:"expand,omitempty"`
 	Transitions []Transition `json:"transitions,omitempty" structs:"transitions,omitempty"`
-}
-
-func (s StatusCategoryID) String() string {
-	switch s {
-	case StatusCategoryToDo:
-		return "2"
-	case StatusCategoryDone:
-		return "3"
-	case StatusCategoryInProgress:
-		return "4"
-	default:
-		return "2" // default to "To Do" if not specified
-	}
 }

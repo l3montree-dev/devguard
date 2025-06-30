@@ -105,6 +105,9 @@ func (f *FirstPartyVuln) RenderADF() jira.ADF {
 		})
 	}
 
+	//add slash commands
+	common.AddSlashCommandsToADF(&adf)
+
 	return adf
 }
 
