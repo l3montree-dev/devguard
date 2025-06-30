@@ -5,6 +5,8 @@ package jiraint
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log/slog"
@@ -90,6 +92,38 @@ func NewJiraIntegration(db core.DB) *JiraIntegration {
 func (i *JiraIntegration) WantsToHandleWebhook(ctx core.Context) bool {
 	return true
 }
+
+func (i *JiraIntegration) CheckWebhookSecretToken(hash string, payload []byte, assetID uuid.UUID) error {
+	asset, err := i.assetRepository.Read(assetID)
+	if err != nil {
+		slog.Error("could not read asset", "err", err)
+		return err
+	}
+
+	jiraSecretToken := asset.WebhookSecret
+	if jiraSecretToken == nil {
+		return nil
+	}
+
+	mac := hmac.New(sha256.New, []byte(jiraSecretToken.String()))
+	_, err = mac.Write(payload)
+	if err != nil {
+		slog.Error("failed to write payload to HMAC", "err", err)
+		return fmt.Errorf("failed to write payload to HMAC: %w", err)
+	}
+
+	hexDigest := fmt.Sprintf("%x", mac.Sum(nil))
+
+	hash = strings.TrimPrefix(hash, "sha256=")
+	check := hmac.Equal([]byte(hash), []byte(hexDigest))
+	if !check {
+		slog.Error("invalid webhook secret")
+		return fmt.Errorf("invalid webhook secret")
+	}
+
+	return nil
+}
+
 func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 
 	//TODO dont save the comment if it was created by devguard
@@ -113,8 +147,6 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 		return ctx.JSON(400, fmt.Sprintf("Invalid Jira webhook event: %v", err))
 	}
 
-	fmt.Println("Received Jira webhook event:", event)
-
 	var vulnEvent models.VulnEvent
 	var vuln models.Vuln
 	var issueID string
@@ -127,6 +159,13 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 	if err != nil {
 		slog.Error("failed to find vulnerability by ticket ID", "err", err, "ticketID", fmt.Sprintf("jira:%d:%d", projectID, issueID))
 		return ctx.JSON(404, fmt.Sprintf("Vulnerability not found for ticket ID: jira:%d:%d", projectID, issueID))
+	}
+
+	sig := req.Header.Get("X-Hub-Signature")
+	err = i.CheckWebhookSecretToken(sig, payload, vuln.GetAssetID())
+	if err != nil {
+		slog.Error("failed to check webhook secret token", "err", err, "ticketID", fmt.Sprintf("jira:%s:%s", projectID, issueID))
+		return ctx.JSON(403, fmt.Sprintf("Forbidden: %v", err))
 	}
 
 	userID := ""
