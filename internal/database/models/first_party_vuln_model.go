@@ -138,7 +138,7 @@ func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {
 		str.WriteString("\n")
 	}
 
-	common.AddSlashCommands(&str)
+	common.AddSlashCommandsToFirstPartyVuln(&str)
 
 	return str.String()
 }

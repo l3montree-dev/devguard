@@ -755,7 +755,7 @@ func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVer
 	// ref: https://github.com/l3montree-dev/devguard/issues/180
 	str.WriteString("\n")
 
-	common.AddSlashCommands(&str)
+	common.AddSlashCommandsToDependencyVuln(&str)
 	return str.String()
 }
 
