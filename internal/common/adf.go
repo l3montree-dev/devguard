@@ -5,8 +5,7 @@ package common
 
 import "github.com/l3montree-dev/devguard/internal/core/integrations/jira"
 
-func AddSlashCommandsToADF(adf *jira.ADF) {
-
+func descriptionADF(adf *jira.ADF) {
 	adf.Content = append(adf.Content,
 		jira.ADFContent{
 			Type: "heading",
@@ -29,6 +28,10 @@ func AddSlashCommandsToADF(adf *jira.ADF) {
 				},
 			},
 		},
+	)
+}
+func acceptedRiskADF(adf *jira.ADF) {
+	adf.Content = append(adf.Content,
 		jira.ADFContent{
 			Type: "heading",
 			Attrs: &jira.ADFMarkAttributes{
@@ -53,6 +56,11 @@ func AddSlashCommandsToADF(adf *jira.ADF) {
 				},
 			},
 		},
+	)
+}
+
+func falsePositiveDependencyVulnADF(adf *jira.ADF) {
+	adf.Content = append(adf.Content,
 		jira.ADFContent{
 			Type: "heading",
 			Attrs: &jira.ADFMarkAttributes{
@@ -125,6 +133,40 @@ func AddSlashCommandsToADF(adf *jira.ADF) {
 				},
 			},
 		},
+	)
+}
+
+func falsePositiveFirstPartyVulnADF(adf *jira.ADF) {
+	adf.Content = append(adf.Content,
+		jira.ADFContent{
+			Type: "heading",
+			Attrs: &jira.ADFMarkAttributes{
+				Level: 4,
+			},
+			Content: []jira.ADFContent{
+				{
+					Type: "text",
+					Text: "⚠️ Mark the risk as false positive: Use this command if you believe the reported vulnerability is not actually a valid issue.",
+				},
+			},
+		},
+		jira.ADFContent{
+			Type: "codeBlock",
+			Attrs: &jira.ADFMarkAttributes{
+				Language: "text",
+			},
+			Content: []jira.ADFContent{
+				{
+					Type: "text",
+					Text: "/false-positive The vulnerability is not exploitable in this context.",
+				},
+			},
+		},
+	)
+}
+
+func reopenRiskADF(adf *jira.ADF) {
+	adf.Content = append(adf.Content,
 		jira.ADFContent{
 			Type: "heading",
 			Attrs: &jira.ADFMarkAttributes{
@@ -150,4 +192,18 @@ func AddSlashCommandsToADF(adf *jira.ADF) {
 			},
 		},
 	)
+}
+
+func AddSlashCommandsToDependencyVulnADF(adf *jira.ADF) {
+	descriptionADF(adf)
+	acceptedRiskADF(adf)
+	falsePositiveDependencyVulnADF(adf)
+	reopenRiskADF(adf)
+}
+
+func AddSlashCommandsToToFirstPartyVulnADF(adf *jira.ADF) {
+	descriptionADF(adf)
+	acceptedRiskADF(adf)
+	falsePositiveFirstPartyVulnADF(adf)
+	reopenRiskADF(adf)
 }

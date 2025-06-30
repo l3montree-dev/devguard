@@ -613,7 +613,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 		return nil, fmt.Errorf("failed to get Jira integration for client %s: %w", client.JiraIntegrationID, err)
 	}
 
-	description := exp.GenerateADF(client.BaseURL, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)
+	description := exp.GenerateADF(i.frontendUrl, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)
 
 	issue := &jira.Issue{
 		Fields: &jira.IssueFields{
@@ -912,7 +912,7 @@ func (i *JiraIntegration) updateDependencyVulnTicket(ctx context.Context, depend
 			Reporter: &jira.User{
 				AccountID: jiraIntegration.AccountID,
 			},
-			Description: exp.GenerateADF(client.BaseURL, orgSlug, projectSlug, asset.Slug, assetVersionName, componentTree),
+			Description: exp.GenerateADF(i.frontendUrl, orgSlug, projectSlug, asset.Slug, assetVersionName, componentTree),
 			Summary:     fmt.Sprintf("%s found in %s", utils.SafeDereference(dependencyVuln.CVEID), utils.RemovePrefixInsensitive(utils.SafeDereference(dependencyVuln.ComponentPurl), "pkg:")),
 		},
 	}
