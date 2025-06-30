@@ -21,7 +21,7 @@ type FirstPartyVulnDTO struct {
 	EndColumn            int              `json:"endColumn"`
 	Snippet              string           `json:"snippet"`
 	CreatedAt            time.Time        `json:"createdAt"`
-	TicketID             *string          `json:"ticketID"`
+	TicketID             *string          `json:"ticketId"`
 	TicketURL            *string          `json:"ticketUrl"`
 	ManualTicketCreation bool             `json:"manualTicketCreation"`
 	Commit               string           `json:"commit"`

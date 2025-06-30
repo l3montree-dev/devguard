@@ -1106,8 +1106,8 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		userID,
 		justification,
 		map[string]any{
-			"ticketID":  vuln.GetTicketID(),
-			"ticketURL": createdIssue.WebURL,
+			"ticketId":  vuln.GetTicketID(),
+			"ticketUrl": createdIssue.WebURL,
 		})
 
 	return g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
