@@ -103,23 +103,24 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 				return nil
 			}
 
-			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the github ticket.", event.User.Name))
+			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name))
 
-			err = g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
+			err = g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
-				slog.Error("could not save dependencyVuln and event", "err", err)
+				slog.Error("could not save vuln and event", "err", err)
 			}
+
 		case "reopen":
 			if vuln.GetState() == models.VulnStateOpen || vuln.GetState() == models.VulnStateFixed {
 				return nil
 			}
-			vulnDependencyVuln := vuln.(*models.DependencyVuln)
-			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability was reopened by %s", event.User.Name))
 
-			err := g.dependencyVulnRepository.ApplyAndSave(nil, vulnDependencyVuln, &vulnEvent)
+			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the gitlab ticket.", event.User.Name))
+
+			err := g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 			if err != nil {
-				slog.Error("could not save dependencyVuln and event", "err", err)
+				slog.Error("could not save vuln and event", "err", err)
+
 			}
 		}
 		asset, err := g.assetRepository.Read(vuln.GetAssetID())
@@ -231,7 +232,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 		}
 	}
-
+	fmt.Println("projectID", projectID, "issueID", issueID, "vulnEvent", vulnEvent)
 	switch vulnEvent.Type {
 	case models.EventTypeAccepted, models.EventTypeFalsePositive:
 		labels := commonint.GetLabels(vuln)
