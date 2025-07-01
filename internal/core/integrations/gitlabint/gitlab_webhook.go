@@ -232,7 +232,6 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 
 		}
 	}
-	fmt.Println("projectID", projectID, "issueID", issueID, "vulnEvent", vulnEvent)
 	switch vulnEvent.Type {
 	case models.EventTypeAccepted, models.EventTypeFalsePositive:
 		labels := commonint.GetLabels(vuln)
