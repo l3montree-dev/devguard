@@ -404,12 +404,10 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	}
 
 	//Create zip of all the necessary files
-	zipBomb, err := buildZIPForPDF(workingDir + "/report-templates/sbom/")
+	zipBomb, err := buildZIPInMemory(workingDir + "/report-templates/sbom/")
 	if err != nil {
 		return err
 	}
-	defer zipBomb.Close()
-	defer os.Remove(workingDir + "/report-templates/sbom/archive.zip")
 
 	//prepare the http request as multipart form data
 	var buf bytes.Buffer
@@ -462,12 +460,9 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	return ctx.Attachment("sbom.pdf", "sbom.pdf")
 }
 
-func buildZIPForPDF(path string) (*os.File, error) {
-	archive, err := os.Create(path + "archive.zip")
-	if err != nil {
-		return nil, err
-	}
-	zipWriter := zip.NewWriter(archive)
+func buildZIPInMemory(path string) (*bytes.Buffer, error) {
+	archive := bytes.Buffer{}
+	zipWriter := zip.NewWriter(&archive)
 	defer zipWriter.Close()
 	fileNames := []string{
 		path + "markdown/abkuerzungen.yaml", path + "markdown/glossar.yaml", path + "markdown/sbom.md",
@@ -475,20 +470,20 @@ func buildZIPForPDF(path string) (*os.File, error) {
 		path + "template/assets/font/Inter-Bold.ttf", path + "template/assets/font/Inter-BoldItalic.ttf", path + "template/assets/font/Inter-Italic-VariableFont_opsz,wght.ttf", path + "template/assets/font/Inter-Italic.ttf", path + "template/assets/font/Inter-Regular.ttf", path + "template/assets/font/Inter-VariableFont_opsz,wght.ttf",
 	}
 	for _, file := range fileNames {
-		fileDescriptor, err := os.Open(file)
+		fileContent, err := os.ReadFile(file)
 		if err != nil {
-			return nil, err
+			return &archive, err
 		}
 		localFilePath, _ := strings.CutPrefix(file, path)
 		zipFileDescriptor, err := zipWriter.Create(localFilePath)
 		if err != nil {
-			return nil, err
+			return &archive, err
 		}
-		_, err = io.Copy(zipFileDescriptor, fileDescriptor)
+		_, err = zipFileDescriptor.Write(fileContent)
 		if err != nil {
-			return nil, err
+			return &archive, err
 		}
-		fileDescriptor.Close()
 	}
-	return os.Open(path + "archive.zip")
+	zipWriter.Close()
+	return &archive, nil
 }
