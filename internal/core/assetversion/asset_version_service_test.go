@@ -9,12 +9,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 )
 
 func TestDiffScanResults(t *testing.T) {
@@ -131,7 +134,8 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		}
 
 		metaData := createYAMLMetadata("testOrga", "OPENCODE BADGE API PROJECT", "main")
-		_, err = metaDataFile.Write([]byte(metaData))
+		yamlData, err := yaml.Marshal(metaData)
+		_, err = metaDataFile.Write(yamlData)
 		if err != nil {
 			slog.Error(err.Error())
 			t.Fail()
@@ -180,5 +184,20 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		_, err = io.Copy(pdf, resp.Body)
 		assert.Nil(t, err)
 
+	})
+}
+
+func TestYamlMetadata(t *testing.T) {
+	t.Run("Test the created yaml", func(t *testing.T) {
+		assetVersionName := "main"
+		organizationName := "TestOrga"
+		projectTitle := "Komplette Fantasie"
+
+		metaData := createYAMLMetadata(organizationName, projectTitle, assetVersionName)
+		yamlData, err := yaml.Marshal(metaData)
+		today := time.Now()
+		assert.Nil(t, err)
+		fmt.Printf("----------YAML-------------\n%s", yamlData)
+		assert.Equal(t, fmt.Sprintf("metadata_vars:\n  document_title: DevGuard Report\n  primary_color: '\"#FF5733\"'\n  version: main\n  generation_date: %s. %s %s\n  app_title_part_one: Komplette\n  app_title_part_two: Fantasie\n  organization_name: TestOrga\n  integrity: sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d\n", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())), string(yamlData))
 	})
 }

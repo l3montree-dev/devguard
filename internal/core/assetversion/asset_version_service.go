@@ -969,5 +969,5 @@ func createTitlesFromProjectName(projectName string) (string, string) {
 		}
 	}
 	//now we return the two titles formatted correctly for the yaml file
-	return "  app_title_part_one: " + title1 + "\n", "  app_title_part_two: " + title2 + "\n"
+	return title1, title2
 }

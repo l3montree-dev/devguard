@@ -344,11 +344,18 @@ func (a *AssetVersionController) Metrics(ctx core.Context) error {
 }
 
 type yamlVars struct {
-	DocumentTitle, PrimaryColor, Version, TimeOfGeneration, ProjectTitle1, ProjectTitle2, OrganizationName, Integrity string
+	DocumentTitle    string `yaml:"document_title"`
+	PrimaryColor     string `yaml:"primary_color"`
+	Version          string `yaml:"version"`
+	TimeOfGeneration string `yaml:"generation_date"`
+	ProjectTitle1    string `yaml:"app_title_part_one"`
+	ProjectTitle2    string `yaml:"app_title_part_two"`
+	OrganizationName string `yaml:"organization_name"`
+	Integrity        string `yaml:"integrity"`
 }
 
 type yamlMetadata struct {
-	Vars yamlVars
+	Vars yamlVars `yaml:"metadata_vars"`
 }
 
 func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
