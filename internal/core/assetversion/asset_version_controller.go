@@ -21,6 +21,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
 	"golang.org/x/exp/slog"
+	"gopkg.in/yaml.v2"
 )
 
 type AssetVersionController struct {
@@ -342,7 +343,16 @@ func (a *AssetVersionController) Metrics(ctx core.Context) error {
 	})
 }
 
+type yamlVars struct {
+	DocumentTitle, PrimaryColor, Version, TimeOfGeneration, ProjectTitle1, ProjectTitle2, OrganizationName, Integrity string
+}
+
+type yamlMetadata struct {
+	Vars yamlVars
+}
+
 func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
+
 	//build the SBOM of this asset version
 	bom, err := a.buildSBOM(ctx)
 	if err != nil {
@@ -381,7 +391,8 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 
 	//Build the meta data for the yaml file
 	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
-	_, err = metaDataFile.Write([]byte(metaData))
+	output, err := yaml.Marshal(metaData)
+	_, err = metaDataFile.Write(output)
 	if err != nil {
 		return err
 	}
@@ -444,6 +455,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	}
 	return ctx.Attachment("sbom.pdf", "sbom.pdf")
 }
+
 func buildZIPForPDF(path string) (*os.File, error) {
 	archive, err := os.Create(path + "archive.zip")
 	if err != nil {

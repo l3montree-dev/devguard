@@ -905,26 +905,27 @@ func markdownTableFromSBOM(bom *cdx.BOM) string {
 	return markdownText.String()
 }
 
-func createYAMLMetadata(orgName string, projectName string, assetVersionName string) string {
-	var yamlText strings.Builder
+// function to generate the metadata used to generate the sbom-pdf
+func createYAMLMetadata(organizationName string, projectName string, assetVersionName string) yamlMetadata {
 	today := time.Now()
 	title1, title2 := createTitlesFromProjectName(projectName)
-
-	yamlText.WriteString("metadata_vars:\n")
-	yamlText.WriteString("  document_title: DevGuard Report\n")
-	yamlText.WriteString("  primary_color: \"#FF5733\"\n")
-	yamlText.WriteString(fmt.Sprintf("  version: %s\n", assetVersionName))
-	yamlText.WriteString(fmt.Sprintf("  generation_date: %s. %s %s\n", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())))
-	yamlText.WriteString(title1)
-	yamlText.WriteString(title2)
-	yamlText.WriteString(fmt.Sprintf("  organization_name: %s\n", orgName))
 	// TO-DO: add sha hash to test the integrity
-	yamlText.WriteString("  integrity: sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d\n")
-	return yamlText.String()
+	return yamlMetadata{
+		Vars: yamlVars{
+			DocumentTitle:    "DevGuard Report",
+			PrimaryColor:     "\"#FF5733\"",
+			Version:          assetVersionName,
+			TimeOfGeneration: fmt.Sprintf("%s. %s %s", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())),
+			ProjectTitle1:    title1,
+			ProjectTitle2:    title2,
+			OrganizationName: organizationName,
+			Integrity:        "sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d",
+		},
+	}
 }
 
+// Divide and/or crop the project name into two, max 14 characters long, strings, there is probably a more elegant way to do this
 func createTitlesFromProjectName(projectName string) (string, string) {
-	//Crop and divide the project name into two max 14 characters long strings, there is probably a more elegant way to do this
 	title1 := ""
 	title2 := ""
 	title1Full := false                   //once a field has exceeded the length of title1 we can ignore title1 from there on
