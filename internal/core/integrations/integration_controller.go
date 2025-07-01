@@ -159,3 +159,18 @@ func (c *integrationController) DeleteGitLabAccessToken(ctx core.Context) error 
 
 	return nil
 }
+
+func (c *integrationController) DeleteJiraAccessToken(ctx core.Context) error {
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	jira := thirdPartyIntegration.GetIntegration(core.JiraIntegrationID)
+	if jira == nil {
+		return ctx.JSON(404, "Jira integration not enabled")
+	}
+
+	if err := jira.(*jiraint.JiraIntegration).Delete(ctx); err != nil {
+		slog.Error("could not delete Jira integration", "err", err)
+		return err
+	}
+
+	return nil
+}

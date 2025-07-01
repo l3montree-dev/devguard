@@ -539,6 +539,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 
 	organizationRouter.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration, neededScope([]string{"manage"}))
+	organizationRouter.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken, neededScope([]string{"manage"}))
 
 	organizationRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration, neededScope([]string{"manage"}))
 	organizationRouter.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken, neededScope([]string{"manage"}))

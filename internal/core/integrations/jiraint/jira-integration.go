@@ -124,11 +124,34 @@ func (i *JiraIntegration) CheckWebhookSecretToken(hash string, payload []byte, a
 	return nil
 }
 
+func (i *JiraIntegration) Delete(ctx core.Context) error {
+	id := ctx.Param("jira_integration_id")
+
+	if id == "" {
+		return ctx.JSON(400, map[string]any{
+			"message": "Jira integration ID is required",
+		})
+	}
+
+	// parse the id
+	parsedID, err := uuid.Parse(id)
+	if err != nil {
+		return ctx.JSON(400, map[string]any{
+			"message": "Invalid Jira integration ID format",
+		})
+	}
+
+	err = i.jiraIntegrationRepository.Delete(nil, parsedID)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(200, map[string]any{
+		"message": "Jira integration deleted successfully",
+	})
+}
+
 func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
-
-	//TODO dont save the comment if it was created by devguard
-
-	//TODO: add webhooksecret
 	req := ctx.Request()
 	if req.Method != "POST" {
 		return ctx.JSON(405, "Method Not Allowed")
@@ -144,7 +167,8 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 	event, err := jira.ParseWebHook(payload)
 	if err != nil {
 		slog.Error("failed to parse Jira webhook event", "err", err)
-		return ctx.JSON(400, fmt.Sprintf("Invalid Jira webhook event: %v", err))
+		/* return ctx.JSON(400, fmt.Sprintf("Invalid Jira webhook event: %v", err)) */
+		return nil
 	}
 
 	var vulnEvent models.VulnEvent
@@ -161,12 +185,12 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 		return ctx.JSON(404, fmt.Sprintf("Vulnerability not found for ticket ID: jira:%d:%d", projectID, issueID))
 	}
 
-	sig := req.Header.Get("X-Hub-Signature")
-	err = i.CheckWebhookSecretToken(sig, payload, vuln.GetAssetID())
+	/* 	sig := req.Header.Get("X-Hub-Signature")
+	   	err = i.CheckWebhookSecretToken(sig, payload, vuln.GetAssetID())
 	if err != nil {
 		slog.Error("failed to check webhook secret token", "err", err, "ticketID", fmt.Sprintf("jira:%s:%s", projectID, issueID))
 		return ctx.JSON(403, fmt.Sprintf("Forbidden: %v", err))
-	}
+	}*/
 
 	userID := ""
 	username := ""
@@ -208,8 +232,6 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 			slog.Error("could not append user to organization", "err", err)
 		}
 	}()
-
-	fmt.Println("statusCategory", event.Issue.Fields.Status.StatusCategory)
 
 	statusCategory := event.Issue.Fields.Status.StatusCategory.ID
 
@@ -370,13 +392,11 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			return err
 		}
 		if !strings.HasPrefix(repoId, "jira:") {
-			return fmt.Errorf("asset %s is not a Jira repository", asset.ID)
+			return nil
 		}
 
 		assetVersionName := core.GetAssetVersion(event.Ctx).Name
-		if err != nil {
-			return err
-		}
+
 		projectSlug, err := core.GetProjectSlug(event.Ctx)
 
 		if err != nil {
@@ -516,7 +536,9 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 				return fmt.Errorf("failed to create Jira issue comment: %w", err)
 			}
 
-		case models.EventTypeComment:
+			// We do not sync comments from DevGuard to Jira at the moment,
+			// because otherwise these comments would trigger webhooks and appear duplicated in DevGuard.
+			/* 		case models.EventTypeComment:
 			justification := fmt.Sprintf("%s\n----\n%s", member.Name+" commented on the vulnerability", utils.SafeDereference(ev.Justification))
 
 			_, _, err = client.CreateIssueComment(
@@ -529,8 +551,8 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 				slog.Error("failed to create Jira issue comment", "err", err, "issue", vuln.GetTicketID())
 				return fmt.Errorf("failed to create Jira issue comment: %w", err)
 			}
+			*/
 		}
-
 		return i.UpdateIssue(context.Background(), asset, vuln)
 	}
 	return nil
