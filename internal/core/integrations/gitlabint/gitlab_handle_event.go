@@ -17,14 +17,6 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
 
-		repoID, err := core.GetRepositoryID(&asset)
-		if err != nil {
-			return err
-		}
-		if !strings.HasPrefix(repoID, "gitlab:") {
-			return fmt.Errorf("asset %s is not a Gitlab repository", asset.ID)
-		}
-
 		assetVersionName := core.GetAssetVersion(event.Ctx).Name
 
 		projectSlug, err := core.GetProjectSlug(event.Ctx)
