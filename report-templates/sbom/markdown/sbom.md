@@ -1,4 +1,4 @@
-# SBOM {.unlisted .unnumbered}
+# SBOM
 
 | PURL | Name | Version | Licenses  | Type |
 |-------------------|---------|---------|--------|-------|
