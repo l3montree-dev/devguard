@@ -960,7 +960,7 @@ func createTitlesFromProjectName(projectName string) (string, string) {
 						title2 = title2 + " " + field
 					} else {
 						if 14-len(title2)-1 >= 4 { //if it doesn't fit we can only truncate like before if there are more than 3 remaining chars because we need 2 for the .. and 1 whitespace
-							title2 = title2 + " " + field[:(14-2-len(title2))] + ".."
+							title2 = title2 + " " + field[:(14-3-len(title2))] + ".."
 						}
 						break //in either case we are done after this field
 					}

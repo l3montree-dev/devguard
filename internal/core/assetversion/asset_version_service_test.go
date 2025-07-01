@@ -201,3 +201,61 @@ func TestYamlMetadata(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf("metadata_vars:\n  document_title: DevGuard Report\n  primary_color: '\"#FF5733\"'\n  version: main\n  generation_date: %s. %s %s\n  app_title_part_one: Komplette\n  app_title_part_two: Fantasie\n  organization_name: TestOrga\n  integrity: sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d\n", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())), string(yamlData))
 	})
 }
+
+func TestCreateProjectTitle(t *testing.T) {
+	t.Run("empty project name should return two empty titles", func(t *testing.T) {
+		projectTitle := ""
+		title1, title2 := createTitlesFromProjectName(projectTitle)
+		assert.Equal(t, "", title1, title2)
+		assert.LessOrEqual(t, len(title1), 14)
+		assert.LessOrEqual(t, len(title2), 14)
+	})
+	t.Run("project name <= 14 characters should just return project name in title1 and title2 should be empty", func(t *testing.T) {
+		projectTitle := "One Two Fields"
+		title1, title2 := createTitlesFromProjectName(projectTitle)
+		assert.Equal(t, projectTitle, title1)
+		assert.Equal(t, "", title2)
+		assert.LessOrEqual(t, len(title1), 14)
+		assert.LessOrEqual(t, len(title2), 14)
+	})
+	t.Run("project name > 14 characters and <= 28 characters should split up the name at the optimal whitespace", func(t *testing.T) {
+		projectTitle := "One Two Three Four Fields"
+		title1, title2 := createTitlesFromProjectName(projectTitle)
+		assert.Equal(t, "One Two Three", title1)
+		assert.Equal(t, "Four Fields", title2)
+		assert.LessOrEqual(t, len(title1), 14)
+		assert.LessOrEqual(t, len(title2), 14)
+	})
+	t.Run("project name > 28 characters with fields < 14 should cut off after the titles are full", func(t *testing.T) {
+		projectTitle := "One Two Three Four Fields More Fields?"
+		title1, title2 := createTitlesFromProjectName(projectTitle)
+		assert.Equal(t, "One Two Three", title1)
+		assert.Equal(t, "Four Fields", title2)
+		assert.LessOrEqual(t, len(title1), 14)
+		assert.LessOrEqual(t, len(title2), 14)
+	})
+	t.Run("project name > 28 characters with fields < 14 should cut off the last title", func(t *testing.T) {
+		projectTitle := "One Two Three Four Taco Fields More Fields?"
+		title1, title2 := createTitlesFromProjectName(projectTitle)
+		assert.Equal(t, "One Two Three", title1)
+		assert.Equal(t, "Four Taco Fi..", title2)
+		assert.LessOrEqual(t, len(title1), 14)
+		assert.LessOrEqual(t, len(title2), 14)
+	})
+	t.Run("project name > 28 characters with fields > 14 should cut off first title with a -, not enough space for api so it gets left out", func(t *testing.T) {
+		projectTitle := "WhoWouldUseSuchALongName Api"
+		title1, title2 := createTitlesFromProjectName(projectTitle)
+		assert.Equal(t, "WhoWouldUseSu-", title1)
+		assert.Equal(t, "chALongName", title2)
+		assert.LessOrEqual(t, len(title1), 14)
+		assert.LessOrEqual(t, len(title2), 14)
+	})
+	t.Run("project name > 28 characters with fields > 14 should cut off first title with a -, enough space for api so it gets inserted", func(t *testing.T) {
+		projectTitle := "WhoWouldUseSuchLongName Api"
+		title1, title2 := createTitlesFromProjectName(projectTitle)
+		assert.Equal(t, "WhoWouldUseSu-", title1)
+		assert.Equal(t, "chLongName Api", title2)
+		assert.LessOrEqual(t, len(title1), 14)
+		assert.LessOrEqual(t, len(title2), 14)
+	})
+}
