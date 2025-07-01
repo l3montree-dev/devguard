@@ -2,9 +2,11 @@ package assetversion
 
 import (
 	"fmt"
+	"html/template"
 	"log/slog"
 	"math"
 	"net/http"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -883,26 +885,14 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 	return firstIssued, lastUpdated, firstResponded
 }
 
-func markdownTableFromSBOM(bom *cdx.BOM) string {
-	var markdownText strings.Builder
-	markdownText.WriteString("# SBOM {.unlisted .unnumbered}\n\n")
-	markdownText.WriteString("| PURL | Name | Version | Licenses  | Type |\n")
-	markdownText.WriteString("|-------------------|---------|---------|--------|-------|\n")
-	for _, component := range *bom.Components {
-		licenseString := "Unknown"
-		if component.Licenses != nil {
-			for _, license := range *component.Licenses {
-				if licenseString == "Unknown" {
-					licenseString = license.License.ID
-				} else {
-					licenseString = licenseString + ", " + license.License.ID
-				}
-			}
-		}
-		tableRow := "| " + component.BOMRef + " | " + component.Name + " | " + component.Version + " | " + licenseString + " | " + string(component.Type) + " |\n"
-		markdownText.WriteString(tableRow)
+func markdownTableFromSBOM(outputFile *os.File, bom *cdx.BOM) error {
+	//create template for the sbom markdown table
+	sbomTmpl, err := template.New("sbomTmpl").Parse("# SBOM\n\n| PURL | Name | Version | Licenses  | Type |\n|-------------------|---------|---------|--------|-------|\n{{range . }}| {{ .BOMRef }} | {{ .Name }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }}| {{ .Type }} |\n{{ end }}")
+	if err != nil {
+		return err
 	}
-	return markdownText.String()
+	//filling the template with data from the bom components and then write that to the outputFile
+	return sbomTmpl.Execute(outputFile, *bom.Components)
 }
 
 // function to generate the metadata used to generate the sbom-pdf

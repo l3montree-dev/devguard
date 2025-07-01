@@ -382,8 +382,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	defer os.Remove(filePathMarkdown) //since we generate new files every time we can delete them after use
 
 	//Convert SBOM to Markdown string
-	markdownTable := markdownTableFromSBOM(bom)
-	_, err = markdownFile.Write([]byte(markdownTable))
+	err = markdownTableFromSBOM(markdownFile, bom)
 	if err != nil {
 		return err
 	}

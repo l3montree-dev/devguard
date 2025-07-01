@@ -104,8 +104,6 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 			},
 		}
 
-		markdownTable := markdownTableFromSBOM(&bom)
-		//Create a new file to write the markdown to
 		workingDir, err := os.Getwd()
 		assert.Nil(t, err)
 		workingDir = filepath.Join(filepath.Join(filepath.Join(workingDir, ".."), ".."), "..")
@@ -118,7 +116,7 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 			t.Fail()
 		}
 
-		_, err = markdownFile.Write([]byte(markdownTable))
+		err = markdownTableFromSBOM(markdownFile, &bom)
 		if err != nil {
 			slog.Error(err.Error())
 			t.Fail()
@@ -133,7 +131,7 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 			t.Fail()
 		}
 
-		metaData := createYAMLMetadata("testOrga", "OPENCODE BADGE API PROJECT", "main")
+		metaData := createYAMLMetadata("testOrga", "", "main")
 		yamlData, err := yaml.Marshal(metaData)
 		_, err = metaDataFile.Write(yamlData)
 		if err != nil {
@@ -169,11 +167,8 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		assert.Nil(t, err)
 		req.Header.Set("Content-Type", mpw.FormDataContentType())
 		client := &http.Client{}
-
 		resp, err := client.Do(req)
-		if !assert.Nil(t, err) {
-			t.Fail()
-		}
+		assert.Nil(t, err)
 		fmt.Printf("Request url: %s", req.URL)
 		defer resp.Body.Close()
 		fmt.Printf("Received Status Code: %d", resp.StatusCode)
@@ -199,6 +194,18 @@ func TestYamlMetadata(t *testing.T) {
 		assert.Nil(t, err)
 		fmt.Printf("----------YAML-------------\n%s", yamlData)
 		assert.Equal(t, fmt.Sprintf("metadata_vars:\n  document_title: DevGuard Report\n  primary_color: '\"#FF5733\"'\n  version: main\n  generation_date: %s. %s %s\n  app_title_part_one: Komplette\n  app_title_part_two: Fantasie\n  organization_name: TestOrga\n  integrity: sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d\n", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())), string(yamlData))
+	})
+	t.Run("Test the created yaml with empty title", func(t *testing.T) {
+		assetVersionName := "main"
+		organizationName := "TestOrga"
+		projectTitle := ""
+
+		metaData := createYAMLMetadata(organizationName, projectTitle, assetVersionName)
+		yamlData, err := yaml.Marshal(metaData)
+		today := time.Now()
+		assert.Nil(t, err)
+		fmt.Printf("----------YAML-------------\n%s", yamlData)
+		assert.Equal(t, fmt.Sprintf("metadata_vars:\n  document_title: DevGuard Report\n  primary_color: '\"#FF5733\"'\n  version: main\n  generation_date: %s. %s %s\n  app_title_part_one: \"\"\n  app_title_part_two: \"\"\n  organization_name: TestOrga\n  integrity: sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d\n", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())), string(yamlData))
 	})
 }
 
@@ -257,5 +264,28 @@ func TestCreateProjectTitle(t *testing.T) {
 		assert.Equal(t, "chLongName Api", title2)
 		assert.LessOrEqual(t, len(title1), 14)
 		assert.LessOrEqual(t, len(title2), 14)
+	})
+}
+
+func TestMarkdownTableFromSBOM(t *testing.T) {
+	t.Run("test an sbom with 3 components which have 2 , 1 and 0 licenses respectively ", func(t *testing.T) {
+		bom := cdx.BOM{
+			Components: &[]cdx.Component{
+				{BOMRef: "pkg:deb/debian/gcc-12@12.2.0", Name: "debian/gcc-12", Version: "12.2.0-14", Type: "application", Licenses: &cdx.Licenses{cdx.LicenseChoice{License: &cdx.License{ID: "Apache-2.0"}}, {License: &cdx.License{ID: "Apache-4.0"}}}},
+				{BOMRef: "pkg:deb/debian/libc6@2.36-9+deb12u10", Name: "debian/libc6", Version: "2.36-9+deb12u10", Type: "library", Licenses: &cdx.Licenses{cdx.LicenseChoice{License: &cdx.License{ID: "MIT"}}}},
+				{BOMRef: "pkg:deb/debian/libstdc++6@12.2.0-14", Name: "debian/libstdc++6", Version: "12.2.0-14", Type: "library", Licenses: &cdx.Licenses{}},
+			},
+		}
+		filePath := "sbomTest.md"
+		markdownFile, err := os.Create(filePath)
+		assert.Nil(t, err)
+		defer markdownFile.Close()
+		defer os.Remove(filePath)
+
+		err = markdownTableFromSBOM(markdownFile, &bom)
+		assert.Nil(t, err)
+		data, err := os.ReadFile(filePath)
+		assert.Nil(t, err)
+		assert.Equal(t, "# SBOM\n\n| PURL | Name | Version | Licenses  | Type |\n|-------------------|---------|---------|--------|-------|\n| pkg:deb/debian/gcc-12@12.2.0 | debian/gcc-12 | 12.2.0-14 | Apache-2.0 Apache-4.0 | application |\n| pkg:deb/debian/libc6@2.36-9&#43;deb12u10 | debian/libc6 | 2.36-9&#43;deb12u10 | MIT | library |\n| pkg:deb/debian/libstdc&#43;&#43;6@12.2.0-14 | debian/libstdc&#43;&#43;6 | 12.2.0-14 |  Unknown | library |\n", string(data))
 	})
 }
