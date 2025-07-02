@@ -16,6 +16,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 	switch event := event.(type) {
 	case core.ManualMitigateEvent:
 		asset := core.GetAsset(event.Ctx)
+
 		assetVersionName := core.GetAssetVersion(event.Ctx).Name
 
 		projectSlug, err := core.GetProjectSlug(event.Ctx)

@@ -579,7 +579,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 
 	switch {
 	case g.gitlabExternalProviderEntity(asset.ExternalEntityProviderID):
-		providerID := ctx.QueryParam("providerID")
+		providerID := ctx.QueryParam("providerId")
 		if providerID == "" {
 			return errors.New("providerID query parameter is required")
 		}
