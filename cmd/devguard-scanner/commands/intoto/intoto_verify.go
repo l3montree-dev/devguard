@@ -145,7 +145,7 @@ func NewInTotoVerifyCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 	}
 
-	cmd.Flags().String("supplyChainID", "", "Supply chain ID")
+	cmd.Flags().String("supplyChainId", "", "Supply chain ID")
 	cmd.Flags().String("token", "", "Token")
 	cmd.Flags().String("layoutKey", "", "Path to the layout key")
 
