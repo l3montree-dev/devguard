@@ -31,7 +31,15 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 	event, err := jira.ParseWebHook(payload)
 	if err != nil {
 		slog.Error("failed to parse Jira webhook event", "err", err)
-		/* return ctx.JSON(400, fmt.Sprintf("Invalid Jira webhook event: %v", err)) */
+
+		return nil
+	}
+
+	// Currently, we only handle "comment created" events (without IssueEventType)
+	// and status changes on the issue (IssueEventType = "issue_generic").
+	// "issue_updated" events are ignored because creating a comment also triggers an "issue_updated" event.
+	if event.IssueEventType == "issue_updated" {
+		slog.Info("Ignoring issue updated event without comment", "event", event.Event)
 		return nil
 	}
 
@@ -104,6 +112,12 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 		// Handle comment created event
 		slog.Info("Handling comment created event", "event", event.Event)
 
+		//check if the event is triggered by a DevGuard
+		if strings.Contains(event.Comment.Body, DevguardCommentText) {
+			slog.Info("Ignoring comment created event triggered by DevGuard", "event", event.Event)
+			return nil
+		}
+
 		// get the asset
 		assetVersion, err := i.assetVersionRepository.Read(vuln.GetAssetVersionName(), vuln.GetAssetID())
 		if err != nil {
@@ -152,6 +166,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 		}
 
 	case jira.EventIssueUpdated:
+
 		// Handle issue updated event
 		switch statusCategory {
 		case jira.StatusCategoryDone:

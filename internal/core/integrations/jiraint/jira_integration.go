@@ -56,6 +56,8 @@ type JiraIntegration struct {
 
 var _ core.ThirdPartyIntegration = &JiraIntegration{}
 
+var DevguardCommentText = "This comment was added via DevGuard."
+
 func NewJiraIntegration(db core.DB) *JiraIntegration {
 	jiraIntegrationRepository := repositories.NewJiraIntegrationRepository(db)
 	aggregatedVulnRepository := repositories.NewAggregatedVulnRepository(db)
@@ -225,6 +227,25 @@ func (i *JiraIntegration) createADFComment(author string, commentText string, ju
 		})
 	}
 
+	// Add DevGuard comment, this is to indicate by webhook that this comment was added by DevGuard
+	adfComment.Content = append(adfComment.Content, jira.ADFContent{
+		Type: "paragraph",
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: DevguardCommentText,
+				Marks: []jira.ADFMark{
+					{
+						Type: "subsup",
+						Attrs: &jira.ADFMarkAttributes{
+							Type: "sup",
+						},
+					},
+				},
+			},
+		},
+	})
+
 	return adfComment
 
 }
@@ -318,6 +339,8 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 	}
 
 	description := exp.GenerateADF(i.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)
+
+	fmt.Println("Creating Jira issue with description:", description)
 
 	issue := &jira.Issue{
 		Fields: &jira.IssueFields{

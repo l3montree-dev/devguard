@@ -146,7 +146,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			}
 		case models.EventTypeFalsePositive:
 			justification := i.createADFComment(member.Name,
-				"  commented on the vulnerability",
+				"  marked the vulnerability as false positive",
 				utils.SafeDereference(ev.Justification))
 			_, _, err = client.CreateIssueComment(
 				event.Ctx.Request().Context(),

@@ -447,6 +447,8 @@ type ADFMarkAttributes struct {
 	Level    int    `json:"level,omitempty"`
 	Href     string `json:"href,omitempty"`
 	Language string `json:"language,omitempty"`
+	Type     string `json:"type,omitempty"` // e.g. "sub" or "sup"
+
 }
 
 type CreateIssueResponse struct {
@@ -469,11 +471,12 @@ func (i *CreateIssueResponse) GetID() string {
 }
 
 type WebhookEvent struct {
-	Timestamp int           `json:"timestamp"`
-	Event     Event         `json:"webhookEvent"`
-	Issue     *IssueWebhook `json:"issue"`
-	Comment   *IssueComment `json:"comment,omitempty"`
-	User      *User         `json:"user,omitempty"`
+	Timestamp      int           `json:"timestamp"`
+	Event          Event         `json:"webhookEvent"`
+	IssueEventType string        `json:"issue_event_type_name"`
+	Issue          *IssueWebhook `json:"issue"`
+	Comment        *IssueComment `json:"comment,omitempty"`
+	User           *User         `json:"user,omitempty"`
 }
 
 type IssueComment struct {

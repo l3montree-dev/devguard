@@ -227,7 +227,7 @@ type Explanation struct {
 	ShortenedComponentPurl string `json:"componentPurl" gorm:"type:text;default:null;"`
 }
 
-func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) jira.ADF {
+func (e Explanation) GenerateADF(baseURL, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) jira.ADF {
 
 	scanners := strings.Fields(e.scannerIDs)
 	for i, s := range scanners {
@@ -238,18 +238,24 @@ func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, asset
 	adf := jira.ADF{
 		Version: 1,
 		Type:    "doc",
+		Content: []jira.ADFContent{},
+	}
+
+	//add the cve description
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "Paragraph",
 		Content: []jira.ADFContent{
 			{
 				Type: "paragraph",
 				Content: []jira.ADFContent{
 					{
 						Type: "text",
-						Text: fmt.Sprintf("%s", e.cveDescription),
+						Text: e.cveDescription,
 					},
 				},
 			},
 		},
-	}
+	})
 
 	//add the affected component
 	adf.Content = append(adf.Content, jira.ADFContent{
@@ -675,7 +681,7 @@ func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, asset
 		Content: []jira.ADFContent{
 			{
 				Type: "text",
-				Text: fmt.Sprintf("More details can be found in "),
+				Text: "More details can be found in ",
 			},
 			{
 				Type: "text",
@@ -684,7 +690,7 @@ func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, asset
 					{
 						Type: "link",
 						Attrs: &jira.ADFMarkAttributes{
-							Href: fmt.Sprintf("%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s", baseUrl, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnID),
+							Href: fmt.Sprintf("%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s", baseURL, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnID),
 						},
 					},
 					{
