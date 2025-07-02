@@ -539,6 +539,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 	}
 
 	bom := cdx.BOM{
+		XMLNS:       "http://cyclonedx.org/schema/bom/1.5",
 		BOMFormat:   "CycloneDX",
 		SpecVersion: cdx.SpecVersion1_5,
 		Version:     1,
