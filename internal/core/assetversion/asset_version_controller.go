@@ -380,9 +380,9 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	}
 	defer markdownFile.Close()
 	defer os.Remove(filePathMarkdown) //since we generate new files every time we can delete them after use
-
+	var temp bytes.Buffer
 	//Convert SBOM to Markdown string
-	err = markdownTableFromSBOM(markdownFile, bom)
+	err = markdownTableFromSBOM(&temp, bom)
 	if err != nil {
 		return err
 	}
@@ -392,19 +392,23 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
+
 	defer metaDataFile.Close()
 	defer os.Remove(filePathMetaData)
 
 	//Build the meta data for the yaml file
 	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
 	output, err := yaml.Marshal(metaData)
+	if err != nil {
+		return err
+	}
 	_, err = metaDataFile.Write(output)
 	if err != nil {
 		return err
 	}
 
 	//Create zip of all the necessary files
-	zipBomb, err := buildZIPInMemory(workingDir + "/report-templates/sbom/")
+	zipBomb, err := buildZIPInMemory(&temp, &temp, workingDir+"/report-templates/sbom/")
 	if err != nil {
 		return err
 	}
@@ -460,14 +464,30 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	return ctx.Attachment("sbom.pdf", "sbom.pdf")
 }
 
-func buildZIPInMemory(path string) (*bytes.Buffer, error) {
+func buildZIPInMemory(metadata, markdown *bytes.Buffer, path string) (*bytes.Buffer, error) {
 	archive := bytes.Buffer{}
 	zipWriter := zip.NewWriter(&archive)
 	defer zipWriter.Close()
 	fileNames := []string{
-		path + "markdown/abkuerzungen.yaml", path + "markdown/glossar.yaml", path + "markdown/sbom.md",
-		path + "template/metadata.yaml", path + "template/template.tex", path + "template/assets/background.png", path + "template/assets/qr.png",
+		path + "markdown/abkuerzungen.yaml", path + "markdown/glossar.yaml",
+		path + "template/template.tex", path + "template/assets/background.png", path + "template/assets/qr.png",
 		path + "template/assets/font/Inter-Bold.ttf", path + "template/assets/font/Inter-BoldItalic.ttf", path + "template/assets/font/Inter-Italic-VariableFont_opsz,wght.ttf", path + "template/assets/font/Inter-Italic.ttf", path + "template/assets/font/Inter-Regular.ttf", path + "template/assets/font/Inter-VariableFont_opsz,wght.ttf",
+	}
+	zipFileDescriptor, err := zipWriter.Create("template/metadata.yaml")
+	if err != nil {
+		return &archive, err
+	}
+	_, err = zipFileDescriptor.Write(metadata.Bytes())
+	if err != nil {
+		return &archive, err
+	}
+	zipFileDescriptor, err = zipWriter.Create("markdown/sbom.md")
+	if err != nil {
+		return &archive, err
+	}
+	_, err = zipFileDescriptor.Write(markdown.Bytes())
+	if err != nil {
+		return &archive, err
 	}
 	for _, file := range fileNames {
 		fileContent, err := os.ReadFile(file)

@@ -107,16 +107,9 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		workingDir, err := os.Getwd()
 		assert.Nil(t, err)
 		workingDir = filepath.Join(filepath.Join(filepath.Join(workingDir, ".."), ".."), "..")
-		filePath1 := workingDir + "/report-templates/sbom/markdown/sbom.md"
-		filePath2 := workingDir + "/report-templates/sbom/template/metadata.yaml"
+		markdownFile := bytes.Buffer{}
 
-		markdownFile, err := os.Create(filePath1)
-		if err != nil {
-			fmt.Println(err.Error())
-			t.Fail()
-		}
-
-		err = markdownTableFromSBOM(markdownFile, &bom)
+		err = markdownTableFromSBOM(&markdownFile, &bom)
 		if err != nil {
 			slog.Error(err.Error())
 			t.Fail()
@@ -125,14 +118,11 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		assert.Nil(t, err)
 		fmt.Printf("Current working Dir in Test: %s\n", wd)
 		//Create metadata.yaml
-		metaDataFile, err := os.Create(filePath2)
-		if err != nil {
-			slog.Error(err.Error())
-			t.Fail()
-		}
+		metaDataFile := bytes.Buffer{}
 
 		metaData := createYAMLMetadata("testOrga", "", "main")
 		yamlData, err := yaml.Marshal(metaData)
+		assert.Nil(t, err)
 		_, err = metaDataFile.Write(yamlData)
 		if err != nil {
 			slog.Error(err.Error())
@@ -140,19 +130,15 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		}
 
 		//Create zip of all the necessary files
-		zipBomb, err := buildZIPForPDF(workingDir + "/report-templates/sbom/")
+		zipBomb, err := buildZIPInMemory(&metaDataFile, &markdownFile, workingDir+"/report-templates/sbom/")
 		assert.Nil(t, err)
-		defer zipBomb.Close()
-		assert.Nil(t, err)
-		fileInfo, err := zipBomb.Stat()
-		assert.Nil(t, err)
-		fmt.Printf("\n---------------Zip Bomb Stats:\nName: %s\nSize: %d\nModTime:%s\n", fileInfo.Name(), fileInfo.Size(), fileInfo.ModTime().String())
 
 		var buf bytes.Buffer
 		mpw := multipart.NewWriter(&buf)
 		fileWriter, err := mpw.CreateFormFile("file", "archive.zip")
 		assert.Nil(t, err)
-		_, err = io.Copy(fileWriter, zipBomb)
+		n, err := io.Copy(fileWriter, zipBomb)
+		fmt.Printf("Copied %d bytes", n)
 		assert.Nil(t, err)
 		err = mpw.Close()
 		assert.Nil(t, err)
@@ -162,7 +148,10 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 			slog.Error("URL of the pdf api is missing")
 			t.Fail()
 		}
-		fmt.Printf("URL = %s", pdfAPIURL)
+		temp, err := os.Create("test.zip")
+		assert.Nil(t, err)
+		_, err = temp.Write(buf.Bytes())
+		assert.Nil(t, err)
 		req, err := http.NewRequest("POST", pdfAPIURL, &buf)
 		assert.Nil(t, err)
 		req.Header.Set("Content-Type", mpw.FormDataContentType())
@@ -276,16 +265,9 @@ func TestMarkdownTableFromSBOM(t *testing.T) {
 				{BOMRef: "pkg:deb/debian/libstdc++6@12.2.0-14", Name: "debian/libstdc++6", Version: "12.2.0-14", Type: "library", Licenses: &cdx.Licenses{}},
 			},
 		}
-		filePath := "sbomTest.md"
-		markdownFile, err := os.Create(filePath)
+		markdownFile := bytes.Buffer{}
+		err := markdownTableFromSBOM(&markdownFile, &bom)
 		assert.Nil(t, err)
-		defer markdownFile.Close()
-		defer os.Remove(filePath)
-
-		err = markdownTableFromSBOM(markdownFile, &bom)
-		assert.Nil(t, err)
-		data, err := os.ReadFile(filePath)
-		assert.Nil(t, err)
-		assert.Equal(t, "# SBOM\n\n| PURL | Name | Version | Licenses  | Type |\n|-------------------|---------|---------|--------|-------|\n| pkg:deb/debian/gcc-12@12.2.0 | debian/gcc-12 | 12.2.0-14 | Apache-2.0 Apache-4.0 | application |\n| pkg:deb/debian/libc6@2.36-9&#43;deb12u10 | debian/libc6 | 2.36-9&#43;deb12u10 | MIT | library |\n| pkg:deb/debian/libstdc&#43;&#43;6@12.2.0-14 | debian/libstdc&#43;&#43;6 | 12.2.0-14 |  Unknown | library |\n", string(data))
+		assert.Equal(t, "# SBOM\n\n| PURL | Name | Version | Licenses  | Type |\n|-------------------|---------|---------|--------|-------|\n| pkg:deb/debian/gcc-12@12.2.0 | debian/gcc-12 | 12.2.0-14 | Apache-2.0 Apache-4.0 | application |\n| pkg:deb/debian/libc6@2.36-9&#43;deb12u10 | debian/libc6 | 2.36-9&#43;deb12u10 | MIT | library |\n| pkg:deb/debian/libstdc&#43;&#43;6@12.2.0-14 | debian/libstdc&#43;&#43;6 | 12.2.0-14 |  Unknown | library |\n", markdownFile.String())
 	})
 }

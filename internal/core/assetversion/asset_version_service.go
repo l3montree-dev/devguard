@@ -1,12 +1,12 @@
 package assetversion
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"log/slog"
 	"math"
 	"net/http"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -885,7 +885,7 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 	return firstIssued, lastUpdated, firstResponded
 }
 
-func markdownTableFromSBOM(outputFile *os.File, bom *cdx.BOM) error {
+func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 	//create template for the sbom markdown table
 	sbomTmpl, err := template.New("sbomTmpl").Parse("# SBOM\n\n| PURL | Name | Version | Licenses  | Type |\n|-------------------|---------|---------|--------|-------|\n{{range . }}| {{ .BOMRef }} | {{ .Name }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }}| {{ .Type }} |\n{{ end }}")
 	if err != nil {
