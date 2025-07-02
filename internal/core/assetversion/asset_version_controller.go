@@ -367,21 +367,12 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	//WARNING if we change the hierarchy of the project we need to change this as well!! (workingDir needs to be root folder of the devguard backend)
-	filePathMarkdown := workingDir + "/report-templates/sbom/markdown/sbom.md"
-	filePathMetaData := workingDir + "/report-templates/sbom/template/metadata.yaml"
-
 	//Create a new file to write the markdown to
-	markdownFile, err := os.Create(filePathMarkdown)
+	markdownFile := bytes.Buffer{}
+	err = markdownTableFromSBOM(&markdownFile, bom)
 	if err != nil {
 		return err
 	}
-	defer markdownFile.Close()
-	defer os.Remove(filePathMarkdown) //since we generate new files every time we can delete them after use
 	var temp bytes.Buffer
 	//Convert SBOM to Markdown string
 	err = markdownTableFromSBOM(&temp, bom)
@@ -390,13 +381,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	}
 
 	//Create metadata.yaml
-	metaDataFile, err := os.Create(filePathMetaData)
-	if err != nil {
-		return err
-	}
-
-	defer metaDataFile.Close()
-	defer os.Remove(filePathMetaData)
+	metaDataFile := bytes.Buffer{}
 
 	//Build the meta data for the yaml file
 	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
@@ -453,12 +438,12 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	}
 
 	//create the pdf and write the data to it
-	pdf, err := os.Create("sbom.pdf")
+	pdf, err := os.CreateTemp("", "sbom.pdf")
 	if err != nil {
 		return err
 	}
+	defer os.Remove(pdf.Name())
 	defer pdf.Close()
-	defer os.Remove("sbom.pdf")
 	_, err = io.Copy(pdf, resp.Body)
 	if err != nil {
 		return err
