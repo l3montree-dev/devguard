@@ -67,7 +67,7 @@ func readAndUploadMetadata(cmd *cobra.Command, supplyChainID string, step string
 	// create the request
 	body := map[string]any{
 		"step":                    step,
-		"supplyChainID":           supplyChainID,
+		"supplyChainId":           supplyChainID,
 		"supplyChainOutputDigest": utils.EmptyThenNil(outputDigest),
 		"payload":                 string(b),
 		"filename":                filename,
@@ -163,10 +163,10 @@ func NewInTotoRunCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("apiURL", "", "The URL of the devguard API")
-	err := cmd.MarkFlagRequired("apiURL")
+	cmd.Flags().String("apiUrl", "", "The URL of the devguard API")
+	err := cmd.MarkFlagRequired("apiUrl")
 	if err != nil {
-		slog.Error("failed to mark flag as required", "flag", "apiURL", "err", err)
+		slog.Error("failed to mark flag as required", "flag", "apiUrl", "err", err)
 	}
 	cmd.Flags().String("step", "", "The step to run")
 	err = cmd.MarkFlagRequired("step")

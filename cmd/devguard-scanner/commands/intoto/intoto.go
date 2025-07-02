@@ -240,12 +240,12 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 				return err
 			}
 
-			apiURL, err := cmd.Flags().GetString("apiURL")
+			apiURL, err := cmd.Flags().GetString("apiUrl")
 			if err != nil {
 				return err
 			}
 
-			supplyChainID, err := cmd.Flags().GetString("supplyChainID")
+			supplyChainID, err := cmd.Flags().GetString("supplyChainId")
 			if err != nil {
 				return err
 			}
@@ -277,9 +277,9 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 	}
 
 	cmd.Flags().String("token", "", "The token to use to authenticate with the devguard api")
-	cmd.Flags().String("apiURL", "api.main.devguard.org", "The devguard api url")
+	cmd.Flags().String("apiUrl", "api.main.devguard.org", "The devguard api url")
 	cmd.Flags().String("assetName", "", "The asset name to use")
-	cmd.Flags().String("supplyChainID", "", "The supply chain id to fetch the links for")
+	cmd.Flags().String("supplyChainId", "", "The supply chain id to fetch the links for")
 
 	return cmd
 }
@@ -359,7 +359,7 @@ func NewInTotoCommand() *cobra.Command {
 	}
 
 	cmd.PersistentFlags().String("assetName", "", "The asset name to use")
-	cmd.PersistentFlags().String("apiURL", "", "The devguard api url")
+	cmd.PersistentFlags().String("apiUrl", "", "The devguard api url")
 
 	// add the token to both commands as needed flag
 	cmd.PersistentFlags().String("token", "", "The token to use for in-toto")
@@ -368,10 +368,10 @@ func NewInTotoCommand() *cobra.Command {
 	cmd.PersistentFlags().StringArray("ignore", []string{".git/**/*"}, "The ignore patterns for the in-toto link")
 	cmd.PersistentFlags().StringArray("materials", []string{"."}, "The materials to include in the in-toto link. Default is the current directory")
 	cmd.PersistentFlags().StringArray("products", []string{"."}, "The products to include in the in-toto link. Default is the current directory")
-	cmd.PersistentFlags().String("supplyChainID", "", "The supply chain id to use. If empty, tries to extract the current commit hash.")
+	cmd.PersistentFlags().String("supplyChainId", "", "The supply chain id to use. If empty, tries to extract the current commit hash.")
 	cmd.PersistentFlags().Bool("generateSlsaProvenance", false, "Generate SLSA provenance for the in-toto link. The provenance will be stored in <stepname>.provenance.json. It will be signed using the intoto token.")
 
-	panicOnError(cmd.MarkPersistentFlagRequired("apiURL"))
+	panicOnError(cmd.MarkPersistentFlagRequired("apiUrl"))
 	panicOnError(cmd.MarkPersistentFlagRequired("assetName"))
 
 	cmd.AddCommand(
