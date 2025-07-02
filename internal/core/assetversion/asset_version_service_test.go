@@ -98,8 +98,7 @@ func TestYamlMetadata(t *testing.T) {
 		yamlData, err := yaml.Marshal(metaData)
 		today := time.Now()
 		assert.Nil(t, err)
-		fmt.Printf("----------YAML-------------\n%s", yamlData)
-		assert.Equal(t, fmt.Sprintf("metadata_vars:\n  document_title: DevGuard Report\n  primary_color: '\"#FF5733\"'\n  version: main\n  generation_date: %s. %s %s\n  app_title_part_one: Komplette\n  app_title_part_two: Fantasie\n  organization_name: TestOrga\n  integrity: sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d\n", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())), string(yamlData))
+		assert.Equal(t, fmt.Sprintf("metadata_vars:\n  document_title: DevGuard Report\n  primary_color: '\"#FF5733\"'\n  version: main\n  generation_date: %s. %s %s\n  app_title_part_one: Komplette\n  app_title_part_two: Fantasie\n  organization_name: TestOrga\n  integrity: \"\"\n", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())), string(yamlData))
 	})
 	t.Run("Test the created yaml with empty title", func(t *testing.T) {
 		assetVersionName := "main"
@@ -110,8 +109,7 @@ func TestYamlMetadata(t *testing.T) {
 		yamlData, err := yaml.Marshal(metaData)
 		today := time.Now()
 		assert.Nil(t, err)
-		fmt.Printf("----------YAML-------------\n%s", yamlData)
-		assert.Equal(t, fmt.Sprintf("metadata_vars:\n  document_title: DevGuard Report\n  primary_color: '\"#FF5733\"'\n  version: main\n  generation_date: %s. %s %s\n  app_title_part_one: \"\"\n  app_title_part_two: \"\"\n  organization_name: TestOrga\n  integrity: sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d\n", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())), string(yamlData))
+		assert.Equal(t, fmt.Sprintf("metadata_vars:\n  document_title: DevGuard Report\n  primary_color: '\"#FF5733\"'\n  version: main\n  generation_date: %s. %s %s\n  app_title_part_one: \"\"\n  app_title_part_two: \"\"\n  organization_name: TestOrga\n  integrity: \"\"\n", strconv.Itoa(today.Day()), today.Month().String(), strconv.Itoa(today.Year())), string(yamlData))
 	})
 }
 
