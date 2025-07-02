@@ -570,13 +570,21 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 				alreadyIncluded[c.DependencyPurl] = true
 
 				licenses := cdx.Licenses{}
-				if c.Dependency.ComponentProject != nil {
-					licenses = append(licenses, cdx.LicenseChoice{
-						License: &cdx.License{
-							ID:   c.Dependency.ComponentProject.License,
-							Name: c.Dependency.ComponentProject.License,
-						},
-					})
+				//technically redundant call to c.Dependency.ComponentProject.License
+				if c.Dependency.ComponentProject != nil && c.Dependency.ComponentProject.License != "" {
+					if c.Dependency.ComponentProject.License != "non-standard" {
+						licenses = append(licenses, cdx.LicenseChoice{
+							License: &cdx.License{
+								ID: c.Dependency.ComponentProject.License,
+							},
+						})
+					} else {
+						licenses = append(licenses, cdx.LicenseChoice{
+							License: &cdx.License{
+								Name: c.Dependency.ComponentProject.License,
+							},
+						})
+					}
 				}
 
 				if c.Dependency.IsLicenseOverwritten {
@@ -598,6 +606,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 					Version:    c.Dependency.Version,
 					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
 				})
+
 			}
 		}
 	}
