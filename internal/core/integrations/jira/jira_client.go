@@ -91,28 +91,12 @@ func (c *Client) GetAccountIDByEmail(ctx context.Context, email string) (string,
 
 }
 
-func (c *Client) CreateIssueComment(ctx context.Context, issueId string, projectId string, comment string) (string, string, error) {
+func (c *Client) CreateIssueComment(ctx context.Context, issueId string, projectId string, comment ADF) (string, string, error) {
 
 	fmt.Println("Creating comment for issue:", issueId, "in project:", projectId, "with comment:", comment)
 
-	var commentData = ADF{
-		Version: 1,
-		Type:    "doc",
-		Content: []ADFContent{
-			{
-				Type: "paragraph",
-				Content: []ADFContent{
-					{
-						Type: "text",
-						Text: comment,
-					},
-				},
-			},
-		},
-	}
-
 	data := map[string]interface{}{
-		"body": commentData,
+		"body": comment,
 	}
 
 	bodyBytes, err := json.Marshal(data)
@@ -136,7 +120,7 @@ func (c *Client) CreateIssueComment(ctx context.Context, issueId string, project
 		return "", "", fmt.Errorf("failed to create issue comment, status code: %d, response: %s", resp.StatusCode, string(bodyContent))
 	}
 
-	slog.Info("Issue comment created successfully", "issue_id", issueId, "project_id", projectId, "response_status", resp.StatusCode, "response_body", bodyBytes)
+	slog.Info("Issue comment created successfully", "issue_id", issueId, "project_id", projectId)
 
 	return "", "", nil
 }

@@ -696,7 +696,7 @@ func (e Explanation) GenerateADF(baseUrl, orgSlug, projectSlug, assetSlug, asset
 	})
 
 	// add the commands to interact with the vulnerability
-	common.AddSlashCommandsToToFirstPartyVulnADF(&adf)
+	common.AddSlashCommandsToDependencyVulnADF(&adf)
 
 	return adf
 }

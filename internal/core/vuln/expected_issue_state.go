@@ -51,6 +51,14 @@ func IsConnectedToThirdPartyIntegration(asset models.Asset) bool {
 	return false
 }
 
+func GetExpectedIssueStateForFirstPartyVuln(asset models.Asset, firstPartyVuln *models.FirstPartyVuln) ExpectedIssueState {
+	if firstPartyVuln.State == models.VulnStateOpen {
+		return ExpectedIssueStateOpen
+	} else {
+		return ExpectedIssueStateClosed
+	}
+}
+
 func GetExpectedIssueState(asset models.Asset, dependencyVuln *models.DependencyVuln) ExpectedIssueState {
 	cvssThresholdExceeded := asset.CVSSAutomaticTicketThreshold != nil && float64(dependencyVuln.CVE.CVSS) >= *asset.CVSSAutomaticTicketThreshold
 	riskThresholdExceeded := asset.RiskAutomaticTicketThreshold != nil && *dependencyVuln.RawRiskAssessment >= *asset.RiskAutomaticTicketThreshold
