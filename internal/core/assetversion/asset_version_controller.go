@@ -373,12 +373,6 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	var temp bytes.Buffer
-	//Convert SBOM to Markdown string
-	err = markdownTableFromSBOM(&temp, bom)
-	if err != nil {
-		return err
-	}
 
 	//Create metadata.yaml
 	metaDataFile := bytes.Buffer{}
@@ -395,7 +389,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	}
 
 	//Create zip of all the necessary files
-	zipBomb, err := buildZIPInMemory(&temp, &temp)
+	zipBomb, err := buildZIPInMemory(&metaDataFile, &markdownFile)
 	if err != nil {
 		return err
 	}
@@ -427,7 +421,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 
 	//do the http request
 	client := &http.Client{}
-	client.Timeout = 5 * time.Minute
+	client.Timeout = 10 * time.Minute
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -437,18 +431,20 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return fmt.Errorf("http request to %s was unsuccessful", req.URL)
 	}
 
-	//create the pdf and write the data to it
-	pdf, err := os.CreateTemp("", "sbom.pdf")
+	//create the pdf and copy the data from the response to it
+	pdf := bytes.Buffer{}
+	_, err = io.Copy(&pdf, resp.Body)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(pdf.Name())
-	defer pdf.Close()
-	_, err = io.Copy(pdf, resp.Body)
-	if err != nil {
-		return err
-	}
-	return ctx.Attachment("sbom.pdf", "sbom.pdf")
+
+	// construct the response
+	ctx.Response().Header().Set(echo.HeaderContentDisposition, `attachment; filename="sbom.pdf"`)
+	ctx.Response().Header().Set(echo.HeaderContentType, "application/pdf")
+	ctx.Response().WriteHeader(http.StatusOK)
+
+	_, err = ctx.Response().Write(pdf.Bytes())
+	return err
 }
 
 //go:embed report-templates/sbom/*

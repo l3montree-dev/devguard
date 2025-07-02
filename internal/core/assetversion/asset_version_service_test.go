@@ -109,9 +109,6 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 			slog.Error(err.Error())
 			t.Fail()
 		}
-		wd, err := os.Getwd()
-		assert.Nil(t, err)
-		fmt.Printf("Current working Dir in Test: %s\n", wd)
 		//Create metadata.yaml
 		metaDataFile := bytes.Buffer{}
 
@@ -155,11 +152,10 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		assert.Nil(t, err)
 		fmt.Printf("Request url: %s", req.URL)
 		defer resp.Body.Close()
-		fmt.Printf("Received Status Code: %d", resp.StatusCode)
+		assert.Equal(t, 200, resp.StatusCode)
 		assert.Nil(t, err)
-		pdf, err := os.CreateTemp("", "sbom.pdf")
+		pdf, err := os.Create("sbom.pdf")
 		assert.Nil(t, err)
-		defer os.Remove(pdf.Name())
 		defer pdf.Close()
 		_, err = io.Copy(pdf, resp.Body)
 		assert.Nil(t, err)
