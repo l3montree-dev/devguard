@@ -8,7 +8,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -103,13 +102,9 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 				{BOMRef: "pkg:deb/debian/libstdc++6@12.2.0-14", Name: "debian/libstdc++6", Version: "12.2.0-14", Type: "library", Licenses: &cdx.Licenses{}},
 			},
 		}
-
-		workingDir, err := os.Getwd()
-		assert.Nil(t, err)
-		workingDir = filepath.Join(filepath.Join(filepath.Join(workingDir, ".."), ".."), "..")
 		markdownFile := bytes.Buffer{}
 
-		err = markdownTableFromSBOM(&markdownFile, &bom)
+		err := markdownTableFromSBOM(&markdownFile, &bom)
 		if err != nil {
 			slog.Error(err.Error())
 			t.Fail()
@@ -130,7 +125,7 @@ func TestFileCreationForPDFSBOM(t *testing.T) {
 		}
 
 		//Create zip of all the necessary files
-		zipBomb, err := buildZIPInMemory(&metaDataFile, &markdownFile, workingDir+"/report-templates/sbom/")
+		zipBomb, err := buildZIPInMemory(&metaDataFile, &markdownFile)
 		assert.Nil(t, err)
 
 		var buf bytes.Buffer

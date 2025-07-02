@@ -3,12 +3,14 @@ package assetversion
 import (
 	"archive/zip"
 	"bytes"
+	"embed"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -408,7 +410,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	}
 
 	//Create zip of all the necessary files
-	zipBomb, err := buildZIPInMemory(&temp, &temp, workingDir+"/report-templates/sbom/")
+	zipBomb, err := buildZIPInMemory(&temp, &temp)
 	if err != nil {
 		return err
 	}
@@ -464,10 +466,15 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	return ctx.Attachment("sbom.pdf", "sbom.pdf")
 }
 
-func buildZIPInMemory(metadata, markdown *bytes.Buffer, path string) (*bytes.Buffer, error) {
+//go:embed report-templates/sbom/*
+var helperFiles embed.FS
+
+func buildZIPInMemory(metadata, markdown *bytes.Buffer) (*bytes.Buffer, error) {
+	path := "report-templates/sbom/"
 	archive := bytes.Buffer{}
 	zipWriter := zip.NewWriter(&archive)
 	defer zipWriter.Close()
+	filepath.Join()
 	fileNames := []string{
 		path + "markdown/abkuerzungen.yaml", path + "markdown/glossar.yaml",
 		path + "template/template.tex", path + "template/assets/background.png", path + "template/assets/qr.png",
@@ -490,7 +497,7 @@ func buildZIPInMemory(metadata, markdown *bytes.Buffer, path string) (*bytes.Buf
 		return &archive, err
 	}
 	for _, file := range fileNames {
-		fileContent, err := os.ReadFile(file)
+		fileContent, err := helperFiles.ReadFile(file)
 		if err != nil {
 			return &archive, err
 		}
