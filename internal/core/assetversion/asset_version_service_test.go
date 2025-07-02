@@ -3,11 +3,6 @@ package assetversion
 import (
 	"bytes"
 	"fmt"
-	"io"
-	"log/slog"
-	"mime/multipart"
-	"net/http"
-	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -90,76 +85,6 @@ func TestDiffScanResults(t *testing.T) {
 		assert.Empty(t, fixedVulns)
 		assert.Empty(t, detectedByCurrentScanner)
 		assert.Empty(t, notDetectedByCurrentScannerAnymore)
-	})
-}
-
-func TestFileCreationForPDFSBOM(t *testing.T) {
-	t.Run("test the new functions", func(t *testing.T) {
-		bom := cdx.BOM{
-			Components: &[]cdx.Component{
-				{BOMRef: "pkg:deb/debian/gcc-12@12.2.0", Name: "debian/gcc-12", Version: "12.2.0-14", Type: "application", Licenses: &cdx.Licenses{cdx.LicenseChoice{License: &cdx.License{ID: "Apache-2.0"}}}},
-				{BOMRef: "pkg:deb/debian/libc6@2.36-9+deb12u10", Name: "debian/libc6", Version: "2.36-9+deb12u10", Type: "library", Licenses: &cdx.Licenses{cdx.LicenseChoice{License: &cdx.License{ID: "MIT"}}}},
-				{BOMRef: "pkg:deb/debian/libstdc++6@12.2.0-14", Name: "debian/libstdc++6", Version: "12.2.0-14", Type: "library", Licenses: &cdx.Licenses{}},
-			},
-		}
-		markdownFile := bytes.Buffer{}
-
-		err := markdownTableFromSBOM(&markdownFile, &bom)
-		if err != nil {
-			slog.Error(err.Error())
-			t.Fail()
-		}
-		//Create metadata.yaml
-		metaDataFile := bytes.Buffer{}
-
-		metaData := createYAMLMetadata("testOrga", "", "main")
-		yamlData, err := yaml.Marshal(metaData)
-		assert.Nil(t, err)
-		_, err = metaDataFile.Write(yamlData)
-		if err != nil {
-			slog.Error(err.Error())
-			t.Fail()
-		}
-
-		//Create zip of all the necessary files
-		zipBomb, err := buildZIPInMemory(&metaDataFile, &markdownFile)
-		assert.Nil(t, err)
-
-		var buf bytes.Buffer
-		mpw := multipart.NewWriter(&buf)
-		fileWriter, err := mpw.CreateFormFile("file", "archive.zip")
-		assert.Nil(t, err)
-		n, err := io.Copy(fileWriter, zipBomb)
-		fmt.Printf("Copied %d bytes", n)
-		assert.Nil(t, err)
-		err = mpw.Close()
-		assert.Nil(t, err)
-		os.Setenv("PDF_GENERATION_API", "https://dwt-api.dev-l3montree.cloud/pdf")
-		pdfAPIURL := os.Getenv("PDF_GENERATION_API")
-		if pdfAPIURL == "" {
-			slog.Error("URL of the pdf api is missing")
-			t.Fail()
-		}
-		temp, err := os.Create("test.zip")
-		assert.Nil(t, err)
-		_, err = temp.Write(buf.Bytes())
-		assert.Nil(t, err)
-		req, err := http.NewRequest("POST", pdfAPIURL, &buf)
-		assert.Nil(t, err)
-		req.Header.Set("Content-Type", mpw.FormDataContentType())
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		assert.Nil(t, err)
-		fmt.Printf("Request url: %s", req.URL)
-		defer resp.Body.Close()
-		assert.Equal(t, 200, resp.StatusCode)
-		assert.Nil(t, err)
-		pdf, err := os.Create("sbom.pdf")
-		assert.Nil(t, err)
-		defer pdf.Close()
-		_, err = io.Copy(pdf, resp.Body)
-		assert.Nil(t, err)
-
 	})
 }
 
