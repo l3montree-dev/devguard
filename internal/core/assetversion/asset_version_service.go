@@ -909,7 +909,7 @@ func createYAMLMetadata(organizationName string, projectName string, assetVersio
 			ProjectTitle1:    title1,
 			ProjectTitle2:    title2,
 			OrganizationName: organizationName,
-			Integrity:        "sha265:3d8ce29bd449af3709535e12a93e0 fa2cea666912c3d37cf316369613533888d",
+			Integrity:        "",
 		},
 	}
 }

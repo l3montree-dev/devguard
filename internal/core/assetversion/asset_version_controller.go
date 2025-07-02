@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -367,23 +366,21 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	//Create a new file to write the markdown to
+	//Create a new file and writing the components as a markdown table to it
 	markdownFile := bytes.Buffer{}
 	err = markdownTableFromSBOM(&markdownFile, bom)
 	if err != nil {
 		return err
 	}
 
-	//Create metadata.yaml
+	// create the metadata for the pdf and writing it into a buffer
 	metaDataFile := bytes.Buffer{}
-
-	//Build the meta data for the yaml file
 	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
-	output, err := yaml.Marshal(metaData)
+	parsedYAML, err := yaml.Marshal(metaData)
 	if err != nil {
 		return err
 	}
-	_, err = metaDataFile.Write(output)
+	_, err = metaDataFile.Write(parsedYAML)
 	if err != nil {
 		return err
 	}
@@ -394,9 +391,9 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 
-	//prepare the http request as multipart form data
-	var buf bytes.Buffer
-	mpw := multipart.NewWriter(&buf)
+	//build the multipart form data for the http request
+	var multipartBuffer bytes.Buffer
+	mpw := multipart.NewWriter(&multipartBuffer)
 	fileWriter, err := mpw.CreateFormFile("file", "archive.zip")
 	if err != nil {
 		return err
@@ -409,26 +406,29 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
+
+	//build the rest of the http request
 	pdfAPIURL := os.Getenv("PDF_GENERATION_API")
 	if pdfAPIURL == "" {
 		return fmt.Errorf("missing env variable for the pdf endpoint")
 	}
-	req, err := http.NewRequest("POST", pdfAPIURL, &buf)
+	req, err := http.NewRequest("POST", pdfAPIURL, &multipartBuffer)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", mpw.FormDataContentType())
 
-	//do the http request
 	client := &http.Client{}
 	client.Timeout = 10 * time.Minute
+
+	//process http response
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("http request to %s was unsuccessful", req.URL)
+		return fmt.Errorf("http request to %s was unsuccessful (Code %d)", req.URL, resp.StatusCode)
 	}
 
 	//create the pdf and copy the data from the response to it
@@ -438,7 +438,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 
-	// construct the response
+	// construct the http response header
 	ctx.Response().Header().Set(echo.HeaderContentDisposition, `attachment; filename="sbom.pdf"`)
 	ctx.Response().Header().Set(echo.HeaderContentType, "application/pdf")
 	ctx.Response().WriteHeader(http.StatusOK)
@@ -451,16 +451,20 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 var helperFiles embed.FS
 
 func buildZIPInMemory(metadata, markdown *bytes.Buffer) (*bytes.Buffer, error) {
+
 	path := "report-templates/sbom/"
 	archive := bytes.Buffer{}
 	zipWriter := zip.NewWriter(&archive)
 	defer zipWriter.Close()
-	filepath.Join()
+
+	// set of all the static files which are embedded
 	fileNames := []string{
 		path + "markdown/abkuerzungen.yaml", path + "markdown/glossar.yaml",
 		path + "template/template.tex", path + "template/assets/background.png", path + "template/assets/qr.png",
 		path + "template/assets/font/Inter-Bold.ttf", path + "template/assets/font/Inter-BoldItalic.ttf", path + "template/assets/font/Inter-Italic-VariableFont_opsz,wght.ttf", path + "template/assets/font/Inter-Italic.ttf", path + "template/assets/font/Inter-Regular.ttf", path + "template/assets/font/Inter-VariableFont_opsz,wght.ttf",
 	}
+
+	// manually add the two generated files to the zip archive
 	zipFileDescriptor, err := zipWriter.Create("template/metadata.yaml")
 	if err != nil {
 		return &archive, err
@@ -469,6 +473,7 @@ func buildZIPInMemory(metadata, markdown *bytes.Buffer) (*bytes.Buffer, error) {
 	if err != nil {
 		return &archive, err
 	}
+
 	zipFileDescriptor, err = zipWriter.Create("markdown/sbom.md")
 	if err != nil {
 		return &archive, err
@@ -477,6 +482,8 @@ func buildZIPInMemory(metadata, markdown *bytes.Buffer) (*bytes.Buffer, error) {
 	if err != nil {
 		return &archive, err
 	}
+
+	// then loop over every static file and write it at the respective relative position in the directory
 	for _, file := range fileNames {
 		fileContent, err := helperFiles.ReadFile(file)
 		if err != nil {
@@ -492,6 +499,8 @@ func buildZIPInMemory(metadata, markdown *bytes.Buffer) (*bytes.Buffer, error) {
 			return &archive, err
 		}
 	}
+
+	//finalize the zip-archive and return it
 	zipWriter.Close()
 	return &archive, nil
 }
