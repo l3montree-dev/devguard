@@ -238,12 +238,6 @@ func (e Explanation) GenerateADF(baseURL, orgSlug, projectSlug, assetSlug, asset
 	adf := jira.ADF{
 		Version: 1,
 		Type:    "doc",
-		Content: []jira.ADFContent{},
-	}
-
-	//add the cve description
-	adf.Content = append(adf.Content, jira.ADFContent{
-		Type: "Paragraph",
 		Content: []jira.ADFContent{
 			{
 				Type: "paragraph",
@@ -255,7 +249,7 @@ func (e Explanation) GenerateADF(baseURL, orgSlug, projectSlug, assetSlug, asset
 				},
 			},
 		},
-	})
+	}
 
 	//add the affected component
 	adf.Content = append(adf.Content, jira.ADFContent{
