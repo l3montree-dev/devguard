@@ -52,7 +52,6 @@ type ProjectRepository interface {
 	Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
 	EnableCommunityManagedPolicies(tx DB, projectID uuid.UUID) error
 	UpsertSplit(tx DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error)
-	NextSlug(orgID uuid.UUID, projectSlug string) (string, error)
 }
 
 type Verifier interface {
@@ -81,7 +80,6 @@ type AssetRepository interface {
 	Delete(tx DB, id uuid.UUID) error
 	GetAssetIDByBadgeSecret(badgeSecret uuid.UUID) (models.Asset, error)
 	ReadWithAssetVersions(assetID uuid.UUID) (models.Asset, error)
-	NextSlug(projectID uuid.UUID, assetSlug string) (string, error)
 }
 
 type AttestationRepository interface {
@@ -195,7 +193,6 @@ type OrganizationRepository interface {
 	Update(tx DB, organization *models.Org) error
 	ContentTree(orgID uuid.UUID, projects []string) []common.ContentTreeElement
 	GetOrgByID(id uuid.UUID) (models.Org, error)
-	NextSlug(organizationSlug string) (string, error)
 }
 
 type OrgService interface {

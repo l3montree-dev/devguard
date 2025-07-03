@@ -161,7 +161,7 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 
 	if slice, ok := projectSliceOrProjectIDSlice.([]models.Project); ok {
 		// if the user is looking for projects which have a parent id set, we return an empty slice
-		if c.QueryParam("parentID") != "" {
+		if c.QueryParam("parentId") != "" {
 			return []models.Project{}, nil
 		}
 		// make sure the projects exist inside the database
@@ -199,7 +199,7 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 	}
 
 	// check if parentID is set
-	queryParentID := c.QueryParam("parentID")
+	queryParentID := c.QueryParam("parentId")
 	var parentID *uuid.UUID = nil
 	if queryParentID != "" {
 		tmp, err := uuid.Parse(queryParentID)

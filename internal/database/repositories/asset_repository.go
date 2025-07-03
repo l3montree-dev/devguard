@@ -120,7 +120,7 @@ func (repository *assetRepository) Upsert(t *[]*models.Asset, conflictingColumns
 
 func (repository *assetRepository) Create(db core.DB, asset *models.Asset) error {
 	// get the next slug for the asset
-	nextSlug, err := repository.NextSlug(asset.ProjectID, asset.Slug)
+	nextSlug, err := repository.nextSlug(asset.ProjectID, asset.Slug)
 	if err != nil {
 		return fmt.Errorf("failed to get next slug: %w", err)
 	}
@@ -135,7 +135,7 @@ func (repository *assetRepository) Create(db core.DB, asset *models.Asset) error
 func (repository *assetRepository) Save(db core.DB, asset *models.Asset) error {
 	if asset.ID == uuid.Nil {
 		// get the next slug for the asset
-		nextSlug, err := repository.NextSlug(asset.ProjectID, asset.Slug)
+		nextSlug, err := repository.nextSlug(asset.ProjectID, asset.Slug)
 		if err != nil {
 			return fmt.Errorf("failed to get next slug: %w", err)
 		}
@@ -271,7 +271,7 @@ func (repository *assetRepository) ReadWithAssetVersions(assetID uuid.UUID) (mod
 	return asset, nil
 }
 
-func (repository *assetRepository) NextSlug(projectID uuid.UUID, assetSlug string) (string, error) {
+func (repository *assetRepository) nextSlug(projectID uuid.UUID, assetSlug string) (string, error) {
 	var count int64
 	err := repository.db.Model(&models.Asset{}).Where("project_id = ? AND slug LIKE ?", projectID, assetSlug+"%").Count(&count).Error
 	if err != nil {

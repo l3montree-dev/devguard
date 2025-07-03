@@ -123,7 +123,7 @@ func (g *orgRepository) GetOrgByID(id uuid.UUID) (models.Org, error) {
 	return org, err
 }
 
-func (g *orgRepository) NextSlug(organizationSlug string) (string, error) {
+func (g *orgRepository) nextSlug(organizationSlug string) (string, error) {
 	var count int64
 	err := g.db.Model(models.Org{}).Where("slug LIKE ?", organizationSlug+"%").Count(&count).Error
 	if err != nil {

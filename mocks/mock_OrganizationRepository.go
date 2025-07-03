@@ -660,66 +660,6 @@ func (_c *OrganizationRepository_List_Call) RunAndReturn(run func(ids []uuid.UUI
 	return _c
 }
 
-// NextSlug provides a mock function for the type OrganizationRepository
-func (_mock *OrganizationRepository) NextSlug(organizationSlug string) (string, error) {
-	ret := _mock.Called(organizationSlug)
-
-	if len(ret) == 0 {
-		panic("no return value specified for NextSlug")
-	}
-
-	var r0 string
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string) (string, error)); ok {
-		return returnFunc(organizationSlug)
-	}
-	if returnFunc, ok := ret.Get(0).(func(string) string); ok {
-		r0 = returnFunc(organizationSlug)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
-		r1 = returnFunc(organizationSlug)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// OrganizationRepository_NextSlug_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'NextSlug'
-type OrganizationRepository_NextSlug_Call struct {
-	*mock.Call
-}
-
-// NextSlug is a helper method to define mock.On call
-//   - organizationSlug string
-func (_e *OrganizationRepository_Expecter) NextSlug(organizationSlug interface{}) *OrganizationRepository_NextSlug_Call {
-	return &OrganizationRepository_NextSlug_Call{Call: _e.mock.On("NextSlug", organizationSlug)}
-}
-
-func (_c *OrganizationRepository_NextSlug_Call) Run(run func(organizationSlug string)) *OrganizationRepository_NextSlug_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *OrganizationRepository_NextSlug_Call) Return(s string, err error) *OrganizationRepository_NextSlug_Call {
-	_c.Call.Return(s, err)
-	return _c
-}
-
-func (_c *OrganizationRepository_NextSlug_Call) RunAndReturn(run func(organizationSlug string) (string, error)) *OrganizationRepository_NextSlug_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Read provides a mock function for the type OrganizationRepository
 func (_mock *OrganizationRepository) Read(id uuid.UUID) (models.Org, error) {
 	ret := _mock.Called(id)

@@ -175,7 +175,7 @@ func (g *projectRepository) EnableCommunityManagedPolicies(tx core.DB, projectID
 
 func (g *projectRepository) Create(tx core.DB, project *models.Project) error {
 	// set the slug if not set
-	slug, err := g.NextSlug(project.OrganizationID, project.Name)
+	slug, err := g.nextSlug(project.OrganizationID, project.Slug)
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (g *projectRepository) UpsertSplit(tx core.DB, externalProviderID string, p
 	return newProjects, updatedProjects, nil
 }
 
-func (g *projectRepository) NextSlug(orgID uuid.UUID, projectSlug string) (string, error) {
+func (g *projectRepository) nextSlug(orgID uuid.UUID, projectSlug string) (string, error) {
 	// check if the slug already exists in the database
 	var count int64
 	err := g.db.Model(&models.Project{}).Where("organization_id = ? AND slug LIKE ?", orgID, projectSlug+"%").Count(&count).Error
