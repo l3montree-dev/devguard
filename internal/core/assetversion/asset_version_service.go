@@ -885,17 +885,18 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 	return firstIssued, lastUpdated, firstResponded
 }
 
+// write the components from bom to the output file following the template
 func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 	//create template for the sbom markdown table
 	sbomTmpl, err := template.New("sbomTmpl").Parse("# SBOM\n\n| PURL | Name | Version | Licenses  | Type |\n|-------------------|---------|---------|--------|-------|\n{{range . }}| {{ .BOMRef }} | {{ .Name }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }}| {{ .Type }} |\n{{ end }}")
 	if err != nil {
 		return err
 	}
-	//filling the template with data from the bom components and then write that to the outputFile
+	//filling the template with data from the bom components and write that to the outputFile
 	return sbomTmpl.Execute(outputFile, *bom.Components)
 }
 
-// function to generate the metadata used to generate the sbom-pdf
+// generate the metadata used to generate the sbom-pdf and return it as struct
 func createYAMLMetadata(organizationName string, projectName string, assetVersionName string) yamlMetadata {
 	today := time.Now()
 	title1, title2 := createTitlesFromProjectName(projectName)
@@ -916,41 +917,42 @@ func createYAMLMetadata(organizationName string, projectName string, assetVersio
 
 // Divide and/or crop the project name into two, max 14 characters long, strings, there is probably a more elegant way to do this
 func createTitlesFromProjectName(projectName string) (string, string) {
+	const maxTitleLength = 14 //make the length easy changeable
 	title1 := ""
 	title2 := ""
 	title1Full := false                   //once a field has exceeded the length of title1 we can ignore title1 from there on
 	fields := strings.Fields(projectName) //separate the words divided by white spaces
 	for _, field := range fields {
 		if title1 == "" { //we have to differentiate if A tittle is empty or not before using, because of the white spaces between words in a title
-			if len(field) <= 14 { //if it fits the 14 char limit we can just write it and move to the next
+			if len(field) <= maxTitleLength { //if it fits the 14 char limit we can just write it and move to the next
 				title1 = field
 			} else { //if not we know it won't fit the second one as well so we break the word up using "-"
-				title1 = field[:13] + "-"
-				title1Full = true          //we flag title1 as full
-				if len(field[13:]) <= 14 { //now we need to append the rest of the word after "-"
-					title2 = field[13:] //if the rest fits into the 14 char limit we just write it there
+				title1 = field[:maxTitleLength-1] + "-"
+				title1Full = true                                    //we flag title1 as full
+				if len(field[maxTitleLength-1:]) <= maxTitleLength { //now we need to append the rest of the word after "-"
+					title2 = field[maxTitleLength-1:] //if the rest fits into the 14 char limit we just write it there
 				} else {
-					title2 = field[13:25] + ".." //if not we need to truncate the last 2 chars and put a .. to symbolize the ending
-					break                        //then we are done since we know nothing fits anymore
+					title2 = field[maxTitleLength-1:2*maxTitleLength-3] + ".." //if not we need to truncate the last 2 chars and put a .. to symbolize the ending
+					break                                                      //then we are done since we know nothing fits anymore
 				}
 			}
 		} else { //title1 is not empty so we now work with whitespaces
-			if !title1Full && len(title1)+1+len(field) <= 14 { //add +1 because we need to account for an inserted white space
+			if !title1Full && len(title1)+1+len(field) <= maxTitleLength { //add +1 because we need to account for an inserted white space
 				title1 = title1 + " " + field
 			} else { //if the field does not fit we move to the second title2 and here we again have to first check if its empty
 				if title2 == "" {
-					if len(field) <= 14 { //same as above
+					if len(field) <= maxTitleLength { //same as above
 						title2 = field
 					} else {
-						title2 = field[:12] + ".." //same as above
+						title2 = field[:maxTitleLength-2] + ".." //same as above
 						break
 					}
 				} else { //if its not empty we again try to put new fields into title2 until we are full
-					if len(title2)+1+len(field) <= 14 { //it fits so we just write it in the title
+					if len(title2)+1+len(field) <= maxTitleLength { //it fits so we just write it in the title
 						title2 = title2 + " " + field
 					} else {
-						if 14-len(title2)-1 >= 4 { //if it doesn't fit we can only truncate like before if there are more than 3 remaining chars because we need 2 for the .. and 1 whitespace
-							title2 = title2 + " " + field[:(14-3-len(title2))] + ".."
+						if maxTitleLength-len(title2)-1 >= 4 { //if it doesn't fit we can only truncate like before if there are more than 3 remaining chars because we need 2 for the .. and 1 whitespace
+							title2 = title2 + " " + field[:(maxTitleLength-3-len(title2))] + ".."
 						}
 						break //in either case we are done after this field
 					}
