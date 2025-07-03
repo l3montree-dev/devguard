@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"fmt"
 	"os"
 	"slices"
 
@@ -120,4 +121,18 @@ func (g *orgRepository) GetOrgByID(id uuid.UUID) (models.Org, error) {
 	var org models.Org
 	err := g.db.Model(models.Org{}).Where("id = ?", id).First(&org).Error
 	return org, err
+}
+
+func (g *orgRepository) NextSlug(organizationSlug string) (string, error) {
+	var count int64
+	err := g.db.Model(models.Org{}).Where("slug LIKE ?", organizationSlug+"%").Count(&count).Error
+	if err != nil {
+		return "", err
+	}
+
+	if count == 0 {
+		return organizationSlug, nil
+	}
+
+	return fmt.Sprintf("%s-%d", organizationSlug, count+1), nil
 }

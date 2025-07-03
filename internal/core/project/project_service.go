@@ -41,11 +41,11 @@ func (s *service) CreateProject(ctx core.Context, project *models.Project) error
 				// get the project by slug and project id unscoped
 				project, err := s.projectRepository.ReadBySlugUnscoped(project.OrganizationID, project.Slug)
 				if err != nil {
-					return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
+					return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 				}
 
 				if err = s.projectRepository.Activate(tx, project.GetID()); err != nil {
-					return echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
+					return echo.NewHTTPError(500, "could not activate project").WithInternal(err)
 				}
 
 				slog.Info("project activated", "projectSlug", project.Slug, "projectID", project.GetID())

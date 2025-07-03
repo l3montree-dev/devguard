@@ -16,12 +16,15 @@
 package repositories
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/lib/pq"
+	"gorm.io/gorm/clause"
 )
 
 type assetRepository struct {
@@ -41,6 +44,108 @@ func NewAssetRepository(db core.DB) *assetRepository {
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Asset](db),
 	}
+}
+
+func (repository *assetRepository) prepareUniqueSlugs(projectID uuid.UUID, assets []*models.Asset) error {
+	if len(assets) == 0 {
+		return nil
+	}
+
+	// Collect slug base patterns for LIKE search
+	patterns := make([]string, 0, len(assets))
+
+	for _, p := range assets {
+		patterns = append(patterns, p.Slug+"%")
+	}
+
+	// Fetch existing slugs safely using ANY()
+	var existing []string
+	err := repository.db.Model(&models.Asset{}).
+		Where("project_id = ? AND slug LIKE ANY(?)", projectID, pq.Array(patterns)).
+		Pluck("slug", &existing).Error
+	if err != nil {
+		return err
+	}
+
+	taken := make(map[string]struct{})
+	for _, s := range existing {
+		taken[s] = struct{}{}
+	}
+
+	// Resolve unique slugs
+	for _, p := range assets {
+		base := p.Slug
+		slug := base
+		i := 1
+		for {
+			if _, exists := taken[slug]; !exists {
+				break
+			}
+			slug = fmt.Sprintf("%s-%d", base, i)
+			i++
+		}
+		p.Slug = slug
+		taken[slug] = struct{}{}
+	}
+
+	return nil
+}
+
+func (repository *assetRepository) Upsert(t *[]*models.Asset, conflictingColumns []clause.Column, updateOnly []string) error {
+	if len(*t) == 0 {
+		return nil
+	}
+
+	err := repository.prepareUniqueSlugs((*t)[0].ProjectID, *t)
+	if err != nil {
+		return fmt.Errorf("failed to prepare unique slugs: %w", err)
+	}
+
+	if len(conflictingColumns) == 0 {
+		if len(updateOnly) > 0 {
+			return repository.db.Clauses(clause.OnConflict{DoUpdates: clause.AssignmentColumns(updateOnly)}).Create(t).Error
+		}
+		return repository.db.Clauses(clause.OnConflict{UpdateAll: true}).Create(t).Error
+	}
+
+	if len(updateOnly) > 0 {
+		return repository.db.Clauses(clause.OnConflict{
+			DoUpdates: clause.AssignmentColumns(updateOnly),
+			Columns:   conflictingColumns,
+		}).Create(t).Error
+	}
+
+	return repository.db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
+}
+
+func (repository *assetRepository) Create(db core.DB, asset *models.Asset) error {
+	// get the next slug for the asset
+	nextSlug, err := repository.NextSlug(asset.ProjectID, asset.Slug)
+	if err != nil {
+		return fmt.Errorf("failed to get next slug: %w", err)
+	}
+	asset.Slug = nextSlug
+
+	if err := repository.GetDB(db).Create(asset).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (repository *assetRepository) Save(db core.DB, asset *models.Asset) error {
+	if asset.ID == uuid.Nil {
+		// get the next slug for the asset
+		nextSlug, err := repository.NextSlug(asset.ProjectID, asset.Slug)
+		if err != nil {
+			return fmt.Errorf("failed to get next slug: %w", err)
+		}
+		asset.Slug = nextSlug
+	}
+
+	if err := repository.GetDB(db).Save(asset).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 func (repository *assetRepository) FindAssetByExternalProviderID(externalEntityProviderID string, externalEntityID string) (*models.Asset, error) {
@@ -72,18 +177,6 @@ func (repository *assetRepository) FindByName(name string) (models.Asset, error)
 	err := repository.db.Where("name = ?", name).First(&app).Error
 	if err != nil {
 		return app, err
-	}
-	return app, nil
-}
-
-func (repository *assetRepository) FindOrCreate(tx core.DB, name string) (models.Asset, error) {
-	app, err := repository.FindByName(name)
-	if err != nil {
-		app = models.Asset{Name: name}
-		err = repository.Create(tx, &app)
-		if err != nil {
-			return app, err
-		}
 	}
 	return app, nil
 }
@@ -176,4 +269,20 @@ func (repository *assetRepository) ReadWithAssetVersions(assetID uuid.UUID) (mod
 		return models.Asset{}, err
 	}
 	return asset, nil
+}
+
+func (repository *assetRepository) NextSlug(projectID uuid.UUID, assetSlug string) (string, error) {
+	var count int64
+	err := repository.db.Model(&models.Asset{}).Where("project_id = ? AND slug LIKE ?", projectID, assetSlug+"%").Count(&count).Error
+	if err != nil {
+		return "", err
+	}
+
+	// if no assets with this slug exist, return the slug as is
+	if count == 0 {
+		return assetSlug, nil
+	}
+
+	// otherwise, append a number to the slug
+	return fmt.Sprintf("%s-%d", assetSlug, count+1), nil
 }

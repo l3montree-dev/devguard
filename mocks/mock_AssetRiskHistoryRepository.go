@@ -73,17 +73,38 @@ type AssetRiskHistoryRepository_GetRiskHistory_Call struct {
 }
 
 // GetRiskHistory is a helper method to define mock.On call
-//   - assetVersionName
-//   - assetID
-//   - start
-//   - end
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - start time.Time
+//   - end time.Time
 func (_e *AssetRiskHistoryRepository_Expecter) GetRiskHistory(assetVersionName interface{}, assetID interface{}, start interface{}, end interface{}) *AssetRiskHistoryRepository_GetRiskHistory_Call {
 	return &AssetRiskHistoryRepository_GetRiskHistory_Call{Call: _e.mock.On("GetRiskHistory", assetVersionName, assetID, start, end)}
 }
 
 func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) Run(run func(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time)) *AssetRiskHistoryRepository_GetRiskHistory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(uuid.UUID), args[2].(time.Time), args[3].(time.Time))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 time.Time
+		if args[2] != nil {
+			arg2 = args[2].(time.Time)
+		}
+		var arg3 time.Time
+		if args[3] != nil {
+			arg3 = args[3].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -132,15 +153,26 @@ type AssetRiskHistoryRepository_GetRiskHistoryByProject_Call struct {
 }
 
 // GetRiskHistoryByProject is a helper method to define mock.On call
-//   - projectID
-//   - day
+//   - projectID uuid.UUID
+//   - day time.Time
 func (_e *AssetRiskHistoryRepository_Expecter) GetRiskHistoryByProject(projectID interface{}, day interface{}) *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call {
 	return &AssetRiskHistoryRepository_GetRiskHistoryByProject_Call{Call: _e.mock.On("GetRiskHistoryByProject", projectID, day)}
 }
 
 func (_c *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call) Run(run func(projectID uuid.UUID, day time.Time)) *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(time.Time))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 time.Time
+		if args[1] != nil {
+			arg1 = args[1].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -178,14 +210,20 @@ type AssetRiskHistoryRepository_UpdateRiskAggregation_Call struct {
 }
 
 // UpdateRiskAggregation is a helper method to define mock.On call
-//   - assetRisk
+//   - assetRisk *models.AssetRiskHistory
 func (_e *AssetRiskHistoryRepository_Expecter) UpdateRiskAggregation(assetRisk interface{}) *AssetRiskHistoryRepository_UpdateRiskAggregation_Call {
 	return &AssetRiskHistoryRepository_UpdateRiskAggregation_Call{Call: _e.mock.On("UpdateRiskAggregation", assetRisk)}
 }
 
 func (_c *AssetRiskHistoryRepository_UpdateRiskAggregation_Call) Run(run func(assetRisk *models.AssetRiskHistory)) *AssetRiskHistoryRepository_UpdateRiskAggregation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*models.AssetRiskHistory))
+		var arg0 *models.AssetRiskHistory
+		if args[0] != nil {
+			arg0 = args[0].(*models.AssetRiskHistory)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
