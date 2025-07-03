@@ -43,6 +43,29 @@ func NewOrgRepository(db core.DB) *orgRepository {
 	}
 }
 
+func (g *orgRepository) Create(tx core.DB, org *models.Org) error {
+	nextSlug, err := g.nextSlug(org.Slug)
+	if err != nil {
+		return fmt.Errorf("could not generate next slug: %w", err)
+	}
+	org.Slug = nextSlug
+
+	return g.GetDB(tx).Create(org).Error
+}
+
+func (g *orgRepository) Save(tx core.DB, org *models.Org) error {
+	// if the slug is empty, generate a new one
+	if org.ID == uuid.Nil {
+		nextSlug, err := g.nextSlug(org.Name)
+		if err != nil {
+			return fmt.Errorf("could not generate next slug: %w", err)
+		}
+		org.Slug = nextSlug
+	}
+
+	return g.GetDB(tx).Save(org).Error
+}
+
 func (g *orgRepository) ReadBySlug(slug string) (models.Org, error) {
 	var t models.Org
 	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Preload("GitLabIntegrations").Where("slug = ?", slug).First(&t).Error
