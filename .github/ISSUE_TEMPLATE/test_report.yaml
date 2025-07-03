@@ -1,0 +1,47 @@
+name: Pre-release Test Protocol
+description: Detailed testing checklist for release candidates
+title: "[TESTING] Pre-release test - vX.X.X"
+labels: ["pre-release-testing", "priority:high"]
+projects: ["DevGuard Sprint"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🚨 Pre-release Test Protocol
+        **Please follow the checklist below carefully and check each scenario once completed.**
+        _Thank you for helping us ensure quality releases!_
+
+  - type: checkboxes
+    id: functional-tests
+    attributes:
+      label: ✅ Functional Test Scenarios
+      description: Please test thoroughly and mark each scenario as you complete.
+      options:
+        - label: User login works with GitHub account
+        - label: User login works with GitLab account
+        - label: User login works with openCode account
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 📝 Additional Notes
+      description: List any issues, unusual behaviors, or notes encountered during testing.
+      placeholder: |
+        - Issue descriptions
+        - Steps to reproduce
+        - Recommendations for refining usability
+    validations:
+      required: false
+
+  - type: dropdown
+    id: elease-ready
+    attributes:
+      label: 🚦 Release Decision
+      multiple: false
+      options:
+        - Green - Ready for release
+        - Yellow - Risks identified, may acceptable
+        - Red - Not ready for release
+    validations:
+      required: true
