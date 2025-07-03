@@ -67,14 +67,20 @@ type GitLister_GetBranchName_Call struct {
 }
 
 // GetBranchName is a helper method to define mock.On call
-//   - path
+//   - path string
 func (_e *GitLister_Expecter) GetBranchName(path interface{}) *GitLister_GetBranchName_Call {
 	return &GitLister_GetBranchName_Call{Call: _e.mock.On("GetBranchName", path)}
 }
 
 func (_c *GitLister_GetBranchName_Call) Run(run func(path string)) *GitLister_GetBranchName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -121,14 +127,20 @@ type GitLister_GetDefaultBranchName_Call struct {
 }
 
 // GetDefaultBranchName is a helper method to define mock.On call
-//   - path
+//   - path string
 func (_e *GitLister_Expecter) GetDefaultBranchName(path interface{}) *GitLister_GetDefaultBranchName_Call {
 	return &GitLister_GetDefaultBranchName_Call{Call: _e.mock.On("GetDefaultBranchName", path)}
 }
 
 func (_c *GitLister_GetDefaultBranchName_Call) Run(run func(path string)) *GitLister_GetDefaultBranchName_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -177,14 +189,20 @@ type GitLister_GetTags_Call struct {
 }
 
 // GetTags is a helper method to define mock.On call
-//   - path
+//   - path string
 func (_e *GitLister_Expecter) GetTags(path interface{}) *GitLister_GetTags_Call {
 	return &GitLister_GetTags_Call{Call: _e.mock.On("GetTags", path)}
 }
 
 func (_c *GitLister_GetTags_Call) Run(run func(path string)) *GitLister_GetTags_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -231,15 +249,26 @@ type GitLister_GitCommitCount_Call struct {
 }
 
 // GitCommitCount is a helper method to define mock.On call
-//   - path
-//   - tag
+//   - path string
+//   - tag *string
 func (_e *GitLister_Expecter) GitCommitCount(path interface{}, tag interface{}) *GitLister_GitCommitCount_Call {
 	return &GitLister_GitCommitCount_Call{Call: _e.mock.On("GitCommitCount", path, tag)}
 }
 
 func (_c *GitLister_GitCommitCount_Call) Run(run func(path string, tag *string)) *GitLister_GitCommitCount_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(*string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 *string
+		if args[1] != nil {
+			arg1 = args[1].(*string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

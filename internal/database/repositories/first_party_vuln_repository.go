@@ -125,7 +125,7 @@ func (repository *firstPartyVulnerabilityRepository) GetDefaultFirstPartyVulnsBy
 
 func (repository *firstPartyVulnerabilityRepository) GetOrgFromVulnID(tx core.DB, firstPartyVulnID string) (models.Org, error) {
 	var org models.Org
-	if err := repository.GetDB(tx).Raw("SELECT organizations.* from organizations left join projects p on organizations.id = p.organization_id left join assets a on p.id = a.project_id left join firstPartyVulns f on a.id = f.asset_id where f.id = ?", firstPartyVulnID).First(&org).Error; err != nil {
+	if err := repository.GetDB(tx).Raw("SELECT organizations.* from organizations left join projects p on organizations.id = p.organization_id left join assets a on p.id = a.project_id left join first_party_vulnerabilities f on a.id = f.asset_id where f.id = ?", firstPartyVulnID).First(&org).Error; err != nil {
 		return models.Org{}, err
 	}
 	return org, nil

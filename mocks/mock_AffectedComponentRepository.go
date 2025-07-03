@@ -60,15 +60,26 @@ type AffectedComponentRepository_DeleteAll_Call struct {
 }
 
 // DeleteAll is a helper method to define mock.On call
-//   - tx
-//   - ecosystem
+//   - tx core.DB
+//   - ecosystem string
 func (_e *AffectedComponentRepository_Expecter) DeleteAll(tx interface{}, ecosystem interface{}) *AffectedComponentRepository_DeleteAll_Call {
 	return &AffectedComponentRepository_DeleteAll_Call{Call: _e.mock.On("DeleteAll", tx, ecosystem)}
 }
 
 func (_c *AffectedComponentRepository_DeleteAll_Call) Run(run func(tx core.DB, ecosystem string)) *AffectedComponentRepository_DeleteAll_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -161,15 +172,26 @@ type AffectedComponentRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - affectedComponent
+//   - tx core.DB
+//   - affectedComponent *models.AffectedComponent
 func (_e *AffectedComponentRepository_Expecter) Save(tx interface{}, affectedComponent interface{}) *AffectedComponentRepository_Save_Call {
 	return &AffectedComponentRepository_Save_Call{Call: _e.mock.On("Save", tx, affectedComponent)}
 }
 
 func (_c *AffectedComponentRepository_Save_Call) Run(run func(tx core.DB, affectedComponent *models.AffectedComponent)) *AffectedComponentRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.AffectedComponent))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.AffectedComponent
+		if args[1] != nil {
+			arg1 = args[1].(*models.AffectedComponent)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -207,15 +229,26 @@ type AffectedComponentRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - affectedPkgs
+//   - tx core.DB
+//   - affectedPkgs []models.AffectedComponent
 func (_e *AffectedComponentRepository_Expecter) SaveBatch(tx interface{}, affectedPkgs interface{}) *AffectedComponentRepository_SaveBatch_Call {
 	return &AffectedComponentRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, affectedPkgs)}
 }
 
 func (_c *AffectedComponentRepository_SaveBatch_Call) Run(run func(tx core.DB, affectedPkgs []models.AffectedComponent)) *AffectedComponentRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.AffectedComponent))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.AffectedComponent
+		if args[1] != nil {
+			arg1 = args[1].([]models.AffectedComponent)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

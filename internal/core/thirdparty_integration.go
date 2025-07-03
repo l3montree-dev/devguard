@@ -35,6 +35,7 @@ const (
 	GitLabIntegrationID IntegrationID = "gitlab"
 	GitHubIntegrationID IntegrationID = "github"
 	AggregateID         IntegrationID = "aggregate"
+	JiraIntegrationID   IntegrationID = "jira"
 )
 
 type ThirdPartyIntegration interface {

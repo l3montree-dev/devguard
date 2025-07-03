@@ -21,6 +21,8 @@ type Org struct {
 
 	GitLabIntegrations []GitLabIntegration `json:"gitLabIntegrations" gorm:"foreignKey:OrgID;"`
 
+	JiraIntegrations []JiraIntegration `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
+
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
 	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`

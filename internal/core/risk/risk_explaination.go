@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/package-url/packageurl-go"
@@ -224,6 +225,480 @@ type Explanation struct {
 	fixedVersion  *string
 
 	ShortenedComponentPurl string `json:"componentPurl" gorm:"type:text;default:null;"`
+}
+
+func (e Explanation) GenerateADF(baseURL, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) jira.ADF {
+
+	scanners := strings.Fields(e.scannerIDs)
+	for i, s := range scanners {
+		scanners[i] = fmt.Sprintf("`%s`", s)
+	}
+
+	//add the description of the vulnerability
+	adf := jira.ADF{
+		Version: 1,
+		Type:    "doc",
+		Content: []jira.ADFContent{
+			{
+				Type: "paragraph",
+				Content: []jira.ADFContent{
+					{
+						Type: "text",
+						Text: e.cveDescription,
+					},
+				},
+			},
+		},
+	}
+
+	//add the affected component
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "heading",
+		Attrs: &jira.ADFMarkAttributes{
+			Level: 3,
+		},
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: "Affected component",
+			},
+		},
+	})
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "paragraph",
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: fmt.Sprintf("The vulnerability is in `%s`, detected by %s.\n", e.ComponentPurl, strings.Join(scanners, ", ")),
+			},
+		},
+	})
+
+	//add fixed version and commands to fix the package
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "heading",
+		Attrs: &jira.ADFMarkAttributes{
+			Level: 3,
+		},
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: "Recommended fix",
+			},
+		},
+	})
+	if e.fixedVersion != nil {
+		adf.Content = append(adf.Content, jira.ADFContent{
+			Type: "paragraph",
+			Content: []jira.ADFContent{
+				{
+					Type: "text",
+					Text: fmt.Sprintf("Upgrade to version %s or later.\n", *e.fixedVersion),
+				},
+			},
+		})
+
+		adf.Content = append(adf.Content, jira.ADFContent{
+			Type: "codeBlock",
+			Attrs: &jira.ADFMarkAttributes{
+				Language: "text",
+			},
+			Content: []jira.ADFContent{
+				{
+					Type: "text",
+					Text: generateCommandsToFixPackage(e.ComponentPurl, *e.fixedVersion),
+				},
+			},
+		})
+
+	} else {
+		adf.Content = append(adf.Content, jira.ADFContent{
+			Type: "paragraph",
+			Content: []jira.ADFContent{
+				{
+					Type: "text",
+					Text: "No fix is available.\n",
+				},
+			},
+		})
+
+	}
+	//add additional guidance for mitigating vulnerabilities
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "heading",
+		Attrs: &jira.ADFMarkAttributes{
+			Level: 3,
+		},
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: "Additional guidance for mitigating vulnerabilities",
+			},
+		},
+	})
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "paragraph",
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: "Visit our guides on ",
+			},
+			{
+				Type: "text",
+				Text: "devguard.org",
+				Marks: []jira.ADFMark{
+					{
+						Type: "link",
+						Attrs: &jira.ADFMarkAttributes{
+							Href: "https://devguard.org/risk-mitigation-guides/software-composition-analysis",
+						},
+					},
+					{
+						Type: "underline",
+					},
+				},
+			},
+		},
+	})
+
+	//add table with risk factors
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type:  "table",
+		Attrs: &jira.ADFMarkAttributes{},
+		Content: []jira.ADFContent{
+			{
+				Type: "tableRow",
+				Content: []jira.ADFContent{
+					{
+						Type:  "tableHeader",
+						Attrs: &jira.ADFMarkAttributes{},
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: "Risk Factor",
+										Marks: []jira.ADFMark{
+											{
+												Type: "strong",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					{
+						Type:  "tableHeader",
+						Attrs: &jira.ADFMarkAttributes{},
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: "Value",
+										Marks: []jira.ADFMark{
+											{
+												Type: "strong",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					{
+						Type:  "tableHeader",
+						Attrs: &jira.ADFMarkAttributes{},
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: "Description",
+										Marks: []jira.ADFMark{
+											{
+												Type: "strong",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Type: "tableRow",
+				Content: []jira.ADFContent{
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: "Vulnerability Depth",
+									},
+								},
+							},
+						},
+					},
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: fmt.Sprintf("`%d`", e.depth),
+									},
+								},
+							},
+						},
+					},
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: e.componentDepthMessage,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Type: "tableRow",
+				Content: []jira.ADFContent{
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: "EPSS",
+									},
+								},
+							},
+						},
+					},
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: fmt.Sprintf("`%.2f %%`", e.epss*100),
+									},
+								},
+							},
+						},
+					},
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: e.epssMessage,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Type: "tableRow",
+				Content: []jira.ADFContent{
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: "EXPLOIT",
+									},
+								},
+							},
+						},
+					},
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: fmt.Sprintf("`%s`", e.exploitMessage.Short),
+									},
+								},
+							},
+						},
+					},
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: e.exploitMessage.Long,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Type: "tableRow",
+				Content: []jira.ADFContent{
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: "CVSS-BE",
+									},
+								},
+							},
+						},
+					},
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: fmt.Sprintf("`%.1f`", e.WithEnvironment),
+									},
+								},
+							},
+						},
+					},
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: e.cvssBEMessage,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Type: "tableRow",
+				Content: []jira.ADFContent{
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: "CVSS-B",
+									},
+								},
+							},
+						},
+					},
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: fmt.Sprintf("`%.1f`", e.BaseScore),
+									},
+								},
+							},
+						},
+					},
+					{
+						Type: "tableCell",
+						Content: []jira.ADFContent{
+							{
+								Type: "paragraph",
+								Content: []jira.ADFContent{
+									{
+										Type: "text",
+										Text: e.cvssMessage,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+
+	// add information about the path to the component
+	adf.Content = append(adf.Content, jira.ADFContent{
+		Type: "paragraph",
+		Content: []jira.ADFContent{
+			{
+				Type: "text",
+				Text: "More details can be found in ",
+			},
+			{
+				Type: "text",
+				Text: "DevGuard",
+				Marks: []jira.ADFMark{
+					{
+						Type: "link",
+						Attrs: &jira.ADFMarkAttributes{
+							Href: fmt.Sprintf("%s/%s/projects/%s/assets/%s/refs/%s/dependency-risks/%s", baseURL, orgSlug, projectSlug, assetSlug, assetVersionName, e.dependencyVulnID),
+						},
+					},
+					{
+						Type: "underline",
+					},
+				},
+			},
+		},
+	})
+
+	// add the commands to interact with the vulnerability
+	common.AddSlashCommandsToDependencyVulnADF(&adf)
+
+	return adf
 }
 
 func (e Explanation) Markdown(baseURL, orgSlug, projectSlug, assetSlug, assetVersionName string, mermaidPathToComponent string) string {

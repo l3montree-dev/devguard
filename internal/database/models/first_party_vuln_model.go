@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/common"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/jira"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"gorm.io/gorm"
@@ -57,6 +58,57 @@ func (firstPartyVuln *FirstPartyVuln) BeforeSave(tx *gorm.DB) (err error) {
 	hash := firstPartyVuln.CalculateHash()
 	firstPartyVuln.ID = hash
 	return nil
+}
+
+func (firstPartyVuln *FirstPartyVuln) RenderADF() jira.ADF {
+	adf := jira.ADF{
+		Version: 1,
+		Type:    "doc",
+		Content: []jira.ADFContent{
+			{
+				Type: "paragraph",
+				Content: []jira.ADFContent{
+					{
+						Type: "text",
+						Text: *firstPartyVuln.Message,
+					},
+				},
+			},
+		},
+	}
+
+	if firstPartyVuln.Snippet != "" {
+		adf.Content = append(adf.Content, jira.ADFContent{
+			Type: "codeBlock",
+			Content: []jira.ADFContent{
+				{
+					Type: "text",
+					Text: firstPartyVuln.Snippet,
+				},
+			},
+		})
+	}
+
+	if firstPartyVuln.URI != "" {
+		link := strings.TrimPrefix(firstPartyVuln.URI, "/")
+		if firstPartyVuln.StartLine != 0 {
+			link += fmt.Sprintf("#L%d", firstPartyVuln.StartLine)
+		}
+		adf.Content = append(adf.Content, jira.ADFContent{
+			Type: "paragraph",
+			Content: []jira.ADFContent{
+				{
+					Type: "text",
+					Text: "File: " + link,
+				},
+			},
+		})
+	}
+
+	//add slash commands
+	common.AddSlashCommandsToToFirstPartyVulnADF(&adf)
+
+	return adf
 }
 
 func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {

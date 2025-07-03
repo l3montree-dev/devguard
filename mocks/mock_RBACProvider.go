@@ -70,14 +70,20 @@ type RBACProvider_DomainsOfUser_Call struct {
 }
 
 // DomainsOfUser is a helper method to define mock.On call
-//   - user
+//   - user string
 func (_e *RBACProvider_Expecter) DomainsOfUser(user interface{}) *RBACProvider_DomainsOfUser_Call {
 	return &RBACProvider_DomainsOfUser_Call{Call: _e.mock.On("DomainsOfUser", user)}
 }
 
 func (_c *RBACProvider_DomainsOfUser_Call) Run(run func(user string)) *RBACProvider_DomainsOfUser_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -117,14 +123,20 @@ type RBACProvider_GetDomainRBAC_Call struct {
 }
 
 // GetDomainRBAC is a helper method to define mock.On call
-//   - domain
+//   - domain string
 func (_e *RBACProvider_Expecter) GetDomainRBAC(domain interface{}) *RBACProvider_GetDomainRBAC_Call {
 	return &RBACProvider_GetDomainRBAC_Call{Call: _e.mock.On("GetDomainRBAC", domain)}
 }
 
 func (_c *RBACProvider_GetDomainRBAC_Call) Run(run func(domain string)) *RBACProvider_GetDomainRBAC_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }

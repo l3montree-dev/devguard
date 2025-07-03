@@ -289,9 +289,9 @@ func (c dependencyVulnHTTPController) CreateEvent(ctx core.Context) error {
 		slog.Error("could not handle event", "err", err)
 	}
 
-	if err != nil {
+	/* 	if err != nil {
 		return echo.NewHTTPError(500, "could not create dependencyVuln event").WithInternal(err)
-	}
+	} */
 
 	return ctx.JSON(200, convertToDetailedDTO(dependencyVuln))
 }

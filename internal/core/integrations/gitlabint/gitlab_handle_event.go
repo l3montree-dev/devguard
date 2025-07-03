@@ -92,7 +92,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		gitlabTicketID := strings.TrimPrefix(*vuln.GetTicketID(), "gitlab:")
 		gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
 		if err != nil {
-			return err
+			return nil
 		}
 
 		members, err := org.FetchMembersOfOrganization(event.Ctx)
