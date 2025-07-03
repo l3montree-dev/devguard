@@ -83,12 +83,6 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 			return nil
 		}
 
-		repoID := utils.SafeDereference(asset.RepositoryID)
-		if !strings.HasPrefix(repoID, "gitlab:") || !strings.HasPrefix(*vuln.GetTicketID(), "gitlab:") {
-			// we do not have a gitlab ticket id - we do not need to do anything
-			return nil
-		}
-
 		// we create a new ticket in github
 		client, projectID, err := g.getClientBasedOnAsset(asset)
 		if err != nil {
@@ -98,7 +92,7 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 		gitlabTicketID := strings.TrimPrefix(*vuln.GetTicketID(), "gitlab:")
 		gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
 		if err != nil {
-			return err
+			return nil
 		}
 
 		members, err := org.FetchMembersOfOrganization(event.Ctx)
