@@ -617,7 +617,7 @@ func (i *JiraIntegration) updateIssueState(ctx context.Context, expectedIssueSta
 	issueStatusID := issue.Fields.Status.StatusCategory.ID
 
 	//get open and done statusIDs from the Jira
-	transitions, err := client.GetTransitions(ctx, ticketID)
+	transitions, err := client.GetIssueTransitions(ctx, ticketID)
 	if err != nil {
 		slog.Error("failed to get Jira transitions", "err", err, "ticketID", ticketID)
 		return fmt.Errorf("failed to get Jira transitions: %w", err)

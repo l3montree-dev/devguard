@@ -120,7 +120,7 @@ type TransitionField struct {
 	Required bool `json:"required" structs:"required"`
 }
 type ChangelogHistory struct {
-	Id      string           `json:"id" structs:"id"`
+	ID      string           `json:"id" structs:"id"`
 	Author  User             `json:"author" structs:"author"`
 	Created string           `json:"created" structs:"created"`
 	Items   []ChangelogItems `json:"items" structs:"items"`
