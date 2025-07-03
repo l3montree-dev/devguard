@@ -200,7 +200,7 @@ func (g *projectRepository) UpsertSplit(tx core.DB, externalProviderID string, p
 	err = g.Upsert(&projects, []clause.Column{
 		{Name: "external_entity_provider_id"},
 		{Name: "external_entity_id"},
-	}, []string{"slug", "name", "description", "organization_id"})
+	}, []string{"name", "description", "organization_id"})
 	if err != nil {
 		return nil, nil, err
 	}
