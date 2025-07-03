@@ -321,7 +321,7 @@ type ExternalUserRepository interface {
 type JiraIntegrationRepository interface {
 	Save(tx DB, model *models.JiraIntegration) error
 	Read(id uuid.UUID) (models.JiraIntegration, error)
-	FindByOrganizationId(orgID uuid.UUID) ([]models.JiraIntegration, error)
+	FindByOrganizationID(orgID uuid.UUID) ([]models.JiraIntegration, error)
 	Delete(tx DB, id uuid.UUID) error
 	GetClientByIntegrationID(integrationID uuid.UUID) (models.JiraIntegration, error)
 }

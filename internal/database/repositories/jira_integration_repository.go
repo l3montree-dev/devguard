@@ -25,7 +25,7 @@ func NewJiraIntegrationRepository(db core.DB) *jiraIntegrationRepository {
 	}
 }
 
-func (r *jiraIntegrationRepository) FindByOrganizationId(orgId uuid.UUID) ([]models.JiraIntegration, error) {
+func (r *jiraIntegrationRepository) FindByOrganizationID(orgId uuid.UUID) ([]models.JiraIntegration, error) {
 	var integrations []models.JiraIntegration
 	if err := r.db.Find(&integrations, "org_id = ?", orgId).Error; err != nil {
 		return nil, err
