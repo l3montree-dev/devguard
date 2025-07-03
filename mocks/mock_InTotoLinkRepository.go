@@ -62,15 +62,26 @@ type InTotoLinkRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *InTotoLinkRepository_Expecter) Activate(tx interface{}, id interface{}) *InTotoLinkRepository_Activate_Call {
 	return &InTotoLinkRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *InTotoLinkRepository_Activate_Call) Run(run func(tx core.DB, id uuid.UUID)) *InTotoLinkRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -209,15 +220,26 @@ type InTotoLinkRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.InTotoLink
 func (_e *InTotoLinkRepository_Expecter) Create(tx interface{}, t interface{}) *InTotoLinkRepository_Create_Call {
 	return &InTotoLinkRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *InTotoLinkRepository_Create_Call) Run(run func(tx core.DB, t *models.InTotoLink)) *InTotoLinkRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.InTotoLink))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.InTotoLink
+		if args[1] != nil {
+			arg1 = args[1].(*models.InTotoLink)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -255,15 +277,26 @@ type InTotoLinkRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.InTotoLink
 func (_e *InTotoLinkRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *InTotoLinkRepository_CreateBatch_Call {
 	return &InTotoLinkRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *InTotoLinkRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.InTotoLink)) *InTotoLinkRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.InTotoLink))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.InTotoLink
+		if args[1] != nil {
+			arg1 = args[1].([]models.InTotoLink)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -301,15 +334,26 @@ type InTotoLinkRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *InTotoLinkRepository_Expecter) Delete(tx interface{}, id interface{}) *InTotoLinkRepository_Delete_Call {
 	return &InTotoLinkRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *InTotoLinkRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *InTotoLinkRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -347,15 +391,26 @@ type InTotoLinkRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx
-//   - ids
+//   - tx core.DB
+//   - ids []models.InTotoLink
 func (_e *InTotoLinkRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *InTotoLinkRepository_DeleteBatch_Call {
 	return &InTotoLinkRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *InTotoLinkRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.InTotoLink)) *InTotoLinkRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.InTotoLink))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.InTotoLink
+		if args[1] != nil {
+			arg1 = args[1].([]models.InTotoLink)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -404,15 +459,26 @@ type InTotoLinkRepository_FindByAssetAndSupplyChainID_Call struct {
 }
 
 // FindByAssetAndSupplyChainID is a helper method to define mock.On call
-//   - assetID
-//   - supplyChainID
+//   - assetID uuid.UUID
+//   - supplyChainID string
 func (_e *InTotoLinkRepository_Expecter) FindByAssetAndSupplyChainID(assetID interface{}, supplyChainID interface{}) *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call {
 	return &InTotoLinkRepository_FindByAssetAndSupplyChainID_Call{Call: _e.mock.On("FindByAssetAndSupplyChainID", assetID, supplyChainID)}
 }
 
 func (_c *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call) Run(run func(assetID uuid.UUID, supplyChainID string)) *InTotoLinkRepository_FindByAssetAndSupplyChainID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(string))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -461,14 +527,20 @@ type InTotoLinkRepository_FindBySupplyChainID_Call struct {
 }
 
 // FindBySupplyChainID is a helper method to define mock.On call
-//   - supplyChainID
+//   - supplyChainID string
 func (_e *InTotoLinkRepository_Expecter) FindBySupplyChainID(supplyChainID interface{}) *InTotoLinkRepository_FindBySupplyChainID_Call {
 	return &InTotoLinkRepository_FindBySupplyChainID_Call{Call: _e.mock.On("FindBySupplyChainID", supplyChainID)}
 }
 
 func (_c *InTotoLinkRepository_FindBySupplyChainID_Call) Run(run func(supplyChainID string)) *InTotoLinkRepository_FindBySupplyChainID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -508,14 +580,20 @@ type InTotoLinkRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx
+//   - tx core.DB
 func (_e *InTotoLinkRepository_Expecter) GetDB(tx interface{}) *InTotoLinkRepository_GetDB_Call {
 	return &InTotoLinkRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *InTotoLinkRepository_GetDB_Call) Run(run func(tx core.DB)) *InTotoLinkRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -564,14 +642,20 @@ type InTotoLinkRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids
+//   - ids []uuid.UUID
 func (_e *InTotoLinkRepository_Expecter) List(ids interface{}) *InTotoLinkRepository_List_Call {
 	return &InTotoLinkRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *InTotoLinkRepository_List_Call) Run(run func(ids []uuid.UUID)) *InTotoLinkRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]uuid.UUID))
+		var arg0 []uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].([]uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -618,14 +702,20 @@ type InTotoLinkRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id uuid.UUID
 func (_e *InTotoLinkRepository_Expecter) Read(id interface{}) *InTotoLinkRepository_Read_Call {
 	return &InTotoLinkRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *InTotoLinkRepository_Read_Call) Run(run func(id uuid.UUID)) *InTotoLinkRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -663,15 +753,26 @@ type InTotoLinkRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - model
+//   - tx core.DB
+//   - model *models.InTotoLink
 func (_e *InTotoLinkRepository_Expecter) Save(tx interface{}, model interface{}) *InTotoLinkRepository_Save_Call {
 	return &InTotoLinkRepository_Save_Call{Call: _e.mock.On("Save", tx, model)}
 }
 
 func (_c *InTotoLinkRepository_Save_Call) Run(run func(tx core.DB, model *models.InTotoLink)) *InTotoLinkRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.InTotoLink))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.InTotoLink
+		if args[1] != nil {
+			arg1 = args[1].(*models.InTotoLink)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -709,15 +810,26 @@ type InTotoLinkRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.InTotoLink
 func (_e *InTotoLinkRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *InTotoLinkRepository_SaveBatch_Call {
 	return &InTotoLinkRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *InTotoLinkRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.InTotoLink)) *InTotoLinkRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.InTotoLink))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.InTotoLink
+		if args[1] != nil {
+			arg1 = args[1].([]models.InTotoLink)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -755,14 +867,20 @@ type InTotoLinkRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn
+//   - fn func(tx core.DB) error
 func (_e *InTotoLinkRepository_Expecter) Transaction(fn interface{}) *InTotoLinkRepository_Transaction_Call {
 	return &InTotoLinkRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *InTotoLinkRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *InTotoLinkRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(tx core.DB) error))
+		var arg0 func(tx core.DB) error
+		if args[0] != nil {
+			arg0 = args[0].(func(tx core.DB) error)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -800,16 +918,32 @@ type InTotoLinkRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
-//   - t
-//   - conflictingColumns
-//   - updateOnly
+//   - t *[]*models.InTotoLink
+//   - conflictingColumns []clause.Column
+//   - updateOnly []string
 func (_e *InTotoLinkRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *InTotoLinkRepository_Upsert_Call {
 	return &InTotoLinkRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
 func (_c *InTotoLinkRepository_Upsert_Call) Run(run func(t *[]*models.InTotoLink, conflictingColumns []clause.Column, updateOnly []string)) *InTotoLinkRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*[]*models.InTotoLink), args[1].([]clause.Column), args[2].([]string))
+		var arg0 *[]*models.InTotoLink
+		if args[0] != nil {
+			arg0 = args[0].(*[]*models.InTotoLink)
+		}
+		var arg1 []clause.Column
+		if args[1] != nil {
+			arg1 = args[1].([]clause.Column)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
