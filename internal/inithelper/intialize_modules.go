@@ -77,7 +77,7 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 		repositories.NewComponentRepository(db),
 		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
 		repositories.NewSupplyChainRepository(db),
-		repositories.NewLicenseOverwriteRepository(db),
+		repositories.NewLicenseRiskRepository(db),
 	)
 }
 

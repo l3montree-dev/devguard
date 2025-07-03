@@ -15,13 +15,13 @@ import (
 )
 
 type AssetVersionController struct {
-	assetVersionRepository     core.AssetVersionRepository
-	assetVersionService        core.AssetVersionService
-	dependencyVulnRepository   core.DependencyVulnRepository
-	componentRepository        core.ComponentRepository
-	dependencyVulnService      core.DependencyVulnService
-	supplyChainRepository      core.SupplyChainRepository
-	licenseOverwriteRepository core.LicenseOverwriteRepository
+	assetVersionRepository   core.AssetVersionRepository
+	assetVersionService      core.AssetVersionService
+	dependencyVulnRepository core.DependencyVulnRepository
+	componentRepository      core.ComponentRepository
+	dependencyVulnService    core.DependencyVulnService
+	supplyChainRepository    core.SupplyChainRepository
+	licenseRiskRepository    core.LicenseRiskRepository
 }
 
 func NewAssetVersionController(
@@ -31,16 +31,16 @@ func NewAssetVersionController(
 	componentRepository core.ComponentRepository,
 	dependencyVulnService core.DependencyVulnService,
 	supplyChainRepository core.SupplyChainRepository,
-	licenseOverwriteRepository core.LicenseOverwriteRepository,
+	licenseRiskRepository core.LicenseRiskRepository,
 ) *AssetVersionController {
 	return &AssetVersionController{
-		assetVersionRepository:     assetVersionRepository,
-		assetVersionService:        assetVersionService,
-		dependencyVulnRepository:   dependencyVulnRepository,
-		componentRepository:        componentRepository,
-		dependencyVulnService:      dependencyVulnService,
-		supplyChainRepository:      supplyChainRepository,
-		licenseOverwriteRepository: licenseOverwriteRepository,
+		assetVersionRepository:   assetVersionRepository,
+		assetVersionService:      assetVersionService,
+		dependencyVulnRepository: dependencyVulnRepository,
+		componentRepository:      componentRepository,
+		dependencyVulnService:    dependencyVulnService,
+		supplyChainRepository:    supplyChainRepository,
+		licenseRiskRepository:    licenseRiskRepository,
 	}
 }
 
@@ -207,7 +207,7 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 
 	scannerID := ctx.QueryParam("scanner")
 
-	overwrittenLicenses, err := a.licenseOverwriteRepository.GetAllOverwritesForOrganization(org.ID)
+	overwrittenLicenses, err := a.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return nil, err
 	}
