@@ -288,33 +288,6 @@ func jiraRequest(client Client, method string, url string, body io.Reader) (*htt
 
 	req.SetBasicAuth(client.UserEmail, client.AccessToken)
 	return http.DefaultClient.Do(req)
-	/* 	respBody, _ := io.ReadAll(resp.Body)
-	   	if err != nil {
-	   		slog.Info("Jira request failed ",
-	   			"method", method,
-	   			"url", url,
-	   			"status", resp.StatusCode,
-	   			"response", string(respBody),
-	   		)
-	   		return nil, fmt.Errorf("failed to execute request: %w %s", err, string(respBody))
-	   	}
-
-	   	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-	   		slog.Info("Jira request failed ",
-	   			"method", method,
-	   			"url", url,
-	   			"status", resp.StatusCode,
-	   			"response", string(respBody),
-	   		)
-	   		return nil, fmt.Errorf("request failed with status code %d: %s", resp.StatusCode, string(respBody))
-	   	}
-
-	   	slog.Info("Jira request successful",
-	   		"method", method,
-	   		"url", url,
-	   		"status", resp.StatusCode,
-	   		"response", string(respBody),
-	   	) */
 
 }
 

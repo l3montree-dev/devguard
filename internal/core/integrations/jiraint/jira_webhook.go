@@ -57,12 +57,12 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 		return nil
 	}
 
-	/* 	sig := req.Header.Get("X-Hub-Signature")
-	   	err = i.CheckWebhookSecretToken(sig, payload, vuln.GetAssetID())
+	sig := req.Header.Get("X-Hub-Signature")
+	err = i.CheckWebhookSecretToken(sig, payload, vuln.GetAssetID())
 	if err != nil {
 		slog.Error("failed to check webhook secret token", "err", err, "ticketID", fmt.Sprintf("jira:%s:%s", projectID, issueID))
 		return ctx.JSON(403, fmt.Sprintf("Forbidden: %v", err))
-	}*/
+	}
 
 	userID := ""
 	username := ""

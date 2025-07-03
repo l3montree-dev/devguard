@@ -340,8 +340,6 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 
 	description := exp.GenerateADF(i.frontendURL, orgSlug, projectSlug, assetSlug, assetVersionName, componentTree)
 
-	fmt.Println("Creating Jira issue with description:", description)
-
 	issue := &jira.Issue{
 		Fields: &jira.IssueFields{
 			Project: jira.Project{

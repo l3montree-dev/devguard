@@ -40,7 +40,7 @@ func acceptedRiskADF(adf *jira.ADF) {
 			Content: []jira.ADFContent{
 				{
 					Type: "text",
-					Text: "👍   Reply with this to acknowledge and accept the identified risk.",
+					Text: "Reply with this to acknowledge and accept the identified risk.",
 				},
 			},
 		},
@@ -69,7 +69,7 @@ func falsePositiveDependencyVulnADF(adf *jira.ADF) {
 			Content: []jira.ADFContent{
 				{
 					Type: "text",
-					Text: "⚠️ Mark the risk as false positive: Use one of these commands if you believe the reported vulnerability is not actually a valid issue.",
+					Text: "Mark the risk as false positive: Use one of these commands if you believe the reported vulnerability is not actually a valid issue.",
 				},
 			},
 		},
@@ -146,7 +146,7 @@ func falsePositiveFirstPartyVulnADF(adf *jira.ADF) {
 			Content: []jira.ADFContent{
 				{
 					Type: "text",
-					Text: "⚠️ Mark the risk as false positive: Use this command if you believe the reported vulnerability is not actually a valid issue.",
+					Text: "Mark the risk as false positive: Use this command if you believe the reported vulnerability is not actually a valid issue.",
 				},
 			},
 		},
@@ -175,7 +175,7 @@ func reopenRiskADF(adf *jira.ADF) {
 			Content: []jira.ADFContent{
 				{
 					Type: "text",
-					Text: "🔁  Reopen the risk: Use this command to reopen a previously closed or accepted vulnerability.",
+					Text: "Reopen the risk: Use this command to reopen a previously closed or accepted vulnerability.",
 				},
 			},
 		},
