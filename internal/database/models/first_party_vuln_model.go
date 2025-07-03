@@ -90,7 +90,7 @@ func (firstPartyVuln *FirstPartyVuln) RenderADF() jira.ADF {
 	}
 
 	if firstPartyVuln.URI != "" {
-		link := fmt.Sprintf(strings.TrimPrefix(firstPartyVuln.URI, "/"))
+		link := strings.TrimPrefix(firstPartyVuln.URI, "/")
 		if firstPartyVuln.StartLine != 0 {
 			link += fmt.Sprintf("#L%d", firstPartyVuln.StartLine)
 		}
