@@ -141,7 +141,7 @@ func TestCreateProjectTitle(t *testing.T) {
 		projectTitle := "One Two Three Four Fields More Fields?"
 		title1, title2 := createTitles(projectTitle)
 		assert.Equal(t, "One Two Three", title1)
-		assert.Equal(t, "Four Fields...", title2)
+		assert.Equal(t, "Four Fields", title2)
 		assert.LessOrEqual(t, len(title1), 14)
 		assert.LessOrEqual(t, len(title2), 14)
 	})
