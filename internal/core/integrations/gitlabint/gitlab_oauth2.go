@@ -20,6 +20,7 @@ import (
 	"github.com/ory/client-go"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
+	"golang.org/x/sync/singleflight"
 )
 
 type GitlabOauth2Config struct {
@@ -58,7 +59,8 @@ type gitlabOauth2Client struct {
 	gitlabClient
 }
 
-var httpClientCache = common.NewCacheTransport(1000, 1*time.Hour)
+var httpClientCache = common.NewCacheTransport(1000, 5*time.Minute)
+var httpRequestDeduplication = common.NewDeduplicationTransport()
 
 func parseGitlabEnvs() map[string]gitlabEnvConfig {
 	urls := make(map[string]gitlabEnvConfig)
@@ -183,6 +185,8 @@ type tokenPersister struct {
 	gitlabOauth2Repository core.GitLabOauth2TokenRepository
 }
 
+var tokenSingleFlightGroup = singleflight.Group{}
+
 func newTokenPersister(gitlabOauth2Repository core.GitLabOauth2TokenRepository, token models.GitLabOauth2Token, tokenSource oauth2.TokenSource) *tokenPersister {
 	return &tokenPersister{
 		next:                   tokenSource,
@@ -192,27 +196,37 @@ func newTokenPersister(gitlabOauth2Repository core.GitLabOauth2TokenRepository, 
 }
 
 func (t *tokenPersister) Token() (*oauth2.Token, error) {
-	token, err := t.next.Token()
-	if err != nil {
-		return nil, err
-	}
-
-	// check if the refresh token has changed
-	if token.RefreshToken != "" && token.RefreshToken != t.currentToken.RefreshToken && t.currentToken.Expiry.Before(token.Expiry) {
-		// save the new refresh token in the database
-
-		t.currentToken.RefreshToken = token.RefreshToken
-		t.currentToken.Expiry = token.Expiry
-		t.currentToken.AccessToken = token.AccessToken
-
-		err := t.gitlabOauth2Repository.Save(nil, &t.currentToken)
-
+	token, err, shared := tokenSingleFlightGroup.Do(utils.HashString(t.currentToken.AccessToken), func() (any, error) {
+		token, err := t.next.Token()
 		if err != nil {
 			return nil, err
 		}
-		slog.Debug("saving new refresh token")
+
+		// check if the refresh token has changed
+		if token.RefreshToken != "" && token.RefreshToken != t.currentToken.RefreshToken && t.currentToken.Expiry.Before(token.Expiry) {
+			// save the new refresh token in the database
+			slog.Debug("refresh token changed", "oldTokenHash", utils.HashString(t.currentToken.AccessToken), "newTokenHash", utils.HashString(token.AccessToken))
+
+			t.currentToken.RefreshToken = token.RefreshToken
+			t.currentToken.Expiry = token.Expiry
+			t.currentToken.AccessToken = token.AccessToken
+
+			err := t.gitlabOauth2Repository.Save(nil, &t.currentToken)
+
+			if err != nil {
+				return nil, err
+			}
+			slog.Debug("saving new refresh token")
+		}
+		return token, nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return token, nil
+	if shared {
+		slog.Debug("deduplicated gitlab oauth2 token request", "newTokenHash", utils.HashString(token.(*oauth2.Token).AccessToken))
+	}
+	return token.(*oauth2.Token), nil
 }
 
 func (c *GitlabOauth2Config) client(token models.GitLabOauth2Token) *http.Client {
