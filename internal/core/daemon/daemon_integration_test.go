@@ -50,7 +50,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		err = db.Save(&assetVersion).Error
 		assert.Nil(t, err)
 
-		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 8)
+		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 15)
 
 		err = db.Exec("UPDATE asset_versions SET updated_at = ? WHERE name = ? AND asset_id = ?", changeUpdatedTime, assetVersion.Name, assetVersion.AssetID).Error
 		assert.Nil(t, err)
@@ -82,7 +82,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		err = db.Create(&assetVersion).Error
 		assert.Nil(t, err)
 
-		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 8)
+		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 15)
 
 		err = db.Exec("UPDATE asset_versions SET updated_at = ? WHERE name = ? AND asset_id = ?", changeUpdatedTime, assetVersion.Name, assetVersion.AssetID).Error
 		assert.Nil(t, err)
@@ -110,7 +110,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		err = db.Create(&assetVersion).Error
 		assert.Nil(t, err)
 
-		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 6) // Set the updated at time to 6 days ago
+		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 12) // Set the updated at time to 6 days ago
 
 		assetVersion.UpdatedAt = changeUpdatedTime
 
@@ -185,7 +185,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		err = db.Create(&vulnEvent).Error
 		assert.Nil(t, err)
 
-		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 8) // Set the updated at time to 8 days ago
+		changeUpdatedTime := time.Now().Add(-time.Hour * 24 * 15) // Set the updated at time to 8 days ago
 		err = db.Exec("UPDATE asset_versions SET updated_at = ? WHERE name = ? AND asset_id = ?", changeUpdatedTime, assetVersion.Name, assetVersion.AssetID).Error
 		assert.Nil(t, err)
 
