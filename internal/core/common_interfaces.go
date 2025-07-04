@@ -381,6 +381,10 @@ type ComponentService interface {
 	GetLicense(component models.Component) (models.Component, error)
 }
 
+type LicenseRiskService interface {
+	FindLicenseRisksInComponents(components []models.Component) error
+}
+
 type AccessControl interface {
 	HasAccess(subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 

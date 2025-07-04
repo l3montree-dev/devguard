@@ -17,13 +17,15 @@ type service struct {
 	componentRepository        core.ComponentRepository
 	depsDevService             core.DepsDevService
 	componentProjectRepository core.ComponentProjectRepository
+	licenseRiskService         core.LicenseRiskService
 }
 
-func NewComponentService(depsDevService core.DepsDevService, componentProjectRepository core.ComponentProjectRepository, componentRepository core.ComponentRepository) service {
+func NewComponentService(depsDevService core.DepsDevService, componentProjectRepository core.ComponentProjectRepository, componentRepository core.ComponentRepository, licenseRiskService core.LicenseRiskService) service {
 	return service{
 		componentRepository:        componentRepository,
 		componentProjectRepository: componentProjectRepository,
 		depsDevService:             depsDevService,
+		licenseRiskService:         licenseRiskService,
 	}
 }
 
@@ -159,11 +161,16 @@ func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID 
 
 	// only get the components - there might be duplicates
 	componentsWithoutLicense := make([]models.Component, 0)
-	seen := make(map[string]bool)
+	componentsWithLicense := make([]models.Component, 0)
+	seen := make(map[string]struct{})
 	for _, componentDependency := range componentDependencies {
-		if _, ok := seen[componentDependency.DependencyPurl]; !ok && componentDependency.Dependency.License == nil {
-			seen[componentDependency.DependencyPurl] = true
-			componentsWithoutLicense = append(componentsWithoutLicense, componentDependency.Dependency)
+		if _, ok := seen[componentDependency.DependencyPurl]; !ok {
+			if componentDependency.Dependency.License == nil {
+				componentsWithoutLicense = append(componentsWithoutLicense, componentDependency.Dependency)
+			} else {
+				componentsWithLicense = append(componentsWithLicense, componentDependency.Dependency)
+			}
+			seen[componentDependency.DependencyPurl] = struct{}{}
 		}
 	}
 
@@ -181,6 +188,7 @@ func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID 
 	if err != nil {
 		return nil, err
 	}
+	components = append(components, componentsWithLicense...)
 
 	// save the components
 	if err := s.componentRepository.SaveBatch(nil, components); err != nil {
@@ -192,6 +200,10 @@ func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID 
 	for _, componentDependency := range componentDependencies {
 		allComponents = append(allComponents, componentDependency.Dependency)
 	}
+
+	// find potential license risks for the components
+
+	err = s.licenseRiskService.FindLicenseRisksInComponents(components)
 
 	return allComponents, nil
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/component"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
@@ -37,6 +38,7 @@ func newUpdateDepsDevInformation() *cobra.Command {
 			depsDevService := vulndb.NewDepsDevService()
 			componentProjectRepository := repositories.NewComponentProjectRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
+			licenseRiskService := vuln.NewLicenseRiskService(repositories.NewLicenseRiskRepository(database))
 
 			components, err := componentRepository.All()
 			if err != nil {
@@ -48,6 +50,7 @@ func newUpdateDepsDevInformation() *cobra.Command {
 				&depsDevService,
 				componentProjectRepository,
 				componentRepository,
+				licenseRiskService,
 			)
 
 			bar := progressbar.Default(int64(len(components)))

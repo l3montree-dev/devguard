@@ -13,6 +13,12 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 )
 
+func CreateLicenseRiskService(db core.DB) core.LicenseRiskService {
+	return vuln.NewLicenseRiskService(
+		repositories.NewLicenseRiskRepository(db),
+	)
+}
+
 func CreateStatisticsService(db core.DB) core.StatisticsService {
 	return statistics.NewService(
 		repositories.NewStatisticsRepository(db),
@@ -30,6 +36,7 @@ func CreateComponentService(db core.DB, depsDevService core.DepsDevService) core
 		depsDevService,
 		repositories.NewComponentProjectRepository(db),
 		repositories.NewComponentRepository(db),
+		CreateLicenseRiskService(db),
 	)
 	return &componentService
 }

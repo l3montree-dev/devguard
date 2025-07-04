@@ -407,7 +407,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
 	depsDevService := vulndb.NewDepsDevService()
 	componentProjectRepository := repositories.NewComponentProjectRepository(db)
-	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository)
+	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository)
+	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
 
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, vulnEventRepository, &componentService)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
