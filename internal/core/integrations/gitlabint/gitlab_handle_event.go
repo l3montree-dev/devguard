@@ -85,14 +85,17 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 
 		// we create a new ticket in github
 		client, projectID, err := g.getClientBasedOnAsset(asset)
-		if err != nil {
+		if err == notConnectedError {
+			return nil
+		} else if err != nil {
 			return err
 		}
 
+		// connected to gitlab
 		gitlabTicketID := strings.TrimPrefix(*vuln.GetTicketID(), "gitlab:")
 		gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
 		if err != nil {
-			return nil
+			return err
 		}
 
 		members, err := org.FetchMembersOfOrganization(event.Ctx)
