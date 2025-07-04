@@ -386,12 +386,6 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 
-	//Create zip of all the necessary files
-	zipBomb, err := buildZIPInMemory(&metaDataFile, &markdownFile)
-	if err != nil {
-		return err
-	}
-
 	//build the multipart form data for the http request
 	var multipartBuffer bytes.Buffer
 	multipartWriter := multipart.NewWriter(&multipartBuffer)
@@ -399,10 +393,12 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(zipFileWriter, zipBomb)
+	//Create zip of all the necessary files
+	err = buildZIPInMemory(zipFileWriter, &metaDataFile, &markdownFile)
 	if err != nil {
 		return err
 	}
+
 	err = multipartWriter.Close()
 	if err != nil {
 		return err
@@ -432,35 +428,27 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return fmt.Errorf("http request to %s was unsuccessful (Code %d)", req.URL, resp.StatusCode)
 	}
 
-	//create the pdf and copy the data from the response to it
-	pdf := bytes.Buffer{}
-	_, err = io.Copy(&pdf, resp.Body)
-	if err != nil {
-		return err
-	}
-
 	// construct the http response header
 	ctx.Response().Header().Set(echo.HeaderContentDisposition, `attachment; filename="sbom.pdf"`)
 	ctx.Response().Header().Set(echo.HeaderContentType, "application/pdf")
 	ctx.Response().WriteHeader(http.StatusOK)
 
-	_, err = ctx.Response().Write(pdf.Bytes())
+	_, err = io.Copy(ctx.Response().Writer, resp.Body)
+
 	return err
 }
 
 //go:embed report-templates/*
 var ressourceFiles embed.FS
 
-func buildZIPInMemory(metadata, markdown *bytes.Buffer) (*bytes.Buffer, error) {
+func buildZIPInMemory(writer io.Writer, metadata, markdown *bytes.Buffer) error {
 
 	path := "report-templates/default/sbom/"
-	archive := bytes.Buffer{}
-	zipWriter := zip.NewWriter(&archive)
+	zipWriter := zip.NewWriter(writer)
 	defer zipWriter.Close()
 
 	// set of all the static files which are embedded
 	fileNames := []string{
-		path + "markdown/abkuerzungen.yaml", path + "markdown/glossar.yaml",
 		path + "template/template.tex", path + "template/assets/background.png", path + "template/assets/qr.png",
 		path + "template/assets/font/Inter-Bold.ttf", path + "template/assets/font/Inter-BoldItalic.ttf", path + "template/assets/font/Inter-Italic-VariableFont_opsz,wght.ttf", path + "template/assets/font/Inter-Italic.ttf", path + "template/assets/font/Inter-Regular.ttf", path + "template/assets/font/Inter-VariableFont_opsz,wght.ttf",
 	}
@@ -468,23 +456,23 @@ func buildZIPInMemory(metadata, markdown *bytes.Buffer) (*bytes.Buffer, error) {
 	// manually add the two generated files to the zip archive
 	zipFileDescriptor, err := zipWriter.Create("template/metadata.yaml")
 	if err != nil {
-		return &archive, err
+		return err
 	}
 	_, err = zipFileDescriptor.Write(metadata.Bytes())
 	if err != nil {
 		zipWriter.Close()
-		return &archive, err
+		return err
 	}
 
 	zipFileDescriptor, err = zipWriter.Create("markdown/sbom.md")
 	if err != nil {
 		zipWriter.Close()
-		return &archive, err
+		return err
 	}
 	_, err = zipFileDescriptor.Write(markdown.Bytes())
 	if err != nil {
 		zipWriter.Close()
-		return &archive, err
+		return err
 	}
 
 	// then loop over every static file and write it at the respective relative position in the directory
@@ -492,22 +480,22 @@ func buildZIPInMemory(metadata, markdown *bytes.Buffer) (*bytes.Buffer, error) {
 		fileContent, err := ressourceFiles.ReadFile(filePath)
 		if err != nil {
 			zipWriter.Close()
-			return &archive, err
+			return err
 		}
 		localFilePath, _ := strings.CutPrefix(filePath, path)
 		zipFileDescriptor, err := zipWriter.Create(localFilePath)
 		if err != nil {
 			zipWriter.Close()
-			return &archive, err
+			return err
 		}
 		_, err = zipFileDescriptor.Write(fileContent)
 		if err != nil {
 			zipWriter.Close()
-			return &archive, err
+			return err
 		}
 	}
 
 	//finalize the zip-archive and return it
 	zipWriter.Close()
-	return &archive, nil
+	return nil
 }
