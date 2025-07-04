@@ -248,17 +248,16 @@ func (g *projectRepository) prepareUniqueSlugs(orgID uuid.UUID, projects []*mode
 	}
 
 	// Fetch existing slugs safely using ANY()
-	var existing []string
+	var existing []*models.Project
 	err := g.db.Model(&models.Project{}).
-		Where("organization_id = ? AND slug LIKE ANY(?)", orgID, pq.Array(patterns)).
-		Pluck("slug", &existing).Error
+		Where("organization_id = ? AND slug LIKE ANY(?)", orgID, pq.Array(patterns)).Find(&existing).Error
 	if err != nil {
 		return err
 	}
 
-	taken := make(map[string]struct{})
+	taken := make(map[string]*models.Project)
 	for _, s := range existing {
-		taken[s] = struct{}{}
+		taken[s.Slug] = s
 	}
 
 	// Resolve unique slugs
@@ -266,15 +265,22 @@ func (g *projectRepository) prepareUniqueSlugs(orgID uuid.UUID, projects []*mode
 		base := p.Slug
 		slug := base
 		i := 1
+
 		for {
 			if _, exists := taken[slug]; !exists {
+				// we found a unique slug
+				p.Slug = slug
+				taken[slug] = p
+				break
+			} else if p.Same(*taken[slug]) {
+				// the slug is already taken - check if it is the same project
+				// if it is the same project, we can keep the slug
 				break
 			}
+			// slug is already taken by another project - append a number to the slug to check if this is unique in the next iteration
 			slug = fmt.Sprintf("%s-%d", base, i)
 			i++
 		}
-		p.Slug = slug
-		taken[slug] = struct{}{}
 	}
 
 	return nil
