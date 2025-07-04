@@ -139,7 +139,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		err = db.Create(&assetVersion).Error
 		assert.Nil(t, err)
 
-		vulnId := "vuln-1"
+		vulnID := "vuln-1"
 
 		componentDependency := models.ComponentDependency{
 			AssetID:          asset.ID,
@@ -156,7 +156,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 
 		dependencyVuln := models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
-				ID:               vulnId,
+				ID:               vulnID,
 				AssetID:          asset.ID,
 				AssetVersion:     assetVersion,
 				AssetVersionName: assetVersion.Name,
@@ -168,7 +168,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 
 		firstPartyVuln := models.FirstPartyVuln{
 			Vulnerability: models.Vulnerability{
-				ID:               vulnId,
+				ID:               vulnID,
 				AssetID:          asset.ID,
 				AssetVersion:     assetVersion,
 				AssetVersionName: assetVersion.Name,
