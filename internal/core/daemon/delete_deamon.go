@@ -14,7 +14,7 @@ func DeleteOldAssetVersions(db core.DB) error {
 	assetVersionRepository := repositories.NewAssetVersionRepository(db)
 	vulnEventRepository := repositories.NewVulnEventRepository(db)
 
-	count, err := assetVersionRepository.DeleteOldAssetVersions(7)
+	count, err := assetVersionRepository.DeleteOldAssetVersions(14)
 	if err != nil {
 		return err
 	}

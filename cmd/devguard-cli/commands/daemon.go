@@ -85,7 +85,7 @@ func triggerDaemon(db core.DB, daemons []string) error {
 			return nil
 		}
 
-		if err := markMirrored(configService, "vulndb.cleanupAssetVersions"); err != nil {
+		if err := markMirrored(configService, "vulndb.deleteOldAssetVersions"); err != nil {
 			slog.Error("could not mark assetVersionsDelete as mirrored", "err", err)
 			return nil
 		}
