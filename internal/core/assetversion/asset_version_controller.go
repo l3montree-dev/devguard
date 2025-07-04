@@ -376,7 +376,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 
 	// create the metadata for the pdf and writing it into a buffer
 	metaDataFile := bytes.Buffer{}
-	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetProject(ctx).Name, core.GetAssetVersion(ctx).Name)
+	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetAsset(ctx).Name, core.GetAssetVersion(ctx).Name)
 	parsedYAML, err := yaml.Marshal(metaData)
 	if err != nil {
 		return err
@@ -384,6 +384,12 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	_, err = metaDataFile.Write(parsedYAML)
 	if err != nil {
 		return err
+	}
+	// check if external entity provider
+	asset := core.GetAsset(ctx)
+	templateName := "default"
+	if asset.ExternalEntityProviderID != nil {
+		templateName = strings.ToLower(*asset.ExternalEntityProviderID)
 	}
 
 	//build the multipart form data for the http request
@@ -394,7 +400,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 		return err
 	}
 	//Create zip of all the necessary files
-	err = buildZIPInMemory(zipFileWriter, &metaDataFile, &markdownFile)
+	err = buildZIPInMemory(zipFileWriter, templateName, &metaDataFile, &markdownFile)
 	if err != nil {
 		return err
 	}
@@ -439,11 +445,16 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 }
 
 //go:embed report-templates/*
-var ressourceFiles embed.FS
+var resourceFiles embed.FS
 
-func buildZIPInMemory(writer io.Writer, metadata, markdown *bytes.Buffer) error {
+func buildZIPInMemory(writer io.Writer, templateName string, metadata, markdown *bytes.Buffer) error {
 
-	path := "report-templates/default/sbom/"
+	if _, err := resourceFiles.ReadDir(fmt.Sprintf("report-templates/%s/sbom", templateName)); err != nil {
+		slog.Warn("could not read embedded resource files for sbom report template", "error", err)
+		templateName = "default"
+	}
+
+	path := fmt.Sprintf("report-templates/%s/sbom/", templateName)
 	zipWriter := zip.NewWriter(writer)
 	defer zipWriter.Close()
 
@@ -477,7 +488,7 @@ func buildZIPInMemory(writer io.Writer, metadata, markdown *bytes.Buffer) error 
 
 	// then loop over every static file and write it at the respective relative position in the directory
 	for _, filePath := range fileNames {
-		fileContent, err := ressourceFiles.ReadFile(filePath)
+		fileContent, err := resourceFiles.ReadFile(filePath)
 		if err != nil {
 			zipWriter.Close()
 			return err

@@ -888,7 +888,14 @@ func getDatesForVulnerabilityEvent(vulnEvents []models.VulnEvent) (time.Time, ti
 // write the components from bom to the output file following the template
 func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 	//create template for the sbom markdown table
-	sbomTmpl, err := template.New("sbomTmpl").Parse("# SBOM\n\n| PURL | Name | Version | Licenses  | Type |\n|-------------------|---------|---------|--------|-------|\n{{range . }}| {{ .BOMRef }} | {{ .Name }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }}| {{ .Type }} |\n{{ end }}")
+	sbomTmpl, err := template.New("sbomTmpl").Parse(
+		`# SBOM
+
+| PURL | Name | Version | Licenses  |
+|-------------------|---------|---------|--------|
+{{range . }}| {{ .BOMRef }} | {{ .Name }} | {{ .Version }} | {{if gt (len .Licenses) 0 }}{{ range .Licenses }}{{.License.ID}} {{end}}{{ else }} Unknown {{ end }} |
+{{ end }}`,
+	)
 	if err != nil {
 		return err
 	}
@@ -897,9 +904,9 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 }
 
 // generate the metadata used to generate the sbom-pdf and return it as struct
-func createYAMLMetadata(organizationName string, projectName string, assetVersionName string) yamlMetadata {
+func createYAMLMetadata(organizationName string, assetName string, assetVersionName string) yamlMetadata {
 	today := time.Now()
-	title1, title2 := createTitlesFromProjectName(projectName)
+	title1, title2 := createTitles(assetName)
 	// TO-DO: add sha hash to test the integrity
 	return yamlMetadata{
 		Vars: yamlVars{
@@ -916,12 +923,12 @@ func createYAMLMetadata(organizationName string, projectName string, assetVersio
 }
 
 // Divide and/or crop the project name into two, max 14 characters long, strings, there is probably a more elegant way to do this
-func createTitlesFromProjectName(projectName string) (string, string) {
+func createTitles(name string) (string, string) {
 	const maxTitleLength = 14 //make the length easy changeable
 	title1 := ""
 	title2 := ""
-	title1Full := false                   //once a field has exceeded the length of title1 we can ignore title1 from there on
-	fields := strings.Fields(projectName) //separate the words divided by white spaces
+	title1Full := false            //once a field has exceeded the length of title1 we can ignore title1 from there on
+	fields := strings.Fields(name) //separate the words divided by white spaces
 	for _, field := range fields {
 		if title1 == "" { //we have to differentiate if A tittle is empty or not before using, because of the white spaces between words in a title
 			if len(field) <= maxTitleLength { //if it fits the 14 char limit we can just write it and move to the next

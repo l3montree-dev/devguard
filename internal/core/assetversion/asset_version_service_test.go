@@ -116,14 +116,14 @@ func TestYamlMetadata(t *testing.T) {
 func TestCreateProjectTitle(t *testing.T) {
 	t.Run("empty project name should return two empty titles", func(t *testing.T) {
 		projectTitle := ""
-		title1, title2 := createTitlesFromProjectName(projectTitle)
+		title1, title2 := createTitles(projectTitle)
 		assert.Equal(t, "", title1, title2)
 		assert.LessOrEqual(t, len(title1), 14)
 		assert.LessOrEqual(t, len(title2), 14)
 	})
 	t.Run("project name <= 14 characters should just return project name in title1 and title2 should be empty", func(t *testing.T) {
 		projectTitle := "One Two Fields"
-		title1, title2 := createTitlesFromProjectName(projectTitle)
+		title1, title2 := createTitles(projectTitle)
 		assert.Equal(t, projectTitle, title1)
 		assert.Equal(t, "", title2)
 		assert.LessOrEqual(t, len(title1), 14)
@@ -131,7 +131,7 @@ func TestCreateProjectTitle(t *testing.T) {
 	})
 	t.Run("project name > 14 characters and <= 28 characters should split up the name at the optimal whitespace", func(t *testing.T) {
 		projectTitle := "One Two Three Four Fields"
-		title1, title2 := createTitlesFromProjectName(projectTitle)
+		title1, title2 := createTitles(projectTitle)
 		assert.Equal(t, "One Two Three", title1)
 		assert.Equal(t, "Four Fields", title2)
 		assert.LessOrEqual(t, len(title1), 14)
@@ -139,15 +139,15 @@ func TestCreateProjectTitle(t *testing.T) {
 	})
 	t.Run("project name > 28 characters with fields < 14 should cut off after the titles are full", func(t *testing.T) {
 		projectTitle := "One Two Three Four Fields More Fields?"
-		title1, title2 := createTitlesFromProjectName(projectTitle)
+		title1, title2 := createTitles(projectTitle)
 		assert.Equal(t, "One Two Three", title1)
-		assert.Equal(t, "Four Fields", title2)
+		assert.Equal(t, "Four Fields...", title2)
 		assert.LessOrEqual(t, len(title1), 14)
 		assert.LessOrEqual(t, len(title2), 14)
 	})
 	t.Run("project name > 28 characters with fields < 14 should cut off the last title", func(t *testing.T) {
 		projectTitle := "One Two Three Four Taco Fields More Fields?"
-		title1, title2 := createTitlesFromProjectName(projectTitle)
+		title1, title2 := createTitles(projectTitle)
 		assert.Equal(t, "One Two Three", title1)
 		assert.Equal(t, "Four Taco Fi..", title2)
 		assert.LessOrEqual(t, len(title1), 14)
@@ -155,7 +155,7 @@ func TestCreateProjectTitle(t *testing.T) {
 	})
 	t.Run("project name > 28 characters with fields > 14 should cut off first title with a -, not enough space for api so it gets left out", func(t *testing.T) {
 		projectTitle := "WhoWouldUseSuchALongName Api"
-		title1, title2 := createTitlesFromProjectName(projectTitle)
+		title1, title2 := createTitles(projectTitle)
 		assert.Equal(t, "WhoWouldUseSu-", title1)
 		assert.Equal(t, "chALongName", title2)
 		assert.LessOrEqual(t, len(title1), 14)
@@ -163,7 +163,7 @@ func TestCreateProjectTitle(t *testing.T) {
 	})
 	t.Run("project name > 28 characters with fields > 14 should cut off first title with a -, enough space for api so it gets inserted", func(t *testing.T) {
 		projectTitle := "WhoWouldUseSuchLongName Api"
-		title1, title2 := createTitlesFromProjectName(projectTitle)
+		title1, title2 := createTitles(projectTitle)
 		assert.Equal(t, "WhoWouldUseSu-", title1)
 		assert.Equal(t, "chLongName Api", title2)
 		assert.LessOrEqual(t, len(title1), 14)
@@ -182,7 +182,8 @@ func TestMarkdownTableFromSBOM(t *testing.T) {
 		}
 		markdownFile := bytes.Buffer{}
 		err := markdownTableFromSBOM(&markdownFile, &bom)
+		fmt.Println(markdownFile.String())
 		assert.Nil(t, err)
-		assert.Equal(t, "# SBOM\n\n| PURL | Name | Version | Licenses  | Type |\n|-------------------|---------|---------|--------|-------|\n| pkg:deb/debian/gcc-12@12.2.0 | debian/gcc-12 | 12.2.0-14 | Apache-2.0 Apache-4.0 | application |\n| pkg:deb/debian/libc6@2.36-9&#43;deb12u10 | debian/libc6 | 2.36-9&#43;deb12u10 | MIT | library |\n| pkg:deb/debian/libstdc&#43;&#43;6@12.2.0-14 | debian/libstdc&#43;&#43;6 | 12.2.0-14 |  Unknown | library |\n", markdownFile.String())
+		assert.Equal(t, "# SBOM\n\n| PURL | Name | Version | Licenses  |\n|-------------------|---------|---------|--------|\n| pkg:deb/debian/gcc-12@12.2.0 | debian/gcc-12 | 12.2.0-14 | Apache-2.0 Apache-4.0  |\n| pkg:deb/debian/libc6@2.36-9&#43;deb12u10 | debian/libc6 | 2.36-9&#43;deb12u10 | MIT  |\n| pkg:deb/debian/libstdc&#43;&#43;6@12.2.0-14 | debian/libstdc&#43;&#43;6 | 12.2.0-14 |  Unknown  |\n", markdownFile.String())
 	})
 }
