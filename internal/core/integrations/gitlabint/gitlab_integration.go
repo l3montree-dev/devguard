@@ -253,7 +253,7 @@ func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.G
 	_ = resp // we don't need the response, but we need to check if the request was successful
 	_ = user
 	if err != nil {
-		slog.Error("failed to get user", "err", err)
+		slog.Error("failed to get user", "err", err, "tokenHash", utils.HashString(token.AccessToken))
 		return false
 	}
 
