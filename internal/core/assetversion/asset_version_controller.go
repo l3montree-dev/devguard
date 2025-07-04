@@ -448,12 +448,12 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	return err
 }
 
-//go:embed report-templates/sbom/*
+//go:embed report-templates/*
 var ressourceFiles embed.FS
 
 func buildZIPInMemory(metadata, markdown *bytes.Buffer) (*bytes.Buffer, error) {
 
-	path := "report-templates/sbom/"
+	path := "report-templates/default/sbom/"
 	archive := bytes.Buffer{}
 	zipWriter := zip.NewWriter(&archive)
 	defer zipWriter.Close()
