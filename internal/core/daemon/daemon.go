@@ -76,6 +76,21 @@ func Start(db core.DB) {
 		// thus there is no need to recalculate the risk or anything earlier
 		slog.Info("starting background jobs", "time", time.Now())
 		var start = time.Now()
+
+		if shouldMirror(configService, "vulndb.deleteOldAssetVersions") {
+			start = time.Now()
+			// delete old asset versions
+			err := DeleteOldAssetVersions(db)
+			if err != nil {
+				slog.Error("could not delete old asset versions", "err", err)
+				return nil
+			}
+			if err := markMirrored(configService, "deleteOldAssetVersions"); err != nil {
+				slog.Error("could not mark deleteOldAssetVersions as mirrored", "err", err)
+			}
+			slog.Info("old asset versions deleted", "duration", time.Since(start))
+		}
+
 		// update deps dev
 		if shouldMirror(configService, "vulndb.depsdev") {
 			err := UpdateDepsDevInformation(db)
