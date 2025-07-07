@@ -28,7 +28,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 	}
 
 	defer req.Body.Close()
-	event, err := jira.ParseWebHook(payload)
+	event, err := jira.ParseWebhook(payload)
 	if err != nil {
 		slog.Error("failed to parse Jira webhook event", "err", err)
 

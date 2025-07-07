@@ -36,7 +36,7 @@ func NewJiraClient(token string, baseURL string, userEmail string) (*Client, err
 }
 
 func (c *Client) GetIssueTransitions(ctx context.Context, issueID string) ([]Transition, error) {
-	resp, err := jiraRequest(*c, http.MethodGet, fmt.Sprintf("/rest/api/3/issue/%s/transitions", issueID), nil)
+	resp, err := c.jiraRequest(http.MethodGet, fmt.Sprintf("/rest/api/3/issue/%s/transitions", issueID), nil)
 	if err != nil {
 		slog.Error("Failed to fetch issue transitions", "issue_id", issueID, "error", err)
 		return nil, fmt.Errorf("failed to fetch issue transitions: %w", err)
@@ -60,7 +60,7 @@ func (c *Client) GetIssueTransitions(ctx context.Context, issueID string) ([]Tra
 }
 
 func (c *Client) GetAccountIDByEmail(ctx context.Context, email string) (string, error) {
-	resp, err := jiraRequest(*c, http.MethodGet, fmt.Sprintf("/rest/api/3/user/search?query=%s", email), nil)
+	resp, err := c.jiraRequest(http.MethodGet, fmt.Sprintf("/rest/api/3/user/search?query=%s", email), nil)
 	if err != nil {
 		slog.Error("Failed to fetch user by email", "email", email, "error", err)
 		return "", fmt.Errorf("failed to fetch user by email: %w", err)
@@ -104,7 +104,7 @@ func (c *Client) CreateIssueComment(ctx context.Context, issueID string, project
 	}
 	body := bytes.NewBuffer(bodyBytes)
 
-	resp, err := jiraRequest(*c, http.MethodPost, fmt.Sprintf("/rest/api/3/issue/%s/comment", issueID), body)
+	resp, err := c.jiraRequest(http.MethodPost, fmt.Sprintf("/rest/api/3/issue/%s/comment", issueID), body)
 	if err != nil {
 		bodyContent, _ := io.ReadAll(resp.Body)
 		slog.Error("Failed to create issue comment", "error", err, "response_body", string(bodyContent))
@@ -137,7 +137,7 @@ func (c *Client) TransitionIssue(ctx context.Context, issueID string, transition
 		return fmt.Errorf("failed to marshal transition body: %w", err)
 	}
 
-	resp, err := jiraRequest(*c, http.MethodPost, fmt.Sprintf("/rest/api/3/issue/%s/transitions", issueID), bytes.NewBuffer(bodyBytes))
+	resp, err := c.jiraRequest(http.MethodPost, fmt.Sprintf("/rest/api/3/issue/%s/transitions", issueID), bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		bodyContent, _ := io.ReadAll(resp.Body)
 		slog.Error("Failed to transition issue", "issue_id", issueID, "error", err, "response_body", string(bodyContent))
@@ -163,7 +163,7 @@ func (c *Client) EditIssue(ctx context.Context, issue *Issue) error {
 		return fmt.Errorf("failed to marshal issue: %w", err)
 	}
 	body := bytes.NewBuffer(bodyBytes)
-	resp, err := jiraRequest(*c, http.MethodPut, fmt.Sprintf("/rest/api/3/issue/%s", issue.ID), body)
+	resp, err := c.jiraRequest(http.MethodPut, fmt.Sprintf("/rest/api/3/issue/%s", issue.ID), body)
 	if err != nil {
 		bodyContent, _ := io.ReadAll(resp.Body)
 		slog.Error("Failed to edit issue", "error", err, "response_body", string(bodyContent))
@@ -182,7 +182,7 @@ func (c *Client) EditIssue(ctx context.Context, issue *Issue) error {
 }
 
 func (c *Client) GetIssue(ctx context.Context, issueID string) (*Issue, error) {
-	resp, err := jiraRequest(*c, http.MethodGet, fmt.Sprintf("/rest/api/3/issue/%s", issueID), nil)
+	resp, err := c.jiraRequest(http.MethodGet, fmt.Sprintf("/rest/api/3/issue/%s", issueID), nil)
 	if err != nil {
 		slog.Error("Failed to fetch issue", "issue_id", issueID, "error", err)
 		return nil, fmt.Errorf("failed to fetch issue: %w", err)
@@ -215,7 +215,7 @@ func (c *Client) CreateIssue(ctx context.Context, issue *Issue) (*CreateIssueRes
 
 	body := bytes.NewBuffer(bodyBytes)
 
-	resp, err := jiraRequest(*c, http.MethodPost, "/rest/api/3/issue", body)
+	resp, err := c.jiraRequest(http.MethodPost, "/rest/api/3/issue", body)
 	if err != nil {
 		bodyContent, _ := io.ReadAll(resp.Body)
 		slog.Error("Failed to create issue", "error", err, "response_body", string(bodyContent))
@@ -243,7 +243,7 @@ func (c *Client) CreateIssue(ctx context.Context, issue *Issue) (*CreateIssueRes
 
 func (c *Client) FetchAllRepos() ([]*Project, error) {
 
-	resp, err := jiraRequest(*c, http.MethodGet, "/rest/api/3/project", nil)
+	resp, err := c.jiraRequest(http.MethodGet, "/rest/api/3/project", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch projects: %w", err)
 	}
@@ -267,12 +267,12 @@ func (c *Client) FetchAllRepos() ([]*Project, error) {
 	return projects, nil
 }
 
-func jiraRequest(client Client, method string, url string, body io.Reader) (*http.Response, error) {
+func (c *Client) jiraRequest(method string, url string, body io.Reader) (*http.Response, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, method, client.BaseURL+url, body)
+	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+url, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -280,12 +280,12 @@ func jiraRequest(client Client, method string, url string, body io.Reader) (*htt
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 
-	req.SetBasicAuth(client.UserEmail, client.AccessToken)
+	req.SetBasicAuth(c.UserEmail, c.AccessToken)
 	return http.DefaultClient.Do(req)
 
 }
 
-func ParseWebHook(payload []byte) (*WebhookEvent, error) {
+func ParseWebhook(payload []byte) (*WebhookEvent, error) {
 
 	var event WebhookEvent
 	if err := json.Unmarshal(payload, &event); err != nil {
