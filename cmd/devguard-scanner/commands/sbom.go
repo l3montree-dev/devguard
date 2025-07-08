@@ -92,7 +92,7 @@ func sbomCmd(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not parse response")
 	}
 
-	return printScaResults(scanResponse, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.ScannerID)
+	return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.ScannerID)
 }
 
 func NewSbomCommand() *cobra.Command {
