@@ -37,6 +37,7 @@ type baseConfig struct {
 
 	Path       string `json:"path" mapstructure:"path"`
 	FailOnRisk string `json:"failOnRisk" mapstructure:"failOnRisk"`
+	FailOnCVSS string `json:"failOnCVSS" mapstructure:"failOnCVSS"`
 	WebUI      string `json:"webUI" mapstructure:"webUI"`
 
 	Username string `json:"username" mapstructure:"username"`
@@ -126,6 +127,7 @@ func ParseBaseConfig() {
 		"scannerID", RuntimeBaseConfig.ScannerID,
 		"webUI", RuntimeBaseConfig.WebUI,
 		"failOnRisk", RuntimeBaseConfig.FailOnRisk,
+		"failOnCVSS", RuntimeBaseConfig.FailOnCVSS,
 		"registry", RuntimeBaseConfig.Registry,
 	)
 }
