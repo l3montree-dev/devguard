@@ -3,6 +3,7 @@ package project
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -151,45 +152,83 @@ func (s *service) ListProjectsByOrganizationID(organizationID uuid.UUID) ([]mode
 	return s.projectRepository.GetByOrgID(organizationID)
 }
 
-func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) {
-	// get all projects the user has at least read access to
-	rbac := core.GetRBAC(c)
-	projectSliceOrProjectIDSlice, err := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
-	if err != nil {
-		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
-	}
+func (s *service) externalProjectsPaged(slice []models.Project, pageInfo core.PageInfo, search string) (core.Paged[models.Project], error) {
 
-	if slice, ok := projectSliceOrProjectIDSlice.([]models.Project); ok {
-		// if the user is looking for projects which have a parent id set, we return an empty slice
-		if c.QueryParam("parentId") != "" {
-			return []models.Project{}, nil
-		}
-		// make sure the projects exist inside the database
-		toUpsert := make([]*models.Project, 0, len(slice))
-		for i := range slice {
-			toUpsert = append(toUpsert, &slice[i])
-			slice[i].OrganizationID = core.GetOrg(c).GetID() // ensure the organization ID is set
-		}
-		created, _, err := s.projectRepository.UpsertSplit(nil, *rbac.GetExternalEntityProviderID(), toUpsert)
-		if err != nil {
-			return nil, echo.NewHTTPError(500, "could not upsert projects").WithInternal(err)
-		}
-
-		// enable the community managed policies for the projects
-		for _, project := range created {
-			if err := s.projectRepository.EnableCommunityManagedPolicies(nil, project.ID); err != nil {
-				return nil, echo.NewHTTPError(500, "could not enable community managed policies").WithInternal(err)
+	if search != "" {
+		// filter the slice by search term
+		filteredSlice := make([]models.Project, 0, len(slice))
+		for _, project := range slice {
+			if strings.Contains(strings.ToLower(project.Name), strings.ToLower(search)) {
+				filteredSlice = append(filteredSlice, project)
 			}
-			slog.Info("enabled community managed policies for project", "projectSlug", project.Slug, "projectID", project.ID)
 		}
-
-		return slice, err
-	}
-	projectsIdsStr, ok := projectSliceOrProjectIDSlice.([]string)
-	if !ok {
-		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(fmt.Errorf("expected []string but got %T", projectSliceOrProjectIDSlice))
+		slice = filteredSlice
 	}
 
+	// if the slice is empty, we return an empty paged result
+	if len(slice) == 0 {
+		return core.Paged[models.Project]{}, nil
+	}
+
+	var slicePaged []models.Project
+	var sliceLength int
+	if len(slice) < int(pageInfo.PageSize) {
+		sliceLength = len(slice)
+	} else {
+		sliceLength = int(pageInfo.PageSize)
+	}
+	if pageInfo.Page > 0 {
+		startIndex := (pageInfo.Page - 1) * int(pageInfo.PageSize)
+		if startIndex >= len(slice) {
+			return core.Paged[models.Project]{}, nil // no projects to return
+		}
+		endIndex := startIndex + sliceLength
+		if endIndex > len(slice) {
+			endIndex = len(slice)
+		}
+		slicePaged = slice[startIndex:endIndex]
+	} else {
+		// if page is 0, we return the first sliceLength elements
+		if sliceLength > len(slice) {
+			sliceLength = len(slice)
+		}
+		slicePaged = slice[:sliceLength]
+	}
+
+	return core.NewPaged(pageInfo, int64(len(slice)), slicePaged), nil
+
+}
+
+func (s *service) externalProjectsForUser(c core.Context, slice []models.Project, rbac core.AccessControl) ([]models.Project, error) {
+
+	// if the user is looking for projects which have a parent id set, we return an empty slice
+	if c.QueryParam("parentId") != "" {
+		return []models.Project{}, nil
+	}
+	// make sure the projects exist inside the database
+	toUpsert := make([]*models.Project, 0, len(slice))
+	for i := range slice {
+		toUpsert = append(toUpsert, &slice[i])
+		slice[i].OrganizationID = core.GetOrg(c).GetID() // ensure the organization ID is set
+	}
+	created, _, err := s.projectRepository.UpsertSplit(nil, *rbac.GetExternalEntityProviderID(), toUpsert)
+	if err != nil {
+		return []models.Project{}, echo.NewHTTPError(500, "could not upsert projects").WithInternal(err)
+	}
+
+	// enable the community managed policies for the projects
+	for _, project := range created {
+		if err := s.projectRepository.EnableCommunityManagedPolicies(nil, project.ID); err != nil {
+			return []models.Project{}, echo.NewHTTPError(500, "could not enable community managed policies").WithInternal(err)
+		}
+		slog.Info("enabled community managed policies for project", "projectSlug", project.Slug, "projectID", project.ID)
+	}
+
+	return slice, nil
+
+}
+
+func (s *service) projectsForUser(c core.Context, projectsIdsStr []string) ([]uuid.UUID, *uuid.UUID, error) {
 	// extract the project ids from the roles
 	projectIDs := make(map[uuid.UUID]struct{})
 	for _, project := range projectsIdsStr {
@@ -204,7 +243,7 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 	if queryParentID != "" {
 		tmp, err := uuid.Parse(queryParentID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		parentID = &tmp
@@ -213,6 +252,73 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 	projectIDsSlice := make([]uuid.UUID, 0, len(projectIDs))
 	for projectID := range projectIDs {
 		projectIDsSlice = append(projectIDsSlice, projectID)
+	}
+
+	return projectIDsSlice, parentID, nil
+}
+
+func (s *service) ListAllowedProjectsPaged(c core.Context) (core.Paged[models.Project], error) {
+
+	pageInfo := core.GetPageInfo(c)
+	search := c.QueryParam("search")
+
+	// get all projects the user has at least read access to
+	rbac := core.GetRBAC(c)
+	projectSliceOrProjectIDSlice, err := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
+	if err != nil {
+		return core.Paged[models.Project]{}, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
+	}
+
+	if slice, ok := projectSliceOrProjectIDSlice.([]models.Project); ok {
+		slice, err := s.externalProjectsForUser(c, slice, rbac)
+		if err != nil {
+			return core.Paged[models.Project]{}, err
+		}
+
+		return s.externalProjectsPaged(slice, pageInfo, search)
+	}
+	projectsIdsStr, ok := projectSliceOrProjectIDSlice.([]string)
+	if !ok {
+		return core.Paged[models.Project]{}, echo.NewHTTPError(500, "could not get projects for user").WithInternal(fmt.Errorf("expected []string but got %T", projectSliceOrProjectIDSlice))
+	}
+
+	projectIDsSlice, parentID, err := s.projectsForUser(c, projectsIdsStr)
+	if err != nil {
+		return core.Paged[models.Project]{}, err
+	}
+
+	projects, err := s.projectRepository.ListPaged(projectIDsSlice, parentID, core.GetOrg(c).GetID(), pageInfo, search)
+
+	if err != nil {
+		return core.Paged[models.Project]{}, err
+	}
+
+	return projects, nil
+}
+
+func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) {
+	// get all projects the user has at least read access to
+	rbac := core.GetRBAC(c)
+	projectSliceOrProjectIDSlice, err := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
+	if err != nil {
+		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
+	}
+
+	if slice, ok := projectSliceOrProjectIDSlice.([]models.Project); ok {
+		slice, err := s.externalProjectsForUser(c, slice, rbac)
+		if err != nil {
+			return nil, err
+		}
+		return slice, err
+	}
+	projectsIdsStr, ok := projectSliceOrProjectIDSlice.([]string)
+	if !ok {
+		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(fmt.Errorf("expected []string but got %T", projectSliceOrProjectIDSlice))
+	}
+
+	projectIDsSlice, parentID, err := s.projectsForUser(c, projectsIdsStr)
+	if err != nil {
+		return nil, err
 	}
 
 	projects, err := s.projectRepository.List(projectIDsSlice, parentID, core.GetOrg(c).GetID())
