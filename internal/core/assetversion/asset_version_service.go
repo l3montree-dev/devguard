@@ -521,7 +521,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	go func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
 
-		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion.Name, assetVersion.AssetID, scannerID)
+		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, scannerID)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {

@@ -376,13 +376,13 @@ type ComponentProjectRepository interface {
 }
 
 type ComponentService interface {
-	GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Component, error)
+	GetAndSaveLicenseInformation(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error)
 	RefreshComponentProjectInformation(project models.ComponentProject)
 	GetLicense(component models.Component) (models.Component, error)
 }
 
 type LicenseRiskService interface {
-	FindLicenseRisksInComponents(components []models.Component) error
+	FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error
 }
 
 type AccessControl interface {

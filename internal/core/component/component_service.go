@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -153,13 +152,13 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	return component, nil
 }
 
-func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersionName, assetID, scannerID)
+func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error) {
+	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return nil, err
 	}
 
-	// only get the components - there might be duplicates
+	// only get the components - there might be duplicates TO-DO: using the OnlyInA OnlyInB to build the maps maybe
 	componentsWithoutLicense := make([]models.Component, 0)
 	componentsWithLicense := make([]models.Component, 0)
 	seen := make(map[string]struct{})
@@ -173,7 +172,7 @@ func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID 
 			seen[componentDependency.DependencyPurl] = struct{}{}
 		}
 	}
-
+	//why are we only getting new licenses and not updating existing ones?
 	slog.Info("getting license information for components", "amount", len(componentsWithoutLicense))
 	errGroup := utils.ErrGroup[models.Component](10)
 	for _, component := range componentsWithoutLicense {
@@ -188,10 +187,16 @@ func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID 
 	if err != nil {
 		return nil, err
 	}
-	components = append(components, componentsWithLicense...)
 
 	// save the components
 	if err := s.componentRepository.SaveBatch(nil, components); err != nil {
+		return nil, err
+	}
+
+	// find potential license risks for the components
+	components = append(components, componentsWithLicense...)
+	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, components, scannerID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -200,10 +205,6 @@ func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID 
 	for _, componentDependency := range componentDependencies {
 		allComponents = append(allComponents, componentDependency.Dependency)
 	}
-
-	// find potential license risks for the components
-
-	err = s.licenseRiskService.FindLicenseRisksInComponents(components)
 
 	return allComponents, nil
 }

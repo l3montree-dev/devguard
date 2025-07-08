@@ -23,14 +23,41 @@ func NewLicenseRiskService(licenseRiskReposiory core.LicenseRiskRepository) Lice
 	}
 }
 
-func (service LicenseRiskService) FindLicenseRisksInComponents(components []models.Component) error {
+func (service LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error {
+	licenses, err := GetOSILicenses()
+	if err != nil {
+		return err
+	}
+	// put all the license in a hash map for faster look up times
+	licenseMap := make(map[string]struct{})
+	for i := range licenses {
+		licenseMap[licenses[i]] = struct{}{}
+	}
 
-	handledComponents := make(map[string]struct{})
-	for _, currentComponent := range components {
-		_, found := handledComponents[currentComponent.Purl]
-		if !found {
-			fmt.Println("")
+	//collect all risks before saving to the database
+	allLicenseRisks := []models.LicenseRisk{}
+	//go over every component and check if the license if the license is a valid osi license; if not we can create a license risk with the provided information
+	for _, component := range components {
+		_, validLicense := licenseMap[*component.License]
+		if !validLicense {
+			licenseRisk := models.LicenseRisk{
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: assetVersion.Name,
+					AssetID:          assetVersion.AssetID,
+					AssetVersion:     assetVersion,
+					State:            models.VulnStateOpen,
+					ScannerIDs:       scannerID,
+					LastDetected:     time.Now(),
+				},
+				FinalLicenseDecision: "",
+				ComponentPurl:        component.Purl,
+			}
+			allLicenseRisks = append(allLicenseRisks, licenseRisk)
 		}
+	}
+	err = service.licenseRiskRepository.SaveBatch(nil, allLicenseRisks)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -39,7 +66,7 @@ func GetOSILicenses() ([]string, error) {
 	var validOSILicenses []string
 	apiURL := os.Getenv("OSI_LICENSES_API")
 	if apiURL == "" {
-		return nil, fmt.Errorf("could not get the URL of the OSI API pls check the OSI_LICENSES_API variable in your .env")
+		return nil, fmt.Errorf("could not get the URL of the OSI API, check the OSI_LICENSES_API variable in your .env file")
 	}
 
 	req, err := http.NewRequest("GET", apiURL, nil)
