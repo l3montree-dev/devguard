@@ -424,8 +424,8 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	}
 
 	existingComponentPurls := make(map[string]bool)
-	for _, c := range assetComponents {
-		existingComponentPurls[c.Component.Purl] = true
+	for _, currentComponent := range assetComponents {
+		existingComponentPurls[currentComponent.Component.Purl] = true
 	}
 
 	// we need to check if the SBOM is new or if it already exists.

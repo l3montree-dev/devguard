@@ -179,7 +179,7 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 	RIGHT JOIN component_dependencies as cd 
 	ON c.purl = cd.dependency_purl 
 	WHERE EXISTS 
-	(SELECT license_id FROM license_overwrite as lo WHERE lo.component_purl = c.purl)
+	(SELECT final_license_decision FROM license_risks as lr WHERE lr.component_purl = c.purl)
 	AND asset_version_name = ?
 	AND asset_id = ? 
 	GROUP BY c.license`,
@@ -190,7 +190,7 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 	RIGHT JOIN component_dependencies as cd 
 	ON c.purl = cd.dependency_purl 
 	WHERE NOT EXISTS 
-	(SELECT license_id FROM license_overwrite as lo WHERE lo.component_purl = c.purl)
+	(SELECT final_license_decision FROM license_risks as lr WHERE lr.component_purl = c.purl)
 	AND asset_version_name = ?
 	AND asset_id = ? 
 	GROUP BY c.license`,

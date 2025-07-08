@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -41,12 +42,13 @@ type HTTPController struct {
 	statisticsService      core.StatisticsService
 
 	dependencyVulnService core.DependencyVulnService
+	licenseRiskService    core.LicenseRiskService
 
 	// mark public to let it be overridden in tests
 	core.FireAndForgetSynchronizer
 }
 
-func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *HTTPController {
+func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, licenseRiskService core.LicenseRiskService) *HTTPController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -61,6 +63,7 @@ func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRe
 		assetVersionRepository:    assetVersionRepository,
 		statisticsService:         statisticsService,
 		dependencyVulnService:     dependencyVulnService,
+		licenseRiskService:        licenseRiskService,
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
@@ -136,6 +139,12 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 		return scanResults, err
 	}
 
+	// check if we have any license risk in our sbom
+	sbomComponents := convertCDXComponentsToSimpleComponents(*normalizedBom.GetComponents())
+	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, sbomComponents, scannerID)
+	if err != nil {
+		return scanResults, err
+	}
 	//Check if we want to create an issue for this assetVersion
 
 	s.FireAndForget(func() {
@@ -267,4 +276,21 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 	}
 	return c.JSON(200, scanResults)
 
+}
+
+func convertCDXComponentsToSimpleComponents(cdxComponents []cyclonedx.Component) []models.Component {
+	components := []models.Component{}
+	// only variables needed for FindLicenseRisksInComponents are converted
+	for _, cdx := range cdxComponents {
+		license := ""
+		// avoid nil pointer dereference
+		if len(*cdx.Licenses) > 0 {
+			license = (*cdx.Licenses)[0].License.ID
+		}
+		components = append(components, models.Component{
+			Purl:    cdx.PackageURL,
+			License: &license,
+		})
+	}
+	return components
 }

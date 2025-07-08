@@ -16,6 +16,7 @@ type VulnType string
 const (
 	VulnTypeDependencyVuln VulnType = "dependencyVuln"
 	VulnTypeFirstPartyVuln VulnType = "firstPartyVuln"
+	VulnTypeLicenseRisk    VulnType = "licenseRisk"
 )
 
 const (

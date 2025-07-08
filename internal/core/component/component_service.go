@@ -172,6 +172,7 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 			seen[componentDependency.DependencyPurl] = struct{}{}
 		}
 	}
+
 	//why are we only getting new licenses and not updating existing ones?
 	slog.Info("getting license information for components", "amount", len(componentsWithoutLicense))
 	errGroup := utils.ErrGroup[models.Component](10)
@@ -182,26 +183,25 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 		})
 	}
 
-	// wait for all components to be processed
-	components, err := errGroup.WaitAndCollect()
+	// wait for all updatedComponents to be processed
+	updatedComponents, err := errGroup.WaitAndCollect()
 	if err != nil {
 		return nil, err
 	}
 
 	// save the components
-	if err := s.componentRepository.SaveBatch(nil, components); err != nil {
+	if err := s.componentRepository.SaveBatch(nil, updatedComponents); err != nil {
 		return nil, err
 	}
 
-	// find potential license risks for the components
-	components = append(components, componentsWithLicense...)
-	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, components, scannerID)
+	// find potential license risks for the components which had no prior license
+	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, updatedComponents, scannerID)
 	if err != nil {
 		return nil, err
 	}
 
 	// now return all components - each one should have the best license information available
-	allComponents := components
+	allComponents := updatedComponents
 	for _, componentDependency := range componentDependencies {
 		allComponents = append(allComponents, componentDependency.Dependency)
 	}

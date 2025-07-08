@@ -38,7 +38,7 @@ func newUpdateDepsDevInformation() *cobra.Command {
 			depsDevService := vulndb.NewDepsDevService()
 			componentProjectRepository := repositories.NewComponentProjectRepository(database)
 			componentRepository := repositories.NewComponentRepository(database)
-			licenseRiskService := vuln.NewLicenseRiskService(repositories.NewLicenseRiskRepository(database))
+			licenseRiskService := vuln.NewLicenseRiskService(repositories.NewLicenseRiskRepository(database), repositories.NewVulnEventRepository(database))
 
 			components, err := componentRepository.All()
 			if err != nil {

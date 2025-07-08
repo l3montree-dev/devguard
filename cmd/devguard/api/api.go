@@ -407,7 +407,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
 	depsDevService := vulndb.NewDepsDevService()
 	componentProjectRepository := repositories.NewComponentProjectRepository(db)
-	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository)
+	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
 
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, vulnEventRepository, &componentService)
@@ -425,7 +425,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService)
 	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
 
-	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
+	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, licenseRiskService)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository)
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
@@ -665,10 +665,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)
-
 	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	dependencyVulnRouter.POST("/:dependencyVulnID/mitigate/", dependencyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
-
 	dependencyVulnRouter.GET("/:dependencyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
 
 	firstPartyVulnRouter := assetVersionRouter.Group("/first-party-vulns")
@@ -679,6 +677,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	firstPartyVulnRouter.GET("/:firstPartyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
 
 	licenseRiskRouter := assetVersionRouter.Group("/license-risks")
+	assetVersionRouter.POST("/license-risk/", licenseRiskController.Create)
 	licenseRiskRouter.GET("/", licenseRiskController.ListPaged)
 
 	routes := server.Routes()

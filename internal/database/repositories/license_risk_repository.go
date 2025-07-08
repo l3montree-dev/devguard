@@ -66,7 +66,7 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersion(asset
 
 func (repository *LicenseRiskRepository) GetAllOverwrittenLicensesForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error) {
 	var result []models.LicenseRisk
-	err := repository.db.Where("asset_id = ? AND asset_version_name = ? AND state = fixed", assetID, assetVersionName).Find(&result).Error
+	err := repository.db.Where("asset_id = ? AND asset_version_name = ? AND state = ?", assetID, assetVersionName, models.VulnStateFixed).Find(&result).Error
 	if err != nil {
 		return result, err
 	}
@@ -75,7 +75,7 @@ func (repository *LicenseRiskRepository) GetAllOverwrittenLicensesForAssetVersio
 
 func (repository *LicenseRiskRepository) MaybeGetLicenseOverwriteForComponent(assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error) {
 	var result models.LicenseRisk
-	err := repository.db.Where("asset_id = ? AND asset_version_name = ? AND component_purl = ? AND state = fixed", assetID, assetVersionName, pURL.String()).First(&result).Error
+	err := repository.db.Where("asset_id = ? AND asset_version_name = ? AND component_purl = ? AND state = ?", assetID, assetVersionName, pURL.String(), models.VulnStateFixed).First(&result).Error
 	if err != nil {
 		return result, err
 	}
@@ -84,4 +84,14 @@ func (repository *LicenseRiskRepository) MaybeGetLicenseOverwriteForComponent(as
 
 func (repository *LicenseRiskRepository) DeleteByComponentPurl(assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) error {
 	return repository.db.Where("asset_id = ? AND asset_version_name = ? AND component_purl = ?", assetID, assetVersionName, pURL.String()).Delete(&models.LicenseRisk{}).Error
+}
+
+func (repository *LicenseRiskRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error) {
+	var licenseRisks = []models.LicenseRisk{}
+	scannerID = "%" + scannerID + "%"
+	err := repository.db.Where("asset_version_name = ? AND asset_id = ? AND scanner_ids LIKE ?", assetVersionName, assetID, scannerID).Find(&licenseRisks).Error
+	if err != nil {
+		return nil, err
+	}
+	return licenseRisks, nil
 }

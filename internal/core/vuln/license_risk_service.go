@@ -9,21 +9,25 @@ import (
 	"os"
 	"time"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
 type LicenseRiskService struct {
 	licenseRiskRepository core.LicenseRiskRepository
+	vulnEventRepository   core.VulnEventRepository
 }
 
-func NewLicenseRiskService(licenseRiskReposiory core.LicenseRiskRepository) LicenseRiskService {
+func NewLicenseRiskService(licenseRiskReposiory core.LicenseRiskRepository, vulnEventRepository core.VulnEventRepository) LicenseRiskService {
 	return LicenseRiskService{
 		licenseRiskRepository: licenseRiskReposiory,
+		vulnEventRepository:   vulnEventRepository,
 	}
 }
 
 func (service LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error {
+	existingLicenseRisks, err := service.licenseRiskRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	licenses, err := GetOSILicenses()
 	if err != nil {
 		return err
@@ -36,6 +40,7 @@ func (service LicenseRiskService) FindLicenseRisksInComponents(assetVersion mode
 
 	//collect all risks before saving to the database
 	allLicenseRisks := []models.LicenseRisk{}
+	allVulnEvents := []models.VulnEvent{}
 	//go over every component and check if the license if the license is a valid osi license; if not we can create a license risk with the provided information
 	for _, component := range components {
 		_, validLicense := licenseMap[*component.License]
@@ -53,9 +58,17 @@ func (service LicenseRiskService) FindLicenseRisksInComponents(assetVersion mode
 				ComponentPurl:        component.Purl,
 			}
 			allLicenseRisks = append(allLicenseRisks, licenseRisk)
+			ev := models.NewDetectedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, scannerID)
+			// apply the event on the dependencyVuln
+			ev.Apply(&licenseRisk)
+			allVulnEvents = append(allVulnEvents, ev)
 		}
 	}
 	err = service.licenseRiskRepository.SaveBatch(nil, allLicenseRisks)
+	if err != nil {
+		return err
+	}
+	err = service.vulnEventRepository.SaveBatch(nil, allVulnEvents)
 	if err != nil {
 		return err
 	}
