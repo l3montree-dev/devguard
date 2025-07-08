@@ -41,11 +41,11 @@ func (s *service) CreateProject(ctx core.Context, project *models.Project) error
 				// get the project by slug and project id unscoped
 				project, err := s.projectRepository.ReadBySlugUnscoped(project.OrganizationID, project.Slug)
 				if err != nil {
-					return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
+					return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 				}
 
 				if err = s.projectRepository.Activate(tx, project.GetID()); err != nil {
-					return echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
+					return echo.NewHTTPError(500, "could not activate project").WithInternal(err)
 				}
 
 				slog.Info("project activated", "projectSlug", project.Slug, "projectID", project.GetID())
@@ -161,7 +161,7 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 
 	if slice, ok := projectSliceOrProjectIDSlice.([]models.Project); ok {
 		// if the user is looking for projects which have a parent id set, we return an empty slice
-		if c.QueryParam("parentID") != "" {
+		if c.QueryParam("parentId") != "" {
 			return []models.Project{}, nil
 		}
 		// make sure the projects exist inside the database
@@ -199,7 +199,7 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 	}
 
 	// check if parentID is set
-	queryParentID := c.QueryParam("parentID")
+	queryParentID := c.QueryParam("parentId")
 	var parentID *uuid.UUID = nil
 	if queryParentID != "" {
 		tmp, err := uuid.Parse(queryParentID)

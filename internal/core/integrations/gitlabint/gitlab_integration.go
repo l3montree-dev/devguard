@@ -250,10 +250,11 @@ func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.G
 		MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions), // only list groups where the user has at least reporter permissions
 		ListOptions:    gitlab.ListOptions{PerPage: 1},        // we only need to check if the request is successful, so we can limit the number of results
 	})
-	_ = resp // we don't need the response, but we need to check if the request was successful
+
 	_ = user
 	if err != nil {
-		slog.Error("failed to get user", "err", err)
+		errMsg, _ := io.ReadAll(resp.Body)
+		slog.Error("failed to get user", "err", err, "tokenHash", utils.HashString(token.AccessToken), "statusCode", resp.StatusCode, "body", string(errMsg))
 		return false
 	}
 
@@ -579,7 +580,7 @@ func (g *GitlabIntegration) AutoSetup(ctx core.Context) error {
 
 	switch {
 	case g.gitlabExternalProviderEntity(asset.ExternalEntityProviderID):
-		providerID := ctx.QueryParam("providerID")
+		providerID := ctx.QueryParam("providerId")
 		if providerID == "" {
 			return errors.New("providerID query parameter is required")
 		}
@@ -1106,8 +1107,8 @@ func (g *GitlabIntegration) CreateIssue(ctx context.Context, asset models.Asset,
 		userID,
 		justification,
 		map[string]any{
-			"ticketID":  vuln.GetTicketID(),
-			"ticketURL": createdIssue.WebURL,
+			"ticketId":  vuln.GetTicketID(),
+			"ticketUrl": createdIssue.WebURL,
 		})
 
 	return g.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)

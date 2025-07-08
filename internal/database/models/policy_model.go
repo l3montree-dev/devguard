@@ -12,7 +12,8 @@ type Policy struct {
 	OrganizationID *uuid.UUID `json:"organizationId"` // will be null for global policies
 	Organization   *Org       `json:"organization" gorm:"foreignKey:OrganizationID;references:ID;constraint:OnDelete:CASCADE;"`
 
-	OpaqueID string `json:"opaqueId" gorm:"unique"` // only used by global policies maintained by the community and migrated by the system
+	OpaqueID string    `json:"opaqueId" gorm:"unique"` // only used by global policies maintained by the community and migrated by the system
+	Projects []Project `json:"projects" gorm:"many2many:project_enabled_policies;"`
 }
 
 func (m Policy) TableName() string {

@@ -72,7 +72,6 @@ type AssetRepository interface {
 	FindByName(name string) (models.Asset, error)
 	FindAssetByExternalProviderID(externalEntityProviderID string, externalEntityID string) (*models.Asset, error)
 	GetFQNByID(id uuid.UUID) (string, error)
-	FindOrCreate(tx DB, name string) (models.Asset, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
 	Update(tx DB, asset *models.Asset) error

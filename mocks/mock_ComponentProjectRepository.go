@@ -61,15 +61,26 @@ type ComponentProjectRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id string
 func (_e *ComponentProjectRepository_Expecter) Activate(tx interface{}, id interface{}) *ComponentProjectRepository_Activate_Call {
 	return &ComponentProjectRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *ComponentProjectRepository_Activate_Call) Run(run func(tx core.DB, id string)) *ComponentProjectRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -208,15 +219,26 @@ type ComponentProjectRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.ComponentProject
 func (_e *ComponentProjectRepository_Expecter) Create(tx interface{}, t interface{}) *ComponentProjectRepository_Create_Call {
 	return &ComponentProjectRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *ComponentProjectRepository_Create_Call) Run(run func(tx core.DB, t *models.ComponentProject)) *ComponentProjectRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.ComponentProject))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.ComponentProject
+		if args[1] != nil {
+			arg1 = args[1].(*models.ComponentProject)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -254,15 +276,26 @@ type ComponentProjectRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.ComponentProject
 func (_e *ComponentProjectRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *ComponentProjectRepository_CreateBatch_Call {
 	return &ComponentProjectRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *ComponentProjectRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.ComponentProject)) *ComponentProjectRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.ComponentProject))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.ComponentProject
+		if args[1] != nil {
+			arg1 = args[1].([]models.ComponentProject)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -300,15 +333,26 @@ type ComponentProjectRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id string
 func (_e *ComponentProjectRepository_Expecter) Delete(tx interface{}, id interface{}) *ComponentProjectRepository_Delete_Call {
 	return &ComponentProjectRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *ComponentProjectRepository_Delete_Call) Run(run func(tx core.DB, id string)) *ComponentProjectRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -346,15 +390,26 @@ type ComponentProjectRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx
-//   - ids
+//   - tx core.DB
+//   - ids []models.ComponentProject
 func (_e *ComponentProjectRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *ComponentProjectRepository_DeleteBatch_Call {
 	return &ComponentProjectRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *ComponentProjectRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.ComponentProject)) *ComponentProjectRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.ComponentProject))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.ComponentProject
+		if args[1] != nil {
+			arg1 = args[1].([]models.ComponentProject)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -394,14 +449,20 @@ type ComponentProjectRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx
+//   - tx core.DB
 func (_e *ComponentProjectRepository_Expecter) GetDB(tx interface{}) *ComponentProjectRepository_GetDB_Call {
 	return &ComponentProjectRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *ComponentProjectRepository_GetDB_Call) Run(run func(tx core.DB)) *ComponentProjectRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -450,14 +511,20 @@ type ComponentProjectRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids
+//   - ids []string
 func (_e *ComponentProjectRepository_Expecter) List(ids interface{}) *ComponentProjectRepository_List_Call {
 	return &ComponentProjectRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *ComponentProjectRepository_List_Call) Run(run func(ids []string)) *ComponentProjectRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]string))
+		var arg0 []string
+		if args[0] != nil {
+			arg0 = args[0].([]string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -504,14 +571,20 @@ type ComponentProjectRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id string
 func (_e *ComponentProjectRepository_Expecter) Read(id interface{}) *ComponentProjectRepository_Read_Call {
 	return &ComponentProjectRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *ComponentProjectRepository_Read_Call) Run(run func(id string)) *ComponentProjectRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -549,15 +622,26 @@ type ComponentProjectRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.ComponentProject
 func (_e *ComponentProjectRepository_Expecter) Save(tx interface{}, t interface{}) *ComponentProjectRepository_Save_Call {
 	return &ComponentProjectRepository_Save_Call{Call: _e.mock.On("Save", tx, t)}
 }
 
 func (_c *ComponentProjectRepository_Save_Call) Run(run func(tx core.DB, t *models.ComponentProject)) *ComponentProjectRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.ComponentProject))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.ComponentProject
+		if args[1] != nil {
+			arg1 = args[1].(*models.ComponentProject)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -595,15 +679,26 @@ type ComponentProjectRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.ComponentProject
 func (_e *ComponentProjectRepository_Expecter) SaveBatch(tx interface{}, ts interface{}) *ComponentProjectRepository_SaveBatch_Call {
 	return &ComponentProjectRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, ts)}
 }
 
 func (_c *ComponentProjectRepository_SaveBatch_Call) Run(run func(tx core.DB, ts []models.ComponentProject)) *ComponentProjectRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.ComponentProject))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.ComponentProject
+		if args[1] != nil {
+			arg1 = args[1].([]models.ComponentProject)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -641,14 +736,20 @@ type ComponentProjectRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - fn
+//   - fn func(tx core.DB) error
 func (_e *ComponentProjectRepository_Expecter) Transaction(fn interface{}) *ComponentProjectRepository_Transaction_Call {
 	return &ComponentProjectRepository_Transaction_Call{Call: _e.mock.On("Transaction", fn)}
 }
 
 func (_c *ComponentProjectRepository_Transaction_Call) Run(run func(fn func(tx core.DB) error)) *ComponentProjectRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(tx core.DB) error))
+		var arg0 func(tx core.DB) error
+		if args[0] != nil {
+			arg0 = args[0].(func(tx core.DB) error)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -686,16 +787,32 @@ type ComponentProjectRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
-//   - t
-//   - conflictingColumns
-//   - updateOnly
+//   - t *[]*models.ComponentProject
+//   - conflictingColumns []clause.Column
+//   - updateOnly []string
 func (_e *ComponentProjectRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *ComponentProjectRepository_Upsert_Call {
 	return &ComponentProjectRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
 func (_c *ComponentProjectRepository_Upsert_Call) Run(run func(t *[]*models.ComponentProject, conflictingColumns []clause.Column, updateOnly []string)) *ComponentProjectRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*[]*models.ComponentProject), args[1].([]clause.Column), args[2].([]string))
+		var arg0 *[]*models.ComponentProject
+		if args[0] != nil {
+			arg0 = args[0].(*[]*models.ComponentProject)
+		}
+		var arg1 []clause.Column
+		if args[1] != nil {
+			arg1 = args[1].([]clause.Column)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }

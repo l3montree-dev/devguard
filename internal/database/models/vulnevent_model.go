@@ -107,14 +107,14 @@ func (event VulnEvent) Apply(vuln Vuln) {
 		// do nothing
 		return
 	case EventTypeAddedScanner:
-		scannerID, ok := (event.GetArbitraryJSONData()["scannerIDs"]).(string)
+		scannerID, ok := (event.GetArbitraryJSONData()["scannerIds"]).(string)
 		if !ok {
 			slog.Error("could not parse scanner id", "dependencyVulnID", event.VulnID)
 			return
 		}
 		vuln.AddScannerID(scannerID)
 	case EventTypeRemovedScanner:
-		scannerID, ok := (event.GetArbitraryJSONData()["scannerIDs"]).(string)
+		scannerID, ok := (event.GetArbitraryJSONData()["scannerIds"]).(string)
 		if !ok {
 			slog.Error("could not parse scanner id", "dependencyVulnID", event.VulnID)
 			return
@@ -190,7 +190,7 @@ func NewFalsePositiveEvent(vulnID string, vulnType VulnType, userID, justificati
 		Justification:           &justification,
 		MechanicalJustification: mechanicalJustification,
 	}
-	ev.SetArbitraryJSONData(map[string]any{"scannerIDs": scannerID})
+	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
 	return ev
 }
 
@@ -201,7 +201,7 @@ func NewFixedEvent(vulnID string, vulnType VulnType, userID string, scannerID st
 		VulnID:   vulnID,
 		UserID:   userID,
 	}
-	ev.SetArbitraryJSONData(map[string]any{"scannerIDs": scannerID})
+	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
 	return ev
 }
 
@@ -214,7 +214,7 @@ func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalcu
 	}
 
 	m := riskCalculationReport.Map()
-	m["scannerIDs"] = scannerID
+	m["scannerIds"] = scannerID
 
 	ev.SetArbitraryJSONData(m)
 
@@ -230,7 +230,7 @@ func NewDetectedOnAnotherBranchEvent(vulnID string, vulnType VulnType, userID st
 	}
 
 	m := riskCalculationReport.Map()
-	m["scannerIDs"] = scannerID
+	m["scannerIds"] = scannerID
 	m["assetVersionName"] = assetVersionName
 
 	ev.SetArbitraryJSONData(m)
@@ -275,7 +275,7 @@ func NewAddedScannerEvent(vulnID string, vulnType VulnType, userID string, scann
 		UserID:   userID,
 	}
 
-	ev.SetArbitraryJSONData(map[string]any{"scannerIDs": scannerID})
+	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
 	return ev
 }
 
@@ -287,7 +287,7 @@ func NewRemovedScannerEvent(vulnID string, vulnType VulnType, userID string, sca
 		UserID:   userID,
 	}
 
-	ev.SetArbitraryJSONData(map[string]any{"scannerIDs": scannerID})
+	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
 	return ev
 }
 

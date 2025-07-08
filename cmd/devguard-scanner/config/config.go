@@ -56,7 +56,7 @@ type InTotoConfig struct {
 	Products  []string `mapstructure:"products"`
 	Ignore    []string `mapstructure:"ignore"`
 
-	SupplyChainID          string `mapstructure:"supplyChainID"`
+	SupplyChainID          string `mapstructure:"supplyChainId"`
 	GenerateSlsaProvenance bool   `mapstructure:"generateSlsaProvenance"`
 
 	LayoutKeyPath string `mapstructure:"layoutKey"`
@@ -118,7 +118,7 @@ func ParseBaseConfig() {
 
 	slog.Info("running with config",
 		"assetName", RuntimeBaseConfig.AssetName,
-		"apiURL", RuntimeBaseConfig.APIURL,
+		"apiUrl", RuntimeBaseConfig.APIURL,
 		"path", RuntimeBaseConfig.Path,
 		"ref", RuntimeBaseConfig.Ref,
 		"defaultBranch", RuntimeBaseConfig.DefaultBranch,
