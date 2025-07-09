@@ -19,11 +19,14 @@ func (g *GitlabIntegration) checkWebhookSecretToken(gitlabSecretToken string, as
 		return err
 	}
 
-	if asset.WebhookSecret != nil {
-		if asset.WebhookSecret.String() != gitlabSecretToken {
-			slog.Error("invalid webhook secret")
-			return errors.New("invalid webhook secret")
-		}
+	if asset.WebhookSecret == nil {
+		slog.Error("webhook secret is not set for asset", "assetID", asset.ID)
+		return errors.New("webhook secret is not set for asset")
+	}
+
+	if asset.WebhookSecret.String() != gitlabSecretToken {
+		slog.Error("invalid webhook secret")
+		return errors.New("invalid webhook secret")
 	}
 
 	return nil
