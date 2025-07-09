@@ -27,24 +27,36 @@ func NewLicenseRiskService(licenseRiskReposiory core.LicenseRiskRepository, vuln
 }
 
 func (service LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error {
+
 	existingLicenseRisks, err := service.licenseRiskRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
+	if err != nil {
+		return err
+	}
+	// put all the license risks we already have into a hash map for faster look up times
+	doesLicenseRiskAlreadyExist := make(map[string]struct{})
+	for i := range existingLicenseRisks {
+		doesLicenseRiskAlreadyExist[existingLicenseRisks[i].ComponentPurl] = struct{}{}
+	}
+
+	// get all current valid licenses to compare against
 	licenses, err := GetOSILicenses()
 	if err != nil {
 		return err
 	}
-	// put all the license in a hash map for faster look up times
 	licenseMap := make(map[string]struct{})
 	for i := range licenses {
 		licenseMap[licenses[i]] = struct{}{}
 	}
 
-	//collect all risks before saving to the database
+	//collect all risks before saving to the database, should be more efficient
 	allLicenseRisks := []models.LicenseRisk{}
 	allVulnEvents := []models.VulnEvent{}
 	//go over every component and check if the license if the license is a valid osi license; if not we can create a license risk with the provided information
 	for _, component := range components {
 		_, validLicense := licenseMap[*component.License]
-		if !validLicense {
+		_, exists := doesLicenseRiskAlreadyExist[component.Purl]
+		// if we have an invalid license and we don not have a risk for this we create one
+		if !validLicense && !exists {
 			licenseRisk := models.LicenseRisk{
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: assetVersion.Name,

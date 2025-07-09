@@ -5,7 +5,11 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
+	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
+	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,5 +35,36 @@ func TestGetOSILicenses(t *testing.T) {
 		slices.Sort(osiApprovedLicenseIDs)
 		slices.Sort(result)
 		assert.Equal(t, osiApprovedLicenseIDs, result)
+	})
+}
+
+func TestConvertCDXComponentsToSimpleComponents(t *testing.T) {
+	t.Run("test with empty cdx bom components", func(t *testing.T) {
+		bom := cyclonedx.BOM{}
+		bom.Components = &[]cyclonedx.Component{}
+		result := scan.ConvertCDXComponentsToSimpleComponents(*bom.Components)
+		assert.Empty(t, result)
+	})
+	t.Run("test with non empty components and only ID", func(t *testing.T) {
+		bom := cyclonedx.BOM{}
+		bom.Components = &[]cyclonedx.Component{
+			{Licenses: &cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{ID: "what da hell"}}}},
+			{Licenses: &cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{ID: "le bron james"}}}},
+		}
+		result := scan.ConvertCDXComponentsToSimpleComponents(*bom.Components)
+		assert.Len(t, result, 2)
+		assert.Equal(t, []models.Component{{License: utils.Ptr("what da hell")}, {License: utils.Ptr("le bron james")}}, result)
+	})
+	t.Run("test with non empty components and a mix of ID, Name and neither", func(t *testing.T) {
+		bom := cyclonedx.BOM{}
+		bom.Components = &[]cyclonedx.Component{
+			{Licenses: &cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{ID: "what da hell"}}}},
+			{Licenses: &cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{ID: "", Name: "le bron james"}}}},
+			{Licenses: &cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{Name: "le bron james"}}}},
+			{Licenses: &cyclonedx.Licenses{cyclonedx.LicenseChoice{License: &cyclonedx.License{}}}},
+		}
+		result := scan.ConvertCDXComponentsToSimpleComponents(*bom.Components)
+		assert.Len(t, result, 4)
+		assert.Equal(t, []models.Component{{License: utils.Ptr("what da hell")}, {License: utils.Ptr("le bron james")}, {License: utils.Ptr("le bron james")}, {License: utils.Ptr("")}}, result)
 	})
 }

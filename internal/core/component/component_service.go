@@ -195,9 +195,11 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 	}
 
 	// find potential license risks for the components which had no prior license
-	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, updatedComponents, scannerID)
-	if err != nil {
-		return nil, err
+	if len(updatedComponents) > 0 {
+		err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, updatedComponents, scannerID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// now return all components - each one should have the best license information available

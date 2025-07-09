@@ -140,7 +140,7 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	}
 
 	// check if we have any license risk in our sbom
-	sbomComponents := convertCDXComponentsToSimpleComponents(*normalizedBom.GetComponents())
+	sbomComponents := ConvertCDXComponentsToSimpleComponents(*normalizedBom.GetComponents())
 	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, sbomComponents, scannerID)
 	if err != nil {
 		return scanResults, err
@@ -278,14 +278,21 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 
 }
 
-func convertCDXComponentsToSimpleComponents(cdxComponents []cyclonedx.Component) []models.Component {
+func ConvertCDXComponentsToSimpleComponents(cdxComponents []cyclonedx.Component) []models.Component {
 	components := []models.Component{}
 	// only variables needed for FindLicenseRisksInComponents are converted
 	for _, cdx := range cdxComponents {
 		license := ""
 		// avoid nil pointer dereference
-		if len(*cdx.Licenses) > 0 {
-			license = (*cdx.Licenses)[0].License.ID
+		if cdx.Licenses != nil && len(*cdx.Licenses) > 0 {
+			if (*cdx.Licenses)[0].License != nil {
+				if (*cdx.Licenses)[0].License.ID != "" {
+					license = (*cdx.Licenses)[0].License.ID
+				} else {
+					license = (*cdx.Licenses)[0].License.Name
+				}
+			}
+
 		}
 		components = append(components, models.Component{
 			Purl:    cdx.PackageURL,
