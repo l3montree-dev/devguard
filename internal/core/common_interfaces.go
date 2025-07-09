@@ -173,6 +173,7 @@ type LicenseRiskRepository interface {
 	MaybeGetLicenseOverwriteForComponent(assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error)
 	DeleteByComponentPurl(assetID uuid.UUID, assetVersionName string, purl packageurl.PackageURL) error
 	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error)
+	ApplyAndSave(tx DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error
 }
 
 type InTotoLinkRepository interface {
@@ -384,6 +385,7 @@ type ComponentService interface {
 
 type LicenseRiskService interface {
 	FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error
+	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)
 }
 
 type AccessControl interface {

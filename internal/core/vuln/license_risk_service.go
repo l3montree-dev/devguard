@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -19,14 +20,14 @@ type LicenseRiskService struct {
 	vulnEventRepository   core.VulnEventRepository
 }
 
-func NewLicenseRiskService(licenseRiskReposiory core.LicenseRiskRepository, vulnEventRepository core.VulnEventRepository) LicenseRiskService {
-	return LicenseRiskService{
+func NewLicenseRiskService(licenseRiskReposiory core.LicenseRiskRepository, vulnEventRepository core.VulnEventRepository) *LicenseRiskService {
+	return &LicenseRiskService{
 		licenseRiskRepository: licenseRiskReposiory,
 		vulnEventRepository:   vulnEventRepository,
 	}
 }
 
-func (service LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error {
+func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error {
 
 	existingLicenseRisks, err := service.licenseRiskRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
@@ -131,4 +132,35 @@ func GetOSILicenses() ([]string, error) {
 
 	return validOSILicenses, nil
 
+}
+
+func (service *LicenseRiskService) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error) {
+	if tx == nil {
+		var ev models.VulnEvent
+		var err error
+		// we are not part of a parent transaction - create a new one
+		err = service.licenseRiskRepository.Transaction(func(d core.DB) error {
+			ev, err = service.updateDependencyVulnState(tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
+			return err
+		})
+		return ev, err
+	}
+	return service.updateDependencyVulnState(tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
+}
+
+func (service *LicenseRiskService) updateDependencyVulnState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
+	var ev models.VulnEvent
+	switch models.VulnEventType(statusType) {
+	case models.EventTypeAccepted:
+		ev = models.NewAcceptedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification)
+	case models.EventTypeFalsePositive:
+		ev = models.NewFalsePositiveEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification, mechanicalJustification, licenseRisk.ScannerIDs)
+	case models.EventTypeReopened:
+		ev = models.NewReopenedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification)
+	case models.EventTypeComment:
+		ev = models.NewCommentEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification)
+	}
+
+	err := service.licenseRiskRepository.ApplyAndSave(tx, licenseRisk, &ev)
+	return ev, err
 }

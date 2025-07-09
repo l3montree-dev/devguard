@@ -141,6 +141,53 @@ func (_c *LicenseRiskRepository_All_Call) RunAndReturn(run func() ([]models.Lice
 	return _c
 }
 
+// ApplyAndSave provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) ApplyAndSave(tx core.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error {
+	ret := _mock.Called(tx, licenseRisk, vulnEvent)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ApplyAndSave")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, *models.LicenseRisk, *models.VulnEvent) error); ok {
+		r0 = returnFunc(tx, licenseRisk, vulnEvent)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LicenseRiskRepository_ApplyAndSave_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ApplyAndSave'
+type LicenseRiskRepository_ApplyAndSave_Call struct {
+	*mock.Call
+}
+
+// ApplyAndSave is a helper method to define mock.On call
+//   - tx
+//   - licenseRisk
+//   - vulnEvent
+func (_e *LicenseRiskRepository_Expecter) ApplyAndSave(tx interface{}, licenseRisk interface{}, vulnEvent interface{}) *LicenseRiskRepository_ApplyAndSave_Call {
+	return &LicenseRiskRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", tx, licenseRisk, vulnEvent)}
+}
+
+func (_c *LicenseRiskRepository_ApplyAndSave_Call) Run(run func(tx core.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent)) *LicenseRiskRepository_ApplyAndSave_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(core.DB), args[1].(*models.LicenseRisk), args[2].(*models.VulnEvent))
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_ApplyAndSave_Call) Return(err error) *LicenseRiskRepository_ApplyAndSave_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_ApplyAndSave_Call) RunAndReturn(run func(tx core.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error) *LicenseRiskRepository_ApplyAndSave_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Begin provides a mock function for the type LicenseRiskRepository
 func (_mock *LicenseRiskRepository) Begin() core.DB {
 	ret := _mock.Called()
@@ -691,6 +738,64 @@ func (_c *LicenseRiskRepository_List_Call) Return(licenseRisks []models.LicenseR
 }
 
 func (_c *LicenseRiskRepository_List_Call) RunAndReturn(run func(ids []string) ([]models.LicenseRisk, error)) *LicenseRiskRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListByScanner provides a mock function for the type LicenseRiskRepository
+func (_mock *LicenseRiskRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error) {
+	ret := _mock.Called(assetVersionName, assetID, scannerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByScanner")
+	}
+
+	var r0 []models.LicenseRisk
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) ([]models.LicenseRisk, error)); ok {
+		return returnFunc(assetVersionName, assetID, scannerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) []models.LicenseRisk); ok {
+		r0 = returnFunc(assetVersionName, assetID, scannerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.LicenseRisk)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
+		r1 = returnFunc(assetVersionName, assetID, scannerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// LicenseRiskRepository_ListByScanner_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListByScanner'
+type LicenseRiskRepository_ListByScanner_Call struct {
+	*mock.Call
+}
+
+// ListByScanner is a helper method to define mock.On call
+//   - assetVersionName
+//   - assetID
+//   - scannerID
+func (_e *LicenseRiskRepository_Expecter) ListByScanner(assetVersionName interface{}, assetID interface{}, scannerID interface{}) *LicenseRiskRepository_ListByScanner_Call {
+	return &LicenseRiskRepository_ListByScanner_Call{Call: _e.mock.On("ListByScanner", assetVersionName, assetID, scannerID)}
+}
+
+func (_c *LicenseRiskRepository_ListByScanner_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scannerID string)) *LicenseRiskRepository_ListByScanner_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *LicenseRiskRepository_ListByScanner_Call) Return(licenseRisks []models.LicenseRisk, err error) *LicenseRiskRepository_ListByScanner_Call {
+	_c.Call.Return(licenseRisks, err)
+	return _c
+}
+
+func (_c *LicenseRiskRepository_ListByScanner_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error)) *LicenseRiskRepository_ListByScanner_Call {
 	_c.Call.Return(run)
 	return _c
 }

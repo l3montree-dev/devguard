@@ -435,7 +435,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	statisticsController := statistics.NewHTTPController(statisticsService, statisticsRepository, assetRepository, assetVersionRepository, projectService)
 	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)
-	licenseRiskController := vuln.NewLicenseRiskController(licenseRiskRepository)
+	licenseRiskController := vuln.NewLicenseRiskController(licenseRiskRepository, licenseRiskService)
 
 	patService := pat.NewPatService(patRepository)
 
@@ -680,6 +680,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	licenseRiskRouter := assetVersionRouter.Group("/license-risks")
 	licenseRiskRouter.GET("/", licenseRiskController.ListPaged)
 	licenseRiskRouter.GET("/:licenseRiskID/", licenseRiskController.Read)
+	licenseRiskRouter.POST("/:licenseRiskID/", licenseRiskController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	licenseRiskRouter.POST("/:licenseRiskID/mitigate", licenseRiskController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

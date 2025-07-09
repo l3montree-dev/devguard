@@ -95,3 +95,31 @@ func (repository *LicenseRiskRepository) ListByScanner(assetVersionName string, 
 	}
 	return licenseRisks, nil
 }
+
+func (repository *LicenseRiskRepository) ApplyAndSave(tx core.DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error {
+	if tx == nil {
+		// we are not part of a parent transaction - create a new one
+		return repository.Transaction(func(d core.DB) error {
+			_, err := repository.applyAndSave(d, licenseRisk, vulnEvent)
+			return err
+		})
+	}
+
+	_, err := repository.applyAndSave(tx, licenseRisk, vulnEvent)
+	return err
+}
+
+func (repository *LicenseRiskRepository) applyAndSave(tx core.DB, licenseRisk *models.LicenseRisk, ev *models.VulnEvent) (models.VulnEvent, error) {
+	ev.Apply(licenseRisk)
+
+	// run the updates in the transaction to keep a valid state
+	err := repository.Save(tx, licenseRisk)
+	if err != nil {
+		return models.VulnEvent{}, err
+	}
+	if err := repository.GetDB(tx).Save(ev).Error; err != nil {
+		return models.VulnEvent{}, err
+	}
+	licenseRisk.Events = append(licenseRisk.Events, *ev)
+	return *ev, nil
+}
