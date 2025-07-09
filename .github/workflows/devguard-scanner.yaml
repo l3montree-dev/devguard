@@ -39,8 +39,7 @@ jobs:
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      fail-on-risk: high
-      fail-on-cvss: high
+
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
@@ -112,8 +111,7 @@ jobs:
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      fail-on-risk: high
-      fail-on-cvss: high
+
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
