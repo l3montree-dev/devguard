@@ -676,9 +676,10 @@ func BuildRouter(db core.DB) *echo.Echo {
 	firstPartyVulnRouter.POST("/:firstPartyVulnID/mitigate/", firstPartyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	firstPartyVulnRouter.GET("/:firstPartyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
 
-	licenseRiskRouter := assetVersionRouter.Group("/license-risks")
 	assetVersionRouter.POST("/license-risk/", licenseRiskController.Create)
+	licenseRiskRouter := assetVersionRouter.Group("/license-risks")
 	licenseRiskRouter.GET("/", licenseRiskController.ListPaged)
+	licenseRiskRouter.GET("/:licenseRiskID/", licenseRiskController.Read)
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

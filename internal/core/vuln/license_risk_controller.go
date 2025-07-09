@@ -121,3 +121,15 @@ func convertLicenseRiskToDetailedDTO(licenseRisk models.LicenseRisk) detailedLic
 		}),
 	}
 }
+
+func (controller LicenseRiskController) Read(ctx core.Context) error {
+	licenseRiskID, _, err := core.GetVulnID(ctx)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not get license risk ID")
+	}
+	licenseRisk, err := controller.LicenseRiskRepository.Read(licenseRiskID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could fetch data from the database")
+	}
+	return ctx.JSON(200, convertLicenseRiskToDetailedDTO(licenseRisk))
+}

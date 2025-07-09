@@ -20,7 +20,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/CycloneDX/cyclonedx-go"
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -278,7 +277,7 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 
 }
 
-func ConvertCDXComponentsToSimpleComponents(cdxComponents []cyclonedx.Component) []models.Component {
+func ConvertCDXComponentsToSimpleComponents(cdxComponents []cdx.Component) []models.Component {
 	components := []models.Component{}
 	// only variables needed for FindLicenseRisksInComponents are converted
 	for _, cdx := range cdxComponents {
