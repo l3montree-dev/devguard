@@ -385,7 +385,7 @@ type ComponentService interface {
 
 type LicenseRiskService interface {
 	FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error
-	UpdateDependencyVulnState(tx DB, assetID uuid.UUID, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)
+	UpdateLicenseRiskState(tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error)
 }
 
 type AccessControl interface {

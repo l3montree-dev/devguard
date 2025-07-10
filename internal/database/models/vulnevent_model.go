@@ -39,6 +39,8 @@ const (
 
 	EventTypeAddedScanner   VulnEventType = "addedScanner"
 	EventTypeRemovedScanner VulnEventType = "removedScanner"
+
+	EventTypeFinalLicenseDecision VulnEventType = "finalLicenseDecision"
 )
 
 type MechanicalJustificationType string
@@ -148,7 +150,10 @@ func (event VulnEvent) Apply(vuln Vuln) {
 		}
 		vuln.SetRawRiskAssessment(f)
 		vuln.SetRiskRecalculatedAt(time.Now())
+	case EventTypeFinalLicenseDecision:
+		vuln.SetState(VulnStateFixed)
 	}
+
 }
 
 func NewAcceptedEvent(vulnID string, vulnType VulnType, userID, justification string) VulnEvent {
@@ -288,6 +293,17 @@ func NewRemovedScannerEvent(vulnID string, vulnType VulnType, userID string, sca
 		UserID:   userID,
 	}
 
+	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
+	return ev
+}
+
+func NewFinalLicenseDecisionEvent(vulnID string, vulnType VulnType, userID string, scannerID string) VulnEvent {
+	ev := VulnEvent{
+		Type:     EventTypeFinalLicenseDecision,
+		VulnID:   vulnID,
+		VulnType: vulnType,
+		UserID:   userID,
+	}
 	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
 	return ev
 }

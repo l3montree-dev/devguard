@@ -119,6 +119,14 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
+
+	// check if we have any license risk in our sbom
+	sbomComponents := ConvertCDXComponentsToSimpleComponents(*normalizedBom.GetComponents())
+	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, sbomComponents, scannerID)
+	if err != nil {
+		return scanResults, err
+	}
+
 	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
 }
 
@@ -138,12 +146,6 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 		return scanResults, err
 	}
 
-	// check if we have any license risk in our sbom
-	sbomComponents := ConvertCDXComponentsToSimpleComponents(*normalizedBom.GetComponents())
-	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, sbomComponents, scannerID)
-	if err != nil {
-		return scanResults, err
-	}
 	//Check if we want to create an issue for this assetVersion
 
 	s.FireAndForget(func() {

@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
@@ -85,63 +84,61 @@ func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) RunAndReturn(run
 	return _c
 }
 
-// UpdateDependencyVulnState provides a mock function for the type LicenseRiskService
-func (_mock *LicenseRiskService) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error) {
-	ret := _mock.Called(tx, assetID, userID, licenseRisk, statusType, justification, mechanicalJustification, assetVersionName)
+// UpdateLicenseRiskState provides a mock function for the type LicenseRiskService
+func (_mock *LicenseRiskService) UpdateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
+	ret := _mock.Called(tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpdateDependencyVulnState")
+		panic("no return value specified for UpdateLicenseRiskState")
 	}
 
 	var r0 models.VulnEvent
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType, string) (models.VulnEvent, error)); ok {
-		return returnFunc(tx, assetID, userID, licenseRisk, statusType, justification, mechanicalJustification, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType) (models.VulnEvent, error)); ok {
+		return returnFunc(tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType, string) models.VulnEvent); ok {
-		r0 = returnFunc(tx, assetID, userID, licenseRisk, statusType, justification, mechanicalJustification, assetVersionName)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType) models.VulnEvent); ok {
+		r0 = returnFunc(tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
 	} else {
 		r0 = ret.Get(0).(models.VulnEvent)
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, uuid.UUID, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType, string) error); ok {
-		r1 = returnFunc(tx, assetID, userID, licenseRisk, statusType, justification, mechanicalJustification, assetVersionName)
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, *models.LicenseRisk, string, string, models.MechanicalJustificationType) error); ok {
+		r1 = returnFunc(tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// LicenseRiskService_UpdateDependencyVulnState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateDependencyVulnState'
-type LicenseRiskService_UpdateDependencyVulnState_Call struct {
+// LicenseRiskService_UpdateLicenseRiskState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateLicenseRiskState'
+type LicenseRiskService_UpdateLicenseRiskState_Call struct {
 	*mock.Call
 }
 
-// UpdateDependencyVulnState is a helper method to define mock.On call
+// UpdateLicenseRiskState is a helper method to define mock.On call
 //   - tx
-//   - assetID
 //   - userID
 //   - licenseRisk
 //   - statusType
 //   - justification
 //   - mechanicalJustification
-//   - assetVersionName
-func (_e *LicenseRiskService_Expecter) UpdateDependencyVulnState(tx interface{}, assetID interface{}, userID interface{}, licenseRisk interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}, assetVersionName interface{}) *LicenseRiskService_UpdateDependencyVulnState_Call {
-	return &LicenseRiskService_UpdateDependencyVulnState_Call{Call: _e.mock.On("UpdateDependencyVulnState", tx, assetID, userID, licenseRisk, statusType, justification, mechanicalJustification, assetVersionName)}
+func (_e *LicenseRiskService_Expecter) UpdateLicenseRiskState(tx interface{}, userID interface{}, licenseRisk interface{}, statusType interface{}, justification interface{}, mechanicalJustification interface{}) *LicenseRiskService_UpdateLicenseRiskState_Call {
+	return &LicenseRiskService_UpdateLicenseRiskState_Call{Call: _e.mock.On("UpdateLicenseRiskState", tx, userID, licenseRisk, statusType, justification, mechanicalJustification)}
 }
 
-func (_c *LicenseRiskService_UpdateDependencyVulnState_Call) Run(run func(tx core.DB, assetID uuid.UUID, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string)) *LicenseRiskService_UpdateDependencyVulnState_Call {
+func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) Run(run func(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType)) *LicenseRiskService_UpdateLicenseRiskState_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID), args[2].(string), args[3].(*models.LicenseRisk), args[4].(string), args[5].(string), args[6].(models.MechanicalJustificationType), args[7].(string))
+		run(args[0].(core.DB), args[1].(string), args[2].(*models.LicenseRisk), args[3].(string), args[4].(string), args[5].(models.MechanicalJustificationType))
 	})
 	return _c
 }
 
-func (_c *LicenseRiskService_UpdateDependencyVulnState_Call) Return(vulnEvent models.VulnEvent, err error) *LicenseRiskService_UpdateDependencyVulnState_Call {
+func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) Return(vulnEvent models.VulnEvent, err error) *LicenseRiskService_UpdateLicenseRiskState_Call {
 	_c.Call.Return(vulnEvent, err)
 	return _c
 }
 
-func (_c *LicenseRiskService_UpdateDependencyVulnState_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error)) *LicenseRiskService_UpdateDependencyVulnState_Call {
+func (_c *LicenseRiskService_UpdateLicenseRiskState_Call) RunAndReturn(run func(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error)) *LicenseRiskService_UpdateLicenseRiskState_Call {
 	_c.Call.Return(run)
 	return _c
 }

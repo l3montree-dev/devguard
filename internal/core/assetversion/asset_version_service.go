@@ -573,6 +573,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 				licenses := cdx.Licenses{}
 				//technically redundant call to c.Dependency.ComponentProject.License
 				if c.Dependency.ComponentProject != nil && c.Dependency.ComponentProject.License != "" {
+					// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
 					if c.Dependency.ComponentProject.License != "non-standard" {
 						licenses = append(licenses, cdx.LicenseChoice{
 							License: &cdx.License{

@@ -177,8 +177,6 @@ func (controller LicenseRiskController) Mitigate(ctx core.Context) error {
 }
 
 func (controller LicenseRiskController) CreateEvent(ctx core.Context) error {
-	asset := core.GetAsset(ctx)
-	assetVersion := core.GetAssetVersion(ctx)
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	licenseRiskID, _, err := core.GetVulnID(ctx)
 	if err != nil {
@@ -205,7 +203,7 @@ func (controller LicenseRiskController) CreateEvent(ctx core.Context) error {
 	justification := status.Justification
 	mechanicalJustification := status.MechanicalJustification
 
-	event, err := controller.licenseRiskService.UpdateDependencyVulnState(nil, asset.ID, userID, &licenseRisk, statusType, justification, mechanicalJustification, assetVersion.Name)
+	event, err := controller.licenseRiskService.UpdateLicenseRiskState(nil, userID, &licenseRisk, statusType, justification, mechanicalJustification)
 	if err != nil {
 		return err
 	}
@@ -217,9 +215,6 @@ func (controller LicenseRiskController) CreateEvent(ctx core.Context) error {
 	if err != nil {
 		// just log the error
 		slog.Error("could not handle event", "err", err)
-	}
-
-	if err != nil {
 		return echo.NewHTTPError(500, "could not create licenseRisk event").WithInternal(err)
 	}
 	return ctx.JSON(200, convertLicenseRiskToDetailedDTO(licenseRisk))
