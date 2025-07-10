@@ -47,6 +47,7 @@ type ProjectRepository interface {
 	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
+	ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string) (Paged[models.Project], error)
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
@@ -210,6 +211,7 @@ type InvitationRepository interface {
 type ProjectService interface {
 	ReadBySlug(ctx Context, organizationID uuid.UUID, slug string) (models.Project, error)
 	ListAllowedProjects(ctx Context) ([]models.Project, error)
+	ListAllowedProjectsPaged(c Context) (Paged[models.Project], error)
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)

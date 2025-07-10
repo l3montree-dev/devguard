@@ -651,6 +651,90 @@ func (_c *ProjectRepository_List_Call) RunAndReturn(run func(idSlice []uuid.UUID
 	return _c
 }
 
+// ListPaged provides a mock function for the type ProjectRepository
+func (_mock *ProjectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo core.PageInfo, search string) (core.Paged[models.Project], error) {
+	ret := _mock.Called(projectIDs, parentID, orgID, pageInfo, search)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPaged")
+	}
+
+	var r0 core.Paged[models.Project]
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID, *uuid.UUID, uuid.UUID, core.PageInfo, string) (core.Paged[models.Project], error)); ok {
+		return returnFunc(projectIDs, parentID, orgID, pageInfo, search)
+	}
+	if returnFunc, ok := ret.Get(0).(func([]uuid.UUID, *uuid.UUID, uuid.UUID, core.PageInfo, string) core.Paged[models.Project]); ok {
+		r0 = returnFunc(projectIDs, parentID, orgID, pageInfo, search)
+	} else {
+		r0 = ret.Get(0).(core.Paged[models.Project])
+	}
+	if returnFunc, ok := ret.Get(1).(func([]uuid.UUID, *uuid.UUID, uuid.UUID, core.PageInfo, string) error); ok {
+		r1 = returnFunc(projectIDs, parentID, orgID, pageInfo, search)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProjectRepository_ListPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPaged'
+type ProjectRepository_ListPaged_Call struct {
+	*mock.Call
+}
+
+// ListPaged is a helper method to define mock.On call
+//   - projectIDs []uuid.UUID
+//   - parentID *uuid.UUID
+//   - orgID uuid.UUID
+//   - pageInfo core.PageInfo
+//   - search string
+func (_e *ProjectRepository_Expecter) ListPaged(projectIDs interface{}, parentID interface{}, orgID interface{}, pageInfo interface{}, search interface{}) *ProjectRepository_ListPaged_Call {
+	return &ProjectRepository_ListPaged_Call{Call: _e.mock.On("ListPaged", projectIDs, parentID, orgID, pageInfo, search)}
+}
+
+func (_c *ProjectRepository_ListPaged_Call) Run(run func(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo core.PageInfo, search string)) *ProjectRepository_ListPaged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].([]uuid.UUID)
+		}
+		var arg1 *uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(*uuid.UUID)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 core.PageInfo
+		if args[3] != nil {
+			arg3 = args[3].(core.PageInfo)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectRepository_ListPaged_Call) Return(paged core.Paged[models.Project], err error) *ProjectRepository_ListPaged_Call {
+	_c.Call.Return(paged, err)
+	return _c
+}
+
+func (_c *ProjectRepository_ListPaged_Call) RunAndReturn(run func(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo core.PageInfo, search string) (core.Paged[models.Project], error)) *ProjectRepository_ListPaged_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Read provides a mock function for the type ProjectRepository
 func (_mock *ProjectRepository) Read(projectID uuid.UUID) (models.Project, error) {
 	ret := _mock.Called(projectID)

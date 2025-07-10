@@ -278,7 +278,7 @@ func (projectController *controller) Read(c core.Context) error {
 
 func (projectController *controller) List(c core.Context) error {
 	// get all projects the user has at least read access to - might be public projects as well
-	projects, err := projectController.projectService.ListAllowedProjects(c)
+	projects, err := projectController.projectService.ListAllowedProjectsPaged(c)
 
 	if err != nil {
 		return err
