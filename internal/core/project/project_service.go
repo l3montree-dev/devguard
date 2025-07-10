@@ -170,7 +170,7 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 			toUpsert = append(toUpsert, &slice[i])
 			slice[i].OrganizationID = core.GetOrg(c).GetID() // ensure the organization ID is set
 		}
-		created, _, err := s.projectRepository.UpsertSplit(nil, *rbac.GetExternalEntityProviderID(), toUpsert)
+		created, updated, err := s.projectRepository.UpsertSplit(nil, *rbac.GetExternalEntityProviderID(), toUpsert)
 		if err != nil {
 			return nil, echo.NewHTTPError(500, "could not upsert projects").WithInternal(err)
 		}
@@ -183,11 +183,14 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 			slog.Info("enabled community managed policies for project", "projectSlug", project.Slug, "projectID", project.ID)
 		}
 
-		// read the projects again to ensure they are up to date
-		projects, err := s.projectRepository.GetByOrgID(core.GetOrg(c).GetID())
-		if err != nil {
-			return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
+		projects := make([]models.Project, 0, len(slice))
+		for _, p := range created {
+			projects = append(projects, *p)
 		}
+		for _, p := range updated {
+			projects = append(projects, *p)
+		}
+
 		return projects, nil
 	}
 	projectsIdsStr, ok := projectSliceOrProjectIDSlice.([]string)
