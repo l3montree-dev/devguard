@@ -183,7 +183,12 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 			slog.Info("enabled community managed policies for project", "projectSlug", project.Slug, "projectID", project.ID)
 		}
 
-		return slice, err
+		// read the projects again to ensure they are up to date
+		projects, err := s.projectRepository.GetByOrgID(core.GetOrg(c).GetID())
+		if err != nil {
+			return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
+		}
+		return projects, nil
 	}
 	projectsIdsStr, ok := projectSliceOrProjectIDSlice.([]string)
 	if !ok {
