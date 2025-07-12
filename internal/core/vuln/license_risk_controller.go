@@ -219,3 +219,22 @@ func (controller LicenseRiskController) CreateEvent(ctx core.Context) error {
 	}
 	return ctx.JSON(200, convertLicenseRiskToDetailedDTO(licenseRisk))
 }
+
+func (controller LicenseRiskController) MakeFinalLicenseDecision(ctx core.Context) error {
+	var licenseDecision struct {
+		License string `json:"license"`
+	}
+
+	err := ctx.Bind(&licenseDecision)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not bind the request to a licenseDecision")
+	}
+
+	vulnID, vulnType, err := core.GetVulnID(ctx)
+	if err != nil || vulnType != models.VulnTypeLicenseRisk {
+		return echo.NewHTTPError(500, "could not get vulnID")
+	}
+
+	userID := core.GetSession(ctx).GetUserID()
+	return controller.licenseRiskService.MakeFinalLicenseDecision(vulnID, licenseDecision.License, userID)
+}

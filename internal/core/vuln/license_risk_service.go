@@ -163,3 +163,15 @@ func (service *LicenseRiskService) updateLicenseRiskState(tx core.DB, userID str
 	err := service.licenseRiskRepository.ApplyAndSave(tx, licenseRisk, &ev)
 	return ev, err
 }
+
+func (service *LicenseRiskService) MakeFinalLicenseDecision(vulnID, finalLicense, userID string) error {
+	licenseRisk, err := service.licenseRiskRepository.Read(vulnID)
+	if err != nil {
+		return err
+	}
+	licenseRisk.State = models.VulnStateFixed
+	licenseRisk.FinalLicenseDecision = finalLicense
+
+	ev := models.NewFixedEvent(vulnID, models.VulnTypeLicenseRisk, userID, licenseRisk.ScannerIDs)
+	return service.licenseRiskRepository.ApplyAndSave(nil, &licenseRisk, &ev)
+}
