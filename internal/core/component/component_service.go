@@ -158,18 +158,13 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 		return nil, err
 	}
 
-	// only get the components - there might be duplicates TO-DO: using the OnlyInA OnlyInB to build the maps maybe
+	// only get the components - there might be duplicates
 	componentsWithoutLicense := make([]models.Component, 0)
-	componentsWithLicense := make([]models.Component, 0)
-	seen := make(map[string]struct{})
+	seen := make(map[string]bool)
 	for _, componentDependency := range componentDependencies {
-		if _, ok := seen[componentDependency.DependencyPurl]; !ok {
-			if componentDependency.Dependency.License == nil {
-				componentsWithoutLicense = append(componentsWithoutLicense, componentDependency.Dependency)
-			} else {
-				componentsWithLicense = append(componentsWithLicense, componentDependency.Dependency)
-			}
-			seen[componentDependency.DependencyPurl] = struct{}{}
+		if _, ok := seen[componentDependency.DependencyPurl]; !ok && componentDependency.Dependency.License == nil {
+			seen[componentDependency.DependencyPurl] = true
+			componentsWithoutLicense = append(componentsWithoutLicense, componentDependency.Dependency)
 		}
 	}
 

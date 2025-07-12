@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -28,7 +27,6 @@ func NewLicenseRiskService(licenseRiskReposiory core.LicenseRiskRepository, vuln
 }
 
 func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error {
-	slog.Info("start looking for license risks")
 	existingLicenseRisks, err := service.licenseRiskRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return err
@@ -77,7 +75,6 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 			allVulnEvents = append(allVulnEvents, ev)
 		}
 	}
-	slog.Info(fmt.Sprintf("finished looking for licenses... found %d, now saving to db", len(allLicenseRisks)))
 	err = service.licenseRiskRepository.SaveBatch(nil, allLicenseRisks)
 	if err != nil {
 		return err
