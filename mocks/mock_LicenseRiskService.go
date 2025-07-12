@@ -84,6 +84,53 @@ func (_c *LicenseRiskService_FindLicenseRisksInComponents_Call) RunAndReturn(run
 	return _c
 }
 
+// MakeFinalLicenseDecision provides a mock function for the type LicenseRiskService
+func (_mock *LicenseRiskService) MakeFinalLicenseDecision(vulnID string, finalLicense string, userID string) error {
+	ret := _mock.Called(vulnID, finalLicense, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MakeFinalLicenseDecision")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string, string, string) error); ok {
+		r0 = returnFunc(vulnID, finalLicense, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// LicenseRiskService_MakeFinalLicenseDecision_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MakeFinalLicenseDecision'
+type LicenseRiskService_MakeFinalLicenseDecision_Call struct {
+	*mock.Call
+}
+
+// MakeFinalLicenseDecision is a helper method to define mock.On call
+//   - vulnID
+//   - finalLicense
+//   - userID
+func (_e *LicenseRiskService_Expecter) MakeFinalLicenseDecision(vulnID interface{}, finalLicense interface{}, userID interface{}) *LicenseRiskService_MakeFinalLicenseDecision_Call {
+	return &LicenseRiskService_MakeFinalLicenseDecision_Call{Call: _e.mock.On("MakeFinalLicenseDecision", vulnID, finalLicense, userID)}
+}
+
+func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Run(run func(vulnID string, finalLicense string, userID string)) *LicenseRiskService_MakeFinalLicenseDecision_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) Return(err error) *LicenseRiskService_MakeFinalLicenseDecision_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *LicenseRiskService_MakeFinalLicenseDecision_Call) RunAndReturn(run func(vulnID string, finalLicense string, userID string) error) *LicenseRiskService_MakeFinalLicenseDecision_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateLicenseRiskState provides a mock function for the type LicenseRiskService
 func (_mock *LicenseRiskService) UpdateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
 	ret := _mock.Called(tx, userID, licenseRisk, statusType, justification, mechanicalJustification)
