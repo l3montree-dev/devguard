@@ -2,8 +2,10 @@ package compliance
 
 import (
 	"embed"
+	"log/slog"
 	"path/filepath"
 	"sort"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -90,6 +92,19 @@ func (c *policyController) migratePolicies() error {
 
 	// delete the policies
 	if len(toDelete) > 0 {
+		wg := sync.WaitGroup{}
+		for _, policy := range toDelete {
+			wg.Add(1)
+			go func(p models.Policy) {
+				defer wg.Done()
+				err := c.policyRepository.GetDB(nil).Model(&toDelete).Association("Projects").Clear()
+				if err != nil {
+					slog.Warn("failed to clear projects association for policy", "policyID", p.ID, "error", err)
+					return
+				}
+			}(policy)
+		}
+		wg.Wait()
 		if err := c.policyRepository.DeleteBatch(nil, toDelete); err != nil {
 			return err
 		}
