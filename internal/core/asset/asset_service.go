@@ -110,7 +110,13 @@ func (s *service) UpdateAssetRequirements(asset models.Asset, responsible string
 func (s *service) GetCVSSBadgeSVG(CVSS models.AssetRiskDistribution) string {
 
 	if CVSS.AssetVersionName == "" {
-		return core.GetBadgeSVG("CVSS", []core.BadgeValues{})
+		return core.GetBadgeSVG("CVSS", []core.BadgeValues{
+			{Key: "unknown", Value: 0, Color: "#808080"},
+		})
+	} else if CVSS.Critical == 0 && CVSS.High == 0 && CVSS.Medium == 0 && CVSS.Low == 0 {
+		return core.GetBadgeSVG("CVSS", []core.BadgeValues{
+			{Key: "all clear", Value: 0, Color: "#008000"},
+		})
 	}
 
 	values := []core.BadgeValues{
