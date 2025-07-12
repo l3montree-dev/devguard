@@ -22,7 +22,7 @@ func (licenseRisk LicenseRisk) GetType() VulnType {
 }
 
 func (licenseRisk *LicenseRisk) CalculateHash() string {
-	// we should only use static information for the hash thats why the final license decision is not included
+	// we should only use static and unique information for the hash ( maybe we need to add scanner IDs, see pull request)
 	hash := utils.HashString(fmt.Sprintf("%s/%s/%s", licenseRisk.ComponentPurl, licenseRisk.AssetVersionName, licenseRisk.AssetID))
 	return hash
 }

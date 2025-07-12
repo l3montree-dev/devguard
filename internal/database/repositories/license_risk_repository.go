@@ -39,7 +39,7 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 		q = q.Where(f.SQL(), f.Value())
 	}
 	if search != "" && len(search) > 2 {
-		q = q.Where("license_risks.license_id ILIKE ? OR license_risks.component_purl ILIKE ? OR license_risks.scanner_ids ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("license_risks.final_license_decision ILIKE ? OR license_risks.component_purl ILIKE ? OR license_risks.scanner_ids ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
 	err := q.Count(&count).Error
