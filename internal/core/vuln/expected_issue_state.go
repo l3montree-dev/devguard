@@ -1,6 +1,8 @@
 package vuln
 
-import "github.com/l3montree-dev/devguard/internal/database/models"
+import (
+	"github.com/l3montree-dev/devguard/internal/database/models"
+)
 
 type ExpectedIssueState string
 
@@ -47,6 +49,14 @@ func IsConnectedToThirdPartyIntegration(asset models.Asset) bool {
 	}
 
 	return false
+}
+
+func GetExpectedIssueStateForFirstPartyVuln(asset models.Asset, firstPartyVuln *models.FirstPartyVuln) ExpectedIssueState {
+	if firstPartyVuln.State == models.VulnStateOpen {
+		return ExpectedIssueStateOpen
+	} else {
+		return ExpectedIssueStateClosed
+	}
 }
 
 func GetExpectedIssueState(asset models.Asset, dependencyVuln *models.DependencyVuln) ExpectedIssueState {
