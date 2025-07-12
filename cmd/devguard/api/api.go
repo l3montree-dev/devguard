@@ -682,7 +682,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	licenseRiskRouter.GET("/:licenseRiskID/", licenseRiskController.Read)
 	licenseRiskRouter.POST("/:licenseRiskID/", licenseRiskController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	licenseRiskRouter.POST("/:licenseRiskID/mitigate", licenseRiskController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
-
+	licenseRiskRouter.POST("/:licenseRiskID/finalLicenseDecision", licenseRiskController.MakeFinalLicenseDecision, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {
 		return routes[i].Path < routes[j].Path

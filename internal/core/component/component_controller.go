@@ -5,16 +5,16 @@ import (
 )
 
 type httpController struct {
-	componentRepository        core.ComponentRepository
-	assetVersionRepository     core.AssetVersionRepository
-	licenseOverwriteRepository core.LicenseRiskRepository
+	componentRepository    core.ComponentRepository
+	assetVersionRepository core.AssetVersionRepository
+	licenseRiskRepository  core.LicenseRiskRepository
 }
 
 func NewHTTPController(componentRepository core.ComponentRepository, assetVersionRepository core.AssetVersionRepository, licenseOverwriteRepository core.LicenseRiskRepository) *httpController {
 	return &httpController{
-		componentRepository:        componentRepository,
-		assetVersionRepository:     assetVersionRepository,
-		licenseOverwriteRepository: licenseOverwriteRepository,
+		componentRepository:    componentRepository,
+		assetVersionRepository: assetVersionRepository,
+		licenseRiskRepository:  licenseOverwriteRepository,
 	}
 }
 
@@ -74,7 +74,7 @@ func (httpController httpController) ListPaged(ctx core.Context) error {
 	search := ctx.QueryParam("search")
 	sort := core.GetSortQuery(ctx)
 
-	overwrittenLicense, err := httpController.licenseOverwriteRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
+	overwrittenLicense, err := httpController.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return err
 	}

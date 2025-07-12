@@ -178,27 +178,27 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 		})
 	}
 
-	// wait for all updatedComponents to be processed
-	updatedComponents, err := errGroup.WaitAndCollect()
+	// wait for all components to be processed
+	components, err := errGroup.WaitAndCollect()
 	if err != nil {
 		return nil, err
 	}
 
 	// save the components
-	if err := s.componentRepository.SaveBatch(nil, updatedComponents); err != nil {
+	if err := s.componentRepository.SaveBatch(nil, components); err != nil {
 		return nil, err
 	}
 
 	// find potential license risks for the components which had no prior license
-	if len(updatedComponents) > 0 {
-		err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, updatedComponents, scannerID)
+	if len(components) > 0 {
+		err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, components, scannerID)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// now return all components - each one should have the best license information available
-	allComponents := updatedComponents
+	allComponents := components
 	for _, componentDependency := range componentDependencies {
 		allComponents = append(allComponents, componentDependency.Dependency)
 	}
