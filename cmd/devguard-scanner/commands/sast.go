@@ -34,10 +34,9 @@ func printSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, asset
 			tw.AppendRow(table.Row{"File", green.Sprint(vuln.URI + ":" + strconv.Itoa(vuln.StartLine))})
 			tw.AppendRow(table.Row{"Line", vuln.StartLine})
 		}
-		tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/%s", webUI, assetName, assetVersionName, vuln.ID))})
 		tw.AppendSeparator()
 	}
-
+	tw.AppendRow(table.Row{"Link", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/", webUI, assetName, assetVersionName))})
 	fmt.Println(tw.Render())
 }
 
