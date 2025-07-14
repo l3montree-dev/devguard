@@ -147,6 +147,7 @@ type DependencyVulnRepository interface {
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 	ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
+	GetAllVulnsForAssetVersion(tx DB, assetID uuid.UUID, assetVersionName string) ([]models.DependencyVuln, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -239,6 +240,8 @@ type DependencyVulnService interface {
 	SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.DependencyVuln) error
 
 	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
+	GetAllVulnsForAssetVersion(tx DB, assetID uuid.UUID, assetVersionName, scannerID string) ([]models.DependencyVuln, error)
+	UpdateDependencyVulnStateBatch(tx DB, assetID uuid.UUID, userID string, dependencyVulns []models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) ([]models.VulnEvent, error)
 }
 
 // useful for integration testing - use in production to just fire and forget a function "go func()"

@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/labstack/echo/v4"
 )
 
 type HTTPController struct {
@@ -85,7 +86,6 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	}()
 
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
-	normalizedBom := bom
 	asset := core.GetAsset(c)
 	org := core.GetOrg(c)
 	project := core.GetProject(c)
@@ -113,11 +113,11 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	}
 
 	// update the sbom in the database in parallel
-	if err := s.assetVersionService.UpdateSBOM(assetVersion, scannerID, normalizedBom); err != nil {
+	if err := s.assetVersionService.UpdateSBOM(assetVersion, scannerID, bom); err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
-	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
+	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, bom, scannerID, userID)
 }
 
 func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
@@ -241,14 +241,14 @@ func (s *HTTPController) ScanDependencyVulnFromProject(c core.Context) error {
 	return c.JSON(200, scanResults)
 }
 
-func (s *HTTPController) ScanSbomFile(c core.Context) error {
+func (s *HTTPController) ScanSbomFile(ctx core.Context) error {
 	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
-	err := c.Request().ParseMultipartForm(maxSize)
+	err := ctx.Request().ParseMultipartForm(maxSize)
 	if err != nil {
 		slog.Error("error when parsing data")
 		return err
 	}
-	file, _, err := c.Request().FormFile("file")
+	file, _, err := ctx.Request().FormFile("file")
 	if err != nil {
 		slog.Error("error when forming file")
 		return err
@@ -261,10 +261,105 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 		return err
 	}
 
-	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
+	scanResults, err := s.DependencyVulnScan(ctx, normalize.FromCdxBom(bom, true))
 	if err != nil {
 		return err
 	}
-	return c.JSON(200, scanResults)
+	return ctx.JSON(200, scanResults)
+
+}
+
+func (s *HTTPController) ScanVeXFile(ctx core.Context) error {
+	var maxSize int64 = 16 * 1024 * 1024 //Max Upload Size 16mb
+	err := ctx.Request().ParseMultipartForm(maxSize)
+	if err != nil {
+		return echo.NewHTTPError(400, "could not parse VeX-file")
+	}
+	file, _, err := ctx.Request().FormFile("file")
+	if err != nil {
+		return echo.NewHTTPError(400, "could not form file from request, is the key: <file> properly set?")
+	}
+	defer file.Close()
+
+	bom := new(cdx.BOM)
+	decoder := cdx.NewBOMDecoder(file, cdx.BOMFileFormatJSON)
+	if err := decoder.Decode(bom); err != nil {
+		return echo.NewHTTPError(500, "could not decode VeX file into a BOM")
+	}
+
+	scanResults, err := s.VeXScan(ctx, bom)
+	if err != nil {
+		slog.Error("error when scanning uploaded VeX file: " + err.Error())
+		return echo.NewHTTPError(500, "could not scan uploaded VeX file")
+	}
+	return ctx.JSON(200, scanResults)
+}
+
+func (s *HTTPController) VeXScan(ctx core.Context, bom *cdx.BOM) (ScanResponse, error) {
+	type key struct {
+		CVE  string
+		Purl string
+	}
+	respone := ScanResponse{}
+	assetVersion := core.GetAssetVersion(ctx)
+	assetID := assetVersion.AssetID
+	detectedVulns := make([]models.DependencyVuln, len(*bom.Vulnerabilities))
+	reopenedVulns := make([]models.DependencyVuln, len(*bom.Vulnerabilities))
+	fixedVulns := make([]models.DependencyVuln, len(*bom.Vulnerabilities))
+
+	existingVulns, err := s.dependencyVulnService.GetAllVulnsForAssetVersion(nil, assetID, assetVersion.Name, "VEX-File-Upload")
+	if err != nil {
+		return respone, err
+	}
+
+	// map with the identifiers of dependency vulns
+	vulnMap := make(map[key]models.DependencyVuln, len(existingVulns))
+	for _, vuln := range existingVulns {
+		vulnMap[key{*vuln.CVEID, *vuln.ComponentPurl}] = vuln
+	}
+	// compare slices : O(a) + 2 * O(b)
+
+	for _, vexVuln := range *bom.Vulnerabilities {
+		exisitingVuln, exists := vulnMap[key{vexVuln.ID, vexVuln.BOMRef}]
+		if exists {
+			if exisitingVuln.State == models.VulnStateFixed {
+
+			}
+
+		} else {
+			detectedVulns = append(detectedVulns, models.DependencyVuln{
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: assetVersion.Name,
+					AssetID:          assetID,
+					ScannerIDs:       "VEX-File-Upload",
+				},
+				CVEID:                 utils.Ptr(vexVuln.ID),
+				ComponentPurl:         utils.Ptr(vexVuln.BOMRef),
+				ComponentFixedVersion: fixedVersion,
+				ComponentDepth:        utils.Ptr(depthMap[v.Purl]),
+				CVE:                   &v.CVE,
+			})
+		}
+	}
+
+	// the existing vulns which are not in bom.vulnerabilities are now fixed
+	return respone, nil
+}
+
+func convertCDXVulnsToDependencyVulns(bomVulns []cdx.Vulnerability) ([]models.DependencyVuln, error) {
+	dependencyVulns := make([]models.DependencyVuln, len(bomVulns))
+	for _, vuln := range bomVulns {
+		dependencyVulns = append(dependencyVulns, models.DependencyVuln{
+			Vulnerability: models.Vulnerability{
+				//...
+			},
+			CVEID: &vuln.ID,
+			//...
+		})
+	}
+	return dependencyVulns, nil
+}
+
+func compareDependencyVulnsAndBOMVulns(bomVulns []cdx.Vulnerability, dependencyVuln []models.DependencyVuln) utils.CompareResult[models.DependencyVuln] {
 
 }
