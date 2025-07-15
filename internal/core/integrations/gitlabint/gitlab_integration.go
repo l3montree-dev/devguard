@@ -336,7 +336,7 @@ func (g *GitlabIntegration) ListGroups(ctx core.Context, userID string, provider
 	}
 	// get the groups for this user
 	groups, _, err := gitlabClient.ListGroups(ctx.Request().Context(), &gitlab.ListGroupsOptions{
-		MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions), // only list groups where the user has at least owner permissions
+		ListOptions: gitlab.ListOptions{PerPage: 100}, // only list groups where the user has at least owner permissions
 	})
 
 	if err != nil {
@@ -451,7 +451,7 @@ func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, p
 	member, _, err := gitlabClient.GetMemberInGroup(ctx, token.GitLabUserID, groupIDInt)
 	if err != nil {
 		slog.Error("failed to get member in group", "err", err)
-		if strings.Contains(err.Error(), "404 Not Found") {
+		if strings.Contains(err.Error(), "404 Not Found") || strings.Contains(err.Error(), "403 Forbidden") {
 			// user is not a member of the group
 			return "", nil
 		}
