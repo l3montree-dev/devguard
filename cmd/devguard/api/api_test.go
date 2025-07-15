@@ -27,7 +27,7 @@ func TestMultiOrganizationMiddleware(t *testing.T) {
 		mockOrgService := mocks.OrgService{}
 		mockRBAC := mocks.AccessControl{}
 
-		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true}
+		org := models.Org{Model: models.Model{ID: uuid.New()}, IsPublic: true, IsSharing: false}
 
 		mockOrgService.On("ReadBySlug", "organization-slug").Return(&org, nil)
 		mockRBACProvider.On("GetDomainRBAC", org.ID.String()).Return(&mockRBAC)
@@ -217,7 +217,8 @@ func TestAccessControlMiddleware(t *testing.T) {
 		mockRBAC := mocks.AccessControl{}
 		mockSession := auth.NewSession("user-id", []string{"test-role"})
 		mockOrganization := models.Org{
-			IsPublic: true,
+			IsPublic:  true,
+			IsSharing: true,
 		}
 
 		userID := "user-id"

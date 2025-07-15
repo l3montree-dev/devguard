@@ -78,7 +78,9 @@ type patchRequest struct {
 	Grundschutz            *bool   `json:"grundschutz"`
 	Description            *string `json:"description"`
 
-	IsPublic    *bool           `json:"isPublic"`
+	IsPublic  *bool `json:"isPublic"`
+	IsSharing *bool `json:"isSharing"`
+
 	ConfigFiles *map[string]any `json:"configFiles"`
 	Language    *string         `json:"language"`
 }
@@ -142,6 +144,11 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 		org.IsPublic = *p.IsPublic
 	}
 
+	if p.IsSharing != nil {
+		updated = true
+		org.IsSharing = *p.IsSharing
+	}
+
 	if p.ConfigFiles != nil {
 		updated = true
 		org.ConfigFiles = *p.ConfigFiles
@@ -178,6 +185,8 @@ type OrgDTO struct {
 	JiraIntegrations []common.JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
+
+	IsSharing bool `json:"isSharing" gorm:"default:true;"`
 
 	ConfigFiles map[string]any `json:"configFiles"`
 
@@ -219,6 +228,7 @@ func fromModel(org models.Org) OrgDTO {
 		Slug:                   org.Slug,
 		Description:            org.Description,
 		IsPublic:               org.IsPublic,
+		IsSharing:              org.IsSharing,
 
 		Projects:                 org.Projects,
 		GithubAppInstallations:   org.GithubAppInstallations,

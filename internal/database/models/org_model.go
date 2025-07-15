@@ -25,6 +25,8 @@ type Org struct {
 
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
+	IsSharing bool `json:"isSharing" gorm:"default:true;"`
+
 	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
 
 	Language string `json:"language" gorm:"type:text;size:2"`
