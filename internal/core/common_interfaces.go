@@ -317,6 +317,14 @@ type ExternalUserRepository interface {
 	FindByOrgID(tx DB, orgID uuid.UUID) ([]models.ExternalUser, error)
 }
 
+type JiraIntegrationRepository interface {
+	Save(tx DB, model *models.JiraIntegration) error
+	Read(id uuid.UUID) (models.JiraIntegration, error)
+	FindByOrganizationID(orgID uuid.UUID) ([]models.JiraIntegration, error)
+	Delete(tx DB, id uuid.UUID) error
+	GetClientByIntegrationID(integrationID uuid.UUID) (models.JiraIntegration, error)
+}
+
 type GitlabIntegrationRepository interface {
 	Save(tx DB, model *models.GitLabIntegration) error
 	Read(id uuid.UUID) (models.GitLabIntegration, error)

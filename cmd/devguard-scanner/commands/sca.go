@@ -152,7 +152,7 @@ git push origin 1.0.1
 }
 
 // can be reused for container scanning as well.
-func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webUI string) error {
+func printScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, assetName, webUI string) error {
 	slog.Info("Scan completed successfully", "dependencyVulnAmount", len(scanResponse.DependencyVulns), "openedByThisScan", scanResponse.AmountOpened, "closedByThisScan", scanResponse.AmountClosed)
 
 	if len(scanResponse.DependencyVulns) == 0 {
@@ -175,6 +175,13 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	for _, risk := range openRisks {
 		if risk > maxRisk {
 			maxRisk = risk
+		}
+	}
+
+	var maxCVSS float32
+	for _, v := range scanResponse.DependencyVulns {
+		if v.CVE != nil && v.CVE.CVSS > maxCVSS {
+			maxCVSS = v.CVE.CVSS
 		}
 	}
 
@@ -204,21 +211,40 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, assetName, webU
 	switch failOnRisk {
 	case "low":
 		if maxRisk > 0.1 {
-			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
 		}
 	case "medium":
 		if maxRisk >= 4 {
-			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
 		}
 
 	case "high":
 		if maxRisk >= 7 {
-			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
 		}
 
 	case "critical":
 		if maxRisk >= 9 {
-			return fmt.Errorf("max risk exceeds threshold %f", maxRisk)
+			return fmt.Errorf("max risk exceeds threshold %.2f", maxRisk)
+		}
+	}
+
+	switch failOnCVSS {
+	case "low":
+		if maxCVSS > 0.1 {
+			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
+		}
+	case "medium":
+		if maxCVSS >= 4 {
+			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
+		}
+	case "high":
+		if maxCVSS >= 7 {
+			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
+		}
+	case "critical":
+		if maxCVSS >= 9 {
+			return fmt.Errorf("max CVSS exceeds threshold %.2f", maxCVSS)
 		}
 	}
 
@@ -254,6 +280,7 @@ func addScanFlags(cmd *cobra.Command) {
 
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
+	cmd.Flags().String("failOnCVSS", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://main.devguard.org'.")
 
 }
@@ -323,7 +350,7 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "could not parse response")
 	}
 
-	return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
+	return printScaResults(scanResponse, config.RuntimeBaseConfig.FailOnRisk, config.RuntimeBaseConfig.FailOnCVSS, config.RuntimeBaseConfig.AssetName, config.RuntimeBaseConfig.WebUI)
 }
 
 func NewSCACommand() *cobra.Command {

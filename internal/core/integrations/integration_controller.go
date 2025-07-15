@@ -21,6 +21,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
 )
 
 type integrationController struct {
@@ -93,6 +94,21 @@ func (c *integrationController) TestAndSaveGitlabIntegration(ctx core.Context) e
 	return nil
 }
 
+func (c *integrationController) TestAndSaveJiraIntegration(ctx core.Context) error {
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	gl := thirdPartyIntegration.GetIntegration(core.JiraIntegrationID)
+	if gl == nil {
+		return ctx.JSON(404, "Jira integration not enabled")
+	}
+
+	if err := gl.(*jiraint.JiraIntegration).TestAndSave(ctx); err != nil {
+		slog.Error("could not test GitLab integration", "err", err)
+		return err
+	}
+
+	return nil
+}
+
 func (c *integrationController) GitLabOauth2Callback(ctx core.Context) error {
 	integrationName := core.GetParam(ctx, "integrationName")
 	if integrationName == "" {
@@ -138,6 +154,21 @@ func (c *integrationController) DeleteGitLabAccessToken(ctx core.Context) error 
 
 	if err := gl.(*gitlabint.GitlabIntegration).Delete(ctx); err != nil {
 		slog.Error("could not delete GitLab integration", "err", err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *integrationController) DeleteJiraAccessToken(ctx core.Context) error {
+	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
+	jira := thirdPartyIntegration.GetIntegration(core.JiraIntegrationID)
+	if jira == nil {
+		return ctx.JSON(404, "Jira integration not enabled")
+	}
+
+	if err := jira.(*jiraint.JiraIntegration).Delete(ctx); err != nil {
+		slog.Error("could not delete Jira integration", "err", err)
 		return err
 	}
 
