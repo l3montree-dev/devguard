@@ -275,6 +275,8 @@ func (g *projectRepository) prepareUniqueSlugs(orgID uuid.UUID, projects []*mode
 			} else if p.Same(*taken[slug]) {
 				// the slug is already taken - check if it is the same project
 				// if it is the same project, we can keep the slug
+				p.Slug = slug
+				taken[slug] = p
 				break
 			}
 			// slug is already taken by another project - append a number to the slug to check if this is unique in the next iteration
