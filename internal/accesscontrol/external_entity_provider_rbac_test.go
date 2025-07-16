@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -17,7 +18,7 @@ func TestIsAllowed(t *testing.T) {
 		userID         string
 		object         core.Object
 		action         core.Action
-		adminToken     string
+		adminToken     *string
 		mockRole       string
 		mockRoleErr    error
 		expectedResult bool
@@ -30,7 +31,7 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "admin-token",
 			object:         core.ObjectProject,
 			action:         core.ActionRead,
-			adminToken:     "admin-token",
+			adminToken:     utils.Ptr("admin-token"),
 			expectedResult: true,
 		},
 		{
@@ -38,7 +39,7 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "user1",
 			object:         core.ObjectOrganization,
 			action:         core.ActionRead,
-			adminToken:     "admin-token",
+			adminToken:     utils.Ptr("admin-token"),
 			expectedResult: true,
 		},
 		{
@@ -46,7 +47,7 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "user2",
 			object:         core.ObjectProject,
 			action:         core.ActionRead,
-			adminToken:     "admin-token",
+			adminToken:     utils.Ptr("admin-token"),
 			mockRole:       core.RoleMember,
 			expectedResult: true,
 		},
@@ -55,7 +56,7 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "user3",
 			object:         core.ObjectProject,
 			action:         core.ActionUpdate,
-			adminToken:     "admin-token",
+			adminToken:     utils.Ptr("admin-token"),
 			mockRole:       core.RoleAdmin,
 			expectedResult: true,
 		},
@@ -64,7 +65,7 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "user4",
 			object:         core.ObjectProject,
 			action:         core.ActionUpdate,
-			adminToken:     "admin-token",
+			adminToken:     utils.Ptr("admin-token"),
 			mockRole:       core.RoleMember,
 			expectedResult: false,
 		},
@@ -73,7 +74,7 @@ func TestIsAllowed(t *testing.T) {
 			userID:      "user5",
 			object:      core.ObjectProject,
 			action:      core.ActionRead,
-			adminToken:  "admin-token",
+			adminToken:  utils.Ptr("admin-token"),
 			mockRoleErr: errors.New("some error"),
 			expectErr:   true,
 		},
@@ -82,7 +83,7 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "user6",
 			object:         core.ObjectProject,
 			action:         core.ActionDelete,
-			adminToken:     "admin-token",
+			adminToken:     utils.Ptr("admin-token"),
 			mockRole:       core.RoleAdmin,
 			expectedResult: false,
 		},
@@ -91,7 +92,7 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "user7",
 			object:         core.ObjectProject,
 			action:         core.ActionDelete,
-			adminToken:     "admin-token",
+			adminToken:     utils.Ptr("admin-token"),
 			mockRole:       core.RoleMember,
 			expectedResult: false,
 		},
@@ -100,7 +101,7 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "user8",
 			object:         core.ObjectProject,
 			action:         core.ActionDelete,
-			adminToken:     "admin-token",
+			adminToken:     utils.Ptr("admin-token"),
 			mockRole:       core.RoleOwner,
 			expectedResult: true,
 		},
@@ -109,7 +110,7 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "admin-token",
 			object:         core.ObjectProject,
 			action:         core.ActionCreate,
-			adminToken:     "admin-token",
+			adminToken:     utils.Ptr("admin-token"),
 			expectedResult: false,
 		},
 		{
@@ -117,7 +118,7 @@ func TestIsAllowed(t *testing.T) {
 			userID:         "admin-token",
 			object:         core.ObjectProject,
 			action:         core.ActionDelete,
-			adminToken:     "admin-token",
+			adminToken:     utils.Ptr("admin-token"),
 			expectedResult: false,
 		},
 	}
@@ -159,7 +160,7 @@ func TestHasAccess(t *testing.T) {
 			nil,
 			nil,
 			"external-entity-provider-id",
-			"admin-token",
+			utils.Ptr("admin-token"),
 		)
 
 		hasAccess, err := rbac.HasAccess("admin-token")
@@ -175,7 +176,7 @@ func TestHasAccess(t *testing.T) {
 			nil,
 			thirdpartyIntegrationMock,
 			"external-entity-provider-id",
-			"",
+			utils.Ptr(""),
 		)
 
 		hasAccess, err := rbac.HasAccess("user1")
@@ -190,7 +191,7 @@ func TestHasAccess(t *testing.T) {
 			nil,
 			thirdpartyIntegrationMock,
 			"external-entity-provider-id",
-			"",
+			utils.Ptr(""),
 		)
 
 		hasAccess, err := rbac.HasAccess("user1")

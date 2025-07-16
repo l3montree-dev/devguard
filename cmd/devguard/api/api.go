@@ -303,11 +303,8 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 					slog.Error("no oauth2 config found for external entity provider", "provider", *org.ExternalEntityProviderID)
 					return ctx.JSON(500, map[string]string{"error": "no oauth2 config found for external entity provider"})
 				}
-				if conf.AdminToken != nil {
-					domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, core.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, *conf.AdminToken)
-				} else {
-					domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, core.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, "")
-				}
+
+				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, core.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, conf.AdminToken)
 
 			} else {
 				domainRBAC = rbacProvider.GetDomainRBAC(org.ID.String())
