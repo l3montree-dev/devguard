@@ -132,7 +132,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 
 		switch ev.Type {
 		case models.EventTypeAccepted:
-			_, _, err = client.CreateIssueComment(
+			err = client.CreateIssueComment(
 				event.Ctx.Request().Context(),
 				ticketID,
 				strconv.Itoa(projectID),
@@ -148,7 +148,7 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 			justification := i.createADFComment(member.Name,
 				"  marked the vulnerability as false positive",
 				utils.SafeDereference(ev.Justification))
-			_, _, err = client.CreateIssueComment(
+			err = client.CreateIssueComment(
 				event.Ctx.Request().Context(),
 				ticketID,
 				strconv.Itoa(projectID),
@@ -161,14 +161,34 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 		case models.EventTypeReopened:
 			justification := i.createADFComment(member.Name, " reopened the vulnerability", utils.SafeDereference(ev.Justification))
 
-			_, _, err = client.CreateIssueComment(
+			err = client.CreateIssueComment(
 				event.Ctx.Request().Context(),
 				ticketID,
 				strconv.Itoa(projectID),
 				justification)
 
 			if err != nil {
+				if err.Error() == `failed to create issue comment, status code: 404, response: {"errorMessages":["Issue does not exist or you do not have permission to see it."],"errors":{}}` {
 
+					assetVersionName := core.GetAssetVersion(event.Ctx).Name
+
+					projectSlug, err := core.GetProjectSlug(event.Ctx)
+
+					if err != nil {
+						return err
+					}
+					orgSlug, err := core.GetOrgSlug(event.Ctx)
+					if err != nil {
+						return err
+					}
+
+					session := core.GetSession(event.Ctx)
+					err = i.CreateIssue(event.Ctx.Request().Context(), asset, assetVersionName, vuln, projectSlug, orgSlug, utils.SafeDereference(ev.Justification), session.GetUserID())
+					if err != nil {
+						slog.Error("failed to create Jira issue", "err", err, "issue", vuln.GetTicketID())
+						return fmt.Errorf("failed to create Jira issue: %w", err)
+					}
+				}
 				slog.Error("failed to create Jira issue comment", "err", err, "issue", vuln.GetTicketID())
 				return fmt.Errorf("failed to create Jira issue comment: %w", err)
 			}
@@ -176,15 +196,16 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 		case models.EventTypeComment:
 			justification := i.createADFComment(member.Name, " commented on the vulnerability", utils.SafeDereference(ev.Justification))
 
-			_, _, err = client.CreateIssueComment(
+			err = client.CreateIssueComment(
 				event.Ctx.Request().Context(),
 				ticketID,
 				strconv.Itoa(projectID),
 				justification)
 
 			if err != nil {
+
 				slog.Error("failed to create Jira issue comment", "err", err, "issue", vuln.GetTicketID())
-				return fmt.Errorf("failed to create Jira issue comment: %w", err)
+				/* 				return fmt.Errorf("failed to create Jira issue comment: %w", err) */
 			}
 
 		}
