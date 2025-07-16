@@ -378,7 +378,7 @@ func (i *JiraIntegration) createDependencyVulnIssue(ctx context.Context, depende
 		return nil, fmt.Errorf("failed to create Jira issue: %w", err)
 	}
 
-	_, _, err = client.CreateIssueComment(ctx, createdIssue.ID, strconv.Itoa(projectID), i.createADFComment("", "", justification))
+	err = client.CreateIssueComment(ctx, createdIssue.ID, strconv.Itoa(projectID), i.createADFComment("", "", justification))
 	if err != nil {
 		slog.Error("failed to create Jira issue comment", "err", err, "issue", createdIssue)
 		return nil, fmt.Errorf("failed to create Jira issue comment: %w", err)
@@ -426,7 +426,7 @@ func (i *JiraIntegration) createFirstPartyVulnIssue(ctx context.Context, firstPa
 		return nil, fmt.Errorf("failed to create Jira issue: %w", err)
 	}
 
-	_, _, err = client.CreateIssueComment(ctx, createdIssue.ID, strconv.Itoa(projectID), i.createADFComment("", "", justification))
+	err = client.CreateIssueComment(ctx, createdIssue.ID, strconv.Itoa(projectID), i.createADFComment("", "", justification))
 	if err != nil {
 		slog.Error("failed to create Jira issue comment", "err", err, "issue", createdIssue)
 		return nil, fmt.Errorf("failed to create Jira issue comment: %w", err)
@@ -583,7 +583,7 @@ func (i *JiraIntegration) UpdateIssue(ctx context.Context, asset models.Asset, v
 
 	if err != nil {
 		//check if err is 404 - if so, we can not reopen the issue
-		if err.Error() == "404 Not Found" {
+		if err.Error() == `failed to create issue comment, status code: 404, response: {"errorMessages":["Issue does not exist or you do not have permission to see it."],"errors":{}}` {
 			// we can not reopen the issue - it is deleted
 			vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), "system", "This Vulnerability is marked as a false positive due to deletion", models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDs())
 			// save the event

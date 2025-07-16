@@ -170,7 +170,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 		// Handle issue updated event
 		switch statusCategory {
 		case jira.StatusCategoryDone:
-			if vuln.GetState() == models.VulnStateAccepted || vuln.GetState() == models.VulnStateFalsePositive {
+			if vuln.GetState() != models.VulnStateOpen {
 				return nil
 			}
 			vulnEvent = models.NewAcceptedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as accepted by %s, due to closing of the jira ticket.", username))
@@ -180,7 +180,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 				slog.Error("could not save dependencyVuln and event", "err", err)
 			}
 		case jira.StatusCategoryToDo, jira.StatusCategoryInProgress:
-			if vuln.GetState() == models.VulnStateOpen || vuln.GetState() == models.VulnStateFixed {
+			if vuln.GetState() == models.VulnStateOpen {
 				return nil
 			}
 			vulnEvent = models.NewReopenedEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability was reopened by %s", username))
