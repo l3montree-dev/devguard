@@ -49,11 +49,19 @@ func (m Project) IsExternalEntity() bool {
 	return m.ExternalEntityProviderID != nil && *m.ExternalEntityProviderID != ""
 }
 
-func (m Project) Same(other Project) bool {
+func (m *Project) Same(other *Project) bool {
 	if m.ExternalEntityID == nil || m.ExternalEntityProviderID == nil {
 		return m.ID != uuid.Nil && m.ID == other.ID
 	}
 
 	return *m.ExternalEntityID == *other.ExternalEntityID &&
 		*m.ExternalEntityProviderID == *other.ExternalEntityProviderID
+}
+
+func (m *Project) GetSlug() string {
+	return m.Slug
+}
+
+func (m *Project) SetSlug(slug string) {
+	m.Slug = slug
 }

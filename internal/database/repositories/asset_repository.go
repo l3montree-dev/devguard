@@ -66,31 +66,9 @@ func (repository *assetRepository) prepareUniqueSlugs(projectID uuid.UUID, asset
 		return err
 	}
 
-	taken := make(map[string]*models.Asset)
-	for _, s := range existing {
-		taken[s.Slug] = s
-	}
-
-	// Resolve unique slugs
-	for _, p := range assets {
-		base := p.Slug
-		slug := base
-		i := 1
-		for {
-			if _, exists := taken[slug]; !exists {
-				// we found a unique slug
-				p.Slug = slug
-				taken[slug] = p
-				break
-			} else if p.Same(*taken[slug]) {
-				// the slug is already taken - check if it is the same project
-				// if it is the same project, we can keep the slug
-				break
-			}
-			// slug is already taken by another project - append a number to the slug to check if this is unique in the next iteration
-			slug = fmt.Sprintf("%s-%d", base, i)
-			i++
-		}
+	// Inject unique slugs into the projects
+	if err := injectUniqueSlugs(existing, assets); err != nil {
+		return fmt.Errorf("failed to inject unique slugs: %w", err)
 	}
 
 	return nil
