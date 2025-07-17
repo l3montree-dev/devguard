@@ -18,9 +18,44 @@ body:
       label: ✅ Functional Test Scenarios
       description: Please test thoroughly and mark each scenario as you complete.
       options:
+        - label: Sign up with email and passkey
+        - label: Sign up with email and password
+        - label: E-mail verification works
+        - label: Login with email and passkey
+        - label: Login with email and password
         - label: User login works with GitHub account
         - label: User login works with GitLab account
         - label: User login works with openCode account
+        - label: Linking GitHub account works
+        - label: Linking GitLab account works
+        - label: Linking openCode account works
+        - label: Create a new organization
+        - label: Switching between light and dark mode works
+        - label: Invite other user to organization with existing account
+        - label: Invite other user to organization without existing account (Sign up during invite)
+        - label: Change members role in organization
+        - label: Remove user from organization
+        - label: Check that owner of organization can never be deleted
+        - label: Create a new group
+        - label: Test permissions for group, subgroup and repo creation (member vs. admin on org level, change to admin on test group level)
+        - label: Test group deletion
+        - label: Test subgroup creation
+        - label: Test subgroup deletion
+        - label: Test repository creation
+        - label: Test repository deletion
+        - label: Test that min org admin can only invite users
+        - label: Test linking org to GitHub
+        - label: Test linking org to GitLab
+        - label: Test linking org to Jira
+        - label: Test linking repo in DevGuard to GitLab
+        - label: Test automated issue creation
+        - label: Test reporting range setting
+        - label: Test auto setup feature
+        - label: Test whole DevSecOps integration flow
+        - label: Test partial scan setup flows
+        - label: Test working with tickets (slash commands, commenting, etc.)
+        - label: Test filter in risk tables
+        - label: Test sbom and vex download
 
   - type: textarea
     id: notes
