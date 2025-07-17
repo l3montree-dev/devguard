@@ -81,7 +81,7 @@ func ParseBaseConfig() {
 		panic(err)
 	}
 
-	// we don't add default artifact name if it is not set, because of backward compatibility, so we don't have new scanner IDs for existing assets
+	// we don't add artifact name if it is 'default', because of backward compatibility, so we don't have new scanner IDs for existing assets
 	if RuntimeBaseConfig.ArtifactName != "" && RuntimeBaseConfig.ArtifactName != "default" {
 		RuntimeBaseConfig.ScannerID = RuntimeBaseConfig.ArtifactName + ":" + RuntimeBaseConfig.ScannerID
 	}
