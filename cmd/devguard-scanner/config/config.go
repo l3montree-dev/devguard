@@ -49,6 +49,7 @@ type baseConfig struct {
 	Ref           string `json:"ref" mapstructure:"ref"`
 	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
 	IsTag         bool   `json:"isTag" mapstructure:"isTag"`
+	ArtifactName  string `json:"artifactName" mapstructure:"artifactName"`
 }
 
 type InTotoConfig struct {
@@ -78,6 +79,10 @@ func ParseBaseConfig() {
 	err := viper.Unmarshal(&RuntimeBaseConfig)
 	if err != nil {
 		panic(err)
+	}
+
+	if RuntimeBaseConfig.ArtifactName != "" {
+		RuntimeBaseConfig.ScannerID = RuntimeBaseConfig.ScannerID + ":" + RuntimeBaseConfig.ArtifactName
 	}
 
 	if RuntimeBaseConfig.APIURL != "" {

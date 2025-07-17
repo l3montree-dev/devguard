@@ -167,3 +167,4 @@ docker run -v "$(PWD):/app" scanner devguard-scanner container-scanning \
   --token="<TOKEN>" \
   --path="/app/image.tar"
 ```
+

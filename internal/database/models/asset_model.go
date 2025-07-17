@@ -65,11 +65,18 @@ func (m Asset) TableName() string {
 	return "assets"
 }
 
-func (m Asset) Same(other Asset) bool {
+func (m *Asset) Same(other *Asset) bool {
 	if m.ExternalEntityID == nil || m.ExternalEntityProviderID == nil {
 		return m.ID != uuid.Nil && m.ID == other.ID
 	}
 
 	return *m.ExternalEntityID == *other.ExternalEntityID &&
 		*m.ExternalEntityProviderID == *other.ExternalEntityProviderID
+}
+
+func (m *Asset) GetSlug() string {
+	return m.Slug
+}
+func (m *Asset) SetSlug(slug string) {
+	m.Slug = slug
 }
