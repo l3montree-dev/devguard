@@ -81,9 +81,10 @@ func ParseBaseConfig() {
 		panic(err)
 	}
 
-	if RuntimeBaseConfig.ArtifactName != "" {
-		RuntimeBaseConfig.ScannerID = RuntimeBaseConfig.ScannerID + ":" + RuntimeBaseConfig.ArtifactName
-	}
+	// we don't add default artifact name if it is not set, because of backward compatibility, so we don't have new scanner IDs for existing assets
+	if RuntimeBaseConfig.ArtifactName != "" && RuntimeBaseConfig.ArtifactName != "default" {
+		RuntimeBaseConfig.ScannerIctName
+	}D = RuntimeBaseConfig.ScannerID + ":" + RuntimeBaseConfig.Artifa
 
 	if RuntimeBaseConfig.APIURL != "" {
 		RuntimeBaseConfig.APIURL = sanitizeAPIURL(RuntimeBaseConfig.APIURL)
