@@ -98,7 +98,7 @@ func TestGetLabels(t *testing.T) {
 		vuln := &models.DependencyVuln{
 			Vulnerability: models.Vulnerability{
 				State:      models.VulnStateOpen,
-				ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca, github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning",
+				ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning:test github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca:test",
 			},
 			RawRiskAssessment: utils.Ptr(0.2),
 		}
@@ -106,8 +106,10 @@ func TestGetLabels(t *testing.T) {
 			"devguard",
 			"state:open",
 			"risk:low",
-			"scanner:sca",
-			"scanner:container-scanning",
+			"artifact:source-code",
+			"artifact:container",
+			"artifact:container:test",
+			"artifact:source-code:test",
 		}
 
 		assert.Equal(t, expectedLabels, GetLabels(vuln))
