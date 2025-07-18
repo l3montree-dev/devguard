@@ -218,7 +218,7 @@ func GetLabels(vuln models.Vuln) []string {
 	}
 
 	scannerIDsString := vuln.GetScannerIDs()
-	scannerIDs := strings.Split(scannerIDsString, ",")
+	scannerIDs := strings.Split(scannerIDsString, " ")
 	scannerDefault := "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"
 
 	for _, scannerID := range scannerIDs {
@@ -227,7 +227,22 @@ func GetLabels(vuln models.Vuln) []string {
 			continue
 		}
 		scannerID = strings.TrimPrefix(scannerID, scannerDefault)
-		labels = append(labels, "scanner:"+scannerID)
+		artifactName := scannerID
+		parts := strings.Split(scannerID, ":")
+		if len(parts) > 0 {
+			switch parts[0] {
+			case "sca":
+				artifactName = "source-code"
+			case "container-scanning":
+				artifactName = "container"
+			case "sbom":
+				artifactName = "sbom"
+			}
+		}
+		if len(parts) > 1 {
+			artifactName = artifactName + ":" + parts[1]
+		}
+		labels = append(labels, "artifact:"+artifactName)
 	}
 
 	return labels
