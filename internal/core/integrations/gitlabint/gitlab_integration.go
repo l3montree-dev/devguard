@@ -336,7 +336,9 @@ func (g *GitlabIntegration) ListGroups(ctx core.Context, userID string, provider
 	}
 	// get the groups for this user
 	groups, _, err := gitlabClient.ListGroups(ctx.Request().Context(), &gitlab.ListGroupsOptions{
-		MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions), // only list groups where the user has at least owner permissions
+		ListOptions: gitlab.ListOptions{PerPage: 100},
+		//MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions),
+		// only list groups where the user has at least reporter permissions
 	})
 
 	if err != nil {
@@ -344,7 +346,26 @@ func (g *GitlabIntegration) ListGroups(ctx core.Context, userID string, provider
 		return nil, err
 	}
 
-	return utils.Map(groups, func(el *gitlab.Group) models.Project {
+	cleanedGroups := make([]*gitlab.Group, 0, len(groups))
+
+	for _, group := range groups {
+		//only check if we are member of the given group
+		member, _, err := gitlabClient.GetMemberInGroup(ctx.Request().Context(), token.GitLabUserID, (*group).ID)
+		if err != nil {
+			if strings.Contains(err.Error(), "403 Forbidden") || strings.Contains(err.Error(), "404 Not Found") {
+				//swallow the error
+				continue
+			} else {
+				return nil, err
+			}
+		}
+		if member.AccessLevel >= gitlab.ReporterPermissions {
+			cleanedGroups = append(cleanedGroups, group)
+		}
+
+	}
+
+	return utils.Map(cleanedGroups, func(el *gitlab.Group) models.Project {
 		return groupToProject(el, providerID)
 	}), nil
 }

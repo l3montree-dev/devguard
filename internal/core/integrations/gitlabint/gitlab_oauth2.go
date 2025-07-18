@@ -106,7 +106,7 @@ func parseGitlabEnvs() map[string]gitlabEnvConfig {
 				conf.botUserAccessToken = value
 			case "admintoken":
 				if value == "" {
-					conf.adminToken = nil
+					conf.adminToken = utils.Ptr("")
 				} else {
 					conf.adminToken = &value
 				}

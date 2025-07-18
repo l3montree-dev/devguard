@@ -59,6 +59,10 @@ func (o *orgService) CreateOrganization(ctx core.Context, organization models.Or
 		return echo.NewHTTPError(409, "organizations with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("organizations with an empty name or an empty slug are not allowed"))
 	}
 
+	if organization.Name == "opencode" || organization.Name == "gitlab" || organization.Name == "github" {
+		return echo.NewHTTPError(409, "organizations named opencode, github or gitlab are not allowed").WithInternal(fmt.Errorf("organizations named opencode, github or gitlab are not allowed"))
+	}
+
 	err := o.organizationRepository.Create(nil, &organization)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value") { //Check the returned error of Create Function
