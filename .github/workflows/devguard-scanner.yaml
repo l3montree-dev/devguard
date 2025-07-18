@@ -97,8 +97,8 @@ jobs:
     uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
     with:
       image-suffix: "-scanner"
-      artifact-suffix: "-scanner"
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-scanner
+      artifact-name: "-scanner"
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}  
@@ -123,9 +123,9 @@ jobs:
     needs: 
     - build-scanner-image
     with:
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-scanner
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-suffix: "-scanner"
+      artifact-name: "-scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
       
@@ -159,7 +159,7 @@ jobs:
     - iac
     uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
     with:
-      artifact-suffix: "-scanner"
+      artifact-name: "-scanner"
       image-suffix: "-scanner"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
@@ -197,9 +197,9 @@ jobs:
     - iac
     uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@main
     with:
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-scanner
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-suffix: "-scanner"
+      artifact-name: "-scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
@@ -233,8 +233,8 @@ jobs:
     - iac
     uses: l3montree-dev/devguard-action/.github/workflows/attest.yml@main
     with:
-      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-scanner
+      asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-suffix: "-scanner"
+      artifact-name: "-scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
