@@ -62,7 +62,7 @@ jobs:
 
 
   build-scanner-image:
-    uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@add-artifact-name
+    uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
     with:
       artifact-name: "-scanner"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
@@ -74,7 +74,7 @@ jobs:
 
   # Image scanning job to detect vulnerabilities in the built Docker image
   scanner-container-scanning:
-    uses: l3montree-dev/devguard-action/.github/workflows/container-scanning.yml@add-artifact-name
+    uses: l3montree-dev/devguard-action/.github/workflows/container-scanning.yml@main
     needs: 
     - build-scanner-image
     with:
@@ -89,7 +89,7 @@ jobs:
     - build-scanner-image
     - scanner-container-scanning
     - devguard
-    uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@add-artifact-name
+    uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
     with:
       artifact-name: "-scanner"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
@@ -104,7 +104,7 @@ jobs:
     - build-scanner-image
     - scanner-container-scanning
     - devguard
-    uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@add-artifact-name
+    uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@main
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
@@ -118,7 +118,7 @@ jobs:
     - build-scanner-image
     - scanner-container-scanning
     - devguard
-    uses: l3montree-dev/devguard-action/.github/workflows/attest.yml@add-artifact-name
+    uses: l3montree-dev/devguard-action/.github/workflows/attest.yml@main
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
