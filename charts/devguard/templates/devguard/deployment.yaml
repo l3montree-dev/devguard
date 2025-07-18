@@ -138,6 +138,10 @@ spec:
                 key: webhookSecret
                 name: {{ .Values.api.github.existingWebhookSecretSecretName }}
                 optional: true
+          - name: ENVIRONMENT
+            value: {{ .Values.api.errorTracking.environment | quote }}
+          - name: ERROR_TRACKING_DSN
+            value: {{ .Values.api.errorTracking.dsn | quote }}
         {{- end }}
           ports:
             - name: http
