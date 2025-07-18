@@ -89,12 +89,7 @@ jobs:
     needs: 
     - build-scanner-image
     - scanner-container-scanning
-    - secret-scanning
-    - sca
-    - sast
-    - golangci
-    - tests
-    - iac
+    - devguard
     uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
     with:
       artifact-name: "-scanner"
@@ -109,12 +104,7 @@ jobs:
     needs: 
     - build-scanner-image
     - scanner-container-scanning
-    - secret-scanning
-    - sca
-    - sast
-    - golangci
-    - tests
-    - iac
+    - devguard
     uses: l3montree-dev/devguard-action/.github/workflows/sign.yml@main
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
@@ -128,12 +118,7 @@ jobs:
     needs: 
     - build-scanner-image
     - scanner-container-scanning
-    - secret-scanning
-    - sca
-    - sast
-    - golangci
-    - tests
-    - iac
+    - devguard
     uses: l3montree-dev/devguard-action/.github/workflows/attest.yml@main
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
