@@ -346,23 +346,35 @@ func (g *GitlabIntegration) ListGroups(ctx core.Context, userID string, provider
 		return nil, err
 	}
 
-	cleanedGroups := make([]*gitlab.Group, 0, len(groups))
-
+	errgroup := utils.ErrGroup[*gitlab.Group](10)
 	for _, group := range groups {
-		//only check if we are member of the given group
-		member, _, err := gitlabClient.GetMemberInGroup(ctx.Request().Context(), token.GitLabUserID, (*group).ID)
-		if err != nil {
-			if strings.Contains(err.Error(), "403 Forbidden") || strings.Contains(err.Error(), "404 Not Found") {
-				//swallow the error
-				continue
-			} else {
-				return nil, err
-			}
-		}
-		if member.AccessLevel >= gitlab.ReporterPermissions {
-			cleanedGroups = append(cleanedGroups, group)
-		}
+		errgroup.Go(func() (*gitlab.Group, error) {
+			member, _, err := gitlabClient.GetMemberInGroup(ctx.Request().Context(), token.GitLabUserID, (*group).ID)
+			if err != nil {
+				if strings.Contains(err.Error(), "403 Forbidden") || strings.Contains(err.Error(), "404 Not Found") {
+					return nil, nil
+				} else {
 
+					return nil, err
+				}
+			}
+			if member.AccessLevel >= gitlab.ReporterPermissions {
+				return group, nil
+			}
+			return nil, nil
+		})
+	}
+
+	allGroups, err := errgroup.WaitAndCollect()
+	if err != nil {
+		return nil, err
+	}
+	// filter all the nil values from the result
+	cleanedGroups := make([]*gitlab.Group, 0, len(groups))
+	for i := range allGroups {
+		if allGroups[i] != nil {
+			cleanedGroups = append(cleanedGroups, allGroups[i])
+		}
 	}
 
 	return utils.Map(cleanedGroups, func(el *gitlab.Group) models.Project {

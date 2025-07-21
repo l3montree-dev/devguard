@@ -176,7 +176,7 @@ func TestHasAccess(t *testing.T) {
 			nil,
 			thirdpartyIntegrationMock,
 			"external-entity-provider-id",
-			utils.Ptr(""),
+			nil,
 		)
 
 		hasAccess, err := rbac.HasAccess("user1")
@@ -191,7 +191,7 @@ func TestHasAccess(t *testing.T) {
 			nil,
 			thirdpartyIntegrationMock,
 			"external-entity-provider-id",
-			utils.Ptr(""),
+			nil,
 		)
 
 		hasAccess, err := rbac.HasAccess("user1")
