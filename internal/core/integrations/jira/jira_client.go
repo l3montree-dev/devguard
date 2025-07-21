@@ -91,7 +91,7 @@ func (c *Client) GetAccountIDByEmail(ctx context.Context, email string) (string,
 
 }
 
-func (c *Client) CreateIssueComment(ctx context.Context, issueID string, projectID string, comment ADF) (string, string, error) {
+func (c *Client) CreateIssueComment(ctx context.Context, issueID string, projectID string, comment ADF) error {
 
 	data := map[string]interface{}{
 		"body": comment,
@@ -100,7 +100,7 @@ func (c *Client) CreateIssueComment(ctx context.Context, issueID string, project
 	bodyBytes, err := json.Marshal(data)
 	if err != nil {
 		slog.Error("Failed to marshal comment data", "error", err)
-		return "", "", fmt.Errorf("failed to marshal comment data: %w", err)
+		return fmt.Errorf("failed to marshal comment data: %w", err)
 	}
 	body := bytes.NewBuffer(bodyBytes)
 
@@ -108,19 +108,19 @@ func (c *Client) CreateIssueComment(ctx context.Context, issueID string, project
 	if err != nil {
 		bodyContent, _ := io.ReadAll(resp.Body)
 		slog.Error("Failed to create issue comment", "error", err, "response_body", string(bodyContent))
-		return "", "", fmt.Errorf("failed to create issue comment: %w	", err)
+		return fmt.Errorf("failed to create issue comment: %w	", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
 		bodyContent, _ := io.ReadAll(resp.Body)
 		slog.Error("Failed to create issue comment", "status_code", resp.StatusCode, "response_body", string(bodyContent))
-		return "", "", fmt.Errorf("failed to create issue comment, status code: %d, response: %s", resp.StatusCode, string(bodyContent))
+		return fmt.Errorf("failed to create issue comment, status code: %d, response: %s", resp.StatusCode, string(bodyContent))
 	}
 
 	slog.Info("Issue comment created successfully", "issue_id", issueID, "project_id", projectID)
 
-	return "", "", nil
+	return nil
 }
 
 func (c *Client) TransitionIssue(ctx context.Context, issueID string, transitionID string) error {

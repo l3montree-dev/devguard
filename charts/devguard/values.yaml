@@ -40,13 +40,13 @@ api:
   podLabels: {}
   podSecurityContext: {}
   # fsGroup: 2000
-  securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+  securityContext:
+    capabilities:
+      drop:
+        - ALL
+    #readOnlyRootFilesystem: true
+    #runAsNonRoot: true
+    #runAsUser: 1000
 
   autoscaling:
     enabled: false
@@ -58,6 +58,12 @@ api:
   nodeSelector: {}
   tolerations: []
   affinity: {}
+
+  errorTracking:
+    # https://<your-error-tracking-dsn>
+    dsn: ""
+    # can be dev, stage or prod
+    environment: "dev"
 
   ingress:
     enabled: true
@@ -91,15 +97,7 @@ web:
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
-  podSecurityContext: {}
-  # fsGroup: 2000
-  securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+
   autoscaling:
     enabled: false
     minReplicas: 1
