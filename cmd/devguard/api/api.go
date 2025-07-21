@@ -431,7 +431,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseOverwriteRepository)
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
-	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
+	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, assetVersionRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseOverwriteRepository)
 	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository, policyRepository)
 

@@ -26,6 +26,7 @@ import (
 	"github.com/google/uuid"
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
 
@@ -33,20 +34,21 @@ import (
 )
 
 type httpController struct {
-	linkRepository        core.InTotoLinkRepository
-	supplyChainRepository core.SupplyChainRepository
-
-	patRepository core.PersonalAccessTokenRepository
+	linkRepository         core.InTotoLinkRepository
+	supplyChainRepository  core.SupplyChainRepository
+	assetVersionRepository core.AssetVersionRepository
+	patRepository          core.PersonalAccessTokenRepository
 
 	inTotoVerifierService core.InTotoVerifierService
 }
 
-func NewHTTPController(repository core.InTotoLinkRepository, supplyChainRepository core.SupplyChainRepository, patRepository core.PersonalAccessTokenRepository, inTotoVerifierService core.InTotoVerifierService) *httpController {
+func NewHTTPController(repository core.InTotoLinkRepository, supplyChainRepository core.SupplyChainRepository, assetVersionRepository core.AssetVersionRepository, patRepository core.PersonalAccessTokenRepository, inTotoVerifierService core.InTotoVerifierService) *httpController {
 	return &httpController{
-		linkRepository:        repository,
-		supplyChainRepository: supplyChainRepository,
-		patRepository:         patRepository,
-		inTotoVerifierService: inTotoVerifierService,
+		linkRepository:         repository,
+		supplyChainRepository:  supplyChainRepository,
+		assetVersionRepository: assetVersionRepository,
+		patRepository:          patRepository,
+		inTotoVerifierService:  inTotoVerifierService,
 	}
 }
 
@@ -130,9 +132,18 @@ func (a *httpController) Create(ctx core.Context) error {
 	}
 
 	asset := core.GetAsset(ctx)
+	tag := ctx.Request().Header.Get("X-Tag")
+	defaultBranch := ctx.Request().Header.Get("X-Asset-Default-Branch")
+	if defaultBranch == "" {
+		defaultBranch = "main"
+	}
+	assetVersion, err := a.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
+	if err != nil {
+		return err
+	}
 
 	link := models.InTotoLink{
-		AssetVersionName: assetVersionName,
+		AssetVersionName: assetVersion.Name,
 		AssetID:          asset.ID,
 		SupplyChainID:    strings.TrimSpace(req.SupplyChainID),
 		Step:             strings.TrimSpace(req.Step),
