@@ -53,7 +53,7 @@
                 },
                 "confirmedTerms": {
                     "type": "boolean",
-                    "title": "I agree to the terms of use (devguard.org/terms-of-use)",
+                    "title": "I agree to the terms of use ",
                     "description": "You must agree to the terms of use to use this service.",
                     "default": false,
                     "const": true
