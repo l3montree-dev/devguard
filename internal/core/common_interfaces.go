@@ -325,6 +325,14 @@ type JiraIntegrationRepository interface {
 	GetClientByIntegrationID(integrationID uuid.UUID) (models.JiraIntegration, error)
 }
 
+type WebhookIntegrationRepository interface {
+	Save(tx DB, model *models.WebhookIntegration) error
+	Read(id uuid.UUID) (models.WebhookIntegration, error)
+	FindByOrganizationID(orgID uuid.UUID) ([]models.WebhookIntegration, error)
+	Delete(tx DB, id uuid.UUID) error
+	GetClientByIntegrationID(integrationID uuid.UUID) (models.WebhookIntegration, error)
+}
+
 type GitlabIntegrationRepository interface {
 	Save(tx DB, model *models.GitLabIntegration) error
 	Read(id uuid.UUID) (models.GitLabIntegration, error)

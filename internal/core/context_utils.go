@@ -139,7 +139,10 @@ func HasOrganization(c Context) bool {
 	_, ok := c.Get("organization").(models.Org)
 	return ok
 }
-
+func HasProject(c Context) bool {
+	_, ok := c.Get("project").(models.Project)
+	return ok
+}
 func GetRBAC(ctx Context) AccessControl {
 	return ctx.Get("rbac").(AccessControl)
 }

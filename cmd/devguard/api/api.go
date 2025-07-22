@@ -36,6 +36,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/webhook"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
@@ -367,6 +368,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 		panic(err)
 	}
 
+	webhookIntegration := webhook.NewWebhookIntegration(db)
+
 	jiraIntegration := jiraint.NewJiraIntegration(db)
 
 	githubIntegration := githubint.NewGithubIntegration(db)
@@ -378,7 +381,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	)
 
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration, jiraIntegration)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration, jiraIntegration, webhookIntegration)
 
 	// init all repositories using the provided database
 	patRepository := repositories.NewPATRepository(db)
@@ -540,6 +543,12 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	organizationRouter.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration, neededScope([]string{"manage"}))
 	organizationRouter.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken, neededScope([]string{"manage"}))
+
+	organizationRouter.POST("/integrations/webhook/test-and-save/", integrationController.TestAndSaveWebhookIntegration, neededScope([]string{"manage"}))
+
+	organizationRouter.PUT("/integrations/webhook/test-and-save/", integrationController.UpdateWebhookIntegration, neededScope([]string{"manage"}))
+
+	organizationRouter.DELETE("/integrations/webhook/:id/", integrationController.DeleteWebhookIntegration, neededScope([]string{"manage"}))
 
 	organizationRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration, neededScope([]string{"manage"}))
 	organizationRouter.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken, neededScope([]string{"manage"}))
