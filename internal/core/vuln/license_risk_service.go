@@ -19,9 +19,9 @@ type LicenseRiskService struct {
 	vulnEventRepository   core.VulnEventRepository
 }
 
-func NewLicenseRiskService(licenseRiskReposiory core.LicenseRiskRepository, vulnEventRepository core.VulnEventRepository) *LicenseRiskService {
+func NewLicenseRiskService(licenseRiskRepository core.LicenseRiskRepository, vulnEventRepository core.VulnEventRepository) *LicenseRiskService {
 	return &LicenseRiskService{
-		licenseRiskRepository: licenseRiskReposiory,
+		licenseRiskRepository: licenseRiskRepository,
 		vulnEventRepository:   vulnEventRepository,
 	}
 }
@@ -86,8 +86,13 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 	return nil
 }
 
+var validOSILicenses []string = make([]string, 0)
+
 func GetOSILicenses() ([]string, error) {
-	var validOSILicenses []string
+	if len(validOSILicenses) > 0 {
+		return validOSILicenses, nil
+	}
+
 	apiURL := os.Getenv("OSI_LICENSES_API")
 	if apiURL == "" {
 		return nil, fmt.Errorf("could not get the URL of the OSI API, check the OSI_LICENSES_API variable in your .env file")

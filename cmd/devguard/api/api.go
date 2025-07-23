@@ -676,13 +676,13 @@ func BuildRouter(db core.DB) *echo.Echo {
 	firstPartyVulnRouter.POST("/:firstPartyVulnID/mitigate/", firstPartyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	firstPartyVulnRouter.GET("/:firstPartyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
 
-	assetVersionRouter.POST("/license-risk/", licenseRiskController.Create)
+	assetVersionRouter.POST("/license-risks/", licenseRiskController.Create)
 	licenseRiskRouter := assetVersionRouter.Group("/license-risks")
 	licenseRiskRouter.GET("/", licenseRiskController.ListPaged)
 	licenseRiskRouter.GET("/:licenseRiskID/", licenseRiskController.Read)
 	licenseRiskRouter.POST("/:licenseRiskID/", licenseRiskController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	licenseRiskRouter.POST("/:licenseRiskID/mitigate", licenseRiskController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
-	licenseRiskRouter.POST("/:licenseRiskID/finalLicenseDecision", licenseRiskController.MakeFinalLicenseDecision, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	licenseRiskRouter.POST("/:licenseRiskID/final-license-decision", licenseRiskController.MakeFinalLicenseDecision, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {
