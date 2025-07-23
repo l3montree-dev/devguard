@@ -403,6 +403,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	policyRepository := repositories.NewPolicyRepository(db)
 	licenseOverwriteRepository := repositories.NewLicenseOverwriteRepository(db)
 
+	webhookRepository := repositories.NewWebhookRepository(db)
+
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
 	projectService := project.NewService(projectRepository, assetRepository)
@@ -427,7 +429,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
 	patController := pat.NewHTTPController(patRepository)
 	orgController := org.NewHTTPController(orgRepository, orgService, casbinRBACProvider, projectService, invitationRepository)
-	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService)
+	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService, webhookRepository)
 	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
 
 	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
@@ -569,6 +571,10 @@ func BuildRouter(db core.DB) *echo.Echo {
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectService, "project", core.ActionRead))
 	projectRouter.GET("/", projectController.Read)
+
+	projectRouter.POST("/integrations/webhook/test-and-save/", integrationController.TestAndSaveWebhookIntegration, neededScope([]string{"manage"}))
+	projectRouter.PUT("/integrations/webhook/test-and-save/", integrationController.UpdateWebhookIntegration, neededScope([]string{"manage"}))
+	projectRouter.DELETE("/integrations/webhook/:id/", integrationController.DeleteWebhookIntegration, neededScope([]string{"manage"}))
 
 	projectRouter.PUT("/policies/:policyID/", policyController.EnablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 	projectRouter.DELETE("/policies/:policyID/", policyController.DisablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionDelete))

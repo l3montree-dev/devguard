@@ -68,7 +68,7 @@ func (g *orgRepository) Save(tx core.DB, org *models.Org) error {
 
 func (g *orgRepository) ReadBySlug(slug string) (models.Org, error) {
 	var t models.Org
-	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Preload("JiraIntegrations").Preload("GitLabIntegrations").Preload("Webhooks").Where("slug = ?", slug).First(&t).Error
+	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Preload("JiraIntegrations").Preload("GitLabIntegrations").Preload("Webhooks", "project_id IS NULL").Where("slug = ?", slug).First(&t).Error
 	return t, err
 }
 

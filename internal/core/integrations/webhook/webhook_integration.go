@@ -68,8 +68,14 @@ func (w *WebhookIntegration) Update(ctx core.Context) error {
 	if err != nil {
 		return ctx.JSON(400, "invalid id format")
 	}
-	webhookIntegration := &models.WebhookIntegration{
 
+	oldWebhookIntegration, err := w.webhookRepository.GetClientByIntegrationID(uuidID)
+	if err != nil {
+		slog.Error("failed to get webhook integration by ID", "err", err)
+		return ctx.JSON(500, "failed to get webhook integration")
+	}
+
+	webhookIntegration := &models.WebhookIntegration{
 		Model: models.Model{
 			ID: uuidID,
 		},
@@ -79,7 +85,8 @@ func (w *WebhookIntegration) Update(ctx core.Context) error {
 		Secret:      &data.Secret,
 		SbomEnabled: data.SbomEnabled,
 		VulnEnabled: data.VulnEnabled,
-		OrgID:       core.GetOrg(ctx).GetID(),
+		OrgID:       oldWebhookIntegration.OrgID,
+		ProjectID:   oldWebhookIntegration.ProjectID,
 	}
 
 	if err := w.webhookRepository.Save(nil, webhookIntegration); err != nil {
@@ -104,7 +111,6 @@ func (w *WebhookIntegration) TestAndSave(ctx core.Context) error {
 		Secret      string `json:"secret"`
 		SbomEnabled bool   `json:"sbomEnabled"`
 		VulnEnabled bool   `json:"vulnEnabled"`
-		ProjectID   string `json:"projectId"` // Optional, can be empty if not associated with a project
 	}
 
 	if err := ctx.Bind(&data); err != nil {
@@ -115,12 +121,11 @@ func (w *WebhookIntegration) TestAndSave(ctx core.Context) error {
 	}
 
 	var projectID *uuid.UUID
-	if data.ProjectID != "" {
-		parsedProjectID, err := uuid.Parse(data.ProjectID)
-		if err != nil {
-			return ctx.JSON(400, "invalid project ID format")
-		}
-		projectID = &parsedProjectID
+
+	ok := core.HasProject(ctx)
+	if ok {
+		projID := core.GetProject(ctx).GetID()
+		projectID = &projID
 	}
 
 	webhookIntegration := &models.WebhookIntegration{

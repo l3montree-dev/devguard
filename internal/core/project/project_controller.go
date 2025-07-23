@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -31,13 +32,15 @@ type controller struct {
 	projectRepository core.ProjectRepository
 	assetRepository   core.AssetRepository
 	projectService    core.ProjectService
+	webhookRepository core.WebhookIntegrationRepository
 }
 
-func NewHTTPController(repository core.ProjectRepository, assetRepository core.AssetRepository, projectService core.ProjectService) *controller {
+func NewHTTPController(repository core.ProjectRepository, assetRepository core.AssetRepository, projectService core.ProjectService, webhookRepository core.WebhookIntegrationRepository) *controller {
 	return &controller{
 		projectRepository: repository,
 		assetRepository:   assetRepository,
 		projectService:    projectService,
+		webhookRepository: webhookRepository,
 	}
 }
 
@@ -268,12 +271,42 @@ func (projectController *controller) Read(c core.Context) error {
 		return err
 	}
 
+	//get the webhooks
+	webhooks, err := projectController.getWebhooks(c)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not fetch webhooks").WithInternal(err)
+	}
+
 	resp := projectDetailsDTO{
 		ProjectDTO: fromModel(project),
 		Members:    members,
+		Webhooks:   webhooks,
 	}
 
 	return c.JSON(200, resp)
+}
+
+func (projectController *controller) getWebhooks(c core.Context) ([]common.WebhookIntegrationDTO, error) {
+
+	orgID := core.GetOrg(c).GetID()
+	projectID := core.GetProject(c).GetID()
+
+	webhooks, err := projectController.webhookRepository.GetProjectWebhooks(orgID, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch webhooks: %w", err)
+	}
+
+	return utils.Map(webhooks, func(w models.WebhookIntegration) common.WebhookIntegrationDTO {
+		return common.WebhookIntegrationDTO{
+			ID:          w.ID.String(),
+			Name:        *w.Name,
+			Description: *w.Description,
+			URL:         w.URL,
+			Secret:      *w.Secret,
+			SbomEnabled: w.SbomEnabled,
+			VulnEnabled: w.VulnEnabled,
+		}
+	}), nil
 }
 
 func (projectController *controller) List(c core.Context) error {

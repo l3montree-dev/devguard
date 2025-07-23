@@ -331,6 +331,7 @@ type WebhookIntegrationRepository interface {
 	FindByOrgIDAndProjectID(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)
 	Delete(tx DB, id uuid.UUID) error
 	GetClientByIntegrationID(integrationID uuid.UUID) (models.WebhookIntegration, error)
+	GetProjectWebhooks(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)
 }
 
 type GitlabIntegrationRepository interface {

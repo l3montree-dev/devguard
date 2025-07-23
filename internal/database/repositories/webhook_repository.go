@@ -27,7 +27,18 @@ func NewWebhookRepository(db core.DB) *webhookRepository {
 func (r *webhookRepository) FindByOrgIDAndProjectID(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error) {
 	var integrations []models.WebhookIntegration
 
-	query := r.db.Where("organization_id = ? AND project_id IS NULL", orgID).Or("organization_id = ? AND project_id = ?", orgID, projectID)
+	query := r.db.Where("org_id = ? AND project_id IS NULL", orgID).Or("org_id = ? AND project_id = ?", orgID, projectID)
+
+	if err := query.Find(&integrations).Error; err != nil {
+		return nil, err
+	}
+
+	return integrations, nil
+}
+func (r *webhookRepository) GetProjectWebhooks(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error) {
+	var integrations []models.WebhookIntegration
+
+	query := r.db.Where("org_id = ? AND project_id = ?", orgID, projectID)
 
 	if err := query.Find(&integrations).Error; err != nil {
 		return nil, err
