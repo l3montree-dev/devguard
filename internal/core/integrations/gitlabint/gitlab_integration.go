@@ -365,17 +365,13 @@ func (g *GitlabIntegration) ListGroups(ctx core.Context, userID string, provider
 		})
 	}
 
-	allGroups, err := errgroup.WaitAndCollect()
+	cleanedGroups, err := errgroup.WaitAndCollect()
 	if err != nil {
 		return nil, err
 	}
-	// filter all the nil values from the result
-	cleanedGroups := make([]*gitlab.Group, 0, len(groups))
-	for i := range allGroups {
-		if allGroups[i] != nil {
-			cleanedGroups = append(cleanedGroups, allGroups[i])
-		}
-	}
+	cleanedGroups = utils.Filter(cleanedGroups, func(g *gitlab.Group) bool {
+		return g != nil
+	})
 
 	return utils.Map(cleanedGroups, func(el *gitlab.Group) models.Project {
 		return groupToProject(el, providerID)

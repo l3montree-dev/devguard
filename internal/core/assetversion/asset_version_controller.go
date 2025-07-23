@@ -444,6 +444,7 @@ func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
 	return err
 }
 
+//go:embed report-templates/*
 var resourceFiles embed.FS
 
 func buildZIPInMemory(writer io.Writer, templateName string, metadata, markdown *bytes.Buffer) error {
