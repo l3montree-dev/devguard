@@ -24,13 +24,18 @@ func NewWebhookRepository(db core.DB) *webhookRepository {
 		Repository: newGormRepository[uuid.UUID, models.WebhookIntegration](db),
 	}
 }
-func (r *webhookRepository) FindByOrganizationID(orgID uuid.UUID) ([]models.WebhookIntegration, error) {
+func (r *webhookRepository) FindByOrgIDAndProjectID(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error) {
 	var integrations []models.WebhookIntegration
-	if err := r.db.Find(&integrations, "org_id = ?", orgID).Error; err != nil {
+
+	query := r.db.Where("organization_id = ? AND project_id IS NULL", orgID).Or("organization_id = ? AND project_id = ?", orgID, projectID)
+
+	if err := query.Find(&integrations).Error; err != nil {
 		return nil, err
 	}
+
 	return integrations, nil
 }
+
 func (r *webhookRepository) GetClientByIntegrationID(integrationID uuid.UUID) (models.WebhookIntegration, error) {
 	var integration models.WebhookIntegration
 	if err := r.db.First(&integration, "id = ?", integrationID).Error; err != nil {

@@ -19,10 +19,8 @@ type WebhookIntegration struct {
 	Org   Org       `json:"org" gorm:"foreignKey:OrgID;constraint:OnDelete:CASCADE;"`
 	OrgID uuid.UUID `json:"orgId" gorm:"column:org_id"`
 
-	/*
-		 	ProjectID *uuid.UUID `json:"projectId" gorm:"column:project_id"`
-			Project   *Project   `json:"project" gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
-	*/
+	ProjectID *uuid.UUID `json:"projectId" gorm:"column:project_id;nullable"`
+	Project   *Project   `json:"project" gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 }
 
 func (WebhookIntegration) TableName() string {

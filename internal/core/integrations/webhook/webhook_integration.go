@@ -12,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/labstack/echo/v4"
 )
 
 type WebhookIntegration struct {
@@ -103,6 +104,7 @@ func (w *WebhookIntegration) TestAndSave(ctx core.Context) error {
 		Secret      string `json:"secret"`
 		SbomEnabled bool   `json:"sbomEnabled"`
 		VulnEnabled bool   `json:"vulnEnabled"`
+		ProjectID   string `json:"projectId"` // Optional, can be empty if not associated with a project
 	}
 
 	if err := ctx.Bind(&data); err != nil {
@@ -112,11 +114,14 @@ func (w *WebhookIntegration) TestAndSave(ctx core.Context) error {
 		return ctx.JSON(400, "url is required")
 	}
 
-	/* 	projectID := uuid.Nil
-	   	if ok := core.HasProject(ctx); ok {
-	   		project := core.GetProject(ctx)
-	   		projectID = project.ID
-	   	} */
+	var projectID *uuid.UUID
+	if data.ProjectID != "" {
+		parsedProjectID, err := uuid.Parse(data.ProjectID)
+		if err != nil {
+			return ctx.JSON(400, "invalid project ID format")
+		}
+		projectID = &parsedProjectID
+	}
 
 	webhookIntegration := &models.WebhookIntegration{
 		Name:        &data.Name,
@@ -126,7 +131,7 @@ func (w *WebhookIntegration) TestAndSave(ctx core.Context) error {
 		SbomEnabled: data.SbomEnabled,
 		VulnEnabled: data.VulnEnabled,
 		OrgID:       core.GetOrg(ctx).GetID(),
-		/* 	ProjectID:   &projectID, */
+		ProjectID:   projectID, // Set project ID if available
 	}
 
 	if err := w.webhookRepository.Save(nil, webhookIntegration); err != nil {
@@ -144,7 +149,43 @@ func (w *WebhookIntegration) TestAndSave(ctx core.Context) error {
 	})
 }
 
+func (w *WebhookIntegration) getWebhooks(ctx echo.Context) ([]models.WebhookIntegration, error) {
+	orgID := core.GetOrg(ctx).GetID()
+	project := core.GetProject(ctx)
+
+	webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(orgID, project.ID)
+	if err != nil {
+		slog.Error("failed to find webhooks", "err", err)
+		return nil, err
+	}
+
+	return webhooks, nil
+}
+
 func (w *WebhookIntegration) HandleEvent(event any) error {
+
+	switch event := event.(type) {
+	case core.SBOMCreatedEvent:
+
+		webhooks, err := w.getWebhooks(event.Ctx)
+		if err != nil {
+			slog.Error("failed to find webhooks for SBOM created event", "err", err)
+			return err
+		}
+
+		for _, webhook := range webhooks {
+			client := NewWebhookClient(webhook.URL, webhook.Secret)
+			if webhook.SbomEnabled {
+				//send sbom
+				if err := client.SendSBOM(event.SBOM); err != nil {
+					slog.Error("failed to send SBOM to webhook", "webhookID", webhook.ID, "err", err)
+					return err
+				}
+				slog.Info("SBOM sent to webhook", "webhookID", webhook.ID)
+			}
+		}
+	}
+
 	return nil
 }
 

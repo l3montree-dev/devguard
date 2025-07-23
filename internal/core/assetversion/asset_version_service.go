@@ -419,11 +419,14 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 	return res
 }
 
-func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
+func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) (bool, error) {
+
+	sbomUpdated := false
+
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, "")
 	if err != nil {
-		return errors.Wrap(err, "could not load asset components")
+		return sbomUpdated, errors.Wrap(err, "could not load asset components")
 	}
 
 	existingComponentPurls := make(map[string]bool)
@@ -513,11 +516,12 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 
 	// make sure, that the components exist
 	if err := s.componentRepository.CreateBatch(nil, componentsSlice); err != nil {
-		return err
+		return sbomUpdated, err
 	}
 
-	if err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, scannerID); err != nil {
-		return err
+	sbomUpdated, err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, scannerID)
+	if err != nil {
+		return sbomUpdated, err
 	}
 
 	// update the license information in the background
@@ -532,7 +536,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 		}
 	}()
 
-	return nil
+	return sbomUpdated, nil
 }
 
 func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {

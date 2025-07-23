@@ -127,7 +127,7 @@ type ComponentRepository interface {
 	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
-	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) error
+	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error)
 	GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error)
 }
@@ -252,7 +252,7 @@ type AssetVersionService interface {
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, orgName string, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error)
-	UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error
+	UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) (bool, error)
 	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
 }
@@ -328,7 +328,7 @@ type JiraIntegrationRepository interface {
 type WebhookIntegrationRepository interface {
 	Save(tx DB, model *models.WebhookIntegration) error
 	Read(id uuid.UUID) (models.WebhookIntegration, error)
-	FindByOrganizationID(orgID uuid.UUID) ([]models.WebhookIntegration, error)
+	FindByOrgIDAndProjectID(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)
 	Delete(tx DB, id uuid.UUID) error
 	GetClientByIntegrationID(integrationID uuid.UUID) (models.WebhookIntegration, error)
 }

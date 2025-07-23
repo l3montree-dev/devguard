@@ -313,7 +313,10 @@ func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Compon
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) error {
+func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error) {
+
+	stateChanged := false
+
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
 		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})
@@ -322,7 +325,11 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 	added := comparison.OnlyInB
 	needToBeChanged := comparison.InBoth
 
-	return c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
+	if len(removed) > 0 || len(added) > 0 || len(needToBeChanged) > 0 {
+		stateChanged = true
+	}
+
+	return stateChanged, c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
 		//We remove the scanner id from all components in removed and if it was the only scanner id we remove the component
 		toDelete, toSave := diffComponents(tx, c, removed, scannerID)
 
