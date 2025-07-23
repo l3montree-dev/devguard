@@ -18,6 +18,8 @@ services:
     volumes:
       - postgres:/var/lib/postgresql/data
       - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - devguard-local
 
   kratos-migrate:
     image: oryd/kratos:v1.3.1
@@ -31,6 +33,8 @@ services:
     environment:
       - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+    networks:
+      - devguard-local
 
   kratos:
     image: oryd/kratos:v1.3.1
@@ -45,13 +49,15 @@ services:
         read_only: true
         source: ./kratos
         target: /etc/config/kratos
-    ports:
-      - "4433:4433"  # Public
-      - "4434:4434"  # Admin
+    #ports:
+      #- "4433:4433"  # Public
+      #- "4434:4434"  # Admin
     environment:
       - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
       - LOG_LEVEL=debug
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+    networks:
+      - devguard-local
 
   devguard-api:
     image: ghcr.io/l3montree-dev/devguard:main-latest
@@ -62,7 +68,6 @@ services:
       kratos:
         condition: service_started
     ports:
-      - "8000:8000"
       - "8080:8080"
     environment:
       - DATABASE_URL=postgresql://postgres:password@postgresql:5432/devguard
@@ -76,6 +81,8 @@ services:
       - POSTGRES_DB=devguard
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432
+    networks:
+      - devguard-local
 
   devguard-web:
     image: ghcr.io/l3montree-dev/devguard-web:main-latest
@@ -87,6 +94,12 @@ services:
     environment:
       - DEVGUARD_API_URL=http://devguard-api:8080
       - ORY_KRATOS_URL=http://kratos:4433
+    networks:
+      - devguard-local
 
 volumes:
   postgres:
+
+networks:
+  devguard-local:
+    name: devguard-local
