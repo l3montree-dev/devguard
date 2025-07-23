@@ -11,7 +11,7 @@ type externalEntityProviderRBAC struct {
 	thirdPartyIntegration    core.ThirdPartyIntegration
 	externalEntityProviderID string
 	externalEntityID         string
-	adminToken               string
+	adminToken               *string
 	ctx                      core.Context
 }
 
@@ -29,7 +29,7 @@ func isRoleAllowedToPerformAction(role string, action core.Action) bool {
 	return false
 }
 
-func NewExternalEntityProviderRBAC(ctx core.Context, thirdPartyIntegration core.ThirdPartyIntegration, externalEntityProviderID string, adminToken string) core.AccessControl {
+func NewExternalEntityProviderRBAC(ctx core.Context, thirdPartyIntegration core.ThirdPartyIntegration, externalEntityProviderID string, adminToken *string) core.AccessControl {
 	return &externalEntityProviderRBAC{
 		thirdPartyIntegration:    thirdPartyIntegration,
 		externalEntityProviderID: externalEntityProviderID,
@@ -79,7 +79,7 @@ func (e *externalEntityProviderRBAC) GetExternalEntityProviderID() *string {
 */
 
 func (e *externalEntityProviderRBAC) HasAccess(userID string) (bool, error) {
-	if userID == e.adminToken {
+	if e.adminToken != nil && userID == *e.adminToken {
 		return true, nil
 	}
 	return e.thirdPartyIntegration.HasAccessToExternalEntityProvider(e.ctx, e.externalEntityProviderID)
@@ -117,7 +117,7 @@ func (e *externalEntityProviderRBAC) AllowRole(role string, object core.Object, 
 	return nil
 }
 func (e *externalEntityProviderRBAC) IsAllowed(userID string, object core.Object, action core.Action) (bool, error) {
-	if userID == e.adminToken {
+	if e.adminToken != nil && userID == *e.adminToken {
 		if action == core.ActionRead {
 			return true, nil
 		}
@@ -142,7 +142,7 @@ func (e *externalEntityProviderRBAC) IsAllowedInProject(project *models.Project,
 	if project.ExternalEntityProviderID == nil || project.ExternalEntityID == nil {
 		return false, nil
 	}
-	if user == e.adminToken && action == core.ActionRead {
+	if e.adminToken != nil && user == *e.adminToken && action == core.ActionRead {
 		return true, nil
 	}
 
