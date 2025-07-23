@@ -13,7 +13,9 @@ data:
         "properties": {
             "traits": {
                 "required": [
-                    "email"
+                    "email",
+                    "name",
+                    "confirmedTerms"
                 ],
                 "additionalProperties": false,
                 "type": "object",
@@ -55,6 +57,13 @@ data:
                                 "type": "string"
                             }
                         }
+                    },
+                    "confirmedTerms": {
+                        "type": "boolean",
+                        "title": "I agree to the terms of use ",
+                        "description": "You must agree to the terms of use to use this service.",
+                        "default": false,
+                        "const": true
                     }
                 }
             }

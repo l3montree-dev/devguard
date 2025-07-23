@@ -1,7 +1,17 @@
 package assetversion
 
 import (
+	"archive/zip"
+	"bytes"
+	"embed"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
 	"net/url"
+	"os"
+	"strings"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -12,6 +22,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/openvex/go-vex/pkg/vex"
 	"golang.org/x/exp/slog"
+	"gopkg.in/yaml.v2"
 )
 
 type AssetVersionController struct {
@@ -331,4 +342,171 @@ func (a *AssetVersionController) Metrics(ctx core.Context) error {
 		EnabledImageSigning:            enabledImageSigning,
 		VerifiedSupplyChainsPercentage: verifiedSupplyChainsPercentage,
 	})
+}
+
+type yamlVars struct {
+	DocumentTitle    string `yaml:"document_title"`
+	PrimaryColor     string `yaml:"primary_color"`
+	Version          string `yaml:"version"`
+	TimeOfGeneration string `yaml:"generation_date"`
+	ProjectTitle1    string `yaml:"app_title_part_one"`
+	ProjectTitle2    string `yaml:"app_title_part_two"`
+	OrganizationName string `yaml:"organization_name"`
+	Integrity        string `yaml:"integrity"`
+}
+
+type yamlMetadata struct {
+	Vars yamlVars `yaml:"metadata_vars"`
+}
+
+func (a *AssetVersionController) BuildPDFFromSBOM(ctx core.Context) error {
+
+	//build the SBOM of this asset version
+	bom, err := a.buildSBOM(ctx)
+	if err != nil {
+		return err
+	}
+
+	//write the components as markdown table to the buffer
+	markdownFile := bytes.Buffer{}
+	err = markdownTableFromSBOM(&markdownFile, bom)
+	if err != nil {
+		return err
+	}
+
+	// create the metadata for the pdf and writing it into a buffer
+	metaDataFile := bytes.Buffer{}
+	metaData := createYAMLMetadata(core.GetOrg(ctx).Name, core.GetAsset(ctx).Name, core.GetAssetVersion(ctx).Name)
+	parsedYAML, err := yaml.Marshal(metaData)
+	if err != nil {
+		return err
+	}
+	_, err = metaDataFile.Write(parsedYAML)
+	if err != nil {
+		return err
+	}
+	// check if external entity provider
+	asset := core.GetAsset(ctx)
+	templateName := "default"
+	if asset.ExternalEntityProviderID != nil {
+		templateName = strings.ToLower(*asset.ExternalEntityProviderID)
+	}
+
+	//build the multipart form data for the http request
+	var multipartBuffer bytes.Buffer
+	multipartWriter := multipart.NewWriter(&multipartBuffer)
+	zipFileWriter, err := multipartWriter.CreateFormFile("file", "archive.zip")
+	if err != nil {
+		return err
+	}
+	//Create zip of all the necessary files
+	err = buildZIPInMemory(zipFileWriter, templateName, &metaDataFile, &markdownFile)
+	if err != nil {
+		return err
+	}
+
+	err = multipartWriter.Close()
+	if err != nil {
+		return err
+	}
+
+	//build the rest of the http request
+	pdfAPIURL := os.Getenv("PDF_GENERATION_API")
+	if pdfAPIURL == "" {
+		return fmt.Errorf("missing env variable 'PDF_GENERATION_API'")
+	}
+	req, err := http.NewRequest(http.MethodPost, pdfAPIURL, &multipartBuffer)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", multipartWriter.FormDataContentType())
+
+	client := &http.Client{}
+	client.Timeout = 10 * time.Minute
+
+	//process http response
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("http request to %s was unsuccessful (Code %d)", req.URL, resp.StatusCode)
+	}
+
+	// construct the http response header
+	ctx.Response().Header().Set(echo.HeaderContentDisposition, `attachment; filename="sbom.pdf"`)
+	ctx.Response().Header().Set(echo.HeaderContentType, "application/pdf")
+	ctx.Response().WriteHeader(http.StatusOK)
+
+	_, err = io.Copy(ctx.Response().Writer, resp.Body)
+
+	return err
+}
+
+//go:embed report-templates/*
+var resourceFiles embed.FS
+
+func buildZIPInMemory(writer io.Writer, templateName string, metadata, markdown *bytes.Buffer) error {
+
+	if _, err := resourceFiles.ReadDir(fmt.Sprintf("report-templates/%s/sbom", templateName)); err != nil {
+		slog.Warn("could not read embedded resource files for sbom report template", "error", err)
+		templateName = "default"
+	}
+
+	path := fmt.Sprintf("report-templates/%s/sbom/", templateName)
+	zipWriter := zip.NewWriter(writer)
+	defer zipWriter.Close()
+
+	// set of all the static files which are embedded
+	fileNames := []string{
+		path + "template/template.tex", path + "template/assets/background.png", path + "template/assets/qr.png",
+		path + "template/assets/font/Inter-Bold.ttf", path + "template/assets/font/Inter-BoldItalic.ttf", path + "template/assets/font/Inter-Italic-VariableFont_opsz,wght.ttf", path + "template/assets/font/Inter-Italic.ttf", path + "template/assets/font/Inter-Regular.ttf", path + "template/assets/font/Inter-VariableFont_opsz,wght.ttf",
+	}
+
+	// manually add the two generated files to the zip archive
+	zipFileDescriptor, err := zipWriter.Create("template/metadata.yaml")
+	if err != nil {
+		return err
+	}
+	_, err = zipFileDescriptor.Write(metadata.Bytes())
+	if err != nil {
+		zipWriter.Close()
+		return err
+	}
+
+	zipFileDescriptor, err = zipWriter.Create("markdown/sbom.md")
+	if err != nil {
+		zipWriter.Close()
+		return err
+	}
+	_, err = zipFileDescriptor.Write(markdown.Bytes())
+	if err != nil {
+		zipWriter.Close()
+		return err
+	}
+
+	// then loop over every static file and write it at the respective relative position in the directory
+	for _, filePath := range fileNames {
+		fileContent, err := resourceFiles.ReadFile(filePath)
+		if err != nil {
+			zipWriter.Close()
+			return err
+		}
+		localFilePath, _ := strings.CutPrefix(filePath, path)
+		zipFileDescriptor, err := zipWriter.Create(localFilePath)
+		if err != nil {
+			zipWriter.Close()
+			return err
+		}
+		_, err = zipFileDescriptor.Write(fileContent)
+		if err != nil {
+			zipWriter.Close()
+			return err
+		}
+	}
+
+	//finalize the zip-archive and return it
+	zipWriter.Close()
+	return nil
 }

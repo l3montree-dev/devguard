@@ -16,6 +16,7 @@
 package repositories
 
 import (
+	"fmt"
 	"os"
 	"slices"
 
@@ -42,9 +43,32 @@ func NewOrgRepository(db core.DB) *orgRepository {
 	}
 }
 
+func (g *orgRepository) Create(tx core.DB, org *models.Org) error {
+	nextSlug, err := g.nextSlug(org.Slug)
+	if err != nil {
+		return fmt.Errorf("could not generate next slug: %w", err)
+	}
+	org.Slug = nextSlug
+
+	return g.GetDB(tx).Create(org).Error
+}
+
+func (g *orgRepository) Save(tx core.DB, org *models.Org) error {
+	// if the slug is empty, generate a new one
+	if org.ID == uuid.Nil {
+		nextSlug, err := g.nextSlug(org.Name)
+		if err != nil {
+			return fmt.Errorf("could not generate next slug: %w", err)
+		}
+		org.Slug = nextSlug
+	}
+
+	return g.GetDB(tx).Save(org).Error
+}
+
 func (g *orgRepository) ReadBySlug(slug string) (models.Org, error) {
 	var t models.Org
-	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Preload("GitLabIntegrations").Where("slug = ?", slug).First(&t).Error
+	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Preload("JiraIntegrations").Preload("GitLabIntegrations").Where("slug = ?", slug).First(&t).Error
 	return t, err
 }
 
@@ -120,4 +144,18 @@ func (g *orgRepository) GetOrgByID(id uuid.UUID) (models.Org, error) {
 	var org models.Org
 	err := g.db.Model(models.Org{}).Where("id = ?", id).First(&org).Error
 	return org, err
+}
+
+func (g *orgRepository) nextSlug(organizationSlug string) (string, error) {
+	var count int64
+	err := g.db.Model(models.Org{}).Where("slug LIKE ?", organizationSlug+"%").Count(&count).Error
+	if err != nil {
+		return "", err
+	}
+
+	if count == 0 {
+		return organizationSlug, nil
+	}
+
+	return fmt.Sprintf("%s-%d", organizationSlug, count+1), nil
 }

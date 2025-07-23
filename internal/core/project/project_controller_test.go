@@ -3,9 +3,11 @@ package project_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gosimple/slug"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -208,7 +210,7 @@ func TestProjectCreation(t *testing.T) {
 		),
 	)
 
-	org, _, _, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	org, project, _, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	t.Run("should enable all community policies by default", func(t *testing.T) {
 		e := echo.New()
@@ -270,5 +272,61 @@ func TestProjectCreation(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.Len(t, createdProject.EnabledPolicies, 1)
+	})
+
+	t.Run("should generate a unique slug", func(t *testing.T) {
+		// create a new project with the same name and slug as the existing project
+		e := echo.New()
+		rec := httptest.NewRecorder()
+		requestBody := map[string]string{
+			"name":        project.Name,
+			"description": "This is a new project with the same name",
+		}
+
+		b, err := json.Marshal(requestBody)
+		assert.Nil(t, err)
+
+		req := httptest.NewRequest("POST", "/projects", bytes.NewBuffer(b))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		ctx := e.NewContext(req, rec)
+		core.SetOrg(ctx, org)
+		session := mocks.NewAuthSession(t)
+		core.SetSession(ctx, session)
+		rbac := mocks.NewAccessControl(t)
+		rbac.On("LinkDomainAndProjectRole", "admin", "admin", mock.Anything).Return(nil)
+
+		rbac.On("InheritProjectRole", "admin", "member", mock.Anything).Return(nil)
+		rbac.On("AllowRoleInProject", mock.Anything, "admin", core.ObjectUser, []core.Action{
+			core.ActionCreate,
+			core.ActionDelete,
+			core.ActionUpdate,
+		}).Return(nil)
+
+		rbac.On("AllowRoleInProject", mock.Anything, "admin", core.ObjectAsset, []core.Action{
+			core.ActionCreate,
+			core.ActionDelete,
+			core.ActionUpdate,
+		}).Return(nil)
+		rbac.On("AllowRoleInProject", mock.Anything, "admin", core.ObjectProject, []core.Action{
+			core.ActionDelete,
+			core.ActionUpdate,
+		}).Return(nil)
+		rbac.On("AllowRoleInProject", mock.Anything, "member", core.ObjectProject, []core.Action{
+			core.ActionRead,
+		}).Return(nil)
+		rbac.On("AllowRoleInProject", mock.Anything, "member", core.ObjectAsset, []core.Action{
+			core.ActionRead,
+		}).Return(nil)
+		core.SetRBAC(ctx, rbac)
+
+		err = controller.Create(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, rec.Code)
+		var response models.Project
+		err = json.Unmarshal(rec.Body.Bytes(), &response)
+		assert.Nil(t, err)
+
+		// check that the slug is unique
+		assert.Equal(t, fmt.Sprintf("%s-2", slug.Make(project.Name)), response.Slug, "The slug should be unique")
 	})
 }

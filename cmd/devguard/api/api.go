@@ -35,6 +35,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
@@ -366,6 +367,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 		panic(err)
 	}
 
+	jiraIntegration := jiraint.NewJiraIntegration(db)
+
 	githubIntegration := githubint.NewGithubIntegration(db)
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
 
@@ -375,7 +378,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	)
 
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration, jiraIntegration)
 
 	// init all repositories using the provided database
 	patRepository := repositories.NewPATRepository(db)
@@ -425,12 +428,13 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService)
 	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
 
-	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, licenseRiskService)
+	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository)
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
-	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, patRepository, intotoService)
+	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, assetVersionRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseRiskRepository)
+
 	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository, policyRepository)
 
 	statisticsController := statistics.NewHTTPController(statisticsService, statisticsRepository, assetRepository, assetVersionRepository, projectService)
@@ -536,6 +540,9 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	organizationRouter.GET("/integrations/finish-installation/", integrationController.FinishInstallation)
 
+	organizationRouter.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration, neededScope([]string{"manage"}))
+	organizationRouter.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken, neededScope([]string{"manage"}))
+
 	organizationRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration, neededScope([]string{"manage"}))
 	organizationRouter.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken, neededScope([]string{"manage"}))
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
@@ -623,6 +630,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
 	assetVersionRouter.GET("/vex.xml/", assetVersionController.VEXXML)
 	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
+	assetVersionRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
 
 	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)

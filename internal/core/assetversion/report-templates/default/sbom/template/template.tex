@@ -1,0 +1,208 @@
+\DocumentMetadata
+{
+lang=de-DE,
+pdfstandard=UA-2,
+testphase= 
+{phase-III,
+ title,
+ table,
+ firstaid} 
+}
+%
+\documentclass[8pt, a4paper]{article}
+\usepackage[ngerman]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{microtype}
+\usepackage[absolute,overlay]{textpos}
+\usepackage{tocloft}
+% Gets corrected using \newgeometry{...} in the document
+% Used for the cover page
+\geometry{top=0pt, left=0pt, right=0pt, bottom=0pt}
+
+% import our custom fonts
+\usepackage{fontspec}
+\newfontfamily{Inter}[Path=$template_path$/assets/font/,Extension=.ttf,
+    UprightFont=*-Regular, BoldFont=*-Bold, ItalicFont=*-Italic, BoldItalicFont=*-BoldItalic]
+
+\setmainfont{Inter}
+\setmonofont{Inter}
+
+% import our custom fonts
+\usepackage{hyperref}          % clickable URls and cross-references
+\hypersetup{
+    urlbordercolor=black,
+    urlcolor=yellow,
+    pdfborderstyle={/S/U/W 1}, % underline links instead of boxes
+    linktoc=all,
+    pdftitle={$document_title$ - Version: $version$},
+    pdfdisplaydoctitle=true,
+    pdflang={de},
+    pdfstartview=FitH,
+    bookmarksnumbered=true,
+    bookmarkstype=toc,
+    bookmarks=true
+}
+
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+%%%%%%%%%%%%%%%%%%%%
+\makeatletter
+% change the font size of the section titles
+\renewcommand\LARGE{\@setfontsize\LARGE{17pt}{16}}
+\renewcommand\Large{\@setfontsize\Large{15pt}{14}}
+\renewcommand\normalsize{\@setfontsize\normalsize{10pt}{18}}
+\renewcommand\footnotesize{\@setfontsize\footnotesize{8pt}{9}}
+\renewcommand\small{\@setfontsize\small{8pt}{9}}
+% remove ident in toc
+\renewcommand*\l@subsection{\@dottedtocline{2}{0pt}{2.3em}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+
+\usepackage{graphicx}
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\def\fps@figure{htbp}
+
+\makeatother
+%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{setspace}
+
+%change the footnote spacing between text and footnote
+\setlength{\skip\footins}{1cm}
+% space between footnotes
+\setlength{\footnotesep}{0.5cm}
+
+\usepackage{fancyhdr}
+\usepackage{lipsum}% just to generate text for the example
+
+% header title and page number
+\fancyhf{}
+\fancyhead[L]{\small\rightmark}
+\fancyhead[R]{\small\thepage}
+
+\fancyhead[C]{\sffamily\small{DevGuard SBOM Report for $app_title_part_one$ $app_title_part_two$ ($version$)}}
+
+% only sections inside the header - not subsections
+\renewcommand\subsectionmark[1]{}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+
+\author{}
+\date{}
+
+% define a color box for the different controls
+\usepackage[most]{tcolorbox}
+\definecolor{block-gray}{gray}{0.85}
+\definecolor{subblock-gray}{gray}{0.95}
+\definecolor{black}{rgb}{0,0,0}
+\definecolor{primary}{rgb}{0.059,0.071,0.086}
+\definecolor{white}{rgb}{1,1,1}
+
+\newtcolorbox{controlbox}{colback=block-gray,left=4pt,right=4pt,top=4pt,bottom=4pt,
+boxrule=0pt,boxsep=0pt,breakable,sharp corners,after=\vspace{0pt}}
+\newtcolorbox{controlsubbox}{colback=subblock-gray,left=4pt,right=4pt,top=4pt,bottom=4pt,
+boxrule=0pt,boxsep=0pt,breakable,sharp corners,before=\vspace{-2pt}}
+
+% removes the huge padding around lists
+\usepackage{enumitem}
+\setlist[itemize]{topsep=0pt, partopsep=0pt, parsep=0pt, itemsep=0pt}
+
+\usepackage{afterpage}
+\newcommand\blankpage{%
+    \null
+    \thispagestyle{empty}%
+    \addtocounter{page}{-1}%
+    \newpage}
+
+\newcommand\emptypage{%
+    \null
+    \thispagestyle{empty}%
+    \newpage}
+
+\renewcommand{\cftfigpresnum}{Abbildung }
+\setlength{\cftfignumwidth}{6em}
+
+\makeatletter
+\let\@cftmakeloftitle\relax
+\makeatother
+
+\usepackage{setspace}
+
+\begin{document}
+
+% cover page 1 - U1
+\begin{titlepage}
+    \pagecolor{primary}
+    \begin{picture}(-5,0)(2.5,0)
+        \put(0,-830){\includegraphics[alt={Hintergrundbild},width=\paperwidth,height=\paperheight]{$template_path$/assets/background.png}}
+        \put(70,-140){\fontsize{40}{1}\selectfont\color{white}\textbf{DevGuard SBOM Report}}
+        \put(38,-620){\fontsize{11}{1}\selectfont\color{white}\textbf{$generation_date$}}
+        \put(38,-680){\parbox{55mm}{\raggedright\fontsize{16}{1}\selectfont\color{white}\textbf{$app_title_part_one$}}}
+        \put(38,-700){\parbox{55mm}{\raggedright\fontsize{16}{1}\selectfont\color{white}\textbf{$app_title_part_two$}}}
+        \put(254,-620){\fontsize{11}{1}\selectfont\color{white}\textbf{Prepared for:}}
+        \put(254,-640){\fontsize{11}{1}\selectfont\color{white}$organization_name$}
+        \put(380,-620){\fontsize{11}{1}\selectfont\color{white}\textbf{Integrity:}}
+        \put(380,-640){\parbox{50mm}{\raggedright\fontsize{8}{1}\selectfont\color{white}$integrity$}}
+        \put(300,-696){\fontsize{11}{1}\selectfont\color{white}\textbf{Prepared by:}}
+        \put(300,-716){\fontsize{11}{1}\selectfont\color{white}DevGuard}
+        \put(38,-800){\fontsize{8}{1}\selectfont\color{white}devguard.org}
+        \put(460,-800){\fontsize{8}{1}\selectfont\color{white}community@devguard.org}
+    \end{picture}
+\end{titlepage}
+\pagecolor{white}
+\clearpage
+
+% correct the margins of the pdf document
+\newgeometry{left=2.5cm, right=2.5cm, top=3cm, bottom=2cm}
+\pagestyle{fancy}
+
+
+%%%%
+% Main Document Content
+%%%%
+$body$
+
+
+$for(include-after)$
+$include-after$
+$endfor$
+
+\clearpage
+
+% cover page 4 - U4
+\thispagestyle{empty}
+\normalsize\color{white}
+\pagecolor{primary}
+
+\begin{tikzpicture}[remember picture,overlay]
+    \node at (current page.south east) [xshift=-0.5cm, yshift=0.5cm, anchor=south east] {
+      \includegraphics[width=2cm]{$template_path$/assets/qr.png}
+      };
+\end{tikzpicture}
+\begin{textblock*}{5cm}(0.75cm,27.75cm) % {block width} (coords)
+    \url{devguard.org}\\
+\end{textblock*}
+
+\end{document}

@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/google/uuid"
@@ -8,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -171,6 +173,17 @@ func (g *projectRepository) EnableCommunityManagedPolicies(tx core.DB, projectID
 	`, projectID).Error
 }
 
+func (g *projectRepository) Create(tx core.DB, project *models.Project) error {
+	// set the slug if not set
+	slug, err := g.nextSlug(project.OrganizationID, project.Slug)
+	if err != nil {
+		return err
+	}
+	project.Slug = slug
+
+	return g.GetDB(tx).Create(project).Error
+}
+
 func (g *projectRepository) UpsertSplit(tx core.DB, externalProviderID string, projects []*models.Project) ([]*models.Project, []*models.Project, error) {
 	// check which projects are already in the database - they can be identified by their external_entity_id and external_entity_provider_id
 	var existingProjects []models.Project
@@ -187,7 +200,7 @@ func (g *projectRepository) UpsertSplit(tx core.DB, externalProviderID string, p
 	err = g.Upsert(&projects, []clause.Column{
 		{Name: "external_entity_provider_id"},
 		{Name: "external_entity_id"},
-	}, []string{"slug", "name", "description", "organization_id"})
+	}, []string{"name", "description", "organization_id"})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -203,4 +216,75 @@ func (g *projectRepository) UpsertSplit(tx core.DB, externalProviderID string, p
 	}
 
 	return newProjects, updatedProjects, nil
+}
+
+func (g *projectRepository) nextSlug(orgID uuid.UUID, projectSlug string) (string, error) {
+	// check if the slug already exists in the database
+	var count int64
+	err := g.db.Model(&models.Project{}).Where("organization_id = ? AND slug LIKE ?", orgID, projectSlug+"%").Count(&count).Error
+	if err != nil {
+		return "", err
+	}
+
+	// if the count is 0, return the slug as is
+	if count == 0 {
+		return projectSlug, nil
+	}
+
+	// otherwise, append a number to the slug
+	return fmt.Sprintf("%s-%d", projectSlug, count+1), nil
+}
+
+func (g *projectRepository) prepareUniqueSlugs(orgID uuid.UUID, projects []*models.Project) error {
+	if len(projects) == 0 {
+		return nil
+	}
+
+	// Collect slug base patterns for LIKE search
+	patterns := make([]string, 0, len(projects))
+
+	for _, p := range projects {
+		patterns = append(patterns, p.Slug+"%")
+	}
+
+	// Fetch existing slugs safely using ANY()
+	var existing []*models.Project
+	err := g.db.Model(&models.Project{}).
+		Where("organization_id = ? AND slug LIKE ANY(?)", orgID, pq.Array(patterns)).Find(&existing).Error
+	if err != nil {
+		return err
+	}
+
+	// Inject unique slugs into the projects
+	if err := injectUniqueSlugs(existing, projects); err != nil {
+		return fmt.Errorf("failed to inject unique slugs: %w", err)
+	}
+	return nil
+}
+
+func (g *projectRepository) Upsert(t *[]*models.Project, conflictingColumns []clause.Column, updateOnly []string) error {
+	if len(*t) == 0 {
+		return nil
+	}
+
+	err := g.prepareUniqueSlugs((*t)[0].OrganizationID, *t)
+	if err != nil {
+		return fmt.Errorf("failed to prepare unique slugs: %w", err)
+	}
+
+	if len(conflictingColumns) == 0 {
+		if len(updateOnly) > 0 {
+			return g.db.Clauses(clause.OnConflict{DoUpdates: clause.AssignmentColumns(updateOnly)}).Create(t).Error
+		}
+		return g.db.Clauses(clause.OnConflict{UpdateAll: true}).Create(t).Error
+	}
+
+	if len(updateOnly) > 0 {
+		return g.db.Clauses(clause.OnConflict{
+			DoUpdates: clause.AssignmentColumns(updateOnly),
+			Columns:   conflictingColumns,
+		}).Create(t).Error
+	}
+
+	return g.db.Clauses(clause.OnConflict{UpdateAll: true, Columns: conflictingColumns}).Create(t).Error
 }

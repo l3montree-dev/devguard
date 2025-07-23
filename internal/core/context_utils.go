@@ -540,11 +540,8 @@ func GetBadgeSVG(label string, values []BadgeValues) string {
 	boxWidth := 25
 	boxHeight := 20
 
-	if len(values) == 0 {
-		values = []BadgeValues{
-			{"?", 0, "#808080"},
-		}
-		boxWidth = 60 // Adjusted width for the "unknown" box
+	if len(values) == 1 {
+		boxWidth = 60 // Adjusted width for single value
 	}
 
 	totalWidth := labelWidth + len(values)*boxWidth
@@ -579,9 +576,11 @@ func GetBadgeSVG(label string, values []BadgeValues) string {
 
 	for i, val := range values {
 		x := labelWidth + i*boxWidth + 3
-		content := fmt.Sprintf(`%s:%d`, val.Key, val.Value)
-		if val.Key == "?" {
-			content = "unknown"
+		// if there is only one value, just show the key, it's unknown or all clear
+		content := val.Key
+		if len(values) > 1 {
+			// If there are multiple values, show the value next to the key
+			content = fmt.Sprintf(`%s:%d`, val.Key, val.Value)
 		}
 		sb.WriteString(fmt.Sprintf(`<text x="%d" y="14">%s</text>`, x, content))
 	}

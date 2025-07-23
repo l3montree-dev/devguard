@@ -38,7 +38,7 @@ func (a *httpController) HandleLookup(ctx core.Context) error {
 
 	id := ctx.QueryParam("id")
 	if id == "" {
-		return echo.NewHTTPError(400, "missing repositoryId")
+		return echo.NewHTTPError(400, "missing repository id ('id')")
 	}
 
 	asset, err := a.assetRepository.FindAssetByExternalProviderID(provider, id)

@@ -55,7 +55,7 @@ type Asset struct {
 	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
 
 	BadgeSecret   *uuid.UUID `json:"badgeSecret" gorm:"type:uuid;default:gen_random_uuid();"`
-	WebhookSecret *uuid.UUID `json:"webhookSecret" gorm:"type:uuid;"`
+	WebhookSecret *uuid.UUID `json:"webhookSecret" gorm:"type:uuid;default:gen_random_uuid();"`
 
 	ExternalEntityID         *string `json:"externalEntityId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
 	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
@@ -63,4 +63,20 @@ type Asset struct {
 
 func (m Asset) TableName() string {
 	return "assets"
+}
+
+func (m *Asset) Same(other *Asset) bool {
+	if m.ExternalEntityID == nil || m.ExternalEntityProviderID == nil {
+		return m.ID != uuid.Nil && m.ID == other.ID
+	}
+
+	return *m.ExternalEntityID == *other.ExternalEntityID &&
+		*m.ExternalEntityProviderID == *other.ExternalEntityProviderID
+}
+
+func (m *Asset) GetSlug() string {
+	return m.Slug
+}
+func (m *Asset) SetSlug(slug string) {
+	m.Slug = slug
 }

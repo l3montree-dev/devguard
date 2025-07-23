@@ -72,7 +72,6 @@ type AssetRepository interface {
 	FindByName(name string) (models.Asset, error)
 	FindAssetByExternalProviderID(externalEntityProviderID string, externalEntityID string) (*models.Asset, error)
 	GetFQNByID(id uuid.UUID) (string, error)
-	FindOrCreate(tx DB, name string) (models.Asset, error)
 	ReadBySlug(projectID uuid.UUID, slug string) (models.Asset, error)
 	GetAssetIDBySlug(projectID uuid.UUID, slug string) (uuid.UUID, error)
 	Update(tx DB, asset *models.Asset) error
@@ -320,6 +319,14 @@ type ExternalUserRepository interface {
 	Save(db DB, user *models.ExternalUser) error
 	GetDB(tx DB) DB
 	FindByOrgID(tx DB, orgID uuid.UUID) ([]models.ExternalUser, error)
+}
+
+type JiraIntegrationRepository interface {
+	Save(tx DB, model *models.JiraIntegration) error
+	Read(id uuid.UUID) (models.JiraIntegration, error)
+	FindByOrganizationID(orgID uuid.UUID) ([]models.JiraIntegration, error)
+	Delete(tx DB, id uuid.UUID) error
+	GetClientByIntegrationID(integrationID uuid.UUID) (models.JiraIntegration, error)
 }
 
 type GitlabIntegrationRepository interface {

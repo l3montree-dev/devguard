@@ -37,6 +37,7 @@ type baseConfig struct {
 
 	Path       string `json:"path" mapstructure:"path"`
 	FailOnRisk string `json:"failOnRisk" mapstructure:"failOnRisk"`
+	FailOnCVSS string `json:"failOnCVSS" mapstructure:"failOnCVSS"`
 	WebUI      string `json:"webUI" mapstructure:"webUI"`
 
 	Username string `json:"username" mapstructure:"username"`
@@ -48,6 +49,7 @@ type baseConfig struct {
 	Ref           string `json:"ref" mapstructure:"ref"`
 	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
 	IsTag         bool   `json:"isTag" mapstructure:"isTag"`
+	ArtifactName  string `json:"artifactName" mapstructure:"artifactName"`
 }
 
 type InTotoConfig struct {
@@ -77,6 +79,11 @@ func ParseBaseConfig() {
 	err := viper.Unmarshal(&RuntimeBaseConfig)
 	if err != nil {
 		panic(err)
+	}
+
+	// we don't add artifact name if it is 'default', because of backward compatibility, so we don't have new scanner IDs for existing assets
+	if RuntimeBaseConfig.ArtifactName != "" && RuntimeBaseConfig.ArtifactName != "default" {
+		RuntimeBaseConfig.ScannerID = RuntimeBaseConfig.ScannerID + ":" + RuntimeBaseConfig.ArtifactName
 	}
 
 	if RuntimeBaseConfig.APIURL != "" {
@@ -126,6 +133,7 @@ func ParseBaseConfig() {
 		"scannerID", RuntimeBaseConfig.ScannerID,
 		"webUI", RuntimeBaseConfig.WebUI,
 		"failOnRisk", RuntimeBaseConfig.FailOnRisk,
+		"failOnCVSS", RuntimeBaseConfig.FailOnCVSS,
 		"registry", RuntimeBaseConfig.Registry,
 	)
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"runtime"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/labstack/echo/v4"
 )
 
@@ -13,6 +14,8 @@ func recovermiddleware() echo.MiddlewareFunc {
 		return func(ctx echo.Context) (returnErr error) {
 			defer func() {
 				if r := recover(); r != nil {
+					sentry.CurrentHub().Recover(r)
+
 					if r == http.ErrAbortHandler {
 						panic(r)
 					}

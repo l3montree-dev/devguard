@@ -79,6 +79,8 @@ spec:
             value: http://kratos:4434
           - name: GOMEMLIMIT
             value: 1024MiB
+          - name: PDF_GENERATION_API
+            value: https://dwt-api.dev-l3montree.cloud/pdf
         {{- range .Values.oidc.providers }}
             {{- if eq .provider "gitlab" }}
           - name: GITLAB_{{ .id | upper }}_APPID
@@ -136,6 +138,10 @@ spec:
                 key: webhookSecret
                 name: {{ .Values.api.github.existingWebhookSecretSecretName }}
                 optional: true
+          - name: ENVIRONMENT
+            value: {{ .Values.api.errorTracking.environment | quote }}
+          - name: ERROR_TRACKING_DSN
+            value: {{ .Values.api.errorTracking.dsn | quote }}
         {{- end }}
           ports:
             - name: http

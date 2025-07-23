@@ -41,11 +41,11 @@ func (s *service) CreateProject(ctx core.Context, project *models.Project) error
 				// get the project by slug and project id unscoped
 				project, err := s.projectRepository.ReadBySlugUnscoped(project.OrganizationID, project.Slug)
 				if err != nil {
-					return echo.NewHTTPError(500, "could not create asset").WithInternal(err)
+					return echo.NewHTTPError(500, "could not create project").WithInternal(err)
 				}
 
 				if err = s.projectRepository.Activate(tx, project.GetID()); err != nil {
-					return echo.NewHTTPError(500, "could not activate asset").WithInternal(err)
+					return echo.NewHTTPError(500, "could not activate project").WithInternal(err)
 				}
 
 				slog.Info("project activated", "projectSlug", project.Slug, "projectID", project.GetID())
@@ -161,7 +161,7 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 
 	if slice, ok := projectSliceOrProjectIDSlice.([]models.Project); ok {
 		// if the user is looking for projects which have a parent id set, we return an empty slice
-		if c.QueryParam("parentID") != "" {
+		if c.QueryParam("parentId") != "" {
 			return []models.Project{}, nil
 		}
 		// make sure the projects exist inside the database
@@ -170,7 +170,7 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 			toUpsert = append(toUpsert, &slice[i])
 			slice[i].OrganizationID = core.GetOrg(c).GetID() // ensure the organization ID is set
 		}
-		created, _, err := s.projectRepository.UpsertSplit(nil, *rbac.GetExternalEntityProviderID(), toUpsert)
+		created, updated, err := s.projectRepository.UpsertSplit(nil, *rbac.GetExternalEntityProviderID(), toUpsert)
 		if err != nil {
 			return nil, echo.NewHTTPError(500, "could not upsert projects").WithInternal(err)
 		}
@@ -183,7 +183,15 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 			slog.Info("enabled community managed policies for project", "projectSlug", project.Slug, "projectID", project.ID)
 		}
 
-		return slice, err
+		projects := make([]models.Project, 0, len(slice))
+		for _, p := range created {
+			projects = append(projects, *p)
+		}
+		for _, p := range updated {
+			projects = append(projects, *p)
+		}
+
+		return projects, nil
 	}
 	projectsIdsStr, ok := projectSliceOrProjectIDSlice.([]string)
 	if !ok {
@@ -199,7 +207,7 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 	}
 
 	// check if parentID is set
-	queryParentID := c.QueryParam("parentID")
+	queryParentID := c.QueryParam("parentId")
 	var parentID *uuid.UUID = nil
 	if queryParentID != "" {
 		tmp, err := uuid.Parse(queryParentID)

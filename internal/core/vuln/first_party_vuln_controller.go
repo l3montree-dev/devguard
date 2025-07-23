@@ -156,24 +156,19 @@ func (c firstPartyVulnController) CreateEvent(ctx core.Context) error {
 
 	mechanicalJustification := status.MechanicalJustification
 
-	err = c.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
-		ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(tx, userID, &firstPartyVuln, statusType, justification, mechanicalJustification)
-		if err != nil {
-			return err
-		}
-		err = thirdPartyIntegration.HandleEvent(core.VulnEvent{
-			Ctx:   ctx,
-			Event: ev,
-		})
-		// we do not want the transaction to be rolled back if the third party integration fails
-		if err != nil {
-			// just log the error
-			slog.Error("could not handle event", "err", err)
-		}
-		return nil
-	})
+	ev, err := c.firstPartyVulnService.UpdateFirstPartyVulnState(nil, userID, &firstPartyVuln, statusType, justification, mechanicalJustification)
 	if err != nil {
-		return echo.NewHTTPError(500, "could not create dependencyVuln event").WithInternal(err)
+		return err
+	}
+
+	err = thirdPartyIntegration.HandleEvent(core.VulnEvent{
+		Ctx:   ctx,
+		Event: ev,
+	})
+	// we do not want the transaction to be rolled back if the third party integration fails
+	if err != nil {
+		// just log the error
+		slog.Error("could not handle event", "err", err)
 	}
 
 	return ctx.JSON(200, convertFirstPartyVulnToDetailedDTO(firstPartyVuln))
