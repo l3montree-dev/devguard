@@ -102,6 +102,7 @@ func (t *thirdPartyIntegrations) GetRoleInGroup(ctx context.Context, userID stri
 			return role, nil
 		}
 	}
+	//when we are part of a subgroup we also have some basic access level to see the parent groups but we have no permissions to fetch the members of those groups
 	return "", fmt.Errorf("no role found for user %s in org %s with providerID %s", userID, groupID, providerID)
 }
 
