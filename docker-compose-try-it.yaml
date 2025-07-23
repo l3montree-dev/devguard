@@ -26,7 +26,7 @@ services:
         condition: service_healthy
     volumes:
       - type: bind
-        source: ./.kratos
+        source: ./kratos
         target: /etc/config/kratos
     environment:
       - DSN=postgres://kratos:secret@postgresql:5432/kratos?sslmode=disable
@@ -43,7 +43,7 @@ services:
     volumes:
       - type: bind
         read_only: true
-        source: ./.kratos
+        source: ./kratos
         target: /etc/config/kratos
     ports:
       - "4433:4433"  # Public
@@ -66,8 +66,8 @@ services:
       - "8080:8080"
     environment:
       - DATABASE_URL=postgresql://postgres:password@postgresql:5432/devguard
-      - KRATOS_PUBLIC_URL=http://kratos:4433
-      - KRATOS_ADMIN_URL=http://kratos:4434
+      - ORY_KRATOS_PUBLIC=http://kratos:4433
+      - ORY_KRATOS_ADMIN=http://kratos:4434
       - LOG_LEVEL=debug
       - INSTANCE_DOMAIN=http://localhost:8080
       - FRONTEND_URL=http://localhost:3000
