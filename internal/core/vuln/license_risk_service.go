@@ -38,19 +38,15 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 	}
 
 	// get all current valid licenses to compare against
-	licenses, err := GetOSILicenses()
+	licenseMap, err := GetOSILicenses()
 	if err != nil {
 		return err
-	}
-	licenseMap := make(map[string]struct{})
-	for i := range licenses {
-		licenseMap[licenses[i]] = struct{}{}
 	}
 
 	//collect all risks before saving to the database, should be more efficient
 	allLicenseRisks := []models.LicenseRisk{}
 	allVulnEvents := []models.VulnEvent{}
-	//go over every component and check if the license if the license is a valid osi license; if not we can create a license risk with the provided information
+	//go over every component and check if the license is a valid osi license; if not we can create a license risk with the provided information
 	for _, component := range components {
 		_, validLicense := licenseMap[*component.License]
 		_, exists := doesLicenseRiskAlreadyExist[component.Purl]
@@ -86,11 +82,11 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 	return nil
 }
 
-var validOSILicenses []string = make([]string, 0)
+var validOSILicenseMap map[string]struct{} = make(map[string]struct{}) // cache for valid OSI licenses
 
-func GetOSILicenses() ([]string, error) {
-	if len(validOSILicenses) > 0 {
-		return validOSILicenses, nil
+func GetOSILicenses() (map[string]struct{}, error) {
+	if len(validOSILicenseMap) > 0 {
+		return validOSILicenseMap, nil
 	}
 
 	apiURL := os.Getenv("OSI_LICENSES_API")
@@ -129,10 +125,10 @@ func GetOSILicenses() ([]string, error) {
 
 	for _, license := range licenses {
 		if license.ID != "" {
-			validOSILicenses = append(validOSILicenses, license.ID)
+			validOSILicenseMap[license.ID] = struct{}{}
 		}
 	}
-	return validOSILicenses, nil
+	return validOSILicenseMap, nil
 }
 
 func (service *LicenseRiskService) UpdateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {

@@ -41,13 +41,12 @@ type HTTPController struct {
 	statisticsService      core.StatisticsService
 
 	dependencyVulnService core.DependencyVulnService
-	licenseRiskService    core.LicenseRiskService
 
 	// mark public to let it be overridden in tests
 	core.FireAndForgetSynchronizer
 }
 
-func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, licenseRiskService core.LicenseRiskService) *HTTPController {
+func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *HTTPController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -62,7 +61,6 @@ func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRe
 		assetVersionRepository:    assetVersionRepository,
 		statisticsService:         statisticsService,
 		dependencyVulnService:     dependencyVulnService,
-		licenseRiskService:        licenseRiskService,
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
@@ -119,14 +117,6 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
-
-	// check if we have any license risk in our sbom
-	sbomComponents := ConvertCDXComponentsToSimpleComponents(*normalizedBom.GetComponents())
-	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, sbomComponents, scannerID)
-	if err != nil {
-		return scanResults, err
-	}
-
 	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
 }
 
@@ -277,28 +267,4 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 	}
 	return c.JSON(200, scanResults)
 
-}
-
-func ConvertCDXComponentsToSimpleComponents(cdxComponents []cdx.Component) []models.Component {
-	components := []models.Component{}
-	// only variables needed for FindLicenseRisksInComponents are converted
-	for _, cdx := range cdxComponents {
-		license := ""
-		// avoid nil pointer dereference
-		if cdx.Licenses != nil && len(*cdx.Licenses) > 0 {
-			if (*cdx.Licenses)[0].License != nil {
-				if (*cdx.Licenses)[0].License.ID != "" {
-					license = (*cdx.Licenses)[0].License.ID
-				} else {
-					license = (*cdx.Licenses)[0].License.Name
-				}
-			}
-
-		}
-		components = append(components, models.Component{
-			Purl:    cdx.PackageURL,
-			License: &license,
-		})
-	}
-	return components
 }

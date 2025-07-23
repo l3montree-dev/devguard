@@ -172,7 +172,6 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 	slog.Info("getting license information for components", "amount", len(componentsWithoutLicense))
 	errGroup := utils.ErrGroup[models.Component](10)
 	for _, component := range componentsWithoutLicense {
-		component := component
 		errGroup.Go(func() (models.Component, error) {
 			return s.GetLicense(component)
 		})
@@ -189,18 +188,19 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 		return nil, err
 	}
 
-	// find potential license risks for the components which had no prior license
-	if len(components) > 0 {
-		err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, components, scannerID)
-		if err != nil {
-			return nil, err
+	allComponents := components
+	// get all the components - with licenses and without
+	for _, componentDependency := range componentDependencies {
+		if !seen[componentDependency.DependencyPurl] {
+			// if the component is not in the seen map, it means it was not processed to get a new license
+			allComponents = append(allComponents, componentDependency.Dependency)
 		}
 	}
 
-	// now return all components - each one should have the best license information available
-	allComponents := components
-	for _, componentDependency := range componentDependencies {
-		allComponents = append(allComponents, componentDependency.Dependency)
+	// find potential license risks
+	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, scannerID)
+	if err != nil {
+		return nil, err
 	}
 
 	return allComponents, nil
