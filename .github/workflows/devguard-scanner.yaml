@@ -64,7 +64,7 @@ jobs:
   build-scanner-image:
     uses: l3montree-dev/devguard-action/.github/workflows/build-image.yml@main
     with:
-      artifact-name: "-scanner"
+      artifact-name: "scanner"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
     secrets:
@@ -80,7 +80,7 @@ jobs:
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-name: "-scanner"
+      artifact-name: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
       
@@ -91,7 +91,7 @@ jobs:
     - devguard
     uses: l3montree-dev/devguard-action/.github/workflows/deploy.yml@main
     with:
-      artifact-name: "-scanner"
+      artifact-name: "scanner"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
     secrets:
@@ -108,7 +108,7 @@ jobs:
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-name: "-scanner"
+      artifact-name: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
@@ -122,6 +122,6 @@ jobs:
     with:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
-      artifact-name: "-scanner"
+      artifact-name: "scanner"
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
