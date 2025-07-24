@@ -64,8 +64,11 @@ func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOa
 		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
 		CreateFirstPartyVulnService(db),
 		repositories.NewAssetRepository(db),
+		repositories.NewProjectRepository(db),
+		repositories.NewOrgRepository(db),
 		repositories.NewVulnEventRepository(db),
 		CreateComponentService(db, depsDevService),
+		integrations.NewThirdPartyIntegrations(gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory), githubint.NewGithubIntegration(db)),
 	)
 }
 

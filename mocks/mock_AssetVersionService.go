@@ -515,29 +515,20 @@ func (_c *AssetVersionService_HandleScanResult_Call) RunAndReturn(run func(asset
 }
 
 // UpdateSBOM provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) (bool, error) {
+func (_mock *AssetVersionService) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
 	ret := _mock.Called(assetVersion, scannerID, sbom)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateSBOM")
 	}
 
-	var r0 bool
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string, normalize.SBOM) (bool, error)); ok {
-		return returnFunc(assetVersion, scannerID, sbom)
-	}
-	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string, normalize.SBOM) bool); ok {
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string, normalize.SBOM) error); ok {
 		r0 = returnFunc(assetVersion, scannerID, sbom)
 	} else {
-		r0 = ret.Get(0).(bool)
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion, string, normalize.SBOM) error); ok {
-		r1 = returnFunc(assetVersion, scannerID, sbom)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // AssetVersionService_UpdateSBOM_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateSBOM'
@@ -576,12 +567,12 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(assetVersion models.
 	return _c
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) Return(b bool, err error) *AssetVersionService_UpdateSBOM_Call {
-	_c.Call.Return(b, err)
+func (_c *AssetVersionService_UpdateSBOM_Call) Return(err error) *AssetVersionService_UpdateSBOM_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) (bool, error)) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }
