@@ -325,7 +325,7 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 	added := comparison.OnlyInB
 	needToBeChanged := comparison.InBoth
 
-	if len(removed) > 0 || len(added) > 0 || len(needToBeChanged) > 0 {
+	if len(removed) > 0 || len(added) > 0 {
 		stateChanged = true
 	}
 

@@ -204,6 +204,11 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	})
 
 	go func() {
+
+		if len(newVulns) == 0 {
+			return
+		}
+
 		pro, err := s.projectRepository.GetProjectByAssetID(asset.ID)
 		if err != nil {
 			slog.Error("could not get project by asset ID", "err", err)
@@ -285,6 +290,9 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
 	go func() {
+		if len(opened) == 0 {
+			return
+		}
 		pro, err := s.projectRepository.GetProjectByAssetID(asset.ID)
 		if err != nil {
 			slog.Error("could not get project by asset ID", "err", err)
