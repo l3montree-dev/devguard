@@ -77,7 +77,7 @@ type FirstPartyScanResponse struct {
 	FirstPartyVulns []vuln.FirstPartyVulnDTO `json:"firstPartyVulns"`
 }
 
-func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (bool, ScanResponse, error) {
+func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) (ScanResponse, error) {
 	monitoring.DependencyVulnScanAmount.Inc()
 	startTime := time.Now()
 	defer func() {
@@ -103,24 +103,24 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
-		return false, scanResults, err
+		return scanResults, err
 	}
 
 	scannerID := c.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
-		return false, scanResults, fmt.Errorf("no X-Scanner header found")
+		return scanResults, fmt.Errorf("no X-Scanner header found")
 	}
 
 	// update the sbom in the database in parallel
-	sbomUpdated, err := s.assetVersionService.UpdateSBOM(assetVersion, scannerID, normalizedBom)
+	err = s.assetVersionService.UpdateSBOM(assetVersion, scannerID, normalizedBom)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
-		return false, scanResults, err
+		return scanResults, err
 	}
 
-	scanResponse, scanErr := s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
-	return sbomUpdated, scanResponse, scanErr
+	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
+
 }
 
 func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
@@ -237,20 +237,11 @@ func (s *HTTPController) ScanDependencyVulnFromProject(c core.Context) error {
 		return err
 	}
 
-	sbomUpdated, scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
+	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
 	if err != nil {
 		return err
 	}
-	if sbomUpdated {
-		thirdPartyIntegrations := core.GetThirdPartyIntegration(c)
-		if err = thirdPartyIntegrations.HandleEvent(core.SBOMCreatedEvent{
-			Ctx:  c,
-			SBOM: *bom,
-		}); err != nil {
-			slog.Error("could not handle manual mitigation event", "err", err)
-		}
 
-	}
 	return c.JSON(200, scanResults)
 }
 
@@ -274,20 +265,11 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 		return err
 	}
 
-	sbomUpdated, scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
+	scanResults, err := s.DependencyVulnScan(c, normalize.FromCdxBom(bom, true))
 	if err != nil {
 		return err
 	}
-	if sbomUpdated {
-		thirdPartyIntegrations := core.GetThirdPartyIntegration(c)
-		if err = thirdPartyIntegrations.HandleEvent(core.SBOMCreatedEvent{
-			Ctx:  c,
-			SBOM: *bom,
-		}); err != nil {
-			slog.Error("could not handle manual mitigation event", "err", err)
-		}
 
-	}
 	return c.JSON(200, scanResults)
 
 }

@@ -10,9 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
-	"github.com/labstack/echo/v4"
 )
 
 type WebhookIntegration struct {
@@ -154,25 +154,16 @@ func (w *WebhookIntegration) TestAndSave(ctx core.Context) error {
 	})
 }
 
-func (w *WebhookIntegration) getWebhooks(ctx echo.Context) ([]models.WebhookIntegration, error) {
-	orgID := core.GetOrg(ctx).GetID()
-	project := core.GetProject(ctx)
-
-	webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(orgID, project.ID)
-	if err != nil {
-		slog.Error("failed to find webhooks", "err", err)
-		return nil, err
-	}
-
-	return webhooks, nil
-}
-
 func (w *WebhookIntegration) HandleEvent(event any) error {
 
 	switch event := event.(type) {
 	case core.SBOMCreatedEvent:
 
-		webhooks, err := w.getWebhooks(event.Ctx)
+		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(event.Org.ID, event.Project.ID)
+		if err != nil {
+			slog.Error("failed to find webhooks", "err", err)
+			return err
+		}
 		if err != nil {
 			slog.Error("failed to find webhooks for SBOM created event", "err", err)
 			return err
@@ -182,11 +173,51 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 			client := NewWebhookClient(webhook.URL, webhook.Secret)
 			if webhook.SbomEnabled {
 				//send sbom
-				if err := client.SendSBOM(event.SBOM); err != nil {
+				if err := client.SendSBOM(*event.SBOM, event.Org, event.Project, event.Asset, event.AssetVersion); err != nil {
 					slog.Error("failed to send SBOM to webhook", "webhookID", webhook.ID, "err", err)
-					return err
 				}
 				slog.Info("SBOM sent to webhook", "webhookID", webhook.ID)
+			}
+		}
+	case core.FirstPartyVulnsDetectedEvent:
+
+		vulns := event.Vulns.([]vuln.FirstPartyVulnDTO)
+
+		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(event.Org.ID, event.Project.ID)
+		if err != nil {
+			slog.Error("failed to find webhooks", "err", err)
+			return err
+		}
+
+		for _, webhook := range webhooks {
+			client := NewWebhookClient(webhook.URL, webhook.Secret)
+			if webhook.VulnEnabled {
+				//send vulnerability
+				if err := client.SendFirstPartyVulnerabilities(vulns, event.Org, event.Project, event.Asset, event.AssetVersion); err != nil {
+					slog.Error("failed to send vulnerability to webhook", "webhookID", webhook.ID, "err", err)
+				}
+				slog.Info("Vulnerability sent to webhook", "webhookID", webhook.ID)
+			}
+		}
+
+	case core.DependencyVulnsDetectedEvent:
+
+		vulns := event.Vulns.([]vuln.DependencyVulnDTO)
+
+		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(event.Org.ID, event.Project.ID)
+		if err != nil {
+			slog.Error("failed to find webhooks", "err", err)
+			return err
+		}
+
+		for _, webhook := range webhooks {
+			client := NewWebhookClient(webhook.URL, webhook.Secret)
+			if webhook.VulnEnabled {
+				//send vulnerability
+				if err := client.SendDependencyVulnerabilities(vulns, event.Org, event.Project, event.Asset, event.AssetVersion); err != nil {
+					slog.Error("failed to send vulnerability to webhook", "webhookID", webhook.ID, "err", err)
+				}
+				slog.Info("Vulnerability sent to webhook", "webhookID", webhook.ID)
 			}
 		}
 	}
