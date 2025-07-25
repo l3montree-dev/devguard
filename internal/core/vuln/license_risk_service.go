@@ -84,6 +84,11 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 
 var validOSILicenseMap map[string]struct{} = make(map[string]struct{}) // cache for valid OSI licenses
 
+// ResetOSILicenseCache clears the cached OSI licenses for testing purposes
+func ResetOSILicenseCache() {
+	validOSILicenseMap = make(map[string]struct{})
+}
+
 func GetOSILicenses() (map[string]struct{}, error) {
 	if len(validOSILicenseMap) > 0 {
 		return validOSILicenseMap, nil
