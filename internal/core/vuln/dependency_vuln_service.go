@@ -294,6 +294,51 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 	return nil
 }
 
+func (s *service) UpdateDependencyVulnStateBatch(tx core.DB, assetID uuid.UUID, userID string, dependencyVulns []models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) ([]models.VulnEvent, error) {
+	// we need to work on the reference of the slice !!
+	vulnEvents := make([]models.VulnEvent, len(dependencyVulns))
+	switch models.VulnEventType(statusType) {
+	case models.EventTypeAccepted:
+		for i := range dependencyVulns {
+			ev := models.NewAcceptedEvent(dependencyVulns[i].CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
+			ev.Apply(&dependencyVulns[i])
+			vulnEvents = append(vulnEvents, ev)
+			dependencyVulns[i].Events = append(dependencyVulns[i].Events, ev)
+		}
+	case models.EventTypeFalsePositive:
+		for i := range dependencyVulns {
+			ev := models.NewFalsePositiveEvent(dependencyVulns[i].CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVulns[i].ScannerIDs)
+			ev.Apply(&dependencyVulns[i])
+			vulnEvents = append(vulnEvents, ev)
+			dependencyVulns[i].Events = append(dependencyVulns[i].Events, ev)
+		}
+	case models.EventTypeReopened:
+		for i := range dependencyVulns {
+			ev := models.NewReopenedEvent(dependencyVulns[i].CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
+			ev.Apply(&dependencyVulns[i])
+			vulnEvents = append(vulnEvents, ev)
+			dependencyVulns[i].Events = append(dependencyVulns[i].Events, ev)
+		}
+	case models.EventTypeComment:
+		for i := range dependencyVulns {
+			ev := models.NewCommentEvent(dependencyVulns[i].CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
+			ev.Apply(&dependencyVulns[i])
+			vulnEvents = append(vulnEvents, ev)
+			dependencyVulns[i].Events = append(dependencyVulns[i].Events, ev)
+		}
+	}
+	err := s.dependencyVulnRepository.SaveBatch(tx, dependencyVulns)
+	if err != nil {
+		return vulnEvents, err
+	}
+	err = s.vulnEventRepository.SaveBatch(tx, vulnEvents)
+	if err != nil {
+		return vulnEvents, nil
+	}
+	return vulnEvents, nil
+
+}
+
 func (s *service) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error) {
 	if tx == nil {
 
@@ -381,4 +426,8 @@ func (s *service) updateIssue(asset models.Asset, vulnerability models.Dependenc
 	}
 	monitoring.TicketUpdatedAmount.Inc()
 	return nil
+}
+
+func (s *service) GetAllVulnsForAssetVersion(tx core.DB, assetID uuid.UUID, assetVersionName, scannerID string) ([]models.DependencyVuln, error) {
+	return s.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(tx, assetVersionName, assetID, scannerID)
 }
