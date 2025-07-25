@@ -45,6 +45,12 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 				return err
 			}
 			vuln = &v
+		case models.VulnTypeLicenseRisk:
+			licenseRisk, err := g.licenseRiskRepository.Read(vulnID)
+			if err != nil {
+				return err
+			}
+			vuln = &licenseRisk
 		}
 
 		orgSlug, err := core.GetOrgSlug(event.Ctx)
@@ -74,6 +80,12 @@ func (g *GitlabIntegration) HandleEvent(event any) error {
 				return err
 			}
 			vuln = &v
+		case models.VulnTypeLicenseRisk:
+			licenseRisk, err := g.licenseRiskRepository.Read(ev.VulnID)
+			if err != nil {
+				return err
+			}
+			vuln = &licenseRisk
 		}
 
 		asset := core.GetAsset(event.Ctx)

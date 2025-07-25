@@ -108,7 +108,7 @@ func (c firstPartyVulnController) Mitigate(ctx core.Context) error {
 	// fetch the firstPartyVuln again from the database. We do not know anything what might have changed. The third party integrations might have changed the state of the vuln.
 	firstPartyVuln, err := c.firstPartyVulnRepository.Read(firstPartyVulnID)
 	if err != nil {
-		return echo.NewHTTPError(404, "could not find dependencyVuln")
+		return echo.NewHTTPError(404, "could not find firstPartyVuln")
 	}
 
 	return ctx.JSON(200, convertFirstPartyVulnToDetailedDTO(firstPartyVuln))

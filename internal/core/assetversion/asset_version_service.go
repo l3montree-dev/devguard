@@ -427,8 +427,8 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	}
 
 	existingComponentPurls := make(map[string]bool)
-	for _, c := range assetComponents {
-		existingComponentPurls[c.Component.Purl] = true
+	for _, currentComponent := range assetComponents {
+		existingComponentPurls[currentComponent.Component.Purl] = true
 	}
 
 	// we need to check if the SBOM is new or if it already exists.
@@ -524,7 +524,7 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	go func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
 
-		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion.Name, assetVersion.AssetID, scannerID)
+		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, scannerID)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {
@@ -576,6 +576,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 				licenses := cdx.Licenses{}
 				//technically redundant call to c.Dependency.ComponentProject.License
 				if c.Dependency.ComponentProject != nil && c.Dependency.ComponentProject.License != "" {
+					// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
 					if c.Dependency.ComponentProject.License != "non-standard" {
 						licenses = append(licenses, cdx.LicenseChoice{
 							License: &cdx.License{

@@ -102,11 +102,11 @@ func GetVulnID(ctx Context) (string, models.VulnType, error) {
 	if dependencyVulnID != "" {
 		return dependencyVulnID, models.VulnTypeDependencyVuln, nil
 	}
-
 	dependencyVulnIDFromGet, ok := ctx.Get("dependencyVulnID").(string)
 	if ok && dependencyVulnIDFromGet != "" {
 		return dependencyVulnIDFromGet, models.VulnTypeDependencyVuln, nil
 	}
+
 	firstPartyVulnID := ctx.Param("firstPartyVulnID")
 	if firstPartyVulnID != "" {
 		return firstPartyVulnID, models.VulnTypeFirstPartyVuln, nil
@@ -114,6 +114,15 @@ func GetVulnID(ctx Context) (string, models.VulnType, error) {
 	firstPartyVulnIDFromGet, ok := ctx.Get("firstPartyVulnID").(string)
 	if ok && firstPartyVulnIDFromGet != "" {
 		return firstPartyVulnIDFromGet, models.VulnTypeFirstPartyVuln, nil
+	}
+
+	licenseRiskID := ctx.Param("licenseRiskID")
+	if licenseRiskID != "" {
+		return licenseRiskID, models.VulnTypeLicenseRisk, nil
+	}
+	licenseRiskIDFromGet, ok := ctx.Get("licenseRiskID").(string)
+	if ok && licenseRiskIDFromGet != "" {
+		return licenseRiskIDFromGet, models.VulnTypeLicenseRisk, nil
 	}
 
 	return "", "", fmt.Errorf("could not get vuln id")

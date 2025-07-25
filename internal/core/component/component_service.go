@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -17,13 +16,15 @@ type service struct {
 	componentRepository        core.ComponentRepository
 	depsDevService             core.DepsDevService
 	componentProjectRepository core.ComponentProjectRepository
+	licenseRiskService         core.LicenseRiskService
 }
 
-func NewComponentService(depsDevService core.DepsDevService, componentProjectRepository core.ComponentProjectRepository, componentRepository core.ComponentRepository) service {
+func NewComponentService(depsDevService core.DepsDevService, componentProjectRepository core.ComponentProjectRepository, componentRepository core.ComponentRepository, licenseRiskService core.LicenseRiskService) service {
 	return service{
 		componentRepository:        componentRepository,
 		componentProjectRepository: componentProjectRepository,
 		depsDevService:             depsDevService,
+		licenseRiskService:         licenseRiskService,
 	}
 }
 
@@ -151,8 +152,8 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	return component, nil
 }
 
-func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersionName, assetID, scannerID)
+func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error) {
+	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		return nil, err
 	}
@@ -167,10 +168,10 @@ func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID 
 		}
 	}
 
+	//why are we only getting new licenses and not updating existing ones? - licenses shouldn't change after once they are set
 	slog.Info("getting license information for components", "amount", len(componentsWithoutLicense))
 	errGroup := utils.ErrGroup[models.Component](10)
 	for _, component := range componentsWithoutLicense {
-		component := component
 		errGroup.Go(func() (models.Component, error) {
 			return s.GetLicense(component)
 		})
@@ -187,10 +188,19 @@ func (s *service) GetAndSaveLicenseInformation(assetVersionName string, assetID 
 		return nil, err
 	}
 
-	// now return all components - each one should have the best license information available
 	allComponents := components
+	// get all the components - with licenses and without
 	for _, componentDependency := range componentDependencies {
-		allComponents = append(allComponents, componentDependency.Dependency)
+		if !seen[componentDependency.DependencyPurl] {
+			// if the component is not in the seen map, it means it was not processed to get a new license
+			allComponents = append(allComponents, componentDependency.Dependency)
+		}
+	}
+
+	// find potential license risks
+	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, scannerID)
+	if err != nil {
+		return nil, err
 	}
 
 	return allComponents, nil

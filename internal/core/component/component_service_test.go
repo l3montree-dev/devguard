@@ -20,8 +20,9 @@ func TestHandleComponent(t *testing.T) {
 		mockDepsDevService := mocks.NewDepsDevService(t)
 		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
 		mockComponentRepository := mocks.NewComponentRepository(t)
+		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService)
 
 		component := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
@@ -41,6 +42,7 @@ func TestHandleComponent(t *testing.T) {
 		mockDepsDevService := mocks.NewDepsDevService(t)
 		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
 		mockComponentRepository := mocks.NewComponentRepository(t)
+		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
 
 		c := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
@@ -49,7 +51,7 @@ func TestHandleComponent(t *testing.T) {
 		}
 
 		mockDepsDevService.On("GetVersion", mock.Anything, "golang", "gorm.io/gorm", "v1.25.12").Return(common.DepsDevVersionResponse{}, assert.AnError)
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService)
 
 		actual, err := service.GetLicense(c)
 
@@ -62,6 +64,7 @@ func TestHandleComponent(t *testing.T) {
 		mockDepsDevService := mocks.NewDepsDevService(t)
 		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
 		mockComponentRepository := mocks.NewComponentRepository(t)
+		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
 
 		c := models.Component{
 			Purl:    "pkg:golang/gorm.io/gorm@v1.25.12",
@@ -93,7 +96,7 @@ func TestHandleComponent(t *testing.T) {
 		}
 		mockDepsDevService.On("GetProject", mock.Anything, "github/test/project").Return(projectResponse, nil)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService)
 
 		actual, err := service.GetLicense(c)
 
@@ -106,6 +109,7 @@ func TestHandleProject(t *testing.T) {
 	t.Run("should save the project information", func(t *testing.T) {
 		mockDepsDevService := mocks.NewDepsDevService(t)
 		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
+		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
 
 		project := models.ComponentProject{
 			ProjectKey: "github/test/project",
@@ -151,7 +155,7 @@ func TestHandleProject(t *testing.T) {
 
 		mockComponentProjectRepository.On("Save", mock.Anything, &expectedProject).Return(nil)
 
-		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, nil)
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, nil, mockLicenseRiskService)
 		service.RefreshComponentProjectInformation(project)
 	})
 }

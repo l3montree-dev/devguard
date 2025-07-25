@@ -29,6 +29,7 @@ func TestScanning(t *testing.T) {
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+	os.Setenv("OSI_LICENSES_API", "https://opensource.org/api/license/")
 	controller, _ := initHTTPController(t, db)
 
 	// scan the vulnerable sbom
@@ -232,6 +233,7 @@ func TestTicketHandling(t *testing.T) {
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+	os.Setenv("OSI_LICENSES_API", "https://opensource.org/api/license/")
 	controller, gitlabClientFacade := initHTTPController(t, db)
 
 	// scan the vulnerable sbom

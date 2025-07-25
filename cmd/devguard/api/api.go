@@ -399,7 +399,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	supplyChainRepository := repositories.NewSupplyChainRepository(db)
 	attestationRepository := repositories.NewAttestationRepository(db)
 	policyRepository := repositories.NewPolicyRepository(db)
-	licenseOverwriteRepository := repositories.NewLicenseOverwriteRepository(db)
+	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
@@ -411,7 +411,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, dependencyVulnService)
 	depsDevService := vulndb.NewDepsDevService()
 	componentProjectRepository := repositories.NewComponentProjectRepository(db)
-	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository)
+	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
+	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
 
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, vulnEventRepository, &componentService)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
@@ -430,15 +431,16 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
 
-	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseOverwriteRepository)
+	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository)
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
 	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, assetVersionRepository, patRepository, intotoService)
-	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseOverwriteRepository)
+	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseRiskRepository)
+
 	complianceController := compliance.NewHTTPController(assetVersionRepository, attestationRepository, policyRepository)
 
 	statisticsController := statistics.NewHTTPController(statisticsService, statisticsRepository, assetRepository, assetVersionRepository, projectService)
 	firstPartyVulnController := vuln.NewFirstPartyVulnController(firstPartyVulnRepository, firstPartyVulnService, projectService)
-	licenseOverwriteController := component.NewLicenseOverwriteController(licenseOverwriteRepository)
+	licenseRiskController := vuln.NewLicenseRiskController(licenseRiskRepository, licenseRiskService)
 
 	patService := pat.NewPatService(patRepository)
 
@@ -556,8 +558,6 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.POST("/projects/", projectController.Create, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
 
 	organizationRouter.GET("/config-files/:config-file/", orgController.GetConfigFile)
-	organizationRouter.PUT("/license-overwrite/", licenseOverwriteController.Create, neededScope([]string{"manage"}))
-	organizationRouter.DELETE("/license-overwrite/:componentPurl", licenseOverwriteController.Delete, neededScope([]string{"manage"}))
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectService, "project", core.ActionRead))
 	projectRouter.GET("/", projectController.Read)
@@ -674,10 +674,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)
-
 	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	dependencyVulnRouter.POST("/:dependencyVulnID/mitigate/", dependencyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
-
 	dependencyVulnRouter.GET("/:dependencyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
 
 	firstPartyVulnRouter := assetVersionRouter.Group("/first-party-vulns")
@@ -686,6 +684,14 @@ func BuildRouter(db core.DB) *echo.Echo {
 	firstPartyVulnRouter.POST("/:firstPartyVulnID/", firstPartyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	firstPartyVulnRouter.POST("/:firstPartyVulnID/mitigate/", firstPartyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	firstPartyVulnRouter.GET("/:firstPartyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
+
+	assetVersionRouter.POST("/license-risks/", licenseRiskController.Create)
+	licenseRiskRouter := assetVersionRouter.Group("/license-risks")
+	licenseRiskRouter.GET("/", licenseRiskController.ListPaged)
+	licenseRiskRouter.GET("/:licenseRiskID/", licenseRiskController.Read)
+	licenseRiskRouter.POST("/:licenseRiskID/", licenseRiskController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	licenseRiskRouter.POST("/:licenseRiskID/mitigate", licenseRiskController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
+	licenseRiskRouter.POST("/:licenseRiskID/final-license-decision", licenseRiskController.MakeFinalLicenseDecision, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	routes := server.Routes()
 	sort.Slice(routes, func(i, j int) bool {

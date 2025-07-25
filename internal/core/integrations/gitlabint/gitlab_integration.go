@@ -113,6 +113,8 @@ type GitlabIntegration struct {
 	assetService                core.AssetService
 	componentRepository         core.ComponentRepository
 	casbinRBACProvider          core.RBACProvider
+	licenseRiskRepository       core.LicenseRiskRepository
+	licenseRiskService          core.LicenseRiskService
 }
 
 var _ core.ThirdPartyIntegration = &GitlabIntegration{}
@@ -133,12 +135,14 @@ func NewGitlabIntegration(db core.DB, oauth2GitlabIntegration map[string]*Gitlab
 	componentRepository := repositories.NewComponentRepository(db)
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
 	gitlabOauth2TokenRepository := repositories.NewGitlabOauth2TokenRepository(db)
+	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
 
 	orgRepository := repositories.NewOrgRepository(db)
 
 	orgService := org.NewService(orgRepository, casbinRBACProvider)
 	projectService := project.NewService(projectRepository, assetRepository)
 	assetService := asset.NewService(assetRepository, dependencyVulnRepository, nil)
+	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
@@ -165,6 +169,8 @@ func NewGitlabIntegration(db core.DB, oauth2GitlabIntegration map[string]*Gitlab
 		assetService:                assetService,
 		casbinRBACProvider:          casbinRBACProvider,
 		clientFactory:               clientFactory,
+		licenseRiskRepository:       licenseRiskRepository,
+		licenseRiskService:          licenseRiskService,
 	}
 }
 

@@ -67,6 +67,7 @@ type GithubIntegration struct {
 	assetRepository                 core.AssetRepository
 	assetVersionRepository          core.AssetVersionRepository
 	componentRepository             core.ComponentRepository
+	licenseRiskRepository           core.LicenseRiskRepository
 
 	orgRepository       core.OrganizationRepository
 	projectRepository   core.ProjectRepository
@@ -87,6 +88,7 @@ func NewGithubIntegration(db core.DB) *GithubIntegration {
 	projectRepository := repositories.NewProjectRepository(db)
 	orgRepository := repositories.NewOrgRepository(db)
 	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
+	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
 
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
@@ -106,6 +108,7 @@ func NewGithubIntegration(db core.DB) *GithubIntegration {
 		componentRepository:             componentRepository,
 		projectRepository:               projectRepository,
 		orgRepository:                   orgRepository,
+		licenseRiskRepository:           licenseRiskRepository,
 
 		githubClientFactory: func(repoID string) (githubClientFacade, error) {
 			return NewGithubClient(installationIDFromRepositoryID(repoID))
@@ -574,6 +577,12 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 				return err
 			}
 			vuln = &v
+		case models.VulnTypeLicenseRisk:
+			v, err := githubIntegration.licenseRiskRepository.Read(vulnID)
+			if err != nil {
+				return err
+			}
+			vuln = &v
 		}
 
 		orgSlug, err := core.GetOrgSlug(event.Ctx)
@@ -600,6 +609,12 @@ func (githubIntegration *GithubIntegration) HandleEvent(event any) error {
 			vuln = &v
 		case models.VulnTypeFirstPartyVuln:
 			v, err := githubIntegration.firstPartyVulnRepository.Read(ev.VulnID)
+			if err != nil {
+				return err
+			}
+			vuln = &v
+		case models.VulnTypeLicenseRisk:
+			v, err := githubIntegration.licenseRiskRepository.Read(ev.VulnID)
 			if err != nil {
 				return err
 			}
