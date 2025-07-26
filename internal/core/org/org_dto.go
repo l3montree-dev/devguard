@@ -177,6 +177,8 @@ type OrgDTO struct {
 
 	JiraIntegrations []common.JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
+	Webhooks []common.WebhookIntegrationDTO `json:"webhooks" gorm:"foreignKey:OrgID;"`
+
 	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
 	ConfigFiles map[string]any `json:"configFiles"`
@@ -204,6 +206,18 @@ func obfuscateJiraIntegrations(integration models.JiraIntegration) common.JiraIn
 	}
 }
 
+func obfuscateWebhookIntegrations(integration models.WebhookIntegration) common.WebhookIntegrationDTO {
+	return common.WebhookIntegrationDTO{
+		ID:          integration.ID.String(),
+		Name:        *integration.Name,
+		Description: *integration.Description,
+		URL:         integration.URL,
+		Secret:      *integration.Secret,
+		SbomEnabled: integration.SbomEnabled,
+		VulnEnabled: integration.VulnEnabled,
+	}
+}
+
 func fromModel(org models.Org) OrgDTO {
 	return OrgDTO{
 		Model:                  org.Model,
@@ -224,6 +238,7 @@ func fromModel(org models.Org) OrgDTO {
 		GithubAppInstallations:   org.GithubAppInstallations,
 		GitLabIntegrations:       utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
 		JiraIntegrations:         utils.Map(org.JiraIntegrations, obfuscateJiraIntegrations),
+		Webhooks:                 utils.Map(org.Webhooks, obfuscateWebhookIntegrations),
 		ConfigFiles:              org.ConfigFiles,
 		Language:                 org.Language,
 		ExternalEntityProviderID: org.ExternalEntityProviderID,

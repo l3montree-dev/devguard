@@ -113,11 +113,14 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	}
 
 	// update the sbom in the database in parallel
-	if err := s.assetVersionService.UpdateSBOM(assetVersion, scannerID, normalizedBom); err != nil {
+	err = s.assetVersionService.UpdateSBOM(assetVersion, scannerID, normalizedBom)
+	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
+
 	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
+
 }
 
 func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
@@ -238,6 +241,7 @@ func (s *HTTPController) ScanDependencyVulnFromProject(c core.Context) error {
 	if err != nil {
 		return err
 	}
+
 	return c.JSON(200, scanResults)
 }
 
@@ -265,6 +269,7 @@ func (s *HTTPController) ScanSbomFile(c core.Context) error {
 	if err != nil {
 		return err
 	}
+
 	return c.JSON(200, scanResults)
 
 }

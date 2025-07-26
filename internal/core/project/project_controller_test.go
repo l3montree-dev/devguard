@@ -28,7 +28,8 @@ func TestProjectControllerRead(t *testing.T) {
 	projectRepo := repositories.NewProjectRepository(db)
 	assetRepo := repositories.NewAssetRepository(db)
 	projectService := project.NewService(projectRepo, assetRepo)
-	controller := project.NewHTTPController(projectRepo, assetRepo, projectService)
+	webhookRepo := repositories.NewWebhookRepository(db)
+	controller := project.NewHTTPController(projectRepo, assetRepo, projectService, webhookRepo)
 
 	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
@@ -128,7 +129,8 @@ func TestProjectControllerList(t *testing.T) {
 	projectRepo := repositories.NewProjectRepository(db)
 	assetRepo := repositories.NewAssetRepository(db)
 	projectService := project.NewService(projectRepo, assetRepo)
-	controller := project.NewHTTPController(projectRepo, assetRepo, projectService)
+	webhookRepo := repositories.NewWebhookRepository(db)
+	controller := project.NewHTTPController(projectRepo, assetRepo, projectService, webhookRepo)
 	org, project, _, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 
 	// add 3 community policies to the database
@@ -208,6 +210,7 @@ func TestProjectCreation(t *testing.T) {
 			repositories.NewProjectRepository(db),
 			repositories.NewAssetRepository(db),
 		),
+		repositories.NewWebhookRepository(db),
 	)
 
 	org, project, _, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)

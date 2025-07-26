@@ -693,20 +693,29 @@ func (_c *ComponentRepository_GetLicenseDistribution_Call) RunAndReturn(run func
 }
 
 // HandleStateDiff provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) error {
+func (_mock *ComponentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error) {
 	ret := _mock.Called(tx, assetVersionName, assetID, oldState, newState, scannerID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleStateDiff")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) error); ok {
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) (bool, error)); ok {
+		return returnFunc(tx, assetVersionName, assetID, oldState, newState, scannerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) bool); ok {
 		r0 = returnFunc(tx, assetVersionName, assetID, oldState, newState, scannerID)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(bool)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, []models.ComponentDependency, []models.ComponentDependency, string) error); ok {
+		r1 = returnFunc(tx, assetVersionName, assetID, oldState, newState, scannerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // ComponentRepository_HandleStateDiff_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleStateDiff'
@@ -763,12 +772,12 @@ func (_c *ComponentRepository_HandleStateDiff_Call) Run(run func(tx core.DB, ass
 	return _c
 }
 
-func (_c *ComponentRepository_HandleStateDiff_Call) Return(err error) *ComponentRepository_HandleStateDiff_Call {
-	_c.Call.Return(err)
+func (_c *ComponentRepository_HandleStateDiff_Call) Return(b bool, err error) *ComponentRepository_HandleStateDiff_Call {
+	_c.Call.Return(b, err)
 	return _c
 }
 
-func (_c *ComponentRepository_HandleStateDiff_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) error) *ComponentRepository_HandleStateDiff_Call {
+func (_c *ComponentRepository_HandleStateDiff_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error)) *ComponentRepository_HandleStateDiff_Call {
 	_c.Call.Return(run)
 	return _c
 }

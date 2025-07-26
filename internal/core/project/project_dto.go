@@ -18,6 +18,7 @@ package project
 import (
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -128,7 +129,8 @@ type ProjectDTO struct {
 
 type projectDetailsDTO struct {
 	ProjectDTO
-	Members []core.User `json:"members"`
+	Members  []core.User                    `json:"members"`
+	Webhooks []common.WebhookIntegrationDTO `json:"webhooks"`
 }
 
 func fromModel(project models.Project) ProjectDTO {

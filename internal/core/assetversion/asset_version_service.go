@@ -18,6 +18,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/openvex/go-vex/pkg/vex"
 
@@ -36,12 +37,15 @@ type service struct {
 	firstPartyVulnService    core.FirstPartyVulnService
 	assetVersionRepository   core.AssetVersionRepository
 	assetRepository          core.AssetRepository
+	projectRepository        core.ProjectRepository
+	orgRepository            core.OrganizationRepository
 	vulnEventRepository      core.VulnEventRepository
 	componentService         core.ComponentService
 	httpClient               *http.Client
+	thirdPartyIntegration    core.ThirdPartyIntegration
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration) *service {
 	return &service{
 		assetVersionRepository:   assetVersionRepository,
 		componentRepository:      componentRepository,
@@ -53,6 +57,9 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		componentService:         componentService,
 		assetRepository:          assetRepository,
 		httpClient:               &http.Client{},
+		thirdPartyIntegration:    thirdPartyIntegration,
+		projectRepository:        projectRepository,
+		orgRepository:            orgRepository,
 	}
 }
 
@@ -196,6 +203,34 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		return vuln.State == models.VulnStateOpen
 	})
 
+	go func() {
+
+		if len(newVulns) == 0 {
+			return
+		}
+
+		pro, err := s.projectRepository.GetProjectByAssetID(asset.ID)
+		if err != nil {
+			slog.Error("could not get project by asset ID", "err", err)
+			return
+		}
+		org, err := s.orgRepository.Read(pro.OrganizationID)
+		if err != nil {
+			slog.Error("could not get organization by ID", "err", err)
+			return
+		}
+
+		if err = s.thirdPartyIntegration.HandleEvent(core.FirstPartyVulnsDetectedEvent{
+			AssetVersion: core.ToAssetVersionObject(*assetVersion),
+			Asset:        core.ToAssetObject(asset),
+			Project:      core.ToProjectObject(pro),
+			Org:          core.ToOrgObject(org),
+			Vulns:        utils.Map(newVulns, vuln.FirstPartyVulnToDto),
+		}); err != nil {
+			slog.Error("could not handle first party vulnerabilities detected event", "err", err)
+		}
+	}()
+
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
 
@@ -253,6 +288,35 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 	}
 
 	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
+
+	go func() {
+		if len(opened) == 0 {
+			return
+		}
+		pro, err := s.projectRepository.GetProjectByAssetID(asset.ID)
+		if err != nil {
+			slog.Error("could not get project by asset ID", "err", err)
+			return
+		}
+
+		org, err := s.orgRepository.Read(pro.OrganizationID)
+		if err != nil {
+			slog.Error("could not get organization by ID", "err", err)
+			return
+		}
+
+		if err = s.thirdPartyIntegration.HandleEvent(core.DependencyVulnsDetectedEvent{
+			AssetVersion: core.ToAssetVersionObject(*assetVersion),
+			Asset:        core.ToAssetObject(asset),
+			Project:      core.ToProjectObject(pro),
+			Org:          core.ToOrgObject(org),
+
+			Vulns: utils.Map(opened, vuln.DependencyVulnToDto),
+		}); err != nil {
+			slog.Error("could not handle dependency vulnerabilities detected event", "err", err)
+		}
+
+	}()
 
 	return opened, closed, newState, nil
 }
@@ -420,6 +484,9 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 }
 
 func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
+
+	sbomUpdated := false
+
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, "")
 	if err != nil {
@@ -516,7 +583,8 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 		return err
 	}
 
-	if err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, scannerID); err != nil {
+	sbomUpdated, err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, scannerID)
+	if err != nil {
 		return err
 	}
 
@@ -531,6 +599,42 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
 		}
 	}()
+
+	go func(sbomUpdated bool) {
+
+		if sbomUpdated {
+			asset, err := s.assetRepository.Read(assetVersion.AssetID)
+			if err != nil {
+				slog.Error("could not read asset", "assetID", assetVersion.AssetID, "err", err)
+				return
+			}
+
+			pro, err := s.projectRepository.GetProjectByAssetID(asset.ID)
+			if err != nil {
+				slog.Error("could not get project by asset ID", "err", err)
+				return
+			}
+
+			org, err := s.orgRepository.Read(pro.OrganizationID)
+			if err != nil {
+				slog.Error("could not get organization by ID", "err", err)
+				return
+			}
+
+			if err = s.thirdPartyIntegration.HandleEvent(core.SBOMCreatedEvent{
+				AssetVersion: core.ToAssetVersionObject(assetVersion),
+				Asset:        core.ToAssetObject(asset),
+				Project:      core.ToProjectObject(pro),
+				Org:          core.ToOrgObject(org),
+				SBOM:         sbom.GetCdxBom(),
+			}); err != nil {
+				slog.Error("could not handle SBOM updated event", "err", err)
+			} else {
+				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
+			}
+		}
+
+	}(sbomUpdated)
 
 	return nil
 }

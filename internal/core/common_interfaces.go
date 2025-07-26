@@ -127,7 +127,7 @@ type ComponentRepository interface {
 	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
-	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) error
+	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error)
 	GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error)
 }
@@ -327,6 +327,15 @@ type JiraIntegrationRepository interface {
 	FindByOrganizationID(orgID uuid.UUID) ([]models.JiraIntegration, error)
 	Delete(tx DB, id uuid.UUID) error
 	GetClientByIntegrationID(integrationID uuid.UUID) (models.JiraIntegration, error)
+}
+
+type WebhookIntegrationRepository interface {
+	Save(tx DB, model *models.WebhookIntegration) error
+	Read(id uuid.UUID) (models.WebhookIntegration, error)
+	FindByOrgIDAndProjectID(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)
+	Delete(tx DB, id uuid.UUID) error
+	GetClientByIntegrationID(integrationID uuid.UUID) (models.WebhookIntegration, error)
+	GetProjectWebhooks(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)
 }
 
 type GitlabIntegrationRepository interface {
