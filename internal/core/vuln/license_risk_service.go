@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -48,6 +49,7 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 	allVulnEvents := []models.VulnEvent{}
 	//go over every component and check if the license is a valid osi license; if not we can create a license risk with the provided information
 	for _, component := range components {
+
 		_, validLicense := licenseMap[*component.License]
 		_, exists := doesLicenseRiskAlreadyExist[component.Purl]
 		// if we have an invalid license and we don not have a risk for this we create one
@@ -82,18 +84,38 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 	return nil
 }
 
-var validOSILicenseMap map[string]struct{} = make(map[string]struct{}) // cache for valid OSI licenses
+var (
+	validOSILicenseMap map[string]struct{} = make(map[string]struct{}) // cache for valid OSI licenses
+	licenseMapMutex    sync.Mutex                                      // protects access to validOSILicenseMap
+)
 
 // ResetOSILicenseCache clears the cached OSI licenses for testing purposes
 func ResetOSILicenseCache() {
+	licenseMapMutex.Lock()
+	defer licenseMapMutex.Unlock()
 	validOSILicenseMap = make(map[string]struct{})
 }
 
 func GetOSILicenses() (map[string]struct{}, error) {
+	// Check if we already have licenses (with read lock)
+	licenseMapMutex.Lock()
 	if len(validOSILicenseMap) > 0 {
+		licenseMapMutex.Unlock()
 		return validOSILicenseMap, nil
 	}
+	defer licenseMapMutex.Unlock()
 
+	var err error
+	validOSILicenseMap, err = fetchOSILicenses()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return validOSILicenseMap, nil
+}
+
+func fetchOSILicenses() (map[string]struct{}, error) {
 	apiURL := os.Getenv("OSI_LICENSES_API")
 	if apiURL == "" {
 		return nil, fmt.Errorf("could not get the URL of the OSI API, check the OSI_LICENSES_API variable in your .env file")
@@ -128,6 +150,7 @@ func GetOSILicenses() (map[string]struct{}, error) {
 		return nil, err
 	}
 
+	validOSILicenseMap := make(map[string]struct{})
 	for _, license := range licenses {
 		if license.ID != "" {
 			validOSILicenseMap[license.ID] = struct{}{}
