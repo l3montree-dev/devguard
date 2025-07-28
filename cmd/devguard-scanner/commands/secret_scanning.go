@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strconv"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -89,16 +88,19 @@ func printSecretScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI stri
 	for _, vuln := range firstPartyVulns {
 		raw := []table.Row{
 			{"RuleID:", vuln.RuleID},
-			{"File:", green.Sprint(vuln.URI + ":" + strconv.Itoa(vuln.StartLine))},
-			{"Snippet:", text.WrapText(vuln.Snippet, 80)},
-			{"Message:", text.WrapText(*vuln.Message, 80)},
-			{"Line:", vuln.StartLine},
+			{"File:", green.Sprint(vuln.URI)},
+		}
+		tw.AppendRows(raw)
+		for _, snippet := range vuln.SnippetContents {
+			tw.AppendRow(table.Row{"Snippet", snippet.Snippet})
+		}
+		raw = []table.Row{{"Message:", text.WrapText(*vuln.Message, 80)},
+
 			{"Commit:", vuln.Commit},
 			{"Author:", vuln.Author},
 			{"Email:", vuln.Email},
 			{"Date:", vuln.Date},
-			{"Link:", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/%s", webUI, assetName, assetVersionName, vuln.ID))},
-		}
+			{"Link:", blue.Sprint(fmt.Sprintf("%s/%s/refs/%s/code-risks/%s", webUI, assetName, assetVersionName, vuln.ID))}}
 
 		tw.AppendRows(raw)
 		tw.AppendSeparator()

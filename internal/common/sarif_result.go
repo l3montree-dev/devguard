@@ -65,7 +65,8 @@ type PartialFingerprints struct {
 	CommitMessage string `json:"commitMessage"`
 }
 type Fingerprints struct {
-	MatchBasedID string `json:"matchBasedId/v1"`
+	MatchBasedID          string `json:"matchBasedId/v1"`
+	CalculatedFingerprint string `json:"calculatedFingerprint/v1"`
 }
 
 type Properties struct {

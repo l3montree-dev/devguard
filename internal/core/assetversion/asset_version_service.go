@@ -90,7 +90,7 @@ func preferMarkdown(text common.Text) string {
 
 func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error) {
 
-	firstPartyVulnerabilities := []models.FirstPartyVuln{}
+	firstPartyVulnerabilitiesMap := make(map[string]models.FirstPartyVuln)
 
 	ruleMap := make(map[string]common.Rule)
 	for _, run := range sarifScan.Runs {
@@ -128,22 +128,61 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 				firstPartyVulnerability.Date = result.PartialFingerprints.Date
 			}
 
-			if len(result.Locations) > 0 {
-				firstPartyVulnerability.URI = result.Locations[0].PhysicalLocation.ArtifactLocation.URI
-				firstPartyVulnerability.StartLine = result.Locations[0].PhysicalLocation.Region.StartLine
-				firstPartyVulnerability.StartColumn = result.Locations[0].PhysicalLocation.Region.StartColumn
-				firstPartyVulnerability.EndLine = result.Locations[0].PhysicalLocation.Region.EndLine
-				firstPartyVulnerability.EndColumn = result.Locations[0].PhysicalLocation.Region.EndColumn
-				firstPartyVulnerability.Snippet = result.Locations[0].PhysicalLocation.Region.Snippet.Text
+			var hash string
+			if result.Fingerprints != nil {
+				if result.Fingerprints.CalculatedFingerprint != "" {
+					firstPartyVulnerability.Fingerprint = result.Fingerprints.CalculatedFingerprint
+				}
 			}
 
-			firstPartyVulnerabilities = append(firstPartyVulnerabilities, firstPartyVulnerability)
+			if len(result.Locations) > 0 {
+				firstPartyVulnerability.URI = result.Locations[0].PhysicalLocation.ArtifactLocation.URI
+
+				snippetContent := models.SnippetContent{
+					StartLine:   result.Locations[0].PhysicalLocation.Region.StartLine,
+					EndLine:     result.Locations[0].PhysicalLocation.Region.EndLine,
+					StartColumn: result.Locations[0].PhysicalLocation.Region.StartColumn,
+					EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
+					Snippet:     result.Locations[0].PhysicalLocation.Region.Snippet.Text,
+				}
+
+				hash = firstPartyVulnerability.CalculateHash()
+				if existingVuln, ok := firstPartyVulnerabilitiesMap[hash]; ok {
+					snippetContents, err := existingVuln.FromJSONSnippetContents()
+					if err != nil {
+						return 0, 0, []models.FirstPartyVuln{}, errors.Wrap(err, "could not parse existing snippet contents")
+					}
+					snippetContents.Snippets = append(snippetContents.Snippets, snippetContent)
+					firstPartyVulnerability.SnippetContents, err = snippetContents.ToJSON()
+					if err != nil {
+						return 0, 0, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
+					}
+
+				} else {
+
+					snippetContents := models.SnippetContents{
+						Snippets: []models.SnippetContent{snippetContent},
+					}
+					var err error
+					firstPartyVulnerability.SnippetContents, err = snippetContents.ToJSON()
+					if err != nil {
+						return 0, 0, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
+					}
+
+					firstPartyVulnerabilitiesMap[hash] = firstPartyVulnerability
+
+				}
+
+				fmt.Println("snip", snippetContent.Snippet)
+
+			}
+
 		}
 	}
-
-	firstPartyVulnerabilities = utils.UniqBy(firstPartyVulnerabilities, func(f models.FirstPartyVuln) string {
-		return f.CalculateHash()
-	})
+	var firstPartyVulnerabilities []models.FirstPartyVuln
+	for _, vuln := range firstPartyVulnerabilitiesMap {
+		firstPartyVulnerabilities = append(firstPartyVulnerabilities, vuln)
+	}
 
 	amountOpened, amountClosed, amountExisting, err := s.handleFirstPartyVulnResult(userID, scannerID, assetVersion, firstPartyVulnerabilities, asset)
 	if err != nil {
@@ -179,24 +218,48 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	fixedVulns := comparison.OnlyInA
 	newVulns := comparison.OnlyInB
 
+	inBoth := comparison.InBoth // these are the vulns that are already in the database, but we need to update them
+
+	updatedFirstPartyVulns := make([]models.FirstPartyVuln, 0)
+
+	for i := range inBoth {
+		for n := range vulns {
+			if inBoth[i].ID == vulns[n].ID {
+				// we found a new vuln that is already in the database, we need to update it
+				inBoth[i].SnippetContents = vulns[n].SnippetContents
+				updatedFirstPartyVulns = append(updatedFirstPartyVulns, inBoth[i])
+			}
+		}
+	}
+
 	// get a transaction
 	if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
 		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, newVulns); err != nil {
 			// this will cancel the transaction
 			return err
 		}
-		return s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, fixedVulns)
+		if err := s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, fixedVulns); err != nil {
+			return err
+		}
+
+		// update existing first party vulns within the transaction
+		for _, v := range updatedFirstPartyVulns {
+			if err := s.firstPartyVulnRepository.Save(tx, &v); err != nil {
+				slog.Error("could not update existing first party vulns", "err", err)
+				return err
+			}
+		}
+		return nil
 	}); err != nil {
 		slog.Error("could not save vulns", "err", err)
 		return 0, 0, []models.FirstPartyVuln{}, err
 	}
-
 	// the amount we actually fixed, is the amount that was open before
 	fixedVulns = utils.Filter(fixedVulns, func(vuln models.FirstPartyVuln) bool {
 		return vuln.State == models.VulnStateOpen
 	})
 
-	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
+	return len(newVulns), len(fixedVulns), append(newVulns, inBoth...), nil
 }
 
 func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {

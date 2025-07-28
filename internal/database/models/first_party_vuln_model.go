@@ -2,7 +2,7 @@ package models
 
 import (
 	"fmt"
-	"strconv"
+	"log/slog"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -14,6 +14,7 @@ import (
 
 type FirstPartyVuln struct {
 	Vulnerability
+	Fingerprint     string         `json:"fingerprint" gorm:"type:text;"`
 	RuleID          string         `json:"ruleId"`
 	RuleName        string         `json:"ruleName"`
 	RuleDescription string         `json:"ruleDescription"`
@@ -21,16 +22,61 @@ type FirstPartyVuln struct {
 	RuleHelpURI     string         `json:"ruleHelpUri"`
 	RuleProperties  database.JSONB `json:"ruleProperties" gorm:"type:jsonb"`
 
-	URI         string `json:"uri"`
-	StartLine   int    `json:"startLine" `
-	StartColumn int    `json:"startColumn"`
+	URI string `json:"uri"`
+
+	Commit string `json:"commit"`
+	Email  string `json:"email"`
+	Author string `json:"author"`
+	Date   string `json:"date"`
+
+	SnippetContents database.JSONB `json:"snippetContents" gorm:"type:jsonb;snippet_contents"` // SnippetContents
+}
+
+type SnippetContents struct {
+	Snippets []SnippetContent `json:"snippets"`
+}
+
+type SnippetContent struct {
+	StartLine   int    `json:"startLine"`
 	EndLine     int    `json:"endLine"`
+	StartColumn int    `json:"startColumn"`
 	EndColumn   int    `json:"endColumn"`
 	Snippet     string `json:"snippet"`
-	Commit      string `json:"commit"`
-	Email       string `json:"email"`
-	Author      string `json:"author"`
-	Date        string `json:"date"`
+}
+
+func (s SnippetContents) ToJSON() (database.JSONB, error) {
+	if len(s.Snippets) == 0 {
+		return database.JSONB{}, fmt.Errorf("no snippets to convert to JSON")
+	}
+	return database.JSONbFromStruct(s)
+}
+
+func (firstPartyVuln *FirstPartyVuln) FromJSONSnippetContents() (SnippetContents, error) {
+
+	res := SnippetContents{
+		Snippets: []SnippetContent{},
+	}
+
+	snippetsInterface := firstPartyVuln.SnippetContents["snippets"].([]any)
+	if snippetsInterface == nil {
+		return res, fmt.Errorf("no snippets found in SnippetContents")
+	}
+	for _, snippetAny := range snippetsInterface {
+		snippet, ok := snippetAny.(map[string]any)
+		if !ok {
+			continue
+		}
+		sc := SnippetContent{
+			StartLine:   int(snippet["startLine"].(float64)),
+			EndLine:     int(snippet["endLine"].(float64)),
+			StartColumn: int(snippet["startColumn"].(float64)),
+			EndColumn:   int(snippet["endColumn"].(float64)),
+			Snippet:     snippet["snippet"].(string),
+		}
+		res.Snippets = append(res.Snippets, sc)
+	}
+
+	return res, nil
 }
 
 var _ Vuln = &FirstPartyVuln{}
@@ -44,12 +90,13 @@ func (firstPartyVuln FirstPartyVuln) TableName() string {
 }
 
 func (firstPartyVuln *FirstPartyVuln) CalculateHash() string {
-	startLineStr := strconv.Itoa(firstPartyVuln.StartLine)
-	endLineStr := strconv.Itoa(firstPartyVuln.EndLine)
-	startColumnStr := strconv.Itoa(firstPartyVuln.StartColumn)
-	endColumnStr := strconv.Itoa(firstPartyVuln.EndColumn)
-	stringToHash := startLineStr + "/" + endLineStr + "/" + startColumnStr + "/" + endColumnStr + "/" + firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName
-	hash := utils.HashString(stringToHash)
+
+	hash := firstPartyVuln.Fingerprint
+	if hash == "" {
+		stringToHash := firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName
+
+		hash = utils.HashString(stringToHash)
+	}
 	firstPartyVuln.ID = hash
 	return hash
 }
@@ -61,6 +108,13 @@ func (firstPartyVuln *FirstPartyVuln) BeforeSave(tx *gorm.DB) (err error) {
 }
 
 func (firstPartyVuln *FirstPartyVuln) RenderADF() jira.ADF {
+
+	snippets, err := firstPartyVuln.FromJSONSnippetContents()
+	if err != nil {
+		slog.Error("could not parse snippet contents", "error", err)
+		return jira.ADF{}
+	}
+
 	adf := jira.ADF{
 		Version: 1,
 		Type:    "doc",
@@ -77,13 +131,13 @@ func (firstPartyVuln *FirstPartyVuln) RenderADF() jira.ADF {
 		},
 	}
 
-	if firstPartyVuln.Snippet != "" {
+	for _, snippet := range snippets.Snippets {
 		adf.Content = append(adf.Content, jira.ADFContent{
 			Type: "codeBlock",
 			Content: []jira.ADFContent{
 				{
 					Type: "text",
-					Text: firstPartyVuln.Snippet,
+					Text: snippet.Snippet,
 				},
 			},
 		})
@@ -91,9 +145,6 @@ func (firstPartyVuln *FirstPartyVuln) RenderADF() jira.ADF {
 
 	if firstPartyVuln.URI != "" {
 		link := strings.TrimPrefix(firstPartyVuln.URI, "/")
-		if firstPartyVuln.StartLine != 0 {
-			link += fmt.Sprintf("#L%d", firstPartyVuln.StartLine)
-		}
 		adf.Content = append(adf.Content, jira.ADFContent{
 			Type: "paragraph",
 			Content: []jira.ADFContent{
@@ -114,12 +165,19 @@ func (firstPartyVuln *FirstPartyVuln) RenderADF() jira.ADF {
 func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {
 	var str strings.Builder
 	str.WriteString(*firstPartyVuln.Message)
-	// check if there is a filename and snippet - if so, we can render that as well
-	if firstPartyVuln.Snippet != "" {
+
+	snippet, err := firstPartyVuln.FromJSONSnippetContents()
+	if err != nil {
+		slog.Error("could not parse snippet contents", "error", err)
+		return str.String()
+	}
+
+	for _, snippet := range snippet.Snippets {
+		// check if there is a filename and snippet - if so, we can render that as well
 		str.WriteString("\n\n")
 		str.WriteString("```")
 		str.WriteString("\n")
-		str.WriteString(firstPartyVuln.Snippet)
+		str.WriteString(snippet.Snippet)
 		str.WriteString("\n")
 		str.WriteString("```")
 	}
@@ -127,12 +185,8 @@ func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {
 	if firstPartyVuln.URI != "" {
 		str.WriteString("\n\n")
 		str.WriteString("File: ")
-		var link string
-		if firstPartyVuln.StartLine != 0 {
-			link = fmt.Sprintf("[%s](%s%s)", firstPartyVuln.URI, strings.TrimPrefix(firstPartyVuln.URI, "/"), fmt.Sprintf("#L%d", firstPartyVuln.StartLine))
-		} else {
-			link = fmt.Sprintf("[%s](%s)", firstPartyVuln.URI, strings.TrimPrefix(firstPartyVuln.URI, "/"))
-		}
+
+		link := fmt.Sprintf("[%s](%s)", firstPartyVuln.URI, strings.TrimPrefix(firstPartyVuln.URI, "/"))
 
 		str.WriteString(link)
 		str.WriteString("\n")
