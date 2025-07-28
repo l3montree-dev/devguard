@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/stretchr/testify/assert"
@@ -11,26 +12,40 @@ import (
 
 func TestRenderMarkdown(t *testing.T) {
 	t.Run("Normal Vuln with a valid line", func(t *testing.T) {
-		firstPartyVuln := models.FirstPartyVuln{
-			Snippet:       "TestSnippet",
-			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message")},
-			URI:           "the/uri/of/the/vuln",
-			StartLine:     64,
+		snippetContents := models.SnippetContents{
+			Snippets: []models.SnippetContent{
+				{
+					StartLine:   64,
+					EndLine:     64,
+					StartColumn: 1,
+					EndColumn:   20,
+					Snippet:     "TestSnippet",
+				},
+			},
 		}
-		result := firstPartyVuln.RenderMarkdown()
-		assert.Equal(t, "A detailed Message\n\n```\nTestSnippet\n```\n\nFile: [the/uri/of/the/vuln](the/uri/of/the/vuln#L64)\n\n--- \n### Interact with this vulnerability\nYou can use the following slash commands to interact with this vulnerability:\n\n#### 👍   Reply with this to acknowledge and accept the identified risk.\n```text\n/accept I accept the risk of this vulnerability, because ...\n```\n\n#### ⚠️ Mark the risk as false positive: Use this command if you believe the reported vulnerability is not actually a valid issue.\n```text\n/false-positive The vulnerability is not exploitable in this context.\n```\n\n#### 🔁  Reopen the risk: Use this command to reopen a previously closed or accepted vulnerability.\n```text\n/reopen ... \n```\n", result)
-	})
-	t.Run("vuln without a valid line", func(t *testing.T) {
-		firstPartyVuln := models.FirstPartyVuln{
-			Snippet:       "TestSnippet",
-			Vulnerability: models.Vulnerability{Message: utils.Ptr("A detailed Message")},
-			URI:           "the/uri/of/the/vuln",
-			StartLine:     0,
-		}
-		result := firstPartyVuln.RenderMarkdown()
-		assert.Equal(t, "A detailed Message\n\n```\nTestSnippet\n```\n\nFile: [the/uri/of/the/vuln](the/uri/of/the/vuln)\n\n--- \n### Interact with this vulnerability\nYou can use the following slash commands to interact with this vulnerability:\n\n#### 👍   Reply with this to acknowledge and accept the identified risk.\n```text\n/accept I accept the risk of this vulnerability, because ...\n```\n\n#### ⚠️ Mark the risk as false positive: Use this command if you believe the reported vulnerability is not actually a valid issue.\n```text\n/false-positive The vulnerability is not exploitable in this context.\n```\n\n#### 🔁  Reopen the risk: Use this command to reopen a previously closed or accepted vulnerability.\n```text\n/reopen ... \n```\n", result)
-	})
+		snippetJSON, err := snippetContents.ToJSON()
+		assert.NoError(t, err)
 
+		firstPartyVuln := models.FirstPartyVuln{
+			SnippetContents: snippetJSON,
+			Vulnerability:   models.Vulnerability{Message: utils.Ptr("A detailed Message")},
+			URI:             "the/uri/of/the/vuln",
+		}
+		result := firstPartyVuln.RenderMarkdown()
+		assert.Contains(t, result, "A detailed Message")
+		assert.Contains(t, result, "TestSnippet")
+		assert.Contains(t, result, "File: [the/uri/of/the/vuln](the/uri/of/the/vuln)")
+	})
+	t.Run("vuln without snippet contents", func(t *testing.T) {
+		firstPartyVuln := models.FirstPartyVuln{
+			SnippetContents: database.JSONB{},
+			Vulnerability:   models.Vulnerability{Message: utils.Ptr("A detailed Message")},
+			URI:             "the/uri/of/the/vuln",
+		}
+		result := firstPartyVuln.RenderMarkdown()
+		assert.Contains(t, result, "A detailed Message")
+		assert.Contains(t, result, "File: [the/uri/of/the/vuln](the/uri/of/the/vuln)")
+	})
 }
 func TestTableName(t *testing.T) {
 	t.Run("Normal Vuln with a valid line", func(t *testing.T) {
@@ -49,14 +64,12 @@ func TestGetType(t *testing.T) {
 func TestCalculateHash(t *testing.T) {
 	t.Run("Normal Vuln with a valid line", func(t *testing.T) {
 		firstPartyVuln := models.FirstPartyVuln{
-			StartLine:     0,
-			EndLine:       2,
-			StartColumn:   2,
-			EndColumn:     8,
 			RuleID:        "no smoking on airplanes",
+			URI:           "",
 			Vulnerability: models.Vulnerability{AssetID: uuid.New(), AssetVersionName: "bombardini krokodili"},
 		}
-		assert.Equal(t, utils.HashString("0"+"/"+"2"+"/"+"2"+"/"+"8"+"/"+"no smoking on airplanes"+"/"+"/"+"/"+firstPartyVuln.AssetID.String()+"/"+"bombardini krokodili"), firstPartyVuln.CalculateHash())
+		expectedHash := utils.HashString(firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName)
+		assert.Equal(t, expectedHash, firstPartyVuln.CalculateHash())
 	})
 }
 
