@@ -31,7 +31,7 @@ func printSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, asset
 		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 80)})
 		if vuln.URI != "" {
 			tw.AppendRow(table.Row{"File", green.Sprint(vuln.URI)})
-			tw.AppendRow(table.Row{"Line", vuln.StartLine})
+
 		}
 		tw.AppendSeparator()
 	}

@@ -74,7 +74,7 @@ func secretScan(p string) (*common.SarifResult, error) {
 	}
 
 	// obfuscate founded secrets
-	obfuscateSecret(&sarifScan)
+	obfuscateSecretAndAddFingerprint(&sarifScan)
 
 	return &sarifScan, nil
 }
