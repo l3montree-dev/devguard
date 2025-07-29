@@ -132,7 +132,7 @@ func (c *integrationController) TestAndSaveWebhookIntegration(ctx core.Context) 
 		return ctx.JSON(404, "Webhook integration not enabled")
 	}
 
-	if err := wh.(*webhook.WebhookIntegration).TestAndSave(ctx); err != nil {
+	if err := wh.(*webhook.WebhookIntegration).Save(ctx); err != nil {
 		slog.Error("could not test GitLab integration", "err", err)
 		return err
 	}

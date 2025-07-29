@@ -113,7 +113,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	}
 
 	// update the sbom in the database in parallel
-	err = s.assetVersionService.UpdateSBOM(assetVersion, scannerID, normalizedBom)
+	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, scannerID, normalizedBom)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
@@ -133,7 +133,7 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(asset, &assetVersion, vulns, scannerID, userID)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, scannerID, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err
@@ -183,6 +183,9 @@ func (s *HTTPController) FirstPartyVulnScan(c core.Context) error {
 		return err
 	}
 
+	org := core.GetOrg(c)
+	project := core.GetProject(c)
+
 	asset := core.GetAsset(c)
 	userID := core.GetSession(c).GetUserID()
 
@@ -211,7 +214,7 @@ func (s *HTTPController) FirstPartyVulnScan(c core.Context) error {
 	}
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(asset, &assetVersion, sarifScan, scannerID, userID)
+	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(org, project, asset, &assetVersion, sarifScan, scannerID, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return c.JSON(500, map[string]string{"error": "could not handle scan result"})

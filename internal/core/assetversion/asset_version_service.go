@@ -95,7 +95,7 @@ func preferMarkdown(text common.Text) string {
 	return text.Text
 }
 
-func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error) {
+func (s *service) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error) {
 
 	firstPartyVulnerabilities := []models.FirstPartyVuln{}
 
@@ -152,7 +152,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 		return f.CalculateHash()
 	})
 
-	amountOpened, amountClosed, amountExisting, err := s.handleFirstPartyVulnResult(userID, scannerID, assetVersion, firstPartyVulnerabilities, asset)
+	amountOpened, amountClosed, amountExisting, err := s.handleFirstPartyVulnResult(userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project)
 	if err != nil {
 		return 0, 0, []models.FirstPartyVuln{}, err
 	}
@@ -166,7 +166,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
-func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset) (int, int, []models.FirstPartyVuln, error) {
+func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project) (int, int, []models.FirstPartyVuln, error) {
 	// get all existing vulns from the database - this is the old state
 	existingVulns, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
@@ -209,21 +209,10 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 			return
 		}
 
-		pro, err := s.projectRepository.GetProjectByAssetID(asset.ID)
-		if err != nil {
-			slog.Error("could not get project by asset ID", "err", err)
-			return
-		}
-		org, err := s.orgRepository.Read(pro.OrganizationID)
-		if err != nil {
-			slog.Error("could not get organization by ID", "err", err)
-			return
-		}
-
 		if err = s.thirdPartyIntegration.HandleEvent(core.FirstPartyVulnsDetectedEvent{
 			AssetVersion: core.ToAssetVersionObject(*assetVersion),
 			Asset:        core.ToAssetObject(asset),
-			Project:      core.ToProjectObject(pro),
+			Project:      core.ToProjectObject(project),
 			Org:          core.ToOrgObject(org),
 			Vulns:        utils.Map(newVulns, vuln.FirstPartyVulnToDto),
 		}); err != nil {
@@ -234,7 +223,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
 
-func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
@@ -293,22 +282,11 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 		if len(opened) == 0 {
 			return
 		}
-		pro, err := s.projectRepository.GetProjectByAssetID(asset.ID)
-		if err != nil {
-			slog.Error("could not get project by asset ID", "err", err)
-			return
-		}
-
-		org, err := s.orgRepository.Read(pro.OrganizationID)
-		if err != nil {
-			slog.Error("could not get organization by ID", "err", err)
-			return
-		}
 
 		if err = s.thirdPartyIntegration.HandleEvent(core.DependencyVulnsDetectedEvent{
 			AssetVersion: core.ToAssetVersionObject(*assetVersion),
 			Asset:        core.ToAssetObject(asset),
-			Project:      core.ToProjectObject(pro),
+			Project:      core.ToProjectObject(project),
 			Org:          core.ToOrgObject(org),
 
 			Vulns: utils.Map(opened, vuln.DependencyVulnToDto),
@@ -483,7 +461,7 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 	return res
 }
 
-func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
+func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
 
 	sbomUpdated := false
 
@@ -603,28 +581,11 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 	go func(sbomUpdated bool) {
 
 		if sbomUpdated {
-			asset, err := s.assetRepository.Read(assetVersion.AssetID)
-			if err != nil {
-				slog.Error("could not read asset", "assetID", assetVersion.AssetID, "err", err)
-				return
-			}
-
-			pro, err := s.projectRepository.GetProjectByAssetID(asset.ID)
-			if err != nil {
-				slog.Error("could not get project by asset ID", "err", err)
-				return
-			}
-
-			org, err := s.orgRepository.Read(pro.OrganizationID)
-			if err != nil {
-				slog.Error("could not get organization by ID", "err", err)
-				return
-			}
 
 			if err = s.thirdPartyIntegration.HandleEvent(core.SBOMCreatedEvent{
 				AssetVersion: core.ToAssetVersionObject(assetVersion),
 				Asset:        core.ToAssetObject(asset),
-				Project:      core.ToProjectObject(pro),
+				Project:      core.ToProjectObject(project),
 				Org:          core.ToOrgObject(org),
 				SBOM:         sbom.GetCdxBom(),
 			}); err != nil {

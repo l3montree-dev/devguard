@@ -98,12 +98,11 @@ func (w *WebhookIntegration) Update(ctx core.Context) error {
 		Name:        *webhookIntegration.Name,
 		Description: *webhookIntegration.Description,
 		URL:         webhookIntegration.URL,
-		Secret:      *webhookIntegration.Secret,
 		SbomEnabled: webhookIntegration.SbomEnabled,
 		VulnEnabled: webhookIntegration.VulnEnabled,
 	})
 }
-func (w *WebhookIntegration) TestAndSave(ctx core.Context) error {
+func (w *WebhookIntegration) Save(ctx core.Context) error {
 	var data struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
@@ -148,7 +147,6 @@ func (w *WebhookIntegration) TestAndSave(ctx core.Context) error {
 		Name:        *webhookIntegration.Name,
 		Description: *webhookIntegration.Description,
 		URL:         webhookIntegration.URL,
-		Secret:      *webhookIntegration.Secret,
 		SbomEnabled: webhookIntegration.SbomEnabled,
 		VulnEnabled: webhookIntegration.VulnEnabled,
 	})

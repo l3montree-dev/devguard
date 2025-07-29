@@ -20,7 +20,6 @@ type WebhookIntegrationDTO struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	URL         string `json:"url"`
-	Secret      string `json:"secret"`
 	SbomEnabled bool   `json:"sbomEnabled"`
 	VulnEnabled bool   `json:"vulnEnabled"`
 }

@@ -212,7 +212,6 @@ func obfuscateWebhookIntegrations(integration models.WebhookIntegration) common.
 		Name:        *integration.Name,
 		Description: *integration.Description,
 		URL:         integration.URL,
-		Secret:      *integration.Secret,
 		SbomEnabled: integration.SbomEnabled,
 		VulnEnabled: integration.VulnEnabled,
 	}

@@ -58,7 +58,7 @@ func (c *webhookClient) CreateRequest(method, url string, body io.Reader) (*http
 	}
 
 	if c.Secret != nil {
-		req.Header.Set("X-DevGuard-Token", *c.Secret)
+		req.Header.Set("X-Webhook-Secret", *c.Secret)
 	}
 
 	req.Header.Set("Content-Type", "application/json")

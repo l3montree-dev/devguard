@@ -302,7 +302,6 @@ func (projectController *controller) getWebhooks(c core.Context) ([]common.Webho
 			Name:        *w.Name,
 			Description: *w.Description,
 			URL:         w.URL,
-			Secret:      *w.Secret,
 			SbomEnabled: w.SbomEnabled,
 			VulnEnabled: w.VulnEnabled,
 		}
