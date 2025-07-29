@@ -42,6 +42,7 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 	statisticsRepository := repositories.NewStatisticsRepository(db)
 	assetRiskHistoryRepository := repositories.NewAssetRiskHistoryRepository(db)
 	projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(db)
+	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
 
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
 	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
@@ -60,7 +61,8 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnerabilityRepository, vulnEventRepository, assetRepository)
 	depsDevService := vulndb.NewDepsDevService()
-	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository)
+	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
+	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
 
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration)
 

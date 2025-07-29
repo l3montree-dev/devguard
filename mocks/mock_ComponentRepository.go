@@ -925,7 +925,7 @@ func (_c *ComponentRepository_LoadComponents_Call) RunAndReturn(run func(tx core
 }
 
 // LoadComponentsWithProject provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseOverwrite, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+func (_mock *ComponentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
 	ret := _mock.Called(tx, overwrittenLicenses, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
@@ -934,15 +934,15 @@ func (_mock *ComponentRepository) LoadComponentsWithProject(tx core.DB, overwrit
 
 	var r0 core.Paged[models.ComponentDependency]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.LicenseOverwrite, string, uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.ComponentDependency], error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.LicenseRisk, string, uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.ComponentDependency], error)); ok {
 		return returnFunc(tx, overwrittenLicenses, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.LicenseOverwrite, string, uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.ComponentDependency]); ok {
+	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.LicenseRisk, string, uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.ComponentDependency]); ok {
 		r0 = returnFunc(tx, overwrittenLicenses, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)
 	} else {
 		r0 = ret.Get(0).(core.Paged[models.ComponentDependency])
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, []models.LicenseOverwrite, string, uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(core.DB, []models.LicenseRisk, string, uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
 		r1 = returnFunc(tx, overwrittenLicenses, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)
 	} else {
 		r1 = ret.Error(1)
@@ -957,7 +957,7 @@ type ComponentRepository_LoadComponentsWithProject_Call struct {
 
 // LoadComponentsWithProject is a helper method to define mock.On call
 //   - tx core.DB
-//   - overwrittenLicenses []models.LicenseOverwrite
+//   - overwrittenLicenses []models.LicenseRisk
 //   - assetVersionName string
 //   - assetID uuid.UUID
 //   - scannerID string
@@ -969,15 +969,15 @@ func (_e *ComponentRepository_Expecter) LoadComponentsWithProject(tx interface{}
 	return &ComponentRepository_LoadComponentsWithProject_Call{Call: _e.mock.On("LoadComponentsWithProject", tx, overwrittenLicenses, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)}
 }
 
-func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(tx core.DB, overwrittenLicenses []models.LicenseOverwrite, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *ComponentRepository_LoadComponentsWithProject_Call {
+func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *ComponentRepository_LoadComponentsWithProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
 			arg0 = args[0].(core.DB)
 		}
-		var arg1 []models.LicenseOverwrite
+		var arg1 []models.LicenseRisk
 		if args[1] != nil {
-			arg1 = args[1].([]models.LicenseOverwrite)
+			arg1 = args[1].([]models.LicenseRisk)
 		}
 		var arg2 string
 		if args[2] != nil {
@@ -1027,7 +1027,7 @@ func (_c *ComponentRepository_LoadComponentsWithProject_Call) Return(paged core.
 	return _c
 }
 
-func (_c *ComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run func(tx core.DB, overwrittenLicenses []models.LicenseOverwrite, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error)) *ComponentRepository_LoadComponentsWithProject_Call {
+func (_c *ComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run func(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error)) *ComponentRepository_LoadComponentsWithProject_Call {
 	_c.Call.Return(run)
 	return _c
 }

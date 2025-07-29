@@ -179,22 +179,22 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 	RIGHT JOIN component_dependencies as cd 
 	ON c.purl = cd.dependency_purl 
 	WHERE EXISTS 
-	(SELECT license_id FROM license_overwrite as lo WHERE lo.component_purl = c.purl)
+	(SELECT final_license_decision FROM license_risks as lr WHERE lr.component_purl = c.purl AND lr.state = ?)
 	AND asset_version_name = ?
 	AND asset_id = ? 
 	GROUP BY c.license`,
-		assetVersionName, assetID)
+		models.VulnStateFixed, assetVersionName, assetID)
 	//Components WITHOUT an overwrite
 	otherLicensesQuery := c.GetDB(tx).Raw(`SELECT c.license , COUNT(c.license) as count 
 	FROM components as c 
 	RIGHT JOIN component_dependencies as cd 
 	ON c.purl = cd.dependency_purl 
 	WHERE NOT EXISTS 
-	(SELECT license_id FROM license_overwrite as lo WHERE lo.component_purl = c.purl)
+	(SELECT final_license_decision FROM license_risks as lr WHERE lr.component_purl = c.purl AND lr.state = ?)
 	AND asset_version_name = ?
 	AND asset_id = ? 
 	GROUP BY c.license`,
-		assetVersionName, assetID)
+		models.VulnStateFixed, assetVersionName, assetID)
 
 	//We then still need to filter for the right scanner
 	if scannerID != "" {
@@ -244,7 +244,7 @@ func licensesToMap(licenses []struct {
 	return licensesMap
 }
 
-func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseOverwrite, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
 	var componentDependencies []models.ComponentDependency
 
 	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
@@ -288,7 +288,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 	// convert all overwritten licenses to a map which maps a purl to a new license
 	isPurlOverwrittenMap := make(map[string]string, len(overwrittenLicenses))
 	for i := range overwrittenLicenses {
-		isPurlOverwrittenMap[overwrittenLicenses[i].ComponentPurl] = overwrittenLicenses[i].LicenseID
+		isPurlOverwrittenMap[overwrittenLicenses[i].ComponentPurl] = overwrittenLicenses[i].FinalLicenseDecision
 	}
 
 	// now we check if a given component (dependency) is present in the overwrittenMap eg. it needs to be overwritten and flagged as such

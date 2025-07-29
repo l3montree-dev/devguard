@@ -16,6 +16,7 @@ type VulnType string
 const (
 	VulnTypeDependencyVuln VulnType = "dependencyVuln"
 	VulnTypeFirstPartyVuln VulnType = "firstPartyVuln"
+	VulnTypeLicenseRisk    VulnType = "licenseRisk"
 )
 
 const (
@@ -148,6 +149,7 @@ func (event VulnEvent) Apply(vuln Vuln) {
 		vuln.SetRawRiskAssessment(f)
 		vuln.SetRiskRecalculatedAt(time.Now())
 	}
+
 }
 
 func NewAcceptedEvent(vulnID string, vulnType VulnType, userID, justification string) VulnEvent {

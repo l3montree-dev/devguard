@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -38,8 +37,8 @@ func (_m *ComponentService) EXPECT() *ComponentService_Expecter {
 }
 
 // GetAndSaveLicenseInformation provides a mock function for the type ComponentService
-func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Component, error) {
-	ret := _mock.Called(assetVersionName, assetID, scannerID)
+func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error) {
+	ret := _mock.Called(assetVersion, scannerID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAndSaveLicenseInformation")
@@ -47,18 +46,18 @@ func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersionName str
 
 	var r0 []models.Component
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) ([]models.Component, error)); ok {
-		return returnFunc(assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string) ([]models.Component, error)); ok {
+		return returnFunc(assetVersion, scannerID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, string) []models.Component); ok {
-		r0 = returnFunc(assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string) []models.Component); ok {
+		r0 = returnFunc(assetVersion, scannerID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Component)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(assetVersionName, assetID, scannerID)
+	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion, string) error); ok {
+		r1 = returnFunc(assetVersion, scannerID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -71,31 +70,25 @@ type ComponentService_GetAndSaveLicenseInformation_Call struct {
 }
 
 // GetAndSaveLicenseInformation is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
+//   - assetVersion models.AssetVersion
 //   - scannerID string
-func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(assetVersionName interface{}, assetID interface{}, scannerID interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
-	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersionName, assetID, scannerID)}
+func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(assetVersion interface{}, scannerID interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
+	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersion, scannerID)}
 }
 
-func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scannerID string)) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersion models.AssetVersion, scannerID string)) *ComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
+		var arg0 models.AssetVersion
 		if args[0] != nil {
-			arg0 = args[0].(string)
+			arg0 = args[0].(models.AssetVersion)
 		}
-		var arg1 uuid.UUID
+		var arg1 string
 		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg1 = args[1].(string)
 		}
 		run(
 			arg0,
 			arg1,
-			arg2,
 		)
 	})
 	return _c
@@ -106,7 +99,7 @@ func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Return(components 
 	return _c
 }
 
-func (_c *ComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.Component, error)) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *ComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error)) *ComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Return(run)
 	return _c
 }

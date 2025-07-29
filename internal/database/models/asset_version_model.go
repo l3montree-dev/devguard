@@ -33,8 +33,8 @@ type AssetVersion struct {
 	Slug            string                `json:"slug" gorm:"type:text;not null;type:text;"`
 	DependencyVulns []DependencyVuln      `json:"dependencyVulns" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 	Type            AssetVersionType      `json:"type" gorm:"type:text;not null;"`
-	Components      []ComponentDependency `json:"components" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;"`
-	SupplyChains    []SupplyChain         `json:"supplyChains" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;"`
+	Components      []ComponentDependency `json:"components" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
+	SupplyChains    []SupplyChain         `json:"supplyChains" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
 
 	LastHistoryUpdate *time.Time
 	SigningPubKey     *string `json:"signingPubKey" gorm:"type:text;"`

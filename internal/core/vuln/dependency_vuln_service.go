@@ -296,7 +296,6 @@ func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, depend
 
 func (s *service) UpdateDependencyVulnState(tx core.DB, assetID uuid.UUID, userID string, dependencyVuln *models.DependencyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType, assetVersionName string) (models.VulnEvent, error) {
 	if tx == nil {
-
 		var ev models.VulnEvent
 		var err error
 		// we are not part of a parent transaction - create a new one

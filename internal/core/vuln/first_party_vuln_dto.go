@@ -11,6 +11,7 @@ type FirstPartyVulnDTO struct {
 	ID                   string           `json:"id"`
 	ScannerIDs           string           `json:"scannerIds"`
 	Message              *string          `json:"message"`
+	AssetVersionName     string           `json:"assetVersionName"`
 	AssetID              string           `json:"assetId"`
 	State                models.VulnState `json:"state"`
 	RuleID               string           `json:"ruleId"`
@@ -47,6 +48,7 @@ func FirstPartyVulnToDto(f models.FirstPartyVuln) FirstPartyVulnDTO {
 		ID:                   f.ID,
 		ScannerIDs:           f.ScannerIDs,
 		Message:              f.Message,
+		AssetVersionName:     f.AssetVersionName,
 		AssetID:              f.AssetID.String(),
 		State:                f.State,
 		RuleID:               f.RuleID,
