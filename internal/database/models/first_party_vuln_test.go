@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/stretchr/testify/assert"
@@ -37,11 +36,19 @@ func TestRenderMarkdown(t *testing.T) {
 		assert.Contains(t, result, "File: [the/uri/of/the/vuln](the/uri/of/the/vuln)")
 	})
 	t.Run("vuln without snippet contents", func(t *testing.T) {
+		snippetContents := models.SnippetContents{
+			Snippets: []models.SnippetContent{
+				{},
+			},
+		}
+		snippetJSON, err := snippetContents.ToJSON()
+		assert.NoError(t, err)
 		firstPartyVuln := models.FirstPartyVuln{
-			SnippetContents: database.JSONB{},
+			SnippetContents: snippetJSON,
 			Vulnerability:   models.Vulnerability{Message: utils.Ptr("A detailed Message")},
 			URI:             "the/uri/of/the/vuln",
 		}
+
 		result := firstPartyVuln.RenderMarkdown()
 		assert.Contains(t, result, "A detailed Message")
 		assert.Contains(t, result, "File: [the/uri/of/the/vuln](the/uri/of/the/vuln)")
