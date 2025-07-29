@@ -169,11 +169,8 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 						return 0, 0, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
 					}
 
-					firstPartyVulnerabilitiesMap[hash] = firstPartyVulnerability
-
 				}
-
-				fmt.Println("snip", snippetContent.Snippet)
+				firstPartyVulnerabilitiesMap[hash] = firstPartyVulnerability
 
 			}
 
