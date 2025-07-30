@@ -150,13 +150,7 @@ func (s *service) ListProjectsByOrganizationID(organizationID uuid.UUID) ([]mode
 	return s.projectRepository.GetByOrgID(organizationID)
 }
 
-func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) {
-	// get all projects the user has at least read access to
-	rbac := core.GetRBAC(c)
-	projectsIdsStr, err := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
-	if err != nil {
-		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
-	}
+func (s *service) projectsForUser(c core.Context, projectsIdsStr []string) ([]uuid.UUID, *uuid.UUID, error) {
 
 	// extract the project ids from the roles
 	projectIDs := make(map[uuid.UUID]struct{})
@@ -172,7 +166,7 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 	if queryParentID != "" {
 		tmp, err := uuid.Parse(queryParentID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		parentID = &tmp
@@ -181,6 +175,50 @@ func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) 
 	projectIDsSlice := make([]uuid.UUID, 0, len(projectIDs))
 	for projectID := range projectIDs {
 		projectIDsSlice = append(projectIDsSlice, projectID)
+	}
+
+	return projectIDsSlice, parentID, nil
+}
+
+func (s *service) ListAllowedProjectsPaged(c core.Context) (core.Paged[models.Project], error) {
+
+	pageInfo := core.GetPageInfo(c)
+	search := c.QueryParam("search")
+
+	// get all projects the user has at least read access to
+	rbac := core.GetRBAC(c)
+	projectIDs, err := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
+	if err != nil {
+		return core.Paged[models.Project]{}, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
+	}
+
+	projectsIdsStr := projectIDs
+
+	projectIDsSlice, parentID, err := s.projectsForUser(c, projectsIdsStr)
+	if err != nil {
+		return core.Paged[models.Project]{}, err
+	}
+
+	projects, err := s.projectRepository.ListPaged(projectIDsSlice, parentID, core.GetOrg(c).GetID(), pageInfo, search)
+
+	if err != nil {
+		return core.Paged[models.Project]{}, err
+	}
+
+	return projects, nil
+}
+
+func (s *service) ListAllowedProjects(c core.Context) ([]models.Project, error) {
+	// get all projects the user has at least read access to
+	rbac := core.GetRBAC(c)
+	projectIDs, err := rbac.GetAllProjectsForUser(core.GetSession(c).GetUserID())
+	if err != nil {
+		return nil, echo.NewHTTPError(500, "could not get projects for user").WithInternal(err)
+	}
+
+	projectIDsSlice, parentID, err := s.projectsForUser(c, projectIDs)
+	if err != nil {
+		return nil, err
 	}
 
 	projects, err := s.projectRepository.List(projectIDsSlice, parentID, core.GetOrg(c).GetID())

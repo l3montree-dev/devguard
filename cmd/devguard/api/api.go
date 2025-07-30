@@ -550,7 +550,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	//Api functions for interacting with an organization  ->  .../organizations/<organization-name>/...
 	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), externalEntityProviderRefreshMiddleware(externalEntityProviderService))
-	organizationRouter.GET("/trigger-sync", externalEntityProviderService.TriggerSync, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
+	organizationRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerSync, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
 	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
 	organizationRouter.GET("/", orgController.Read, accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
 

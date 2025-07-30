@@ -129,7 +129,8 @@ func (controller *httpController) ContentTree(ctx core.Context) error {
 	// get the organization from the context
 	organization := core.GetOrg(ctx)
 
-	ps, err := controller.projectService.ListAllowedProjects(ctx)
+	ps, err := controller.projectService.ListAllowedProjects(
+		ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
