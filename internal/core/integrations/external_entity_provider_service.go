@@ -8,6 +8,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/sync/singleflight"
 	"gorm.io/gorm/clause"
 )
 
@@ -16,6 +17,7 @@ type externalEntityProviderService struct {
 	assetRepository   core.AssetRepository
 	projectRepository core.ProjectRepository
 	rbacProvider      core.RBACProvider
+	singleFlightGroup *singleflight.Group
 }
 
 func NewExternalEntityProviderService(
@@ -29,12 +31,14 @@ func NewExternalEntityProviderService(
 		assetRepository:   assetRepository,
 		projectRepository: projectRepository,
 		rbacProvider:      rbacProvider,
+		singleFlightGroup: &singleflight.Group{},
 	}
 }
 
 func (s externalEntityProviderService) TriggerSync(c echo.Context) error {
 	org := core.GetOrg(c)
 	if org.IsExternalEntity() {
+		// Trigger the sync for the external entity provider projects
 		err := s.RefreshExternalEntityProviderProjects(c, org, core.GetSession(c).GetUserID())
 		if err != nil {
 			return echo.NewHTTPError(500, "could not trigger sync").WithInternal(err)
@@ -45,39 +49,44 @@ func (s externalEntityProviderService) TriggerSync(c echo.Context) error {
 }
 
 func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx core.Context, org models.Org, user string) error {
-	if org.ExternalEntityProviderID == nil {
-		return fmt.Errorf("organization %s does not have an external entity provider configured", org.GetID())
-	}
+	_, err, shared := s.singleFlightGroup.Do(org.ID.String()+"/"+user, func() (any, error) {
+		if org.ExternalEntityProviderID == nil {
+			return nil, fmt.Errorf("organization %s does not have an external entity provider configured", org.GetID())
+		}
 
-	domainRBAC := s.rbacProvider.GetDomainRBAC(org.GetID().String())
-	allowedProjects, err := s.getAllowedProjectsForUser(domainRBAC, user)
-	if err != nil {
-		return err
-	}
+		domainRBAC := s.rbacProvider.GetDomainRBAC(org.GetID().String())
+		allowedProjects, err := s.getAllowedProjectsForUser(domainRBAC, user)
+		if err != nil {
+			return nil, err
+		}
 
-	projects, roles, err := s.fetchExternalProjects(ctx, user, *org.ExternalEntityProviderID)
-	if err != nil {
-		return err
-	}
+		projects, roles, err := s.fetchExternalProjects(ctx, user, *org.ExternalEntityProviderID)
+		if err != nil {
+			return nil, err
+		}
 
-	created, updated, err := s.upsertProjects(org, projects, *org.ExternalEntityProviderID)
-	if err != nil {
-		return err
-	}
+		created, updated, err := s.upsertProjects(org, projects, *org.ExternalEntityProviderID)
+		if err != nil {
+			return nil, err
+		}
 
-	if err := s.enableCommunityPoliciesForNewProjects(created); err != nil {
-		return err
-	}
+		if err := s.enableCommunityPoliciesForNewProjects(created); err != nil {
+			return nil, err
+		}
 
-	projectsMap := s.createProjectsMap(created, updated)
+		projectsMap := s.createProjectsMap(created, updated)
 
-	if err := s.syncProjectsAndAssets(ctx, domainRBAC, user, projects, roles, append(created, updated...)); err != nil {
-		return err
-	}
+		if err := s.syncProjectsAndAssets(ctx, domainRBAC, user, projects, roles, append(created, updated...)); err != nil {
+			return nil, err
+		}
 
-	s.revokeAccessForRemovedProjects(domainRBAC, user, allowedProjects, projectsMap)
+		s.revokeAccessForRemovedProjects(domainRBAC, user, allowedProjects, projectsMap)
 
-	return nil
+		return nil, nil
+	})
+
+	slog.Info("external entity provider projects sync completed", "orgID", org.GetID(), "user", user, "shared", shared)
+	return err
 }
 
 func (s externalEntityProviderService) getAllowedProjectsForUser(domainRBAC core.AccessControl, user string) ([]string, error) {
