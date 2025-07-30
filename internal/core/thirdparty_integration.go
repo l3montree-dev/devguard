@@ -32,10 +32,11 @@ type User struct {
 type IntegrationID string
 
 const (
-	GitLabIntegrationID IntegrationID = "gitlab"
-	GitHubIntegrationID IntegrationID = "github"
-	AggregateID         IntegrationID = "aggregate"
-	JiraIntegrationID   IntegrationID = "jira"
+	GitLabIntegrationID  IntegrationID = "gitlab"
+	GitHubIntegrationID  IntegrationID = "github"
+	AggregateID          IntegrationID = "aggregate"
+	JiraIntegrationID    IntegrationID = "jira"
+	WebhookIntegrationID IntegrationID = "webhook"
 )
 
 type ThirdPartyIntegration interface {

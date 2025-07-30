@@ -31,6 +31,7 @@ func TestProjectCreation(t *testing.T) {
 			repositories.NewProjectRepository(db),
 			repositories.NewAssetRepository(db),
 		),
+		repositories.NewWebhookRepository(db),
 	)
 
 	org, project, _, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
