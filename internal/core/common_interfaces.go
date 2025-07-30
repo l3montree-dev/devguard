@@ -218,7 +218,7 @@ type InvitationRepository interface {
 }
 
 type ExternalEntityProviderService interface {
-	RefreshExternalEntityProviderProjects(ctx Context, casbinProvider RBACProvider, org models.Org, user string) error
+	RefreshExternalEntityProviderProjects(ctx Context, org models.Org, user string) error
 }
 
 type ProjectService interface {
@@ -412,6 +412,7 @@ type AccessControl interface {
 
 	GrantRoleInProject(subject string, role Role, project string) error
 	RevokeRoleInProject(subject string, role Role, project string) error
+	RevokeAllRolesInProjectForUser(user string, project string) error
 	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, project string) error
 
 	InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error

@@ -38,16 +38,16 @@ func (_m *ExternalEntityProviderService) EXPECT() *ExternalEntityProviderService
 }
 
 // RefreshExternalEntityProviderProjects provides a mock function for the type ExternalEntityProviderService
-func (_mock *ExternalEntityProviderService) RefreshExternalEntityProviderProjects(ctx core.Context, casbinProvider core.RBACProvider, org models.Org, user string) error {
-	ret := _mock.Called(ctx, casbinProvider, org, user)
+func (_mock *ExternalEntityProviderService) RefreshExternalEntityProviderProjects(ctx core.Context, org models.Org, user string) error {
+	ret := _mock.Called(ctx, org, user)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RefreshExternalEntityProviderProjects")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, core.RBACProvider, models.Org, string) error); ok {
-		r0 = returnFunc(ctx, casbinProvider, org, user)
+	if returnFunc, ok := ret.Get(0).(func(core.Context, models.Org, string) error); ok {
+		r0 = returnFunc(ctx, org, user)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,36 +61,30 @@ type ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call st
 
 // RefreshExternalEntityProviderProjects is a helper method to define mock.On call
 //   - ctx core.Context
-//   - casbinProvider core.RBACProvider
 //   - org models.Org
 //   - user string
-func (_e *ExternalEntityProviderService_Expecter) RefreshExternalEntityProviderProjects(ctx interface{}, casbinProvider interface{}, org interface{}, user interface{}) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
-	return &ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call{Call: _e.mock.On("RefreshExternalEntityProviderProjects", ctx, casbinProvider, org, user)}
+func (_e *ExternalEntityProviderService_Expecter) RefreshExternalEntityProviderProjects(ctx interface{}, org interface{}, user interface{}) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
+	return &ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call{Call: _e.mock.On("RefreshExternalEntityProviderProjects", ctx, org, user)}
 }
 
-func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) Run(run func(ctx core.Context, casbinProvider core.RBACProvider, org models.Org, user string)) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
+func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) Run(run func(ctx core.Context, org models.Org, user string)) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.Context
 		if args[0] != nil {
 			arg0 = args[0].(core.Context)
 		}
-		var arg1 core.RBACProvider
+		var arg1 models.Org
 		if args[1] != nil {
-			arg1 = args[1].(core.RBACProvider)
+			arg1 = args[1].(models.Org)
 		}
-		var arg2 models.Org
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(models.Org)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
+			arg2 = args[2].(string)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -101,7 +95,7 @@ func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Ca
 	return _c
 }
 
-func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) RunAndReturn(run func(ctx core.Context, casbinProvider core.RBACProvider, org models.Org, user string) error) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
+func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) RunAndReturn(run func(ctx core.Context, org models.Org, user string) error) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }

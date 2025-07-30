@@ -72,7 +72,7 @@ func accessControlMiddleware(obj core.Object, act core.Action) echo.MiddlewareFu
 				if org.IsPublic && act == core.ActionRead {
 					core.SetIsPublicRequest(ctx)
 				} else {
-					slog.Error("access denied", "user", user, "object", obj, "action", act)
+					slog.Error("access denied in accessControlMiddleware", "user", user, "object", obj, "action", act)
 					ctx.Response().WriteHeader(403)
 					return echo.NewHTTPError(403, "forbidden")
 				}
@@ -172,6 +172,7 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) core.
 						// allow READ on all objects in the project - if access is public
 						core.SetIsPublicRequest(ctx)
 					} else {
+						slog.Warn("access denied in ProjectAccess", "user", user, "object", obj, "action", act, "projectSlug", projectSlug)
 						return echo.NewHTTPError(403, "forbidden")
 					}
 				}
@@ -222,6 +223,7 @@ func projectAccessControl(projectService core.ProjectService, obj core.Object, a
 					slog.Info("public access to project", "projectSlug", projectSlug)
 					core.SetIsPublicRequest(ctx)
 				} else {
+					slog.Warn("access denied in projectAccessControl", "user", user, "object", obj, "action", act, "projectID", project.ID.String(), "projectSlug", projectSlug)
 					return echo.NewHTTPError(403, "forbidden")
 				}
 			}
@@ -250,7 +252,7 @@ func neededScope(neededScopes []string) core.MiddlewareFunc {
 	}
 }
 
-func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.ExternalEntityProviderService, rbacProvider core.RBACProvider) core.MiddlewareFunc {
+func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.ExternalEntityProviderService) core.MiddlewareFunc {
 	limiter := map[string]time.Time{}
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -264,7 +266,7 @@ func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.
 					limiter[org.GetID().String()+"/"+core.GetSession(ctx).GetUserID()] = time.Now().Add(15 * time.Minute)
 
 					go func() {
-						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(ctx, rbacProvider, org, core.GetSession(ctx).GetUserID())
+						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(ctx, org, core.GetSession(ctx).GetUserID())
 						if err != nil {
 							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", org.GetID(), "userID", core.GetSession(ctx).GetUserID())
 						} else {
@@ -355,7 +357,7 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 					core.SetIsPublicRequest(ctx)
 				} else {
 					// not allowed and not a public organization
-					slog.Error("access denied")
+					slog.Error("access denied in multiOrganizationMiddleware", "user", session.GetUserID(), "organization", organization)
 					return ctx.JSON(403, map[string]string{"error": "access denied"})
 				}
 			}
@@ -454,7 +456,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	orgService := org.NewService(orgRepository, casbinRBACProvider)
 
-	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetRepository, projectRepository)
+	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetRepository, projectRepository, casbinRBACProvider)
 
 	// init all http controllers using the repositories
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
@@ -547,7 +549,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	orgRouter.GET("/", orgController.List)
 
 	//Api functions for interacting with an organization  ->  .../organizations/<organization-name>/...
-	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), externalEntityProviderRefreshMiddleware(externalEntityProviderService, casbinRBACProvider))
+	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), externalEntityProviderRefreshMiddleware(externalEntityProviderService))
+	organizationRouter.GET("/trigger-sync", externalEntityProviderService.TriggerSync, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
 	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
 	organizationRouter.GET("/", orgController.Read, accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
 

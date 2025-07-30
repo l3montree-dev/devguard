@@ -1196,6 +1196,63 @@ func (_c *AccessControl_LinkDomainAndProjectRole_Call) RunAndReturn(run func(dom
 	return _c
 }
 
+// RevokeAllRolesInProjectForUser provides a mock function for the type AccessControl
+func (_mock *AccessControl) RevokeAllRolesInProjectForUser(user string, project string) error {
+	ret := _mock.Called(user, project)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeAllRolesInProjectForUser")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = returnFunc(user, project)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AccessControl_RevokeAllRolesInProjectForUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeAllRolesInProjectForUser'
+type AccessControl_RevokeAllRolesInProjectForUser_Call struct {
+	*mock.Call
+}
+
+// RevokeAllRolesInProjectForUser is a helper method to define mock.On call
+//   - user string
+//   - project string
+func (_e *AccessControl_Expecter) RevokeAllRolesInProjectForUser(user interface{}, project interface{}) *AccessControl_RevokeAllRolesInProjectForUser_Call {
+	return &AccessControl_RevokeAllRolesInProjectForUser_Call{Call: _e.mock.On("RevokeAllRolesInProjectForUser", user, project)}
+}
+
+func (_c *AccessControl_RevokeAllRolesInProjectForUser_Call) Run(run func(user string, project string)) *AccessControl_RevokeAllRolesInProjectForUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AccessControl_RevokeAllRolesInProjectForUser_Call) Return(err error) *AccessControl_RevokeAllRolesInProjectForUser_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AccessControl_RevokeAllRolesInProjectForUser_Call) RunAndReturn(run func(user string, project string) error) *AccessControl_RevokeAllRolesInProjectForUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RevokeRole provides a mock function for the type AccessControl
 func (_mock *AccessControl) RevokeRole(subject string, role core.Role) error {
 	ret := _mock.Called(subject, role)

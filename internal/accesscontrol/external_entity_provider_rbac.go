@@ -37,36 +37,40 @@ func (e *externalEntityProviderRBAC) HasAccess(userID string) (bool, error) {
 	return e.thirdPartyIntegration.HasAccessToExternalEntityProvider(e.ctx, e.externalEntityProviderID)
 }
 
+func (e *externalEntityProviderRBAC) RevokeAllRolesInProjectForUser(user string, project string) error {
+	return e.rootAccessControl.RevokeAllRolesInProjectForUser(user, project)
+}
+
 func (e *externalEntityProviderRBAC) InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions core.Role) error {
-	return nil
+	return e.rootAccessControl.InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions)
 }
 
 func (e *externalEntityProviderRBAC) GetAllRoles(user string) []string {
-	return []string{}
+	return e.rootAccessControl.GetAllRoles(user)
 }
 func (e *externalEntityProviderRBAC) GrantRole(subject string, role core.Role) error {
-	return nil
+	return e.rootAccessControl.GrantRole(subject, role)
 }
 func (e *externalEntityProviderRBAC) RevokeRole(subject string, role core.Role) error {
-	return nil
+	return e.rootAccessControl.RevokeRole(subject, role)
 }
 func (e *externalEntityProviderRBAC) GrantRoleInProject(subject string, role core.Role, project string) error {
-	return nil
+	return e.rootAccessControl.GrantRoleInProject(subject, role, project)
 }
 func (e *externalEntityProviderRBAC) RevokeRoleInProject(subject string, role core.Role, project string) error {
-	return nil
+	return e.rootAccessControl.RevokeRoleInProject(subject, role, project)
 }
 func (e *externalEntityProviderRBAC) InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions core.Role, project string) error {
-	return nil
+	return e.rootAccessControl.InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions, project)
 }
 func (e *externalEntityProviderRBAC) InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions core.ProjectRole) error {
-	return nil
+	return e.rootAccessControl.InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions)
 }
 func (e *externalEntityProviderRBAC) LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions core.Role, project string) error {
-	return nil
+	return e.rootAccessControl.LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions, project)
 }
 func (e *externalEntityProviderRBAC) AllowRole(role core.Role, object core.Object, action []core.Action) error {
-	return nil
+	return e.rootAccessControl.AllowRole(role, object, action)
 }
 func (e *externalEntityProviderRBAC) IsAllowed(userID string, object core.Object, action core.Action) (bool, error) {
 	if e.adminToken != nil && userID == *e.adminToken {
@@ -97,8 +101,7 @@ func (e *externalEntityProviderRBAC) IsAllowedInProject(project *models.Project,
 }
 
 func (e *externalEntityProviderRBAC) AllowRoleInProject(project string, role core.Role, object core.Object, action []core.Action) error {
-	// This method is not applicable for external entity provider RBAC
-	return nil
+	return e.rootAccessControl.AllowRoleInProject(project, role, object, action)
 }
 
 func (e *externalEntityProviderRBAC) GetAllProjectsForUser(user string) ([]string, error) {
@@ -107,26 +110,21 @@ func (e *externalEntityProviderRBAC) GetAllProjectsForUser(user string) ([]strin
 }
 
 func (e *externalEntityProviderRBAC) GetOwnerOfOrganization() (string, error) {
-	// This method is not applicable for external entity provider RBAC
-	return "", nil
+	return e.rootAccessControl.GetOwnerOfOrganization()
 }
 
 func (e *externalEntityProviderRBAC) GetAllMembersOfOrganization() ([]string, error) {
-	// This method is not applicable for external entity provider RBAC
 	return []string{}, nil
 }
 
 func (e *externalEntityProviderRBAC) GetAllMembersOfProject(projectID string) ([]string, error) {
-	// This method is not applicable for external entity provider RBAC
-	return []string{}, nil
+	return e.rootAccessControl.GetAllMembersOfProject(projectID)
 }
 
 func (e *externalEntityProviderRBAC) GetDomainRole(user string) (core.Role, error) {
-	// This method is not applicable for external entity provider RBAC
-	return "", nil
+	return core.RoleMember, nil
 }
 
 func (e *externalEntityProviderRBAC) GetProjectRole(user string, project string) (core.Role, error) {
-	// This method is not applicable for external entity provider RBAC
-	return "", nil
+	return e.rootAccessControl.GetProjectRole(user, project)
 }

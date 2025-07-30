@@ -204,7 +204,18 @@ func (c *casbinRBAC) getProjectRoleName(role core.Role, project string) string {
 
 func (c *casbinRBAC) RevokeRole(user string, role core.Role) error {
 	_, err := c.enforcer.DeleteRoleForUserInDomain("user::"+user, "role::"+string(role), "domain::"+c.domain)
+
 	return err
+}
+
+func (c *casbinRBAC) RevokeAllRolesInProjectForUser(user string, project string) error {
+	for _, role := range []core.Role{core.RoleOwner, core.RoleAdmin, core.RoleMember} {
+		err := c.RevokeRoleInProject(user, role, project)
+		if err != nil {
+			return fmt.Errorf("could not revoke role %s for user %s in project %s: %w", role, user, project, err)
+		}
+	}
+	return nil
 }
 
 func (c *casbinRBAC) AllowRole(role core.Role, object core.Object, action []core.Action) error {
@@ -238,6 +249,7 @@ func (c *casbinRBAC) RevokeRoleInProject(user string, role core.Role, project st
 
 func (c *casbinRBAC) IsAllowed(user string, object core.Object, action core.Action) (bool, error) {
 	permissions, err := c.enforcer.GetImplicitPermissionsForUser("user::"+user, "domain::"+c.domain)
+
 	if err != nil {
 		return false, err
 	}
@@ -257,9 +269,10 @@ func (c *casbinRBAC) IsAllowedInProject(project *models.Project, user string, ob
 		return false, err
 	}
 
+	projectID := project.ID.String()
 	// check for the permissions
 	for _, p := range permissions {
-		if p[2] == "project::"+project.ID.String()+"|obj::"+string(object) && p[3] == "act::"+string(action) {
+		if p[2] == "project::"+projectID+"|obj::"+string(object) && p[3] == "act::"+string(action) {
 			return true, nil
 		}
 	}

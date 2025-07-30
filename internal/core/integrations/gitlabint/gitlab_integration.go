@@ -397,7 +397,7 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 func gitlabAccessLevelToRole(accessLevel gitlab.AccessLevelValue) core.Role {
 
 	if accessLevel >= gitlab.OwnerPermissions {
-		return core.RoleOwner
+		return core.RoleAdmin // there is nothing like an owner on project level, so we map it to admin
 	} else if accessLevel >= gitlab.MaintainerPermissions {
 		return core.RoleAdmin
 	} else if accessLevel >= gitlab.DeveloperPermissions {

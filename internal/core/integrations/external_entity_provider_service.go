@@ -15,27 +15,47 @@ type externalEntityProviderService struct {
 	projectService    core.ProjectService
 	assetRepository   core.AssetRepository
 	projectRepository core.ProjectRepository
+	rbacProvider      core.RBACProvider
 }
 
 func NewExternalEntityProviderService(
 	projectService core.ProjectService,
 	assetRepository core.AssetRepository,
 	projectRepository core.ProjectRepository,
+	rbacProvider core.RBACProvider,
 ) externalEntityProviderService {
 	return externalEntityProviderService{
 		projectService:    projectService,
 		assetRepository:   assetRepository,
 		projectRepository: projectRepository,
+		rbacProvider:      rbacProvider,
 	}
 }
 
-func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx core.Context, casbinProvider core.RBACProvider, org models.Org, user string) error {
+func (s externalEntityProviderService) TriggerSync(c echo.Context) error {
+	org := core.GetOrg(c)
+	if org.IsExternalEntity() {
+		err := s.RefreshExternalEntityProviderProjects(c, org, core.GetSession(c).GetUserID())
+		if err != nil {
+			return echo.NewHTTPError(500, "could not trigger sync").WithInternal(err)
+		}
+		return c.NoContent(204)
+	}
+	return echo.NewHTTPError(400, "organization is not an external entity provider")
+}
+
+func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx core.Context, org models.Org, user string) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 
 	if org.ExternalEntityProviderID == nil {
 		return fmt.Errorf("organization %s does not have an external entity provider configured", org.GetID())
 	}
-
+	// get all projects the user has access to from the database
+	domainRBAC := s.rbacProvider.GetDomainRBAC(org.GetID().String())
+	allowedProjects, err := domainRBAC.GetAllProjectsForUser(user)
+	if err != nil {
+		return fmt.Errorf("could not get allowed projects for user %s: %w", user, err)
+	}
 	// This method is not applicable for external entity provider RBAC
 	projects, roles, err := thirdPartyIntegration.ListGroups(context.TODO(), user, *org.ExternalEntityProviderID)
 	if err != nil {
@@ -53,6 +73,7 @@ func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx
 		return fmt.Errorf("could not upsert projects: %w", err)
 	}
 
+	slog.Info("upserted projects from external entity provider", "created", len(created), "updated", len(updated))
 	// enable the community managed policies for the projects
 	for _, project := range created {
 		if err := s.projectRepository.EnableCommunityManagedPolicies(nil, project.ID); err != nil {
@@ -61,7 +82,10 @@ func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx
 		slog.Info("enabled community managed policies for project", "projectSlug", project.Slug, "projectID", project.ID)
 	}
 
-	domainRBAC := casbinProvider.GetDomainRBAC(org.GetID().String())
+	var projectsMap = make(map[string]struct{}, len(created)+len(updated))
+	for _, project := range append(created, updated...) {
+		projectsMap[project.ID.String()] = struct{}{}
+	}
 
 	// update the assets inside those projects as well
 	for i, project := range append(created, updated...) {
@@ -104,6 +128,16 @@ func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx
 			{Name: "external_entity_id"},
 		}, []string{"project_id", "slug", "description", "name"}); err != nil {
 			return echo.NewHTTPError(500, "could not upsert assets").WithInternal(err)
+		}
+	}
+
+	// maybe we need to revoke some access for projects that no longer exist
+	for _, project := range allowedProjects {
+		if _, ok := projectsMap[project]; !ok {
+			// project no longer exists, revoke access
+			if err := domainRBAC.RevokeAllRolesInProjectForUser(user, project); err != nil {
+				slog.Warn("could not revoke all roles for user", "user", user, "projectID", project, "err", err)
+			}
 		}
 	}
 
