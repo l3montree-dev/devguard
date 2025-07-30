@@ -800,7 +800,7 @@ func createProjectHookOptions(token *uuid.UUID, hooks []*gitlab.ProjectHook) (*g
 	projectOptions.PushEvents = gitlab.Ptr(false)
 	if instanceDomain == "" { //If no URL is provided in the environment variables default to main URL
 		slog.Debug("no URL specified in .env file defaulting to main")
-		defaultURL := "https://api.main.devguard.org/api/v1/webhook/"
+		defaultURL := "https://api.devguard.org/api/v1/webhook/"
 		projectOptions.URL = &defaultURL
 	} else {
 		instanceDomain = strings.TrimSuffix(instanceDomain, "/") //Remove trailing slash if it exists
