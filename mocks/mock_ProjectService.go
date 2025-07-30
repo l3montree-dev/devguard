@@ -38,6 +38,63 @@ func (_m *ProjectService) EXPECT() *ProjectService_Expecter {
 	return &ProjectService_Expecter{mock: &_m.Mock}
 }
 
+// BootstrapProject provides a mock function for the type ProjectService
+func (_mock *ProjectService) BootstrapProject(rbac core.AccessControl, project *models.Project) error {
+	ret := _mock.Called(rbac, project)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BootstrapProject")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.AccessControl, *models.Project) error); ok {
+		r0 = returnFunc(rbac, project)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ProjectService_BootstrapProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BootstrapProject'
+type ProjectService_BootstrapProject_Call struct {
+	*mock.Call
+}
+
+// BootstrapProject is a helper method to define mock.On call
+//   - rbac core.AccessControl
+//   - project *models.Project
+func (_e *ProjectService_Expecter) BootstrapProject(rbac interface{}, project interface{}) *ProjectService_BootstrapProject_Call {
+	return &ProjectService_BootstrapProject_Call{Call: _e.mock.On("BootstrapProject", rbac, project)}
+}
+
+func (_c *ProjectService_BootstrapProject_Call) Run(run func(rbac core.AccessControl, project *models.Project)) *ProjectService_BootstrapProject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.AccessControl
+		if args[0] != nil {
+			arg0 = args[0].(core.AccessControl)
+		}
+		var arg1 *models.Project
+		if args[1] != nil {
+			arg1 = args[1].(*models.Project)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectService_BootstrapProject_Call) Return(err error) *ProjectService_BootstrapProject_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ProjectService_BootstrapProject_Call) RunAndReturn(run func(rbac core.AccessControl, project *models.Project) error) *ProjectService_BootstrapProject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateProject provides a mock function for the type ProjectService
 func (_mock *ProjectService) CreateProject(ctx core.Context, project *models.Project) error {
 	ret := _mock.Called(ctx, project)
@@ -215,6 +272,66 @@ func (_c *ProjectService_ListAllowedProjects_Call) Return(projects []models.Proj
 }
 
 func (_c *ProjectService_ListAllowedProjects_Call) RunAndReturn(run func(ctx core.Context) ([]models.Project, error)) *ProjectService_ListAllowedProjects_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListAllowedProjectsPaged provides a mock function for the type ProjectService
+func (_mock *ProjectService) ListAllowedProjectsPaged(c core.Context) (core.Paged[models.Project], error) {
+	ret := _mock.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListAllowedProjectsPaged")
+	}
+
+	var r0 core.Paged[models.Project]
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context) (core.Paged[models.Project], error)); ok {
+		return returnFunc(c)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.Context) core.Paged[models.Project]); ok {
+		r0 = returnFunc(c)
+	} else {
+		r0 = ret.Get(0).(core.Paged[models.Project])
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.Context) error); ok {
+		r1 = returnFunc(c)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ProjectService_ListAllowedProjectsPaged_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListAllowedProjectsPaged'
+type ProjectService_ListAllowedProjectsPaged_Call struct {
+	*mock.Call
+}
+
+// ListAllowedProjectsPaged is a helper method to define mock.On call
+//   - c core.Context
+func (_e *ProjectService_Expecter) ListAllowedProjectsPaged(c interface{}) *ProjectService_ListAllowedProjectsPaged_Call {
+	return &ProjectService_ListAllowedProjectsPaged_Call{Call: _e.mock.On("ListAllowedProjectsPaged", c)}
+}
+
+func (_c *ProjectService_ListAllowedProjectsPaged_Call) Run(run func(c core.Context)) *ProjectService_ListAllowedProjectsPaged_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.Context
+		if args[0] != nil {
+			arg0 = args[0].(core.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectService_ListAllowedProjectsPaged_Call) Return(paged core.Paged[models.Project], err error) *ProjectService_ListAllowedProjectsPaged_Call {
+	_c.Call.Return(paged, err)
+	return _c
+}
+
+func (_c *ProjectService_ListAllowedProjectsPaged_Call) RunAndReturn(run func(c core.Context) (core.Paged[models.Project], error)) *ProjectService_ListAllowedProjectsPaged_Call {
 	_c.Call.Return(run)
 	return _c
 }

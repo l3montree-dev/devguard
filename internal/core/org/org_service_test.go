@@ -161,8 +161,8 @@ func TestServiceCreate(t *testing.T) {
 		rbacProvider := mocks.NewRBACProvider(t)
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
-		accesscontrol.On("InheritRole", mock.Anything, "admin").Return(nil)
-		accesscontrol.On("InheritRole", mock.Anything, "member").Return(fmt.Errorf("something went wrong"))
+		accesscontrol.On("InheritRole", mock.Anything, core.RoleAdmin).Return(nil)
+		accesscontrol.On("InheritRole", mock.Anything, core.RoleMember).Return(fmt.Errorf("something went wrong"))
 
 		h := org.NewService(organizationRepository, rbacProvider)
 
@@ -191,7 +191,7 @@ func TestServiceCreate(t *testing.T) {
 		rbacProvider := mocks.NewRBACProvider(t)
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
-		accesscontrol.On("InheritRole", mock.Anything, "admin").Return(fmt.Errorf("something went wrong"))
+		accesscontrol.On("InheritRole", mock.Anything, core.RoleAdmin).Return(fmt.Errorf("something went wrong"))
 
 		h := org.NewService(organizationRepository, rbacProvider)
 		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
@@ -220,7 +220,7 @@ func TestServiceCreate(t *testing.T) {
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, mock.Anything).Return(nil)
-		accesscontrol.On("AllowRole", "owner", core.ObjectOrganization, mock.Anything).Return(fmt.Errorf("something went wrong"))
+		accesscontrol.On("AllowRole", core.RoleOwner, core.ObjectOrganization, mock.Anything).Return(fmt.Errorf("something went wrong"))
 
 		h := org.NewService(organizationRepository, rbacProvider)
 		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
@@ -249,8 +249,8 @@ func TestServiceCreate(t *testing.T) {
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, mock.Anything).Return(nil)
-		accesscontrol.On("AllowRole", "owner", core.ObjectOrganization, mock.Anything).Return(nil)
-		accesscontrol.On("AllowRole", "admin", core.ObjectOrganization, mock.Anything).Return(fmt.Errorf("something went wrong"))
+		accesscontrol.On("AllowRole", core.RoleOwner, core.ObjectOrganization, mock.Anything).Return(nil)
+		accesscontrol.On("AllowRole", core.RoleAdmin, core.ObjectOrganization, mock.Anything).Return(fmt.Errorf("something went wrong"))
 
 		h := org.NewService(organizationRepository, rbacProvider)
 		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
@@ -279,9 +279,9 @@ func TestServiceCreate(t *testing.T) {
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, mock.Anything).Return(nil)
-		accesscontrol.On("AllowRole", "owner", core.ObjectOrganization, mock.Anything).Return(nil)
-		accesscontrol.On("AllowRole", "admin", core.ObjectOrganization, mock.Anything).Return(nil)
-		accesscontrol.On("AllowRole", "admin", core.ObjectProject, mock.Anything).Return(fmt.Errorf("something went wrong"))
+		accesscontrol.On("AllowRole", core.RoleOwner, core.ObjectOrganization, mock.Anything).Return(nil)
+		accesscontrol.On("AllowRole", core.RoleAdmin, core.ObjectOrganization, mock.Anything).Return(nil)
+		accesscontrol.On("AllowRole", core.RoleAdmin, core.ObjectProject, mock.Anything).Return(fmt.Errorf("something went wrong"))
 
 		h := org.NewService(organizationRepository, rbacProvider)
 		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
@@ -310,10 +310,10 @@ func TestServiceCreate(t *testing.T) {
 		rbacProvider.On("GetDomainRBAC", mock.Anything).Return(accesscontrol)
 		accesscontrol.On("GrantRole", mock.Anything, mock.Anything).Return(nil)
 		accesscontrol.On("InheritRole", mock.Anything, mock.Anything).Return(nil)
-		accesscontrol.On("AllowRole", "owner", core.ObjectOrganization, mock.Anything).Return(nil)
-		accesscontrol.On("AllowRole", "admin", core.ObjectOrganization, mock.Anything).Return(nil)
-		accesscontrol.On("AllowRole", "admin", core.ObjectProject, mock.Anything).Return(nil)
-		accesscontrol.On("AllowRole", "member", core.ObjectOrganization, mock.Anything).Return(fmt.Errorf("something went wrong"))
+		accesscontrol.On("AllowRole", core.RoleOwner, core.ObjectOrganization, mock.Anything).Return(nil)
+		accesscontrol.On("AllowRole", core.RoleAdmin, core.ObjectOrganization, mock.Anything).Return(nil)
+		accesscontrol.On("AllowRole", core.RoleAdmin, core.ObjectProject, mock.Anything).Return(nil)
+		accesscontrol.On("AllowRole", core.RoleMember, core.ObjectOrganization, mock.Anything).Return(fmt.Errorf("something went wrong"))
 
 		h := org.NewService(organizationRepository, rbacProvider)
 		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})

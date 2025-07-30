@@ -47,6 +47,7 @@ type ProjectRepository interface {
 	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
+	ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string) (Paged[models.Project], error)
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
@@ -208,7 +209,6 @@ type OrganizationRepository interface {
 
 type OrgService interface {
 	CreateOrganization(ctx Context, organization models.Org) error
-	CreateExternalEntityOrganization(ctx Context, externalEntitySlug ExternalEntitySlug) (*models.Org, error)
 	ReadBySlug(slug string) (*models.Org, error)
 }
 
@@ -218,13 +218,19 @@ type InvitationRepository interface {
 	Delete(tx DB, id uuid.UUID) error
 }
 
+type ExternalEntityProviderService interface {
+	RefreshExternalEntityProviderProjects(ctx Context, org models.Org, user string) error
+}
+
 type ProjectService interface {
 	ReadBySlug(ctx Context, organizationID uuid.UUID, slug string) (models.Project, error)
 	ListAllowedProjects(ctx Context) ([]models.Project, error)
+	ListAllowedProjectsPaged(c Context) (Paged[models.Project], error)
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	CreateProject(ctx Context, project *models.Project) error
+	BootstrapProject(rbac AccessControl, project *models.Project) error
 }
 
 type InTotoVerifierService interface {
@@ -399,28 +405,29 @@ type LicenseRiskService interface {
 type AccessControl interface {
 	HasAccess(subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
-	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error
+	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
 	GetAllRoles(user string) []string
 
-	GrantRole(subject string, role string) error
-	RevokeRole(subject string, role string) error
+	GrantRole(subject string, role Role) error
+	RevokeRole(subject string, role Role) error
 
-	GrantRoleInProject(subject string, role string, project string) error
-	RevokeRoleInProject(subject string, role string, project string) error
-	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string, project string) error
+	GrantRoleInProject(subject string, role Role, project string) error
+	RevokeRoleInProject(subject string, role Role, project string) error
+	RevokeAllRolesInProjectForUser(user string, project string) error
+	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, project string) error
 
 	InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error
 
-	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions string, project string) error
+	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions Role, project string) error
 
-	AllowRole(role string, object Object, action []Action) error
+	AllowRole(role Role, object Object, action []Action) error
 	IsAllowed(subject string, object Object, action Action) (bool, error)
 
 	IsAllowedInProject(project *models.Project, user string, object Object, action Action) (bool, error)
-	AllowRoleInProject(project string, role string, object Object, action []Action) error
+	AllowRoleInProject(project string, role Role, object Object, action []Action) error
 
-	GetAllProjectsForUser(user string) (any, error) // return is either a slice of strings or projects
+	GetAllProjectsForUser(user string) ([]string, error) // return is either a slice of strings or projects
 
 	GetOwnerOfOrganization() (string, error)
 
@@ -428,8 +435,8 @@ type AccessControl interface {
 
 	GetAllMembersOfProject(projectID string) ([]string, error)
 
-	GetDomainRole(user string) (string, error)
-	GetProjectRole(user string, project string) (string, error)
+	GetDomainRole(user string) (Role, error)
+	GetProjectRole(user string, project string) (Role, error)
 
 	GetExternalEntityProviderID() *string
 }
@@ -441,11 +448,23 @@ type RBACProvider interface {
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
 
+type Role string
+
 const (
-	RoleOwner  = "owner"
-	RoleAdmin  = "admin"
-	RoleMember = "member"
+	RoleOwner  Role = "owner"
+	RoleAdmin  Role = "admin"
+	RoleMember Role = "member"
+	RoleGuest  Role = "guest"
 )
+
+func ValidRole(role Role) bool {
+	switch role {
+	case RoleOwner, RoleAdmin, RoleMember, RoleGuest:
+		return true
+	default:
+		return false
+	}
+}
 
 type Action string
 
@@ -467,5 +486,5 @@ const (
 
 type ProjectRole struct {
 	Project string
-	Role    string
+	Role    Role
 }

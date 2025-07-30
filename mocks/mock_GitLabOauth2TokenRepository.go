@@ -375,10 +375,7 @@ func (_c *GitLabOauth2TokenRepository_Save_Call) Run(run func(tx core.DB, model 
 			arg0 = args[0].(core.DB)
 		}
 		var arg1 []*models.GitLabOauth2Token
-		var variadicArgs []*models.GitLabOauth2Token
-		if len(args) > 1 {
-			variadicArgs = args[1].([]*models.GitLabOauth2Token)
-		}
+		variadicArgs := args[1].([]*models.GitLabOauth2Token)
 		arg1 = variadicArgs
 		run(
 			arg0,

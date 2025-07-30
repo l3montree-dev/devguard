@@ -229,162 +229,6 @@ func (_c *IntegrationAggregate_GetIntegration_Call) RunAndReturn(run func(id cor
 	return _c
 }
 
-// GetRoleInGroup provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
-	ret := _mock.Called(ctx, userID, providerID, groupID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetRoleInGroup")
-	}
-
-	var r0 string
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) (string, error)); ok {
-		return returnFunc(ctx, userID, providerID, groupID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) string); ok {
-		r0 = returnFunc(ctx, userID, providerID, groupID)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
-		r1 = returnFunc(ctx, userID, providerID, groupID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// IntegrationAggregate_GetRoleInGroup_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRoleInGroup'
-type IntegrationAggregate_GetRoleInGroup_Call struct {
-	*mock.Call
-}
-
-// GetRoleInGroup is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID string
-//   - providerID string
-//   - groupID string
-func (_e *IntegrationAggregate_Expecter) GetRoleInGroup(ctx interface{}, userID interface{}, providerID interface{}, groupID interface{}) *IntegrationAggregate_GetRoleInGroup_Call {
-	return &IntegrationAggregate_GetRoleInGroup_Call{Call: _e.mock.On("GetRoleInGroup", ctx, userID, providerID, groupID)}
-}
-
-func (_c *IntegrationAggregate_GetRoleInGroup_Call) Run(run func(ctx context.Context, userID string, providerID string, groupID string)) *IntegrationAggregate_GetRoleInGroup_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *IntegrationAggregate_GetRoleInGroup_Call) Return(s string, err error) *IntegrationAggregate_GetRoleInGroup_Call {
-	_c.Call.Return(s, err)
-	return _c
-}
-
-func (_c *IntegrationAggregate_GetRoleInGroup_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, groupID string) (string, error)) *IntegrationAggregate_GetRoleInGroup_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetRoleInProject provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
-	ret := _mock.Called(ctx, userID, providerID, projectID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetRoleInProject")
-	}
-
-	var r0 string
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) (string, error)); ok {
-		return returnFunc(ctx, userID, providerID, projectID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) string); ok {
-		r0 = returnFunc(ctx, userID, providerID, projectID)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
-		r1 = returnFunc(ctx, userID, providerID, projectID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// IntegrationAggregate_GetRoleInProject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRoleInProject'
-type IntegrationAggregate_GetRoleInProject_Call struct {
-	*mock.Call
-}
-
-// GetRoleInProject is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID string
-//   - providerID string
-//   - projectID string
-func (_e *IntegrationAggregate_Expecter) GetRoleInProject(ctx interface{}, userID interface{}, providerID interface{}, projectID interface{}) *IntegrationAggregate_GetRoleInProject_Call {
-	return &IntegrationAggregate_GetRoleInProject_Call{Call: _e.mock.On("GetRoleInProject", ctx, userID, providerID, projectID)}
-}
-
-func (_c *IntegrationAggregate_GetRoleInProject_Call) Run(run func(ctx context.Context, userID string, providerID string, projectID string)) *IntegrationAggregate_GetRoleInProject_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *IntegrationAggregate_GetRoleInProject_Call) Return(s string, err error) *IntegrationAggregate_GetRoleInProject_Call {
-	_c.Call.Return(s, err)
-	return _c
-}
-
-func (_c *IntegrationAggregate_GetRoleInProject_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, projectID string) (string, error)) *IntegrationAggregate_GetRoleInProject_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetUsers provides a mock function for the type IntegrationAggregate
 func (_mock *IntegrationAggregate) GetUsers(org models.Org) []core.User {
 	ret := _mock.Called(org)
@@ -607,7 +451,7 @@ func (_c *IntegrationAggregate_HasAccessToExternalEntityProvider_Call) RunAndRet
 }
 
 // ListGroups provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
+func (_mock *IntegrationAggregate) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
 	ret := _mock.Called(ctx, userID, providerID)
 
 	if len(ret) == 0 {
@@ -615,23 +459,31 @@ func (_mock *IntegrationAggregate) ListGroups(ctx core.Context, userID string, p
 	}
 
 	var r0 []models.Project
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string) ([]models.Project, error)); ok {
+	var r1 []core.Role
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) ([]models.Project, []core.Role, error)); ok {
 		return returnFunc(ctx, userID, providerID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string) []models.Project); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) []models.Project); ok {
 		r0 = returnFunc(ctx, userID, providerID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Project)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context, string, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) []core.Role); ok {
 		r1 = returnFunc(ctx, userID, providerID)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]core.Role)
+		}
 	}
-	return r0, r1
+	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string) error); ok {
+		r2 = returnFunc(ctx, userID, providerID)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
 }
 
 // IntegrationAggregate_ListGroups_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListGroups'
@@ -640,18 +492,18 @@ type IntegrationAggregate_ListGroups_Call struct {
 }
 
 // ListGroups is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx context.Context
 //   - userID string
 //   - providerID string
 func (_e *IntegrationAggregate_Expecter) ListGroups(ctx interface{}, userID interface{}, providerID interface{}) *IntegrationAggregate_ListGroups_Call {
 	return &IntegrationAggregate_ListGroups_Call{Call: _e.mock.On("ListGroups", ctx, userID, providerID)}
 }
 
-func (_c *IntegrationAggregate_ListGroups_Call) Run(run func(ctx core.Context, userID string, providerID string)) *IntegrationAggregate_ListGroups_Call {
+func (_c *IntegrationAggregate_ListGroups_Call) Run(run func(ctx context.Context, userID string, providerID string)) *IntegrationAggregate_ListGroups_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(context.Context)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -670,12 +522,12 @@ func (_c *IntegrationAggregate_ListGroups_Call) Run(run func(ctx core.Context, u
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListGroups_Call) Return(projects []models.Project, err error) *IntegrationAggregate_ListGroups_Call {
-	_c.Call.Return(projects, err)
+func (_c *IntegrationAggregate_ListGroups_Call) Return(projects []models.Project, roles []core.Role, err error) *IntegrationAggregate_ListGroups_Call {
+	_c.Call.Return(projects, roles, err)
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListGroups_Call) RunAndReturn(run func(ctx core.Context, userID string, providerID string) ([]models.Project, error)) *IntegrationAggregate_ListGroups_Call {
+func (_c *IntegrationAggregate_ListGroups_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error)) *IntegrationAggregate_ListGroups_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -743,7 +595,7 @@ func (_c *IntegrationAggregate_ListOrgs_Call) RunAndReturn(run func(ctx core.Con
 }
 
 // ListProjects provides a mock function for the type IntegrationAggregate
-func (_mock *IntegrationAggregate) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
+func (_mock *IntegrationAggregate) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
 	ret := _mock.Called(ctx, userID, providerID, groupID)
 
 	if len(ret) == 0 {
@@ -751,23 +603,31 @@ func (_mock *IntegrationAggregate) ListProjects(ctx core.Context, userID string,
 	}
 
 	var r0 []models.Asset
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string, string) ([]models.Asset, error)); ok {
+	var r1 []core.Role
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) ([]models.Asset, []core.Role, error)); ok {
 		return returnFunc(ctx, userID, providerID, groupID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context, string, string, string) []models.Asset); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) []models.Asset); ok {
 		r0 = returnFunc(ctx, userID, providerID, groupID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Asset)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context, string, string, string) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string) []core.Role); ok {
 		r1 = returnFunc(ctx, userID, providerID, groupID)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]core.Role)
+		}
 	}
-	return r0, r1
+	if returnFunc, ok := ret.Get(2).(func(context.Context, string, string, string) error); ok {
+		r2 = returnFunc(ctx, userID, providerID, groupID)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
 }
 
 // IntegrationAggregate_ListProjects_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListProjects'
@@ -776,7 +636,7 @@ type IntegrationAggregate_ListProjects_Call struct {
 }
 
 // ListProjects is a helper method to define mock.On call
-//   - ctx core.Context
+//   - ctx context.Context
 //   - userID string
 //   - providerID string
 //   - groupID string
@@ -784,11 +644,11 @@ func (_e *IntegrationAggregate_Expecter) ListProjects(ctx interface{}, userID in
 	return &IntegrationAggregate_ListProjects_Call{Call: _e.mock.On("ListProjects", ctx, userID, providerID, groupID)}
 }
 
-func (_c *IntegrationAggregate_ListProjects_Call) Run(run func(ctx core.Context, userID string, providerID string, groupID string)) *IntegrationAggregate_ListProjects_Call {
+func (_c *IntegrationAggregate_ListProjects_Call) Run(run func(ctx context.Context, userID string, providerID string, groupID string)) *IntegrationAggregate_ListProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(core.Context)
+			arg0 = args[0].(context.Context)
 		}
 		var arg1 string
 		if args[1] != nil {
@@ -812,12 +672,12 @@ func (_c *IntegrationAggregate_ListProjects_Call) Run(run func(ctx core.Context,
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListProjects_Call) Return(assets []models.Asset, err error) *IntegrationAggregate_ListProjects_Call {
-	_c.Call.Return(assets, err)
+func (_c *IntegrationAggregate_ListProjects_Call) Return(assets []models.Asset, roles []core.Role, err error) *IntegrationAggregate_ListProjects_Call {
+	_c.Call.Return(assets, roles, err)
 	return _c
 }
 
-func (_c *IntegrationAggregate_ListProjects_Call) RunAndReturn(run func(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error)) *IntegrationAggregate_ListProjects_Call {
+func (_c *IntegrationAggregate_ListProjects_Call) RunAndReturn(run func(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error)) *IntegrationAggregate_ListProjects_Call {
 	_c.Call.Return(run)
 	return _c
 }
