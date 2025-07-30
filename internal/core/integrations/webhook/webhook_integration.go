@@ -238,14 +238,14 @@ func (w *WebhookIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 	return nil, nil
 }
 
-func (w *WebhookIntegration) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
+func (w *WebhookIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
 	// Logic to list groups
-	return nil, nil
+	return nil, nil, nil
 }
 
-func (w *WebhookIntegration) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
+func (w *WebhookIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
 	// Logic to list projects
-	return nil, nil
+	return nil, nil, nil
 }
 
 func (w *WebhookIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
