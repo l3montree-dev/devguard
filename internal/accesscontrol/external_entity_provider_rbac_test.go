@@ -19,7 +19,7 @@ func TestIsAllowed(t *testing.T) {
 		object         core.Object
 		action         core.Action
 		adminToken     *string
-		mockRole       string
+		mockRole       core.Role
 		mockRoleErr    error
 		expectedResult bool
 		expectErr      bool
@@ -138,6 +138,7 @@ func TestIsAllowed(t *testing.T) {
 
 			rbac := NewExternalEntityProviderRBAC(
 				nil,
+				nil,
 				thirdpartyIntegrationMock,
 				"external-entity-provider-id",
 				tc.adminToken,
@@ -159,6 +160,7 @@ func TestHasAccess(t *testing.T) {
 		rbac := NewExternalEntityProviderRBAC(
 			nil,
 			nil,
+			nil,
 			"external-entity-provider-id",
 			utils.Ptr("admin-token"),
 		)
@@ -174,6 +176,7 @@ func TestHasAccess(t *testing.T) {
 
 		rbac := NewExternalEntityProviderRBAC(
 			nil,
+			nil,
 			thirdpartyIntegrationMock,
 			"external-entity-provider-id",
 			nil,
@@ -188,6 +191,7 @@ func TestHasAccess(t *testing.T) {
 		thirdpartyIntegrationMock.On("HasAccessToExternalEntityProvider", mock.Anything, "external-entity-provider-id").Return(false, nil)
 
 		rbac := NewExternalEntityProviderRBAC(
+			nil,
 			nil,
 			thirdpartyIntegrationMock,
 			"external-entity-provider-id",

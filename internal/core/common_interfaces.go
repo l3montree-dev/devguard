@@ -208,7 +208,6 @@ type OrganizationRepository interface {
 
 type OrgService interface {
 	CreateOrganization(ctx Context, organization models.Org) error
-	CreateExternalEntityOrganization(ctx Context, externalEntitySlug ExternalEntitySlug) (*models.Org, error)
 	ReadBySlug(slug string) (*models.Org, error)
 }
 
@@ -225,6 +224,7 @@ type ProjectService interface {
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	CreateProject(ctx Context, project *models.Project) error
+	RefreshExternalEntityProviderProjects(Context, RBACProvider, models.Org, string) error
 }
 
 type InTotoVerifierService interface {
@@ -399,28 +399,28 @@ type LicenseRiskService interface {
 type AccessControl interface {
 	HasAccess(subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
-	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error
+	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
 	GetAllRoles(user string) []string
 
-	GrantRole(subject string, role string) error
-	RevokeRole(subject string, role string) error
+	GrantRole(subject string, role Role) error
+	RevokeRole(subject string, role Role) error
 
-	GrantRoleInProject(subject string, role string, project string) error
-	RevokeRoleInProject(subject string, role string, project string) error
-	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string, project string) error
+	GrantRoleInProject(subject string, role Role, project string) error
+	RevokeRoleInProject(subject string, role Role, project string) error
+	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, project string) error
 
 	InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error
 
-	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions string, project string) error
+	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions Role, project string) error
 
-	AllowRole(role string, object Object, action []Action) error
+	AllowRole(role Role, object Object, action []Action) error
 	IsAllowed(subject string, object Object, action Action) (bool, error)
 
 	IsAllowedInProject(project *models.Project, user string, object Object, action Action) (bool, error)
-	AllowRoleInProject(project string, role string, object Object, action []Action) error
+	AllowRoleInProject(project string, role Role, object Object, action []Action) error
 
-	GetAllProjectsForUser(user string) (any, error) // return is either a slice of strings or projects
+	GetAllProjectsForUser(user string) ([]string, error) // return is either a slice of strings or projects
 
 	GetOwnerOfOrganization() (string, error)
 
@@ -428,8 +428,8 @@ type AccessControl interface {
 
 	GetAllMembersOfProject(projectID string) ([]string, error)
 
-	GetDomainRole(user string) (string, error)
-	GetProjectRole(user string, project string) (string, error)
+	GetDomainRole(user string) (Role, error)
+	GetProjectRole(user string, project string) (Role, error)
 
 	GetExternalEntityProviderID() *string
 }
@@ -441,11 +441,23 @@ type RBACProvider interface {
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
 
+type Role string
+
 const (
-	RoleOwner  = "owner"
-	RoleAdmin  = "admin"
-	RoleMember = "member"
+	RoleOwner  Role = "owner"
+	RoleAdmin  Role = "admin"
+	RoleMember Role = "member"
+	RoleGuest  Role = "guest"
 )
+
+func ValidRole(role Role) bool {
+	switch role {
+	case RoleOwner, RoleAdmin, RoleMember, RoleGuest:
+		return true
+	default:
+		return false
+	}
+}
 
 type Action string
 
@@ -467,5 +479,5 @@ const (
 
 type ProjectRole struct {
 	Project string
-	Role    string
+	Role    Role
 }

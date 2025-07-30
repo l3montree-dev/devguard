@@ -44,15 +44,12 @@ type ThirdPartyIntegration interface {
 
 	ListOrgs(ctx Context) ([]models.Org, error) // maps identity providers to orgs
 
-	ListGroups(ctx Context, userID string, providerID string) ([]models.Project, error)                 // maps groups to projects
-	ListProjects(ctx Context, userID string, providerID string, groupID string) ([]models.Asset, error) // maps projects to assets
+	ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []Role, error)                 // maps groups to projects
+	ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []Role, error) // maps projects to assets
 
 	ListRepositories(ctx Context) ([]Repository, error)
 
 	HasAccessToExternalEntityProvider(ctx Context, externalEntityProviderID string) (bool, error)
-
-	GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error)
-	GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error)
 
 	HandleEvent(event any) error
 	CreateIssue(ctx context.Context, asset models.Asset, assetVersionName string, vuln models.Vuln, projectSlug string, orgSlug string, justification string, userID string) error

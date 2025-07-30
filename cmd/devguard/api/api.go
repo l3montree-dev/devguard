@@ -20,6 +20,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -71,6 +72,7 @@ func accessControlMiddleware(obj core.Object, act core.Action) echo.MiddlewareFu
 				if org.IsPublic && act == core.ActionRead {
 					core.SetIsPublicRequest(ctx)
 				} else {
+					slog.Error("access denied", "user", user, "object", obj, "action", act)
 					ctx.Response().WriteHeader(403)
 					return echo.NewHTTPError(403, "forbidden")
 				}
@@ -194,6 +196,7 @@ func projectAccessControl(projectService core.ProjectService, obj core.Object, a
 			// get the project id
 			projectSlug, err := core.GetProjectSlug(ctx)
 			if err != nil {
+				slog.Error("could not get project slug", "err", err)
 				return echo.NewHTTPError(500, "could not get project id")
 			}
 
@@ -201,12 +204,14 @@ func projectAccessControl(projectService core.ProjectService, obj core.Object, a
 			project, err := projectService.ReadBySlug(ctx, core.GetOrg(ctx).GetID(), projectSlug)
 
 			if err != nil {
+				slog.Error("could not get project by slug", "err", err, "projectSlug", projectSlug)
 				return echo.NewHTTPError(404, "could not get project")
 			}
 
 			allowed, err := rbac.IsAllowedInProject(&project, user, obj, act)
 
 			if err != nil {
+				slog.Error("could not determine if the user has access", "err", err, "projectSlug", projectSlug)
 				return echo.NewHTTPError(500, "could not determine if the user has access")
 			}
 
@@ -214,6 +219,7 @@ func projectAccessControl(projectService core.ProjectService, obj core.Object, a
 			if !allowed {
 				// check if public
 				if project.IsPublic && act == core.ActionRead {
+					slog.Info("public access to project", "projectSlug", projectSlug)
 					core.SetIsPublicRequest(ctx)
 				} else {
 					return echo.NewHTTPError(403, "forbidden")
@@ -234,11 +240,41 @@ func neededScope(neededScopes []string) core.MiddlewareFunc {
 
 			ok := utils.ContainsAll(userScopes, neededScopes)
 			if !ok {
+				slog.Error("user does not have the required scopes", "neededScopes", neededScopes, "userScopes", userScopes)
 				return echo.NewHTTPError(403, "your personal access token does not have the required scope, needed scopes: "+strings.Join(neededScopes, ", "))
 			}
 
 			return next(c)
 
+		}
+	}
+}
+
+func externalEntityProviderRefreshMiddleware(projectService core.ProjectService, rbacProvider core.RBACProvider) core.MiddlewareFunc {
+	limiter := map[string]time.Time{}
+
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		// get the current org
+		return func(ctx core.Context) error {
+			org := core.GetOrg(ctx)
+
+			if org.IsExternalEntity() {
+				// check if we are allowed to refresh the external entity provider projects
+				if time.Now().After(limiter[org.GetID().String()+"/"+core.GetSession(ctx).GetUserID()]) {
+					limiter[org.GetID().String()+"/"+core.GetSession(ctx).GetUserID()] = time.Now().Add(15 * time.Minute)
+
+					go func() {
+						err := projectService.RefreshExternalEntityProviderProjects(ctx, rbacProvider, org, core.GetSession(ctx).GetUserID())
+						if err != nil {
+							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", org.GetID(), "userID", core.GetSession(ctx).GetUserID())
+						} else {
+							slog.Info("refreshed external entity provider projects", "orgID", org.GetID(), "userID", core.GetSession(ctx).GetUserID())
+						}
+					}()
+				}
+			}
+
+			return next(ctx)
 		}
 	}
 }
@@ -279,7 +315,6 @@ func assetNameMiddleware() core.MiddlewareFunc {
 func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationService core.OrgService, oauth2Config map[string]*gitlabint.GitlabOauth2Config) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) (err error) {
-
 			// get the organization from the provided context
 			organization := core.GetParam(ctx, "organization")
 			if organization == "" {
@@ -295,7 +330,7 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 			}
 
 			// check what kind of RBAC we need
-			var domainRBAC core.AccessControl
+			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
 			if org.IsExternalEntity() {
 				// check if there is an admin token defined
 				conf, ok := oauth2Config[*org.ExternalEntityProviderID]
@@ -304,10 +339,7 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 					return ctx.JSON(500, map[string]string{"error": "no oauth2 config found for external entity provider"})
 				}
 
-				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, core.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, conf.AdminToken)
-
-			} else {
-				domainRBAC = rbacProvider.GetDomainRBAC(org.ID.String())
+				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, rbacProvider.GetDomainRBAC(org.ID.String()), core.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, conf.AdminToken)
 			}
 
 			// check if the user is allowed to access the organization
@@ -513,7 +545,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	orgRouter.GET("/", orgController.List)
 
 	//Api functions for interacting with an organization  ->  .../organizations/<organization-name>/...
-	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations))
+	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), externalEntityProviderRefreshMiddleware(projectService, casbinRBACProvider))
 	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
 	organizationRouter.GET("/", orgController.Read, accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
 

@@ -20,11 +20,9 @@ import (
 	"fmt"
 
 	"github.com/l3montree-dev/devguard/internal/core"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/ory/client-go"
-	"gorm.io/gorm/clause"
 )
 
 type controller struct {
@@ -104,7 +102,7 @@ func FetchMembersOfProject(ctx core.Context) ([]core.User, error) {
 		return core.User{
 			ID:   i.Id,
 			Name: name,
-			Role: role,
+			Role: string(role),
 		}
 	})
 
@@ -209,7 +207,7 @@ func (projectController *controller) ChangeRole(c core.Context) error {
 
 	rbac.RevokeRoleInProject(userID, "member", project.ID.String()) // nolint:errcheck // we don't care if the user is not a member
 
-	if err := rbac.GrantRoleInProject(userID, req.Role, project.ID.String()); err != nil {
+	if err := rbac.GrantRoleInProject(userID, core.Role(req.Role), project.ID.String()); err != nil {
 		return err
 	}
 
@@ -230,37 +228,14 @@ func (projectController *controller) Delete(c core.Context) error {
 func (projectController *controller) Read(c core.Context) error {
 	// just get the project from the context
 	project := core.GetProject(c)
-	if project.IsExternalEntity() {
-		// we need to fetch the assets for this project
-		thirdpartyIntegration := core.GetThirdPartyIntegration(c)
-		assets, err := thirdpartyIntegration.ListProjects(c, core.GetSession(c).GetUserID(), *project.ExternalEntityProviderID, *project.ExternalEntityID)
-		if err != nil {
-			return echo.NewHTTPError(500, "could not fetch assets for project").WithInternal(err)
-		}
-		// ensure the assets exist in the database
-		toUpsert := make([]*models.Asset, 0, len(assets))
-		for i := range assets {
-			assets[i].ProjectID = project.ID
-			toUpsert = append(toUpsert, &assets[i])
-		}
 
-		if err := projectController.assetRepository.Upsert(&toUpsert, []clause.Column{
-			{Name: "external_entity_provider_id"},
-			{Name: "external_entity_id"},
-		}, []string{"project_id", "slug", "description", "name"}); err != nil {
-			return echo.NewHTTPError(500, "could not upsert assets").WithInternal(err)
-		}
-		// set the assets on the project
-		project.Assets = assets
-	} else {
-		// lets fetch the assets related to this project
-		assets, err := projectController.assetRepository.GetByProjectID(project.ID)
-		if err != nil {
-			return err
-		}
-
-		project.Assets = assets
+	// lets fetch the assets related to this project
+	assets, err := projectController.assetRepository.GetByProjectID(project.ID)
+	if err != nil {
+		return err
 	}
+
+	project.Assets = assets
 
 	// lets fetch the members of the project
 	members, err := FetchMembersOfProject(c)

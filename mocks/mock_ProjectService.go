@@ -414,3 +414,72 @@ func (_c *ProjectService_RecursivelyGetChildProjects_Call) RunAndReturn(run func
 	_c.Call.Return(run)
 	return _c
 }
+
+// RefreshExternalEntityProviderProjects provides a mock function for the type ProjectService
+func (_mock *ProjectService) RefreshExternalEntityProviderProjects(v core.Context, rBACProvider core.RBACProvider, org models.Org, s string) error {
+	ret := _mock.Called(v, rBACProvider, org, s)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshExternalEntityProviderProjects")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context, core.RBACProvider, models.Org, string) error); ok {
+		r0 = returnFunc(v, rBACProvider, org, s)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ProjectService_RefreshExternalEntityProviderProjects_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshExternalEntityProviderProjects'
+type ProjectService_RefreshExternalEntityProviderProjects_Call struct {
+	*mock.Call
+}
+
+// RefreshExternalEntityProviderProjects is a helper method to define mock.On call
+//   - v core.Context
+//   - rBACProvider core.RBACProvider
+//   - org models.Org
+//   - s string
+func (_e *ProjectService_Expecter) RefreshExternalEntityProviderProjects(v interface{}, rBACProvider interface{}, org interface{}, s interface{}) *ProjectService_RefreshExternalEntityProviderProjects_Call {
+	return &ProjectService_RefreshExternalEntityProviderProjects_Call{Call: _e.mock.On("RefreshExternalEntityProviderProjects", v, rBACProvider, org, s)}
+}
+
+func (_c *ProjectService_RefreshExternalEntityProviderProjects_Call) Run(run func(v core.Context, rBACProvider core.RBACProvider, org models.Org, s string)) *ProjectService_RefreshExternalEntityProviderProjects_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.Context
+		if args[0] != nil {
+			arg0 = args[0].(core.Context)
+		}
+		var arg1 core.RBACProvider
+		if args[1] != nil {
+			arg1 = args[1].(core.RBACProvider)
+		}
+		var arg2 models.Org
+		if args[2] != nil {
+			arg2 = args[2].(models.Org)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *ProjectService_RefreshExternalEntityProviderProjects_Call) Return(err error) *ProjectService_RefreshExternalEntityProviderProjects_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ProjectService_RefreshExternalEntityProviderProjects_Call) RunAndReturn(run func(v core.Context, rBACProvider core.RBACProvider, org models.Org, s string) error) *ProjectService_RefreshExternalEntityProviderProjects_Call {
+	_c.Call.Return(run)
+	return _c
+}
