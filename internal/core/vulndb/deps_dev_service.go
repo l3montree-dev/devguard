@@ -84,6 +84,12 @@ func (s *depsDevService) GetVersion(ctx context.Context, ecosystem, packageName,
 		return common.DepsDevVersionResponse{}, err
 	}
 
+	// replace any slashes in the package name with a colon
+	if ecosystem == "maven" {
+		// for maven, we need to replace the slashes with colons
+		packageName = strings.ReplaceAll(packageName, "/", ":")
+	}
+
 	// make sure the package name is url encoded
 	packageName = url.PathEscape(packageName)
 	if err := s.rateLimiter.Wait(ctx); err != nil {
