@@ -120,7 +120,6 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 	}
 
 	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
-
 }
 
 func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {

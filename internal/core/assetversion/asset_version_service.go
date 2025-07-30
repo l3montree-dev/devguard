@@ -203,22 +203,19 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		return vuln.State == models.VulnStateOpen
 	})
 
-	go func() {
-
-		if len(newVulns) == 0 {
-			return
-		}
-
-		if err = s.thirdPartyIntegration.HandleEvent(core.FirstPartyVulnsDetectedEvent{
-			AssetVersion: core.ToAssetVersionObject(*assetVersion),
-			Asset:        core.ToAssetObject(asset),
-			Project:      core.ToProjectObject(project),
-			Org:          core.ToOrgObject(org),
-			Vulns:        utils.Map(newVulns, vuln.FirstPartyVulnToDto),
-		}); err != nil {
-			slog.Error("could not handle first party vulnerabilities detected event", "err", err)
-		}
-	}()
+	if len(newVulns) > 0 {
+		go func() {
+			if err = s.thirdPartyIntegration.HandleEvent(core.FirstPartyVulnsDetectedEvent{
+				AssetVersion: core.ToAssetVersionObject(*assetVersion),
+				Asset:        core.ToAssetObject(asset),
+				Project:      core.ToProjectObject(project),
+				Org:          core.ToOrgObject(org),
+				Vulns:        utils.Map(newVulns, vuln.FirstPartyVulnToDto),
+			}); err != nil {
+				slog.Error("could not handle first party vulnerabilities detected event", "err", err)
+			}
+		}()
+	}
 
 	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
 }
@@ -278,23 +275,19 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
-	go func() {
-		if len(opened) == 0 {
-			return
-		}
-
-		if err = s.thirdPartyIntegration.HandleEvent(core.DependencyVulnsDetectedEvent{
-			AssetVersion: core.ToAssetVersionObject(*assetVersion),
-			Asset:        core.ToAssetObject(asset),
-			Project:      core.ToProjectObject(project),
-			Org:          core.ToOrgObject(org),
-
-			Vulns: utils.Map(opened, vuln.DependencyVulnToDto),
-		}); err != nil {
-			slog.Error("could not handle dependency vulnerabilities detected event", "err", err)
-		}
-
-	}()
+	if len(opened) > 0 {
+		go func() {
+			if err = s.thirdPartyIntegration.HandleEvent(core.DependencyVulnsDetectedEvent{
+				AssetVersion: core.ToAssetVersionObject(*assetVersion),
+				Asset:        core.ToAssetObject(asset),
+				Project:      core.ToProjectObject(project),
+				Org:          core.ToOrgObject(org),
+				Vulns:        utils.Map(opened, vuln.DependencyVulnToDto),
+			}); err != nil {
+				slog.Error("could not handle dependency vulnerabilities detected event", "err", err)
+			}
+		}()
+	}
 
 	return opened, closed, newState, nil
 }
@@ -462,9 +455,6 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 }
 
 func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
-
-	sbomUpdated := false
-
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, "")
 	if err != nil {
@@ -561,7 +551,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		return err
 	}
 
-	sbomUpdated, err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, scannerID)
+	sbomUpdated, err := s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, scannerID)
 	if err != nil {
 		return err
 	}
@@ -577,11 +567,8 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
 		}
 	}()
-
-	go func(sbomUpdated bool) {
-
-		if sbomUpdated {
-
+	if sbomUpdated {
+		go func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.SBOMCreatedEvent{
 				AssetVersion: core.ToAssetVersionObject(assetVersion),
 				Asset:        core.ToAssetObject(asset),
@@ -593,10 +580,9 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 			} else {
 				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
 			}
-		}
 
-	}(sbomUpdated)
-
+		}()
+	}
 	return nil
 }
 

@@ -22,7 +22,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
-	"github.com/l3montree-dev/devguard/internal/core/integrations/webhook"
 )
 
 type integrationController struct {
@@ -95,50 +94,6 @@ func (c *integrationController) TestAndSaveGitlabIntegration(ctx core.Context) e
 	return nil
 }
 
-func (c *integrationController) DeleteWebhookIntegration(ctx core.Context) error {
-	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	wh := thirdPartyIntegration.GetIntegration(core.WebhookIntegrationID)
-	if wh == nil {
-		return ctx.JSON(404, "Webhook integration not enabled")
-	}
-
-	if err := wh.(*webhook.WebhookIntegration).Delete(ctx); err != nil {
-		slog.Error("could not delete webhook integration", "err", err)
-		return err
-	}
-
-	return nil
-}
-
-func (c *integrationController) UpdateWebhookIntegration(ctx core.Context) error {
-	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	wh := thirdPartyIntegration.GetIntegration(core.WebhookIntegrationID)
-	if wh == nil {
-		return ctx.JSON(404, "Webhook integration not enabled")
-	}
-
-	if err := wh.(*webhook.WebhookIntegration).Update(ctx); err != nil {
-		slog.Error("could not update webhook integration", "err", err)
-		return err
-	}
-
-	return nil
-}
-
-func (c *integrationController) TestAndSaveWebhookIntegration(ctx core.Context) error {
-	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	wh := thirdPartyIntegration.GetIntegration(core.WebhookIntegrationID)
-	if wh == nil {
-		return ctx.JSON(404, "Webhook integration not enabled")
-	}
-
-	if err := wh.(*webhook.WebhookIntegration).Save(ctx); err != nil {
-		slog.Error("could not test GitLab integration", "err", err)
-		return err
-	}
-
-	return nil
-}
 func (c *integrationController) TestAndSaveJiraIntegration(ctx core.Context) error {
 	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
 	gl := thirdPartyIntegration.GetIntegration(core.JiraIntegrationID)
