@@ -254,7 +254,13 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, ass
 func addDefaultFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("assetName", "", "The id of the asset which is scanned")
 	cmd.PersistentFlags().String("token", "", "The personal access token to authenticate the request")
-	cmd.PersistentFlags().String("apiUrl", "https://api.devguard.dev", "The url of the API to send the scan request to")
+	apiURL := os.Getenv("API_URL")
+	if apiURL != "" {
+		cmd.PersistentFlags().String("apiUrl", apiURL, "The url of the API to send the scan request to")
+	} else {
+		cmd.PersistentFlags().String("apiUrl", "main.devguard.org", "The url of the API to send the scan request to")
+	}
+
 }
 
 func addAssetRefFlags(cmd *cobra.Command) {
