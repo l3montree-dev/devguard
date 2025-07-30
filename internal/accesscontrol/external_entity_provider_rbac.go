@@ -8,7 +8,6 @@ import (
 type externalEntityProviderRBAC struct {
 	thirdPartyIntegration    core.ThirdPartyIntegration
 	externalEntityProviderID string
-	externalEntityID         string
 	adminToken               *string
 	ctx                      core.Context
 

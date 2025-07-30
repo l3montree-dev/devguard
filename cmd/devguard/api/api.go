@@ -250,7 +250,7 @@ func neededScope(neededScopes []string) core.MiddlewareFunc {
 	}
 }
 
-func externalEntityProviderRefreshMiddleware(projectService core.ProjectService, rbacProvider core.RBACProvider) core.MiddlewareFunc {
+func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.ExternalEntityProviderService, rbacProvider core.RBACProvider) core.MiddlewareFunc {
 	limiter := map[string]time.Time{}
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -264,7 +264,7 @@ func externalEntityProviderRefreshMiddleware(projectService core.ProjectService,
 					limiter[org.GetID().String()+"/"+core.GetSession(ctx).GetUserID()] = time.Now().Add(15 * time.Minute)
 
 					go func() {
-						err := projectService.RefreshExternalEntityProviderProjects(ctx, rbacProvider, org, core.GetSession(ctx).GetUserID())
+						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(ctx, rbacProvider, org, core.GetSession(ctx).GetUserID())
 						if err != nil {
 							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", org.GetID(), "userID", core.GetSession(ctx).GetUserID())
 						} else {
@@ -454,6 +454,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	orgService := org.NewService(orgRepository, casbinRBACProvider)
 
+	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetRepository, projectRepository)
+
 	// init all http controllers using the repositories
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
 	patController := pat.NewHTTPController(patRepository)
@@ -545,7 +547,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	orgRouter.GET("/", orgController.List)
 
 	//Api functions for interacting with an organization  ->  .../organizations/<organization-name>/...
-	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), externalEntityProviderRefreshMiddleware(projectService, casbinRBACProvider))
+	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), externalEntityProviderRefreshMiddleware(externalEntityProviderService, casbinRBACProvider))
 	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
 	organizationRouter.GET("/", orgController.Read, accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
 

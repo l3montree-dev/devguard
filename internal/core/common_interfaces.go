@@ -217,6 +217,10 @@ type InvitationRepository interface {
 	Delete(tx DB, id uuid.UUID) error
 }
 
+type ExternalEntityProviderService interface {
+	RefreshExternalEntityProviderProjects(ctx Context, casbinProvider RBACProvider, org models.Org, user string) error
+}
+
 type ProjectService interface {
 	ReadBySlug(ctx Context, organizationID uuid.UUID, slug string) (models.Project, error)
 	ListAllowedProjects(ctx Context) ([]models.Project, error)
@@ -224,7 +228,7 @@ type ProjectService interface {
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	CreateProject(ctx Context, project *models.Project) error
-	RefreshExternalEntityProviderProjects(Context, RBACProvider, models.Org, string) error
+	BootstrapProject(rbac AccessControl, project *models.Project) error
 }
 
 type InTotoVerifierService interface {
