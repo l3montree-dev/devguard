@@ -281,7 +281,7 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().String("path", ".", "The path to the project to scan. Defaults to the current directory.")
 	cmd.Flags().String("failOnRisk", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
 	cmd.Flags().String("failOnCVSS", "critical", "The risk level to fail the scan on. Can be 'low', 'medium', 'high' or 'critical'. Defaults to 'critical'.")
-	cmd.Flags().String("webUI", "https://main.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://main.devguard.org'.")
+	cmd.Flags().String("webUI", "https://app.devguard.org", "The url of the web UI to show the scan results in. Defaults to 'https://app.devguard.org'.")
 	cmd.Flags().String("artifactName", "", "The name of the artifact to upload. If not specified, it will be the name of the path. If the path is a directory, it will be the name of the directory. If the path is a file, it will be the name of the file.")
 
 }

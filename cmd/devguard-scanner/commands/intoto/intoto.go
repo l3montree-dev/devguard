@@ -277,7 +277,7 @@ func newInTotoFetchCommitLinkCommand() *cobra.Command {
 	}
 
 	cmd.Flags().String("token", "", "The token to use to authenticate with the devguard api")
-	cmd.Flags().String("apiUrl", "api.main.devguard.org", "The devguard api url")
+	cmd.Flags().String("apiUrl", "api.devguard.org", "The devguard api url")
 	cmd.Flags().String("assetName", "", "The asset name to use")
 	cmd.Flags().String("supplyChainId", "", "The supply chain id to fetch the links for")
 
