@@ -72,32 +72,16 @@ type StatisticsService_GetAssetVersionCvssDistribution_Call struct {
 }
 
 // GetAssetVersionCvssDistribution is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - assetName string
+//   - assetVersionName
+//   - assetID
+//   - assetName
 func (_e *StatisticsService_Expecter) GetAssetVersionCvssDistribution(assetVersionName interface{}, assetID interface{}, assetName interface{}) *StatisticsService_GetAssetVersionCvssDistribution_Call {
 	return &StatisticsService_GetAssetVersionCvssDistribution_Call{Call: _e.mock.On("GetAssetVersionCvssDistribution", assetVersionName, assetID, assetName)}
 }
 
 func (_c *StatisticsService_GetAssetVersionCvssDistribution_Call) Run(run func(assetVersionName string, assetID uuid.UUID, assetName string)) *StatisticsService_GetAssetVersionCvssDistribution_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
 	})
 	return _c
 }
@@ -144,32 +128,16 @@ type StatisticsService_GetAssetVersionRiskDistribution_Call struct {
 }
 
 // GetAssetVersionRiskDistribution is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - assetName string
+//   - assetVersionName
+//   - assetID
+//   - assetName
 func (_e *StatisticsService_Expecter) GetAssetVersionRiskDistribution(assetVersionName interface{}, assetID interface{}, assetName interface{}) *StatisticsService_GetAssetVersionRiskDistribution_Call {
 	return &StatisticsService_GetAssetVersionRiskDistribution_Call{Call: _e.mock.On("GetAssetVersionRiskDistribution", assetVersionName, assetID, assetName)}
 }
 
 func (_c *StatisticsService_GetAssetVersionRiskDistribution_Call) Run(run func(assetVersionName string, assetID uuid.UUID, assetName string)) *StatisticsService_GetAssetVersionRiskDistribution_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
 	})
 	return _c
 }
@@ -218,38 +186,17 @@ type StatisticsService_GetAssetVersionRiskHistory_Call struct {
 }
 
 // GetAssetVersionRiskHistory is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - start time.Time
-//   - end time.Time
+//   - assetVersionName
+//   - assetID
+//   - start
+//   - end
 func (_e *StatisticsService_Expecter) GetAssetVersionRiskHistory(assetVersionName interface{}, assetID interface{}, start interface{}, end interface{}) *StatisticsService_GetAssetVersionRiskHistory_Call {
 	return &StatisticsService_GetAssetVersionRiskHistory_Call{Call: _e.mock.On("GetAssetVersionRiskHistory", assetVersionName, assetID, start, end)}
 }
 
 func (_c *StatisticsService_GetAssetVersionRiskHistory_Call) Run(run func(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time)) *StatisticsService_GetAssetVersionRiskHistory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
-		}
-		var arg3 time.Time
-		if args[3] != nil {
-			arg3 = args[3].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(time.Time), args[3].(time.Time))
 	})
 	return _c
 }
@@ -296,32 +243,16 @@ type StatisticsService_GetAverageFixingTime_Call struct {
 }
 
 // GetAverageFixingTime is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - severity string
+//   - assetVersionName
+//   - assetID
+//   - severity
 func (_e *StatisticsService_Expecter) GetAverageFixingTime(assetVersionName interface{}, assetID interface{}, severity interface{}) *StatisticsService_GetAverageFixingTime_Call {
 	return &StatisticsService_GetAverageFixingTime_Call{Call: _e.mock.On("GetAverageFixingTime", assetVersionName, assetID, severity)}
 }
 
 func (_c *StatisticsService_GetAverageFixingTime_Call) Run(run func(assetVersionName string, assetID uuid.UUID, severity string)) *StatisticsService_GetAverageFixingTime_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
 	})
 	return _c
 }
@@ -370,26 +301,15 @@ type StatisticsService_GetComponentRisk_Call struct {
 }
 
 // GetComponentRisk is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
+//   - assetVersionName
+//   - assetID
 func (_e *StatisticsService_Expecter) GetComponentRisk(assetVersionName interface{}, assetID interface{}) *StatisticsService_GetComponentRisk_Call {
 	return &StatisticsService_GetComponentRisk_Call{Call: _e.mock.On("GetComponentRisk", assetVersionName, assetID)}
 }
 
 func (_c *StatisticsService_GetComponentRisk_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *StatisticsService_GetComponentRisk_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(string), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -438,26 +358,15 @@ type StatisticsService_GetDependencyCountPerscanner_Call struct {
 }
 
 // GetDependencyCountPerscanner is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
+//   - assetVersionName
+//   - assetID
 func (_e *StatisticsService_Expecter) GetDependencyCountPerscanner(assetVersionName interface{}, assetID interface{}) *StatisticsService_GetDependencyCountPerscanner_Call {
 	return &StatisticsService_GetDependencyCountPerscanner_Call{Call: _e.mock.On("GetDependencyCountPerscanner", assetVersionName, assetID)}
 }
 
 func (_c *StatisticsService_GetDependencyCountPerscanner_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *StatisticsService_GetDependencyCountPerscanner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(string), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -504,32 +413,16 @@ type StatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call stru
 }
 
 // GetDependencyVulnAggregationStateAndChangeSince is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
-//   - calculateChangeTo time.Time
+//   - assetVersionName
+//   - assetID
+//   - calculateChangeTo
 func (_e *StatisticsService_Expecter) GetDependencyVulnAggregationStateAndChangeSince(assetVersionName interface{}, assetID interface{}, calculateChangeTo interface{}) *StatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
 	return &StatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call{Call: _e.mock.On("GetDependencyVulnAggregationStateAndChangeSince", assetVersionName, assetID, calculateChangeTo)}
 }
 
 func (_c *StatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call) Run(run func(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time)) *StatisticsService_GetDependencyVulnAggregationStateAndChangeSince_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(string), args[1].(uuid.UUID), args[2].(time.Time))
 	})
 	return _c
 }
@@ -578,26 +471,15 @@ type StatisticsService_GetDependencyVulnCountByScannerID_Call struct {
 }
 
 // GetDependencyVulnCountByScannerID is a helper method to define mock.On call
-//   - assetVersionName string
-//   - assetID uuid.UUID
+//   - assetVersionName
+//   - assetID
 func (_e *StatisticsService_Expecter) GetDependencyVulnCountByScannerID(assetVersionName interface{}, assetID interface{}) *StatisticsService_GetDependencyVulnCountByScannerID_Call {
 	return &StatisticsService_GetDependencyVulnCountByScannerID_Call{Call: _e.mock.On("GetDependencyVulnCountByScannerID", assetVersionName, assetID)}
 }
 
 func (_c *StatisticsService_GetDependencyVulnCountByScannerID_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *StatisticsService_GetDependencyVulnCountByScannerID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(string), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -646,32 +528,16 @@ type StatisticsService_GetProjectRiskHistory_Call struct {
 }
 
 // GetProjectRiskHistory is a helper method to define mock.On call
-//   - projectID uuid.UUID
-//   - start time.Time
-//   - end time.Time
+//   - projectID
+//   - start
+//   - end
 func (_e *StatisticsService_Expecter) GetProjectRiskHistory(projectID interface{}, start interface{}, end interface{}) *StatisticsService_GetProjectRiskHistory_Call {
 	return &StatisticsService_GetProjectRiskHistory_Call{Call: _e.mock.On("GetProjectRiskHistory", projectID, start, end)}
 }
 
 func (_c *StatisticsService_GetProjectRiskHistory_Call) Run(run func(projectID uuid.UUID, start time.Time, end time.Time)) *StatisticsService_GetProjectRiskHistory_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 uuid.UUID
-		if args[0] != nil {
-			arg0 = args[0].(uuid.UUID)
-		}
-		var arg1 time.Time
-		if args[1] != nil {
-			arg1 = args[1].(time.Time)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(uuid.UUID), args[1].(time.Time), args[2].(time.Time))
 	})
 	return _c
 }
@@ -709,44 +575,18 @@ type StatisticsService_UpdateAssetRiskAggregation_Call struct {
 }
 
 // UpdateAssetRiskAggregation is a helper method to define mock.On call
-//   - assetVersion *models.AssetVersion
-//   - assetID uuid.UUID
-//   - start time.Time
-//   - end time.Time
-//   - updateProject bool
+//   - assetVersion
+//   - assetID
+//   - start
+//   - end
+//   - updateProject
 func (_e *StatisticsService_Expecter) UpdateAssetRiskAggregation(assetVersion interface{}, assetID interface{}, start interface{}, end interface{}, updateProject interface{}) *StatisticsService_UpdateAssetRiskAggregation_Call {
 	return &StatisticsService_UpdateAssetRiskAggregation_Call{Call: _e.mock.On("UpdateAssetRiskAggregation", assetVersion, assetID, start, end, updateProject)}
 }
 
 func (_c *StatisticsService_UpdateAssetRiskAggregation_Call) Run(run func(assetVersion *models.AssetVersion, assetID uuid.UUID, start time.Time, end time.Time, updateProject bool)) *StatisticsService_UpdateAssetRiskAggregation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.AssetVersion
-		if args[0] != nil {
-			arg0 = args[0].(*models.AssetVersion)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 time.Time
-		if args[2] != nil {
-			arg2 = args[2].(time.Time)
-		}
-		var arg3 time.Time
-		if args[3] != nil {
-			arg3 = args[3].(time.Time)
-		}
-		var arg4 bool
-		if args[4] != nil {
-			arg4 = args[4].(bool)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
+		run(args[0].(*models.AssetVersion), args[1].(uuid.UUID), args[2].(time.Time), args[3].(time.Time), args[4].(bool))
 	})
 	return _c
 }

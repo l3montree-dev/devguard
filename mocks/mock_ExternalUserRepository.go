@@ -72,26 +72,15 @@ type ExternalUserRepository_FindByOrgID_Call struct {
 }
 
 // FindByOrgID is a helper method to define mock.On call
-//   - tx core.DB
-//   - orgID uuid.UUID
+//   - tx
+//   - orgID
 func (_e *ExternalUserRepository_Expecter) FindByOrgID(tx interface{}, orgID interface{}) *ExternalUserRepository_FindByOrgID_Call {
 	return &ExternalUserRepository_FindByOrgID_Call{Call: _e.mock.On("FindByOrgID", tx, orgID)}
 }
 
 func (_c *ExternalUserRepository_FindByOrgID_Call) Run(run func(tx core.DB, orgID uuid.UUID)) *ExternalUserRepository_FindByOrgID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(uuid.UUID))
 	})
 	return _c
 }
@@ -131,20 +120,14 @@ type ExternalUserRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx core.DB
+//   - tx
 func (_e *ExternalUserRepository_Expecter) GetDB(tx interface{}) *ExternalUserRepository_GetDB_Call {
 	return &ExternalUserRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *ExternalUserRepository_GetDB_Call) Run(run func(tx core.DB)) *ExternalUserRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(core.DB))
 	})
 	return _c
 }
@@ -182,26 +165,15 @@ type ExternalUserRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - db core.DB
-//   - user *models.ExternalUser
+//   - db
+//   - user
 func (_e *ExternalUserRepository_Expecter) Save(db interface{}, user interface{}) *ExternalUserRepository_Save_Call {
 	return &ExternalUserRepository_Save_Call{Call: _e.mock.On("Save", db, user)}
 }
 
 func (_c *ExternalUserRepository_Save_Call) Run(run func(db core.DB, user *models.ExternalUser)) *ExternalUserRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.DB
-		if args[0] != nil {
-			arg0 = args[0].(core.DB)
-		}
-		var arg1 *models.ExternalUser
-		if args[1] != nil {
-			arg1 = args[1].(*models.ExternalUser)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(core.DB), args[1].(*models.ExternalUser))
 	})
 	return _c
 }
