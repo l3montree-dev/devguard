@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/google/uuid"
@@ -288,4 +290,39 @@ func (repository *dependencyVulnRepository) FindByTicketID(tx core.DB, ticketID 
 		return vuln, err
 	}
 	return vuln, nil
+}
+
+func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx core.DB, orgID uuid.UUID, pURL string, cveID string) (models.DependencyVulnHints, error) {
+	type stateCount struct {
+		State  string
+		Amount int
+	}
+	var hints models.DependencyVulnHints
+	stateCounts := make([]stateCount, 0, 7)
+	err := repository.GetDB(tx).Raw(`SELECT d.state, COUNT(d.state) FROM dependency_vulns d WHERE asset_id IN (
+		SELECT id from assets WHERE project_id IN (
+		  SELECT id from projects WHERE organization_id = ?
+	  )
+	) AND d.cve_id = ? AND d.component_purl = ? GROUP BY d.state`, orgID, cveID, pURL).Scan(&stateCounts).Error
+	if err != nil {
+		return hints, err
+	}
+	for _, state := range stateCounts {
+		switch state.State {
+		case "open":
+			hints.AmountOpen++
+		case "fixed":
+			hints.AmountFixed++
+		case "accepted":
+			hints.AmountAccepted++
+		case "falsePositive":
+			hints.AmountFalsePositives++
+		case "markedForTransfer":
+			hints.AmountMarkedForTransfer++
+		default:
+			slog.Error("invalid state", "state", state.State)
+			return hints, fmt.Errorf("invalid state")
+		}
+	}
+	return hints, nil
 }
