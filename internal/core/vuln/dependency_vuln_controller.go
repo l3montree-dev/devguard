@@ -242,12 +242,15 @@ func (controller dependencyVulnHTTPController) Read(ctx core.Context) error {
 	risk, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 	dependencyVuln.CVE.Risk = risk
 	dependencyVuln.CVE.Vector = vector
+	//if enabled in org settings we also want to send hints
 	org := core.GetOrg(ctx)
 	if org.ShareVulnInformation {
+		//form more detailed response
 		type responseWithHints struct {
 			dependencyVulnDTO detailedDependencyVulnDTO
 			hints             models.DependencyVulnHints
 		}
+
 		hints, err := controller.dependencyVulnRepository.GetHintsInOrganizationForVuln(nil, org.ID, *dependencyVuln.ComponentPurl, *dependencyVuln.CVEID)
 		if err != nil {
 			return err

@@ -299,6 +299,7 @@ func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx cor
 	}
 	var hints models.DependencyVulnHints
 	stateCounts := make([]stateCount, 0, 7)
+
 	err := repository.GetDB(tx).Raw(`SELECT d.state, COUNT(d.state) FROM dependency_vulns d WHERE asset_id IN (
 		SELECT id from assets WHERE project_id IN (
 		  SELECT id from projects WHERE organization_id = ?
@@ -307,20 +308,22 @@ func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx cor
 	if err != nil {
 		return hints, err
 	}
+	// convert information from query to hints struct
 	for _, state := range stateCounts {
+		//maybe use VulnStates for this, needs conversion then
 		switch state.State {
 		case "open":
-			hints.AmountOpen++
+			hints.AmountOpen += state.Amount
 		case "fixed":
-			hints.AmountFixed++
+			hints.AmountFixed += state.Amount
 		case "accepted":
-			hints.AmountAccepted++
+			hints.AmountAccepted += state.Amount
 		case "falsePositive":
-			hints.AmountFalsePositives++
+			hints.AmountFalsePositives += state.Amount
 		case "markedForTransfer":
-			hints.AmountMarkedForTransfer++
+			hints.AmountMarkedForTransfer += state.Amount
 		default:
-			slog.Error("invalid state", "state", state.State)
+			slog.Error("invalid state", "state", state.State) //debug for now, can be removed later
 			return hints, fmt.Errorf("invalid state")
 		}
 	}
