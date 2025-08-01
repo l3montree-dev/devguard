@@ -120,13 +120,13 @@ func (githubIntegration *GithubIntegration) GetID() core.IntegrationID {
 	return core.GitHubIntegrationID
 }
 
-func (githubIntegration *GithubIntegration) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
+func (githubIntegration *GithubIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
 	// currently not supported.
-	return nil, nil
+	return nil, nil, nil
 }
 
-func (githubIntegration *GithubIntegration) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
-	return nil, fmt.Errorf("not implemented")
+func (githubIntegration *GithubIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
+	return nil, nil, fmt.Errorf("not implemented")
 }
 
 func (githubIntegration *GithubIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
@@ -138,14 +138,14 @@ func (githubIntegration *GithubIntegration) HasAccessToExternalEntityProvider(ct
 	return false, nil
 }
 
-func (githubIntegration *GithubIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
+func (githubIntegration *GithubIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (core.Role, error) {
 	// currently not supported.
-	return "", fmt.Errorf("not implemented")
+	return core.RoleGuest, fmt.Errorf("not implemented")
 }
 
-func (githubIntegration *GithubIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
+func (githubIntegration *GithubIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (core.Role, error) {
 	// currently not supported.
-	return "", fmt.Errorf("not implemented")
+	return core.RoleGuest, fmt.Errorf("not implemented")
 }
 
 func (githubIntegration *GithubIntegration) GetOrg(ctx context.Context, userID string, providerID string, groupID string) (models.Org, error) {

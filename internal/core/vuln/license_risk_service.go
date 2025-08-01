@@ -47,6 +47,9 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 	//collect all risks before saving to the database, should be more efficient
 	allLicenseRisks := []models.LicenseRisk{}
 	allVulnEvents := []models.VulnEvent{}
+	// track which license risks we've already processed to prevent duplicates
+	processedLicenseRisks := make(map[string]struct{})
+
 	//go over every component and check if the license is a valid osi license; if not we can create a license risk with the provided information
 	for _, component := range components {
 
@@ -66,11 +69,17 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 				FinalLicenseDecision: "",
 				ComponentPurl:        component.Purl,
 			}
-			allLicenseRisks = append(allLicenseRisks, licenseRisk)
-			ev := models.NewDetectedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, scannerID)
-			// apply the event on the dependencyVuln
-			ev.Apply(&licenseRisk)
-			allVulnEvents = append(allVulnEvents, ev)
+
+			// Check if we've already processed this license risk to avoid duplicates
+			riskHash := licenseRisk.CalculateHash()
+			if _, processed := processedLicenseRisks[riskHash]; !processed {
+				processedLicenseRisks[riskHash] = struct{}{}
+				allLicenseRisks = append(allLicenseRisks, licenseRisk)
+				ev := models.NewDetectedEvent(riskHash, models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, scannerID)
+				// apply the event on the dependencyVuln
+				ev.Apply(&licenseRisk)
+				allVulnEvents = append(allVulnEvents, ev)
+			}
 		}
 	}
 	err = service.licenseRiskRepository.SaveBatch(nil, allLicenseRisks)

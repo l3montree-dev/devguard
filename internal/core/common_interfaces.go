@@ -47,6 +47,7 @@ type ProjectRepository interface {
 	GetByOrgID(organizationID uuid.UUID) ([]models.Project, error)
 	GetProjectByAssetID(assetID uuid.UUID) (models.Project, error)
 	List(idSlice []uuid.UUID, parentID *uuid.UUID, organizationID uuid.UUID) ([]models.Project, error)
+	ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo PageInfo, search string) (Paged[models.Project], error)
 	EnablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	DisablePolicyForProject(tx DB, projectID uuid.UUID, policyID uuid.UUID) error
 	Upsert(projects *[]*models.Project, conflictingColumns []clause.Column, toUpdate []string) error
@@ -127,7 +128,7 @@ type ComponentRepository interface {
 	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
-	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) error
+	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error)
 	GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error)
 }
@@ -147,7 +148,7 @@ type DependencyVulnRepository interface {
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 	ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
-	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (models.DependencyVulnHints, error)
+	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error)
 }
 
 type FirstPartyVulnRepository interface {
@@ -209,7 +210,6 @@ type OrganizationRepository interface {
 
 type OrgService interface {
 	CreateOrganization(ctx Context, organization models.Org) error
-	CreateExternalEntityOrganization(ctx Context, externalEntitySlug ExternalEntitySlug) (*models.Org, error)
 	ReadBySlug(slug string) (*models.Org, error)
 }
 
@@ -219,13 +219,19 @@ type InvitationRepository interface {
 	Delete(tx DB, id uuid.UUID) error
 }
 
+type ExternalEntityProviderService interface {
+	RefreshExternalEntityProviderProjects(ctx Context, org models.Org, user string) error
+}
+
 type ProjectService interface {
 	ReadBySlug(ctx Context, organizationID uuid.UUID, slug string) (models.Project, error)
 	ListAllowedProjects(ctx Context) ([]models.Project, error)
+	ListAllowedProjectsPaged(c Context) (Paged[models.Project], error)
 	ListProjectsByOrganizationID(organizationID uuid.UUID) ([]models.Project, error)
 	RecursivelyGetChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	GetDirectChildProjects(projectID uuid.UUID) ([]models.Project, error)
 	CreateProject(ctx Context, project *models.Project) error
+	BootstrapProject(rbac AccessControl, project *models.Project) error
 }
 
 type InTotoVerifierService interface {
@@ -263,9 +269,9 @@ type AssetVersionService interface {
 	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) *cdx.BOM
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, orgName string, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
-	HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error)
-	UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error
-	HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error)
+	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error
+	HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
 }
 
@@ -328,6 +334,15 @@ type JiraIntegrationRepository interface {
 	FindByOrganizationID(orgID uuid.UUID) ([]models.JiraIntegration, error)
 	Delete(tx DB, id uuid.UUID) error
 	GetClientByIntegrationID(integrationID uuid.UUID) (models.JiraIntegration, error)
+}
+
+type WebhookIntegrationRepository interface {
+	Save(tx DB, model *models.WebhookIntegration) error
+	Read(id uuid.UUID) (models.WebhookIntegration, error)
+	FindByOrgIDAndProjectID(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)
+	Delete(tx DB, id uuid.UUID) error
+	GetClientByIntegrationID(integrationID uuid.UUID) (models.WebhookIntegration, error)
+	GetProjectWebhooks(orgID uuid.UUID, projectID uuid.UUID) ([]models.WebhookIntegration, error)
 }
 
 type GitlabIntegrationRepository interface {
@@ -400,28 +415,29 @@ type LicenseRiskService interface {
 type AccessControl interface {
 	HasAccess(subject string) (bool, error) // return error if couldnt be checked due to unauthorized access or other issues
 
-	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string) error
+	InheritRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role) error
 
 	GetAllRoles(user string) []string
 
-	GrantRole(subject string, role string) error
-	RevokeRole(subject string, role string) error
+	GrantRole(subject string, role Role) error
+	RevokeRole(subject string, role Role) error
 
-	GrantRoleInProject(subject string, role string, project string) error
-	RevokeRoleInProject(subject string, role string, project string) error
-	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions string, project string) error
+	GrantRoleInProject(subject string, role Role, project string) error
+	RevokeRoleInProject(subject string, role Role, project string) error
+	RevokeAllRolesInProjectForUser(user string, project string) error
+	InheritProjectRole(roleWhichGetsPermissions, roleWhichProvidesPermissions Role, project string) error
 
 	InheritProjectRolesAcrossProjects(roleWhichGetsPermissions, roleWhichProvidesPermissions ProjectRole) error
 
-	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions string, project string) error
+	LinkDomainAndProjectRole(domainRoleWhichGetsPermission, projectRoleWhichProvidesPermissions Role, project string) error
 
-	AllowRole(role string, object Object, action []Action) error
+	AllowRole(role Role, object Object, action []Action) error
 	IsAllowed(subject string, object Object, action Action) (bool, error)
 
 	IsAllowedInProject(project *models.Project, user string, object Object, action Action) (bool, error)
-	AllowRoleInProject(project string, role string, object Object, action []Action) error
+	AllowRoleInProject(project string, role Role, object Object, action []Action) error
 
-	GetAllProjectsForUser(user string) (any, error) // return is either a slice of strings or projects
+	GetAllProjectsForUser(user string) ([]string, error) // return is either a slice of strings or projects
 
 	GetOwnerOfOrganization() (string, error)
 
@@ -429,8 +445,8 @@ type AccessControl interface {
 
 	GetAllMembersOfProject(projectID string) ([]string, error)
 
-	GetDomainRole(user string) (string, error)
-	GetProjectRole(user string, project string) (string, error)
+	GetDomainRole(user string) (Role, error)
+	GetProjectRole(user string, project string) (Role, error)
 
 	GetExternalEntityProviderID() *string
 }
@@ -442,11 +458,23 @@ type RBACProvider interface {
 
 type RBACMiddleware = func(obj Object, act Action) echo.MiddlewareFunc
 
+type Role string
+
 const (
-	RoleOwner  = "owner"
-	RoleAdmin  = "admin"
-	RoleMember = "member"
+	RoleOwner  Role = "owner"
+	RoleAdmin  Role = "admin"
+	RoleMember Role = "member"
+	RoleGuest  Role = "guest"
 )
+
+func ValidRole(role Role) bool {
+	switch role {
+	case RoleOwner, RoleAdmin, RoleMember, RoleGuest:
+		return true
+	default:
+		return false
+	}
+}
 
 type Action string
 
@@ -468,5 +496,5 @@ const (
 
 type ProjectRole struct {
 	Project string
-	Role    string
+	Role    Role
 }

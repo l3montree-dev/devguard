@@ -8,27 +8,23 @@ import (
 )
 
 type FirstPartyVulnDTO struct {
-	ID                   string           `json:"id"`
-	ScannerIDs           string           `json:"scannerIds"`
-	Message              *string          `json:"message"`
-	AssetVersionName     string           `json:"assetVersionName"`
-	AssetID              string           `json:"assetId"`
-	State                models.VulnState `json:"state"`
-	RuleID               string           `json:"ruleId"`
-	URI                  string           `json:"uri"`
-	StartLine            int              `json:"startLine"`
-	StartColumn          int              `json:"startColumn"`
-	EndLine              int              `json:"endLine"`
-	EndColumn            int              `json:"endColumn"`
-	Snippet              string           `json:"snippet"`
-	CreatedAt            time.Time        `json:"createdAt"`
-	TicketID             *string          `json:"ticketId"`
-	TicketURL            *string          `json:"ticketUrl"`
-	ManualTicketCreation bool             `json:"manualTicketCreation"`
-	Commit               string           `json:"commit"`
-	Email                string           `json:"email"`
-	Author               string           `json:"author"`
-	Date                 string           `json:"date"`
+	ID                   string                  `json:"id"`
+	ScannerIDs           string                  `json:"scannerIds"`
+	Message              *string                 `json:"message"`
+	AssetVersionName     string                  `json:"assetVersionName"`
+	AssetID              string                  `json:"assetId"`
+	State                models.VulnState        `json:"state"`
+	RuleID               string                  `json:"ruleId"`
+	URI                  string                  `json:"uri"`
+	SnippetContents      []models.SnippetContent `json:"snippetContents"`
+	CreatedAt            time.Time               `json:"createdAt"`
+	TicketID             *string                 `json:"ticketId"`
+	TicketURL            *string                 `json:"ticketUrl"`
+	ManualTicketCreation bool                    `json:"manualTicketCreation"`
+	Commit               string                  `json:"commit"`
+	Email                string                  `json:"email"`
+	Author               string                  `json:"author"`
+	Date                 string                  `json:"date"`
 
 	RuleName        string         `json:"ruleName"`
 	RuleHelp        string         `json:"ruleHelp"`
@@ -43,6 +39,10 @@ type detailedFirstPartyVulnDTO struct {
 }
 
 func FirstPartyVulnToDto(f models.FirstPartyVuln) FirstPartyVulnDTO {
+	snippets, err := f.FromJSONSnippetContents()
+	if err != nil {
+		snippets = models.SnippetContents{}
+	}
 
 	return FirstPartyVulnDTO{
 		ID:                   f.ID,
@@ -53,11 +53,6 @@ func FirstPartyVulnToDto(f models.FirstPartyVuln) FirstPartyVulnDTO {
 		State:                f.State,
 		RuleID:               f.RuleID,
 		URI:                  f.URI,
-		StartLine:            f.StartLine,
-		StartColumn:          f.StartColumn,
-		EndLine:              f.EndLine,
-		EndColumn:            f.EndColumn,
-		Snippet:              f.Snippet,
 		CreatedAt:            f.CreatedAt,
 		TicketID:             f.TicketID,
 		TicketURL:            f.TicketURL,
@@ -66,6 +61,7 @@ func FirstPartyVulnToDto(f models.FirstPartyVuln) FirstPartyVulnDTO {
 		Email:                f.Email,
 		Author:               f.Author,
 		Date:                 f.Date,
+		SnippetContents:      snippets.Snippets,
 
 		RuleName:        f.RuleName,
 		RuleHelp:        f.RuleHelp,

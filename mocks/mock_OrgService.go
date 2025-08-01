@@ -37,63 +37,6 @@ func (_m *OrgService) EXPECT() *OrgService_Expecter {
 	return &OrgService_Expecter{mock: &_m.Mock}
 }
 
-// CreateExternalEntityOrganization provides a mock function for the type OrgService
-func (_mock *OrgService) CreateExternalEntityOrganization(ctx core.Context, externalEntitySlug core.ExternalEntitySlug) (*models.Org, error) {
-	ret := _mock.Called(ctx, externalEntitySlug)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CreateExternalEntityOrganization")
-	}
-
-	var r0 *models.Org
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, core.ExternalEntitySlug) (*models.Org, error)); ok {
-		return returnFunc(ctx, externalEntitySlug)
-	}
-	if returnFunc, ok := ret.Get(0).(func(core.Context, core.ExternalEntitySlug) *models.Org); ok {
-		r0 = returnFunc(ctx, externalEntitySlug)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*models.Org)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(core.Context, core.ExternalEntitySlug) error); ok {
-		r1 = returnFunc(ctx, externalEntitySlug)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// OrgService_CreateExternalEntityOrganization_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateExternalEntityOrganization'
-type OrgService_CreateExternalEntityOrganization_Call struct {
-	*mock.Call
-}
-
-// CreateExternalEntityOrganization is a helper method to define mock.On call
-//   - ctx
-//   - externalEntitySlug
-func (_e *OrgService_Expecter) CreateExternalEntityOrganization(ctx interface{}, externalEntitySlug interface{}) *OrgService_CreateExternalEntityOrganization_Call {
-	return &OrgService_CreateExternalEntityOrganization_Call{Call: _e.mock.On("CreateExternalEntityOrganization", ctx, externalEntitySlug)}
-}
-
-func (_c *OrgService_CreateExternalEntityOrganization_Call) Run(run func(ctx core.Context, externalEntitySlug core.ExternalEntitySlug)) *OrgService_CreateExternalEntityOrganization_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.Context), args[1].(core.ExternalEntitySlug))
-	})
-	return _c
-}
-
-func (_c *OrgService_CreateExternalEntityOrganization_Call) Return(org *models.Org, err error) *OrgService_CreateExternalEntityOrganization_Call {
-	_c.Call.Return(org, err)
-	return _c
-}
-
-func (_c *OrgService_CreateExternalEntityOrganization_Call) RunAndReturn(run func(ctx core.Context, externalEntitySlug core.ExternalEntitySlug) (*models.Org, error)) *OrgService_CreateExternalEntityOrganization_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // CreateOrganization provides a mock function for the type OrgService
 func (_mock *OrgService) CreateOrganization(ctx core.Context, organization models.Org) error {
 	ret := _mock.Called(ctx, organization)
@@ -117,15 +60,26 @@ type OrgService_CreateOrganization_Call struct {
 }
 
 // CreateOrganization is a helper method to define mock.On call
-//   - ctx
-//   - organization
+//   - ctx core.Context
+//   - organization models.Org
 func (_e *OrgService_Expecter) CreateOrganization(ctx interface{}, organization interface{}) *OrgService_CreateOrganization_Call {
 	return &OrgService_CreateOrganization_Call{Call: _e.mock.On("CreateOrganization", ctx, organization)}
 }
 
 func (_c *OrgService_CreateOrganization_Call) Run(run func(ctx core.Context, organization models.Org)) *OrgService_CreateOrganization_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.Context), args[1].(models.Org))
+		var arg0 core.Context
+		if args[0] != nil {
+			arg0 = args[0].(core.Context)
+		}
+		var arg1 models.Org
+		if args[1] != nil {
+			arg1 = args[1].(models.Org)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -174,14 +128,20 @@ type OrgService_ReadBySlug_Call struct {
 }
 
 // ReadBySlug is a helper method to define mock.On call
-//   - slug
+//   - slug string
 func (_e *OrgService_Expecter) ReadBySlug(slug interface{}) *OrgService_ReadBySlug_Call {
 	return &OrgService_ReadBySlug_Call{Call: _e.mock.On("ReadBySlug", slug)}
 }
 
 func (_c *OrgService_ReadBySlug_Call) Run(run func(slug string)) *OrgService_ReadBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }

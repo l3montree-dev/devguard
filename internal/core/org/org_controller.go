@@ -24,7 +24,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/ory/client-go"
-	"gorm.io/gorm/clause"
 
 	"github.com/labstack/echo/v4"
 )
@@ -129,7 +128,8 @@ func (controller *httpController) ContentTree(ctx core.Context) error {
 	// get the organization from the context
 	organization := core.GetOrg(ctx)
 
-	ps, err := controller.projectService.ListAllowedProjects(ctx)
+	ps, err := controller.projectService.ListAllowedProjects(
+		ctx)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get projects").WithInternal(err)
 	}
@@ -249,7 +249,7 @@ func (controller *httpController) ChangeRole(ctx core.Context) error {
 	rbac.RevokeRole(userID, "member") // nolint:errcheck// we do not care if the user is not a member
 	rbac.RevokeRole(userID, "admin")  // nolint:errcheck// we do not care if the user is not a member
 
-	if err := rbac.GrantRole(userID, req.Role); err != nil {
+	if err := rbac.GrantRole(userID, core.Role(req.Role)); err != nil {
 		return echo.NewHTTPError(500, "could not grant role").WithInternal(err)
 	}
 
@@ -302,14 +302,14 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 
 	// get the roles for the members
 
-	errGroup := utils.ErrGroup[map[string]string](10)
+	errGroup := utils.ErrGroup[map[string]core.Role](10)
 	for _, member := range m {
-		errGroup.Go(func() (map[string]string, error) {
+		errGroup.Go(func() (map[string]core.Role, error) {
 			role, err := accessControl.GetDomainRole(member.Id)
 			if err != nil {
 				return nil, err
 			}
-			return map[string]string{member.Id: role}, nil
+			return map[string]core.Role{member.Id: role}, nil
 		})
 	}
 
@@ -318,12 +318,12 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 		return nil, err
 	}
 
-	roleMap := utils.Reduce(roles, func(acc map[string]string, r map[string]string) map[string]string {
+	roleMap := utils.Reduce(roles, func(acc map[string]core.Role, r map[string]core.Role) map[string]core.Role {
 		for k, v := range r {
 			acc[k] = v
 		}
 		return acc
-	}, make(map[string]string))
+	}, make(map[string]core.Role))
 
 	users := make([]core.User, len(m))
 	for i, member := range m {
@@ -341,7 +341,7 @@ func FetchMembersOfOrganization(ctx core.Context) ([]core.User, error) {
 		users[i] = core.User{
 			ID:   member.Id,
 			Name: name,
-			Role: roleMap[member.Id],
+			Role: string(roleMap[member.Id]),
 		}
 	}
 
@@ -405,20 +405,8 @@ func (controller *httpController) List(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read organizations").WithInternal(err)
 	}
-	// return the enabled git providers as well
-	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	orgs, err := thirdPartyIntegration.ListOrgs(ctx)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not get organizations from third party integrations").WithInternal(err)
-	}
-	// make sure, that the third party organizations exists inside the database
-	if err := controller.organizationRepository.Upsert(utils.Ptr(utils.Map(orgs, utils.Ptr)), []clause.Column{
-		{Name: "external_entity_provider_id"},
-	}, nil); err != nil {
-		return echo.NewHTTPError(500, "could not ensure third party organizations exist").WithInternal(err)
-	}
 
-	return ctx.JSON(200, append(organizations, orgs...))
+	return ctx.JSON(200, organizations)
 }
 
 func (controller *httpController) Metrics(ctx core.Context) error {

@@ -172,6 +172,11 @@ func RemoveFromWhitespaceSeparatedStringList(s string, item string) string {
 	return strings.Join(res, " ")
 }
 
+func ContainsInWhitespaceSeparatedStringList(s string, item string) bool {
+	els := strings.Fields(s)
+	return slices.Contains(els, item)
+}
+
 func CompareFirstTwoDecimals(a, b float64) bool {
 
 	aRounded := math.Round(a*100) / 100

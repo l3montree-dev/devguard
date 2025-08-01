@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Use the official PostgreSQL image as a base
-FROM postgres:17.4-bookworm6@sha256:304ab813518754228f9f792f79d6da36359b82d8ecf418096c636725f8c930ad
+FROM postgres:16.9-bookworm@sha256:fec2740c517838d4f582e48a8a9a1cb51082af3dcae59e9b12a66ec262302b97
 
 # Install the build dependencies
 RUN apt-get update && apt-get install -y \

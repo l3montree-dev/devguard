@@ -18,7 +18,6 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"os"
 	"strings"
 	"time"
 
@@ -36,12 +35,6 @@ type componentRepository struct {
 }
 
 func NewComponentRepository(db core.DB) *componentRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.Component{}, &models.ComponentDependency{}); err != nil {
-			panic(err)
-		}
-	}
-
 	return &componentRepository{
 		Repository: newGormRepository[string, models.Component](db),
 		db:         db,
@@ -313,7 +306,7 @@ func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Compon
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) error {
+func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error) {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
 		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})
@@ -322,7 +315,7 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 	added := comparison.OnlyInB
 	needToBeChanged := comparison.InBoth
 
-	return c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
+	return len(removed) > 0 || len(added) > 0, c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
 		//We remove the scanner id from all components in removed and if it was the only scanner id we remove the component
 		toDelete, toSave := diffComponents(tx, c, removed, scannerID)
 
@@ -343,7 +336,7 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 
 		//Next step is adding the scanner id to all existing component dependencies we just found
 		for i := range needToBeChanged {
-			if !strings.Contains(needToBeChanged[i].ScannerIDs, scannerID) {
+			if !utils.ContainsInWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID) {
 				needToBeChanged[i].ScannerIDs = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID)
 			}
 		}

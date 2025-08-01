@@ -3,7 +3,6 @@ package integrations
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 
@@ -32,18 +31,23 @@ func (t *thirdPartyIntegrations) GetID() core.IntegrationID {
 	return core.AggregateID
 }
 
-func (t *thirdPartyIntegrations) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
-	wg := utils.ErrGroup[[]models.Project](-1)
+func (t *thirdPartyIntegrations) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
+	type projectsWithRoles struct {
+		projects []models.Project
+		roles    []core.Role
+	}
+
+	wg := utils.ErrGroup[projectsWithRoles](-1)
 
 	for _, i := range t.integrations {
-		wg.Go(func() ([]models.Project, error) {
-			groups, err := i.ListGroups(ctx, userID, providerID)
+		wg.Go(func() (projectsWithRoles, error) {
+			groups, roles, err := i.ListGroups(ctx, userID, providerID)
 			if err != nil {
 				slog.Error("error while listing groups", "err", err)
 				// swallow error
-				return nil, nil
+				return projectsWithRoles{}, nil
 			}
-			return groups, err
+			return projectsWithRoles{projects: groups, roles: roles}, nil
 		})
 	}
 
@@ -52,27 +56,45 @@ func (t *thirdPartyIntegrations) ListGroups(ctx core.Context, userID string, pro
 		slog.Error("error while listing groups", "err", err)
 	}
 
-	return utils.Flat(results), nil
+	projects := make([]models.Project, 0, len(results))
+	roles := make([]core.Role, 0, len(results))
+	for _, result := range results {
+		projects = append(projects, result.projects...)
+		roles = append(roles, result.roles...)
+	}
+	return projects, roles, nil
 }
 
-func (t *thirdPartyIntegrations) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
-	wg := utils.ErrGroup[[]models.Asset](-1)
+func (t *thirdPartyIntegrations) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
+	type assetsWithRoles struct {
+		assets []models.Asset
+		roles  []core.Role
+	}
+	// wg := utils.ErrGroup[assetsWithRoles](-1)
+
+	results := make([]assetsWithRoles, 0, len(t.integrations))
 	for _, i := range t.integrations {
-		wg.Go(func() ([]models.Asset, error) {
-			projects, err := i.ListProjects(ctx, userID, providerID, groupID)
-			if err != nil {
-				slog.Error("error while listing projects", "err", err)
-				// swallow error
-				return nil, nil
-			}
-			return projects, err
-		})
+		// wg.Go(func() (assetsWithRoles, error) {
+		projects, roles, err := i.ListProjects(ctx, userID, providerID, groupID)
+		if err != nil {
+			slog.Error("error while listing projects", "err", err)
+			// swallow error
+			continue
+		}
+		results = append(results, assetsWithRoles{assets: projects, roles: roles})
+		// })
 	}
-	results, err := wg.WaitAndCollect()
-	if err != nil {
+	// results, err := wg.WaitAndCollect()
+	/*if err != nil {
 		slog.Error("error while listing projects", "err", err)
+	}*/
+	assets := make([]models.Asset, 0, len(results))
+	roles := make([]core.Role, 0, len(results))
+	for _, result := range results {
+		assets = append(assets, result.assets...)
+		roles = append(roles, result.roles...)
 	}
-	return utils.Flat(results), nil
+	return assets, roles, nil
 }
 
 func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx core.Context, externalEntityProviderID string) (bool, error) {
@@ -88,37 +110,6 @@ func (t *thirdPartyIntegrations) HasAccessToExternalEntityProvider(ctx core.Cont
 		}
 	}
 	return false, nil
-}
-
-func (t *thirdPartyIntegrations) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
-	for _, i := range t.integrations {
-		role, err := i.GetRoleInGroup(ctx, userID, providerID, groupID)
-		if err != nil {
-			slog.Error("error while getting role in org", "err", err, "providerID", providerID, "orgID", groupID)
-			// swallow error
-			continue
-		}
-		if role != "" {
-			return role, nil
-		}
-	}
-	//when we are part of a subgroup we also have some basic access level to see the parent groups but we have no permissions to fetch the members of those groups
-	return "", fmt.Errorf("no role found for user %s in org %s with providerID %s", userID, groupID, providerID)
-}
-
-func (t *thirdPartyIntegrations) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
-	for _, i := range t.integrations {
-		role, err := i.GetRoleInProject(ctx, userID, providerID, projectID)
-		if err != nil {
-			slog.Error("error while getting role in project", "err", err, "providerID", providerID, "projectID", projectID)
-			// swallow error
-			continue
-		}
-		if role != "" {
-			return role, nil
-		}
-	}
-	return "", fmt.Errorf("no role found for user %s in project %s with providerID %s", userID, projectID, providerID)
 }
 
 func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repository, error) {

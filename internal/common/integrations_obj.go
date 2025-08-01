@@ -14,3 +14,12 @@ type JiraIntegrationDTO struct {
 	ObfuscatedToken string `json:"obfuscatedToken"`
 	UserEmail       string `json:"userEmail"`
 }
+
+type WebhookIntegrationDTO struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	URL         string `json:"url"`
+	SbomEnabled bool   `json:"sbomEnabled"`
+	VulnEnabled bool   `json:"vulnEnabled"`
+}

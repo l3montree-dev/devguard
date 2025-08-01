@@ -17,7 +17,6 @@ package repositories
 
 import (
 	"fmt"
-	"os"
 	"slices"
 
 	"github.com/google/uuid"
@@ -32,11 +31,6 @@ type orgRepository struct {
 }
 
 func NewOrgRepository(db core.DB) *orgRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.Org{}); err != nil {
-			panic(err)
-		}
-	}
 	return &orgRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Org](db),
@@ -68,7 +62,7 @@ func (g *orgRepository) Save(tx core.DB, org *models.Org) error {
 
 func (g *orgRepository) ReadBySlug(slug string) (models.Org, error) {
 	var t models.Org
-	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Preload("JiraIntegrations").Preload("GitLabIntegrations").Where("slug = ?", slug).First(&t).Error
+	err := g.db.Model(models.Org{}).Preload("GithubAppInstallations").Preload("JiraIntegrations").Preload("GitLabIntegrations").Preload("Webhooks", "project_id IS NULL").Where("slug = ?", slug).First(&t).Error
 	return t, err
 }
 

@@ -20,6 +20,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -36,6 +37,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/jiraint"
+	"github.com/l3montree-dev/devguard/internal/core/integrations/webhook"
 	"github.com/l3montree-dev/devguard/internal/core/intoto"
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
@@ -71,6 +73,7 @@ func accessControlMiddleware(obj core.Object, act core.Action) echo.MiddlewareFu
 				if org.IsPublic && act == core.ActionRead {
 					core.SetIsPublicRequest(ctx)
 				} else {
+					slog.Error("access denied in accessControlMiddleware", "user", user, "object", obj, "action", act)
 					ctx.Response().WriteHeader(403)
 					return echo.NewHTTPError(403, "forbidden")
 				}
@@ -170,6 +173,7 @@ func projectAccessControlFactory(projectRepository core.ProjectRepository) core.
 						// allow READ on all objects in the project - if access is public
 						core.SetIsPublicRequest(ctx)
 					} else {
+						slog.Warn("access denied in ProjectAccess", "user", user, "object", obj, "action", act, "projectSlug", projectSlug)
 						return echo.NewHTTPError(403, "forbidden")
 					}
 				}
@@ -194,6 +198,7 @@ func projectAccessControl(projectService core.ProjectService, obj core.Object, a
 			// get the project id
 			projectSlug, err := core.GetProjectSlug(ctx)
 			if err != nil {
+				slog.Error("could not get project slug", "err", err)
 				return echo.NewHTTPError(500, "could not get project id")
 			}
 
@@ -201,12 +206,14 @@ func projectAccessControl(projectService core.ProjectService, obj core.Object, a
 			project, err := projectService.ReadBySlug(ctx, core.GetOrg(ctx).GetID(), projectSlug)
 
 			if err != nil {
+				slog.Error("could not get project by slug", "err", err, "projectSlug", projectSlug)
 				return echo.NewHTTPError(404, "could not get project")
 			}
 
 			allowed, err := rbac.IsAllowedInProject(&project, user, obj, act)
 
 			if err != nil {
+				slog.Error("could not determine if the user has access", "err", err, "projectSlug", projectSlug)
 				return echo.NewHTTPError(500, "could not determine if the user has access")
 			}
 
@@ -214,8 +221,10 @@ func projectAccessControl(projectService core.ProjectService, obj core.Object, a
 			if !allowed {
 				// check if public
 				if project.IsPublic && act == core.ActionRead {
+					slog.Info("public access to project", "projectSlug", projectSlug)
 					core.SetIsPublicRequest(ctx)
 				} else {
+					slog.Warn("access denied in projectAccessControl", "user", user, "object", obj, "action", act, "projectID", project.ID.String(), "projectSlug", projectSlug)
 					return echo.NewHTTPError(403, "forbidden")
 				}
 			}
@@ -234,11 +243,41 @@ func neededScope(neededScopes []string) core.MiddlewareFunc {
 
 			ok := utils.ContainsAll(userScopes, neededScopes)
 			if !ok {
+				slog.Error("user does not have the required scopes", "neededScopes", neededScopes, "userScopes", userScopes)
 				return echo.NewHTTPError(403, "your personal access token does not have the required scope, needed scopes: "+strings.Join(neededScopes, ", "))
 			}
 
 			return next(c)
 
+		}
+	}
+}
+
+func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.ExternalEntityProviderService) core.MiddlewareFunc {
+	limiter := map[string]time.Time{}
+
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		// get the current org
+		return func(ctx core.Context) error {
+			org := core.GetOrg(ctx)
+
+			if org.IsExternalEntity() {
+				// check if we are allowed to refresh the external entity provider projects
+				if time.Now().After(limiter[org.GetID().String()+"/"+core.GetSession(ctx).GetUserID()]) {
+					limiter[org.GetID().String()+"/"+core.GetSession(ctx).GetUserID()] = time.Now().Add(15 * time.Minute)
+
+					go func() {
+						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(ctx, org, core.GetSession(ctx).GetUserID())
+						if err != nil {
+							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", org.GetID(), "userID", core.GetSession(ctx).GetUserID())
+						} else {
+							slog.Info("refreshed external entity provider projects", "orgID", org.GetID(), "userID", core.GetSession(ctx).GetUserID())
+						}
+					}()
+				}
+			}
+
+			return next(ctx)
 		}
 	}
 }
@@ -279,7 +318,6 @@ func assetNameMiddleware() core.MiddlewareFunc {
 func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationService core.OrgService, oauth2Config map[string]*gitlabint.GitlabOauth2Config) core.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) (err error) {
-
 			// get the organization from the provided context
 			organization := core.GetParam(ctx, "organization")
 			if organization == "" {
@@ -295,7 +333,7 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 			}
 
 			// check what kind of RBAC we need
-			var domainRBAC core.AccessControl
+			domainRBAC := rbacProvider.GetDomainRBAC(org.ID.String())
 			if org.IsExternalEntity() {
 				// check if there is an admin token defined
 				conf, ok := oauth2Config[*org.ExternalEntityProviderID]
@@ -304,10 +342,7 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 					return ctx.JSON(500, map[string]string{"error": "no oauth2 config found for external entity provider"})
 				}
 
-				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, core.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, conf.AdminToken)
-
-			} else {
-				domainRBAC = rbacProvider.GetDomainRBAC(org.ID.String())
+				domainRBAC = accesscontrol.NewExternalEntityProviderRBAC(ctx, rbacProvider.GetDomainRBAC(org.ID.String()), core.GetThirdPartyIntegration(ctx), *org.ExternalEntityProviderID, conf.AdminToken)
 			}
 
 			// check if the user is allowed to access the organization
@@ -323,7 +358,7 @@ func multiOrganizationMiddleware(rbacProvider core.RBACProvider, organizationSer
 					core.SetIsPublicRequest(ctx)
 				} else {
 					// not allowed and not a public organization
-					slog.Error("access denied")
+					slog.Error("access denied in multiOrganizationMiddleware", "user", session.GetUserID(), "organization", organization)
 					return ctx.JSON(403, map[string]string{"error": "access denied"})
 				}
 			}
@@ -368,6 +403,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 		panic(err)
 	}
 
+	webhookIntegration := webhook.NewWebhookIntegration(db)
+
 	jiraIntegration := jiraint.NewJiraIntegration(db)
 
 	githubIntegration := githubint.NewGithubIntegration(db)
@@ -379,7 +416,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	)
 
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, casbinRBACProvider, gitlabClientFactory)
-	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration, jiraIntegration)
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabIntegration, githubIntegration, jiraIntegration, webhookIntegration)
 
 	// init all repositories using the provided database
 	patRepository := repositories.NewPATRepository(db)
@@ -401,6 +438,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	policyRepository := repositories.NewPolicyRepository(db)
 	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
 
+	webhookRepository := repositories.NewWebhookRepository(db)
+
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
 	projectService := project.NewService(projectRepository, assetRepository)
@@ -414,7 +453,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, vulnEventRepository, &componentService)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 	invitationRepository := repositories.NewInvitationRepository(db)
 
@@ -422,11 +461,13 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	orgService := org.NewService(orgRepository, casbinRBACProvider)
 
+	externalEntityProviderService := integrations.NewExternalEntityProviderService(projectService, assetRepository, projectRepository, casbinRBACProvider, orgRepository)
+
 	// init all http controllers using the repositories
 	policyController := compliance.NewPolicyController(policyRepository, projectRepository)
 	patController := pat.NewHTTPController(patRepository)
 	orgController := org.NewHTTPController(orgRepository, orgService, casbinRBACProvider, projectService, invitationRepository)
-	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService)
+	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService, webhookRepository)
 	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
 
 	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService)
@@ -513,7 +554,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 	orgRouter.GET("/", orgController.List)
 
 	//Api functions for interacting with an organization  ->  .../organizations/<organization-name>/...
-	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations))
+	organizationRouter := orgRouter.Group("/:organization", multiOrganizationMiddleware(casbinRBACProvider, orgService, gitlabOauth2Integrations), externalEntityProviderRefreshMiddleware(externalEntityProviderService))
+	organizationRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerSync, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
 	organizationRouter.DELETE("/", orgController.Delete, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionDelete))
 	organizationRouter.GET("/", orgController.Read, accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
 
@@ -544,6 +586,12 @@ func BuildRouter(db core.DB) *echo.Echo {
 	organizationRouter.POST("/integrations/jira/test-and-save/", integrationController.TestAndSaveJiraIntegration, neededScope([]string{"manage"}))
 	organizationRouter.DELETE("/integrations/jira/:jira_integration_id/", integrationController.DeleteJiraAccessToken, neededScope([]string{"manage"}))
 
+	organizationRouter.POST("/integrations/webhook/test-and-save/", webhookIntegration.Save, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
+
+	organizationRouter.PUT("/integrations/webhook/:id/", webhookIntegration.Update, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
+
+	organizationRouter.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
+
 	organizationRouter.POST("/integrations/gitlab/test-and-save/", integrationController.TestAndSaveGitlabIntegration, neededScope([]string{"manage"}))
 	organizationRouter.DELETE("/integrations/gitlab/:gitlab_integration_id/", integrationController.DeleteGitLabAccessToken, neededScope([]string{"manage"}))
 	organizationRouter.GET("/integrations/repositories/", integrationController.ListRepositories)
@@ -561,6 +609,10 @@ func BuildRouter(db core.DB) *echo.Echo {
 	//Api functions for interacting with a project inside an organization  ->  .../organizations/<organization-name>/projects/<project-name>/...
 	projectRouter := organizationRouter.Group("/projects/:projectSlug", projectAccessControl(projectService, "project", core.ActionRead))
 	projectRouter.GET("/", projectController.Read)
+
+	projectRouter.POST("/integrations/webhook/test-and-save/", webhookIntegration.Save, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectRouter.PUT("/integrations/webhook/:id/", webhookIntegration.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectRouter.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 
 	projectRouter.PUT("/policies/:policyID/", policyController.EnablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 	projectRouter.DELETE("/policies/:policyID/", policyController.DisablePolicyForProject, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionDelete))

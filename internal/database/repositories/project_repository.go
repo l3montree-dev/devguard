@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -20,11 +19,6 @@ type projectRepository struct {
 }
 
 func NewProjectRepository(db core.DB) *projectRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.Project{}); err != nil {
-			panic(err)
-		}
-	}
 	return &projectRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Project](db),
@@ -113,6 +107,39 @@ func nestProjects(slug string, projects []models.Project) models.Project {
 
 func (g *projectRepository) Update(tx core.DB, project *models.Project) error {
 	return g.db.Save(project).Error
+}
+
+func (g *projectRepository) ListPaged(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID, pageInfo core.PageInfo, search string) (core.Paged[models.Project], error) {
+	var projects []models.Project
+
+	var q *gorm.DB
+	if parentID != nil {
+		q = g.db.Model(&models.Project{}).Where(
+			g.db.Where("id IN ? AND parent_id = ?", projectIDs, parentID).
+				Or("organization_id = ? AND is_public = true AND parent_id = ?", orgID, parentID),
+		)
+	} else {
+		q = g.db.Model(&models.Project{}).Where(
+			g.db.Where("id IN ? AND parent_id IS NULL", projectIDs).
+				Or("organization_id = ? AND is_public = true AND parent_id IS NULL", orgID),
+		)
+	}
+
+	// apply search
+	if search != "" {
+		q = q.Where("name ILIKE ?", "%"+search+"%")
+	}
+
+	var count int64
+	err := q.Count(&count).Error
+	if err != nil {
+		return core.Paged[models.Project]{}, err
+	}
+	err = q.Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&projects).Error
+	if err != nil {
+		return core.Paged[models.Project]{}, err
+	}
+	return core.NewPaged(pageInfo, count, projects), nil
 }
 
 func (g *projectRepository) List(projectIDs []uuid.UUID, parentID *uuid.UUID, orgID uuid.UUID) ([]models.Project, error) {

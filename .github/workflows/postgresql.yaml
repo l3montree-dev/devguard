@@ -15,6 +15,7 @@ jobs:
       artifact-suffix: "-postgresql"
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
       api-url: https://api.main.devguard.org
+      web-ui: https://main.devguard.org
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}  
       build-args: "--context=. --dockerfile=Dockerfile.postgresql"
@@ -28,6 +29,7 @@ jobs:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-postgresql
       api-url: https://api.main.devguard.org
       artifact-suffix: "-postgresql"
+      web-ui: https://main.devguard.org
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 

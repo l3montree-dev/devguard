@@ -8,12 +8,171 @@ import (
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
 
+func TestFirstPartyVulnHash(t *testing.T) {
+	t.Run("should return the same hash for two equal vulnerabilities", func(t *testing.T) {
+		snippet1 := models.SnippetContent{
+			StartLine:   1,
+			EndLine:     2,
+			StartColumn: 1,
+			EndColumn:   20,
+			Snippet:     "TestSnippet",
+		}
+		snippetContents1 := models.SnippetContents{
+			Snippets: []models.SnippetContent{snippet1},
+		}
+		snippetJSON1, err := snippetContents1.ToJSON()
+		assert.NoError(t, err)
+		vuln1 := models.FirstPartyVuln{
+			URI:             "test-uri",
+			SnippetContents: snippetJSON1,
+			Vulnerability: models.Vulnerability{
+				Message: utils.Ptr("Test message"),
+			},
+		}
+
+		snippet2 := models.SnippetContent{
+			StartLine:   1,
+			EndLine:     2,
+			StartColumn: 1,
+			EndColumn:   20,
+			Snippet:     "TestSnippet",
+		}
+		snippetContents2 := models.SnippetContents{
+			Snippets: []models.SnippetContent{snippet2},
+		}
+		snippetJSON2, err := snippetContents2.ToJSON()
+		assert.NoError(t, err)
+
+		vuln2 := models.FirstPartyVuln{
+			URI:             "test-uri",
+			SnippetContents: snippetJSON2,
+			Vulnerability: models.Vulnerability{
+				Message: utils.Ptr("other message"),
+			},
+		}
+
+		assert.Equal(t, vuln1.CalculateHash(), vuln2.CalculateHash())
+	})
+
+	t.Run("should return different hashes for different vulnerabilities", func(t *testing.T) {
+		snippet1 := models.SnippetContent{
+			StartLine:   1,
+			EndLine:     2,
+			StartColumn: 1,
+			EndColumn:   20,
+			Snippet:     "TestSnippet",
+		}
+		snippetContents1 := models.SnippetContents{
+			Snippets: []models.SnippetContent{snippet1},
+		}
+		snippetJSON1, err := snippetContents1.ToJSON()
+		assert.NoError(t, err)
+		vuln1 := models.FirstPartyVuln{
+			URI:             "test-uri",
+			SnippetContents: snippetJSON1,
+			Vulnerability: models.Vulnerability{
+				Message: utils.Ptr("Test message"),
+			},
+		}
+
+		snippet2 := models.SnippetContent{
+			StartLine:   3,
+			EndLine:     4,
+			StartColumn: 5,
+			EndColumn:   6,
+			Snippet:     "AnotherSnippet",
+		}
+		snippetContents2 := models.SnippetContents{
+			Snippets: []models.SnippetContent{snippet2},
+		}
+		snippetJSON2, err := snippetContents2.ToJSON()
+		assert.NoError(t, err)
+
+		vuln2 := models.FirstPartyVuln{
+			URI:             "another-uri",
+			SnippetContents: snippetJSON2,
+			Vulnerability: models.Vulnerability{
+				Message: utils.Ptr("Another message"),
+			},
+		}
+
+		assert.NotEqual(t, vuln1.CalculateHash(), vuln2.CalculateHash())
+	})
+
+	t.Run("should take the hash of the vulnerability, if it exists", func(t *testing.T) {
+		vuln := common.SarifResult{
+			Version: "2.1.0",
+			Schema:  "https://json.schemastore.org/sarif-2.1.0.json",
+			Runs: []common.Run{
+				{
+					Results: []common.Result{
+						{
+							RuleID: "test-rule",
+							Locations: []common.Location{
+								{
+									PhysicalLocation: common.PhysicalLocation{
+										ArtifactLocation: common.ArtifactLocation{
+											URI: "test-uri",
+										},
+										Region: common.Region{
+											StartLine: 1,
+											Snippet: common.Text{
+												Text: "TestSnippet",
+											},
+										},
+									},
+								},
+							},
+							Fingerprints: &common.Fingerprints{
+								CalculatedFingerprint: "test-fingerprint",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		assetVersionService := mocks.NewAssetVersionService(t)
+
+		// Create the expected FirstPartyVuln with the fingerprint
+		// The ID should be set to the fingerprint when it exists
+		expectedVuln := models.FirstPartyVuln{
+			Vulnerability: models.Vulnerability{
+				ID: "test-fingerprint", // This should match the fingerprint
+			},
+			Fingerprint: "test-fingerprint",
+		}
+
+		// Set up the mock expectation
+		assetVersionService.On("HandleFirstPartyVulnResult",
+			models.Asset{},
+			&models.AssetVersion{Name: "test-asset-version"},
+			vuln,
+			"scannerID",
+			"userID").Return(0, 0, []models.FirstPartyVuln{expectedVuln}, nil)
+
+		_, _, r, err := assetVersionService.HandleFirstPartyVulnResult(
+			models.Asset{},
+			&models.AssetVersion{
+				Name: "test-asset-version",
+			},
+			vuln,
+			"scannerID",
+			"userID")
+		assert.NoError(t, err)
+		assert.Len(t, r, 1)
+		assert.Equal(t, "test-fingerprint", r[0].ID)
+	})
+
+}
 func TestDiffScanResults(t *testing.T) {
 
 	t.Run("should correctly identify a vulnerability which now gets found by another scanner", func(t *testing.T) {
@@ -85,6 +244,25 @@ func TestDiffScanResults(t *testing.T) {
 		assert.Empty(t, fixedVulns)
 		assert.Empty(t, detectedByCurrentScanner)
 		assert.Empty(t, notDetectedByCurrentScannerAnymore)
+	})
+
+	t.Run("BUG: should NOT incorrectly identify scanner removal when scanner ID contains colon and is substring of existing scanner", func(t *testing.T) {
+
+		currentScanner := "container-scanning"
+		foundVulnerabilities := []models.DependencyVuln{
+			{CVEID: utils.Ptr("CVE-1234")},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning:scanner"}},
+		}
+
+		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
+
+		assert.Empty(t, foundByScannerAndNotExisting, "Should be empty - this is a new detection by current scanner")
+		assert.Empty(t, fixedVulns, "Should be empty - no vulnerabilities are fixed")
+		assert.Equal(t, 1, len(detectedByCurrentScanner), "Should detect that current scanner found existing vulnerability for first time")
+		assert.Empty(t, notDetectedByCurrentScannerAnymore, "BUG: Should be empty - current scanner was never detecting this vulnerability before!")
 	})
 }
 

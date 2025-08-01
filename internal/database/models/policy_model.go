@@ -13,7 +13,7 @@ type Policy struct {
 	Organization   *Org       `json:"organization" gorm:"foreignKey:OrganizationID;references:ID;constraint:OnDelete:CASCADE;"`
 
 	OpaqueID string    `json:"opaqueId" gorm:"unique"` // only used by global policies maintained by the community and migrated by the system
-	Projects []Project `json:"projects" gorm:"many2many:project_enabled_policies;"`
+	Projects []Project `json:"projects" gorm:"many2many:project_enabled_policies;constraint:OnDelete:CASCADE;"`
 }
 
 func (m Policy) TableName() string {

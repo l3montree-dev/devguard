@@ -18,7 +18,6 @@ package repositories
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/google/uuid"
@@ -34,13 +33,6 @@ type assetVersionRepository struct {
 }
 
 func NewAssetVersionRepository(db core.DB) *assetVersionRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		err := db.AutoMigrate(&models.AssetVersion{})
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	return &assetVersionRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.AssetVersion](db),

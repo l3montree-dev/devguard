@@ -259,8 +259,7 @@ func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.G
 
 	_ = user
 	if err != nil {
-		errMsg, _ := io.ReadAll(resp.Body)
-		slog.Error("failed to get user", "err", err, "tokenHash", utils.HashString(token.AccessToken), "statusCode", resp.StatusCode, "body", string(errMsg))
+		slog.Error("failed to get user", "err", err, "tokenHash", utils.HashString(token.AccessToken), "statusCode", resp.StatusCode)
 		return false
 	}
 
@@ -327,21 +326,21 @@ func (g *GitlabIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 	return utils.Map(tokens, oauth2TokenToOrg), nil
 }
 
-func (g *GitlabIntegration) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
+func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
 	// get the oauth2 tokens for this user
 	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
-		return nil, err
+		return nil, nil, err
 	}
 	// create a new gitlab batch client
 	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
-		return nil, err
+		return nil, nil, err
 	}
 	// get the groups for this user
-	groups, _, err := gitlabClient.ListGroups(ctx.Request().Context(), &gitlab.ListGroupsOptions{
+	groups, _, err := gitlabClient.ListGroups(ctx, &gitlab.ListGroupsOptions{
 		ListOptions: gitlab.ListOptions{PerPage: 100},
 		//MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions),
 		// only list groups where the user has at least reporter permissions
@@ -349,23 +348,30 @@ func (g *GitlabIntegration) ListGroups(ctx core.Context, userID string, provider
 
 	if err != nil {
 		slog.Error("failed to list groups", "err", err)
-		return nil, err
+		return nil, nil, err
 	}
 
-	errgroup := utils.ErrGroup[*gitlab.Group](10)
+	type groupWithAccessLevel struct {
+		group       *gitlab.Group
+		accessLevel gitlab.AccessLevelValue
+	}
+
+	errgroup := utils.ErrGroup[*groupWithAccessLevel](10)
 	for _, group := range groups {
-		errgroup.Go(func() (*gitlab.Group, error) {
-			member, _, err := gitlabClient.GetMemberInGroup(ctx.Request().Context(), token.GitLabUserID, (*group).ID)
+		errgroup.Go(func() (*groupWithAccessLevel, error) {
+			member, _, err := gitlabClient.GetMemberInGroup(ctx, token.GitLabUserID, (*group).ID)
 			if err != nil {
 				if strings.Contains(err.Error(), "403 Forbidden") || strings.Contains(err.Error(), "404 Not Found") {
 					return nil, nil
 				} else {
-
 					return nil, err
 				}
 			}
 			if member.AccessLevel >= gitlab.ReporterPermissions {
-				return group, nil
+				return &groupWithAccessLevel{
+					group:       group,
+					accessLevel: member.AccessLevel,
+				}, nil
 			}
 			return nil, nil
 		})
@@ -373,63 +379,73 @@ func (g *GitlabIntegration) ListGroups(ctx core.Context, userID string, provider
 
 	cleanedGroups, err := errgroup.WaitAndCollect()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	cleanedGroups = utils.Filter(cleanedGroups, func(g *gitlab.Group) bool {
-		return g != nil
+	cleanedGroups = utils.Filter(cleanedGroups, func(g *groupWithAccessLevel) bool {
+		return g != nil && g.group != nil
 	})
 
-	return utils.Map(cleanedGroups, func(el *gitlab.Group) models.Project {
-		return groupToProject(el, providerID)
-	}), nil
+	return utils.Map(cleanedGroups, func(el *groupWithAccessLevel) models.Project {
+			return groupToProject(el.group, providerID)
+		}), utils.Map(
+			cleanedGroups, func(el *groupWithAccessLevel) core.Role {
+				return gitlabAccessLevelToRole(el.accessLevel)
+			},
+		), nil
 }
 
-func (g *GitlabIntegration) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
+func gitlabAccessLevelToRole(accessLevel gitlab.AccessLevelValue) core.Role {
+
+	if accessLevel >= gitlab.OwnerPermissions {
+		return core.RoleAdmin // there is nothing like an owner on project level, so we map it to admin
+	} else if accessLevel >= gitlab.MaintainerPermissions {
+		return core.RoleAdmin
+	} else if accessLevel >= gitlab.DeveloperPermissions {
+		return core.RoleMember
+	}
+	return core.RoleMember // default to member if no higher access level is found
+}
+
+func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
 	// get the oauth2 tokens for this user
 	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
 	if err != nil {
 		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
-		return nil, err
+		return nil, nil, err
 	}
 	// create a new gitlab batch client
 	gitlabClient, err := g.clientFactory.FromOauth2Token(*token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
-		return nil, err
+		return nil, nil, err
 	}
 	// convert the groupID to an int
 	groupIDInt, err := strconv.Atoi(groupID)
 	if err != nil {
 		slog.Error("failed to convert groupID to int", "err", err)
-		return nil, errors.Wrap(err, "failed to convert groupID to int")
+		return nil, nil, errors.Wrap(err, "failed to convert groupID to int")
 	}
 	// get the projects in the group
-	projects, _, err := gitlabClient.ListProjectsInGroup(ctx.Request().Context(), groupIDInt, &gitlab.ListGroupProjectsOptions{
+	projects, _, err := gitlabClient.ListProjectsInGroup(ctx, groupIDInt, &gitlab.ListGroupProjectsOptions{
 		WithShared: gitlab.Ptr(false),
 	})
 	if err != nil {
 		slog.Error("failed to list projects in group", "err", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	// convert the projects to assets
 	result := make([]models.Asset, 0, len(projects))
+	accessLevels := make([]core.Role, 0, len(projects))
 	for _, project := range projects {
-		result = append(result, projectToAsset(project, providerID))
+		// check if the project has a permissions set - otherwise it is an public project
+		if project.Permissions != nil && project.Permissions.ProjectAccess != nil {
+			result = append(result, projectToAsset(project, providerID))
+			accessLevels = append(accessLevels, gitlabAccessLevelToRole(project.Permissions.ProjectAccess.AccessLevel))
+		}
 	}
 
-	return result, nil
-}
-
-func gitlabAccessLevelToRole(accessLevel gitlab.AccessLevelValue) string {
-	switch accessLevel {
-	case gitlab.OwnerPermissions:
-		return "owner"
-	case gitlab.MaintainerPermissions:
-		return "admin"
-	default:
-		return "member"
-	}
+	return result, accessLevels, nil
 }
 
 func (g *GitlabIntegration) GetGroup(ctx context.Context, userID string, providerID string, groupID string) (models.Project, error) {
@@ -462,7 +478,7 @@ func (g *GitlabIntegration) GetGroup(ctx context.Context, userID string, provide
 	return groupToProject(group, providerID), nil
 }
 
-func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (string, error) {
+func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (core.Role, error) {
 	// get the oauth2 tokens for this user
 	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
 	if err != nil {
@@ -497,7 +513,7 @@ func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, p
 	return gitlabAccessLevelToRole(member.AccessLevel), nil
 }
 
-func (g *GitlabIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (string, error) {
+func (g *GitlabIntegration) GetRoleInProject(ctx context.Context, userID string, providerID string, projectID string) (core.Role, error) {
 	// get the oauth2 tokens for this user
 	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
 	if err != nil {
@@ -800,7 +816,7 @@ func createProjectHookOptions(token *uuid.UUID, hooks []*gitlab.ProjectHook) (*g
 	projectOptions.PushEvents = gitlab.Ptr(false)
 	if instanceDomain == "" { //If no URL is provided in the environment variables default to main URL
 		slog.Debug("no URL specified in .env file defaulting to main")
-		defaultURL := "https://api.main.devguard.org/api/v1/webhook/"
+		defaultURL := "https://api.devguard.org/api/v1/webhook/"
 		projectOptions.URL = &defaultURL
 	} else {
 		instanceDomain = strings.TrimSuffix(instanceDomain, "/") //Remove trailing slash if it exists

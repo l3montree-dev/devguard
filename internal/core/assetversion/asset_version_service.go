@@ -18,6 +18,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/risk"
+	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/openvex/go-vex/pkg/vex"
 
@@ -36,12 +37,15 @@ type service struct {
 	firstPartyVulnService    core.FirstPartyVulnService
 	assetVersionRepository   core.AssetVersionRepository
 	assetRepository          core.AssetRepository
+	projectRepository        core.ProjectRepository
+	orgRepository            core.OrganizationRepository
 	vulnEventRepository      core.VulnEventRepository
 	componentService         core.ComponentService
 	httpClient               *http.Client
+	thirdPartyIntegration    core.ThirdPartyIntegration
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration) *service {
 	return &service{
 		assetVersionRepository:   assetVersionRepository,
 		componentRepository:      componentRepository,
@@ -53,6 +57,9 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		componentService:         componentService,
 		assetRepository:          assetRepository,
 		httpClient:               &http.Client{},
+		thirdPartyIntegration:    thirdPartyIntegration,
+		projectRepository:        projectRepository,
+		orgRepository:            orgRepository,
 	}
 }
 
@@ -88,9 +95,9 @@ func preferMarkdown(text common.Text) string {
 	return text.Text
 }
 
-func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error) {
+func (s *service) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error) {
 
-	firstPartyVulnerabilities := []models.FirstPartyVuln{}
+	firstPartyVulnerabilitiesMap := make(map[string]models.FirstPartyVuln)
 
 	ruleMap := make(map[string]common.Rule)
 	for _, run := range sarifScan.Runs {
@@ -128,24 +135,60 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 				firstPartyVulnerability.Date = result.PartialFingerprints.Date
 			}
 
-			if len(result.Locations) > 0 {
-				firstPartyVulnerability.URI = result.Locations[0].PhysicalLocation.ArtifactLocation.URI
-				firstPartyVulnerability.StartLine = result.Locations[0].PhysicalLocation.Region.StartLine
-				firstPartyVulnerability.StartColumn = result.Locations[0].PhysicalLocation.Region.StartColumn
-				firstPartyVulnerability.EndLine = result.Locations[0].PhysicalLocation.Region.EndLine
-				firstPartyVulnerability.EndColumn = result.Locations[0].PhysicalLocation.Region.EndColumn
-				firstPartyVulnerability.Snippet = result.Locations[0].PhysicalLocation.Region.Snippet.Text
+			var hash string
+			if result.Fingerprints != nil {
+				if result.Fingerprints.CalculatedFingerprint != "" {
+					firstPartyVulnerability.Fingerprint = result.Fingerprints.CalculatedFingerprint
+				}
 			}
 
-			firstPartyVulnerabilities = append(firstPartyVulnerabilities, firstPartyVulnerability)
+			if len(result.Locations) > 0 {
+				firstPartyVulnerability.URI = result.Locations[0].PhysicalLocation.ArtifactLocation.URI
+
+				snippetContent := models.SnippetContent{
+					StartLine:   result.Locations[0].PhysicalLocation.Region.StartLine,
+					EndLine:     result.Locations[0].PhysicalLocation.Region.EndLine,
+					StartColumn: result.Locations[0].PhysicalLocation.Region.StartColumn,
+					EndColumn:   result.Locations[0].PhysicalLocation.Region.EndColumn,
+					Snippet:     result.Locations[0].PhysicalLocation.Region.Snippet.Text,
+				}
+
+				hash = firstPartyVulnerability.CalculateHash()
+				if existingVuln, ok := firstPartyVulnerabilitiesMap[hash]; ok {
+					snippetContents, err := existingVuln.FromJSONSnippetContents()
+					if err != nil {
+						return 0, 0, []models.FirstPartyVuln{}, errors.Wrap(err, "could not parse existing snippet contents")
+					}
+					snippetContents.Snippets = append(snippetContents.Snippets, snippetContent)
+					firstPartyVulnerability.SnippetContents, err = snippetContents.ToJSON()
+					if err != nil {
+						return 0, 0, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
+					}
+
+				} else {
+
+					snippetContents := models.SnippetContents{
+						Snippets: []models.SnippetContent{snippetContent},
+					}
+					var err error
+					firstPartyVulnerability.SnippetContents, err = snippetContents.ToJSON()
+					if err != nil {
+						return 0, 0, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
+					}
+
+				}
+				firstPartyVulnerabilitiesMap[hash] = firstPartyVulnerability
+
+			}
+
 		}
 	}
+	var firstPartyVulnerabilities []models.FirstPartyVuln
+	for _, vuln := range firstPartyVulnerabilitiesMap {
+		firstPartyVulnerabilities = append(firstPartyVulnerabilities, vuln)
+	}
 
-	firstPartyVulnerabilities = utils.UniqBy(firstPartyVulnerabilities, func(f models.FirstPartyVuln) string {
-		return f.CalculateHash()
-	})
-
-	amountOpened, amountClosed, amountExisting, err := s.handleFirstPartyVulnResult(userID, scannerID, assetVersion, firstPartyVulnerabilities, asset)
+	amountOpened, amountClosed, amountExisting, err := s.handleFirstPartyVulnResult(userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project)
 	if err != nil {
 		return 0, 0, []models.FirstPartyVuln{}, err
 	}
@@ -159,7 +202,7 @@ func (s *service) HandleFirstPartyVulnResult(asset models.Asset, assetVersion *m
 	return amountOpened, amountClosed, amountExisting, nil
 }
 
-func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset) (int, int, []models.FirstPartyVuln, error) {
+func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project) (int, int, []models.FirstPartyVuln, error) {
 	// get all existing vulns from the database - this is the old state
 	existingVulns, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
@@ -179,27 +222,65 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	fixedVulns := comparison.OnlyInA
 	newVulns := comparison.OnlyInB
 
+	inBoth := comparison.InBoth // these are the vulns that are already in the database, but we need to update them
+
+	updatedFirstPartyVulns := make([]models.FirstPartyVuln, 0)
+
+	for i := range inBoth {
+		for n := range vulns {
+			if inBoth[i].ID == vulns[n].ID {
+				// we found a new vuln that is already in the database, we need to update it
+				inBoth[i].SnippetContents = vulns[n].SnippetContents
+				updatedFirstPartyVulns = append(updatedFirstPartyVulns, inBoth[i])
+			}
+		}
+	}
+
 	// get a transaction
 	if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
 		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, newVulns); err != nil {
 			// this will cancel the transaction
 			return err
 		}
-		return s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, fixedVulns)
+		if err := s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, fixedVulns); err != nil {
+			return err
+		}
+
+		// update existing first party vulns within the transaction
+		for _, v := range updatedFirstPartyVulns {
+			if err := s.firstPartyVulnRepository.Save(tx, &v); err != nil {
+				slog.Error("could not update existing first party vulns", "err", err)
+				return err
+			}
+		}
+		return nil
 	}); err != nil {
 		slog.Error("could not save vulns", "err", err)
 		return 0, 0, []models.FirstPartyVuln{}, err
 	}
-
 	// the amount we actually fixed, is the amount that was open before
 	fixedVulns = utils.Filter(fixedVulns, func(vuln models.FirstPartyVuln) bool {
 		return vuln.State == models.VulnStateOpen
 	})
 
-	return len(newVulns), len(fixedVulns), append(newVulns, comparison.InBoth...), nil
+	if len(newVulns) > 0 {
+		go func() {
+			if err = s.thirdPartyIntegration.HandleEvent(core.FirstPartyVulnsDetectedEvent{
+				AssetVersion: core.ToAssetVersionObject(*assetVersion),
+				Asset:        core.ToAssetObject(asset),
+				Project:      core.ToProjectObject(project),
+				Org:          core.ToOrgObject(org),
+				Vulns:        utils.Map(newVulns, vuln.FirstPartyVulnToDto),
+			}); err != nil {
+				slog.Error("could not handle first party vulnerabilities detected event", "err", err)
+			}
+		}()
+	}
+
+	return len(newVulns), len(fixedVulns), append(newVulns, inBoth...), nil
 }
 
-func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
@@ -254,6 +335,20 @@ func (s *service) HandleScanResult(asset models.Asset, assetVersion *models.Asse
 
 	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
+	if len(opened) > 0 {
+		go func() {
+			if err = s.thirdPartyIntegration.HandleEvent(core.DependencyVulnsDetectedEvent{
+				AssetVersion: core.ToAssetVersionObject(*assetVersion),
+				Asset:        core.ToAssetObject(asset),
+				Project:      core.ToProjectObject(project),
+				Org:          core.ToOrgObject(org),
+				Vulns:        utils.Map(opened, vuln.DependencyVulnToDto),
+			}); err != nil {
+				slog.Error("could not handle dependency vulnerabilities detected event", "err", err)
+			}
+		}()
+	}
+
 	return opened, closed, newState, nil
 }
 
@@ -273,7 +368,7 @@ func diffScanResults(currentScanner string, foundVulnerabilities []models.Depend
 
 	// Now we work on the vulnerabilities found in both sets -> has the vulnerability this scanner id already in his scanner_ids
 	for i := range foundByScannerAndExisting {
-		if !strings.Contains(foundByScannerAndExisting[i].ScannerIDs, currentScanner) {
+		if !utils.ContainsInWhitespaceSeparatedStringList(foundByScannerAndExisting[i].ScannerIDs, currentScanner) {
 			detectedByOtherScanner = append(detectedByOtherScanner, foundByScannerAndExisting[i])
 		}
 	}
@@ -282,7 +377,7 @@ func diffScanResults(currentScanner string, foundVulnerabilities []models.Depend
 	for i := range notFoundByScannerAndExisting {
 		if strings.TrimSpace(notFoundByScannerAndExisting[i].ScannerIDs) == currentScanner {
 			fixedVulns = append(fixedVulns, notFoundByScannerAndExisting[i])
-		} else if strings.Contains(notFoundByScannerAndExisting[i].ScannerIDs, currentScanner) {
+		} else if utils.ContainsInWhitespaceSeparatedStringList(notFoundByScannerAndExisting[i].ScannerIDs, currentScanner) {
 			notDetectedByScannerAnymore = append(notDetectedByScannerAnymore, notFoundByScannerAndExisting[i])
 		}
 	}
@@ -419,7 +514,7 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 	return res
 }
 
-func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
+func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
 	// load the asset components
 	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, "")
 	if err != nil {
@@ -516,7 +611,8 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 		return err
 	}
 
-	if err = s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, scannerID); err != nil {
+	sbomUpdated, err := s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, scannerID)
+	if err != nil {
 		return err
 	}
 
@@ -531,7 +627,22 @@ func (s *service) UpdateSBOM(assetVersion models.AssetVersion, scannerID string,
 			slog.Info("license information updated", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
 		}
 	}()
+	if sbomUpdated {
+		go func() {
+			if err = s.thirdPartyIntegration.HandleEvent(core.SBOMCreatedEvent{
+				AssetVersion: core.ToAssetVersionObject(assetVersion),
+				Asset:        core.ToAssetObject(asset),
+				Project:      core.ToProjectObject(project),
+				Org:          core.ToOrgObject(org),
+				SBOM:         sbom.GetCdxBom(),
+			}); err != nil {
+				slog.Error("could not handle SBOM updated event", "err", err)
+			} else {
+				slog.Info("handled SBOM updated event", "assetVersion", assetVersion.Name, "assetID", assetVersion.AssetID)
+			}
 
+		}()
+	}
 	return nil
 }
 

@@ -40,15 +40,6 @@ type DependencyVuln struct {
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
 
-// used to return information about other instances of a dependency vuln in other parts of an organization
-type DependencyVulnHints struct {
-	AmountOpen              int
-	AmountFixed             int
-	AmountAccepted          int
-	AmountFalsePositives    int
-	AmountMarkedForTransfer int
-}
-
 var _ Vuln = &DependencyVuln{}
 
 func (vuln *DependencyVuln) SetRawRiskAssessment(risk float64) {

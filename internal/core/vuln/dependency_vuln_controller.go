@@ -242,25 +242,28 @@ func (controller dependencyVulnHTTPController) Read(ctx core.Context) error {
 	risk, vector := risk.RiskCalculation(*dependencyVuln.CVE, core.GetEnvironmentalFromAsset(asset))
 	dependencyVuln.CVE.Risk = risk
 	dependencyVuln.CVE.Vector = vector
+
+	return ctx.JSON(200, convertToDetailedDTO(dependencyVuln))
+}
+
+func (controller dependencyVulnHTTPController) Hints(ctx core.Context) error {
 	//if enabled in org settings we also want to send hints
 	org := core.GetOrg(ctx)
-	if org.ShareVulnInformation {
-		//form more detailed response
-		type responseWithHints struct {
-			dependencyVulnDTO detailedDependencyVulnDTO
-			hints             models.DependencyVulnHints
-		}
-
-		hints, err := controller.dependencyVulnRepository.GetHintsInOrganizationForVuln(nil, org.ID, *dependencyVuln.ComponentPurl, *dependencyVuln.CVEID)
-		if err != nil {
-			return err
-		}
-		return ctx.JSON(200, responseWithHints{
-			dependencyVulnDTO: convertToDetailedDTO(dependencyVuln),
-			hints:             hints,
-		})
+	if !org.SharesVulnInformation {
+		return echo.NewHTTPError(403, "vuln information sharing is not enabled for this organization")
 	}
-	return ctx.JSON(200, convertToDetailedDTO(dependencyVuln))
+	dependencyVulnID, _, err := core.GetVulnID(ctx)
+	if err != nil {
+		return echo.NewHTTPError(400, "invalid dependencyVuln id")
+	}
+
+	dependencyVuln, err := controller.dependencyVulnRepository.Read(dependencyVulnID)
+
+	hints, err := controller.dependencyVulnRepository.GetHintsInOrganizationForVuln(nil, org.ID, *dependencyVuln.ComponentPurl, *dependencyVuln.CVEID)
+	if err != nil {
+		return err
+	}
+	return ctx.JSON(200, hints)
 }
 
 func (controller dependencyVulnHTTPController) CreateEvent(ctx core.Context) error {

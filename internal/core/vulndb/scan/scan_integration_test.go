@@ -195,7 +195,7 @@ func TestScanning(t *testing.T) {
 		req.Header.Set("X-Scanner", "scanner-4")
 		req.Header.Set("X-Asset-Ref", "some-other-branch")
 		ctx := app.NewContext(req, recorder)
-		setupContext(ctx)
+		setupContext(ctx) //setup context
 		err = controller.ScanDependencyVulnFromProject(ctx)
 		assert.Nil(t, err)
 		assert.Equal(t, 200, recorder.Code)

@@ -20,7 +20,7 @@ import (
 
 func TestCreateProjectHook(t *testing.T) {
 	t.Run("Returned ProjectHookOption Struct should have the URL set to main devguard", func(t *testing.T) {
-		os.Setenv("INSTANCE_DOMAIN", "https://api.main.devguard.org")
+		os.Setenv("INSTANCE_DOMAIN", "https://api.devguard.org")
 
 		hooks := []*gitlab.ProjectHook{}
 		token, err := uuid.NewUUID()
@@ -33,7 +33,7 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error(err.Error())
 			return
 		}
-		assert.Equal(t, "https://api.main.devguard.org/api/v1/webhook/", *results.URL)
+		assert.Equal(t, "https://api.devguard.org/api/v1/webhook/", *results.URL)
 
 	})
 	t.Run("Returned ProjectHookOption Struct should have the URL set to stage devguard if the environment variable INSTANCE_DOMAIN is set to ...staged... ", func(t *testing.T) {
@@ -69,7 +69,7 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error(err.Error())
 			return
 		}
-		assert.Equal(t, "https://api.main.devguard.org/api/v1/webhook/", *results.URL)
+		assert.Equal(t, "https://api.devguard.org/api/v1/webhook/", *results.URL)
 
 	})
 	t.Run("function should default to main if no ENV Variable is provided", func(t *testing.T) {
@@ -85,7 +85,7 @@ func TestCreateProjectHook(t *testing.T) {
 			slog.Error(err.Error())
 			return
 		}
-		assert.Equal(t, "https://api.main.devguard.org/api/v1/webhook/", *results.URL)
+		assert.Equal(t, "https://api.devguard.org/api/v1/webhook/", *results.URL)
 
 	})
 

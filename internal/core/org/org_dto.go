@@ -140,7 +140,7 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 
 	if p.ShareVulnInformation != nil {
 		updated = true
-		org.ShareVulnInformation = *p.ShareVulnInformation
+		org.SharesVulnInformation = *p.ShareVulnInformation
 	}
 
 	if p.IsPublic != nil {
@@ -183,8 +183,9 @@ type OrgDTO struct {
 
 	JiraIntegrations []common.JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
-	ShareVulnInformation bool `json:"shareVulnInformation"`
-	IsPublic             bool `json:"isPublic" gorm:"default:false;"`
+	SharesVulnInformation bool                           `json:"sharesVulnInformation"`
+	IsPublic              bool                           `json:"isPublic" gorm:"default:false;"`
+	Webhooks              []common.WebhookIntegrationDTO `json:"webhooks" gorm:"foreignKey:OrgID;"`
 
 	ConfigFiles map[string]any `json:"configFiles"`
 
@@ -211,6 +212,17 @@ func obfuscateJiraIntegrations(integration models.JiraIntegration) common.JiraIn
 	}
 }
 
+func obfuscateWebhookIntegrations(integration models.WebhookIntegration) common.WebhookIntegrationDTO {
+	return common.WebhookIntegrationDTO{
+		ID:          integration.ID.String(),
+		Name:        *integration.Name,
+		Description: *integration.Description,
+		URL:         integration.URL,
+		SbomEnabled: integration.SbomEnabled,
+		VulnEnabled: integration.VulnEnabled,
+	}
+}
+
 func fromModel(org models.Org) OrgDTO {
 	return OrgDTO{
 		Model:                  org.Model,
@@ -225,13 +237,14 @@ func fromModel(org models.Org) OrgDTO {
 		Grundschutz:            org.Grundschutz,
 		Slug:                   org.Slug,
 		Description:            org.Description,
-		ShareVulnInformation:   org.ShareVulnInformation,
+		SharesVulnInformation:  org.SharesVulnInformation,
 		IsPublic:               org.IsPublic,
 
 		Projects:                 org.Projects,
 		GithubAppInstallations:   org.GithubAppInstallations,
 		GitLabIntegrations:       utils.Map(org.GitLabIntegrations, obfuscateGitLabIntegrations),
 		JiraIntegrations:         utils.Map(org.JiraIntegrations, obfuscateJiraIntegrations),
+		Webhooks:                 utils.Map(org.Webhooks, obfuscateWebhookIntegrations),
 		ConfigFiles:              org.ConfigFiles,
 		Language:                 org.Language,
 		ExternalEntityProviderID: org.ExternalEntityProviderID,

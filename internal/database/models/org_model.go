@@ -23,8 +23,10 @@ type Org struct {
 
 	JiraIntegrations []JiraIntegration `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
-	IsPublic             bool `json:"isPublic" gorm:"default:false;"`
-	ShareVulnInformation bool `json:"shareVulnInformation" gorm:"default:false"`
+	SharesVulnInformation bool                 `json:"sharesVulnInformation" gorm:"default:false"`
+	Webhooks              []WebhookIntegration `json:"webhooks" gorm:"foreignKey:OrgID;"`
+
+	IsPublic bool `json:"isPublic" gorm:"default:false;"`
 
 	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`
 

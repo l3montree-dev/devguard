@@ -155,13 +155,13 @@ func (i *JiraIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 	// Jira integration does not have organizations in the same way as GitLab or GitHub
 	return nil, fmt.Errorf("Jira integration does not support listing organizations")
 }
-func (i *JiraIntegration) ListGroups(ctx core.Context, userID string, providerID string) ([]models.Project, error) {
+func (i *JiraIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
 	// Jira integration does not have groups in the same way as GitLab or GitHub
-	return nil, fmt.Errorf("Jira integration does not support listing groups")
+	return nil, nil, fmt.Errorf("Jira integration does not support listing groups")
 }
-func (i *JiraIntegration) ListProjects(ctx core.Context, userID string, providerID string, groupID string) ([]models.Asset, error) {
+func (i *JiraIntegration) ListProjects(ctx context.Context, userID string, providerID string, groupID string) ([]models.Asset, []core.Role, error) {
 	// Jira integration does not have projects in the same way as GitLab or GitHub
-	return nil, fmt.Errorf("Jira integration does not support listing projects")
+	return nil, nil, fmt.Errorf("Jira integration does not support listing projects")
 }
 func (i *JiraIntegration) ListRepositories(ctx core.Context) ([]core.Repository, error) {
 

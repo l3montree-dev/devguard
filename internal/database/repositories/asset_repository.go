@@ -17,7 +17,6 @@ package repositories
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -33,13 +32,6 @@ type assetRepository struct {
 }
 
 func NewAssetRepository(db core.DB) *assetRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		err := db.AutoMigrate(&models.Asset{})
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	return &assetRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Asset](db),

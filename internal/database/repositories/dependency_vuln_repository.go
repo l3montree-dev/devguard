@@ -3,9 +3,9 @@ package repositories
 import (
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
 
@@ -19,11 +19,6 @@ type dependencyVulnRepository struct {
 }
 
 func NewDependencyVulnRepository(db core.DB) *dependencyVulnRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.DependencyVuln{}); err != nil {
-			panic(err)
-		}
-	}
 	return &dependencyVulnRepository{
 		db:                      db,
 		VulnerabilityRepository: *NewVulnerabilityRepository[models.DependencyVuln](db),
@@ -292,12 +287,12 @@ func (repository *dependencyVulnRepository) FindByTicketID(tx core.DB, ticketID 
 	return vuln, nil
 }
 
-func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx core.DB, orgID uuid.UUID, pURL string, cveID string) (models.DependencyVulnHints, error) {
+func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx core.DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error) {
 	type stateCount struct {
 		State  string
 		Amount int
 	}
-	var hints models.DependencyVulnHints
+	var hints common.DependencyVulnHints
 	stateCounts := make([]stateCount, 0, 7)
 
 	err := repository.GetDB(tx).Raw(`SELECT d.state, COUNT(d.state) FROM dependency_vulns d WHERE asset_id IN (

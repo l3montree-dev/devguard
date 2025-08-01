@@ -55,6 +55,7 @@ jobs:
       api-url: https://api.main.devguard.org
       fail-on-risk: high
       fail-on-cvss: high
+      web-ui: https://main.devguard.org
       should-deploy:  ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}       
@@ -81,6 +82,9 @@ jobs:
       asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard
       api-url: https://api.main.devguard.org
       artifact-name: "scanner"
+      web-ui: https://main.devguard.org
+      fail-on-cvss: high
+      fail-on-risk: high
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
       
