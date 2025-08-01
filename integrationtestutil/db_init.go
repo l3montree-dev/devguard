@@ -7,6 +7,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
@@ -46,6 +47,27 @@ func InitDatabaseContainer(initDBSQLPath string) (core.DB, func()) {
 
 	if err != nil {
 		log.Printf("failed to connect to database: %s", err)
+		panic(err)
+	}
+
+	// automigrate ALL models
+	if err := db.AutoMigrate(
+		&models.Org{},
+		&models.Project{},
+		&models.Asset{},
+		&models.AssetVersion{},
+		&models.CVE{},
+		&models.DependencyVuln{},
+		&models.VulnEvent{},
+		&models.Exploit{},
+		&models.ComponentDependency{},
+		&models.LicenseRisk{},
+		&models.AssetRiskHistory{},
+		&models.ProjectRiskHistory{},
+		&models.Weakness{},
+		&models.GitLabIntegration{},
+	); err != nil {
+		log.Printf("failed to auto migrate models: %s", err)
 		panic(err)
 	}
 
