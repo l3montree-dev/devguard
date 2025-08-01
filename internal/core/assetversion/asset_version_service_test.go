@@ -245,6 +245,25 @@ func TestDiffScanResults(t *testing.T) {
 		assert.Empty(t, detectedByCurrentScanner)
 		assert.Empty(t, notDetectedByCurrentScannerAnymore)
 	})
+
+	t.Run("BUG: should NOT incorrectly identify scanner removal when scanner ID contains colon and is substring of existing scanner", func(t *testing.T) {
+
+		currentScanner := "container-scanning"
+		foundVulnerabilities := []models.DependencyVuln{
+			{CVEID: utils.Ptr("CVE-1234")},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning:scanner"}},
+		}
+
+		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
+
+		assert.Empty(t, foundByScannerAndNotExisting, "Should be empty - this is a new detection by current scanner")
+		assert.Empty(t, fixedVulns, "Should be empty - no vulnerabilities are fixed")
+		assert.Equal(t, 1, len(detectedByCurrentScanner), "Should detect that current scanner found existing vulnerability for first time")
+		assert.Empty(t, notDetectedByCurrentScannerAnymore, "BUG: Should be empty - current scanner was never detecting this vulnerability before!")
+	})
 }
 
 func TestYamlMetadata(t *testing.T) {

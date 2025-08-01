@@ -336,7 +336,7 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 
 		//Next step is adding the scanner id to all existing component dependencies we just found
 		for i := range needToBeChanged {
-			if !strings.Contains(needToBeChanged[i].ScannerIDs, scannerID) {
+			if !utils.ContainsInWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID) {
 				needToBeChanged[i].ScannerIDs = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID)
 			}
 		}

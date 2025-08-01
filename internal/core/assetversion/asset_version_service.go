@@ -368,7 +368,7 @@ func diffScanResults(currentScanner string, foundVulnerabilities []models.Depend
 
 	// Now we work on the vulnerabilities found in both sets -> has the vulnerability this scanner id already in his scanner_ids
 	for i := range foundByScannerAndExisting {
-		if !strings.Contains(foundByScannerAndExisting[i].ScannerIDs, currentScanner) {
+		if !utils.ContainsInWhitespaceSeparatedStringList(foundByScannerAndExisting[i].ScannerIDs, currentScanner) {
 			detectedByOtherScanner = append(detectedByOtherScanner, foundByScannerAndExisting[i])
 		}
 	}
@@ -377,7 +377,7 @@ func diffScanResults(currentScanner string, foundVulnerabilities []models.Depend
 	for i := range notFoundByScannerAndExisting {
 		if strings.TrimSpace(notFoundByScannerAndExisting[i].ScannerIDs) == currentScanner {
 			fixedVulns = append(fixedVulns, notFoundByScannerAndExisting[i])
-		} else if strings.Contains(notFoundByScannerAndExisting[i].ScannerIDs, currentScanner) {
+		} else if utils.ContainsInWhitespaceSeparatedStringList(notFoundByScannerAndExisting[i].ScannerIDs, currentScanner) {
 			notDetectedByScannerAnymore = append(notDetectedByScannerAnymore, notFoundByScannerAndExisting[i])
 		}
 	}
