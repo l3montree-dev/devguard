@@ -729,6 +729,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	dependencyVulnRouter.POST("/:dependencyVulnID/mitigate/", dependencyVulnController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	dependencyVulnRouter.GET("/:dependencyVulnID/events/", vulnEventController.ReadAssetEventsByVulnID)
+	dependencyVulnRouter.GET("/:dependencyVulnID/hints/", dependencyVulnController.Hints)
 
 	firstPartyVulnRouter := assetVersionRouter.Group("/first-party-vulns")
 	firstPartyVulnRouter.GET("/", firstPartyVulnController.ListPaged)

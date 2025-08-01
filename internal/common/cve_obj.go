@@ -69,9 +69,9 @@ func (r RiskCalculationReport) String() string {
 
 // used to return information about other instances of a dependency vuln in other parts of an organization
 type DependencyVulnHints struct {
-	AmountOpen              int
-	AmountFixed             int
-	AmountAccepted          int
-	AmountFalsePositives    int
-	AmountMarkedForTransfer int
+	AmountOpen              int `json:"amountOpen"`
+	AmountFixed             int `json:"amountFixed"`
+	AmountAccepted          int `json:"amountAccepted"`
+	AmountFalsePositive     int `json:"amountFalsePositive"`
+	AmountMarkedForTransfer int `json:"amountMarkedForTransfer"`
 }

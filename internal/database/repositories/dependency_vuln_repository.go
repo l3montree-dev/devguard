@@ -289,13 +289,13 @@ func (repository *dependencyVulnRepository) FindByTicketID(tx core.DB, ticketID 
 
 func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx core.DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error) {
 	type stateCount struct {
-		State  string
-		Amount int
+		State string `json:"state"`
+		Count int    `json:"count"`
 	}
 	var hints common.DependencyVulnHints
 	stateCounts := make([]stateCount, 0, 7)
 
-	err := repository.GetDB(tx).Raw(`SELECT d.state, COUNT(d.state) FROM dependency_vulns d WHERE asset_id IN (
+	err := repository.GetDB(tx).Debug().Raw(`SELECT d.state as "state", COUNT(d.state) as "count" FROM dependency_vulns d WHERE asset_id IN (
 		SELECT id from assets WHERE project_id IN (
 		  SELECT id from projects WHERE organization_id = ?
 	  )
@@ -308,15 +308,15 @@ func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx cor
 		//maybe use VulnStates for this, needs conversion then
 		switch state.State {
 		case "open":
-			hints.AmountOpen += state.Amount
+			hints.AmountOpen += state.Count
 		case "fixed":
-			hints.AmountFixed += state.Amount
+			hints.AmountFixed += state.Count
 		case "accepted":
-			hints.AmountAccepted += state.Amount
+			hints.AmountAccepted += state.Count
 		case "falsePositive":
-			hints.AmountFalsePositives += state.Amount
+			hints.AmountFalsePositive += state.Count
 		case "markedForTransfer":
-			hints.AmountMarkedForTransfer += state.Amount
+			hints.AmountMarkedForTransfer += state.Count
 		default:
 			slog.Error("invalid state", "state", state.State) //debug for now, can be removed later
 			return hints, fmt.Errorf("invalid state")

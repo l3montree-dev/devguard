@@ -249,15 +249,16 @@ func (controller dependencyVulnHTTPController) Read(ctx core.Context) error {
 func (controller dependencyVulnHTTPController) Hints(ctx core.Context) error {
 	//if enabled in org settings we also want to send hints
 	org := core.GetOrg(ctx)
-	if !org.SharesVulnInformation {
-		return echo.NewHTTPError(403, "vuln information sharing is not enabled for this organization")
-	}
+
 	dependencyVulnID, _, err := core.GetVulnID(ctx)
 	if err != nil {
 		return echo.NewHTTPError(400, "invalid dependencyVuln id")
 	}
 
 	dependencyVuln, err := controller.dependencyVulnRepository.Read(dependencyVulnID)
+	if err != nil {
+		return echo.NewHTTPError(404, "could not find dependencyVuln")
+	}
 
 	hints, err := controller.dependencyVulnRepository.GetHintsInOrganizationForVuln(nil, org.ID, *dependencyVuln.ComponentPurl, *dependencyVuln.CVEID)
 	if err != nil {
