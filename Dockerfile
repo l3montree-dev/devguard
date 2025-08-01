@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM golang:1.24.3-bookworm@sha256:89a04cc2e2fbafef82d4a45523d4d4ae4ecaf11a197689036df35fef3bde444a as build
+FROM golang:1.24.5-bookworm@sha256:ef8c5c733079ac219c77edab604c425d748c740d8699530ea6aced9de79aea40 as build
 ARG GITHUB_REF_NAME
 
 WORKDIR /go/src/app
@@ -24,7 +24,7 @@ ENV FLAGS="ldflags='-X main.release=devguard@${GITHUB_REF_NAME}'"
 RUN CGO_ENABLED=0 make devguard
 RUN CGO_ENABLED=0 make devguard-cli
 
-FROM gcr.io/distroless/static-debian12@sha256:d9f9472a8f4541368192d714a995eb1a99bab1f7071fc8bde261d7eda3b667d8
+FROM gcr.io/distroless/static-debian12@sha256:b7b9a6953e7bed6baaf37329331051d7bdc1b99c885f6dbeb72d75b1baad54f9
 
 WORKDIR /
 
