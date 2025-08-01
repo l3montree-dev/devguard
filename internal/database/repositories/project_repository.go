@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
@@ -20,11 +19,6 @@ type projectRepository struct {
 }
 
 func NewProjectRepository(db core.DB) *projectRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.Project{}); err != nil {
-			panic(err)
-		}
-	}
 	return &projectRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Project](db),

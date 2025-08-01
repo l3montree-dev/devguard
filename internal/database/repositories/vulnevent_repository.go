@@ -1,8 +1,6 @@
 package repositories
 
 import (
-	"os"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -15,11 +13,6 @@ type eventRepository struct {
 }
 
 func NewVulnEventRepository(db core.DB) *eventRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.VulnEvent{}); err != nil {
-			panic(err)
-		}
-	}
 	return &eventRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.VulnEvent](db),

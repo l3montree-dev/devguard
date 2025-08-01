@@ -25,6 +25,7 @@ import (
 	"github.com/l3montree-dev/devguard/cmd/devguard/api"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
+	"github.com/l3montree-dev/devguard/internal/database"
 
 	_ "github.com/lib/pq"
 )
@@ -62,10 +63,23 @@ func main() {
 		}()
 	}
 
+	// Initialize database connection first
 	db, err := core.DatabaseFactory()
 	if err != nil {
 		slog.Error(err.Error()) // print detailed error message to stdout
 		panic(errors.New("Failed to setup database connection"))
+	}
+
+	// Run database migrations using the existing database connection
+	autoMigrate := os.Getenv("AUTO_MIGRATE")
+	if autoMigrate == "" || autoMigrate == "true" {
+		slog.Info("running database migrations...")
+		if err := database.RunMigrationsWithDB(db); err != nil {
+			slog.Error("failed to run database migrations", "error", err)
+			panic(errors.New("Failed to run database migrations"))
+		}
+	} else {
+		slog.Info("automatic migrations disabled via AUTO_MIGRATE=false")
 	}
 
 	daemon.Start(db)
