@@ -1,8 +1,6 @@
 package repositories
 
 import (
-	"os"
-
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -15,11 +13,6 @@ type cweRepository struct {
 }
 
 func NewCWERepository(db core.DB) *cweRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.CWE{}); err != nil {
-			panic(err)
-		}
-	}
 	return &cweRepository{
 		db:         db,
 		Repository: newGormRepository[string, models.CWE](db),

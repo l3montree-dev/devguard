@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,12 +15,6 @@ type assetRiskHistoryRepository struct {
 }
 
 func NewAssetRiskHistoryRepository(db core.DB) *assetRiskHistoryRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.AssetRiskHistory{}); err != nil {
-			panic(err)
-		}
-	}
-
 	return &assetRiskHistoryRepository{
 		db:         db,
 		Repository: newGormRepository[uint, models.AssetRiskHistory](db),

@@ -1,8 +1,6 @@
 package repositories
 
 import (
-	"os"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -16,12 +14,6 @@ type supplyChainRepository struct {
 }
 
 func NewSupplyChainRepository(db core.DB) *supplyChainRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.SupplyChain{}); err != nil {
-			panic(err)
-		}
-	}
-
 	return &supplyChainRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.SupplyChain](db),

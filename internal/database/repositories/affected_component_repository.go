@@ -16,7 +16,6 @@ package repositories
 
 import (
 	"log/slog"
-	"os"
 
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -41,13 +40,6 @@ func (g *affectedCmpRepository) Save(tx *gorm.DB, affectedComponents *models.Aff
 }
 
 func NewAffectedComponentRepository(db core.DB) *affectedCmpRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		err := db.AutoMigrate(&models.AffectedComponent{})
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	return &affectedCmpRepository{
 		db:         db,
 		Repository: newGormRepository[string, models.AffectedComponent](db),

@@ -1,8 +1,6 @@
 package repositories
 
 import (
-	"os"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -15,11 +13,6 @@ type eventRepository struct {
 }
 
 func NewVulnEventRepository(db core.DB) *eventRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.VulnEvent{}); err != nil {
-			panic(err)
-		}
-	}
 	return &eventRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.VulnEvent](db),
@@ -50,7 +43,7 @@ func (r *eventRepository) readFirstPartyVulnAssetEvents(vulnID string) ([]models
 		Where("vuln_events.vuln_id IN (?)",
 			r.db.Table("first_party_vulnerabilities").
 				Select("id").
-				Where("asset_id = ? AND scanner_ids = ? AND rule_id = ? AND uri = ? AND start_line = ?", t.AssetID, t.ScannerIDs, t.RuleID, t.URI, t.StartLine),
+				Where("asset_id = ? AND scanner_ids = ? AND rule_id = ? AND uri = ? ", t.AssetID, t.ScannerIDs, t.RuleID, t.URI),
 		).
 		Order("vuln_events.created_at ASC").
 		Find(&events).Error

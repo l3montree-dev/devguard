@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -238,10 +239,11 @@ func obfuscateString(str string) string {
 }
 
 // add obfuscation function for snippet
-func obfuscateSecret(sarifScan *common.SarifResult) {
+func obfuscateSecretAndAddFingerprint(sarifScan *common.SarifResult) {
 	// obfuscate the snippet
 	for ru, run := range sarifScan.Runs {
 		for re, result := range run.Results {
+			// obfuscate the snippet
 			for lo, location := range result.Locations {
 				snippet := location.PhysicalLocation.Region.Snippet.Text
 				snippetMax := 20
@@ -252,6 +254,10 @@ func obfuscateSecret(sarifScan *common.SarifResult) {
 				// set the snippet
 				sarifScan.Runs[ru].Results[re].Locations[lo].PhysicalLocation.Region.Snippet.Text = snippet
 			}
+
+			//set the fingerprint to the calculated fingerprint if it exists
+			result.Fingerprints.CalculatedFingerprint = result.PartialFingerprints.CommitSha + ":" + result.Locations[0].PhysicalLocation.ArtifactLocation.URI + ":" + result.RuleID + ":" + strconv.Itoa(result.Locations[0].PhysicalLocation.Region.StartLine)
+
 		}
 	}
 }

@@ -1,8 +1,6 @@
 package repositories
 
 import (
-	"os"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -17,11 +15,6 @@ type LicenseRiskRepository struct {
 }
 
 func NewLicenseRiskRepository(db core.DB) *LicenseRiskRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.LicenseRisk{}); err != nil {
-			panic(err)
-		}
-	}
 	return &LicenseRiskRepository{
 		db:         db,
 		Repository: newGormRepository[string, models.LicenseRisk](db),

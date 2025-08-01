@@ -18,7 +18,6 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"os"
 	"strings"
 	"time"
 
@@ -36,12 +35,6 @@ type componentRepository struct {
 }
 
 func NewComponentRepository(db core.DB) *componentRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.Component{}, &models.ComponentDependency{}); err != nil {
-			panic(err)
-		}
-	}
-
 	return &componentRepository{
 		Repository: newGormRepository[string, models.Component](db),
 		db:         db,

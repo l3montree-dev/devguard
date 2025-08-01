@@ -17,7 +17,6 @@ package repositories
 
 import (
 	"fmt"
-	"os"
 	"slices"
 
 	"github.com/google/uuid"
@@ -32,11 +31,6 @@ type orgRepository struct {
 }
 
 func NewOrgRepository(db core.DB) *orgRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.Org{}); err != nil {
-			panic(err)
-		}
-	}
 	return &orgRepository{
 		db:         db,
 		Repository: newGormRepository[uuid.UUID, models.Org](db),

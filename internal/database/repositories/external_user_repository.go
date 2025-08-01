@@ -16,8 +16,6 @@
 package repositories
 
 import (
-	"os"
-
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -30,11 +28,6 @@ type externalUserRepository struct {
 }
 
 func NewExternalUserRepository(db core.DB) *externalUserRepository {
-	if os.Getenv("DISABLE_AUTOMIGRATE") != "true" {
-		if err := db.AutoMigrate(&models.ExternalUser{}); err != nil {
-			panic(err)
-		}
-	}
 	return &externalUserRepository{
 		db:         db,
 		Repository: newGormRepository[int, models.ExternalUser](db),
