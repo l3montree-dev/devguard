@@ -53,8 +53,9 @@ func TestTriggerSync(t *testing.T) {
 			assetRepo := mocks.NewAssetRepository(t)
 			projectRepo := mocks.NewProjectRepository(t)
 			rbacProvider := mocks.NewRBACProvider(t)
+			orgRepo := mocks.NewOrganizationRepository(t)
 
-			service := NewExternalEntityProviderService(projectService, assetRepo, projectRepo, rbacProvider)
+			service := NewExternalEntityProviderService(projectService, assetRepo, projectRepo, rbacProvider, orgRepo)
 
 			// Create echo context
 			e := echo.New()
@@ -81,16 +82,21 @@ func TestTriggerSync(t *testing.T) {
 			core.SetSession(ctx, session)
 
 			if tt.isExternalOrg {
+				// Mock the third party integration for syncOrgs call
+				thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+				thirdPartyIntegration.On("ListOrgs", mock.Anything).Return([]models.Org{}, nil)
+				core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
+
+				// Mock the organization repository upsert
+				orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
 				// Mock the refresh method call
 				domainRBAC := mocks.NewAccessControl(t)
 				rbacProvider.On("GetDomainRBAC", org.GetID().String()).Return(domainRBAC)
 				domainRBAC.On("GetAllProjectsForUser", "user123").Return([]string{}, tt.refreshError)
 
 				if tt.refreshError == nil {
-					thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
 					thirdPartyIntegration.On("ListGroups", mock.Anything, "user123", "gitlab").Return([]models.Project{}, []core.Role{}, nil)
-					core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
-
 					projectRepo.On("UpsertSplit", mock.Anything, "gitlab", mock.Anything).Return([]*models.Project{}, []*models.Project{}, nil)
 				}
 			}
@@ -401,24 +407,27 @@ func createTestService(t *testing.T) externalEntityProviderService {
 	assetRepo := mocks.NewAssetRepository(t)
 	projectRepo := mocks.NewProjectRepository(t)
 	rbacProvider := mocks.NewRBACProvider(t)
+	orgRepo := mocks.NewOrganizationRepository(t)
 
-	return NewExternalEntityProviderService(projectService, assetRepo, projectRepo, rbacProvider)
+	return NewExternalEntityProviderService(projectService, assetRepo, projectRepo, rbacProvider, orgRepo)
 }
 
 func createTestServiceWithRepo(t *testing.T, projectRepo core.ProjectRepository) externalEntityProviderService {
 	projectService := mocks.NewProjectService(t)
 	assetRepo := mocks.NewAssetRepository(t)
 	rbacProvider := mocks.NewRBACProvider(t)
+	orgRepo := mocks.NewOrganizationRepository(t)
 
-	return NewExternalEntityProviderService(projectService, assetRepo, projectRepo, rbacProvider)
+	return NewExternalEntityProviderService(projectService, assetRepo, projectRepo, rbacProvider, orgRepo)
 }
 
 func createTestServiceWithAssetRepo(t *testing.T, assetRepo core.AssetRepository) externalEntityProviderService {
 	projectService := mocks.NewProjectService(t)
 	projectRepo := mocks.NewProjectRepository(t)
 	rbacProvider := mocks.NewRBACProvider(t)
+	orgRepo := mocks.NewOrganizationRepository(t)
 
-	return NewExternalEntityProviderService(projectService, assetRepo, projectRepo, rbacProvider)
+	return NewExternalEntityProviderService(projectService, assetRepo, projectRepo, rbacProvider, orgRepo)
 }
 
 func createTestContext() core.Context {

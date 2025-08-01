@@ -7,17 +7,19 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 	"golang.org/x/sync/singleflight"
 	"gorm.io/gorm/clause"
 )
 
 type externalEntityProviderService struct {
-	projectService    core.ProjectService
-	assetRepository   core.AssetRepository
-	projectRepository core.ProjectRepository
-	rbacProvider      core.RBACProvider
-	singleFlightGroup *singleflight.Group
+	projectService         core.ProjectService
+	assetRepository        core.AssetRepository
+	projectRepository      core.ProjectRepository
+	rbacProvider           core.RBACProvider
+	singleFlightGroup      *singleflight.Group
+	organizationRepository core.OrganizationRepository
 }
 
 func NewExternalEntityProviderService(
@@ -25,13 +27,15 @@ func NewExternalEntityProviderService(
 	assetRepository core.AssetRepository,
 	projectRepository core.ProjectRepository,
 	rbacProvider core.RBACProvider,
+	organizationRepository core.OrganizationRepository,
 ) externalEntityProviderService {
 	return externalEntityProviderService{
-		projectService:    projectService,
-		assetRepository:   assetRepository,
-		projectRepository: projectRepository,
-		rbacProvider:      rbacProvider,
-		singleFlightGroup: &singleflight.Group{},
+		projectService:         projectService,
+		assetRepository:        assetRepository,
+		projectRepository:      projectRepository,
+		rbacProvider:           rbacProvider,
+		singleFlightGroup:      &singleflight.Group{},
+		organizationRepository: organizationRepository,
 	}
 }
 
@@ -48,7 +52,24 @@ func (s externalEntityProviderService) TriggerSync(c echo.Context) error {
 	return echo.NewHTTPError(400, "organization is not an external entity provider")
 }
 
+func (s externalEntityProviderService) syncOrgs(c echo.Context) error {
+	// return the enabled git providers as well
+	thirdPartyIntegration := core.GetThirdPartyIntegration(c)
+	orgs, err := thirdPartyIntegration.ListOrgs(c)
+	if err != nil {
+		return fmt.Errorf("could not list organizations: %w", err)
+	}
+	// make sure, that the third party organizations exists inside the database
+	if err := s.organizationRepository.Upsert(utils.Ptr(utils.Map(orgs, utils.Ptr)), []clause.Column{
+		{Name: "external_entity_provider_id"},
+	}, nil); err != nil {
+		return fmt.Errorf("could not upsert organizations: %w", err)
+	}
+	return nil
+}
+
 func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx core.Context, org models.Org, user string) error {
+	s.syncOrgs(ctx)
 	_, err, shared := s.singleFlightGroup.Do(org.ID.String()+"/"+user, func() (any, error) {
 		if org.ExternalEntityProviderID == nil {
 			return nil, fmt.Errorf("organization %s does not have an external entity provider configured", org.GetID())

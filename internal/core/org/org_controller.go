@@ -24,7 +24,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/ory/client-go"
-	"gorm.io/gorm/clause"
 
 	"github.com/labstack/echo/v4"
 )
@@ -406,20 +405,8 @@ func (controller *httpController) List(ctx core.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(500, "could not read organizations").WithInternal(err)
 	}
-	// return the enabled git providers as well
-	thirdPartyIntegration := core.GetThirdPartyIntegration(ctx)
-	orgs, err := thirdPartyIntegration.ListOrgs(ctx)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not get organizations from third party integrations").WithInternal(err)
-	}
-	// make sure, that the third party organizations exists inside the database
-	if err := controller.organizationRepository.Upsert(utils.Ptr(utils.Map(orgs, utils.Ptr)), []clause.Column{
-		{Name: "external_entity_provider_id"},
-	}, nil); err != nil {
-		return echo.NewHTTPError(500, "could not ensure third party organizations exist").WithInternal(err)
-	}
 
-	return ctx.JSON(200, append(organizations, orgs...))
+	return ctx.JSON(200, organizations)
 }
 
 func (controller *httpController) Metrics(ctx core.Context) error {
