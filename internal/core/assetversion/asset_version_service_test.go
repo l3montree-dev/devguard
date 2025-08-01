@@ -153,6 +153,8 @@ func TestFirstPartyVulnHash(t *testing.T) {
 
 		// Set up the mock expectation
 		assetVersionService.On("HandleFirstPartyVulnResult",
+			models.Org{},
+			models.Project{},
 			models.Asset{},
 			&models.AssetVersion{Name: "test-asset-version"},
 			vuln,
