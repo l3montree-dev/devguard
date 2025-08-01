@@ -115,10 +115,15 @@ func generateSBOM(path string) (*os.File, error) {
 
 // Function to dynamically change the format of the table row depending on the input parameters
 func dependencyVulnToTableRow(pURL packageurl.PackageURL, v vuln.DependencyVulnDTO) table.Row {
+	var cvss float32 = 0.0
+	if v.CVE != nil {
+		cvss = v.CVE.CVSS
+	}
+
 	if pURL.Namespace == "" { //Remove the second slash if the second parameter is empty to avoid double slashes
-		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), v.CVE.CVSS, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
+		return table.Row{fmt.Sprintf("pkg:%s/%s", pURL.Type, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
 	} else {
-		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), v.CVE.CVSS, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
+		return table.Row{fmt.Sprintf("pkg:%s/%s/%s", pURL.Type, pURL.Namespace, pURL.Name), utils.SafeDereference(v.CVEID), utils.OrDefault(v.RawRiskAssessment, 0), cvss, strings.TrimPrefix(pURL.Version, "v"), utils.SafeDereference(v.ComponentFixedVersion), v.State}
 	}
 }
 
@@ -171,6 +176,12 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, ass
 		return utils.OrDefault(f.RawRiskAssessment, 0)
 	})
 
+	openCVSS := utils.Map(utils.Filter(scanResponse.DependencyVulns, func(f vuln.DependencyVulnDTO) bool {
+		return f.State == "open" && f.CVE != nil
+	}), func(f vuln.DependencyVulnDTO) float32 {
+		return f.CVE.CVSS
+	})
+
 	maxRisk := 0.
 	for _, risk := range openRisks {
 		if risk > maxRisk {
@@ -179,9 +190,9 @@ func printScaResults(scanResponse scan.ScanResponse, failOnRisk, failOnCVSS, ass
 	}
 
 	var maxCVSS float32
-	for _, v := range scanResponse.DependencyVulns {
-		if v.CVE != nil && v.CVE.CVSS > maxCVSS {
-			maxCVSS = v.CVE.CVSS
+	for _, v := range openCVSS {
+		if v > maxCVSS {
+			maxCVSS = v
 		}
 	}
 
