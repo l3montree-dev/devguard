@@ -69,7 +69,11 @@ func (s externalEntityProviderService) syncOrgs(c echo.Context) error {
 }
 
 func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx core.Context, org models.Org, user string) error {
-	s.syncOrgs(ctx)
+	err := s.syncOrgs(ctx)
+	if err != nil {
+		slog.Warn("could not sync organizations", "orgID", org.GetID(), "user", user, "err", err)
+		return err
+	}
 	_, err, shared := s.singleFlightGroup.Do(org.ID.String()+"/"+user, func() (any, error) {
 		if org.ExternalEntityProviderID == nil {
 			return nil, fmt.Errorf("organization %s does not have an external entity provider configured", org.GetID())
