@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strconv"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -26,13 +25,13 @@ func printSastScanResults(firstPartyVulns []vuln.FirstPartyVulnDTO, webUI, asset
 	green := text.FgGreen
 	for _, vuln := range firstPartyVulns {
 		tw.AppendRow(table.Row{"RuleID", vuln.RuleID})
-		if vuln.Snippet != "" {
-			tw.AppendRow(table.Row{"Snippet", vuln.Snippet})
+		for _, snippet := range vuln.SnippetContents {
+			tw.AppendRow(table.Row{"Snippet", snippet.Snippet})
 		}
 		tw.AppendRow(table.Row{"Message", text.WrapText(*vuln.Message, 80)})
 		if vuln.URI != "" {
-			tw.AppendRow(table.Row{"File", green.Sprint(vuln.URI + ":" + strconv.Itoa(vuln.StartLine))})
-			tw.AppendRow(table.Row{"Line", vuln.StartLine})
+			tw.AppendRow(table.Row{"File", green.Sprint(vuln.URI)})
+
 		}
 		tw.AppendSeparator()
 	}

@@ -26,6 +26,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
 	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 
 	_ "github.com/lib/pq"
 )
@@ -77,6 +78,12 @@ func main() {
 		if err := database.RunMigrationsWithDB(db); err != nil {
 			slog.Error("failed to run database migrations", "error", err)
 			panic(errors.New("Failed to run database migrations"))
+		}
+
+		// Run hash migrations if needed (when algorithm version changes)
+		if err := models.RunHashMigrationsIfNeeded(db); err != nil {
+			slog.Error("failed to run hash migrations", "error", err)
+			panic(errors.New("Failed to run hash migrations"))
 		}
 	} else {
 		slog.Info("automatic migrations disabled via AUTO_MIGRATE=false")

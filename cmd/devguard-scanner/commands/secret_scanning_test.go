@@ -73,7 +73,7 @@ func TestObfuscateSnippet(t *testing.T) {
 		expectedSnippet := "that is an example c*********************************************************"
 
 		// Call the function with the example data
-		obfuscateSecret(&exampleSarifResult)
+		obfuscateSecretAndAddFingerprint(&exampleSarifResult)
 
 		// Check if the original snippet is not present in the obfuscated result
 		assert.NotContains(t, exampleSarifResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text, originalSnippet)
@@ -94,7 +94,7 @@ func TestObfuscateSnippet(t *testing.T) {
 		exampleSarifResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text = originalSnippet
 
 		// Call the function with the example data
-		obfuscateSecret(&exampleSarifResult)
+		obfuscateSecretAndAddFingerprint(&exampleSarifResult)
 
 		// Check if the original snippet is not present in the obfuscated result
 		assert.NotContains(t, exampleSarifResult.Runs[0].Results[0].Locations[0].PhysicalLocation.Region.Snippet.Text, originalSnippet)

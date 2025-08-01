@@ -263,25 +263,33 @@ func (c firstPartyVulnController) Sarif(ctx core.Context) error {
 				Message: common.Text{
 					Text: vuln.RuleDescription,
 				},
-				Locations: []common.Location{
-					{
-						PhysicalLocation: common.PhysicalLocation{
-							ArtifactLocation: common.ArtifactLocation{
-								URI: vuln.URI,
-							},
-							Region: common.Region{
-								StartLine:   vuln.StartLine,
-								StartColumn: vuln.StartColumn,
-								EndLine:     vuln.EndLine,
-								EndColumn:   vuln.EndColumn,
-								Snippet: common.Text{
-									Text: vuln.Snippet,
-								},
+			}
+
+			snippet, err := vuln.FromJSONSnippetContents()
+			if err != nil {
+				slog.Error("could not marshal snippet contents", "err", err)
+			}
+			locations := make([]common.Location, 0, len(snippet.Snippets))
+			for _, snippetContent := range snippet.Snippets {
+				locations = append(locations, common.Location{
+					PhysicalLocation: common.PhysicalLocation{
+						ArtifactLocation: common.ArtifactLocation{
+							URI: vuln.URI,
+						},
+						Region: common.Region{
+							StartLine:   snippetContent.StartLine,
+							StartColumn: snippetContent.StartColumn,
+							EndLine:     snippetContent.EndLine,
+							EndColumn:   snippetContent.EndColumn,
+							Snippet: common.Text{
+								Text: snippetContent.Snippet,
 							},
 						},
 					},
-				},
+				})
 			}
+			result.Locations = append(result.Locations, locations...)
+
 			run.Results = append(run.Results, result)
 		}
 		sarif.Runs = append(sarif.Runs, run)
