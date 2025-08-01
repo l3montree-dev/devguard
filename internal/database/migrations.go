@@ -44,11 +44,6 @@ func RunMigrationsWithDB(gormDB *gorm.DB) error {
 	if err != nil {
 		return fmt.Errorf("failed to create migrator: %w", err)
 	}
-	defer func() {
-		if sourceErr, dbErr := migrator.Close(); sourceErr != nil || dbErr != nil {
-			slog.Error("failed to close migrator", "sourceErr", sourceErr, "dbErr", dbErr)
-		}
-	}()
 
 	// Run all pending migrations
 	if err := migrator.Up(); err != nil {
@@ -88,11 +83,6 @@ func GetMigrationVersionWithDB(gormDB *gorm.DB) (uint, bool, error) {
 	if err != nil {
 		return 0, false, fmt.Errorf("failed to create migrator: %w", err)
 	}
-	defer func() {
-		if sourceErr, dbErr := migrator.Close(); sourceErr != nil || dbErr != nil {
-			slog.Error("failed to close migrator", "sourceErr", sourceErr, "dbErr", dbErr)
-		}
-	}()
 
 	return migrator.Version()
 }
