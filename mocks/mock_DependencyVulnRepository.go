@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	mock "github.com/stretchr/testify/mock"
@@ -1281,6 +1282,84 @@ func (_c *DependencyVulnRepository_GetDependencyVulnsByPurl_Call) Return(depende
 }
 
 func (_c *DependencyVulnRepository_GetDependencyVulnsByPurl_Call) RunAndReturn(run func(tx core.DB, purls []string) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetDependencyVulnsByPurl_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetHintsInOrganizationForVuln provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetHintsInOrganizationForVuln(tx core.DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error) {
+	ret := _mock.Called(tx, orgID, pURL, cveID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetHintsInOrganizationForVuln")
+	}
+
+	var r0 common.DependencyVulnHints
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, string, string) (common.DependencyVulnHints, error)); ok {
+		return returnFunc(tx, orgID, pURL, cveID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, string, string) common.DependencyVulnHints); ok {
+		r0 = returnFunc(tx, orgID, pURL, cveID)
+	} else {
+		r0 = ret.Get(0).(common.DependencyVulnHints)
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, uuid.UUID, string, string) error); ok {
+		r1 = returnFunc(tx, orgID, pURL, cveID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_GetHintsInOrganizationForVuln_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetHintsInOrganizationForVuln'
+type DependencyVulnRepository_GetHintsInOrganizationForVuln_Call struct {
+	*mock.Call
+}
+
+// GetHintsInOrganizationForVuln is a helper method to define mock.On call
+//   - tx core.DB
+//   - orgID uuid.UUID
+//   - pURL string
+//   - cveID string
+func (_e *DependencyVulnRepository_Expecter) GetHintsInOrganizationForVuln(tx interface{}, orgID interface{}, pURL interface{}, cveID interface{}) *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call {
+	return &DependencyVulnRepository_GetHintsInOrganizationForVuln_Call{Call: _e.mock.On("GetHintsInOrganizationForVuln", tx, orgID, pURL, cveID)}
+}
+
+func (_c *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call) Run(run func(tx core.DB, orgID uuid.UUID, pURL string, cveID string)) *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call) Return(dependencyVulnHints common.DependencyVulnHints, err error) *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call {
+	_c.Call.Return(dependencyVulnHints, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call) RunAndReturn(run func(tx core.DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error)) *DependencyVulnRepository_GetHintsInOrganizationForVuln_Call {
 	_c.Call.Return(run)
 	return _c
 }

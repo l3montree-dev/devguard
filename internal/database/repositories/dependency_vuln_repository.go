@@ -1,7 +1,11 @@
 package repositories
 
 import (
+	"fmt"
+	"log/slog"
+
 	"github.com/google/uuid"
+	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/utils"
 
@@ -281,4 +285,42 @@ func (repository *dependencyVulnRepository) FindByTicketID(tx core.DB, ticketID 
 		return vuln, err
 	}
 	return vuln, nil
+}
+
+func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx core.DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error) {
+	type stateCount struct {
+		State string `json:"state"`
+		Count int    `json:"count"`
+	}
+	var hints common.DependencyVulnHints
+	stateCounts := make([]stateCount, 0, 7)
+
+	err := repository.GetDB(tx).Debug().Raw(`SELECT d.state as "state", COUNT(d.state) as "count" FROM dependency_vulns d WHERE asset_id IN (
+		SELECT id from assets WHERE project_id IN (
+		  SELECT id from projects WHERE organization_id = ?
+	  )
+	) AND d.cve_id = ? AND d.component_purl = ? GROUP BY d.state`, orgID, cveID, pURL).Scan(&stateCounts).Error
+	if err != nil {
+		return hints, err
+	}
+	// convert information from query to hints struct
+	for _, state := range stateCounts {
+		//maybe use VulnStates for this, needs conversion then
+		switch state.State {
+		case "open":
+			hints.AmountOpen += state.Count
+		case "fixed":
+			hints.AmountFixed += state.Count
+		case "accepted":
+			hints.AmountAccepted += state.Count
+		case "falsePositive":
+			hints.AmountFalsePositive += state.Count
+		case "markedForTransfer":
+			hints.AmountMarkedForTransfer += state.Count
+		default:
+			slog.Error("invalid state", "state", state.State) //debug for now, can be removed later
+			return hints, fmt.Errorf("invalid state")
+		}
+	}
+	return hints, nil
 }

@@ -148,6 +148,7 @@ type DependencyVulnRepository interface {
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 	ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
+	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error)
 }
 
 type FirstPartyVulnRepository interface {

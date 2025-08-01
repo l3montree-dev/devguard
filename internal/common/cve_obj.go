@@ -66,3 +66,12 @@ func (r RiskCalculationReport) String() string {
 	}
 	return string(str)
 }
+
+// used to return information about other instances of a dependency vuln in other parts of an organization
+type DependencyVulnHints struct {
+	AmountOpen              int `json:"amountOpen"`
+	AmountFixed             int `json:"amountFixed"`
+	AmountAccepted          int `json:"amountAccepted"`
+	AmountFalsePositive     int `json:"amountFalsePositive"`
+	AmountMarkedForTransfer int `json:"amountMarkedForTransfer"`
+}

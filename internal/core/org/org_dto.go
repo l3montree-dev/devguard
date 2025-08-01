@@ -78,9 +78,10 @@ type patchRequest struct {
 	Grundschutz            *bool   `json:"grundschutz"`
 	Description            *string `json:"description"`
 
-	IsPublic    *bool           `json:"isPublic"`
-	ConfigFiles *map[string]any `json:"configFiles"`
-	Language    *string         `json:"language"`
+	ShareVulnInformation *bool           `json:"shareVulnInformation"`
+	IsPublic             *bool           `json:"isPublic"`
+	ConfigFiles          *map[string]any `json:"configFiles"`
+	Language             *string         `json:"language"`
 }
 
 func (p patchRequest) applyToModel(org *models.Org) bool {
@@ -137,6 +138,11 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 		org.Description = *p.Description
 	}
 
+	if p.ShareVulnInformation != nil {
+		updated = true
+		org.SharesVulnInformation = *p.ShareVulnInformation
+	}
+
 	if p.IsPublic != nil {
 		updated = true
 		org.IsPublic = *p.IsPublic
@@ -177,9 +183,9 @@ type OrgDTO struct {
 
 	JiraIntegrations []common.JiraIntegrationDTO `json:"jiraIntegrations" gorm:"foreignKey:OrgID;"`
 
-	Webhooks []common.WebhookIntegrationDTO `json:"webhooks" gorm:"foreignKey:OrgID;"`
-
-	IsPublic bool `json:"isPublic" gorm:"default:false;"`
+	SharesVulnInformation bool                           `json:"sharesVulnInformation"`
+	IsPublic              bool                           `json:"isPublic" gorm:"default:false;"`
+	Webhooks              []common.WebhookIntegrationDTO `json:"webhooks" gorm:"foreignKey:OrgID;"`
 
 	ConfigFiles map[string]any `json:"configFiles"`
 
@@ -231,6 +237,7 @@ func fromModel(org models.Org) OrgDTO {
 		Grundschutz:            org.Grundschutz,
 		Slug:                   org.Slug,
 		Description:            org.Description,
+		SharesVulnInformation:  org.SharesVulnInformation,
 		IsPublic:               org.IsPublic,
 
 		Projects:                 org.Projects,
