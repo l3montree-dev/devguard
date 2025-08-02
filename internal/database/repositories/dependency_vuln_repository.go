@@ -295,11 +295,17 @@ func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx cor
 	var hints common.DependencyVulnHints
 	stateCounts := make([]stateCount, 0, 7)
 
-	err := repository.GetDB(tx).Debug().Raw(`SELECT d.state as "state", COUNT(d.state) as "count" FROM dependency_vulns d WHERE asset_id IN (
-		SELECT id from assets WHERE project_id IN (
-		  SELECT id from projects WHERE organization_id = ?
-	  )
-	) AND d.cve_id = ? AND d.component_purl = ? GROUP BY d.state`, orgID, cveID, pURL).Scan(&stateCounts).Error
+	err := repository.GetDB(tx).Debug().Raw(`SELECT state, COUNT(*) as "count" FROM (
+	SELECT DISTINCT d.asset_id, d.state as "state"
+    FROM dependency_vulns d
+    WHERE d.asset_id IN (
+        SELECT id FROM assets WHERE project_id IN (
+            SELECT id FROM projects WHERE organization_id = ?
+        )
+    )
+    AND d.cve_id = ?
+    AND d.component_purl = ?
+	) AS distinct_deps GROUP BY state`, orgID, cveID, pURL).Scan(&stateCounts).Error
 	if err != nil {
 		return hints, err
 	}
