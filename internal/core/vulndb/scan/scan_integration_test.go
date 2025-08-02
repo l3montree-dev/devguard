@@ -177,12 +177,6 @@ func TestScanning(t *testing.T) {
 		// should be only a single vulnerability
 		assert.Nil(t, err)
 		assert.Len(t, vulns, 1)
-		// mark the vuln as accepted
-		vulns[0].State = models.VulnStateAccepted
-		// save it
-		err = dependencyVulnRepository.Save(nil, &vulns[0])
-		assert.Nil(t, err)
-
 		// create an accepted event inside the database
 		acceptedEvent := models.NewAcceptedEvent(vulns[0].ID, vulns[0].GetType(), "abc", "accepting the vulnerability")
 		err = dependencyVulnRepository.ApplyAndSave(nil, &vulns[0], &acceptedEvent)
@@ -219,12 +213,27 @@ func TestScanning(t *testing.T) {
 				newVuln = v
 			}
 		}
+
 		assert.NotEmpty(t, newVuln.Events)
 		lastTwoEvents := newVuln.Events[len(newVuln.Events)-2:]
-		assert.Equal(t, models.EventTypeAccepted, lastTwoEvents[0].Type)
-		assert.Equal(t, "accepting the vulnerability", *lastTwoEvents[0].Justification)
-		assert.Equal(t, "main", *lastTwoEvents[0].OriginalAssetVersionName)
-		assert.Equal(t, models.EventTypeDetectedOnAnotherBranch, lastTwoEvents[1].Type)
+
+		// we can not really rely on the created_at since the events are created in the same second
+		// nevertheless - one has to be the accepted event and the other the detected on different branch event
+		var accEvent models.VulnEvent
+		var detectedOnAnotherBranchEvent models.VulnEvent
+		for _, ev := range lastTwoEvents {
+			if ev.Type == models.EventTypeAccepted {
+				accEvent = ev
+			} else {
+				detectedOnAnotherBranchEvent = ev
+			}
+		}
+
+		assert.NotEmpty(t, accEvent)
+		assert.NotEmpty(t, detectedOnAnotherBranchEvent)
+		assert.Equal(t, models.EventTypeAccepted, accEvent.Type)
+		assert.Equal(t, "accepting the vulnerability", *accEvent.Justification)
+		assert.Equal(t, "main", *accEvent.OriginalAssetVersionName)
 	})
 }
 

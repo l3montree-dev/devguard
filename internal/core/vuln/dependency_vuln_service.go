@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -105,7 +106,16 @@ func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, scannerI
 		ev := models.NewDetectedOnAnotherBranchEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, "system", riskReport, scannerID, assetVersion.Name)
 		events[i] = append(events[i], ev)
 		// replay all events on the dependencyVuln
-		for _, ev := range alreadyExistingEvents[i] {
+		// but sort them by the time they were created ascending
+		slices.SortStableFunc(events[i], func(a, b models.VulnEvent) int {
+			if a.CreatedAt.Before(b.CreatedAt) {
+				return -1
+			} else if a.CreatedAt.After(b.CreatedAt) {
+				return 1
+			}
+			return 0
+		})
+		for _, ev := range events[i] {
 			ev.Apply(&dependencyVulns[i])
 		}
 	}
