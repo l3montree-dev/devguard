@@ -131,6 +131,19 @@ func Start(db core.DB) {
 			slog.Info("scan updated", "duration", time.Since(start))
 		}
 
+		if shouldMirror(configService, "vulndb.autoReopen") {
+			start = time.Now()
+			// update the auto reopen
+			if err := AutoReopenAcceptedVulnerabilities(db); err != nil {
+				slog.Error("could not update auto reopen", "err", err)
+				return nil
+			}
+			if err := markMirrored(configService, "vulndb.autoReopen"); err != nil {
+				slog.Error("could not mark vulndb.autoReopen as mirrored", "err", err)
+			}
+			slog.Info("auto reopen updated", "duration", time.Since(start))
+		}
+
 		// after we have a fresh vulndb we can update the dependencyVulns.
 		// we save data inside the dependency_vulns table: ComponentDepth and ComponentFixedVersion
 		// those need to be updated before recalculating the risk

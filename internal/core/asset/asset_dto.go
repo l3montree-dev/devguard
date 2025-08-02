@@ -43,6 +43,8 @@ type AssetDTO struct {
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold"`
 
+	VulnAutoReopenAfterDays *int `json:"vulnAutoReopenAfterDays"`
+
 	BadgeSecret   *uuid.UUID `json:"badgeSecret"`
 	WebhookSecret *uuid.UUID `json:"webhookSecret"`
 
@@ -80,6 +82,8 @@ func toDTO(asset models.Asset) AssetDTO {
 
 		CVSSAutomaticTicketThreshold: asset.CVSSAutomaticTicketThreshold,
 		RiskAutomaticTicketThreshold: asset.RiskAutomaticTicketThreshold,
+
+		VulnAutoReopenAfterDays: asset.VulnAutoReopenAfterDays,
 
 		AssetVersions: asset.AssetVersions,
 
@@ -168,6 +172,8 @@ type PatchRequest struct {
 
 	ConfigFiles *map[string]any `json:"configFiles"`
 
+	VulnAutoReopenAfterDays *int `json:"vulnAutoReopenAfterDays"`
+
 	WebhookSecret *string `json:"webhookSecret"`
 	BadgeSecret   *string `json:"badgeSecret"`
 }
@@ -244,6 +250,11 @@ func (assetPatch *PatchRequest) applyToModel(asset *models.Asset) bool {
 		if err == nil {
 			asset.BadgeSecret = &badgeUUID
 		}
+	}
+
+	if assetPatch.VulnAutoReopenAfterDays != nil {
+		updated = true
+		asset.VulnAutoReopenAfterDays = assetPatch.VulnAutoReopenAfterDays
 	}
 
 	return updated

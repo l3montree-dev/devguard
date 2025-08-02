@@ -50,6 +50,9 @@ type Asset struct {
 	CVSSAutomaticTicketThreshold *float64 `json:"cvssAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
 	RiskAutomaticTicketThreshold *float64 `json:"riskAutomaticTicketThreshold" gorm:"type:decimal(4,2);"`
 
+	// Auto-reopen configuration - number of days after which closed/accepted vulnerabilities should be reopened
+	VulnAutoReopenAfterDays *int `json:"vulnAutoReopenAfterDays" gorm:"type:integer;"`
+
 	SigningPubKey *string `json:"signingPubKey" gorm:"type:text;"`
 
 	ConfigFiles database.JSONB `json:"configFiles" gorm:"type:jsonb"`

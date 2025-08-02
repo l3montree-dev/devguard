@@ -252,14 +252,14 @@ func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.G
 	}
 
 	// check if the token is valid by fetching the user
-	user, resp, err := gitlabClient.ListGroups(ctx.Request().Context(), &gitlab.ListGroupsOptions{
+	user, _, err := gitlabClient.ListGroups(ctx.Request().Context(), &gitlab.ListGroupsOptions{
 		MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions), // only list groups where the user has at least reporter permissions
 		ListOptions:    gitlab.ListOptions{PerPage: 1},        // we only need to check if the request is successful, so we can limit the number of results
 	})
 
 	_ = user
 	if err != nil {
-		slog.Error("failed to get user", "err", err, "tokenHash", utils.HashString(token.AccessToken), "statusCode", resp.StatusCode)
+		slog.Error("failed to get user", "err", err, "tokenHash", utils.HashString(token.AccessToken))
 		return false
 	}
 
