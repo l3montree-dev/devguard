@@ -14,4 +14,4 @@
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ALTER TABLE first_party_vulnerabilities
-ADD COLUMN fingerprint text;
+ADD COLUMN IF NOT EXISTS fingerprint text;

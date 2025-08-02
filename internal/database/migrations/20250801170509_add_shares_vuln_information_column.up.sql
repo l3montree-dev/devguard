@@ -14,4 +14,4 @@
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ALTER TABLE organizations
-ADD COLUMN shares_vuln_information boolean NOT NULL DEFAULT false;
+ADD COLUMN IF NOT EXISTS shares_vuln_information boolean NOT NULL DEFAULT false;
