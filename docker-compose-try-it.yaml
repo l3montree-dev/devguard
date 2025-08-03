@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgresql:
-    image: ghcr.io/l3montree-dev/devguard/postgresql:v0.4.16
+    image: ghcr.io/l3montree-dev/devguard/postgresql:0.13.1
     container_name: devguard-postgres
     environment:
       POSTGRES_USER: postgres
@@ -60,7 +60,7 @@ services:
       - devguard-local
 
   devguard-api:
-    image: ghcr.io/l3montree-dev/devguard:0.13.0
+    image: ghcr.io/l3montree-dev/devguard:0.13.1
     container_name: devguard-api
     depends_on:
       postgresql:
@@ -85,7 +85,7 @@ services:
       - devguard-local
 
   devguard-web:
-    image: ghcr.io/l3montree-dev/devguard-web:0.13.0
+    image: ghcr.io/l3montree-dev/devguard-web:0.13.1
     container_name: devguard-web
     depends_on:
       - devguard-api
