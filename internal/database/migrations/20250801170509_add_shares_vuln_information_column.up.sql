@@ -13,5 +13,5 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ALTER TABLE organizations
+ALTER TABLE public.organizations
 ADD COLUMN IF NOT EXISTS shares_vuln_information boolean NOT NULL DEFAULT false;

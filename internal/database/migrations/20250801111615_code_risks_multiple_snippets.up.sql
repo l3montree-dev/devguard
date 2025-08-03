@@ -13,10 +13,10 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ALTER TABLE first_party_vulnerabilities
+ALTER TABLE public.first_party_vulnerabilities
 ADD COLUMN snippet_contents JSONB;
 
-UPDATE first_party_vulnerabilities
+UPDATE public.first_party_vulnerabilities
 SET snippet_contents = jsonb_build_object(
     'snippets', jsonb_build_array(
         jsonb_build_object(

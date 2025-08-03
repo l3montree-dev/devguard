@@ -13,5 +13,5 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-ALTER TABLE first_party_vulnerabilities
+ALTER TABLE public.first_party_vulnerabilities
 ADD COLUMN IF NOT EXISTS fingerprint text;

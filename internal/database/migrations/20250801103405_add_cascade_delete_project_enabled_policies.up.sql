@@ -17,18 +17,18 @@
 -- This ensures that when a project is deleted, all related entries in the project_enabled_policies join table are automatically deleted
 
 -- Drop existing foreign key constraints (if they exist)
-ALTER TABLE project_enabled_policies 
+ALTER TABLE public.project_enabled_policies 
 DROP CONSTRAINT IF EXISTS fk_project_enabled_policies_project;
 
-ALTER TABLE project_enabled_policies 
+ALTER TABLE public.project_enabled_policies 
 DROP CONSTRAINT IF EXISTS fk_project_enabled_policies_policy;
 
 -- Add the foreign key constraint for project_id with CASCADE DELETE
-ALTER TABLE project_enabled_policies 
+ALTER TABLE public.project_enabled_policies 
 ADD CONSTRAINT fk_project_enabled_policies_project 
-FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
+FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 -- Add the foreign key constraint for policy_id with CASCADE DELETE  
-ALTER TABLE project_enabled_policies 
+ALTER TABLE public.project_enabled_policies 
 ADD CONSTRAINT fk_project_enabled_policies_policy 
-FOREIGN KEY (policy_id) REFERENCES policies(id) ON DELETE CASCADE;
+FOREIGN KEY (policy_id) REFERENCES public.policies(id) ON DELETE CASCADE;
