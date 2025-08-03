@@ -34,7 +34,7 @@ api:
     # This will be changed to a specific tag once we are in BETA.
     pullPolicy: Always # IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: main-latest
+    tag: 0.13.0
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
@@ -93,7 +93,7 @@ web:
     # This will be changed to a specific tag once we are in BETA.
     pullPolicy: Always # IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: main-latest
+    tag: 0.13.0
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
