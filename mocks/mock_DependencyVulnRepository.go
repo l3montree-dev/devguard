@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -485,6 +487,86 @@ func (_c *DependencyVulnRepository_DeleteBatch_Call) Return(err error) *Dependen
 }
 
 func (_c *DependencyVulnRepository_DeleteBatch_Call) RunAndReturn(run func(tx core.DB, ids []models.DependencyVuln) error) *DependencyVulnRepository_DeleteBatch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAllByAssetIDAndState provides a mock function for the type DependencyVulnRepository
+func (_mock *DependencyVulnRepository) GetAllByAssetIDAndState(tx core.DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error) {
+	ret := _mock.Called(tx, assetID, state, durationSinceStateChange)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllByAssetIDAndState")
+	}
+
+	var r0 []models.DependencyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, models.VulnState, time.Duration) ([]models.DependencyVuln, error)); ok {
+		return returnFunc(tx, assetID, state, durationSinceStateChange)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, uuid.UUID, models.VulnState, time.Duration) []models.DependencyVuln); ok {
+		r0 = returnFunc(tx, assetID, state, durationSinceStateChange)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.DependencyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, uuid.UUID, models.VulnState, time.Duration) error); ok {
+		r1 = returnFunc(tx, assetID, state, durationSinceStateChange)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DependencyVulnRepository_GetAllByAssetIDAndState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllByAssetIDAndState'
+type DependencyVulnRepository_GetAllByAssetIDAndState_Call struct {
+	*mock.Call
+}
+
+// GetAllByAssetIDAndState is a helper method to define mock.On call
+//   - tx core.DB
+//   - assetID uuid.UUID
+//   - state models.VulnState
+//   - durationSinceStateChange time.Duration
+func (_e *DependencyVulnRepository_Expecter) GetAllByAssetIDAndState(tx interface{}, assetID interface{}, state interface{}, durationSinceStateChange interface{}) *DependencyVulnRepository_GetAllByAssetIDAndState_Call {
+	return &DependencyVulnRepository_GetAllByAssetIDAndState_Call{Call: _e.mock.On("GetAllByAssetIDAndState", tx, assetID, state, durationSinceStateChange)}
+}
+
+func (_c *DependencyVulnRepository_GetAllByAssetIDAndState_Call) Run(run func(tx core.DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration)) *DependencyVulnRepository_GetAllByAssetIDAndState_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 models.VulnState
+		if args[2] != nil {
+			arg2 = args[2].(models.VulnState)
+		}
+		var arg3 time.Duration
+		if args[3] != nil {
+			arg3 = args[3].(time.Duration)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetAllByAssetIDAndState_Call) Return(dependencyVulns []models.DependencyVuln, err error) *DependencyVulnRepository_GetAllByAssetIDAndState_Call {
+	_c.Call.Return(dependencyVulns, err)
+	return _c
+}
+
+func (_c *DependencyVulnRepository_GetAllByAssetIDAndState_Call) RunAndReturn(run func(tx core.DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)) *DependencyVulnRepository_GetAllByAssetIDAndState_Call {
 	_c.Call.Return(run)
 	return _c
 }
