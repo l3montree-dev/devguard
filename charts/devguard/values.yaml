@@ -32,9 +32,9 @@ api:
     repository: ghcr.io/l3montree-dev/devguard
     # TODO: As we are curently in ALPHA, we are using the latest tag. 
     # This will be changed to a specific tag once we are in BETA.
-    pullPolicy: Always # IfNotPresent
+    pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: 0.13.0
+    # tag: 0.13.0
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
@@ -91,9 +91,9 @@ web:
     repository: ghcr.io/l3montree-dev/devguard-web
     # TODO: As we are curently in ALPHA, we are using the latest tag. 
     # This will be changed to a specific tag once we are in BETA.
-    pullPolicy: Always # IfNotPresent
+    pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
-    tag: 0.13.0
+    # tag: 0.13.0
   imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}

@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgresql:
-    image: ghcr.io/l3montree-dev/devguard-postgresql:v0.4.16
+    image: ghcr.io/l3montree-dev/devguard/postgresql:v0.4.16
     container_name: devguard-postgres
     environment:
       POSTGRES_USER: postgres
