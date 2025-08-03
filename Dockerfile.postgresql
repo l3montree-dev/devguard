@@ -20,6 +20,7 @@ FROM postgres:16.9-bookworm@sha256:fec2740c517838d4f582e48a8a9a1cb51082af3dcae59
 RUN apt-get update && apt-get install -y \
     git \
     build-essential \
+    postgresql-server-dev-16 \
     postgresql-server-dev-all && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen en_US.UTF-8
@@ -32,10 +33,16 @@ ENV LC_ALL=en_US.UTF-8
 # Clone the pg-semver repository
 RUN git clone https://github.com/theory/pg-semver.git /pg-semver
 
-# Build and install pg-semver
+# Build and install pg-semver with proper PostgreSQL version
 RUN cd /pg-semver && \
+    export PG_CONFIG=/usr/lib/postgresql/16/bin/pg_config && \
+    export PATH="/usr/lib/postgresql/16/bin:$PATH" && \
+    make clean && \
     make && \
-    make install
+    make install && \
+    # Verify the extension files are installed correctly for PostgreSQL 16
+    echo "Checking installed semver files:" && \
+    find /usr -name "*semver*" -type f 2>/dev/null
 
 # Clean up the build dependencies to keep the image size down
 RUN apt-get remove -y git build-essential postgresql-server-dev-all && \
