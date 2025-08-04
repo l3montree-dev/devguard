@@ -300,7 +300,7 @@ func TestSyncOrgs(t *testing.T) {
 			orgRepo,
 		)
 
-		err := serviceWithOrgRepo.SyncOrgs(ctx)
+		err := serviceWithOrgRepo.TriggerOrgSync(ctx)
 
 		assert.NoError(t, err)
 		thirdPartyIntegration.AssertExpectations(t)
@@ -324,7 +324,7 @@ func TestSyncOrgs(t *testing.T) {
 		thirdPartyIntegration.On("ListOrgs", ctx).Return(nil, errors.New("api error"))
 		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 
-		err := service.SyncOrgs(ctx)
+		err := service.TriggerOrgSync(ctx)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "could not list organizations")
@@ -366,7 +366,7 @@ func TestSyncOrgs(t *testing.T) {
 			orgRepo,
 		)
 
-		err := serviceWithOrgRepo.SyncOrgs(ctx)
+		err := serviceWithOrgRepo.TriggerOrgSync(ctx)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "could not upsert organizations")
@@ -416,7 +416,7 @@ func TestSyncOrgs(t *testing.T) {
 		)
 
 		// Should not return error even if RBAC fails (it just logs a warning)
-		err := serviceWithMocks.SyncOrgs(ctx)
+		err := serviceWithMocks.TriggerOrgSync(ctx)
 
 		assert.NoError(t, err)
 		thirdPartyIntegration.AssertExpectations(t)
@@ -451,7 +451,7 @@ func TestSyncOrgs(t *testing.T) {
 			orgRepo,
 		)
 
-		err := serviceWithOrgRepo.SyncOrgs(ctx)
+		err := serviceWithOrgRepo.TriggerOrgSync(ctx)
 
 		assert.NoError(t, err)
 		thirdPartyIntegration.AssertExpectations(t)

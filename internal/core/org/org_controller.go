@@ -101,7 +101,7 @@ func (controller *httpController) Update(ctx core.Context) error {
 	}
 
 	resp := orgDetailsDTO{
-		OrgDTO:  fromModel(organization),
+		OrgDTO:  FromModel(organization),
 		Members: members,
 	}
 
@@ -191,7 +191,7 @@ func (controller *httpController) AcceptInvitation(ctx core.Context) error {
 	}
 
 	return ctx.JSON(200,
-		fromModel(invitation.Organization),
+		FromModel(invitation.Organization),
 	)
 }
 
@@ -373,7 +373,7 @@ func (controller *httpController) Read(ctx core.Context) error {
 	}
 
 	resp := orgDetailsDTO{
-		OrgDTO:  fromModel(organization),
+		OrgDTO:  FromModel(organization),
 		Members: members,
 	}
 

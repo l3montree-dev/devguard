@@ -263,7 +263,7 @@ func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService core.
 				slog.Info("syncing external entity provider orgs", "userID", key)
 				limiter[key] = time.Now().Add(15 * time.Minute)
 				go func() {
-					if err := externalEntityProviderService.SyncOrgs(ctx); err != nil {
+					if _, err := externalEntityProviderService.SyncOrgs(ctx); err != nil {
 						slog.Error("could not sync external entity provider orgs", "err", err, "userID", key)
 					}
 				}()
@@ -542,7 +542,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(core.NewAdminClient(ory), patService), externalEntityProviderOrgSyncMiddleware(externalEntityProviderService))
-	sessionRouter.GET("/trigger-sync/", externalEntityProviderService.SyncOrgs, neededScope([]string{"manage"}))
+	sessionRouter.GET("/trigger-sync/", externalEntityProviderService.TriggerOrgSync, neededScope([]string{"manage"}))
 
 	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
 	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)

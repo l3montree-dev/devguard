@@ -223,7 +223,7 @@ func obfuscateWebhookIntegrations(integration models.WebhookIntegration) common.
 	}
 }
 
-func fromModel(org models.Org) OrgDTO {
+func FromModel(org models.Org) OrgDTO {
 	return OrgDTO{
 		Model:                  org.Model,
 		Name:                   org.Name,

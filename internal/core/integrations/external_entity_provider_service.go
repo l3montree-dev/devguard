@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
@@ -52,11 +53,22 @@ func (s externalEntityProviderService) TriggerSync(c echo.Context) error {
 	return echo.NewHTTPError(400, "organization is not an external entity provider")
 }
 
-func (s externalEntityProviderService) SyncOrgs(c echo.Context) error {
+func (s externalEntityProviderService) TriggerOrgSync(c echo.Context) error {
+	orgs, err := s.SyncOrgs(c)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not sync organizations").WithInternal(err)
+	}
+
+	return c.JSON(200, utils.Map(orgs, func(o *models.Org) org.OrgDTO {
+		return org.FromModel(*o)
+	}))
+}
+
+func (s externalEntityProviderService) SyncOrgs(c echo.Context) ([]*models.Org, error) {
 	// return the enabled git providers as well
 	thirdPartyIntegration := core.GetThirdPartyIntegration(c)
 	userID := core.GetSession(c).GetUserID()
-	_, err, shared := s.singleFlightGroup.Do("syncOrgs/"+userID, func() (any, error) {
+	orgs, err, _ := s.singleFlightGroup.Do("syncOrgs/"+userID, func() (any, error) {
 		orgs, err := thirdPartyIntegration.ListOrgs(c)
 		if err != nil {
 			return nil, fmt.Errorf("could not list organizations: %w", err)
@@ -78,12 +90,14 @@ func (s externalEntityProviderService) SyncOrgs(c echo.Context) error {
 			}
 		}
 
-		return nil, nil
+		return orgsPtr, nil
 	})
 
-	slog.Info("external entity provider org sync completed", "user", userID, "shared", shared)
+	if err != nil {
+		return nil, fmt.Errorf("could not sync organizations: %w", err)
+	}
 
-	return err
+	return orgs.([]*models.Org), nil
 }
 
 func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx core.Context, org models.Org, user string) error {
