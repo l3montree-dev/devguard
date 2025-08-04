@@ -5,6 +5,7 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -152,6 +153,106 @@ func (w *WebhookIntegration) Save(ctx core.Context) error {
 	})
 }
 
+func (w *WebhookIntegration) Test(ctx core.Context) error {
+	var data struct {
+		URL         string `json:"url"`
+		Secret      string `json:"secret"`
+		PayloadType string `json:"payloadType"`
+	}
+
+	if err := ctx.Bind(&data); err != nil {
+		return ctx.JSON(400, "invalid request data")
+	}
+	if data.URL == "" {
+		return ctx.JSON(400, "url is required")
+	}
+
+	// Default to empty payload if not specified
+	if data.PayloadType == "" {
+		data.PayloadType = "empty"
+	}
+
+	// Validate payload type
+	var payloadType TestPayloadType
+	switch data.PayloadType {
+	case "empty":
+		payloadType = TestPayloadTypeEmpty
+	case "sampleSbom":
+		payloadType = TestPayloadTypeSampleSBOM
+	case "sampleDependencyVulns":
+		payloadType = TestPayloadTypeSampleDependencyVulns
+	case "sampleFirstPartyVulns":
+		payloadType = TestPayloadTypeSampleFirstPartyVulns
+	default:
+		return ctx.JSON(400, map[string]string{
+			"error": "Invalid payload type. Supported types: empty, sampleSbom, sampleDependencyVulns, sampleFirstPartyVulns",
+		})
+	}
+
+	// Create example objects for testing
+	org := core.ToOrgObject(core.GetOrg(ctx))
+
+	// For assets and projects, we'll use example data if not available in context
+	var project core.ProjectObject
+	var asset core.AssetObject
+	var assetVersion core.AssetVersionObject
+
+	if core.HasProject(ctx) {
+		project = core.ToProjectObject(core.GetProject(ctx))
+	} else {
+		// Create example project data
+		project = core.ProjectObject{
+			ID:          uuid.New(),
+			Name:        "Example Project",
+			Slug:        "example-project",
+			Description: "Example project for webhook testing",
+			IsPublic:    false,
+			Type:        "application",
+		}
+	}
+
+	// Create example asset and asset version data for testing
+	asset = core.AssetObject{
+		ID:                         uuid.New(),
+		Name:                       "Example Asset",
+		Slug:                       "example-asset",
+		Description:                "Example asset for webhook testing",
+		ProjectID:                  project.ID,
+		AvailabilityRequirement:    "high",
+		IntegrityRequirement:       "high",
+		ConfidentialityRequirement: "high",
+		ReachableFromInternet:      false,
+	}
+
+	assetVersion = core.AssetVersionObject{
+		Name:          "example-version",
+		AssetID:       asset.ID,
+		Slug:          "example-version",
+		DefaultBranch: true,
+		Type:          "branch",
+	}
+
+	// Create webhook client and send test
+	var secret *string
+	if data.Secret != "" {
+		secret = &data.Secret
+	}
+
+	client := NewWebhookClient(data.URL, secret)
+
+	if err := client.SendTest(org, project, asset, assetVersion, payloadType); err != nil {
+		slog.Error("failed to send test webhook", "err", err)
+		return ctx.JSON(400, map[string]string{
+			"error": fmt.Sprintf("Webhook test failed: %s", err.Error()),
+		})
+	}
+
+	return ctx.JSON(200, map[string]string{
+		"message":     "Test webhook sent successfully",
+		"payloadType": data.PayloadType,
+	})
+}
+
 func (w *WebhookIntegration) HandleEvent(event any) error {
 
 	switch event := event.(type) {
@@ -160,10 +261,6 @@ func (w *WebhookIntegration) HandleEvent(event any) error {
 		webhooks, err := w.webhookRepository.FindByOrgIDAndProjectID(event.Org.ID, event.Project.ID)
 		if err != nil {
 			slog.Error("failed to find webhooks", "err", err)
-			return err
-		}
-		if err != nil {
-			slog.Error("failed to find webhooks for SBOM created event", "err", err)
 			return err
 		}
 

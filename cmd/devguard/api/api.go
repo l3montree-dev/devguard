@@ -588,6 +588,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	organizationRouter.POST("/integrations/webhook/test-and-save/", webhookIntegration.Save, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
 
+	organizationRouter.POST("/integrations/webhook/test/", webhookIntegration.Test, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
+
 	organizationRouter.PUT("/integrations/webhook/:id/", webhookIntegration.Update, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
 
 	organizationRouter.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete, neededScope([]string{"manage"}), accessControlMiddleware(core.ObjectOrganization, core.ActionUpdate))
@@ -611,6 +613,9 @@ func BuildRouter(db core.DB) *echo.Echo {
 	projectRouter.GET("/", projectController.Read)
 
 	projectRouter.POST("/integrations/webhook/test-and-save/", webhookIntegration.Save, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+
+	projectRouter.POST("/integrations/webhook/test/", webhookIntegration.Test, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionRead))
+
 	projectRouter.PUT("/integrations/webhook/:id/", webhookIntegration.Update, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 	projectRouter.DELETE("/integrations/webhook/:id/", webhookIntegration.Delete, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
 
