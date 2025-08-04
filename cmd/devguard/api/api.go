@@ -253,6 +253,26 @@ func neededScope(neededScopes []string) core.MiddlewareFunc {
 	}
 }
 
+func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService core.ExternalEntityProviderService) core.MiddlewareFunc {
+	limiter := map[string]time.Time{}
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx core.Context) error {
+
+			key := core.GetSession(ctx).GetUserID()
+			if _, ok := limiter[key]; !ok || time.Now().After(limiter[key]) {
+				slog.Info("syncing external entity provider orgs", "userID", key)
+				limiter[key] = time.Now().Add(15 * time.Minute)
+				go func() {
+					if err := externalEntityProviderService.SyncOrgs(ctx); err != nil {
+						slog.Error("could not sync external entity provider orgs", "err", err, "userID", key)
+					}
+				}()
+			}
+			return next(ctx)
+		}
+	}
+}
+
 func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.ExternalEntityProviderService) core.MiddlewareFunc {
 	limiter := map[string]time.Time{}
 
@@ -521,7 +541,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	apiV1Router.GET("/lookup/", assetController.HandleLookup)
 
 	// everything below this line is protected by the session middleware
-	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(core.NewAdminClient(ory), patService))
+	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(core.NewAdminClient(ory), patService), externalEntityProviderOrgSyncMiddleware(externalEntityProviderService))
 	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
 	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)
 

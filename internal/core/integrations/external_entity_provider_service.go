@@ -52,28 +52,40 @@ func (s externalEntityProviderService) TriggerSync(c echo.Context) error {
 	return echo.NewHTTPError(400, "organization is not an external entity provider")
 }
 
-func (s externalEntityProviderService) syncOrgs(c echo.Context) error {
+func (s externalEntityProviderService) SyncOrgs(c echo.Context) error {
 	// return the enabled git providers as well
 	thirdPartyIntegration := core.GetThirdPartyIntegration(c)
-	orgs, err := thirdPartyIntegration.ListOrgs(c)
-	if err != nil {
-		return fmt.Errorf("could not list organizations: %w", err)
-	}
-	// make sure, that the third party organizations exists inside the database
-	if err := s.organizationRepository.Upsert(utils.Ptr(utils.Map(orgs, utils.Ptr)), []clause.Column{
-		{Name: "external_entity_provider_id"},
-	}, nil); err != nil {
-		return fmt.Errorf("could not upsert organizations: %w", err)
-	}
-	return nil
+	userID := core.GetSession(c).GetUserID()
+	_, err, _ := s.singleFlightGroup.Do("syncOrgs/"+userID, func() (any, error) {
+		orgs, err := thirdPartyIntegration.ListOrgs(c)
+		if err != nil {
+			return nil, fmt.Errorf("could not list organizations: %w", err)
+		}
+
+		orgsPtr := utils.Map(orgs, utils.Ptr)
+
+		// make sure, that the third party organizations exists inside the database
+		if err := s.organizationRepository.Upsert(&orgsPtr, []clause.Column{
+			{Name: "external_entity_provider_id"},
+		}, nil); err != nil {
+			return nil, fmt.Errorf("could not upsert organizations: %w", err)
+		}
+
+		// make sure the user is a member of the organizations
+		for _, org := range orgsPtr {
+			if err := s.rbacProvider.GetDomainRBAC(org.GetID().String()).GrantRole(userID, core.RoleMember); err != nil {
+				slog.Warn("could not grant role for user in organization", "user", userID, "orgID", org.GetID(), "err", err)
+			}
+		}
+
+		return nil, nil
+	})
+
+	return err
 }
 
 func (s externalEntityProviderService) RefreshExternalEntityProviderProjects(ctx core.Context, org models.Org, user string) error {
-	err := s.syncOrgs(ctx)
-	if err != nil {
-		slog.Warn("could not sync organizations", "orgID", org.GetID(), "user", user, "err", err)
-		return err
-	}
+
 	_, err, shared := s.singleFlightGroup.Do(org.ID.String()+"/"+user, func() (any, error) {
 		if org.ExternalEntityProviderID == nil {
 			return nil, fmt.Errorf("organization %s does not have an external entity provider configured", org.GetID())

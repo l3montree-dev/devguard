@@ -245,7 +245,7 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx core.Context, 
 
 func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.GitLabOauth2Token) bool {
 	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(token, true)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(token, false)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return false
