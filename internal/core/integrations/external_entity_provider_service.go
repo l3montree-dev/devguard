@@ -56,7 +56,7 @@ func (s externalEntityProviderService) SyncOrgs(c echo.Context) error {
 	// return the enabled git providers as well
 	thirdPartyIntegration := core.GetThirdPartyIntegration(c)
 	userID := core.GetSession(c).GetUserID()
-	_, err, _ := s.singleFlightGroup.Do("syncOrgs/"+userID, func() (any, error) {
+	_, err, shared := s.singleFlightGroup.Do("syncOrgs/"+userID, func() (any, error) {
 		orgs, err := thirdPartyIntegration.ListOrgs(c)
 		if err != nil {
 			return nil, fmt.Errorf("could not list organizations: %w", err)
@@ -80,6 +80,8 @@ func (s externalEntityProviderService) SyncOrgs(c echo.Context) error {
 
 		return nil, nil
 	})
+
+	slog.Info("external entity provider org sync completed", "user", userID, "shared", shared)
 
 	return err
 }

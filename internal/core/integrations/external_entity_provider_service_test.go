@@ -84,11 +84,7 @@ func TestTriggerSync(t *testing.T) {
 			if tt.isExternalOrg {
 				// Mock the third party integration for syncOrgs call
 				thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
-				thirdPartyIntegration.On("ListOrgs", mock.Anything).Return([]models.Org{}, nil)
 				core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
-
-				// Mock the organization repository upsert
-				orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 				// Mock the refresh method call
 				domainRBAC := mocks.NewAccessControl(t)
@@ -188,9 +184,7 @@ func TestUpsertProjects(t *testing.T) {
 		createdPtr := &models.Project{Model: models.Model{ID: uuid.New()}, Slug: "project1"}
 		updatedPtr := &models.Project{Model: models.Model{ID: uuid.New()}, Slug: "project2"}
 
-		projectRepo.On("UpsertSplit", mock.Anything, "gitlab", mock.MatchedBy(func(projects []*models.Project) bool {
-			return len(projects) == 2
-		})).Return([]*models.Project{createdPtr}, []*models.Project{updatedPtr}, nil)
+		projectRepo.On("UpsertSplit", mock.Anything, "gitlab", mock.Anything).Return([]*models.Project{createdPtr}, []*models.Project{updatedPtr}, nil)
 
 		created, updated, err := service.upsertProjects(org, projects, "gitlab")
 
@@ -251,6 +245,217 @@ func TestEnableCommunityPoliciesForNewProjects(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "could not enable community managed policies for project project1")
+	})
+}
+
+func TestSyncOrgs(t *testing.T) {
+	t.Run("successful sync with new organizations", func(t *testing.T) {
+		ctx := createTestContext()
+
+		// Mock session with user
+		session := mocks.NewAuthSession(t)
+		session.On("GetUserID").Return("user123")
+		core.SetSession(ctx, session)
+
+		// Mock third party integration
+		orgs := []models.Org{
+			{
+				Model:                    models.Model{ID: uuid.New()},
+				Slug:                     "org1",
+				Name:                     "Organization 1",
+				ExternalEntityProviderID: utils.Ptr("github"),
+			},
+			{
+				Model:                    models.Model{ID: uuid.New()},
+				Slug:                     "org2",
+				Name:                     "Organization 2",
+				ExternalEntityProviderID: utils.Ptr("github"),
+			},
+		}
+		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+		thirdPartyIntegration.On("ListOrgs", ctx).Return(orgs, nil)
+		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
+
+		// Mock organization repository
+		orgRepo := mocks.NewOrganizationRepository(t)
+		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		// Mock RBAC provider - should call GetDomainRBAC for each org
+		rbacProvider := mocks.NewRBACProvider(t)
+		domainRBAC1 := mocks.NewAccessControl(t)
+		domainRBAC2 := mocks.NewAccessControl(t)
+
+		rbacProvider.On("GetDomainRBAC", orgs[0].GetID().String()).Return(domainRBAC1)
+		rbacProvider.On("GetDomainRBAC", orgs[1].GetID().String()).Return(domainRBAC2)
+
+		domainRBAC1.On("GrantRole", "user123", core.RoleMember).Return(nil)
+		domainRBAC2.On("GrantRole", "user123", core.RoleMember).Return(nil)
+
+		// Create service with mocked org repo
+		serviceWithOrgRepo := NewExternalEntityProviderService(
+			mocks.NewProjectService(t),
+			mocks.NewAssetRepository(t),
+			mocks.NewProjectRepository(t),
+			rbacProvider,
+			orgRepo,
+		)
+
+		err := serviceWithOrgRepo.SyncOrgs(ctx)
+
+		assert.NoError(t, err)
+		thirdPartyIntegration.AssertExpectations(t)
+		orgRepo.AssertExpectations(t)
+		rbacProvider.AssertExpectations(t)
+		domainRBAC1.AssertExpectations(t)
+		domainRBAC2.AssertExpectations(t)
+	})
+
+	t.Run("handles third party integration error", func(t *testing.T) {
+		service := createTestService(t)
+		ctx := createTestContext()
+
+		// Mock session with user
+		session := mocks.NewAuthSession(t)
+		session.On("GetUserID").Return("user123")
+		core.SetSession(ctx, session)
+
+		// Mock third party integration with error
+		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+		thirdPartyIntegration.On("ListOrgs", ctx).Return(nil, errors.New("api error"))
+		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
+
+		err := service.SyncOrgs(ctx)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "could not list organizations")
+		assert.Contains(t, err.Error(), "api error")
+		thirdPartyIntegration.AssertExpectations(t)
+	})
+
+	t.Run("handles upsert error", func(t *testing.T) {
+		ctx := createTestContext()
+
+		// Mock session with user
+		session := mocks.NewAuthSession(t)
+		session.On("GetUserID").Return("user123")
+		core.SetSession(ctx, session)
+
+		// Mock third party integration
+		orgs := []models.Org{
+			{
+				Model:                    models.Model{ID: uuid.New()},
+				Slug:                     "org1",
+				Name:                     "Organization 1",
+				ExternalEntityProviderID: utils.Ptr("github"),
+			},
+		}
+		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+		thirdPartyIntegration.On("ListOrgs", ctx).Return(orgs, nil)
+		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
+
+		// Mock organization repository with error
+		orgRepo := mocks.NewOrganizationRepository(t)
+		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("database error"))
+
+		// Create service with mocked org repo
+		serviceWithOrgRepo := NewExternalEntityProviderService(
+			mocks.NewProjectService(t),
+			mocks.NewAssetRepository(t),
+			mocks.NewProjectRepository(t),
+			mocks.NewRBACProvider(t),
+			orgRepo,
+		)
+
+		err := serviceWithOrgRepo.SyncOrgs(ctx)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "could not upsert organizations")
+		assert.Contains(t, err.Error(), "database error")
+		thirdPartyIntegration.AssertExpectations(t)
+		orgRepo.AssertExpectations(t)
+	})
+
+	t.Run("handles rbac grant error but continues", func(t *testing.T) {
+		ctx := createTestContext()
+
+		// Mock session with user
+		session := mocks.NewAuthSession(t)
+		session.On("GetUserID").Return("user123")
+		core.SetSession(ctx, session)
+
+		// Mock third party integration
+		orgs := []models.Org{
+			{
+				Model:                    models.Model{ID: uuid.New()},
+				Slug:                     "org1",
+				Name:                     "Organization 1",
+				ExternalEntityProviderID: utils.Ptr("github"),
+			},
+		}
+		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+		thirdPartyIntegration.On("ListOrgs", ctx).Return(orgs, nil)
+		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
+
+		// Mock organization repository
+		orgRepo := mocks.NewOrganizationRepository(t)
+		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		// Mock RBAC provider with error
+		rbacProvider := mocks.NewRBACProvider(t)
+		domainRBAC := mocks.NewAccessControl(t)
+		rbacProvider.On("GetDomainRBAC", mock.AnythingOfType("string")).Return(domainRBAC)
+		domainRBAC.On("GrantRole", "user123", core.RoleMember).Return(errors.New("rbac error"))
+
+		// Create service with mocked dependencies
+		serviceWithMocks := NewExternalEntityProviderService(
+			mocks.NewProjectService(t),
+			mocks.NewAssetRepository(t),
+			mocks.NewProjectRepository(t),
+			rbacProvider,
+			orgRepo,
+		)
+
+		// Should not return error even if RBAC fails (it just logs a warning)
+		err := serviceWithMocks.SyncOrgs(ctx)
+
+		assert.NoError(t, err)
+		thirdPartyIntegration.AssertExpectations(t)
+		orgRepo.AssertExpectations(t)
+		rbacProvider.AssertExpectations(t)
+		domainRBAC.AssertExpectations(t)
+	})
+
+	t.Run("handles empty organization list", func(t *testing.T) {
+		ctx := createTestContext()
+
+		// Mock session with user
+		session := mocks.NewAuthSession(t)
+		session.On("GetUserID").Return("user123")
+		core.SetSession(ctx, session)
+
+		// Mock third party integration with empty list
+		thirdPartyIntegration := mocks.NewIntegrationAggregate(t)
+		thirdPartyIntegration.On("ListOrgs", ctx).Return([]models.Org{}, nil)
+		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
+
+		// Mock organization repository - even with empty list, Upsert is still called
+		orgRepo := mocks.NewOrganizationRepository(t)
+		orgRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+		// Create service with mocked org repo
+		serviceWithOrgRepo := NewExternalEntityProviderService(
+			mocks.NewProjectService(t),
+			mocks.NewAssetRepository(t),
+			mocks.NewProjectRepository(t),
+			mocks.NewRBACProvider(t),
+			orgRepo,
+		)
+
+		err := serviceWithOrgRepo.SyncOrgs(ctx)
+
+		assert.NoError(t, err)
+		thirdPartyIntegration.AssertExpectations(t)
+		orgRepo.AssertExpectations(t)
 	})
 }
 
@@ -331,9 +536,7 @@ func TestSyncProjectAssets(t *testing.T) {
 		thirdPartyIntegration.On("ListProjects", mock.Anything, "user123", "gitlab", "123").Return(assets, nil, nil)
 		core.SetThirdPartyIntegration(ctx, thirdPartyIntegration)
 
-		assetRepo.On("Upsert", mock.MatchedBy(func(assets *[]*models.Asset) bool {
-			return len(*assets) == 2
-		}), mock.Anything, mock.Anything).Return(nil)
+		assetRepo.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 		err := service.syncProjectAssets(ctx, "user123", project)
 

@@ -70,24 +70,22 @@ func (t *thirdPartyIntegrations) ListProjects(ctx context.Context, userID string
 		assets []models.Asset
 		roles  []core.Role
 	}
-	// wg := utils.ErrGroup[assetsWithRoles](-1)
+	wg := utils.ErrGroup[assetsWithRoles](-1)
 
-	results := make([]assetsWithRoles, 0, len(t.integrations))
 	for _, i := range t.integrations {
-		// wg.Go(func() (assetsWithRoles, error) {
-		projects, roles, err := i.ListProjects(ctx, userID, providerID, groupID)
-		if err != nil {
-			slog.Error("error while listing projects", "err", err)
-			// swallow error
-			continue
-		}
-		results = append(results, assetsWithRoles{assets: projects, roles: roles})
-		// })
+		wg.Go(func() (assetsWithRoles, error) {
+			projects, roles, err := i.ListProjects(ctx, userID, providerID, groupID)
+			if err != nil {
+				// swallow error
+				return assetsWithRoles{}, nil
+			}
+			return assetsWithRoles{assets: projects, roles: roles}, nil
+		})
 	}
-	// results, err := wg.WaitAndCollect()
-	/*if err != nil {
+	results, err := wg.WaitAndCollect()
+	if err != nil {
 		slog.Error("error while listing projects", "err", err)
-	}*/
+	}
 	assets := make([]models.Asset, 0, len(results))
 	roles := make([]core.Role, 0, len(results))
 	for _, result := range results {

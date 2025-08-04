@@ -542,6 +542,8 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	// everything below this line is protected by the session middleware
 	sessionRouter := apiV1Router.Group("", auth.SessionMiddleware(core.NewAdminClient(ory), patService), externalEntityProviderOrgSyncMiddleware(externalEntityProviderService))
+	sessionRouter.GET("/trigger-sync/", externalEntityProviderService.SyncOrgs, neededScope([]string{"manage"}))
+
 	sessionRouter.GET("/oauth2/gitlab/:integrationName/", integrationController.GitLabOauth2Login)
 	sessionRouter.GET("/oauth2/gitlab/callback/:integrationName/", integrationController.GitLabOauth2Callback)
 
