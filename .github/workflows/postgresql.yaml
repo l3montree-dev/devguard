@@ -5,6 +5,10 @@ on:
     tags:
     - '*'
 
+permissions:
+  contents: read
+  packages: write
+
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
   # Docker image build job

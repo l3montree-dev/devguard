@@ -6,6 +6,12 @@ on:
   workflow_dispatch:
   push:
 
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+  packages: write
+
 
 jobs:
   golangci:
