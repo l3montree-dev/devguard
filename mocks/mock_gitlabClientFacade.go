@@ -1056,6 +1056,76 @@ func (_c *GitlabClientFacade_GetProject_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// GetVersion provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) GetVersion(ctx context.Context) (*gitlab.Version, *gitlab.Response, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetVersion")
+	}
+
+	var r0 *gitlab.Version
+	var r1 *gitlab.Response
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (*gitlab.Version, *gitlab.Response, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) *gitlab.Version); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gitlab.Version)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) *gitlab.Response); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*gitlab.Response)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context) error); ok {
+		r2 = returnFunc(ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// GitlabClientFacade_GetVersion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetVersion'
+type GitlabClientFacade_GetVersion_Call struct {
+	*mock.Call
+}
+
+// GetVersion is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *GitlabClientFacade_Expecter) GetVersion(ctx interface{}) *GitlabClientFacade_GetVersion_Call {
+	return &GitlabClientFacade_GetVersion_Call{Call: _e.mock.On("GetVersion", ctx)}
+}
+
+func (_c *GitlabClientFacade_GetVersion_Call) Run(run func(ctx context.Context)) *GitlabClientFacade_GetVersion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetVersion_Call) Return(version *gitlab.Version, response *gitlab.Response, err error) *GitlabClientFacade_GetVersion_Call {
+	_c.Call.Return(version, response, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_GetVersion_Call) RunAndReturn(run func(ctx context.Context) (*gitlab.Version, *gitlab.Response, error)) *GitlabClientFacade_GetVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InviteReporter provides a mock function for the type GitlabClientFacade
 func (_mock *GitlabClientFacade) InviteReporter(ctx context.Context, projectID int, userID int) (*gitlab.ProjectMember, *gitlab.Response, error) {
 	ret := _mock.Called(ctx, projectID, userID)

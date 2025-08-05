@@ -262,8 +262,10 @@ func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService core.
 			if _, ok := limiter[key]; !ok || time.Now().After(limiter[key]) {
 				slog.Info("syncing external entity provider orgs", "userID", key)
 				limiter[key] = time.Now().Add(15 * time.Minute)
+				// Create a goroutine-safe context to avoid using the request context
+				safeCtx := core.GoroutineSafeContext(ctx)
 				go func() {
-					if _, err := externalEntityProviderService.SyncOrgs(ctx); err != nil {
+					if _, err := externalEntityProviderService.SyncOrgs(safeCtx); err != nil {
 						slog.Error("could not sync external entity provider orgs", "err", err, "userID", key)
 					}
 				}()
@@ -286,12 +288,17 @@ func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.
 				if time.Now().After(limiter[org.GetID().String()+"/"+core.GetSession(ctx).GetUserID()]) {
 					limiter[org.GetID().String()+"/"+core.GetSession(ctx).GetUserID()] = time.Now().Add(15 * time.Minute)
 
+					// Create a goroutine-safe context and capture the values we need
+					safeCtx := core.GoroutineSafeContext(ctx)
+					userID := core.GetSession(ctx).GetUserID()
+					orgID := org.GetID()
+
 					go func() {
-						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(ctx, org, core.GetSession(ctx).GetUserID())
+						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(safeCtx, org, userID)
 						if err != nil {
-							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", org.GetID(), "userID", core.GetSession(ctx).GetUserID())
+							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "userID", userID)
 						} else {
-							slog.Info("refreshed external entity provider projects", "orgID", org.GetID(), "userID", core.GetSession(ctx).GetUserID())
+							slog.Info("refreshed external entity provider projects", "orgID", orgID, "userID", userID)
 						}
 					}()
 				}

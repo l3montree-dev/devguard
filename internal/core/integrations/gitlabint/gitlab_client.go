@@ -115,6 +115,10 @@ func (client gitlabClient) Whoami(ctx context.Context) (*gitlab.User, *gitlab.Re
 	return client.Users.CurrentUser(gitlab.WithContext(ctx))
 }
 
+func (client gitlabClient) GetVersion(ctx context.Context) (*gitlab.Version, *gitlab.Response, error) {
+	return client.Version.GetVersion()
+}
+
 func (client gitlabClient) GetMemberInProject(ctx context.Context, userID int, projectID int) (*gitlab.ProjectMember, *gitlab.Response, error) {
 	return client.ProjectMembers.GetInheritedProjectMember(projectID, userID, nil, gitlab.WithContext(ctx))
 }

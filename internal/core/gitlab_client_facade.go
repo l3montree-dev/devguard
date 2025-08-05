@@ -18,6 +18,8 @@ type GitlabClientFactory interface {
 type GitlabClientFacade interface {
 	Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error)
 
+	GetVersion(ctx context.Context) (*gitlab.Version, *gitlab.Response, error)
+
 	GetClientID() string
 
 	ListProjects(ctx context.Context, opt *gitlab.ListProjectsOptions) ([]*gitlab.Project, *gitlab.Response, error)

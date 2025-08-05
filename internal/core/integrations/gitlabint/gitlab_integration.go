@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -245,19 +246,14 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx core.Context, 
 
 func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.GitLabOauth2Token) bool {
 	// create a new gitlab batch client
-	gitlabClient, err := g.clientFactory.FromOauth2Token(token, false)
+	gitlabClient, err := g.clientFactory.FromOauth2Token(token, true)
 	if err != nil {
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return false
 	}
 
 	// check if the token is valid by fetching the user
-	user, _, err := gitlabClient.ListGroups(ctx.Request().Context(), &gitlab.ListGroupsOptions{
-		MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions), // only list groups where the user has at least reporter permissions
-		ListOptions:    gitlab.ListOptions{PerPage: 1},        // we only need to check if the request is successful, so we can limit the number of results
-	})
-
-	_ = user
+	_, _, err = gitlabClient.GetVersion(ctx.Request().Context())
 	if err != nil {
 		slog.Error("failed to get user", "err", err, "tokenHash", utils.HashString(token.AccessToken))
 		return false
@@ -272,7 +268,10 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx core.Context
 	// todo this, fetch the kratos user and check if the user has a gitlab login
 	adminClient := core.GetAuthAdminClient(ctx)
 
-	identity, err := adminClient.GetIdentityWithCredentials(ctx.Request().Context(), core.GetSession(ctx).GetUserID())
+	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	identity, err := adminClient.GetIdentityWithCredentials(ctxWithTimeout, core.GetSession(ctx).GetUserID())
 	if err != nil {
 		slog.Error("failed to get identity", "err", err)
 		return nil, err

@@ -76,10 +76,12 @@ func registerMiddlewares(e *echo.Echo) {
 	}
 }
 
+var E *echo.Echo
+
 func Server() *echo.Echo {
-	e := echo.New()
-	e.HideBanner = true
-	e.Logger.SetLevel(99)
-	registerMiddlewares(e)
-	return e
+	E = echo.New()
+	E.HideBanner = true
+	E.Logger.SetLevel(99)
+	registerMiddlewares(E)
+	return E
 }
