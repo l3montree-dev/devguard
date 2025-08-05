@@ -21,11 +21,10 @@
             "mode": "auto",
             "program": "${workspaceRoot}/cmd/devguard-scanner/main.go",
             "args": [
-                "sca",
-                "--path=../devguard-test",
-                "--assetName=l3montree/projects/devguard/assets/devguard-api",
+                "secret-scanning",
+                "--assetName=wetteronline/projects/devguard/assets/sbom4",
                 "--apiUrl=http://localhost:8080",
-                "--token=5ea4f27ae4385fdcc67628a5d2360880de1b70c768bd6715568edf63c5692981"
+                "--token=c5077f7d008d9980814d0345fdfaddcd02774d4577ed87c5b7e8cc3108447a1b"
             ],
         },
         {

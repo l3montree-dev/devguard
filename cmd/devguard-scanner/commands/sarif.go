@@ -243,6 +243,13 @@ func obfuscateSecretAndAddFingerprint(sarifScan *common.SarifResult) {
 	// obfuscate the snippet
 	for ru, run := range sarifScan.Runs {
 		for re, result := range run.Results {
+			if len(result.Locations) == 0 {
+				continue
+			}
+			// make sure to set the result.Fingerprints
+			if result.Fingerprints == nil {
+				result.Fingerprints = &common.Fingerprints{}
+			}
 			// obfuscate the snippet
 			for lo, location := range result.Locations {
 				snippet := location.PhysicalLocation.Region.Snippet.Text
