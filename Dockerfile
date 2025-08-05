@@ -24,15 +24,17 @@ ENV FLAGS="ldflags='-X main.release=devguard@${GITHUB_REF_NAME}'"
 RUN CGO_ENABLED=0 make devguard
 RUN CGO_ENABLED=0 make devguard-cli
 
-FROM gcr.io/distroless/static-debian12@sha256:b7b9a6953e7bed6baaf37329331051d7bdc1b99c885f6dbeb72d75b1baad54f9
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:cdf4daaf154e3e27cfffc799c16f343a384228f38646928a1513d925f473cb46
+
+USER 53111
 
 WORKDIR /
 
-COPY config/rbac_model.conf /config/rbac_model.conf
-COPY --from=build /go/src/app/devguard /usr/local/bin/devguard
-COPY --from=build /go/src/app/devguard-cli /usr/local/bin/devguard-cli
-COPY templates /templates
-COPY intoto-public-key.pem /intoto-public-key.pem
-COPY cosign.pub /cosign.pub
+COPY --chown=53111:53111 config/rbac_model.conf /config/rbac_model.conf
+COPY --chown=53111:53111 --from=build /go/src/app/devguard /usr/local/bin/devguard
+COPY --chown=53111:53111 --from=build /go/src/app/devguard-cli /usr/local/bin/devguard-cli
+COPY --chown=53111:53111 templates /templates
+COPY --chown=53111:53111 intoto-public-key.pem /intoto-public-key.pem
+COPY --chown=53111:53111 cosign.pub /cosign.pub
 
 CMD ["devguard"]
