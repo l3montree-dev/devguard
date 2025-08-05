@@ -63,7 +63,7 @@ jobs:
       fail-on-cvss: high
       web-ui: https://main.devguard.org
       should-deploy:  ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
-      continue-on-open-code-risk: true
+      continue-on-open-code-risk: false
     secrets:
       devguard-token: ${{ secrets.DEVGUARD_TOKEN }}       
       build-args: "--context=. --dockerfile=Dockerfile --build-arg GITHUB_REF_NAME=$GITHUB_REF_NAME"       
