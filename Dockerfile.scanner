@@ -68,20 +68,12 @@ RUN ${VENV_DIR}/semgrep/bin/pip install --upgrade pip && \
 RUN ${VENV_DIR}/checkov/bin/pip install --upgrade pip && \
     ${VENV_DIR}/checkov/bin/pip install checkov==3.2.457
 
+# Create wrapper scripts using printf to avoid heredoc issues
+RUN printf '#!/bin/sh\nexec %s/semgrep/bin/semgrep "$@"\n' "${VENV_DIR}" > /usr/local/bin/semgrep && \
+    chmod +x /usr/local/bin/semgrep
 
-RUN cat <<EOF > /usr/local/bin/semgrep
-#!/bin/sh
-exec ${VENV_DIR}/semgrep/bin/semgrep "\$@"
-EOF
-
-RUN chmod +x /usr/local/bin/semgrep
-
-RUN cat <<EOF > /usr/local/bin/checkov
-#!/bin/sh
-exec ${VENV_DIR}/checkov/bin/checkov "\$@"
-EOF
-
-RUN chmod +x /usr/local/bin/checkov
+RUN printf '#!/bin/sh\nexec %s/checkov/bin/checkov "$@"\n' "${VENV_DIR}" > /usr/local/bin/checkov && \
+    chmod +x /usr/local/bin/checkov
 
 # add venv bin to path
 ENV PATH="/usr/local/bin/venv/bin:$PATH"
