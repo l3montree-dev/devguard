@@ -16,10 +16,15 @@ spec:
       labels:
         app: postgresql
         version: "{{ .Chart.AppVersion }}"
+    automountServiceAccountToken: false
     spec:
       containers:
       - image: "{{ .Values.api.image.repository }}/postgresql:{{ .Chart.AppVersion }}"
         name: postgresql
+        securityContext:
+          seccompProfile:
+            type: RuntimeDefault
+          allowPrivilegeEscalation: false
         ports:
         - containerPort: 5432
           protocol: TCP

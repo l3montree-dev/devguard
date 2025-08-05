@@ -4,6 +4,8 @@ services:
   postgresql:
     image: ghcr.io/l3montree-dev/devguard/postgresql:0.13.4
     container_name: devguard-postgres
+    security_opt:
+      - no-new-privileges:true 
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
@@ -23,6 +25,10 @@ services:
 
   kratos-migrate:
     image: oryd/kratos:v1.3.1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       postgresql:
         condition: service_healthy
@@ -39,6 +45,11 @@ services:
   kratos:
     image: oryd/kratos:v1.3.1
     container_name: devguard-kratos
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    user: "53111"
     depends_on:
       postgresql:
         condition: service_healthy
@@ -62,6 +73,11 @@ services:
   devguard-api:
     image: ghcr.io/l3montree-dev/devguard:0.13.4
     container_name: devguard-api
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    user: "53111"
     depends_on:
       postgresql:
         condition: service_healthy
@@ -87,6 +103,10 @@ services:
   devguard-web:
     image: ghcr.io/l3montree-dev/devguard-web:0.13.4
     container_name: devguard-web
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       - devguard-api
     ports:
