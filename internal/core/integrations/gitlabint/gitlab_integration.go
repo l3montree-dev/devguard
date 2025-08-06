@@ -426,7 +426,8 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 	}
 	// get the projects in the group
 	projects, _, err := gitlabClient.ListProjectsInGroup(ctx, groupIDInt, &gitlab.ListGroupProjectsOptions{
-		WithShared: gitlab.Ptr(false),
+		WithShared:     gitlab.Ptr(false),
+		MinAccessLevel: gitlab.Ptr(gitlab.DeveloperPermissions), // only list projects where the user has at least developer permissions
 	})
 	if err != nil {
 		slog.Error("failed to list projects in group", "err", err)
@@ -441,6 +442,10 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 		if project.Permissions != nil && project.Permissions.ProjectAccess != nil {
 			result = append(result, projectToAsset(project, providerID))
 			accessLevels = append(accessLevels, gitlabAccessLevelToRole(project.Permissions.ProjectAccess.AccessLevel))
+		} else {
+			// if the project has no permissions set, it is a public project - but we asked for min access level of developer, so we can assume that the user has at least developer permissions
+			result = append(result, projectToAsset(project, providerID))
+			accessLevels = append(accessLevels, core.RoleMember) // default to member if no higher access level is found
 		}
 	}
 
