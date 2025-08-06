@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: '0 */6 * * *' # every hour
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   POSTGRES_DB: devguard
   POSTGRES_USER: devguard

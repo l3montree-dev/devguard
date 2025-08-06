@@ -223,8 +223,8 @@ type InvitationRepository interface {
 
 type ExternalEntityProviderService interface {
 	RefreshExternalEntityProviderProjects(ctx Context, org models.Org, user string) error
-	TriggerOrgSync(c echo.Context) error
-	SyncOrgs(c echo.Context) ([]*models.Org, error)
+	TriggerOrgSync(c Context) error
+	SyncOrgs(c Context) ([]*models.Org, error)
 }
 
 type ProjectService interface {

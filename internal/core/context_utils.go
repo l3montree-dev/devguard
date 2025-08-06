@@ -17,11 +17,13 @@ package core
 import (
 	"context"
 	"fmt"
+	"net/http/httptest"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/echohttp"
 	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/ory/client-go"
@@ -591,4 +593,62 @@ func GetBadgeSVG(label string, values []BadgeValues) string {
 	sb.WriteString(`</g></svg>`)
 
 	return sb.String()
+}
+
+func GoroutineSafeContext(c Context) Context {
+	// create a new context - with only the values
+	ctx := echohttp.E.NewContext(nil, httptest.NewRecorder())
+
+	// copy all values from the original context that might be needed in goroutines
+	if thirdParty, ok := c.Get("thirdPartyIntegration").(IntegrationAggregate); ok {
+		ctx.Set("thirdPartyIntegration", thirdParty)
+	}
+
+	if session, ok := c.Get("session").(AuthSession); ok {
+		ctx.Set("session", session)
+	}
+
+	if org, ok := c.Get("organization").(models.Org); ok {
+		ctx.Set("organization", org)
+	}
+
+	if project, ok := c.Get("project").(models.Project); ok {
+		ctx.Set("project", project)
+	}
+
+	if asset, ok := c.Get("asset").(models.Asset); ok {
+		ctx.Set("asset", asset)
+	}
+
+	if assetVersion, ok := c.Get("assetVersion").(models.AssetVersion); ok {
+		ctx.Set("assetVersion", assetVersion)
+	}
+
+	if rbac, ok := c.Get("rbac").(AccessControl); ok {
+		ctx.Set("rbac", rbac)
+	}
+
+	if authClient, ok := c.Get("authAdminClient").(AdminClient); ok {
+		ctx.Set("authAdminClient", authClient)
+	}
+
+	// Copy string values that might be needed
+	if orgSlug, ok := c.Get("orgSlug").(string); ok {
+		ctx.Set("orgSlug", orgSlug)
+	}
+
+	if projectSlug, ok := c.Get("projectSlug").(string); ok {
+		ctx.Set("projectSlug", projectSlug)
+	}
+
+	if assetSlug, ok := c.Get("assetSlug").(string); ok {
+		ctx.Set("assetSlug", assetSlug)
+	}
+
+	// Copy public request flag
+	if c.Get("publicRequest") != nil {
+		ctx.Set("publicRequest", true)
+	}
+
+	return ctx
 }

@@ -106,8 +106,7 @@ func (c *Client) CreateIssueComment(ctx context.Context, issueID string, project
 
 	resp, err := c.jiraRequest(http.MethodPost, fmt.Sprintf("/rest/api/3/issue/%s/comment", issueID), body)
 	if err != nil {
-		bodyContent, _ := io.ReadAll(resp.Body)
-		slog.Error("Failed to create issue comment", "error", err, "response_body", string(bodyContent))
+		slog.Error("Failed to create issue comment", "error", err)
 		return fmt.Errorf("failed to create issue comment: %w	", err)
 	}
 	defer resp.Body.Close()
@@ -139,8 +138,8 @@ func (c *Client) TransitionIssue(ctx context.Context, issueID string, transition
 
 	resp, err := c.jiraRequest(http.MethodPost, fmt.Sprintf("/rest/api/3/issue/%s/transitions", issueID), bytes.NewBuffer(bodyBytes))
 	if err != nil {
-		bodyContent, _ := io.ReadAll(resp.Body)
-		slog.Error("Failed to transition issue", "issue_id", issueID, "error", err, "response_body", string(bodyContent))
+
+		slog.Error("Failed to transition issue", "issue_id", issueID, "error", err)
 		return fmt.Errorf("failed to transition issue: %w", err)
 	}
 	defer resp.Body.Close()
@@ -165,8 +164,7 @@ func (c *Client) EditIssue(ctx context.Context, issue *Issue) error {
 	body := bytes.NewBuffer(bodyBytes)
 	resp, err := c.jiraRequest(http.MethodPut, fmt.Sprintf("/rest/api/3/issue/%s", issue.ID), body)
 	if err != nil {
-		bodyContent, _ := io.ReadAll(resp.Body)
-		slog.Error("Failed to edit issue", "error", err, "response_body", string(bodyContent))
+		slog.Error("Failed to edit issue", "error", err)
 		return fmt.Errorf("failed to edit issue: %w", err)
 	}
 	defer resp.Body.Close()
@@ -196,8 +194,7 @@ func (c *Client) GetIssue(ctx context.Context, issueID string) (*Issue, error) {
 
 	var issue Issue
 	if err := json.NewDecoder(resp.Body).Decode(&issue); err != nil {
-		bodyContent, _ := io.ReadAll(resp.Body)
-		slog.Error("Failed to decode issue response", "issue_id", issueID, "error", err, "response_body", string(bodyContent))
+		slog.Error("Failed to decode issue response", "issue_id", issueID, "error", err)
 		return nil, fmt.Errorf("failed to decode issue response: %w", err)
 	}
 
@@ -217,8 +214,8 @@ func (c *Client) CreateIssue(ctx context.Context, issue *Issue) (*CreateIssueRes
 
 	resp, err := c.jiraRequest(http.MethodPost, "/rest/api/3/issue", body)
 	if err != nil {
-		bodyContent, _ := io.ReadAll(resp.Body)
-		slog.Error("Failed to create issue", "error", err, "response_body", string(bodyContent))
+
+		slog.Error("Failed to create issue", "error", err)
 		return nil, "", fmt.Errorf("failed to create issue: %w", err)
 	}
 	defer resp.Body.Close()
@@ -226,8 +223,8 @@ func (c *Client) CreateIssue(ctx context.Context, issue *Issue) (*CreateIssueRes
 	var response CreateIssueResponse
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		bodyContent, _ := io.ReadAll(resp.Body)
-		slog.Error("Failed to decode issue creation response", "error", err, "response_body", string(bodyContent))
+
+		slog.Error("Failed to decode issue creation response", "error", err)
 
 		return nil, "", fmt.Errorf("failed to decode issue creation response: %w", err)
 	}

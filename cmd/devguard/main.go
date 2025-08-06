@@ -72,8 +72,8 @@ func main() {
 	}
 
 	// Run database migrations using the existing database connection
-	autoMigrate := os.Getenv("AUTO_MIGRATE")
-	if autoMigrate == "" || autoMigrate == "true" {
+	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
+	if disableAutoMigrate != "true" {
 		slog.Info("running database migrations...")
 		if err := database.RunMigrationsWithDB(db); err != nil {
 			slog.Error("failed to run database migrations", "error", err)
@@ -86,7 +86,7 @@ func main() {
 			panic(errors.New("Failed to run hash migrations"))
 		}
 	} else {
-		slog.Info("automatic migrations disabled via AUTO_MIGRATE=false")
+		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
 
 	daemon.Start(db)

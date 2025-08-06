@@ -99,3 +99,116 @@ func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Ca
 	_c.Call.Return(run)
 	return _c
 }
+
+// SyncOrgs provides a mock function for the type ExternalEntityProviderService
+func (_mock *ExternalEntityProviderService) SyncOrgs(c core.Context) ([]*models.Org, error) {
+	ret := _mock.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SyncOrgs")
+	}
+
+	var r0 []*models.Org
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context) ([]*models.Org, error)); ok {
+		return returnFunc(c)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.Context) []*models.Org); ok {
+		r0 = returnFunc(c)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*models.Org)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.Context) error); ok {
+		r1 = returnFunc(c)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ExternalEntityProviderService_SyncOrgs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncOrgs'
+type ExternalEntityProviderService_SyncOrgs_Call struct {
+	*mock.Call
+}
+
+// SyncOrgs is a helper method to define mock.On call
+//   - c core.Context
+func (_e *ExternalEntityProviderService_Expecter) SyncOrgs(c interface{}) *ExternalEntityProviderService_SyncOrgs_Call {
+	return &ExternalEntityProviderService_SyncOrgs_Call{Call: _e.mock.On("SyncOrgs", c)}
+}
+
+func (_c *ExternalEntityProviderService_SyncOrgs_Call) Run(run func(c core.Context)) *ExternalEntityProviderService_SyncOrgs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.Context
+		if args[0] != nil {
+			arg0 = args[0].(core.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ExternalEntityProviderService_SyncOrgs_Call) Return(orgs []*models.Org, err error) *ExternalEntityProviderService_SyncOrgs_Call {
+	_c.Call.Return(orgs, err)
+	return _c
+}
+
+func (_c *ExternalEntityProviderService_SyncOrgs_Call) RunAndReturn(run func(c core.Context) ([]*models.Org, error)) *ExternalEntityProviderService_SyncOrgs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// TriggerOrgSync provides a mock function for the type ExternalEntityProviderService
+func (_mock *ExternalEntityProviderService) TriggerOrgSync(c core.Context) error {
+	ret := _mock.Called(c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TriggerOrgSync")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.Context) error); ok {
+		r0 = returnFunc(c)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ExternalEntityProviderService_TriggerOrgSync_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TriggerOrgSync'
+type ExternalEntityProviderService_TriggerOrgSync_Call struct {
+	*mock.Call
+}
+
+// TriggerOrgSync is a helper method to define mock.On call
+//   - c core.Context
+func (_e *ExternalEntityProviderService_Expecter) TriggerOrgSync(c interface{}) *ExternalEntityProviderService_TriggerOrgSync_Call {
+	return &ExternalEntityProviderService_TriggerOrgSync_Call{Call: _e.mock.On("TriggerOrgSync", c)}
+}
+
+func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) Run(run func(c core.Context)) *ExternalEntityProviderService_TriggerOrgSync_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.Context
+		if args[0] != nil {
+			arg0 = args[0].(core.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) Return(err error) *ExternalEntityProviderService_TriggerOrgSync_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) RunAndReturn(run func(c core.Context) error) *ExternalEntityProviderService_TriggerOrgSync_Call {
+	_c.Call.Return(run)
+	return _c
+}

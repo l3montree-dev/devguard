@@ -206,13 +206,19 @@ func (s externalEntityProviderService) createProjectsMap(created, updated []mode
 }
 
 func (s externalEntityProviderService) syncProjectsAndAssets(ctx core.Context, domainRBAC core.AccessControl, user string, originalProjects []models.Project, roles []core.Role, projects []models.Project) error {
+	wg := utils.ErrGroup[any](10)
 	for i, project := range projects {
-		if err := s.syncSingleProject(ctx, domainRBAC, user, &originalProjects[i], roles[i], &project); err != nil {
-			slog.Error("could not sync project", "projectSlug", project.Slug, "projectID", project.ID, "err", err)
-			continue
-		}
+		wg.Go(func() (any, error) {
+			if err := s.syncSingleProject(ctx, domainRBAC, user, &originalProjects[i], roles[i], &project); err != nil {
+				slog.Error("could not sync project", "projectSlug", project.Slug, "projectID", project.ID, "err", err)
+				// swallow the error right here
+			}
+			return nil, nil
+		})
+
 	}
-	return nil
+	_, err := wg.WaitAndCollect()
+	return err
 }
 
 func (s externalEntityProviderService) syncSingleProject(ctx core.Context, domainRBAC core.AccessControl, user string, originalProject *models.Project, userRole core.Role, project *models.Project) error {

@@ -105,7 +105,7 @@ DevGuard uses [golang-migrate](https://github.com/golang-migrate/migrate) for da
 ### How Database Migrations Work
 
 1. **Automatic Migration**: By default, migrations run automatically when the application starts
-2. **Environment Control**: Set `AUTO_MIGRATE=false` to disable automatic migrations
+2. **Environment Control**: Set `DISABLE_AUTOMIGRATE=true` to disable automatic migrations
 3. **Embedded Migrations**: Migration files are embedded in the binary for easy deployment
 4. **Idempotent**: Migrations can be run multiple times safely
 
