@@ -20,6 +20,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -254,14 +255,16 @@ func neededScope(neededScopes []string) core.MiddlewareFunc {
 }
 
 func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService core.ExternalEntityProviderService) core.MiddlewareFunc {
-	limiter := map[string]time.Time{}
+	limiter := &sync.Map{}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx core.Context) error {
 
 			key := core.GetSession(ctx).GetUserID()
-			if _, ok := limiter[key]; !ok || time.Now().After(limiter[key]) {
+			now := time.Now()
+
+			if value, ok := limiter.Load(key); !ok || now.After(value.(time.Time)) {
 				slog.Info("syncing external entity provider orgs", "userID", key)
-				limiter[key] = time.Now().Add(15 * time.Minute)
+				limiter.Store(key, now.Add(15*time.Minute))
 				// Create a goroutine-safe context to avoid using the request context
 				safeCtx := core.GoroutineSafeContext(ctx)
 				go func() {
@@ -276,7 +279,7 @@ func externalEntityProviderOrgSyncMiddleware(externalEntityProviderService core.
 }
 
 func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.ExternalEntityProviderService) core.MiddlewareFunc {
-	limiter := map[string]time.Time{}
+	limiter := &sync.Map{}
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		// get the current org
@@ -284,9 +287,12 @@ func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.
 			org := core.GetOrg(ctx)
 
 			if org.IsExternalEntity() {
-				// check if we are allowed to refresh the external entity provider projects
-				if time.Now().After(limiter[org.GetID().String()+"/"+core.GetSession(ctx).GetUserID()]) {
-					limiter[org.GetID().String()+"/"+core.GetSession(ctx).GetUserID()] = time.Now().Add(15 * time.Minute)
+				key := org.GetID().String() + "/" + core.GetSession(ctx).GetUserID()
+				now := time.Now()
+
+				// Check if we are allowed to refresh the external entity provider projects
+				if value, ok := limiter.Load(key); !ok || now.After(value.(time.Time)) {
+					limiter.Store(key, now.Add(15*time.Minute))
 
 					// Create a goroutine-safe context and capture the values we need
 					safeCtx := core.GoroutineSafeContext(ctx)
