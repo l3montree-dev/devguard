@@ -1,13 +1,17 @@
 package commands
 
 import (
+	"errors"
 	"log/slog"
+	"os"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
+	"github.com/l3montree-dev/devguard/internal/database"
+	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/spf13/cobra"
 )
@@ -51,6 +55,26 @@ func isValidCVE(cveID string) bool {
 	return r.MatchString(cveID)
 }
 
+func migrateDB(db core.DB) {
+	// Run database migrations using the existing database connection
+	disableAutoMigrate := os.Getenv("DISABLE_AUTOMIGRATE")
+	if disableAutoMigrate != "true" {
+		slog.Info("running database migrations...")
+		if err := database.RunMigrationsWithDB(db); err != nil {
+			slog.Error("failed to run database migrations", "error", err)
+			panic(errors.New("Failed to run database migrations"))
+		}
+
+		// Run hash migrations if needed (when algorithm version changes)
+		if err := models.RunHashMigrationsIfNeeded(db); err != nil {
+			slog.Error("failed to run hash migrations", "error", err)
+			panic(errors.New("Failed to run hash migrations"))
+		}
+	} else {
+		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
+	}
+}
+
 func newImportCVECommand() *cobra.Command {
 	importCmd := &cobra.Command{
 		Use:   "import-cve",
@@ -58,11 +82,13 @@ func newImportCVECommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			core.LoadConfig() // nolint
-			database, err := core.DatabaseFactory()
+			db, err := core.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "err", err)
 				return
 			}
+
+			migrateDB(db)
 
 			cveID := args[0]
 			cveID = strings.TrimSpace(strings.ToUpper(cveID))
@@ -72,9 +98,9 @@ func newImportCVECommand() *cobra.Command {
 				return
 			}
 
-			cveRepository := repositories.NewCVERepository(database)
+			cveRepository := repositories.NewCVERepository(db)
 			nvdService := vulndb.NewNVDService(cveRepository)
-			osvService := vulndb.NewOSVService(repositories.NewAffectedComponentRepository(database))
+			osvService := vulndb.NewOSVService(repositories.NewAffectedComponentRepository(db))
 
 			cve, err := nvdService.ImportCVE(cveID)
 
@@ -155,17 +181,19 @@ func newSyncCommand() *cobra.Command {
 
 			core.LoadConfig() // nolint
 
-			database, err := core.DatabaseFactory()
+			db, err := core.DatabaseFactory()
 			if err != nil {
 				slog.Error("could not connect to database", "err", err)
 				return
 			}
 
+			migrateDB(db)
+
 			databasesToSync, _ := cmd.Flags().GetStringArray("databases")
 
-			cveRepository := repositories.NewCVERepository(database)
-			cweRepository := repositories.NewCWERepository(database)
-			affectedCmpRepository := repositories.NewAffectedComponentRepository(database)
+			cveRepository := repositories.NewCVERepository(db)
+			cweRepository := repositories.NewCWERepository(db)
+			affectedCmpRepository := repositories.NewAffectedComponentRepository(db)
 			nvdService := vulndb.NewNVDService(cveRepository)
 			mitreService := vulndb.NewMitreService(cweRepository)
 			epssService := vulndb.NewEPSSService(nvdService, cveRepository)
@@ -173,9 +201,9 @@ func newSyncCommand() *cobra.Command {
 			// cvelistService := vulndb.NewCVEListService(cveRepository)
 			debianSecurityTracker := vulndb.NewDebianSecurityTracker(affectedCmpRepository)
 
-			expoitDBService := vulndb.NewExploitDBService(nvdService, repositories.NewExploitRepository(database))
+			expoitDBService := vulndb.NewExploitDBService(nvdService, repositories.NewExploitRepository(db))
 
-			githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(database))
+			githubExploitDBService := vulndb.NewGithubExploitDBService(repositories.NewExploitRepository(db))
 
 			if emptyOrContains(databasesToSync, "cwe") {
 				now := time.Now()
