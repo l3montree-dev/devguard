@@ -72,6 +72,7 @@ func Start(db core.DB) {
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 	// only run this function if leader
 	leaderElector.IfLeader(context.Background(), func() error {
+		defer time.Sleep(5 * time.Minute) // wait for 5 minutes before checking again - always - even in case of error
 		// we only update the vulnerability database each 6 hours.
 		// thus there is no need to recalculate the risk or anything earlier
 		slog.Info("starting background jobs", "time", time.Now())
@@ -85,7 +86,7 @@ func Start(db core.DB) {
 				slog.Error("could not delete old asset versions", "err", err)
 				return nil
 			}
-			if err := markMirrored(configService, "deleteOldAssetVersions"); err != nil {
+			if err := markMirrored(configService, "vulndb.deleteOldAssetVersions"); err != nil {
 				slog.Error("could not mark deleteOldAssetVersions as mirrored", "err", err)
 			}
 			slog.Info("old asset versions deleted", "duration", time.Since(start))
@@ -198,8 +199,6 @@ func Start(db core.DB) {
 			slog.Info("statistics updated", "duration", time.Since(start))
 		}
 
-		// wait for 5 minutes before checking again
-		time.Sleep(5 * time.Minute)
 		return nil
 	})
 }
