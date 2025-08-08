@@ -64,6 +64,7 @@ func (p *PatController) Create(c core.Context) error {
 		"pubKey":      patStruct.PubKey,
 		"fingerprint": patStruct.Fingerprint,
 		"scopes":      patStruct.Scopes,
+		"id":          patStruct.ID.String(),
 	})
 }
 
