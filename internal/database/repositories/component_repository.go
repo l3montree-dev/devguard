@@ -63,17 +63,16 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 	query := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
 	scannerIDs := strings.Split(scannerID, " ")
-	if len(scannerIDs) > 0 {
+	if len(scannerIDs) > 0 && scannerID != "" {
 		scannerIDsSubQuery := c.GetDB(tx)
 		for i, id := range scannerIDs {
-			like := "%" + id + "%"
 			if i == 0 {
-				scannerIDsSubQuery = scannerIDsSubQuery.Where("scanner_ids LIKE ?", like)
+				scannerIDsSubQuery = scannerIDsSubQuery.Where("? = ANY(string_to_array(scanner_ids, ' '))", id)
 			} else {
-				scannerIDsSubQuery = scannerIDsSubQuery.Or("scanner_ids LIKE ?", like)
+				scannerIDsSubQuery = scannerIDsSubQuery.Or("? = ANY(string_to_array(scanner_ids, ' '))", id)
 			}
 		}
-		query.Where(scannerIDsSubQuery)
+		query = query.Where(scannerIDsSubQuery)
 	}
 
 	err = query.Find(&components).Error
@@ -191,9 +190,9 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 
 	//We then still need to filter for the right scanner
 	if scannerID != "" {
-		scannerID = "%" + scannerID + "%"
-		overwrittenLicensesQuery = overwrittenLicensesQuery.Where("scanner_ids LIKE ?", scannerID)
-		otherLicensesQuery = otherLicensesQuery.Where("scanner_ids LIKE ?", scannerID)
+		// scanner ids is a string array separated by whitespaces
+		overwrittenLicensesQuery = overwrittenLicensesQuery.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
+		otherLicensesQuery = otherLicensesQuery.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
 	}
 
 	//Map the query to the right struct
@@ -243,8 +242,8 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
 	if scannerID != "" {
-		scannerID = "%" + scannerID + "%"
-		query = query.Where("scanner_ids LIKE ?", scannerID)
+		// scanner ids is a string array separated by whitespaces
+		query = query.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
 	}
 
 	for _, f := range filter {
@@ -317,7 +316,7 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 
 	return len(removed) > 0 || len(added) > 0, c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
 		//We remove the scanner id from all components in removed and if it was the only scanner id we remove the component
-		toDelete, toSave := diffComponents(tx, c, removed, scannerID)
+		toDelete, toSave := diffComponents(removed, scannerID)
 
 		//Now we want to update the database with the new scanner id values
 		if len(toSave) > 0 {
@@ -384,7 +383,7 @@ func (c *componentRepository) GetDependencyCountPerScanner(assetVersionName stri
 	return counts, nil
 }
 
-func diffComponents(tx core.DB, c *componentRepository, components []models.ComponentDependency, scannerID string) ([]models.ComponentDependency, []models.ComponentDependency) {
+func diffComponents(components []models.ComponentDependency, scannerID string) ([]models.ComponentDependency, []models.ComponentDependency) {
 	var componentsToDelete []models.ComponentDependency
 	var componentsToSave []models.ComponentDependency
 

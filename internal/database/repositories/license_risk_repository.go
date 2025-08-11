@@ -81,8 +81,8 @@ func (repository *LicenseRiskRepository) DeleteByComponentPurl(assetID uuid.UUID
 
 func (repository *LicenseRiskRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
-	scannerID = "%" + scannerID + "%"
-	err := repository.db.Where("asset_version_name = ? AND asset_id = ? AND scanner_ids LIKE ?", assetVersionName, assetID, scannerID).Find(&licenseRisks).Error
+	// scanner ids is a string array separated by whitespaces
+	err := repository.db.Where("asset_version_name = ? AND asset_id = ? AND ? = ANY(string_to_array(scanner_ids, ' '))", assetVersionName, assetID, scannerID).Find(&licenseRisks).Error
 	if err != nil {
 		return nil, err
 	}
