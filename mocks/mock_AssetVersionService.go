@@ -315,29 +315,33 @@ func (_c *AssetVersionService_GetAssetVersionsByAssetID_Call) RunAndReturn(run f
 }
 
 // HandleFirstPartyVulnResult provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error) {
+func (_mock *AssetVersionService) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 	ret := _mock.Called(org, project, asset, assetVersion, sarifScan, scannerID, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleFirstPartyVulnResult")
 	}
 
-	var r0 int
-	var r1 int
+	var r0 []models.FirstPartyVuln
+	var r1 []models.FirstPartyVuln
 	var r2 []models.FirstPartyVuln
 	var r3 error
-	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, common.SarifResult, string, string) (int, int, []models.FirstPartyVuln, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, common.SarifResult, string, string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)); ok {
 		return returnFunc(org, project, asset, assetVersion, sarifScan, scannerID, userID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, common.SarifResult, string, string) int); ok {
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, common.SarifResult, string, string) []models.FirstPartyVuln); ok {
 		r0 = returnFunc(org, project, asset, assetVersion, sarifScan, scannerID, userID)
 	} else {
-		r0 = ret.Get(0).(int)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.FirstPartyVuln)
+		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, common.SarifResult, string, string) int); ok {
+	if returnFunc, ok := ret.Get(1).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, common.SarifResult, string, string) []models.FirstPartyVuln); ok {
 		r1 = returnFunc(org, project, asset, assetVersion, sarifScan, scannerID, userID)
 	} else {
-		r1 = ret.Get(1).(int)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]models.FirstPartyVuln)
+		}
 	}
 	if returnFunc, ok := ret.Get(2).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, common.SarifResult, string, string) []models.FirstPartyVuln); ok {
 		r2 = returnFunc(org, project, asset, assetVersion, sarifScan, scannerID, userID)
@@ -414,12 +418,12 @@ func (_c *AssetVersionService_HandleFirstPartyVulnResult_Call) Run(run func(org 
 	return _c
 }
 
-func (_c *AssetVersionService_HandleFirstPartyVulnResult_Call) Return(n int, n1 int, firstPartyVulns []models.FirstPartyVuln, err error) *AssetVersionService_HandleFirstPartyVulnResult_Call {
-	_c.Call.Return(n, n1, firstPartyVulns, err)
+func (_c *AssetVersionService_HandleFirstPartyVulnResult_Call) Return(firstPartyVulns []models.FirstPartyVuln, firstPartyVulns1 []models.FirstPartyVuln, firstPartyVulns2 []models.FirstPartyVuln, err error) *AssetVersionService_HandleFirstPartyVulnResult_Call {
+	_c.Call.Return(firstPartyVulns, firstPartyVulns1, firstPartyVulns2, err)
 	return _c
 }
 
-func (_c *AssetVersionService_HandleFirstPartyVulnResult_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error)) *AssetVersionService_HandleFirstPartyVulnResult_Call {
+func (_c *AssetVersionService_HandleFirstPartyVulnResult_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)) *AssetVersionService_HandleFirstPartyVulnResult_Call {
 	_c.Call.Return(run)
 	return _c
 }

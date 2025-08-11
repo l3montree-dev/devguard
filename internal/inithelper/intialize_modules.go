@@ -104,5 +104,9 @@ func CreateHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2C
 		CreateAssetVersionService(db, oauth2, rbac, clientFactory, depsDevService),
 		CreateStatisticsService(db),
 		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
+		CreateFirstPartyVulnService(db, integrations.NewThirdPartyIntegrations(
+			gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory),
+			githubint.NewGithubIntegration(db),
+		)),
 	)
 }
