@@ -47,7 +47,7 @@ type HTTPController struct {
 	core.FireAndForgetSynchronizer
 }
 
-func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService) *HTTPController {
+func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService) *HTTPController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -62,6 +62,7 @@ func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRe
 		assetVersionRepository:    assetVersionRepository,
 		statisticsService:         statisticsService,
 		dependencyVulnService:     dependencyVulnService,
+		firstPartyVulnService:     firstPartyVulnService,
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
 	}
 }
