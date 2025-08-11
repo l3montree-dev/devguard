@@ -227,22 +227,26 @@ func GetLabels(vuln models.Vuln) []string {
 			continue
 		}
 		scannerID = strings.TrimPrefix(scannerID, scannerDefault)
-		artifactName := scannerID
-		parts := strings.Split(scannerID, ":")
-		if len(parts) > 0 {
-			switch parts[0] {
-			case "sca":
-				artifactName = "source-code"
-			case "container-scanning":
-				artifactName = "container"
-			case "sbom":
-				artifactName = "sbom"
+		if strings.HasPrefix(scannerID, "sca") || strings.HasPrefix(scannerID, "container-scanning") || strings.HasPrefix(scannerID, "sbom") {
+			artifactName := scannerID
+			parts := strings.Split(scannerID, ":")
+			if len(parts) > 0 {
+				switch parts[0] {
+				case "sca":
+					artifactName = "source-code"
+				case "container-scanning":
+					artifactName = "container"
+				case "sbom":
+					artifactName = "sbom"
+				}
 			}
+			if len(parts) > 1 {
+				artifactName = artifactName + ":" + parts[1]
+			}
+			labels = append(labels, "artifact:"+artifactName)
+		} else {
+			labels = append(labels, scannerID)
 		}
-		if len(parts) > 1 {
-			artifactName = artifactName + ":" + parts[1]
-		}
-		labels = append(labels, "artifact:"+artifactName)
 	}
 
 	return labels
