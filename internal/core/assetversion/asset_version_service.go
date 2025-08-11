@@ -188,7 +188,7 @@ func (s *service) HandleFirstPartyVulnResult(ctx core.Context, org models.Org, p
 		firstPartyVulnerabilities = append(firstPartyVulnerabilities, vuln)
 	}
 
-	opened, closed, newState, err := s.handleFirstPartyVulnResult(ctx, userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project)
+	opened, closed, newState, err := s.handleFirstPartyVulnResult(userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project)
 	if err != nil {
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
@@ -202,7 +202,7 @@ func (s *service) HandleFirstPartyVulnResult(ctx core.Context, org models.Org, p
 	return opened, closed, newState, nil
 }
 
-func (s *service) handleFirstPartyVulnResult(ctx core.Context, userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
+func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 	// get all existing vulns from the database - this is the old state
 	existingVulns, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
@@ -236,6 +236,11 @@ func (s *service) handleFirstPartyVulnResult(ctx core.Context, userID string, sc
 		}
 	}
 
+	// filter out any vulnerabilities which were already fixed, by only keeping the open ones
+	fixedVulns = utils.Filter(fixedVulns, func(vuln models.FirstPartyVuln) bool {
+		return vuln.State == models.VulnStateOpen
+	})
+
 	// get a transaction
 	if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
 		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, newVulns); err != nil {
@@ -257,17 +262,6 @@ func (s *service) handleFirstPartyVulnResult(ctx core.Context, userID string, sc
 	}); err != nil {
 		slog.Error("could not save vulns", "err", err)
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
-	}
-
-	//close open tickets for fixed vulnerabilities
-	for _, vuln := range fixedVulns {
-		if vuln.TicketID != nil {
-			vuln.State = models.VulnStateFixed // currently state = open, which results in UpdateIssues not closing the issue
-			err := s.thirdPartyIntegration.UpdateIssue(ctx.Request().Context(), asset, &vuln)
-			if err != nil {
-				return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
-			}
-		}
 	}
 
 	if len(newVulns) > 0 {

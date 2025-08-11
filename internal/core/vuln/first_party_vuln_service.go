@@ -147,6 +147,9 @@ func (s *firstPartyVulnService) SyncAllIssues(org models.Org, project models.Pro
 }
 
 func (s *firstPartyVulnService) SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error {
+	if len(vulnList) == 0 {
+		return nil
+	}
 	errgroup := utils.ErrGroup[any](10)
 	for _, vulnerability := range vulnList {
 		if vulnerability.TicketID != nil {
