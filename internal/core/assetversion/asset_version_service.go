@@ -95,7 +95,7 @@ func preferMarkdown(text common.Text) string {
 	return text.Text
 }
 
-func (s *service) HandleFirstPartyVulnResult(ctx core.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
+func (s *service) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 
 	firstPartyVulnerabilitiesMap := make(map[string]models.FirstPartyVuln)
 
