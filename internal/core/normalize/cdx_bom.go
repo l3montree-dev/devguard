@@ -55,7 +55,7 @@ func FromCdxBom(bom *cdx.BOM, convertComponentType bool) *cdxBom {
 					srcName = property.Value
 				} else if property.Name == "aquasecurity:trivy:SrcVersion" {
 					srcVersion = property.Value
-				} else if property.Name == "aquasecurity:trivy:pkgID" {
+				} else if property.Name == "aquasecurity:trivy:PkgID" {
 					pkgID = property.Value
 				}
 			}
