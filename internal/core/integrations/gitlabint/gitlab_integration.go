@@ -1041,7 +1041,6 @@ func (g *GitlabIntegration) updateFirstPartyIssue(ctx context.Context, dependenc
 	gitlabTicketIDInt, err := strconv.Atoi(strings.Split(gitlabTicketID, "/")[1])
 
 	labels := commonint.GetLabels(dependencyVuln)
-
 	if err != nil {
 		return err
 	}

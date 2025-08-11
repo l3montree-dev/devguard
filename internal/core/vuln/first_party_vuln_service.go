@@ -1,23 +1,32 @@
 package vuln
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
+	"time"
+
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/monitoring"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type firstPartyVulnService struct {
 	firstPartyVulnRepository core.FirstPartyVulnRepository
 	vulnEventRepository      core.VulnEventRepository
+	assetRepository          core.AssetRepository
 
-	assetRepository core.AssetRepository
+	thirdPartyIntegration core.ThirdPartyIntegration
 }
 
-func NewFirstPartyVulnService(firstPartyVulnRepository core.FirstPartyVulnRepository, vulnEventRepository core.VulnEventRepository, assetRepository core.AssetRepository) *firstPartyVulnService {
+func NewFirstPartyVulnService(firstPartyVulnRepository core.FirstPartyVulnRepository, vulnEventRepository core.VulnEventRepository, assetRepository core.AssetRepository, thirdPartyIntegration core.ThirdPartyIntegration) *firstPartyVulnService {
 	return &firstPartyVulnService{
 		firstPartyVulnRepository: firstPartyVulnRepository,
 		vulnEventRepository:      vulnEventRepository,
 		assetRepository:          assetRepository,
+		thirdPartyIntegration:    thirdPartyIntegration,
 	}
 }
 
@@ -107,7 +116,7 @@ func (s *firstPartyVulnService) ApplyAndSave(tx core.DB, firstPartyVuln *models.
 }
 
 func (s *firstPartyVulnService) applyAndSave(tx core.DB, firstPartyVuln *models.FirstPartyVuln, ev *models.VulnEvent) (models.VulnEvent, error) {
-	// apply the event on the dependencyVuln
+	// apply the event on the first-party vuln
 	ev.Apply(firstPartyVuln)
 
 	// run the updates in the transaction to keep a valid state
@@ -120,4 +129,48 @@ func (s *firstPartyVulnService) applyAndSave(tx core.DB, firstPartyVuln *models.
 	}
 	firstPartyVuln.Events = append(firstPartyVuln.Events, *ev)
 	return *ev, nil
+}
+
+func (s *firstPartyVulnService) SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
+	// get all first-party for the assetVersion
+	vulnList, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, asset.ID, "")
+	if err != nil {
+		return fmt.Errorf("could not get first-party vulnerability by asset version: %w", err)
+	}
+
+	if len(vulnList) == 0 {
+		slog.Info("no first-party vulnerabilities found for asset version", "assetVersionName", assetVersion.Name)
+		return nil
+	}
+
+	return s.SyncIssues(org, project, asset, assetVersion, vulnList)
+}
+
+func (s *firstPartyVulnService) SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error {
+	if len(vulnList) == 0 {
+		return nil
+	}
+	errgroup := utils.ErrGroup[any](10)
+	for _, vulnerability := range vulnList {
+		if vulnerability.TicketID != nil {
+			errgroup.Go(func() (any, error) {
+				return s.updateIssue(asset, vulnerability), nil
+			})
+		}
+	}
+
+	_, err := errgroup.WaitAndCollect()
+	return err
+}
+
+func (s *firstPartyVulnService) updateIssue(asset models.Asset, vulnerability models.FirstPartyVuln) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := s.thirdPartyIntegration.UpdateIssue(ctx, asset, &vulnerability)
+	if err != nil {
+		return err
+	}
+	monitoring.TicketUpdatedAmount.Inc()
+	return nil
 }

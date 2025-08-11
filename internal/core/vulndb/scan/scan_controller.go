@@ -41,6 +41,7 @@ type HTTPController struct {
 	statisticsService      core.StatisticsService
 
 	dependencyVulnService core.DependencyVulnService
+	firstPartyVulnService core.FirstPartyVulnService
 
 	// mark public to let it be overridden in tests
 	core.FireAndForgetSynchronizer
@@ -166,7 +167,7 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	return scanResults, nil
 }
 
-func (s *HTTPController) FirstPartyVulnScan(c core.Context) error {
+func (s *HTTPController) FirstPartyVulnScan(ctx core.Context) error {
 
 	monitoring.FirstPartyScanAmount.Inc()
 	startTime := time.Now()
@@ -176,22 +177,22 @@ func (s *HTTPController) FirstPartyVulnScan(c core.Context) error {
 
 	var sarifScan common.SarifResult
 
-	defer c.Request().Body.Close()
+	defer ctx.Request().Body.Close()
 
-	if err := c.Bind(&sarifScan); err != nil {
+	if err := ctx.Bind(&sarifScan); err != nil {
 		return err
 	}
 
-	org := core.GetOrg(c)
-	project := core.GetProject(c)
+	org := core.GetOrg(ctx)
+	project := core.GetProject(ctx)
 
-	asset := core.GetAsset(c)
-	userID := core.GetSession(c).GetUserID()
+	asset := core.GetAsset(ctx)
+	userID := core.GetSession(ctx).GetUserID()
 
-	tag := c.Request().Header.Get("X-Tag")
+	tag := ctx.Request().Header.Get("X-Tag")
 
-	defaultBranch := c.Request().Header.Get("X-Asset-Default-Branch")
-	assetVersionName := c.Request().Header.Get("X-Asset-Ref")
+	defaultBranch := ctx.Request().Header.Get("X-Asset-Default-Branch")
+	assetVersionName := ctx.Request().Header.Get("X-Asset-Ref")
 	if assetVersionName == "" {
 		slog.Warn("no X-Asset-Ref header found. Using main as ref name")
 		assetVersionName = "main"
@@ -201,32 +202,39 @@ func (s *HTTPController) FirstPartyVulnScan(c core.Context) error {
 	assetVersion, err := s.assetVersionRepository.FindOrCreate(assetVersionName, asset.ID, tag == "1", utils.EmptyThenNil(defaultBranch))
 	if err != nil {
 		slog.Error("could not find or create asset version", "err", err)
-		return c.JSON(500, map[string]string{"error": "could not find or create asset version"})
+		return ctx.JSON(500, map[string]string{"error": "could not find or create asset version"})
 	}
 
-	scannerID := c.Request().Header.Get("X-Scanner")
+	scannerID := ctx.Request().Header.Get("X-Scanner")
 	if scannerID == "" {
 		slog.Error("no X-Scanner header found")
-		return c.JSON(400, map[string]string{
+		return ctx.JSON(400, map[string]string{
 			"error": "no X-Scanner header found",
 		})
 	}
 
 	// handle the scan result
-	amountOpened, amountClose, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(org, project, asset, &assetVersion, sarifScan, scannerID, userID)
+	opened, closed, newState, err := s.assetVersionService.HandleFirstPartyVulnResult(org, project, asset, &assetVersion, sarifScan, scannerID, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
-		return c.JSON(500, map[string]string{"error": "could not handle scan result"})
+		return ctx.JSON(500, map[string]string{"error": "could not handle scan result"})
 	}
+
+	s.FireAndForget(func() {
+		err := s.firstPartyVulnService.SyncIssues(org, project, asset, assetVersion, append(newState, closed...))
+		if err != nil {
+			slog.Error("could not create issues for vulnerabilities", "err", err)
+		}
+	})
 
 	err = s.assetVersionRepository.Save(nil, &assetVersion)
 	if err != nil {
 		slog.Error("could not save asset", "err", err)
 	}
 
-	return c.JSON(200, FirstPartyScanResponse{
-		AmountOpened:    amountOpened,
-		AmountClosed:    amountClose,
+	return ctx.JSON(200, FirstPartyScanResponse{
+		AmountOpened:    len(opened),
+		AmountClosed:    len(closed),
 		FirstPartyVulns: utils.Map(newState, vuln.FirstPartyVulnToDto),
 	})
 }
