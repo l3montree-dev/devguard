@@ -474,7 +474,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	webhookRepository := repositories.NewWebhookRepository(db)
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
-	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository)
+	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository, thirdPartyIntegration)
 	projectService := project.NewService(projectRepository, assetRepository)
 	dependencyVulnController := vuln.NewHTTPController(dependencyVulnRepository, dependencyVulnService, projectService)
 

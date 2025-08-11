@@ -19,11 +19,20 @@ func NewFirstPartyVulnerabilityRepository(db core.DB) *firstPartyVulnerabilityRe
 }
 
 func (repository *firstPartyVulnerabilityRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+	// tx core.DB missing (or chosen not to be implemented) ?
 	var vulns = []models.FirstPartyVuln{}
-	scannerID = "%" + scannerID + "%"
-	if err := repository.Repository.GetDB(repository.db).Where("asset_version_name = ? AND asset_id = ? AND scanner_ids LIKE ?", assetVersionName, assetID, scannerID).Find(&vulns).Error; err != nil {
+
+	query := repository.Repository.GetDB(repository.db).Where("asset_version_name = ? AND asset_id = ? ", assetVersionName, assetID)
+	if scannerID != "" {
+		// scanner ids is a string array separated by whitespaces
+		query = query.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
+	}
+
+	err := query.Find(&vulns).Error
+	if err != nil {
 		return nil, err
 	}
+
 	return vulns, nil
 }
 

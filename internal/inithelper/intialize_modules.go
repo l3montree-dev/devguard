@@ -42,11 +42,12 @@ func CreateComponentService(db core.DB, depsDevService core.DepsDevService) core
 	return &componentService
 }
 
-func CreateFirstPartyVulnService(db core.DB) core.FirstPartyVulnService {
+func CreateFirstPartyVulnService(db core.DB, thirdPartyIntegration core.ThirdPartyIntegration) core.FirstPartyVulnService {
 	return vuln.NewFirstPartyVulnService(
 		repositories.NewFirstPartyVulnerabilityRepository(db),
 		repositories.NewVulnEventRepository(db),
 		repositories.NewAssetRepository(db),
+		thirdPartyIntegration,
 	)
 }
 
@@ -64,19 +65,20 @@ func CreateDependencyVulnService(db core.DB, oauth2 map[string]*gitlabint.Gitlab
 }
 
 func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) core.AssetVersionService {
+	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory), githubint.NewGithubIntegration(db))
 	return assetversion.NewService(
 		repositories.NewAssetVersionRepository(db),
 		repositories.NewComponentRepository(db),
 		repositories.NewDependencyVulnRepository(db),
 		repositories.NewFirstPartyVulnerabilityRepository(db),
 		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
-		CreateFirstPartyVulnService(db),
+		CreateFirstPartyVulnService(db, thirdPartyIntegration),
 		repositories.NewAssetRepository(db),
 		repositories.NewProjectRepository(db),
 		repositories.NewOrgRepository(db),
 		repositories.NewVulnEventRepository(db),
 		CreateComponentService(db, depsDevService),
-		integrations.NewThirdPartyIntegrations(gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory), githubint.NewGithubIntegration(db)),
+		thirdPartyIntegration,
 	)
 }
 

@@ -93,7 +93,6 @@ func (firstPartyVuln *FirstPartyVuln) CalculateHash() string {
 	hash := firstPartyVuln.Fingerprint
 	if hash == "" {
 		stringToHash := firstPartyVuln.RuleID + "/" + firstPartyVuln.URI + "/" + firstPartyVuln.ScannerIDs + "/" + firstPartyVuln.AssetID.String() + "/" + firstPartyVuln.AssetVersionName
-
 		hash = utils.HashString(stringToHash)
 	}
 	firstPartyVuln.ID = hash
