@@ -52,6 +52,8 @@ type AssetDTO struct {
 
 	ExternalEntityProviderID *string `json:"externalEntityProviderId,omitempty"`
 	ExternalEntityID         *string `json:"externalEntityId,omitempty"`
+
+	RepositoryProvider *string `json:"repositoryProvider,omitempty"`
 }
 
 func toDTOs(assets []models.Asset) []AssetDTO {
@@ -89,6 +91,7 @@ func toDTO(asset models.Asset) AssetDTO {
 
 		ExternalEntityProviderID: asset.ExternalEntityProviderID,
 		ExternalEntityID:         asset.ExternalEntityID,
+		RepositoryProvider:       asset.RepositoryProvider,
 	}
 }
 
@@ -113,9 +116,10 @@ type createRequest struct {
 	Importance            int  `json:"importance"`
 	ReachableFromInternet bool `json:"reachableFromInternet"`
 
-	ConfidentialityRequirement string `json:"confidentialityRequirement" validate:"required"`
-	IntegrityRequirement       string `json:"integrityRequirement" validate:"required"`
-	AvailabilityRequirement    string `json:"availabilityRequirement" validate:"required"`
+	ConfidentialityRequirement string  `json:"confidentialityRequirement" validate:"required"`
+	IntegrityRequirement       string  `json:"integrityRequirement" validate:"required"`
+	AvailabilityRequirement    string  `json:"availabilityRequirement" validate:"required"`
+	RepositoryProvider         *string `json:"repositoryProvider" validate:"oneof=github gitlab"` // either null or github or gitlab, etc.
 }
 
 func sanitizeRequirementLevel(level string) models.RequirementLevel {
@@ -141,6 +145,7 @@ func (a *createRequest) toModel(projectID uuid.UUID) models.Asset {
 		ConfidentialityRequirement: sanitizeRequirementLevel(a.ConfidentialityRequirement),
 		IntegrityRequirement:       sanitizeRequirementLevel(a.IntegrityRequirement),
 		AvailabilityRequirement:    sanitizeRequirementLevel(a.AvailabilityRequirement),
+		RepositoryProvider:         a.RepositoryProvider,
 	}
 
 	if a.EnableTicketRange {
@@ -176,6 +181,8 @@ type PatchRequest struct {
 
 	WebhookSecret *string `json:"webhookSecret"`
 	BadgeSecret   *string `json:"badgeSecret"`
+
+	RepositoryProvider *string `json:"repositoryProvider" validate:"oneof=github gitlab"` // either null or github or gitlab, etc.
 }
 
 func (assetPatch *PatchRequest) applyToModel(asset *models.Asset) bool {
@@ -255,6 +262,15 @@ func (assetPatch *PatchRequest) applyToModel(asset *models.Asset) bool {
 	if assetPatch.VulnAutoReopenAfterDays != nil {
 		updated = true
 		asset.VulnAutoReopenAfterDays = assetPatch.VulnAutoReopenAfterDays
+	}
+
+	if assetPatch.RepositoryProvider != nil && *assetPatch.RepositoryProvider != "" {
+		updated = true
+		if *assetPatch.RepositoryProvider == "" {
+			asset.RepositoryProvider = nil
+		} else {
+			asset.RepositoryProvider = assetPatch.RepositoryProvider
+		}
 	}
 
 	return updated

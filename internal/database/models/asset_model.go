@@ -62,6 +62,7 @@ type Asset struct {
 
 	ExternalEntityID         *string `json:"externalEntityId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
 	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"uniqueIndex:asset_unique_external_entity;type:text"`
+	RepositoryProvider       *string `json:"repositoryProvider" gorm:"type:text;"`
 }
 
 func (m Asset) TableName() string {
