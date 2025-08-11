@@ -95,7 +95,7 @@ func preferMarkdown(text common.Text) string {
 	return text.Text
 }
 
-func (s *service) HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) (int, int, []models.FirstPartyVuln, error) {
+func (s *service) HandleFirstPartyVulnResult(ctx core.Context, org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 
 	firstPartyVulnerabilitiesMap := make(map[string]models.FirstPartyVuln)
 
@@ -157,12 +157,12 @@ func (s *service) HandleFirstPartyVulnResult(org models.Org, project models.Proj
 				if existingVuln, ok := firstPartyVulnerabilitiesMap[hash]; ok {
 					snippetContents, err := existingVuln.FromJSONSnippetContents()
 					if err != nil {
-						return 0, 0, []models.FirstPartyVuln{}, errors.Wrap(err, "could not parse existing snippet contents")
+						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not parse existing snippet contents")
 					}
 					snippetContents.Snippets = append(snippetContents.Snippets, snippetContent)
 					firstPartyVulnerability.SnippetContents, err = snippetContents.ToJSON()
 					if err != nil {
-						return 0, 0, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
+						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
 					}
 
 				} else {
@@ -173,7 +173,7 @@ func (s *service) HandleFirstPartyVulnResult(org models.Org, project models.Proj
 					var err error
 					firstPartyVulnerability.SnippetContents, err = snippetContents.ToJSON()
 					if err != nil {
-						return 0, 0, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
+						return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, errors.Wrap(err, "could not convert snippet contents to JSON")
 					}
 
 				}
@@ -188,9 +188,9 @@ func (s *service) HandleFirstPartyVulnResult(org models.Org, project models.Proj
 		firstPartyVulnerabilities = append(firstPartyVulnerabilities, vuln)
 	}
 
-	amountOpened, amountClosed, amountExisting, err := s.handleFirstPartyVulnResult(userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project)
+	opened, closed, newState, err := s.handleFirstPartyVulnResult(ctx, userID, scannerID, assetVersion, firstPartyVulnerabilities, asset, org, project)
 	if err != nil {
-		return 0, 0, []models.FirstPartyVuln{}, err
+		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
 
 	if assetVersion.Metadata == nil {
@@ -199,15 +199,15 @@ func (s *service) HandleFirstPartyVulnResult(org models.Org, project models.Proj
 
 	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
-	return amountOpened, amountClosed, amountExisting, nil
+	return opened, closed, newState, nil
 }
 
-func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project) (int, int, []models.FirstPartyVuln, error) {
+func (s *service) handleFirstPartyVulnResult(ctx core.Context, userID string, scannerID string, assetVersion *models.AssetVersion, vulns []models.FirstPartyVuln, asset models.Asset, org models.Org, project models.Project) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error) {
 	// get all existing vulns from the database - this is the old state
 	existingVulns, err := s.firstPartyVulnRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		slog.Error("could not get existing vulns", "err", err)
-		return 0, 0, []models.FirstPartyVuln{}, err
+		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
 
 	// remove all fixed vulns from the existing vulns
@@ -256,12 +256,19 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		return nil
 	}); err != nil {
 		slog.Error("could not save vulns", "err", err)
-		return 0, 0, []models.FirstPartyVuln{}, err
+		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
-	// the amount we actually fixed, is the amount that was open before
-	fixedVulns = utils.Filter(fixedVulns, func(vuln models.FirstPartyVuln) bool {
-		return vuln.State == models.VulnStateOpen
-	})
+
+	//close open tickets for fixed vulnerabilities
+	for _, vuln := range fixedVulns {
+		if vuln.TicketID != nil {
+			vuln.State = models.VulnStateFixed // currently state = open, which results in UpdateIssues not closing the issue
+			err := s.thirdPartyIntegration.UpdateIssue(ctx.Request().Context(), asset, &vuln)
+			if err != nil {
+				return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
+			}
+		}
+	}
 
 	if len(newVulns) > 0 {
 		go func() {
@@ -277,7 +284,7 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		}()
 	}
 
-	return len(newVulns), len(fixedVulns), append(newVulns, inBoth...), nil
+	return newVulns, fixedVulns, append(newVulns, inBoth...), nil
 }
 
 func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
