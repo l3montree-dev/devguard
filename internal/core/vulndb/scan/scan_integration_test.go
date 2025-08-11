@@ -186,7 +186,7 @@ func TestScanning(t *testing.T) {
 		sbomFile := sbomWithVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "scanner-4")
+		req.Header.Set("X-Scanner", vulns[0].ScannerIDs)
 		req.Header.Set("X-Asset-Ref", "some-other-branch")
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx) //setup context

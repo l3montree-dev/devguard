@@ -428,13 +428,13 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
-	// get all vulns from the default branch
-	existingVulnsOnDefaultBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(nil, assetVersion.AssetID, "")
+	// get all vulns from other branches
+	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
-	existingVulnsOnDefaultBranch = utils.Filter(existingVulnsOnDefaultBranch, func(dependencyVuln models.DependencyVuln) bool {
+	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dependencyVuln models.DependencyVuln) bool {
 		return dependencyVuln.State != models.VulnStateFixed
 	})
 
@@ -445,10 +445,10 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 
 	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(scannerID, dependencyVulns, existingDependencyVulns)
 
-	newDetectedVulnsNotOnDefaultBranch, newDetectedButOnDefaultBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, newDetectedVulns, existingVulnsOnDefaultBranch)
+	newDetectedVulnsNotOnDefaultBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, newDetectedVulns, existingVulnsOnOtherBranch)
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
-		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, scannerID, newDetectedButOnDefaultBranchExisting, existingEvents, *assetVersion, asset); err != nil {
+		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, scannerID, newDetectedButOnOtherBranchExisting, existingEvents, *assetVersion, asset); err != nil {
 			slog.Error("error when trying to add events for existing vulnerability on different branch")
 			return err // this will cancel the transaction
 		}
