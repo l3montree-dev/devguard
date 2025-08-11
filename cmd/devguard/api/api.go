@@ -763,6 +763,9 @@ func BuildRouter(db core.DB) *echo.Echo {
 
 	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)
 
+	dependencyVulnArtifactRouter := assetVersionRouter.Group("/dependency-vulns-artifacts")
+	dependencyVulnArtifactRouter.GET("/", dependencyVulnController.ListArtifacts)
+
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)

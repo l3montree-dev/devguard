@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"slices"
+	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/events"
@@ -363,4 +364,25 @@ func getAssetVersionName(vuln models.DependencyVuln, ev models.VulnEvent) string
 		return *ev.OriginalAssetVersionName
 	}
 	return vuln.AssetVersionName // fallback to the vuln's asset version name if event does not have it
+}
+
+func (controller dependencyVulnHTTPController) ListArtifacts(ctx core.Context) error {
+
+	assetID := core.GetAsset(ctx).ID
+	assetVersion := core.GetAssetVersion(ctx)
+
+	// get the artifacts for this asset version
+	artifacts, err := controller.dependencyVulnRepository.GetArtifacts(assetVersion.Name, assetID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
+	}
+	scannerDefault := "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"
+	for i, artifact := range artifacts {
+		if strings.HasPrefix(artifact, scannerDefault) {
+			// remove the scanner default prefix
+			artifacts[i] = strings.TrimPrefix(artifact, scannerDefault)
+		}
+	}
+
+	return ctx.JSON(200, artifacts)
 }
