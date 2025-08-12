@@ -182,7 +182,7 @@ type PatchRequest struct {
 	WebhookSecret *string `json:"webhookSecret"`
 	BadgeSecret   *string `json:"badgeSecret"`
 
-	RepositoryProvider *string `json:"repositoryProvider" validate:"oneof=github gitlab"` // either null or github or gitlab, etc.
+	RepositoryProvider *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
 }
 
 func (assetPatch *PatchRequest) applyToModel(asset *models.Asset) bool {
