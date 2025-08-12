@@ -119,7 +119,7 @@ type createRequest struct {
 	ConfidentialityRequirement string  `json:"confidentialityRequirement" validate:"required"`
 	IntegrityRequirement       string  `json:"integrityRequirement" validate:"required"`
 	AvailabilityRequirement    string  `json:"availabilityRequirement" validate:"required"`
-	RepositoryProvider         *string `json:"repositoryProvider" validate:"oneof=github gitlab"` // either null or github or gitlab, etc.
+	RepositoryProvider         *string `json:"repositoryProvider" validate:"omitempty,oneof=github gitlab"` // either null or github or gitlab, etc.
 }
 
 func sanitizeRequirementLevel(level string) models.RequirementLevel {
