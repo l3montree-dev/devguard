@@ -173,6 +173,7 @@ func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {
 	}
 	extension := getLanguage(firstPartyVuln.URI)
 
+	// dynamically change the headline to the amount of Snippets
 	str.WriteString("\n\n")
 	if len(snippet.Snippets) == 1 {
 		str.WriteString("## Code Snippet\n")
@@ -189,6 +190,7 @@ func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {
 		str.WriteString("\n")
 		str.WriteString("```\n")
 
+		// build the link to the file and start line of the snippet
 		link := fmt.Sprintf("[%s](../%s#L%d)", firstPartyVuln.URI, strings.TrimPrefix(firstPartyVuln.URI, "/"), snippet.StartLine)
 		if snippet.StartLine == snippet.EndLine {
 			locationString = fmt.Sprintf("**Found at:** %s\n**Line:** %d\n", link, snippet.StartLine)

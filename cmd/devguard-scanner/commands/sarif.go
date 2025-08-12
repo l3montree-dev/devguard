@@ -207,8 +207,8 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 		expandedSnippet = startStr + "\n"
 	}
 
-	marker := "+++\n"
-	expandedSnippet += marker + secretLineBegin + original + marker
+	marker := "+++"
+	expandedSnippet += marker + "\n" + secretLineBegin + original + "\n" + marker
 
 	if len(end) > 0 {
 		endStr = strings.Join(end, "\n")
