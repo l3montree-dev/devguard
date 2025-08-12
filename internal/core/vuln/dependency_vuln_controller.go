@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"log/slog"
 	"slices"
-	"strings"
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/events"
+
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -99,7 +99,6 @@ func (controller dependencyVulnHTTPController) ListByProjectPaged(ctx core.Conte
 func (controller dependencyVulnHTTPController) ListPaged(ctx core.Context) error {
 	// get the asset
 	assetVersion := core.GetAssetVersion(ctx)
-
 	// check if we should list flat - this means not grouped by package
 	if ctx.QueryParam("flat") == "true" {
 		dependencyVulns, err := controller.dependencyVulnRepository.GetDependencyVulnsByAssetVersionPagedAndFlat(nil, assetVersion.Name, assetVersion.AssetID, core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
@@ -375,13 +374,6 @@ func (controller dependencyVulnHTTPController) ListArtifacts(ctx core.Context) e
 	artifacts, err := controller.dependencyVulnRepository.GetArtifacts(assetVersion.Name, assetID)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
-	}
-	scannerDefault := "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"
-	for i, artifact := range artifacts {
-		if strings.HasPrefix(artifact, scannerDefault) {
-			// remove the scanner default prefix
-			artifacts[i] = strings.TrimPrefix(artifact, scannerDefault)
-		}
 	}
 
 	return ctx.JSON(200, artifacts)

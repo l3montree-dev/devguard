@@ -221,6 +221,8 @@ func GetLabels(vuln models.Vuln) []string {
 	scannerIDs := strings.Split(scannerIDsString, " ")
 	scannerDefault := "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"
 
+	// the same logic how to get the artifact name is implemented in the frontend
+	// so if you change it here, you need to change it there too
 	for _, scannerID := range scannerIDs {
 		scannerID = strings.TrimSpace(scannerID)
 		if scannerID == "" {
