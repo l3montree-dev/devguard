@@ -51,8 +51,6 @@ func (factory SimpleGitlabClientFactory) FromOauth2Token(token models.GitLabOaut
 	for _, integration := range factory.oauth2GitlabIntegration {
 		if integration.ProviderID == token.ProviderID {
 			oauth2Client := integration.client(token)
-			// do request deduplication
-			common.WrapHTTPClient(oauth2Client, httpRequestDeduplication.Handler())
 
 			if enableClientCache {
 				common.WrapHTTPClient(oauth2Client, httpClientCache.Handler())

@@ -37,6 +37,150 @@ func (_m *FirstPartyVulnService) EXPECT() *FirstPartyVulnService_Expecter {
 	return &FirstPartyVulnService_Expecter{mock: &_m.Mock}
 }
 
+// SyncAllIssues provides a mock function for the type FirstPartyVulnService
+func (_mock *FirstPartyVulnService) SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error {
+	ret := _mock.Called(org, project, asset, assetVersion)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SyncAllIssues")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion) error); ok {
+		r0 = returnFunc(org, project, asset, assetVersion)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// FirstPartyVulnService_SyncAllIssues_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncAllIssues'
+type FirstPartyVulnService_SyncAllIssues_Call struct {
+	*mock.Call
+}
+
+// SyncAllIssues is a helper method to define mock.On call
+//   - org models.Org
+//   - project models.Project
+//   - asset models.Asset
+//   - assetVersion models.AssetVersion
+func (_e *FirstPartyVulnService_Expecter) SyncAllIssues(org interface{}, project interface{}, asset interface{}, assetVersion interface{}) *FirstPartyVulnService_SyncAllIssues_Call {
+	return &FirstPartyVulnService_SyncAllIssues_Call{Call: _e.mock.On("SyncAllIssues", org, project, asset, assetVersion)}
+}
+
+func (_c *FirstPartyVulnService_SyncAllIssues_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion)) *FirstPartyVulnService_SyncAllIssues_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 models.Org
+		if args[0] != nil {
+			arg0 = args[0].(models.Org)
+		}
+		var arg1 models.Project
+		if args[1] != nil {
+			arg1 = args[1].(models.Project)
+		}
+		var arg2 models.Asset
+		if args[2] != nil {
+			arg2 = args[2].(models.Asset)
+		}
+		var arg3 models.AssetVersion
+		if args[3] != nil {
+			arg3 = args[3].(models.AssetVersion)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *FirstPartyVulnService_SyncAllIssues_Call) Return(err error) *FirstPartyVulnService_SyncAllIssues_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *FirstPartyVulnService_SyncAllIssues_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error) *FirstPartyVulnService_SyncAllIssues_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SyncIssues provides a mock function for the type FirstPartyVulnService
+func (_mock *FirstPartyVulnService) SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error {
+	ret := _mock.Called(org, project, asset, assetVersion, vulnList)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SyncIssues")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, []models.FirstPartyVuln) error); ok {
+		r0 = returnFunc(org, project, asset, assetVersion, vulnList)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// FirstPartyVulnService_SyncIssues_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SyncIssues'
+type FirstPartyVulnService_SyncIssues_Call struct {
+	*mock.Call
+}
+
+// SyncIssues is a helper method to define mock.On call
+//   - org models.Org
+//   - project models.Project
+//   - asset models.Asset
+//   - assetVersion models.AssetVersion
+//   - vulnList []models.FirstPartyVuln
+func (_e *FirstPartyVulnService_Expecter) SyncIssues(org interface{}, project interface{}, asset interface{}, assetVersion interface{}, vulnList interface{}) *FirstPartyVulnService_SyncIssues_Call {
+	return &FirstPartyVulnService_SyncIssues_Call{Call: _e.mock.On("SyncIssues", org, project, asset, assetVersion, vulnList)}
+}
+
+func (_c *FirstPartyVulnService_SyncIssues_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln)) *FirstPartyVulnService_SyncIssues_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 models.Org
+		if args[0] != nil {
+			arg0 = args[0].(models.Org)
+		}
+		var arg1 models.Project
+		if args[1] != nil {
+			arg1 = args[1].(models.Project)
+		}
+		var arg2 models.Asset
+		if args[2] != nil {
+			arg2 = args[2].(models.Asset)
+		}
+		var arg3 models.AssetVersion
+		if args[3] != nil {
+			arg3 = args[3].(models.AssetVersion)
+		}
+		var arg4 []models.FirstPartyVuln
+		if args[4] != nil {
+			arg4 = args[4].([]models.FirstPartyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *FirstPartyVulnService_SyncIssues_Call) Return(err error) *FirstPartyVulnService_SyncIssues_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *FirstPartyVulnService_SyncIssues_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error) *FirstPartyVulnService_SyncIssues_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateFirstPartyVulnState provides a mock function for the type FirstPartyVulnService
 func (_mock *FirstPartyVulnService) UpdateFirstPartyVulnState(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
 	ret := _mock.Called(tx, userID, firstPartyVuln, statusType, justification, mechanicalJustification)

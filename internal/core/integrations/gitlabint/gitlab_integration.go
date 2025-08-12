@@ -236,7 +236,7 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx core.Context, 
 	}
 
 	// check that the token is valid
-	if !g.checkIfTokenIsValid(ctx, *token) {
+	if !g.checkIfTokenIsValid(ctx, *token, 0) {
 		slog.Error("gitlab oauth2 token is not valid", "providerID", externalEntityProviderID)
 		return false, fmt.Errorf("gitlab oauth2 token is not valid for provider %s", externalEntityProviderID)
 	}
@@ -244,7 +244,7 @@ func (g *GitlabIntegration) HasAccessToExternalEntityProvider(ctx core.Context, 
 	return true, nil
 }
 
-func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.GitLabOauth2Token) bool {
+func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.GitLabOauth2Token, iteration int) bool {
 	// create a new gitlab batch client
 	gitlabClient, err := g.clientFactory.FromOauth2Token(token, true)
 	if err != nil {
@@ -255,8 +255,15 @@ func (g *GitlabIntegration) checkIfTokenIsValid(ctx core.Context, token models.G
 	// check if the token is valid by fetching the user
 	_, _, err = gitlabClient.GetVersion(ctx.Request().Context())
 	if err != nil {
-		slog.Error("failed to get user", "err", err, "tokenHash", utils.HashString(token.AccessToken))
-		return false
+		if iteration >= 3 {
+			// we tried 3 times to check if the token is valid, but it is still not valid
+			slog.Error("gitlab oauth2 token is not valid", "err", err, "tokenHash", utils.HashString(token.AccessToken), "iteration", iteration)
+			return false
+		}
+		slog.Error("gitlab oauth2 token is not valid", "err", err, "tokenHash", utils.HashString(token.AccessToken), "iteration", iteration)
+		// wait 1 second before trying again
+		time.Sleep(1 * time.Second)
+		return g.checkIfTokenIsValid(ctx, token, iteration+1)
 	}
 
 	return true

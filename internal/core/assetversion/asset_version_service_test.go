@@ -159,7 +159,7 @@ func TestFirstPartyVulnHash(t *testing.T) {
 			&models.AssetVersion{Name: "test-asset-version"},
 			vuln,
 			"scannerID",
-			"userID").Return(0, 0, []models.FirstPartyVuln{expectedVuln}, nil)
+			"userID").Return([]models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{expectedVuln}, nil)
 
 		_, _, r, err := assetVersionService.HandleFirstPartyVulnResult(
 			models.Org{},

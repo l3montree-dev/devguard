@@ -60,7 +60,6 @@ type gitlabOauth2Client struct {
 }
 
 var httpClientCache = common.NewCacheTransport(1000, 5*time.Minute)
-var httpRequestDeduplication = common.NewDeduplicationTransport()
 
 func parseGitlabEnvs() map[string]gitlabEnvConfig {
 	urls := make(map[string]gitlabEnvConfig)

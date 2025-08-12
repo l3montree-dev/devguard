@@ -1,13 +1,13 @@
 package common
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha256"
-	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
+	"net/http/httputil"
 	"time"
 
 	"github.com/hashicorp/golang-lru/v2/expirable"
@@ -34,11 +34,11 @@ func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 type CacheTransport struct {
-	cache *expirable.LRU[string, *http.Response]
+	cache *expirable.LRU[string, []byte]
 }
 
 func NewCacheTransport(cacheSize int, expiration time.Duration) *CacheTransport {
-	cache := expirable.NewLRU[string, *http.Response](cacheSize, nil, expiration)
+	cache := expirable.NewLRU[string, []byte](cacheSize, nil, expiration)
 	return &CacheTransport{
 		cache: cache,
 	}
@@ -54,7 +54,12 @@ func (c *CacheTransport) Handler() func(req *http.Request, next http.RoundTrippe
 
 		if val, ok := c.cache.Get(key); ok {
 			slog.Info("Cache hit", "url", req.URL.String())
-			return cloneResponse(val)
+			resp, err := responseFromBytes(val)
+			if err != nil {
+				slog.Error("Failed to read response from cache", "err", err)
+				return nil, err
+			}
+			return resp, nil
 		}
 
 		resp, err := next.RoundTrip(req)
@@ -67,29 +72,25 @@ func (c *CacheTransport) Handler() func(req *http.Request, next http.RoundTrippe
 			return resp, nil
 		}
 
-		cloned, err := cloneResponse(resp)
-		if err == nil {
-			c.cache.Add(key, cloned)
+		v, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			slog.Error("Failed to dump response", "err", err)
+			return resp, nil
 		}
 
-		return resp, nil
+		c.cache.Add(key, v)
+
+		return responseFromBytes(v)
 	}
 }
 
-func cloneResponse(src *http.Response) (*http.Response, error) {
-	if src.Body == nil {
-		return nil, errors.New("nil body")
-	}
-	bodyBytes, err := io.ReadAll(src.Body)
+func responseFromBytes(v []byte) (*http.Response, error) {
+	r := bufio.NewReader(bytes.NewReader(v))
+	resp, err := http.ReadResponse(r, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
-	src.Body.Close()
-	src.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-
-	cloned := *src
-	cloned.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-	return &cloned, nil
+	return resp, nil
 }
 
 func cacheKey(req *http.Request) string {
