@@ -163,6 +163,7 @@ func (firstPartyVuln *FirstPartyVuln) RenderADF() jira.ADF {
 
 func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {
 	var str strings.Builder
+	str.WriteString("## Vulnerability Description\n\n")
 	str.WriteString(*firstPartyVuln.Message)
 
 	snippet, err := firstPartyVuln.FromJSONSnippetContents()
@@ -170,27 +171,31 @@ func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {
 		slog.Error("could not parse snippet contents", "error", err)
 		return str.String()
 	}
-
 	extension := getLanguage(firstPartyVuln.URI)
 
+	str.WriteString("\n\n")
+	if len(snippet.Snippets) == 1 {
+		str.WriteString("## Code Snippet\n")
+	} else if len(snippet.Snippets) >= 2 {
+		str.WriteString("## Code Snippets\n")
+	}
+
+	var locationString string
 	for _, snippet := range snippet.Snippets {
 		// check if there is a filename and snippet - if so, we can render that as well
 		str.WriteString("\n\n")
-		str.WriteString("```" + extension)
-		str.WriteString("\n")
+		str.WriteString("```" + extension + "\n")
 		str.WriteString(snippet.Snippet)
 		str.WriteString("\n")
-		str.WriteString("```")
-	}
+		str.WriteString("```\n")
 
-	if firstPartyVuln.URI != "" {
-		str.WriteString("\n\n")
-		str.WriteString("File: ")
-
-		link := fmt.Sprintf("[%s](%s)", firstPartyVuln.URI, strings.TrimPrefix(firstPartyVuln.URI, "/"))
-
-		str.WriteString(link)
-		str.WriteString("\n")
+		link := fmt.Sprintf("[%s](../%s#L%d)", firstPartyVuln.URI, strings.TrimPrefix(firstPartyVuln.URI, "/"), snippet.StartLine)
+		if snippet.StartLine == snippet.EndLine {
+			locationString = fmt.Sprintf("**Found at:** %s\n**Line:** %d\n", link, snippet.StartLine)
+		} else {
+			locationString = fmt.Sprintf("**Found at:** %s\n**Lines:** %d - %d\n", link, snippet.StartLine, snippet.EndLine)
+		}
+		str.WriteString(locationString)
 	}
 
 	common.AddSlashCommandsToFirstPartyVuln(&str)
