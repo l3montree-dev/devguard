@@ -184,9 +184,11 @@ func (firstPartyVuln *FirstPartyVuln) RenderMarkdown() string {
 	var locationString string
 	for _, snippet := range snippet.Snippets {
 		// check if there is a filename and snippet - if so, we can render that as well
+		sanitizedSnippet := strings.ReplaceAll(snippet.Snippet, "+++\n", "")
+		sanitizedSnippet = strings.ReplaceAll(sanitizedSnippet, "\n+++", "") //just to make sure
 		str.WriteString("\n\n")
 		str.WriteString("```" + extension + "\n")
-		str.WriteString(snippet.Snippet)
+		str.WriteString(sanitizedSnippet)
 		str.WriteString("\n")
 		str.WriteString("```\n")
 

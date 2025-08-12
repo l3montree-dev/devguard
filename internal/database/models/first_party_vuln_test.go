@@ -33,7 +33,7 @@ func TestRenderMarkdown(t *testing.T) {
 		result := firstPartyVuln.RenderMarkdown()
 		assert.Contains(t, result, "A detailed Message")
 		assert.Contains(t, result, "TestSnippet")
-		assert.Contains(t, result, "File: [the/uri/of/the/vuln](the/uri/of/the/vuln)")
+		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L64)")
 	})
 	t.Run("vuln without snippet contents", func(t *testing.T) {
 		snippetContents := models.SnippetContents{
@@ -51,7 +51,7 @@ func TestRenderMarkdown(t *testing.T) {
 
 		result := firstPartyVuln.RenderMarkdown()
 		assert.Contains(t, result, "A detailed Message")
-		assert.Contains(t, result, "File: [the/uri/of/the/vuln](the/uri/of/the/vuln)")
+		assert.Contains(t, result, "**Found at:** [the/uri/of/the/vuln](../the/uri/of/the/vuln#L0)")
 	})
 }
 func TestTableName(t *testing.T) {
