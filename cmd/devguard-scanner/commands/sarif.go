@@ -174,6 +174,10 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 		return original, fmt.Errorf("start line or end line is out of range")
 	}
 
+	if startLine > endLine {
+		return original, fmt.Errorf("start line after end line")
+	}
+
 	//original is the string with the secret, but without the beginning of the line, so we reconstruct it
 	// slice the original string where *** are
 	secretStringBegin := strings.Split(original, "***")
@@ -203,7 +207,8 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 		expandedSnippet = startStr + "\n"
 	}
 
-	expandedSnippet += "+++\n" + secretLineBegin + original + "\n+++"
+	marker := "+++"
+	expandedSnippet += marker + "\n" + secretLineBegin + original + "\n" + marker
 
 	if len(end) > 0 {
 		endStr = strings.Join(end, "\n")
