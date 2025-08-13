@@ -184,8 +184,8 @@ func (tree *tree) RenderToMermaid() string {
 	return "```" + builder.String() + "\nclassDef default stroke-width:2px\n```\n"
 }
 
-func GetComponentDepth(elements []models.ComponentDependency, onlyShowScannerID string) map[string]int {
-	tree := BuildDependencyTree(elements, onlyShowScannerID)
+func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
+	tree := BuildDependencyTree(elements, "")
 	// calculate the depth for each node
 	depthMap := make(map[string]int)
 	CalculateDepth(tree.Root, -1, depthMap) // first purl will be the application itself. whenever calculate depth sees a purl, it increments the depth.
@@ -202,13 +202,12 @@ func buildDependencyTreePerScanner(elements []models.ComponentDependency, onlySh
 		// split at whitespace
 		scannerIDsList := strings.Fields(scannerIDs)
 		for _, scannerID := range scannerIDsList {
-			if onlyShowScannerID != "" && onlyShowScannerID != scannerID {
-				continue
+			if onlyShowScannerID == "" || onlyShowScannerID == scannerID {
+				if _, ok := scannerDependencyMap[scannerID]; !ok {
+					scannerDependencyMap[scannerID] = make([]models.ComponentDependency, 0)
+				}
+				scannerDependencyMap[scannerID] = append(scannerDependencyMap[scannerID], element)
 			}
-			if _, ok := scannerDependencyMap[scannerID]; !ok {
-				scannerDependencyMap[scannerID] = make([]models.ComponentDependency, 0)
-			}
-			scannerDependencyMap[scannerID] = append(scannerDependencyMap[scannerID], element)
 		}
 	}
 

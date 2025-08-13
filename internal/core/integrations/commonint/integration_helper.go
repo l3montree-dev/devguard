@@ -177,7 +177,7 @@ func RenderPathToComponent(componentRepository core.ComponentRepository, assetID
 		return "", err
 	}
 
-	tree := assetversion.BuildDependencyTree(components, scannerID)
+	tree := assetversion.BuildDependencyTree(components, "")
 	return tree.RenderToMermaid(), nil
 }
 

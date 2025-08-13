@@ -292,7 +292,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
 	// build a dependency tree
-	tree := BuildDependencyTree(assetComponents, scannerID)
+	tree := BuildDependencyTree(assetComponents, "")
 	// calculate the depth of each component
 	depthMap := make(map[string]int)
 

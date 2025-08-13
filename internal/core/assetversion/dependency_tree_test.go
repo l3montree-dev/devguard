@@ -174,7 +174,7 @@ func TestGetComponentDepth(t *testing.T) {
 			{ComponentPurl: nil, DependencyPurl: "app", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning"},
 		}
 
-		depthMap := GetComponentDepth(dependencies, "")
+		depthMap := GetComponentDepth(dependencies)
 		expectedDepths := map[string]int{
 			"pkg:golang/b@1.0.0": 1,
 			"pkg:golang/c@1.0.0": 2,
@@ -199,7 +199,7 @@ func TestGetComponentDepth(t *testing.T) {
 			{ComponentPurl: utils.Ptr("pkg:golang/app@0.0.0"), DependencyPurl: "pkg:golang/c@1.0.0", ScannerIDs: "my-own-scanner"},
 		}
 
-		depthMap := GetComponentDepth(dependencies, "")
+		depthMap := GetComponentDepth(dependencies)
 		expectedDepths := map[string]int{
 			"pkg:golang/b@1.0.0": 1,
 			"pkg:golang/c@1.0.0": 1,
