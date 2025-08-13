@@ -346,3 +346,19 @@ func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx cor
 	}
 	return hints, nil
 }
+
+func (repository *dependencyVulnRepository) GetArtifacts(assetVersionName string, assetID uuid.UUID) ([]string, error) {
+	var artifacts []string
+
+	query := `
+	       SELECT DISTINCT unnest(string_to_array(scanner_ids, ' '))
+	       FROM dependency_vulns
+	       WHERE asset_version_name = ? AND asset_id = ?
+       `
+
+	if err := repository.Repository.GetDB(repository.db).Raw(query, assetVersionName, assetID).Scan(&artifacts).Error; err != nil {
+		return nil, fmt.Errorf("could not get artifacts: %w", err)
+	}
+
+	return artifacts, nil
+}
