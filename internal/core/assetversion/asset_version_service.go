@@ -292,7 +292,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
 	// build a dependency tree
-	tree := BuildDependencyTree(assetComponents)
+	tree := BuildDependencyTree(assetComponents, scannerID)
 	// calculate the depth of each component
 	depthMap := make(map[string]int)
 
@@ -670,9 +670,9 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 	}
 
 	bom := cdx.BOM{
-		XMLNS:       "http://cyclonedx.org/schema/bom/1.5",
+		XMLNS:       "http://cyclonedx.org/schema/bom/1.6",
 		BOMFormat:   "CycloneDX",
-		SpecVersion: cdx.SpecVersion1_5,
+		SpecVersion: cdx.SpecVersion1_6,
 		Version:     1,
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),

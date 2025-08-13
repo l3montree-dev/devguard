@@ -102,7 +102,7 @@ func UpdateComponentProperties(db core.DB) error {
 						continue
 					}
 
-					depthMap := assetversion.GetComponentDepth(components)
+					depthMap := assetversion.GetComponentDepth(components, scannerID)
 
 					for _, dependencyVuln := range dependencyVulns {
 						depth := depthMap[*dependencyVuln.ComponentPurl]

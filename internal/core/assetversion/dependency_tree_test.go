@@ -32,7 +32,7 @@ func TestDependencyTree(t *testing.T) {
 			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "f", Depth: 3, ScannerIDs: "scanner1"},
 			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "g", Depth: 3, ScannerIDs: "scanner1"},
 		}
-		tree := BuildDependencyTree(graph)
+		tree := BuildDependencyTree(graph, "")
 
 		// expect a to have two children: b and c
 		if len(tree.Root.Children) != 2 {
@@ -68,7 +68,7 @@ func TestDependencyTree(t *testing.T) {
 			{ComponentPurl: utils.Ptr("b"), DependencyPurl: "c", Depth: 2, ScannerIDs: "scanner1"},
 			{ComponentPurl: utils.Ptr("c"), DependencyPurl: "b", Depth: 2, ScannerIDs: "scanner1"}, // closes the cycle
 		}
-		tree := BuildDependencyTree(graph)
+		tree := BuildDependencyTree(graph, "")
 
 		// expect a to have a two children b and c
 		if len(tree.Root.Children) != 2 {
@@ -174,7 +174,7 @@ func TestGetComponentDepth(t *testing.T) {
 			{ComponentPurl: nil, DependencyPurl: "app", ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning"},
 		}
 
-		depthMap := GetComponentDepth(dependencies)
+		depthMap := GetComponentDepth(dependencies, "")
 		expectedDepths := map[string]int{
 			"pkg:golang/b@1.0.0": 1,
 			"pkg:golang/c@1.0.0": 2,
@@ -199,7 +199,7 @@ func TestGetComponentDepth(t *testing.T) {
 			{ComponentPurl: utils.Ptr("pkg:golang/app@0.0.0"), DependencyPurl: "pkg:golang/c@1.0.0", ScannerIDs: "my-own-scanner"},
 		}
 
-		depthMap := GetComponentDepth(dependencies)
+		depthMap := GetComponentDepth(dependencies, "")
 		expectedDepths := map[string]int{
 			"pkg:golang/b@1.0.0": 1,
 			"pkg:golang/c@1.0.0": 1,

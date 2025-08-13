@@ -65,9 +65,7 @@ func NewConnection(host, user, password, dbname, port string) (*gorm.DB, error) 
 	db, err := gorm.Open(postgres.New(postgres.Config{
 		DSN: fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbname),
 	}), &gorm.Config{
-		Logger: &sentryLogger{
-			defaultLogger: logger.Default,
-		},
+		Logger: logger.Default,
 	})
 
 	if err != nil {

@@ -124,7 +124,7 @@ func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 		return err
 	}
 
-	tree := BuildDependencyTree(components)
+	tree := BuildDependencyTree(components, scannerID)
 	if tree.Root.Children == nil {
 		tree.Root.Children = make([]*treeNode, 0)
 	}
@@ -148,7 +148,7 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) err
 		return err
 	}
 
-	tree := BuildDependencyTree(components)
+	tree := BuildDependencyTree(components, scannerID)
 	if tree.Root.Children == nil {
 		tree.Root.Children = make([]*treeNode, 0)
 	}
