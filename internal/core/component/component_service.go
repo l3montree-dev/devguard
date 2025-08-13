@@ -1,9 +1,14 @@
 package component
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 
+	"github.com/google/licensecheck"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -75,80 +80,97 @@ func (s *service) RefreshComponentProjectInformation(project models.ComponentPro
 func (s *service) GetLicense(component models.Component) (models.Component, error) {
 	pURL := component.Purl
 
-	p, err := packageurl.FromString(pURL)
+	validatedPURL, err := packageurl.FromString(pURL)
 	if err != nil {
 		// swallow the error
 		component.License = utils.Ptr("unknown")
 		return component, nil
 	}
 
-	resp, err := s.depsDevService.GetVersion(context.Background(), p.Type, combineNamespaceAndName(p.Namespace, p.Name), p.Version)
-
-	if err != nil {
-		slog.Warn("could not get license information", "err", err, "purl", pURL)
-
-		// set the license to unknown
-		component.License = utils.Ptr("unknown")
-		return component, nil
-	}
-
-	// check if there is a license
-	if len(resp.Licenses) > 0 {
-		// update the license
-		component.License = &resp.Licenses[0]
-		component.Published = &resp.PublishedAt
-	} else {
-		// set the license to unknown
-		component.License = utils.Ptr("unknown")
-	}
-
-	// check if there is a related project
-	if len(resp.RelatedProjects) > 0 {
-		// find the project with the "SOURCE_REPO" type
-		for _, project := range resp.RelatedProjects {
-			if project.RelationType == "SOURCE_REPO" {
-				// get the project key and fetch the project
-				projectKey := project.ProjectKey.ID
-
-				// fetch the project
-				projectResp, err := s.depsDevService.GetProject(context.Background(), projectKey)
-				if err != nil {
-					slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
-				}
-
-				var jsonbScorecard *database.JSONB = nil
-				var scoreCardScore *float64 = nil
-				if projectResp.Scorecard != nil {
-					jsonb, err := database.JSONbFromStruct(*projectResp.Scorecard)
-					scoreCardScore = &projectResp.Scorecard.OverallScore
-
-					if err != nil {
-						slog.Warn("could not convert scorecard to jsonb", "err", err)
-					} else {
-						jsonbScorecard = &jsonb
-					}
-				}
-				// save the project information
-				componentProject := &models.ComponentProject{
-					ProjectKey:     projectKey,
-					StarsCount:     projectResp.StarsCount,
-					ForksCount:     projectResp.ForksCount,
-					License:        projectResp.License,
-					Description:    projectResp.Description,
-					Homepage:       projectResp.Homepage,
-					ScoreCard:      jsonbScorecard,
-					ScoreCardScore: scoreCardScore,
-				}
-
-				component.ComponentProject = componentProject
-				component.ComponentProjectKey = &projectKey
-				break
-			}
+	// check whether its a debian package. If it is we get our information from the debian package master
+	if validatedPURL.Type == "deb" {
+		packageInformation, err := getDebianPackageInformation(validatedPURL)
+		if err != nil {
+			// swallow error but display a warning
+			slog.Warn("could not get license information", "err", err, "purl", pURL)
+			component.License = utils.Ptr("unknown")
+			return component, nil
 		}
-	} else {
-		slog.Warn("no related projects found", "purl", pURL)
-	}
 
+		cov := licensecheck.Scan(packageInformation.Bytes())
+		if len(cov.Match) == 0 {
+			component.License = utils.Ptr("unknown")
+			return component, nil
+		}
+		component.License = &cov.Match[0].ID
+	} else {
+		resp, err := s.depsDevService.GetVersion(context.Background(), validatedPURL.Type, combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name), validatedPURL.Version)
+
+		if err != nil {
+			slog.Warn("could not get license information", "err", err, "purl", pURL)
+
+			// set the license to unknown
+			component.License = utils.Ptr("unknown")
+			return component, nil
+		}
+
+		// check if there is a license
+		if len(resp.Licenses) > 0 {
+			// update the license
+			component.License = &resp.Licenses[0]
+			component.Published = &resp.PublishedAt
+		} else {
+			// set the license to unknown
+			component.License = utils.Ptr("unknown")
+		}
+
+		// check if there is a related project
+		if len(resp.RelatedProjects) > 0 {
+			// find the project with the "SOURCE_REPO" type
+			for _, project := range resp.RelatedProjects {
+				if project.RelationType == "SOURCE_REPO" {
+					// get the project key and fetch the project
+					projectKey := project.ProjectKey.ID
+
+					// fetch the project
+					projectResp, err := s.depsDevService.GetProject(context.Background(), projectKey)
+					if err != nil {
+						slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
+					}
+
+					var jsonbScorecard *database.JSONB = nil
+					var scoreCardScore *float64 = nil
+					if projectResp.Scorecard != nil {
+						jsonb, err := database.JSONbFromStruct(*projectResp.Scorecard)
+						scoreCardScore = &projectResp.Scorecard.OverallScore
+
+						if err != nil {
+							slog.Warn("could not convert scorecard to jsonb", "err", err)
+						} else {
+							jsonbScorecard = &jsonb
+						}
+					}
+					// save the project information
+					componentProject := &models.ComponentProject{
+						ProjectKey:     projectKey,
+						StarsCount:     projectResp.StarsCount,
+						ForksCount:     projectResp.ForksCount,
+						License:        projectResp.License,
+						Description:    projectResp.Description,
+						Homepage:       projectResp.Homepage,
+						ScoreCard:      jsonbScorecard,
+						ScoreCardScore: scoreCardScore,
+					}
+
+					component.ComponentProject = componentProject
+					component.ComponentProjectKey = &projectKey
+					break
+				}
+			}
+		} else {
+			slog.Warn("no related projects found", "purl", pURL)
+		}
+	}
 	return component, nil
 }
 
@@ -204,4 +226,23 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 	}
 
 	return allComponents, nil
+}
+
+func getDebianPackageInformation(pURL packageurl.PackageURL) (*bytes.Buffer, error) {
+	buff := bytes.Buffer{}
+
+	requestURL := fmt.Sprintf("https://metadata.ftp-master.debian.org/changelogs/main/%c/%s/%s_%s_copyright", pURL.Name[0], pURL.Name, pURL.Name, pURL.Version)
+	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	_, err = io.Copy(&buff, resp.Body)
+	return &buff, err
 }
