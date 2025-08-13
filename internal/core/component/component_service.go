@@ -87,7 +87,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 		return component, nil
 	}
 
-	// check whether its a debian package
+	// check whether its a debian package. If it is we get our information from the debian package master
 	if p.Type == "deb" {
 		packageInformation, err := getDebianPackageInformation(p)
 		if err != nil {
@@ -100,7 +100,6 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 		component.License = &cov.Match[0].ID
 		return component, nil
 	} else {
-
 		resp, err := s.depsDevService.GetVersion(context.Background(), p.Type, combineNamespaceAndName(p.Namespace, p.Name), p.Version)
 
 		if err != nil {
@@ -228,7 +227,7 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 func getDebianPackageInformation(pURL packageurl.PackageURL) (*bytes.Buffer, error) {
 	buff := bytes.Buffer{}
 
-	requestURL := fmt.Sprintf("https://metadata.ftp-master.debian.org/changelogs/main/%s/%s/%s_%s_copyright", pURL.Name[0], pURL.Name, pURL.Name, pURL.Version)
+	requestURL := fmt.Sprintf("https://metadata.ftp-master.debian.org/changelogs/main/%c/%s/%s_%s_copyright", pURL.Name[0], pURL.Name, pURL.Name, pURL.Version)
 	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 	if err != nil {
 		return nil, err
