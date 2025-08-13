@@ -1,0 +1,1 @@
+UPDATE components c SET license = NULL WHERE c.purl LIKE 'pkg:deb/debian/%';
