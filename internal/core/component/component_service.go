@@ -238,8 +238,12 @@ func getDebianPackageInformation(pURL packageurl.PackageURL) (*bytes.Buffer, err
 	}
 
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil || resp.StatusCode != 200 {
+	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("could not get debian package information: %s", resp.Status)
 	}
 
 	defer resp.Body.Close()
