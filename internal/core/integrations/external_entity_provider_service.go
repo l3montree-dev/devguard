@@ -236,7 +236,7 @@ func (s externalEntityProviderService) syncSingleProject(ctx core.Context, domai
 func (s externalEntityProviderService) updateUserRole(domainRBAC core.AccessControl, user string, userRole core.Role, projectID string) error {
 	currentRole, _ := domainRBAC.GetProjectRole(user, projectID) // swallow the error here - if an error happens means the user is not part of the project
 
-	if currentRole == userRole {
+	if currentRole == userRole || currentRole == "" {
 		return nil // user already has the correct role
 	}
 

@@ -80,6 +80,12 @@ selfservice:
         password:
           hooks:
           - hook: session
+        passkey:
+          hooks:
+          - hook: session
+        oidc:
+          hooks:
+          - hook: session
 
 log:
   level: debug
