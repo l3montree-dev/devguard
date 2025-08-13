@@ -7,6 +7,7 @@ import (
 
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/events"
+
 	"github.com/l3montree-dev/devguard/internal/core/risk"
 
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -98,7 +99,6 @@ func (controller dependencyVulnHTTPController) ListByProjectPaged(ctx core.Conte
 func (controller dependencyVulnHTTPController) ListPaged(ctx core.Context) error {
 	// get the asset
 	assetVersion := core.GetAssetVersion(ctx)
-
 	// check if we should list flat - this means not grouped by package
 	if ctx.QueryParam("flat") == "true" {
 		dependencyVulns, err := controller.dependencyVulnRepository.GetDependencyVulnsByAssetVersionPagedAndFlat(nil, assetVersion.Name, assetVersion.AssetID, core.GetPageInfo(ctx), ctx.QueryParam("search"), core.GetFilterQuery(ctx), core.GetSortQuery(ctx))
@@ -363,4 +363,18 @@ func getAssetVersionName(vuln models.DependencyVuln, ev models.VulnEvent) string
 		return *ev.OriginalAssetVersionName
 	}
 	return vuln.AssetVersionName // fallback to the vuln's asset version name if event does not have it
+}
+
+func (controller dependencyVulnHTTPController) ListArtifacts(ctx core.Context) error {
+
+	assetID := core.GetAsset(ctx).ID
+	assetVersion := core.GetAssetVersion(ctx)
+
+	// get the artifacts for this asset version
+	artifacts, err := controller.dependencyVulnRepository.GetArtifacts(assetVersion.Name, assetID)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
+	}
+
+	return ctx.JSON(200, artifacts)
 }

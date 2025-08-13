@@ -455,11 +455,13 @@ func (f FilterQuery) SQL() string {
 		return field + " < ?"
 	case "like":
 		return field + " LIKE ?"
-
+	case "any":
+		return "? = ANY(string_to_array(" + field + ", ' '))"
 	default:
 		// default do an equals
 		return f.field + " = ?"
 	}
+
 }
 
 func (f FilterQuery) Value() any {

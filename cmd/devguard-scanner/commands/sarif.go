@@ -112,7 +112,7 @@ func NewSarifCommand() *cobra.Command {
 		RunE:  sarifCmd,
 	}
 
-	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard-scanner/cmd/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
+	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
 
 	addScanFlags(cmd)
 	return cmd
