@@ -80,7 +80,7 @@ func (s *service) RefreshComponentProjectInformation(project models.ComponentPro
 func (s *service) GetLicense(component models.Component) (models.Component, error) {
 	pURL := component.Purl
 
-	p, err := packageurl.FromString(pURL)
+	validatedPURL, err := packageurl.FromString(pURL)
 	if err != nil {
 		// swallow the error
 		component.License = utils.Ptr("unknown")
@@ -88,19 +88,23 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	}
 
 	// check whether its a debian package. If it is we get our information from the debian package master
-	if p.Type == "deb" {
-		packageInformation, err := getDebianPackageInformation(p)
+	if validatedPURL.Type == "deb" {
+		packageInformation, err := getDebianPackageInformation(validatedPURL)
 		if err != nil {
-			return component, err
+			// swallow error but display a warning
+			slog.Warn("could not get license information", "err", err, "purl", pURL)
+			component.License = utils.Ptr("unknown")
+			return component, nil
 		}
+
 		cov := licensecheck.Scan(packageInformation.Bytes())
 		if len(cov.Match) == 0 {
+			component.License = utils.Ptr("unknown")
 			return component, nil
 		}
 		component.License = &cov.Match[0].ID
-		return component, nil
 	} else {
-		resp, err := s.depsDevService.GetVersion(context.Background(), p.Type, combineNamespaceAndName(p.Namespace, p.Name), p.Version)
+		resp, err := s.depsDevService.GetVersion(context.Background(), validatedPURL.Type, combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name), validatedPURL.Version)
 
 		if err != nil {
 			slog.Warn("could not get license information", "err", err, "purl", pURL)
@@ -234,7 +238,7 @@ func getDebianPackageInformation(pURL packageurl.PackageURL) (*bytes.Buffer, err
 	}
 
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
+	if err != nil || resp.StatusCode != 200 {
 		return nil, err
 	}
 

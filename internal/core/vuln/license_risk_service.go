@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"sync"
@@ -52,7 +53,10 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 
 	//go over every component and check if the license is a valid osi license; if not we can create a license risk with the provided information
 	for _, component := range components {
-
+		if component.License == nil {
+			slog.Warn("license is nil, avoided nil pointer dereference")
+			continue
+		}
 		_, validLicense := licenseMap[*component.License]
 		_, exists := doesLicenseRiskAlreadyExist[component.Purl]
 		// if we have an invalid license and we don not have a risk for this we create one
