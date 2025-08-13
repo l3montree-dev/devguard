@@ -764,6 +764,7 @@ func BuildRouter(db core.DB) *echo.Echo {
 	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)
 
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
+	dependencyVulnRouter.GET("/artifacts/", dependencyVulnController.ListArtifacts)
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)
 	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))

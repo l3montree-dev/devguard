@@ -112,7 +112,7 @@ func NewSarifCommand() *cobra.Command {
 		RunE:  sarifCmd,
 	}
 
-	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard-scanner/cmd/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
+	cmd.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sarif", "Name of the scanner. DevGuard will compare new and old results based on the scannerID.")
 
 	addScanFlags(cmd)
 	return cmd
@@ -174,6 +174,10 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 		return original, fmt.Errorf("start line or end line is out of range")
 	}
 
+	if startLine > endLine {
+		return original, fmt.Errorf("start line after end line")
+	}
+
 	//original is the string with the secret, but without the beginning of the line, so we reconstruct it
 	// slice the original string where *** are
 	secretStringBegin := strings.Split(original, "***")
@@ -203,7 +207,8 @@ func expandSnippet(fileContent []byte, startLine, endLine int, original string) 
 		expandedSnippet = startStr + "\n"
 	}
 
-	expandedSnippet += "+++\n" + secretLineBegin + original + "\n+++"
+	marker := "+++"
+	expandedSnippet += marker + "\n" + secretLineBegin + original + "\n" + marker
 
 	if len(end) > 0 {
 		endStr = strings.Join(end, "\n")
