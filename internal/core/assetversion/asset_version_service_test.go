@@ -142,16 +142,16 @@ func TestFirstPartyVulnHash(t *testing.T) {
 
 		assetVersionService := mocks.NewAssetVersionService(t)
 
-		// Create the expected FirstPartyVuln with the fingerprint
-		// The ID should be set to the fingerprint when it exists
+		// create the expected FirstPartyVuln with the fingerprint
+		// the ID should be set to the fingerprint when it exists
 		expectedVuln := models.FirstPartyVuln{
 			Vulnerability: models.Vulnerability{
-				ID: "test-fingerprint", // This should match the fingerprint
+				ID: "test-fingerprint", // this should match the fingerprint
 			},
 			Fingerprint: "test-fingerprint",
 		}
 
-		// Set up the mock expectation
+		// set up the mock expectation
 		assetVersionService.On("HandleFirstPartyVulnResult",
 			models.Org{},
 			models.Project{},
@@ -350,6 +350,223 @@ func TestCreateProjectTitle(t *testing.T) {
 		assert.Equal(t, "chLongName Api", title2)
 		assert.LessOrEqual(t, len(title1), 14)
 		assert.LessOrEqual(t, len(title2), 14)
+	})
+}
+
+func TestDiffVulnsBetweenBranches(t *testing.T) {
+	t.Run("should identify new vulnerabilities not on other branch", func(t *testing.T) {
+		scannerID := "test-scanner"
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0001"),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+				},
+			},
+			{
+				CVEID: utils.Ptr("CVE-2023-0002"),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+				},
+			},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0003"),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "main",
+				},
+			},
+		}
+
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, foundVulnerabilities, existingDependencyVulns)
+
+		assert.Len(t, newDetectedVulnsNotOnOtherBranch, 2)
+		assert.Empty(t, newDetectedButOnOtherBranchExisting)
+		assert.Empty(t, existingEvents)
+		assert.Equal(t, "CVE-2023-0001", *newDetectedVulnsNotOnOtherBranch[0].CVEID)
+		assert.Equal(t, "CVE-2023-0002", *newDetectedVulnsNotOnOtherBranch[1].CVEID)
+	})
+
+	t.Run("should identify vulnerabilities that exist on other branch", func(t *testing.T) {
+		scannerID := "test-scanner"
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0001"),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+				},
+			},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0001"),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "main",
+					Events: []models.VulnEvent{
+						{
+							Type: models.EventTypeDetected,
+						},
+					},
+				},
+			},
+		}
+
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, foundVulnerabilities, existingDependencyVulns)
+
+		assert.Empty(t, newDetectedVulnsNotOnOtherBranch)
+		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
+		assert.Len(t, existingEvents, 1)
+		assert.Equal(t, "CVE-2023-0001", *newDetectedButOnOtherBranchExisting[0].CVEID)
+		assert.Len(t, existingEvents[0], 1)
+		assert.Equal(t, "main", *existingEvents[0][0].OriginalAssetVersionName)
+	})
+
+	t.Run("should handle multiple vulnerabilities with same CVE on other branch", func(t *testing.T) {
+		scannerID := "test-scanner"
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0001"),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+				},
+			},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0001"),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "main",
+					Events: []models.VulnEvent{
+						{
+							Type: models.EventTypeDetected,
+						},
+					},
+				},
+			},
+			{
+				CVEID: utils.Ptr("CVE-2023-0001"),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "develop",
+					Events: []models.VulnEvent{
+						{
+							Type: models.EventTypeAccepted,
+						},
+					},
+				},
+			},
+		}
+
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, foundVulnerabilities, existingDependencyVulns)
+
+		assert.Empty(t, newDetectedVulnsNotOnOtherBranch)
+		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
+		assert.Len(t, existingEvents, 1)
+		assert.Len(t, existingEvents[0], 2) // combined events from both existing vulns
+		assert.Equal(t, "main", *existingEvents[0][0].OriginalAssetVersionName)
+		assert.Equal(t, "develop", *existingEvents[0][1].OriginalAssetVersionName)
+	})
+
+	t.Run("should filter out events that were already copied", func(t *testing.T) {
+		scannerID := "test-scanner"
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0001"),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+				},
+			},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0001"),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "main",
+					Events: []models.VulnEvent{
+						{
+							Type:                     models.EventTypeDetected,
+							OriginalAssetVersionName: nil, // original event
+						},
+						{
+							Type:                     models.EventTypeAccepted,
+							OriginalAssetVersionName: utils.Ptr("other-branch"), // already copied event
+						},
+					},
+				},
+			},
+		}
+
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, foundVulnerabilities, existingDependencyVulns)
+
+		assert.Empty(t, newDetectedVulnsNotOnOtherBranch)
+		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
+		assert.Len(t, existingEvents, 1)
+		assert.Len(t, existingEvents[0], 1) // only the original event, not the copied one
+		assert.Equal(t, models.EventTypeDetected, existingEvents[0][0].Type)
+		assert.Equal(t, "main", *existingEvents[0][0].OriginalAssetVersionName)
+	})
+
+	t.Run("should handle mixed scenario with new and existing vulnerabilities", func(t *testing.T) {
+		scannerID := "test-scanner"
+
+		foundVulnerabilities := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0001"), // new vuln
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+				},
+			},
+			{
+				CVEID: utils.Ptr("CVE-2023-0002"), // exists on other branch
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+				},
+			},
+			{
+				CVEID: utils.Ptr("CVE-2023-0003"), // new vuln
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "feature-branch",
+				},
+			},
+		}
+
+		existingDependencyVulns := []models.DependencyVuln{
+			{
+				CVEID: utils.Ptr("CVE-2023-0002"),
+				Vulnerability: models.Vulnerability{
+					AssetVersionName: "main",
+					Events: []models.VulnEvent{
+						{
+							Type: models.EventTypeDetected,
+						},
+					},
+				},
+			},
+		}
+
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, foundVulnerabilities, existingDependencyVulns)
+
+		assert.Len(t, newDetectedVulnsNotOnOtherBranch, 2)
+		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
+		assert.Len(t, existingEvents, 1)
+
+		// check new vulnerabilities
+		newCVEs := []string{*newDetectedVulnsNotOnOtherBranch[0].CVEID, *newDetectedVulnsNotOnOtherBranch[1].CVEID}
+		assert.Contains(t, newCVEs, "CVE-2023-0001")
+		assert.Contains(t, newCVEs, "CVE-2023-0003")
+
+		// check existing vulnerability
+		assert.Equal(t, "CVE-2023-0002", *newDetectedButOnOtherBranchExisting[0].CVEID)
+		assert.Len(t, existingEvents[0], 1)
+		assert.Equal(t, "main", *existingEvents[0][0].OriginalAssetVersionName)
 	})
 }
 

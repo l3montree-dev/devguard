@@ -31,8 +31,7 @@ const (
 	EventTypeComment           VulnEventType = "comment"
 
 	// Automated Events (Events that are triggered by automation's on the server)
-	EventTypeDetected                VulnEventType = "detected"
-	EventTypeDetectedOnAnotherBranch VulnEventType = "detectedOnAnotherBranch"
+	EventTypeDetected VulnEventType = "detected"
 
 	// EventTypeRiskAssessmentUpdated VulnEventType = "riskAssessmentUpdated"
 	EventTypeRawRiskAssessmentUpdated VulnEventType = "rawRiskAssessmentUpdated"
@@ -104,9 +103,6 @@ func (event VulnEvent) TableName() string {
 
 func (event VulnEvent) Apply(vuln Vuln) {
 	switch event.Type {
-	case EventTypeDetectedOnAnotherBranch:
-		// do nothing
-		return
 	case EventTypeAddedScanner:
 		scannerID, ok := (event.GetArbitraryJSONData()["scannerIds"]).(string)
 		if !ok {
@@ -223,23 +219,6 @@ func NewDetectedEvent(vulnID string, vulnType VulnType, userID string, riskCalcu
 	return ev
 }
 
-func NewDetectedOnAnotherBranchEvent(vulnID string, vulnType VulnType, userID string, riskCalculationReport common.RiskCalculationReport, scannerID string, assetVersionName string) VulnEvent {
-	ev := VulnEvent{
-		Type:     EventTypeDetectedOnAnotherBranch,
-		VulnType: vulnType,
-		VulnID:   vulnID,
-		UserID:   userID,
-	}
-
-	m := riskCalculationReport.Map()
-	m["scannerIds"] = scannerID
-	m["assetVersionName"] = assetVersionName
-
-	ev.SetArbitraryJSONData(m)
-
-	return ev
-}
-
 func NewMitigateEvent(vulnID string, vulnType VulnType, userID string, justification string, arbitraryData map[string]any) VulnEvent {
 	ev := VulnEvent{
 		Type:          EventTypeMitigate,
@@ -291,15 +270,6 @@ func NewRemovedScannerEvent(vulnID string, vulnType VulnType, userID string, sca
 
 	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
 	return ev
-}
-
-func (event VulnEvent) IsScanUnreleatedEvent() bool {
-	switch event.Type {
-	case EventTypeAddedScanner, EventTypeRemovedScanner, EventTypeDetectedOnAnotherBranch, EventTypeRawRiskAssessmentUpdated:
-		return false
-	default:
-		return true
-	}
 }
 
 func CheckStatusType(statusType string) error {
