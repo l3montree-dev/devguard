@@ -83,28 +83,17 @@ func (s *service) UserDetectedExistingVulnOnDifferentBranch(tx core.DB, scannerI
 		return nil
 	}
 
-	e := core.Environmental{
-		ConfidentialityRequirements: string(asset.ConfidentialityRequirement),
-		IntegrityRequirements:       string(asset.IntegrityRequirement),
-		AvailabilityRequirements:    string(asset.AvailabilityRequirement),
-	}
-
 	events := make([][]models.VulnEvent, len(dependencyVulns))
 
 	for i, dependencyVuln := range dependencyVulns {
 		// copy all events for this vulnerability
 		if len(alreadyExistingEvents[i]) != 0 {
-			events[i] = utils.Map(utils.Filter(alreadyExistingEvents[i], func(ev models.VulnEvent) bool {
-				return ev.IsScanUnreleatedEvent()
-			}), func(el models.VulnEvent) models.VulnEvent {
+			events[i] = utils.Map(alreadyExistingEvents[i], func(el models.VulnEvent) models.VulnEvent {
 				el.VulnID = dependencyVuln.CalculateHash()
 				el.ID = uuid.Nil
 				return el
 			})
 		}
-		riskReport := risk.RawRisk(*dependencyVuln.CVE, e, *dependencyVuln.ComponentDepth)
-		ev := models.NewDetectedOnAnotherBranchEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, "system", riskReport, scannerID, assetVersion.Name)
-		events[i] = append(events[i], ev)
 		// replay all events on the dependencyVuln
 		// but sort them by the time they were created ascending
 		slices.SortStableFunc(events[i], func(a, b models.VulnEvent) int {

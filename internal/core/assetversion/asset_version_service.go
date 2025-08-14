@@ -415,16 +415,16 @@ func diffVulnsBetweenBranches(scannerID string, foundVulnerabilities []models.De
 			// combine the existing vuln events into a single slice
 			existingVulnEventsOnOtherBranch := make([]models.VulnEvent, 0)
 			for _, vuln := range existingVulns {
-				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(vuln.Events, func(event models.VulnEvent) models.VulnEvent {
-					event.OriginalAssetVersionName = utils.Ptr(vuln.AssetVersionName)
-					return event
-				})...)
+				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(
+					utils.Filter(vuln.Events, func(ev models.VulnEvent) bool {
+						// make sure to only copy original events, not events which were already copied
+						return ev.OriginalAssetVersionName == nil
+					}),
+					func(event models.VulnEvent) models.VulnEvent {
+						event.OriginalAssetVersionName = utils.Ptr(vuln.AssetVersionName)
+						return event
+					})...)
 			}
-
-			// sort the existing vuln events by created at
-			slices.SortStableFunc(existingVulnEventsOnOtherBranch, func(a, b models.VulnEvent) int {
-				return a.CreatedAt.Compare(b.CreatedAt)
-			})
 
 			// we also want to get the events for that vuln
 			existingEvents = append(existingEvents, existingVulnEventsOnOtherBranch)
