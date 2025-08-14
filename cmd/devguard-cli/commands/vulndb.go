@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -32,12 +33,7 @@ func emptyOrContains(s []string, e string) bool {
 	if len(s) == 0 {
 		return true
 	}
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s, e)
 }
 
 func isValidCVE(cveID string) bool {
@@ -147,6 +143,7 @@ func newImportCommand() *cobra.Command {
 				slog.Error("could not connect to database", "err", err)
 				return
 			}
+			migrateDB(database)
 
 			cveRepository := repositories.NewCVERepository(database)
 			cweRepository := repositories.NewCWERepository(database)
