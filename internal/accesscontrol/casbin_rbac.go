@@ -23,6 +23,7 @@ import (
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/pubsub"
 	"github.com/l3montree-dev/devguard/internal/utils"
 
 	"github.com/casbin/casbin/v2"
@@ -292,8 +293,8 @@ func (c casbinRBACProvider) DomainsOfUser(user string) ([]string, error) {
 }
 
 // the provider can be used to create domain specific RBAC instances
-func NewCasbinRBACProvider(db *gorm.DB) (casbinRBACProvider, error) {
-	enforcer, err := buildEnforcer(db)
+func NewCasbinRBACProvider(db *gorm.DB, broker pubsub.Broker) (casbinRBACProvider, error) {
+	enforcer, err := buildEnforcer(db, broker)
 	if err != nil {
 		return casbinRBACProvider{}, err
 	}
@@ -302,7 +303,7 @@ func NewCasbinRBACProvider(db *gorm.DB) (casbinRBACProvider, error) {
 	}, nil
 }
 
-func buildEnforcer(db *gorm.DB) (*casbin.Enforcer, error) {
+func buildEnforcer(db *gorm.DB, broker pubsub.Broker) (*casbin.Enforcer, error) {
 	if casbinEnforcer != nil {
 		return casbinEnforcer, nil
 	}
@@ -321,6 +322,22 @@ func buildEnforcer(db *gorm.DB) (*casbin.Enforcer, error) {
 	}
 
 	e.EnableLog(false)
+	// make sure to publish a pub sub message when the policy changes
+	watcher := newCasbinPubSubWatcher(broker)
+	err = e.SetWatcher(watcher)
+	if err != nil {
+		return nil, fmt.Errorf("could not set watcher: %w", err)
+	}
+	// make sure to set the update callback
+	err = watcher.SetUpdateCallback(func(string) {
+		err := e.LoadPolicy()
+		if err != nil {
+			slog.Error("error while loading policy after update", "err", err)
+		}
+	})
+	if err != nil {
+		return nil, fmt.Errorf("could not set update callback: %w", err)
+	}
 
 	// Load the policy from DB.
 	if err = e.LoadPolicy(); err != nil {

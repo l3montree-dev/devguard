@@ -12,6 +12,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/githubint"
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/pubsub"
 	"github.com/spf13/cobra"
 )
 
@@ -45,9 +46,15 @@ func newTriggerCommand() *cobra.Command {
 				return err
 			}
 
+			broker, err := pubsub.BrokerFactory()
+			if err != nil {
+				slog.Error("failed to create broker", "err", err)
+				panic(err)
+			}
+
 			daemons, _ := cmd.Flags().GetStringArray("daemons")
 
-			return triggerDaemon(database, daemons)
+			return triggerDaemon(database, broker, daemons)
 		},
 	}
 
@@ -56,9 +63,9 @@ func newTriggerCommand() *cobra.Command {
 	return trigger
 }
 
-func triggerDaemon(db core.DB, daemons []string) error {
+func triggerDaemon(db core.DB, broker pubsub.Broker, daemons []string) error {
 	configService := config.NewService(db)
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, broker)
 	if err != nil {
 		panic(err)
 	}

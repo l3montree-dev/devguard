@@ -43,7 +43,6 @@ func (t *thirdPartyIntegrations) ListGroups(ctx context.Context, userID string, 
 		wg.Go(func() (projectsWithRoles, error) {
 			groups, roles, err := i.ListGroups(ctx, userID, providerID)
 			if err != nil {
-				slog.Error("error while listing groups", "err", err)
 				// swallow error
 				return projectsWithRoles{}, nil
 			}

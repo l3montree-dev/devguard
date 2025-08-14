@@ -50,6 +50,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/echohttp"
+	"github.com/l3montree-dev/devguard/internal/pubsub"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 )
@@ -428,10 +429,10 @@ func health(ctx echo.Context) error {
 	return ctx.String(200, "ok")
 }
 
-func BuildRouter(db core.DB) *echo.Echo {
+func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	ory := auth.GetOryAPIClient(os.Getenv("ORY_KRATOS_PUBLIC"))
 	oryAdmin := auth.GetOryAPIClient(os.Getenv("ORY_KRATOS_ADMIN"))
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, broker)
 	if err != nil {
 		panic(err)
 	}
@@ -800,6 +801,6 @@ func BuildRouter(db core.DB) *echo.Echo {
 	return server
 }
 
-func Start(db core.DB) {
-	slog.Error("failed to start server", "err", BuildRouter(db).Start(":8080").Error())
+func Start(db core.DB, broker pubsub.Broker) {
+	slog.Error("failed to start server", "err", BuildRouter(db, broker).Start(":8080").Error())
 }

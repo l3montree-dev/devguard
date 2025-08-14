@@ -27,6 +27,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/daemon"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/pubsub"
 
 	_ "github.com/lib/pq"
 )
@@ -89,9 +90,14 @@ func main() {
 		slog.Info("automatic migrations disabled via DISABLE_AUTOMIGRATE=true")
 	}
 
-	daemon.Start(db)
+	broker, err := pubsub.BrokerFactory()
+	if err != nil {
+		slog.Error("failed to create broker", "err", err)
+		panic(err)
+	}
 
-	api.Start(db)
+	daemon.Start(db, broker)
+	api.Start(db, broker)
 }
 
 func initSentry() {

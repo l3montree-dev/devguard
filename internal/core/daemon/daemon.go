@@ -14,6 +14,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/integrations/gitlabint"
 	"github.com/l3montree-dev/devguard/internal/core/leaderelection"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
+	"github.com/l3montree-dev/devguard/internal/pubsub"
 	"gorm.io/gorm"
 )
 
@@ -52,8 +53,8 @@ func markMirrored(configService config.Service, key string) error {
 	})
 }
 
-func Start(db core.DB) {
-	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db)
+func Start(db core.DB, broker pubsub.Broker) {
+	casbinRBACProvider, err := accesscontrol.NewCasbinRBACProvider(db, broker)
 	if err != nil {
 		panic(err)
 	}

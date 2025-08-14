@@ -18,6 +18,7 @@ package utils
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -188,4 +189,22 @@ func (f *SyncFireAndForgetSynchronizer) FireAndForget(fn func()) {
 
 func NewSyncFireAndForgetSynchronizer() *SyncFireAndForgetSynchronizer {
 	return &SyncFireAndForgetSynchronizer{}
+}
+
+func Debounce(fn func(), delay time.Duration) func() {
+	var timer *time.Timer
+	var mu sync.Mutex
+
+	return func() {
+		mu.Lock()
+		defer mu.Unlock()
+
+		if timer != nil {
+			timer.Stop()
+		}
+
+		timer = time.AfterFunc(delay, func() {
+			fn()
+		})
+	}
 }
