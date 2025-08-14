@@ -38,7 +38,7 @@ func (_m *OrgService) EXPECT() *OrgService_Expecter {
 }
 
 // CreateOrganization provides a mock function for the type OrgService
-func (_mock *OrgService) CreateOrganization(ctx core.Context, organization models.Org) error {
+func (_mock *OrgService) CreateOrganization(ctx core.Context, organization *models.Org) error {
 	ret := _mock.Called(ctx, organization)
 
 	if len(ret) == 0 {
@@ -46,7 +46,7 @@ func (_mock *OrgService) CreateOrganization(ctx core.Context, organization model
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(core.Context, models.Org) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(core.Context, *models.Org) error); ok {
 		r0 = returnFunc(ctx, organization)
 	} else {
 		r0 = ret.Error(0)
@@ -61,20 +61,20 @@ type OrgService_CreateOrganization_Call struct {
 
 // CreateOrganization is a helper method to define mock.On call
 //   - ctx core.Context
-//   - organization models.Org
+//   - organization *models.Org
 func (_e *OrgService_Expecter) CreateOrganization(ctx interface{}, organization interface{}) *OrgService_CreateOrganization_Call {
 	return &OrgService_CreateOrganization_Call{Call: _e.mock.On("CreateOrganization", ctx, organization)}
 }
 
-func (_c *OrgService_CreateOrganization_Call) Run(run func(ctx core.Context, organization models.Org)) *OrgService_CreateOrganization_Call {
+func (_c *OrgService_CreateOrganization_Call) Run(run func(ctx core.Context, organization *models.Org)) *OrgService_CreateOrganization_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.Context
 		if args[0] != nil {
 			arg0 = args[0].(core.Context)
 		}
-		var arg1 models.Org
+		var arg1 *models.Org
 		if args[1] != nil {
-			arg1 = args[1].(models.Org)
+			arg1 = args[1].(*models.Org)
 		}
 		run(
 			arg0,
@@ -89,7 +89,7 @@ func (_c *OrgService_CreateOrganization_Call) Return(err error) *OrgService_Crea
 	return _c
 }
 
-func (_c *OrgService_CreateOrganization_Call) RunAndReturn(run func(ctx core.Context, organization models.Org) error) *OrgService_CreateOrganization_Call {
+func (_c *OrgService_CreateOrganization_Call) RunAndReturn(run func(ctx core.Context, organization *models.Org) error) *OrgService_CreateOrganization_Call {
 	_c.Call.Return(run)
 	return _c
 }
