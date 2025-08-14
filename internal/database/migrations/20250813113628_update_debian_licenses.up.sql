@@ -1,1 +1,1 @@
-UPDATE public.components c SET c.license = NULL WHERE c.purl LIKE 'pkg:deb/debian/%';
+UPDATE public.components SET license = NULL WHERE purl LIKE 'pkg:deb/debian/%';
