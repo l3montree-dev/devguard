@@ -213,7 +213,7 @@ type OrganizationRepository interface {
 }
 
 type OrgService interface {
-	CreateOrganization(ctx Context, organization models.Org) error
+	CreateOrganization(ctx Context, organization *models.Org) error
 	ReadBySlug(slug string) (*models.Org, error)
 }
 

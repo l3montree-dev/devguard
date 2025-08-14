@@ -140,7 +140,6 @@ func (t *thirdPartyIntegrations) ListOrgs(ctx core.Context) ([]models.Org, error
 		wg.Go(func() ([]models.Org, error) {
 			orgs, err := i.ListOrgs(ctx)
 			if err != nil {
-				slog.Error("error while listing orgs", "err", err)
 				// swallow error
 				return nil, nil
 			}

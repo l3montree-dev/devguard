@@ -23,7 +23,7 @@ func NewService(organizationRepository core.OrganizationRepository, rbacProvider
 	}
 }
 
-func (o *orgService) CreateOrganization(ctx core.Context, organization models.Org) error {
+func (o *orgService) CreateOrganization(ctx core.Context, organization *models.Org) error {
 	if organization.Name == "" || organization.Slug == "" {
 		return echo.NewHTTPError(409, "organizations with an empty name or an empty slug are not allowed").WithInternal(fmt.Errorf("organizations with an empty name or an empty slug are not allowed"))
 	}
@@ -32,7 +32,7 @@ func (o *orgService) CreateOrganization(ctx core.Context, organization models.Or
 		return echo.NewHTTPError(409, "organizations named opencode, github or gitlab are not allowed").WithInternal(fmt.Errorf("organizations named opencode, github or gitlab are not allowed"))
 	}
 
-	err := o.organizationRepository.Create(nil, &organization)
+	err := o.organizationRepository.Create(nil, organization)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value") { //Check the returned error of Create Function
 			return echo.NewHTTPError(409, "organization with that name already exists").WithInternal(err) //Error Code 409: conflict in current state of the resource
@@ -46,7 +46,7 @@ func (o *orgService) CreateOrganization(ctx core.Context, organization models.Or
 	return nil
 }
 
-func (o *orgService) bootstrapOrg(ctx core.Context, organization models.Org) error {
+func (o *orgService) bootstrapOrg(ctx core.Context, organization *models.Org) error {
 	// create the permissions for the organization
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
 	userID := core.GetSession(ctx).GetUserID()

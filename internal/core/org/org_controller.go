@@ -62,7 +62,7 @@ func (controller *httpController) Create(ctx core.Context) error {
 		return echo.NewHTTPError(400, "slug is required")
 	}
 
-	err := controller.orgService.CreateOrganization(ctx, organization)
+	err := controller.orgService.CreateOrganization(ctx, &organization)
 	if err != nil {
 		return err
 	}

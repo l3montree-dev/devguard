@@ -29,7 +29,7 @@ func TestServiceCreate(t *testing.T) {
 
 		h := org.NewService(organizationRepository, nil)
 
-		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
+		err := h.CreateOrganization(ctx, &models.Org{Name: "cool org", Slug: "cool-org"})
 		if err == nil {
 			t.Fail()
 		}
@@ -46,7 +46,7 @@ func TestServiceCreate(t *testing.T) {
 
 		h := org.NewService(organizationRepository, nil)
 
-		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
+		err := h.CreateOrganization(ctx, &models.Org{Name: "cool org", Slug: "cool-org"})
 		if err == nil {
 			t.Fail()
 		}
@@ -77,7 +77,7 @@ func TestServiceCreate(t *testing.T) {
 
 		h := org.NewService(organizationRepository, rbacProvider)
 
-		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
+		err := h.CreateOrganization(ctx, &models.Org{Name: "cool org", Slug: "cool-org"})
 		if err != nil {
 			t.Fail()
 		}
@@ -106,7 +106,7 @@ func TestServiceCreate(t *testing.T) {
 
 		h := org.NewService(organizationRepository, rbacProvider)
 
-		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
+		err := h.CreateOrganization(ctx, &models.Org{Name: "cool org", Slug: "cool-org"})
 		if err == nil {
 			t.Fail()
 		}
@@ -136,7 +136,7 @@ func TestServiceCreate(t *testing.T) {
 
 		h := org.NewService(organizationRepository, rbacProvider)
 
-		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
+		err := h.CreateOrganization(ctx, &models.Org{Name: "cool org", Slug: "cool-org"})
 		if err == nil {
 			t.Fail()
 		}
@@ -166,7 +166,7 @@ func TestServiceCreate(t *testing.T) {
 
 		h := org.NewService(organizationRepository, rbacProvider)
 
-		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
+		err := h.CreateOrganization(ctx, &models.Org{Name: "cool org", Slug: "cool-org"})
 		if err == nil {
 			t.Fail()
 		}
@@ -194,7 +194,7 @@ func TestServiceCreate(t *testing.T) {
 		accesscontrol.On("InheritRole", mock.Anything, core.RoleAdmin).Return(fmt.Errorf("something went wrong"))
 
 		h := org.NewService(organizationRepository, rbacProvider)
-		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
+		err := h.CreateOrganization(ctx, &models.Org{Name: "cool org", Slug: "cool-org"})
 		if err == nil {
 			t.Fail()
 		}
@@ -223,7 +223,7 @@ func TestServiceCreate(t *testing.T) {
 		accesscontrol.On("AllowRole", core.RoleOwner, core.ObjectOrganization, mock.Anything).Return(fmt.Errorf("something went wrong"))
 
 		h := org.NewService(organizationRepository, rbacProvider)
-		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
+		err := h.CreateOrganization(ctx, &models.Org{Name: "cool org", Slug: "cool-org"})
 		if err == nil {
 			t.Fail()
 		}
@@ -253,7 +253,7 @@ func TestServiceCreate(t *testing.T) {
 		accesscontrol.On("AllowRole", core.RoleAdmin, core.ObjectOrganization, mock.Anything).Return(fmt.Errorf("something went wrong"))
 
 		h := org.NewService(organizationRepository, rbacProvider)
-		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
+		err := h.CreateOrganization(ctx, &models.Org{Name: "cool org", Slug: "cool-org"})
 		if err == nil {
 			t.Fail()
 		}
@@ -284,7 +284,7 @@ func TestServiceCreate(t *testing.T) {
 		accesscontrol.On("AllowRole", core.RoleAdmin, core.ObjectProject, mock.Anything).Return(fmt.Errorf("something went wrong"))
 
 		h := org.NewService(organizationRepository, rbacProvider)
-		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
+		err := h.CreateOrganization(ctx, &models.Org{Name: "cool org", Slug: "cool-org"})
 		if err == nil {
 			t.Fail()
 		}
@@ -316,7 +316,7 @@ func TestServiceCreate(t *testing.T) {
 		accesscontrol.On("AllowRole", core.RoleMember, core.ObjectOrganization, mock.Anything).Return(fmt.Errorf("something went wrong"))
 
 		h := org.NewService(organizationRepository, rbacProvider)
-		err := h.CreateOrganization(ctx, models.Org{Name: "cool org", Slug: "cool-org"})
+		err := h.CreateOrganization(ctx, &models.Org{Name: "cool org", Slug: "cool-org"})
 
 		if err == nil {
 			t.Fail()
