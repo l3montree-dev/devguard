@@ -74,16 +74,16 @@ func (s *service) CreateProject(ctx core.Context, project *models.Project) error
 func (s *service) BootstrapProject(rbac core.AccessControl, project *models.Project) error {
 	// make sure to keep the organization roles in sync
 	// let the organization admin role inherit all permissions from the project admin
-	if err := rbac.LinkDomainAndProjectRole("admin", "admin", project.ID.String()); err != nil {
+	if err := rbac.LinkDomainAndProjectRole(core.RoleAdmin, core.RoleAdmin, project.ID.String()); err != nil {
 		return err
 	}
 
 	// give the admin of a project all member permissions
-	if err := rbac.InheritProjectRole("admin", "member", project.ID.String()); err != nil {
+	if err := rbac.InheritProjectRole(core.RoleAdmin, core.RoleMember, project.ID.String()); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "user", []core.Action{
+	if err := rbac.AllowRoleInProject(project.ID.String(), core.RoleAdmin, core.ObjectUser, []core.Action{
 		core.ActionCreate,
 		core.ActionDelete,
 		core.ActionUpdate,
@@ -91,7 +91,7 @@ func (s *service) BootstrapProject(rbac core.AccessControl, project *models.Proj
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "asset", []core.Action{
+	if err := rbac.AllowRoleInProject(project.ID.String(), core.RoleAdmin, core.ObjectAsset, []core.Action{
 		core.ActionCreate,
 		core.ActionDelete,
 		core.ActionUpdate,
@@ -99,20 +99,20 @@ func (s *service) BootstrapProject(rbac core.AccessControl, project *models.Proj
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), "admin", "project", []core.Action{
+	if err := rbac.AllowRoleInProject(project.ID.String(), core.RoleAdmin, core.ObjectProject, []core.Action{
 		core.ActionDelete,
 		core.ActionUpdate,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), "member", "project", []core.Action{
+	if err := rbac.AllowRoleInProject(project.ID.String(), core.RoleMember, core.ObjectProject, []core.Action{
 		core.ActionRead,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRoleInProject(project.ID.String(), "member", "asset", []core.Action{
+	if err := rbac.AllowRoleInProject(project.ID.String(), core.RoleMember, core.ObjectAsset, []core.Action{
 		core.ActionRead,
 	}); err != nil {
 		return err
@@ -122,10 +122,10 @@ func (s *service) BootstrapProject(rbac core.AccessControl, project *models.Proj
 	if project.ParentID != nil {
 		// make a parent project admin an admin of the child project
 		if err := rbac.InheritProjectRolesAcrossProjects(core.ProjectRole{
-			Role:    "admin",
+			Role:    core.RoleAdmin,
 			Project: (*project.ParentID).String(),
 		}, core.ProjectRole{
-			Role:    "admin",
+			Role:    core.RoleAdmin,
 			Project: project.ID.String(),
 		}); err != nil {
 			return err
@@ -133,10 +133,10 @@ func (s *service) BootstrapProject(rbac core.AccessControl, project *models.Proj
 
 		// make a parent project member a member of the child project
 		if err := rbac.InheritProjectRolesAcrossProjects(core.ProjectRole{
-			Role:    "member",
+			Role:    core.RoleMember,
 			Project: (*project.ParentID).String(),
 		}, core.ProjectRole{
-			Role:    "member",
+			Role:    core.RoleMember,
 			Project: project.ID.String(),
 		}); err != nil {
 			return err

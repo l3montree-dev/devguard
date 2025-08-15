@@ -51,29 +51,29 @@ func (o *orgService) bootstrapOrg(ctx core.Context, organization *models.Org) er
 	rbac := o.rbacProvider.GetDomainRBAC(organization.ID.String())
 	userID := core.GetSession(ctx).GetUserID()
 
-	if err := rbac.GrantRole(userID, "owner"); err != nil {
+	if err := rbac.GrantRole(userID, core.RoleAdmin); err != nil {
 		return err
 	}
-	if err := rbac.InheritRole("owner", "admin"); err != nil { // an owner is an admin
+	if err := rbac.InheritRole(core.RoleOwner, core.RoleAdmin); err != nil { // an owner is an admin
 		return err
 	}
-	if err := rbac.InheritRole("admin", "member"); err != nil { // an admin is a member
+	if err := rbac.InheritRole(core.RoleAdmin, core.RoleMember); err != nil { // an admin is a member
 		return err
 	}
 
-	if err := rbac.AllowRole("owner", "organization", []core.Action{
+	if err := rbac.AllowRole(core.RoleOwner, core.ObjectOrganization, []core.Action{
 		core.ActionDelete,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRole("admin", "organization", []core.Action{
+	if err := rbac.AllowRole(core.RoleAdmin, core.ObjectOrganization, []core.Action{
 		core.ActionUpdate,
 	}); err != nil {
 		return err
 	}
 
-	if err := rbac.AllowRole("admin", "project", []core.Action{
+	if err := rbac.AllowRole(core.RoleAdmin, core.ObjectProject, []core.Action{
 		core.ActionCreate,
 		core.ActionRead, // listing all projects
 		core.ActionUpdate,
@@ -82,7 +82,7 @@ func (o *orgService) bootstrapOrg(ctx core.Context, organization *models.Org) er
 		return err
 	}
 
-	if err := rbac.AllowRole("member", "organization", []core.Action{
+	if err := rbac.AllowRole(core.RoleMember, core.ObjectOrganization, []core.Action{
 		core.ActionRead,
 	}); err != nil {
 		return err
