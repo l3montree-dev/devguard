@@ -348,7 +348,7 @@ func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx cor
 }
 
 func (repository *dependencyVulnRepository) GetArtifacts(assetVersionName string, assetID uuid.UUID) ([]string, error) {
-	var artifacts []string
+	artifacts := make([]string, 0)
 
 	query := `
 	       SELECT DISTINCT unnest(string_to_array(scanner_ids, ' '))

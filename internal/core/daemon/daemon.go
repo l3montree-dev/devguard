@@ -73,6 +73,7 @@ func Start(db core.DB, broker pubsub.Broker) {
 	leaderElector := leaderelection.NewDatabaseLeaderElector(configService)
 	// only run this function if leader
 	leaderElector.IfLeader(context.Background(), func() error {
+		daemonStart := time.Now()
 		defer time.Sleep(5 * time.Minute) // wait for 5 minutes before checking again - always - even in case of error
 		// we only update the vulnerability database each 6 hours.
 		// thus there is no need to recalculate the risk or anything earlier
@@ -199,6 +200,8 @@ func Start(db core.DB, broker pubsub.Broker) {
 			}
 			slog.Info("statistics updated", "duration", time.Since(start))
 		}
+
+		slog.Info("background jobs finished", "duration", time.Since(daemonStart))
 
 		return nil
 	})
