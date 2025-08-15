@@ -86,7 +86,6 @@ func (w *casbinPubSubWatcher) Update() error {
 	}
 
 	w.debouncedPublish()
-	w.callback("policy updated")
 	return nil
 }
 

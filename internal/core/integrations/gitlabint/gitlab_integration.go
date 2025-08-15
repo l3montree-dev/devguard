@@ -286,7 +286,7 @@ func (g *GitlabIntegration) getAndSaveOauth2TokenFromAuthServer(ctx core.Context
 
 	t, err := getGitlabAccessTokenFromOryIdentity(g.oauth2Endpoints, identity)
 	if err != nil {
-		slog.Error("failed to get gitlab access token from ory identity", "err", err)
+		slog.Warn("failed to get gitlab access token from ory identity")
 		return nil, err
 	}
 
@@ -320,7 +320,7 @@ func (g *GitlabIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 	// if the user revoked is sign in, we do not want to show him the org anymore.
 	tokens, err := g.getAndSaveOauth2TokenFromAuthServer(ctx)
 	if err != nil {
-		slog.Error("failed to find gitlab oauth2 tokens", "err", err)
+		slog.Debug("failed to find gitlab oauth2 tokens")
 		return nil, err
 	}
 

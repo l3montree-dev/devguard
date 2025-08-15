@@ -333,6 +333,8 @@ func buildEnforcer(db *gorm.DB, broker pubsub.Broker) (*casbin.SyncedEnforcer, e
 		err := e.LoadPolicy()
 		if err != nil {
 			slog.Error("error while loading policy after update", "err", err)
+		} else {
+			slog.Debug("policy successfully reloaded after update")
 		}
 	})
 	if err != nil {
