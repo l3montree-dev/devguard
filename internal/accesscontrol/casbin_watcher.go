@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 
 	"github.com/casbin/casbin/v2/persist"
 	"github.com/l3montree-dev/devguard/internal/pubsub"
@@ -51,20 +52,27 @@ func newCasbinPubSubWatcher(broker pubsub.Broker) *casbinPubSubWatcher {
 		log.Fatalf("could not subscribe to policy change topic: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
 	watcher := &casbinPubSubWatcher{
 		broker: broker,
-		cancel: cancel,
 	}
-	go func() {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ch:
-			watcher.callback("policy updated")
-		}
-	}()
+
+	go watcher.listenForUpdates(ch)
 	return watcher
+}
+
+func (w *casbinPubSubWatcher) listenForUpdates(ch <-chan map[string]interface{}) {
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("recovered from panic in casbinPubSubWatcher listener", "error", r)
+		}
+		w.listenForUpdates(ch)
+	}()
+
+	slog.Debug("listening for policy change notifications")
+	for range ch {
+		slog.Debug("received policy change notification")
+		w.callback("policy updated")
+	}
 }
 
 func (w *casbinPubSubWatcher) SetUpdateCallback(callback func(string)) error {
