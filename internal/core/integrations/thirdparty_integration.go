@@ -115,7 +115,7 @@ func (t *thirdPartyIntegrations) ListRepositories(ctx core.Context) ([]core.Repo
 		wg.Go(func() ([]core.Repository, error) {
 			repos, err := i.ListRepositories(ctx)
 			if err != nil {
-				slog.Error("error while listing repositories", "err", err)
+				slog.Debug("error while listing repositories", "err", err)
 				// swallow error
 				return nil, nil
 			}
