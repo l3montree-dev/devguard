@@ -18,18 +18,15 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/casbin/casbin/v2/persist"
 	"github.com/l3montree-dev/devguard/internal/pubsub"
-	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type casbinPubSubWatcher struct {
-	broker           pubsub.Broker
-	callback         func(string)
-	cancel           context.CancelFunc
-	debouncedPublish func()
+	broker   pubsub.Broker
+	callback func(string)
+	cancel   context.CancelFunc
 }
 
 type policyChangePubSubMessage struct {
@@ -58,11 +55,6 @@ func newCasbinPubSubWatcher(broker pubsub.Broker) *casbinPubSubWatcher {
 	watcher := &casbinPubSubWatcher{
 		broker: broker,
 		cancel: cancel,
-		debouncedPublish: utils.Debounce(func() {
-			if err := broker.Publish(ctx, policyChangePubSubMessage{}); err != nil {
-				log.Printf("could not publish policy change: %v", err)
-			}
-		}, 100*time.Millisecond),
 	}
 	go func() {
 		select {
@@ -85,7 +77,11 @@ func (w *casbinPubSubWatcher) Update() error {
 		return fmt.Errorf("no callback set")
 	}
 
-	w.debouncedPublish()
+	ctx := context.Background()
+
+	if err := w.broker.Publish(ctx, policyChangePubSubMessage{}); err != nil {
+		log.Printf("could not publish policy change: %v", err)
+	}
 	return nil
 }
 
