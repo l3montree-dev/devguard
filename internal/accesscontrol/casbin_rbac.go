@@ -31,15 +31,15 @@ import (
 )
 
 var _ core.AccessControl = &casbinRBAC{}
-var casbinEnforcer *casbin.Enforcer
+var casbinEnforcer *casbin.SyncedEnforcer
 
 type casbinRBAC struct {
 	domain   string // scopes this to a specific domain - or organization
-	enforcer *casbin.Enforcer
+	enforcer *casbin.SyncedEnforcer
 }
 
 type casbinRBACProvider struct {
-	enforcer *casbin.Enforcer
+	enforcer *casbin.SyncedEnforcer
 }
 
 func (c casbinRBACProvider) GetDomainRBAC(domain string) core.AccessControl {
@@ -303,7 +303,7 @@ func NewCasbinRBACProvider(db *gorm.DB, broker pubsub.Broker) (casbinRBACProvide
 	}, nil
 }
 
-func buildEnforcer(db *gorm.DB, broker pubsub.Broker) (*casbin.Enforcer, error) {
+func buildEnforcer(db *gorm.DB, broker pubsub.Broker) (*casbin.SyncedEnforcer, error) {
 	if casbinEnforcer != nil {
 		return casbinEnforcer, nil
 	}
@@ -316,7 +316,7 @@ func buildEnforcer(db *gorm.DB, broker pubsub.Broker) (*casbin.Enforcer, error) 
 		return nil, err
 	}
 
-	e, err := casbin.NewEnforcer("config/rbac_model.conf", a)
+	e, err := casbin.NewSyncedEnforcer("config/rbac_model.conf", a)
 	if err != nil {
 		return nil, err
 	}
