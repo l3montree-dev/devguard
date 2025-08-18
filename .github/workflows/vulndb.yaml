@@ -82,8 +82,8 @@ jobs:
 
     - name: Sign the database zip file  
       env:
-        COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-      run: cosign sign-blob --yes --key cosign.key vulndb.zip > vulndb.zip.sig
+        COSIGN_PASSWORD: ""
+      run: cosign import-key-pair --key cosign.key && cosign sign-blob --yes --key import-cosign.key vulndb.zip > vulndb.zip.sig
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v3
       with:
