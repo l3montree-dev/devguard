@@ -110,11 +110,11 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 		component.License = &cov.Match[0].ID
 	case "apk":
 		license, err := getAlpineLicense(validatedPURL)
-		if err != nil {
+		if err != nil || license == "" {
+			component.License = utils.Ptr("unknown")
 			return component, err
 		}
 		component.License = &license
-		return component, nil
 	default:
 		resp, err := s.depsDevService.GetVersion(context.Background(), validatedPURL.Type, combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name), validatedPURL.Version)
 
@@ -313,13 +313,18 @@ func getAlpineLicense(pURL packageurl.PackageURL) (string, error) {
 			}
 		}
 	}
-	packages := strings.Split(apkIndex.String(), "\n\n")
+	return extractLicenseFromAPKINDEX(*apkIndex, pURL.Name), nil
+}
+
+func extractLicenseFromAPKINDEX(contents bytes.Buffer, packageName string) string {
+	var license string
+	packages := strings.Split(contents.String(), "\n\n")
 	for _, pkg := range packages {
 		indexName := strings.Index(pkg, "\nP:")
 		if indexName != -1 {
 			startAtName := pkg[indexName+3:]
 			name, _, _ := strings.Cut(startAtName, "\n")
-			if name == pURL.Name {
+			if name == packageName {
 				indexLicense := strings.Index(pkg, "\nL:")
 				if indexLicense != -1 {
 					license, _, _ = strings.Cut(pkg[indexLicense+3:], "\n")
@@ -328,5 +333,5 @@ func getAlpineLicense(pURL packageurl.PackageURL) (string, error) {
 			}
 		}
 	}
-	return license, err
+	return license
 }
