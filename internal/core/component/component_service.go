@@ -1,12 +1,17 @@
 package component
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/google/licensecheck"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -79,7 +84,6 @@ func (s *service) RefreshComponentProjectInformation(project models.ComponentPro
 
 func (s *service) GetLicense(component models.Component) (models.Component, error) {
 	pURL := component.Purl
-
 	validatedPURL, err := packageurl.FromString(pURL)
 	if err != nil {
 		// swallow the error
@@ -88,7 +92,8 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	}
 
 	// check whether its a debian package. If it is we get our information from the debian package master
-	if validatedPURL.Type == "deb" {
+	switch validatedPURL.Type {
+	case "deb":
 		packageInformation, err := getDebianPackageInformation(validatedPURL)
 		if err != nil {
 			// swallow error but display a warning
@@ -103,7 +108,14 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 			return component, nil
 		}
 		component.License = &cov.Match[0].ID
-	} else {
+	case "apk":
+		license, err := getAlpineLicense(validatedPURL)
+		if err != nil {
+			return component, err
+		}
+		component.License = &license
+		return component, nil
+	default:
 		resp, err := s.depsDevService.GetVersion(context.Background(), validatedPURL.Type, combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name), validatedPURL.Version)
 
 		if err != nil {
@@ -125,50 +137,51 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 		}
 
 		// check if there is a related project
-		if len(resp.RelatedProjects) > 0 {
-			// find the project with the "SOURCE_REPO" type
-			for _, project := range resp.RelatedProjects {
-				if project.RelationType == "SOURCE_REPO" {
-					// get the project key and fetch the project
-					projectKey := project.ProjectKey.ID
-
-					// fetch the project
-					projectResp, err := s.depsDevService.GetProject(context.Background(), projectKey)
-					if err != nil {
-						slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
-					}
-
-					var jsonbScorecard *database.JSONB = nil
-					var scoreCardScore *float64 = nil
-					if projectResp.Scorecard != nil {
-						jsonb, err := database.JSONbFromStruct(*projectResp.Scorecard)
-						scoreCardScore = &projectResp.Scorecard.OverallScore
-
-						if err != nil {
-							slog.Warn("could not convert scorecard to jsonb", "err", err)
-						} else {
-							jsonbScorecard = &jsonb
-						}
-					}
-					// save the project information
-					componentProject := &models.ComponentProject{
-						ProjectKey:     projectKey,
-						StarsCount:     projectResp.StarsCount,
-						ForksCount:     projectResp.ForksCount,
-						License:        projectResp.License,
-						Description:    projectResp.Description,
-						Homepage:       projectResp.Homepage,
-						ScoreCard:      jsonbScorecard,
-						ScoreCardScore: scoreCardScore,
-					}
-
-					component.ComponentProject = componentProject
-					component.ComponentProjectKey = &projectKey
-					break
-				}
-			}
-		} else {
+		if len(resp.RelatedProjects) == 0 {
 			slog.Warn("no related projects found", "purl", pURL)
+			return component, nil
+		}
+
+		// find the project with the "SOURCE_REPO" type
+		for _, project := range resp.RelatedProjects {
+			if project.RelationType == "SOURCE_REPO" {
+				// get the project key and fetch the project
+				projectKey := project.ProjectKey.ID
+
+				// fetch the project
+				projectResp, err := s.depsDevService.GetProject(context.Background(), projectKey)
+				if err != nil {
+					slog.Warn("could not get project information", "err", err, "projectKey", projectKey)
+				}
+
+				var jsonbScorecard *database.JSONB = nil
+				var scoreCardScore *float64 = nil
+				if projectResp.Scorecard != nil {
+					jsonb, err := database.JSONbFromStruct(*projectResp.Scorecard)
+					scoreCardScore = &projectResp.Scorecard.OverallScore
+
+					if err != nil {
+						slog.Warn("could not convert scorecard to jsonb", "err", err)
+					} else {
+						jsonbScorecard = &jsonb
+					}
+				}
+				// save the project information
+				componentProject := &models.ComponentProject{
+					ProjectKey:     projectKey,
+					StarsCount:     projectResp.StarsCount,
+					ForksCount:     projectResp.ForksCount,
+					License:        projectResp.License,
+					Description:    projectResp.Description,
+					Homepage:       projectResp.Homepage,
+					ScoreCard:      jsonbScorecard,
+					ScoreCardScore: scoreCardScore,
+				}
+
+				component.ComponentProject = componentProject
+				component.ComponentProjectKey = &projectKey
+				break
+			}
 		}
 	}
 	return component, nil
@@ -249,4 +262,71 @@ func getDebianPackageInformation(pURL packageurl.PackageURL) (*bytes.Buffer, err
 	defer resp.Body.Close()
 	_, err = io.Copy(&buff, resp.Body)
 	return &buff, err
+}
+
+func getAlpineLicense(pURL packageurl.PackageURL) (string, error) {
+	var license string
+	defaultURL := "https://dl-cdn.alpinelinux.org/edge/main/x86_64/APKINDEX.tar.gz"
+	req, err := http.NewRequest("GET", defaultURL, nil)
+	if err != nil {
+		return license, err
+	}
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return license, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return license, fmt.Errorf("http request was unsuccessful, status code: %d", resp.StatusCode)
+	}
+	defer resp.Body.Close()
+
+	buf := bytes.Buffer{}
+	_, err = io.Copy(&buf, resp.Body)
+	if err != nil {
+		return license, err
+	}
+
+	unzippedContents, err := gzip.NewReader(&buf)
+	if err != nil {
+		return license, err
+	}
+	defer unzippedContents.Close()
+
+	tarContents := tar.NewReader(unzippedContents)
+	apkIndex := bytes.NewBuffer(make([]byte, 0, 2*1000*1000)) // allocate 2 MB memory for buf to avoid resizing operations
+	for {                                                     //go through every file
+		header, err := tarContents.Next()
+		if err == io.EOF {
+			break // end of tar archive
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		if header.Name == "APKINDEX" {
+			_, err = apkIndex.ReadFrom(tarContents)
+			if err != nil {
+				return license, err
+			}
+		}
+	}
+	packages := strings.Split(apkIndex.String(), "\n\n")
+	for _, pkg := range packages {
+		indexName := strings.Index(pkg, "\nP:")
+		if indexName != -1 {
+			startAtName := pkg[indexName+3:]
+			name, _, _ := strings.Cut(startAtName, "\n")
+			if name == pURL.Name {
+				indexLicense := strings.Index(pkg, "\nL:")
+				if indexLicense != -1 {
+					license, _, _ = strings.Cut(pkg[indexLicense+3:], "\n")
+					break
+				}
+			}
+		}
+	}
+	return license, err
 }
