@@ -164,6 +164,7 @@ func (p patchRequest) applyToModel(org *models.Org) bool {
 
 type OrgDTO struct {
 	models.Model
+	Avatar                 *string          `json:"avatar,omitempty"`
 	Name                   string           `json:"name" gorm:"type:text"`
 	ContactPhoneNumber     *string          `json:"contactPhoneNumber" gorm:"type:text"`
 	NumberOfEmployees      *int             `json:"numberOfEmployees"`

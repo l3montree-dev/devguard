@@ -236,7 +236,7 @@ func (s externalEntityProviderService) syncSingleProject(ctx core.Context, domai
 func (s externalEntityProviderService) updateUserRole(domainRBAC core.AccessControl, user string, userRole core.Role, projectID string) error {
 	currentRole, _ := domainRBAC.GetProjectRole(user, projectID) // swallow the error here - if an error happens means the user is not part of the project
 
-	if currentRole == userRole || currentRole == "" {
+	if currentRole == userRole || userRole == "" {
 		return nil // user already has the correct role
 	}
 
@@ -273,7 +273,7 @@ func (s externalEntityProviderService) syncProjectAssets(ctx core.Context, user 
 	if err := s.assetRepository.Upsert(&toUpsert, []clause.Column{
 		{Name: "external_entity_provider_id"},
 		{Name: "external_entity_id"},
-	}, []string{"project_id", "slug", "description", "name"}); err != nil {
+	}, []string{"project_id", "slug", "description", "name", "avatar"}); err != nil {
 		return echo.NewHTTPError(500, "could not upsert assets").WithInternal(err)
 	}
 

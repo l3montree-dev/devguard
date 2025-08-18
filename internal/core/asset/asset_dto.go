@@ -18,6 +18,7 @@ type LookupResponse struct {
 type AssetDTO struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
+	Avatar      *string   `json:"avatar,omitempty"`
 	Slug        string    `json:"slug"`
 	Description string    `json:"description"`
 	ProjectID   uuid.UUID `json:"projectId"`
@@ -68,6 +69,7 @@ func toDTO(asset models.Asset) AssetDTO {
 	return AssetDTO{
 		ID:          asset.ID,
 		Name:        asset.Name,
+		Avatar:      asset.Avatar,
 		Slug:        asset.Slug,
 		Description: asset.Description,
 		ProjectID:   asset.ProjectID,

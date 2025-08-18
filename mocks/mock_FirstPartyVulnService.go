@@ -271,6 +271,87 @@ func (_c *FirstPartyVulnService_UpdateFirstPartyVulnState_Call) RunAndReturn(run
 	return _c
 }
 
+// UserDetectedExistingFirstPartyVulnOnDifferentBranch provides a mock function for the type FirstPartyVulnService
+func (_mock *FirstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx core.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
+	ret := _mock.Called(tx, scannerID, firstPartyVulns, alreadyExistingEvents, assetVersion, asset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UserDetectedExistingFirstPartyVulnOnDifferentBranch")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, []models.FirstPartyVuln, [][]models.VulnEvent, models.AssetVersion, models.Asset) error); ok {
+		r0 = returnFunc(tx, scannerID, firstPartyVulns, alreadyExistingEvents, assetVersion, asset)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UserDetectedExistingFirstPartyVulnOnDifferentBranch'
+type FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call struct {
+	*mock.Call
+}
+
+// UserDetectedExistingFirstPartyVulnOnDifferentBranch is a helper method to define mock.On call
+//   - tx core.DB
+//   - scannerID string
+//   - firstPartyVulns []models.FirstPartyVuln
+//   - alreadyExistingEvents [][]models.VulnEvent
+//   - assetVersion models.AssetVersion
+//   - asset models.Asset
+func (_e *FirstPartyVulnService_Expecter) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx interface{}, scannerID interface{}, firstPartyVulns interface{}, alreadyExistingEvents interface{}, assetVersion interface{}, asset interface{}) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
+	return &FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call{Call: _e.mock.On("UserDetectedExistingFirstPartyVulnOnDifferentBranch", tx, scannerID, firstPartyVulns, alreadyExistingEvents, assetVersion, asset)}
+}
+
+func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) Run(run func(tx core.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset)) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []models.FirstPartyVuln
+		if args[2] != nil {
+			arg2 = args[2].([]models.FirstPartyVuln)
+		}
+		var arg3 [][]models.VulnEvent
+		if args[3] != nil {
+			arg3 = args[3].([][]models.VulnEvent)
+		}
+		var arg4 models.AssetVersion
+		if args[4] != nil {
+			arg4 = args[4].(models.AssetVersion)
+		}
+		var arg5 models.Asset
+		if args[5] != nil {
+			arg5 = args[5].(models.Asset)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) Return(err error) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call) RunAndReturn(run func(tx core.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error) *FirstPartyVulnService_UserDetectedExistingFirstPartyVulnOnDifferentBranch_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UserDetectedFirstPartyVulns provides a mock function for the type FirstPartyVulnService
 func (_mock *FirstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error {
 	ret := _mock.Called(tx, userID, scannerID, firstPartyVulns)

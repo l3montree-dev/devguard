@@ -17,7 +17,9 @@ package gitlabint
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/gosimple/slug"
@@ -48,19 +50,27 @@ func NewGitlabBatchClient(clients []core.GitlabClientFacade) *gitlabBatchClient 
 	}
 }
 
-func groupToProject(group *gitlab.Group, providerID string) models.Project {
+func groupToProject(avatarBase64 *string, group *gitlab.Group, providerID string) models.Project {
+	var externalEntityParentID *string = nil
+	if group.ParentID > 0 {
+		externalEntityParentID = utils.Ptr(fmt.Sprintf("%d", group.ParentID))
+	}
+
 	return models.Project{
 		Name:                     group.FullName,
 		Description:              group.Description,
+		Avatar:                   avatarBase64,
 		Slug:                     slug.Make(group.Path),
 		ExternalEntityProviderID: &providerID,
+		ExternalEntityParentID:   externalEntityParentID,
 		ExternalEntityID:         utils.Ptr(fmt.Sprintf("%d", group.ID)),
 	}
 }
 
-func projectToAsset(project *gitlab.Project, providerID string) models.Asset {
+func projectToAsset(avatarBase64 *string, project *gitlab.Project, providerID string) models.Asset {
 	return models.Asset{
 		Name:                     project.Name,
+		Avatar:                   avatarBase64,
 		Description:              project.Description,
 		Slug:                     slug.Make(project.Path),
 		ExternalEntityProviderID: &providerID,
@@ -117,6 +127,45 @@ func (client gitlabClient) Whoami(ctx context.Context) (*gitlab.User, *gitlab.Re
 
 func (client gitlabClient) GetVersion(ctx context.Context) (*gitlab.Version, *gitlab.Response, error) {
 	return client.Version.GetVersion()
+}
+
+func (client gitlabClient) FetchProjectAvatarBase64(projectID int) (string, error) {
+	b, _, err := client.Projects.DownloadAvatar(projectID, nil)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to download avatar: %w", err)
+	}
+
+	bytes, err := io.ReadAll(b)
+	if err != nil {
+		return "", fmt.Errorf("failed to read avatar bytes: %w", err)
+	}
+
+	base64Encoded := base64.StdEncoding.EncodeToString(bytes)
+	if base64Encoded == "" {
+		return "", fmt.Errorf("failed to encode avatar to base64")
+	}
+
+	return base64Encoded, nil
+}
+
+func (client gitlabClient) FetchGroupAvatarBase64(groupID int) (string, error) {
+	b, _, err := client.Groups.DownloadAvatar(groupID, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to download avatar: %w", err)
+	}
+
+	bytes, err := io.ReadAll(b)
+	if err != nil {
+		return "", fmt.Errorf("failed to read avatar bytes: %w", err)
+	}
+
+	base64Encoded := base64.StdEncoding.EncodeToString(bytes)
+	if base64Encoded == "" {
+		return "", fmt.Errorf("failed to encode avatar to base64")
+	}
+
+	return base64Encoded, nil
 }
 
 func (client gitlabClient) GetMemberInProject(ctx context.Context, userID int, projectID int) (*gitlab.ProjectMember, *gitlab.Response, error) {

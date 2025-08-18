@@ -19,6 +19,8 @@ type GitlabClientFacade interface {
 	Whoami(ctx context.Context) (*gitlab.User, *gitlab.Response, error)
 
 	GetVersion(ctx context.Context) (*gitlab.Version, *gitlab.Response, error)
+	FetchGroupAvatarBase64(groupID int) (string, error)
+	FetchProjectAvatarBase64(projectID int) (string, error)
 
 	GetClientID() string
 
