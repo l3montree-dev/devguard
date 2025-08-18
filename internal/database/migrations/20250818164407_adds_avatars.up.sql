@@ -14,7 +14,7 @@
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 -- Add avatar column to projects table
-ALTER TABLE projects ADD COLUMN IF NOT EXISTS avatar TEXT;
+ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS avatar TEXT;
 
 -- Add avatar column to assets table  
-ALTER TABLE assets ADD COLUMN  IF NOT EXISTS avatar TEXT;
+ALTER TABLE public.assets ADD COLUMN  IF NOT EXISTS avatar TEXT;
