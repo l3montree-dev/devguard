@@ -273,7 +273,7 @@ func (s externalEntityProviderService) syncProjectAssets(ctx core.Context, user 
 	if err := s.assetRepository.Upsert(&toUpsert, []clause.Column{
 		{Name: "external_entity_provider_id"},
 		{Name: "external_entity_id"},
-	}, []string{"project_id", "slug", "description", "name"}); err != nil {
+	}, []string{"project_id", "slug", "description", "name", "avatar"}); err != nil {
 		return echo.NewHTTPError(500, "could not upsert assets").WithInternal(err)
 	}
 

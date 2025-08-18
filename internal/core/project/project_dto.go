@@ -107,6 +107,7 @@ func (projectPatch *patchRequest) applyToModel(project *models.Project) bool {
 }
 
 type ProjectDTO struct {
+	Avatar      *string   `json:"avatar,omitempty"` // URL to the project's avatar
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
 	Slug        string    `json:"slug"`
@@ -140,6 +141,7 @@ func fromModel(project models.Project) ProjectDTO {
 	}
 
 	return ProjectDTO{
+		Avatar:      project.Avatar,
 		ID:          project.ID,
 		Name:        project.Name,
 		Slug:        project.Slug,

@@ -24,8 +24,9 @@ const (
 
 type Asset struct {
 	Model
-	Name string `json:"name" gorm:"type:text"`
-	Slug string `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
+	Name   string  `json:"name" gorm:"type:text"`
+	Avatar *string `json:"avatar" gorm:"type:text"`
+	Slug   string  `json:"slug" gorm:"type:text;uniqueIndex:idx_app_project_slug;not null;"`
 
 	CentralDependencyVulnManagement bool `json:"centralDependencyVulnManagement" gorm:"default:false;"`
 

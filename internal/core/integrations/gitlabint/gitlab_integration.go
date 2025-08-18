@@ -532,13 +532,25 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 	result := make([]models.Asset, 0, len(projects))
 	accessLevels := make([]core.Role, 0, len(projects))
 	for _, project := range projects {
+		// check if we can fetch the avatar
+		var avatarBase64 *string
+		if project.AvatarURL != "" {
+			avatar, err := gitlabClient.FetchProjectAvatarBase64(project.ID)
+			if err != nil {
+				slog.Error("failed to fetch avatar", "err", err, "projectID", project.ID)
+				// Continue without avatar instead of returning error
+			} else {
+				avatarBase64 = &avatar
+			}
+		}
+
 		// check if the project has a permissions set - otherwise it is an public project
 		if project.Permissions != nil && project.Permissions.ProjectAccess != nil {
-			result = append(result, projectToAsset(project, providerID))
+			result = append(result, projectToAsset(avatarBase64, project, providerID))
 			accessLevels = append(accessLevels, gitlabAccessLevelToRole(project.Permissions.ProjectAccess.AccessLevel))
 		} else {
 			// if the project has no permissions set, it is a public project - but we asked for min access level of developer, so we can assume that the user has at least developer permissions
-			result = append(result, projectToAsset(project, providerID))
+			result = append(result, projectToAsset(avatarBase64, project, providerID))
 			accessLevels = append(accessLevels, core.RoleMember) // default to member if no higher access level is found
 		}
 	}

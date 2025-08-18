@@ -67,9 +67,10 @@ func groupToProject(avatarBase64 *string, group *gitlab.Group, providerID string
 	}
 }
 
-func projectToAsset(project *gitlab.Project, providerID string) models.Asset {
+func projectToAsset(avatarBase64 *string, project *gitlab.Project, providerID string) models.Asset {
 	return models.Asset{
 		Name:                     project.Name,
+		Avatar:                   avatarBase64,
 		Description:              project.Description,
 		Slug:                     slug.Make(project.Path),
 		ExternalEntityProviderID: &providerID,
