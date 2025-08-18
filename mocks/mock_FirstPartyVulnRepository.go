@@ -967,6 +967,86 @@ func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIDPaged_Cal
 	return _c
 }
 
+// GetFirstPartyVulnsByOtherAssetVersions provides a mock function for the type FirstPartyVulnRepository
+func (_mock *FirstPartyVulnRepository) GetFirstPartyVulnsByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID, scannerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFirstPartyVulnsByOtherAssetVersions")
+	}
+
+	var r0 []models.FirstPartyVuln
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) ([]models.FirstPartyVuln, error)); ok {
+		return returnFunc(tx, assetVersionName, assetID, scannerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) []models.FirstPartyVuln); ok {
+		r0 = returnFunc(tx, assetVersionName, assetID, scannerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.FirstPartyVuln)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, string) error); ok {
+		r1 = returnFunc(tx, assetVersionName, assetID, scannerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFirstPartyVulnsByOtherAssetVersions'
+type FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call struct {
+	*mock.Call
+}
+
+// GetFirstPartyVulnsByOtherAssetVersions is a helper method to define mock.On call
+//   - tx core.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scannerID string
+func (_e *FirstPartyVulnRepository_Expecter) GetFirstPartyVulnsByOtherAssetVersions(tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
+	return &FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call{Call: _e.mock.On("GetFirstPartyVulnsByOtherAssetVersions", tx, assetVersionName, assetID, scannerID)}
+}
+
+func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) Return(firstPartyVulns []models.FirstPartyVuln, err error) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
+	_c.Call.Return(firstPartyVulns, err)
+	return _c
+}
+
+func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function for the type FirstPartyVulnRepository
 func (_mock *FirstPartyVulnRepository) List(ids []string) ([]models.FirstPartyVuln, error) {
 	ret := _mock.Called(ids)

@@ -16,6 +16,7 @@ const (
 type Project struct {
 	Model
 	Name           string    `json:"name" gorm:"type:text"`
+	Avatar         *string   `json:"avatar" gorm:"type:text"`
 	Assets         []Asset   `json:"assets" gorm:"foreignKey:ProjectID;"`
 	OrganizationID uuid.UUID `json:"organizationId" gorm:"uniqueIndex:idx_project_org_slug;not null;type:uuid"`
 	Organization   Org       `json:"organization" gorm:"foreignKey:OrganizationID;references:ID;constraint:OnDelete:CASCADE;"`
@@ -39,6 +40,7 @@ type Project struct {
 
 	ExternalEntityID         *string `json:"externalEntityId" gorm:"uniqueIndex:unique_external_entity;"`
 	ExternalEntityProviderID *string `json:"externalEntityProviderId" gorm:"uniqueIndex:unique_external_entity;"`
+	ExternalEntityParentID   *string `json:"externalEntityProviderParentId" gorm:"type:text;"`
 
 	Webhooks []WebhookIntegration `json:"webhooks" gorm:"foreignKey:ProjectID;"`
 }

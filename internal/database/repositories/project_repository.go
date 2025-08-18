@@ -227,7 +227,7 @@ func (g *projectRepository) UpsertSplit(tx core.DB, externalProviderID string, p
 	err = g.Upsert(&projects, []clause.Column{
 		{Name: "external_entity_provider_id"},
 		{Name: "external_entity_id"},
-	}, []string{"name", "description", "organization_id"})
+	}, []string{"name", "description", "organization_id", "external_entity_parent_id", "avatar"})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -242,6 +242,18 @@ func (g *projectRepository) UpsertSplit(tx core.DB, externalProviderID string, p
 		}
 	}
 
+	// make sure to set the correct parent ids for the projects. Maybe there is an externalEntityProviderParentID set
+	err = g.GetDB(tx).Exec(`
+	UPDATE projects p
+	SET parent_id = parent.id
+	FROM projects parent
+	WHERE p.external_entity_parent_id = parent.external_entity_id
+  	AND p.id != parent.id;`).Error
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to set parent ids: %w", err)
+	}
+	// return the new and updated projects
 	return newProjects, updatedProjects, nil
 }
 

@@ -696,6 +696,126 @@ func (_c *GitlabClientFacade_EditIssueLabel_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// FetchGroupAvatarBase64 provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) FetchGroupAvatarBase64(groupID int) (string, error) {
+	ret := _mock.Called(groupID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchGroupAvatarBase64")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(int) (string, error)); ok {
+		return returnFunc(groupID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(int) string); ok {
+		r0 = returnFunc(groupID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(int) error); ok {
+		r1 = returnFunc(groupID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// GitlabClientFacade_FetchGroupAvatarBase64_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchGroupAvatarBase64'
+type GitlabClientFacade_FetchGroupAvatarBase64_Call struct {
+	*mock.Call
+}
+
+// FetchGroupAvatarBase64 is a helper method to define mock.On call
+//   - groupID int
+func (_e *GitlabClientFacade_Expecter) FetchGroupAvatarBase64(groupID interface{}) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
+	return &GitlabClientFacade_FetchGroupAvatarBase64_Call{Call: _e.mock.On("FetchGroupAvatarBase64", groupID)}
+}
+
+func (_c *GitlabClientFacade_FetchGroupAvatarBase64_Call) Run(run func(groupID int)) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 int
+		if args[0] != nil {
+			arg0 = args[0].(int)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_FetchGroupAvatarBase64_Call) Return(s string, err error) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_FetchGroupAvatarBase64_Call) RunAndReturn(run func(groupID int) (string, error)) *GitlabClientFacade_FetchGroupAvatarBase64_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FetchProjectAvatarBase64 provides a mock function for the type GitlabClientFacade
+func (_mock *GitlabClientFacade) FetchProjectAvatarBase64(projectID int) (string, error) {
+	ret := _mock.Called(projectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchProjectAvatarBase64")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(int) (string, error)); ok {
+		return returnFunc(projectID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(int) string); ok {
+		r0 = returnFunc(projectID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(int) error); ok {
+		r1 = returnFunc(projectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// GitlabClientFacade_FetchProjectAvatarBase64_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchProjectAvatarBase64'
+type GitlabClientFacade_FetchProjectAvatarBase64_Call struct {
+	*mock.Call
+}
+
+// FetchProjectAvatarBase64 is a helper method to define mock.On call
+//   - projectID int
+func (_e *GitlabClientFacade_Expecter) FetchProjectAvatarBase64(projectID interface{}) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
+	return &GitlabClientFacade_FetchProjectAvatarBase64_Call{Call: _e.mock.On("FetchProjectAvatarBase64", projectID)}
+}
+
+func (_c *GitlabClientFacade_FetchProjectAvatarBase64_Call) Run(run func(projectID int)) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 int
+		if args[0] != nil {
+			arg0 = args[0].(int)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *GitlabClientFacade_FetchProjectAvatarBase64_Call) Return(s string, err error) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *GitlabClientFacade_FetchProjectAvatarBase64_Call) RunAndReturn(run func(projectID int) (string, error)) *GitlabClientFacade_FetchProjectAvatarBase64_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetClientID provides a mock function for the type GitlabClientFacade
 func (_mock *GitlabClientFacade) GetClientID() string {
 	ret := _mock.Called()
