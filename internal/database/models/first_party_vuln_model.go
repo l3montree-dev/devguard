@@ -100,8 +100,8 @@ func (firstPartyVuln *FirstPartyVuln) CalculateHash() string {
 	return hash
 }
 
-func (FirstPartyVuln FirstPartyVuln) AssetVersionIndependentHash() string {
-	stringToHash := FirstPartyVuln.RuleID + "/" + FirstPartyVuln.URI + "/" + FirstPartyVuln.ScannerIDs + "/" + FirstPartyVuln.AssetID.String()
+func (firstPartyVuln FirstPartyVuln) AssetVersionIndependentHash() string {
+	stringToHash := firstPartyVuln.RuleID + "/" + firstPartyVuln.URI
 	hash := utils.HashString(stringToHash)
 	return hash
 }

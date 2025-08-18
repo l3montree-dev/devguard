@@ -604,9 +604,10 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 		// Verify events were copied correctly
 		var copiedAcceptedEvent, copiedCommentEvent models.VulnEvent
 		for _, event := range branchBVuln.Events {
-			if event.Type == models.EventTypeAccepted {
+			switch event.Type {
+			case models.EventTypeAccepted:
 				copiedAcceptedEvent = event
-			} else if event.Type == models.EventTypeComment {
+			case models.EventTypeComment:
 				copiedCommentEvent = event
 			}
 		}
