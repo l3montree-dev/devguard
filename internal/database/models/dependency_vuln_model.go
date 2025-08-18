@@ -62,6 +62,27 @@ func (vuln *DependencyVuln) GetType() VulnType {
 	return VulnTypeDependencyVuln
 }
 
+func (vuln DependencyVuln) AssetVersionIndependentHash() string {
+	if vuln.CVEID == nil {
+		return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", utils.OrDefault(vuln.ComponentPurl, ""), vuln.AssetVersionName, vuln.AssetID, vuln.ScannerIDs))
+	}
+	return *vuln.CVEID
+}
+
+func (vuln DependencyVuln) GetAssetVersionName() string {
+	if vuln.AssetVersionName == "" {
+		return vuln.AssetVersionName
+	}
+	return vuln.AssetVersionName
+}
+
+func (vuln DependencyVuln) GetEvents() []VulnEvent {
+	if vuln.Events == nil {
+		return []VulnEvent{}
+	}
+	return vuln.Events
+}
+
 type DependencyVulnRisk struct {
 	DependencyVulnID  string
 	CreatedAt         time.Time

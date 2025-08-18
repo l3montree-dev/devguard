@@ -100,6 +100,20 @@ func (firstPartyVuln *FirstPartyVuln) CalculateHash() string {
 	return hash
 }
 
+func (FirstPartyVuln FirstPartyVuln) AssetVersionIndependentHash() string {
+	stringToHash := FirstPartyVuln.RuleID + "/" + FirstPartyVuln.URI + "/" + FirstPartyVuln.ScannerIDs + "/" + FirstPartyVuln.AssetID.String()
+	hash := utils.HashString(stringToHash)
+	return hash
+}
+
+func (firstPartyVuln FirstPartyVuln) GetAssetVersionName() string {
+	return firstPartyVuln.AssetVersionName
+}
+
+func (firstPartyVuln FirstPartyVuln) GetEvents() []VulnEvent {
+	return firstPartyVuln.Events
+}
+
 func (firstPartyVuln *FirstPartyVuln) BeforeSave(tx *gorm.DB) (err error) {
 	hash := firstPartyVuln.CalculateHash()
 	firstPartyVuln.ID = hash

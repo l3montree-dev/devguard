@@ -18,6 +18,24 @@ func NewFirstPartyVulnerabilityRepository(db core.DB) *firstPartyVulnerabilityRe
 	}
 }
 
+func (repository *firstPartyVulnerabilityRepository) GetFirstPartyVulnsByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
+	var vulns = []models.FirstPartyVuln{}
+
+	query := repository.Repository.GetDB(tx).Model(&models.FirstPartyVuln{}).Preload("Events").Where("asset_version_name != ? AND asset_id = ? ", assetVersionName, assetID)
+
+	if scannerID != "" {
+		// scanner ids is a string array separated by whitespaces
+		query = query.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
+	}
+
+	err := query.Find(&vulns).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return vulns, nil
+}
+
 func (repository *firstPartyVulnerabilityRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error) {
 	// tx core.DB missing (or chosen not to be implemented) ?
 	var vulns = []models.FirstPartyVuln{}

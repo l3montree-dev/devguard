@@ -168,6 +168,7 @@ type FirstPartyVulnRepository interface {
 	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error
 	GetByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
+	GetFirstPartyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 }
 
 type LicenseRiskRepository interface {
@@ -297,6 +298,7 @@ type AssetVersionRepository interface {
 type FirstPartyVulnService interface {
 	UserFixedFirstPartyVulns(tx DB, userID string, firstPartyVulns []models.FirstPartyVuln) error
 	UserDetectedFirstPartyVulns(tx DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error
+	UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error
 	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error)
 	SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error
 	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error

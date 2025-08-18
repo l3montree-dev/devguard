@@ -215,15 +215,22 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		return vuln.State != models.VulnStateFixed
 	})
 
+	existingVulnsOnOtherBranch, err := s.firstPartyVulnRepository.GetFirstPartyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	if err != nil {
+		slog.Error("could not get existing vulns on other branches", "err", err)
+		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
+	}
+
+	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dependencyVuln models.FirstPartyVuln) bool {
+		return dependencyVuln.State != models.VulnStateFixed
+	})
+
 	comparison := utils.CompareSlices(existingVulns, vulns, func(vuln models.FirstPartyVuln) string {
 		return vuln.CalculateHash()
 	})
 
-	fixedVulns := comparison.OnlyInA
 	newVulns := comparison.OnlyInB
-
 	inBoth := comparison.InBoth // these are the vulns that are already in the database, but we need to update them
-
 	updatedFirstPartyVulns := make([]models.FirstPartyVuln, 0)
 
 	for i := range inBoth {
@@ -235,18 +242,27 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 			}
 		}
 	}
-
 	// filter out any vulnerabilities which were already fixed, by only keeping the open ones
-	fixedVulns = utils.Filter(fixedVulns, func(vuln models.FirstPartyVuln) bool {
+	fixedVulns := utils.Filter(comparison.OnlyInA, func(vuln models.FirstPartyVuln) bool {
 		return vuln.State == models.VulnStateOpen
 	})
 
+	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newVulns, existingVulnsOnOtherBranch)
+
 	// get a transaction
 	if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
-		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, newVulns); err != nil {
-			// this will cancel the transaction
+		// Process new vulnerabilities that exist on other branches with lifecycle management
+		if err := s.firstPartyVulnService.UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx, scannerID, newDetectedButOnOtherBranchExisting, existingEvents, *assetVersion, asset); err != nil {
+			slog.Error("error when trying to add events for existing first party vulnerability on different branch", "err", err)
 			return err
 		}
+
+		// Process new vulnerabilities that don't exist on other branches
+		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, newDetectedVulnsNotOnOtherBranch); err != nil {
+			return err
+		}
+
+		// Process fixed vulnerabilities
 		if err := s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, fixedVulns); err != nil {
 			return err
 		}
@@ -264,21 +280,21 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
 
-	if len(newVulns) > 0 {
+	if len(newDetectedVulnsNotOnOtherBranch) > 0 {
 		go func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.FirstPartyVulnsDetectedEvent{
 				AssetVersion: core.ToAssetVersionObject(*assetVersion),
 				Asset:        core.ToAssetObject(asset),
 				Project:      core.ToProjectObject(project),
 				Org:          core.ToOrgObject(org),
-				Vulns:        utils.Map(newVulns, vuln.FirstPartyVulnToDto),
+				Vulns:        utils.Map(newDetectedVulnsNotOnOtherBranch, vuln.FirstPartyVulnToDto),
 			}); err != nil {
 				slog.Error("could not handle first party vulnerabilities detected event", "err", err)
 			}
 		}()
 	}
 
-	return newVulns, fixedVulns, append(newVulns, inBoth...), nil
+	return newDetectedVulnsNotOnOtherBranch, fixedVulns, append(newDetectedVulnsNotOnOtherBranch, inBoth...), nil
 }
 
 func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
@@ -386,53 +402,49 @@ func diffScanResults(currentScanner string, foundVulnerabilities []models.Depend
 	return foundByScannerAndNotExisting, fixedVulns, detectedByOtherScanner, notDetectedByScannerAnymore
 }
 
-func diffVulnsBetweenBranches(scannerID string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, [][]models.VulnEvent) {
-	// build a map from those vulns based on the cve id
-	vulnMap := make(map[string][]models.DependencyVuln)
-	for _, vuln := range existingDependencyVulns {
-		if vuln.CVEID != nil {
-			if _, ok := vulnMap[*vuln.CVEID]; !ok {
-				// we only want to keep the latest version of the vuln
-				vulnMap[*vuln.CVEID] = []models.DependencyVuln{vuln}
-			} else {
-				vulnMap[*vuln.CVEID] = append(vulnMap[*vuln.CVEID], vuln)
-			}
-		}
+type Diffable interface {
+	AssetVersionIndependentHash() string
+	GetAssetVersionName() string
+	GetEvents() []models.VulnEvent
+}
+
+func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T) ([]T, []T, [][]models.VulnEvent) {
+	newDetectedVulnsNotOnOtherBranch := make([]T, 0)
+	newDetectedButOnOtherBranchExisting := make([]T, 0)
+	existingEvents := make([][]models.VulnEvent, 0)
+
+	// Create a map of existing vulnerabilities by hash for quick lookup
+	existingVulnsMap := make(map[string][]T)
+	for _, vuln := range existingVulns {
+		hash := vuln.AssetVersionIndependentHash()
+		existingVulnsMap[hash] = append(existingVulnsMap[hash], vuln)
 	}
 
-	newDetectedVulnsNotOnOtherBranch := make([]models.DependencyVuln, 0)
-	// check the new detected vulns if they are already present on the default branch
-	newDetectedButOnOtherBranchExisting := make([]models.DependencyVuln, 0)
-	existingEvents := make([][]models.VulnEvent, 0)
 	for _, newDetectedVuln := range foundVulnerabilities {
-		if newDetectedVuln.CVEID == nil {
-			continue // we only want to check for CVE vulns
-		}
-		if existingVulns, ok := vulnMap[*newDetectedVuln.CVEID]; ok {
-			// we found an existing vuln on the default branch
+		hash := newDetectedVuln.AssetVersionIndependentHash()
+		if existingVulns, ok := existingVulnsMap[hash]; ok {
+			// there is already a vulnerability with the same hash -
+			// thus it exists on another branch
 			newDetectedButOnOtherBranchExisting = append(newDetectedButOnOtherBranchExisting, newDetectedVuln)
 
-			// combine the existing vuln events into a single slice
 			existingVulnEventsOnOtherBranch := make([]models.VulnEvent, 0)
-			for _, vuln := range existingVulns {
-				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(
-					utils.Filter(vuln.Events, func(ev models.VulnEvent) bool {
-						// make sure to only copy original events, not events which were already copied
-						return ev.OriginalAssetVersionName == nil
-					}),
-					func(event models.VulnEvent) models.VulnEvent {
-						event.OriginalAssetVersionName = utils.Ptr(vuln.AssetVersionName)
-						return event
-					})...)
+			for _, existingVuln := range existingVulns {
+				// we only want to copy original events, not events which were already copied
+				events := utils.Filter(existingVuln.GetEvents(), func(ev models.VulnEvent) bool {
+					return ev.OriginalAssetVersionName == nil
+				})
+				// copy the events and set the original asset version name to the existing vuln's asset version name
+				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
+					event.OriginalAssetVersionName = utils.Ptr(existingVuln.GetAssetVersionName())
+					return event
+				})...)
 			}
-
-			// we also want to get the events for that vuln
 			existingEvents = append(existingEvents, existingVulnEventsOnOtherBranch)
 		} else {
-			// this is really a new detected vuln
 			newDetectedVulnsNotOnOtherBranch = append(newDetectedVulnsNotOnOtherBranch, newDetectedVuln)
 		}
 	}
+
 	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
 }
 
@@ -462,7 +474,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 
 	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(scannerID, dependencyVulns, existingDependencyVulns)
 
-	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, newDetectedVulns, existingVulnsOnOtherBranch)
+	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newDetectedVulns, existingVulnsOnOtherBranch)
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, scannerID, newDetectedButOnOtherBranchExisting, existingEvents, *assetVersion, asset); err != nil {
