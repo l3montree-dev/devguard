@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -332,6 +333,12 @@ func (g *GitlabIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 	return utils.Map(tokens, oauth2TokenToOrg), nil
 }
 
+type groupWithAccessLevel struct {
+	group        *gitlab.Group
+	avatarBase64 *string
+	accessLevel  gitlab.AccessLevelValue
+}
+
 func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
 	// get the oauth2 tokens for this user
 	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
@@ -345,21 +352,17 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return nil, nil, err
 	}
-	// get the groups for this user
-	groups, _, err := gitlabClient.ListGroups(ctx, &gitlab.ListGroupsOptions{
-		ListOptions: gitlab.ListOptions{PerPage: 100},
-		//MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions),
-		// only list groups where the user has at least reporter permissions
+
+	groups, err := fetchPaginatedData(func(page int) ([]*gitlab.Group, *gitlab.Response, error) {
+		// get the groups for this user
+		return gitlabClient.ListGroups(ctx, &gitlab.ListGroupsOptions{
+			ListOptions: gitlab.ListOptions{Page: page, PerPage: 100},
+		})
 	})
 
 	if err != nil {
 		slog.Error("failed to list groups", "err", err)
 		return nil, nil, err
-	}
-
-	type groupWithAccessLevel struct {
-		group       *gitlab.Group
-		accessLevel gitlab.AccessLevelValue
 	}
 
 	errgroup := utils.ErrGroup[*groupWithAccessLevel](10)
@@ -374,9 +377,20 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 				}
 			}
 			if member.AccessLevel >= gitlab.ReporterPermissions {
+				// check if we can fetch the avatar
+				var avatarBase64 *string
+				if group.AvatarURL != "" {
+					avatar, err := gitlabClient.FetchGroupAvatarBase64(group.ID)
+					if err != nil {
+						slog.Error("failed to fetch avatar", "err", err, "groupID", group.ID)
+						return nil, err
+					}
+					avatarBase64 = &avatar
+				}
 				return &groupWithAccessLevel{
-					group:       group,
-					accessLevel: member.AccessLevel,
+					group:        group,
+					avatarBase64: avatarBase64,
+					accessLevel:  member.AccessLevel,
 				}, nil
 			}
 			return nil, nil
@@ -392,12 +406,85 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 	})
 
 	return utils.Map(cleanedGroups, func(el *groupWithAccessLevel) models.Project {
-			return groupToProject(el.group, providerID)
+			return groupToProject(el.avatarBase64, el.group, providerID)
 		}), utils.Map(
 			cleanedGroups, func(el *groupWithAccessLevel) core.Role {
 				return gitlabAccessLevelToRole(el.accessLevel)
 			},
 		), nil
+}
+
+// Generic function to fetch paginated data with rate limiting and concurrency
+func fetchPaginatedData[T any](
+	fetchPage func(page int) ([]T, *gitlab.Response, error),
+) ([]T, error) {
+
+	// Channel to collect fetched data
+	dataChan := make(chan []T)
+	var wg sync.WaitGroup
+
+	// Fetch the first page
+	allData, response, err := fetchPage(1)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// check if total pages are defined - if not (thanks commit api), we have to work with the next page header
+	if response.TotalPages == 0 {
+		// work with the next page
+		for response.NextPage != 0 {
+			// Fetch the page
+			pageData, r, err := fetchPage(response.NextPage)
+
+			// update the response - otherwise this loop would run forever
+			response = r
+
+			if err != nil {
+				break
+			}
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				// Send fetched data to the channel
+				dataChan <- pageData
+			}()
+		}
+
+	} else if response.TotalPages > 1 { // we already fetched one page.
+		// Start fetching remaining pages concurrently
+		for page := response.NextPage; page <= response.TotalPages; page++ {
+			wg.Add(1)
+			go func(page int) {
+				defer wg.Done()
+				// Fetch the page
+				pageData, _, err := fetchPage(page)
+				if err != nil {
+					return
+				}
+
+				// Send fetched data to the channel
+				dataChan <- pageData
+			}(page)
+		}
+	}
+
+	// Collect all data from the channel
+	go func() {
+		wg.Wait()
+		close(dataChan)
+	}()
+
+	// Append data from the first page and the channel
+	// collect everything until the channel is closed
+	for pageData := range dataChan {
+		if pageData != nil {
+			allData = append(allData, pageData...)
+		}
+	}
+
+	return allData, nil
 }
 
 func gitlabAccessLevelToRole(accessLevel gitlab.AccessLevelValue) core.Role {
@@ -486,7 +573,19 @@ func (g *GitlabIntegration) GetGroup(ctx context.Context, userID string, provide
 		slog.Error("failed to get organization", "err", err)
 		return models.Project{}, err
 	}
-	return groupToProject(group, providerID), nil
+
+	// check if the group has an avatar
+	var avatarBase64 *string
+	if group.AvatarURL != "" {
+		avatar, err := gitlabClient.FetchGroupAvatarBase64(group.ID)
+		if err != nil {
+			slog.Error("failed to fetch avatar", "err", err, "groupID", group.ID)
+			return models.Project{}, err
+		}
+		avatarBase64 = &avatar
+	}
+
+	return groupToProject(avatarBase64, group, providerID), nil
 }
 
 func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (core.Role, error) {
