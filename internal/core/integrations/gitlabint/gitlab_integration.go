@@ -339,6 +339,19 @@ type groupWithAccessLevel struct {
 	accessLevel  gitlab.AccessLevelValue
 }
 
+func getAllParentGroups(idMap map[int]*gitlab.Group, group *gitlab.Group) []*gitlab.Group {
+	var parentGroups []*gitlab.Group
+	for group.ParentID != 0 {
+		parentGroup, ok := idMap[group.ParentID]
+		if !ok {
+			break
+		}
+		parentGroups = append(parentGroups, parentGroup)
+		group = parentGroup
+	}
+	return parentGroups
+}
+
 func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
 	// get the oauth2 tokens for this user
 	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
@@ -365,9 +378,16 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 		return nil, nil, err
 	}
 
-	errgroup := utils.ErrGroup[*groupWithAccessLevel](10)
+	errgroup := utils.ErrGroup[[]*groupWithAccessLevel](10)
+
+	// !!!we need to mark the user as member in ALL PARENT-GROUPS he has access to!!!
+	idMap := make(map[int]*gitlab.Group)
 	for _, group := range groups {
-		errgroup.Go(func() (*groupWithAccessLevel, error) {
+		idMap[group.ID] = group
+	}
+
+	for _, group := range groups {
+		errgroup.Go(func() ([]*groupWithAccessLevel, error) {
 			member, _, err := gitlabClient.GetMemberInGroup(ctx, token.GitLabUserID, (*group).ID)
 			if err != nil {
 				if strings.Contains(err.Error(), "403 Forbidden") || strings.Contains(err.Error(), "404 Not Found") {
@@ -387,11 +407,27 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 					}
 					avatarBase64 = &avatar
 				}
-				return &groupWithAccessLevel{
+
+				// get all parent groups
+				parentGroups := getAllParentGroups(idMap, group)
+				res := make([]*groupWithAccessLevel, 0, len(parentGroups)+1)
+				// add the current group
+				res = append(res, &groupWithAccessLevel{
 					group:        group,
 					avatarBase64: avatarBase64,
 					accessLevel:  member.AccessLevel,
-				}, nil
+				})
+
+				// add all parent groups
+				for _, parentGroup := range parentGroups {
+					res = append(res, &groupWithAccessLevel{
+						group:        parentGroup,
+						avatarBase64: nil,
+						accessLevel:  member.AccessLevel,
+					})
+				}
+				return res, nil
+
 			}
 			return nil, nil
 		})
@@ -401,14 +437,34 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 	if err != nil {
 		return nil, nil, err
 	}
-	cleanedGroups = utils.Filter(cleanedGroups, func(g *groupWithAccessLevel) bool {
+	cleanedGroupsFlat := utils.Filter(utils.Flat(cleanedGroups), func(g *groupWithAccessLevel) bool {
 		return g != nil && g.group != nil
 	})
 
-	return utils.Map(cleanedGroups, func(el *groupWithAccessLevel) models.Project {
+	// there might be duplicates now in the cleanedGroupsFlat - unique them by group ID. If a group has an avatar, we use that one, otherwise we use the first one we find.
+	uniqueIDMap := make(map[int]*groupWithAccessLevel)
+	for _, group := range cleanedGroupsFlat {
+		if existing, ok := uniqueIDMap[group.group.ID]; ok {
+			// if the existing group has an avatar, we keep it, otherwise we use the new one
+			if existing.avatarBase64 == nil && group.avatarBase64 != nil {
+				uniqueIDMap[group.group.ID] = group
+			}
+		} else {
+			// if the group is not in the map, we add it
+			uniqueIDMap[group.group.ID] = group
+		}
+	}
+
+	// convert the uniqueIdMap to a slice
+	cleanedGroupsFlat = make([]*groupWithAccessLevel, 0, len(uniqueIDMap))
+	for _, group := range uniqueIDMap {
+		cleanedGroupsFlat = append(cleanedGroupsFlat, group)
+	}
+
+	return utils.Map(cleanedGroupsFlat, func(el *groupWithAccessLevel) models.Project {
 			return groupToProject(el.avatarBase64, el.group, providerID)
 		}), utils.Map(
-			cleanedGroups, func(el *groupWithAccessLevel) core.Role {
+			cleanedGroupsFlat, func(el *groupWithAccessLevel) core.Role {
 				return gitlabAccessLevelToRole(el.accessLevel)
 			},
 		), nil
