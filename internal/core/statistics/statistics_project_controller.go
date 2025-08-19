@@ -11,6 +11,53 @@ import (
 	"github.com/pkg/errors"
 )
 
+func (c *httpController) GetProjectCvssDistribution(ctx core.Context) error {
+	project := core.GetProject(ctx)
+
+	// get direct children
+	childProjects, err := c.projectService.GetDirectChildProjects(project.ID)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch child projects")
+	}
+
+	// get the cvss distribution for this project
+	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectID(project.ID)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch assets by project id")
+	}
+
+	group := utils.ErrGroup[models.AssetRiskDistribution](10)
+	for _, assetVersion := range assetVersions {
+		group.Go(func() (models.AssetRiskDistribution, error) {
+			// get the corresponding asset
+			asset, err := c.assetRepository.Read(assetVersion.AssetID)
+			if err != nil {
+				return models.AssetRiskDistribution{}, errors.Wrap(err, "could not fetch asset by id")
+			}
+
+			return c.statisticsService.GetAssetVersionCvssDistribution(assetVersion.Name, assetVersion.AssetID, asset.Name)
+		})
+	}
+
+	projectResults, err := group.WaitAndCollect()
+
+	if err != nil {
+		return errors.Wrap(err, "could not fetch cvss distribution")
+	}
+
+	for _, childProject := range childProjects {
+		res, err := c.getProjectCvssDistribution(childProject.ID)
+		if err != nil {
+			return errors.Wrap(err, "could not fetch assets by project id")
+		}
+
+		// aggregate the results
+		projectResults = append(projectResults, aggregateRiskDistribution(res, childProject.ID, childProject.Name))
+	}
+
+	return ctx.JSON(200, projectResults)
+}
+
 func (c *httpController) GetProjectRiskDistribution(ctx core.Context) error {
 	project := core.GetProject(ctx)
 
@@ -71,6 +118,34 @@ func (c *httpController) getChildrenProjectIDs(projectID uuid.UUID) ([]uuid.UUID
 	projectIDs = append(projectIDs, projectID)
 
 	return projectIDs, nil
+}
+
+func (c *httpController) getProjectCvssDistribution(projectID uuid.UUID) ([]models.AssetRiskDistribution, error) {
+	// fetch all assets
+	projectIDs, err := c.getChildrenProjectIDs(projectID)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not fetch child projects")
+	}
+
+	assetVersions, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectIDs(projectIDs)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not fetch assets by project id")
+	}
+
+	group := utils.ErrGroup[models.AssetRiskDistribution](10)
+	for _, assetVersion := range assetVersions {
+		group.Go(func() (models.AssetRiskDistribution, error) {
+			// get the corresponding asset
+			asset, err := c.assetRepository.Read(assetVersion.AssetID)
+			if err != nil {
+				return models.AssetRiskDistribution{}, errors.Wrap(err, "could not fetch asset by id")
+			}
+
+			return c.statisticsService.GetAssetVersionCvssDistribution(assetVersion.Name, assetVersion.AssetID, asset.Name)
+		})
+	}
+
+	return group.WaitAndCollect()
 }
 
 func (c *httpController) getProjectRiskDistribution(projectID uuid.UUID) ([]models.AssetRiskDistribution, error) {
