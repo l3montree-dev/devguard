@@ -34,6 +34,16 @@ type AssetRiskHistory struct {
 	MaxClosedRisk float64 `json:"maxClosedRisk"`
 	MinClosedRisk float64 `json:"minClosedRisk"`
 
+	Low      int `json:"low"`
+	Medium   int `json:"medium"`
+	High     int `json:"high"`
+	Critical int `json:"critical"`
+
+	LowCVSS      int `json:"lowCvss"`
+	MediumCVSS   int `json:"mediumCvss"`
+	HighCVSS     int `json:"highCvss"`
+	CriticalCVSS int `json:"criticalCvss"`
+
 	OpenDependencyVulns  int `json:"openDependencyVulns"`
 	FixedDependencyVulns int `json:"fixedDependencyVulns"`
 }
@@ -56,6 +66,16 @@ type ProjectRiskHistory struct {
 	AvgClosedRisk float64 `json:"averageClosedRisk"`
 	MaxClosedRisk float64 `json:"maxClosedRisk"`
 	MinClosedRisk float64 `json:"minClosedRisk"`
+
+	Low      int `json:"low"`
+	Medium   int `json:"medium"`
+	High     int `json:"high"`
+	Critical int `json:"critical"`
+
+	LowCVSS      int `json:"lowCvss"`
+	MediumCVSS   int `json:"mediumCvss"`
+	HighCVSS     int `json:"highCvss"`
+	CriticalCVSS int `json:"criticalCvss"`
 
 	OpenDependencyVulns  int `json:"openDependencyVulns"`
 	FixedDependencyVulns int `json:"fixedDependencyVulns"`

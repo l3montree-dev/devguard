@@ -23,7 +23,7 @@ func NewStatisticsRepository(db core.DB) *statisticsRepository {
 func (r *statisticsRepository) TimeTravelDependencyVulnState(assetVersionName string, assetID uuid.UUID, time time.Time) ([]models.DependencyVuln, error) {
 	dependencyVulns := []models.DependencyVuln{}
 
-	err := r.db.Model(&models.DependencyVuln{}).Preload("Events", func(db core.DB) core.DB {
+	err := r.db.Model(&models.DependencyVuln{}).Preload("CVE").Preload("Events", func(db core.DB) core.DB {
 		return db.Where("created_at <= ?", time).Order("created_at ASC")
 	}).
 		Where("asset_version_name = ?", assetVersionName).Where("asset_id = ?", assetID).Where("created_at <= ?", time).

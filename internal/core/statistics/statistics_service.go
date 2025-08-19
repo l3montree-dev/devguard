@@ -66,6 +66,8 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 		var projectRiskHistory = models.ProjectRiskHistory{}
 
 		openDependencyVulns, fixedDependencyVulns := 0, 0
+		totalLow, totalMedium, totalHigh, totalCritical := 0, 0, 0, 0
+		totalLowCvss, totalMediumCvss, totalHighCvss, totalCriticalCvss := 0, 0, 0, 0
 
 		for _, assetHistory := range assetsHistory {
 			if assetHistory.OpenDependencyVulns > 0 {
@@ -73,6 +75,17 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 			} else if assetHistory.FixedDependencyVulns > 0 {
 				fixedDependencyVulns += assetHistory.FixedDependencyVulns
 			}
+
+			// Aggregate severity counts
+			totalLow += assetHistory.Low
+			totalMedium += assetHistory.Medium
+			totalHigh += assetHistory.High
+			totalCritical += assetHistory.Critical
+
+			totalLowCvss += assetHistory.LowCVSS
+			totalMediumCvss += assetHistory.MediumCVSS
+			totalHighCvss += assetHistory.HighCVSS
+			totalCriticalCvss += assetHistory.CriticalCVSS
 
 			if riskAggregationOpen.Min > assetHistory.MinOpenRisk {
 				riskAggregationOpen.Min = assetHistory.MinOpenRisk
@@ -127,6 +140,16 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 			MaxClosedRisk: fixedRisk.Max,
 			MinClosedRisk: fixedRisk.Min,
 
+			Low:      totalLow,
+			Medium:   totalMedium,
+			High:     totalHigh,
+			Critical: totalCritical,
+
+			LowCVSS:      totalLowCvss,
+			MediumCVSS:   totalMediumCvss,
+			HighCVSS:     totalHighCvss,
+			CriticalCVSS: totalCriticalCvss,
+
 			OpenDependencyVulns:  openDependencyVulns,
 			FixedDependencyVulns: fixedDependencyVulns,
 		}
@@ -140,7 +163,7 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 
 func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, begin time.Time, end time.Time, propagateToProject bool) error {
 	// set begin to last second of date
-	begin = time.Date(begin.Year(), begin.Month(), begin.Day(), 23, 59, 59, 0, time.UTC)
+	begin = time.Date(begin.Year(), begin.Month(), begin.Day()-1, 23, 59, 59, 0, time.UTC)
 	// as max, do 1 year from the past
 	if begin.Before(time.Now().AddDate(-1, 0, 0)) {
 		begin = time.Now().AddDate(-1, 0, 0)
@@ -166,13 +189,14 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 		}
 
 		openDependencyVulns, fixedDependencyVulns := 0, 0
+		var openVulns []models.DependencyVuln
 
 		for _, dependencyVuln := range dependencyVulns {
 			var key string
 			if dependencyVuln.State == models.VulnStateOpen {
 				openDependencyVulns++
 				key = "open"
-
+				openVulns = append(openVulns, dependencyVuln)
 			} else {
 				fixedDependencyVulns++
 				key = "fixed"
@@ -216,6 +240,10 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 			fixedRisk.Avg = fixedRisk.Sum / float64(fixedDependencyVulns)
 		}
 
+		// Calculate severity counts
+		lowRisk, mediumRisk, highRisk, criticalRisk := calculateSeverityCountsByRisk(openVulns)
+		lowCvss, mediumCvss, highCvss, criticalCvss := calculateSeverityCountsByCvss(openVulns)
+
 		result := models.AssetRiskHistory{
 			AssetVersionName: assetVersion.Name,
 			AssetID:          assetID,
@@ -230,6 +258,16 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 			AvgClosedRisk: fixedRisk.Avg,
 			MaxClosedRisk: fixedRisk.Max,
 			MinClosedRisk: fixedRisk.Min,
+
+			Low:      lowRisk,
+			Medium:   mediumRisk,
+			High:     highRisk,
+			Critical: criticalRisk,
+
+			LowCVSS:      lowCvss,
+			MediumCVSS:   mediumCvss,
+			HighCVSS:     highCvss,
+			CriticalCVSS: criticalCvss,
 
 			OpenDependencyVulns:  openDependencyVulns,
 			FixedDependencyVulns: fixedDependencyVulns,
@@ -362,6 +400,40 @@ func (s *service) GetDependencyVulnAggregationStateAndChangeSince(assetVersionNa
 		Now: nowState,
 		Was: wasState,
 	}, nil
+}
+
+func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+	for _, vuln := range dependencyVulns {
+		risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
+		switch {
+		case risk >= 0.0 && risk < 4.0:
+			low++
+		case risk >= 4.0 && risk < 7.0:
+			medium++
+		case risk >= 7.0 && risk < 9.0:
+			high++
+		case risk >= 9.0 && risk <= 10.0:
+			critical++
+		}
+	}
+	return
+}
+
+func calculateSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+	for _, vuln := range dependencyVulns {
+		cvss := float64(vuln.CVE.CVSS)
+		switch {
+		case cvss >= 0.0 && cvss < 4.0:
+			low++
+		case cvss >= 4.0 && cvss < 7.0:
+			medium++
+		case cvss >= 7.0 && cvss < 9.0:
+			high++
+		case cvss >= 9.0 && cvss <= 10.0:
+			critical++
+		}
+	}
+	return
 }
 
 func calculateDependencyVulnAggregationState(dependencyVulns []models.DependencyVuln) DependencyVulnAggregationState {
