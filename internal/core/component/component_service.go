@@ -5,12 +5,14 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/licensecheck"
@@ -264,74 +266,156 @@ func getDebianPackageInformation(pURL packageurl.PackageURL) (*bytes.Buffer, err
 	return &buff, err
 }
 
+var (
+	alpineReleaseVersions []string
+	alpineVersionIndex                      = 0
+	alpineLicenseMap      map[string]string = make(map[string]string, 8192) // Map to cache alpine type licenses. Form : <package name> + <package version> -> license (size is just an approximate)
+	alpineMutex           sync.Mutex                                        // since we are running in a go routine we need to sync the access to the map
+)
+
 func getAlpineLicense(pURL packageurl.PackageURL) (string, error) {
 	var license string
-	defaultURL := "https://dl-cdn.alpinelinux.org/edge/main/x86_64/APKINDEX.tar.gz"
-	req, err := http.NewRequest("GET", defaultURL, nil)
+	alpineMutex.Lock()
+	if len(alpineReleaseVersions) == 0 {
+		alpineMutex.Unlock()
+		err := retrieveAlpineVersions()
+		if err != nil {
+			return license, err
+		}
+		alpineMutex.Lock()
+	}
+	license, exists := alpineLicenseMap[pURL.Name+pURL.Version]
+	alpineMutex.Unlock()
+	if exists {
+		return license, nil
+	}
+	alpineMutex.Lock()
+	for alpineVersionIndex < len(alpineReleaseVersions) {
+		versionURL := fmt.Sprintf("https://dl-cdn.alpinelinux.org/%s/main/x86_64/APKINDEX.tar.gz", alpineReleaseVersions[alpineVersionIndex]) //use env
+		alpineMutex.Unlock()
+		req, err := http.NewRequest("GET", versionURL, nil)
+		if err != nil {
+			return license, err
+		}
+		client := &http.Client{
+			Timeout: 30 * time.Second,
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			return license, err
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return license, fmt.Errorf("http request was unsuccessful, status code: %d", resp.StatusCode)
+		}
+		defer resp.Body.Close()
+
+		buf := bytes.Buffer{}
+		_, err = io.Copy(&buf, resp.Body)
+		if err != nil {
+			return license, err
+		}
+
+		unzippedContents, err := gzip.NewReader(&buf)
+		if err != nil {
+			return license, err
+		}
+		defer unzippedContents.Close()
+
+		tarContents := tar.NewReader(unzippedContents)
+		apkIndex := bytes.NewBuffer(make([]byte, 0, 2*1000*1000)) // allocate 2 MB memory for buf to avoid resizing operations
+		for {                                                     //go through every file
+			header, err := tarContents.Next()
+			if err == io.EOF {
+				break // end of tar archive
+			}
+			if err != nil {
+				log.Fatal(err)
+			}
+			if header.Name == "APKINDEX" {
+				_, err = apkIndex.ReadFrom(tarContents)
+				if err != nil {
+					return license, err
+				}
+			}
+		}
+		extractLicensesFromAPKINDEX(*apkIndex)
+		alpineMutex.Lock()
+		license, exists = alpineLicenseMap[pURL.Name+pURL.Version]
+		alpineMutex.Unlock()
+		if exists {
+			return license, nil
+		}
+		slog.Warn("alpine license not found in", versionURL, "")
+		alpineMutex.Lock()
+		alpineVersionIndex++
+	}
+	alpineMutex.Unlock()
+	return license, nil
+}
+
+// splits contents into blocks separated by two new line characters. Then iterate over every block to extract package name, version and license using string modifications
+func extractLicensesFromAPKINDEX(contents bytes.Buffer) {
+	var name, version, license string
+	var indexName, indexVersion, indexLicense int
+	for pkg := range strings.SplitSeq(contents.String(), "\n\n") {
+		indexName = strings.Index(pkg, "\nP:")
+		if indexName != -1 { // first check package name
+			name, _, _ = strings.Cut(pkg[indexName+3:], "\n")
+			indexVersion = strings.Index(pkg[indexName+len(name):], "\nV:") // reduce operations by starting the search after the package field
+			if indexVersion != -1 {                                         // then check version
+				version, _, _ = strings.Cut(pkg[indexName+len(name)+indexVersion+3:], "\n")
+				indexLicense = strings.Index(pkg[indexName+len(name)+indexVersion+len(version):], "\nL:")
+				if indexLicense != -1 { // last check the license
+					license, _, _ = strings.Cut(pkg[indexName+len(name)+indexVersion+len(version)+indexLicense+3:], "\n") // reduce operations by starting the search after the version field
+					alpineMutex.Lock()
+					alpineLicenseMap[name+version] = license
+					alpineMutex.Unlock()
+				}
+			}
+		}
+	}
+}
+
+func retrieveAlpineVersions() error {
+	buf := bytes.NewBuffer(make([]byte, 0, 64*1000))
+	releasesURL := "https://alpinelinux.org/releases.json"
+	req, err := http.NewRequest("GET", releasesURL, nil)
 	if err != nil {
-		return license, err
+		return err
 	}
 	client := &http.Client{
 		Timeout: 30 * time.Second,
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return license, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return license, fmt.Errorf("http request was unsuccessful, status code: %d", resp.StatusCode)
+		return err
 	}
 	defer resp.Body.Close()
 
-	buf := bytes.Buffer{}
-	_, err = io.Copy(&buf, resp.Body)
+	_, err = io.Copy(buf, resp.Body)
 	if err != nil {
-		return license, err
+		return err
 	}
 
-	unzippedContents, err := gzip.NewReader(&buf)
+	type releases struct {
+		ReleaseBranches []struct {
+			Branch string `json:"rel_branch"`
+		} `json:"release_branches"`
+	}
+	r := releases{}
+	err = json.Unmarshal(buf.Bytes(), &r)
 	if err != nil {
-		return license, err
+		return err
 	}
-	defer unzippedContents.Close()
-
-	tarContents := tar.NewReader(unzippedContents)
-	apkIndex := bytes.NewBuffer(make([]byte, 0, 2*1000*1000)) // allocate 2 MB memory for buf to avoid resizing operations
-	for {                                                     //go through every file
-		header, err := tarContents.Next()
-		if err == io.EOF {
-			break // end of tar archive
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
-		if header.Name == "APKINDEX" {
-			_, err = apkIndex.ReadFrom(tarContents)
-			if err != nil {
-				return license, err
-			}
+	alpineMutex.Lock()
+	alpineReleaseVersions = make([]string, 0, len(r.ReleaseBranches))
+	for _, rls := range r.ReleaseBranches {
+		if rls.Branch[1] == '3' || rls.Branch == "edge" { //only check versions 3.x and edge
+			alpineReleaseVersions = append(alpineReleaseVersions, rls.Branch)
 		}
 	}
-	return extractLicenseFromAPKINDEX(*apkIndex, pURL.Name), nil
-}
-
-func extractLicenseFromAPKINDEX(contents bytes.Buffer, packageName string) string {
-	var license string
-	packages := strings.Split(contents.String(), "\n\n")
-	for _, pkg := range packages {
-		indexName := strings.Index(pkg, "\nP:")
-		if indexName != -1 {
-			startAtName := pkg[indexName+3:]
-			name, _, _ := strings.Cut(startAtName, "\n")
-			if name == packageName {
-				indexLicense := strings.Index(pkg, "\nL:")
-				if indexLicense != -1 {
-					license, _, _ = strings.Cut(pkg[indexLicense+3:], "\n")
-					break
-				}
-			}
-		}
-	}
-	return license
+	fmt.Printf("\n\nThis is the list of versions: %v\n\n", alpineReleaseVersions)
+	alpineMutex.Unlock()
+	return nil
 }
