@@ -13,7 +13,7 @@ import (
 )
 
 type statisticsService interface {
-	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error)
+	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
 	GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetVersionCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)

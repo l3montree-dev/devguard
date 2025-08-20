@@ -3,7 +3,6 @@ package statistics
 import (
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -128,30 +127,32 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 
 		projectRiskHistory = models.ProjectRiskHistory{
 			ProjectID: projectID,
-			Day:       time,
+			History: models.History{
+				Day: time,
 
-			SumOpenRisk: openRisk.Sum,
-			AvgOpenRisk: openRisk.Avg,
-			MaxOpenRisk: openRisk.Max,
-			MinOpenRisk: openRisk.Min,
+				SumOpenRisk: openRisk.Sum,
+				AvgOpenRisk: openRisk.Avg,
+				MaxOpenRisk: openRisk.Max,
+				MinOpenRisk: openRisk.Min,
 
-			SumClosedRisk: fixedRisk.Sum,
-			AvgClosedRisk: fixedRisk.Avg,
-			MaxClosedRisk: fixedRisk.Max,
-			MinClosedRisk: fixedRisk.Min,
+				SumClosedRisk:        fixedRisk.Sum,
+				AvgClosedRisk:        fixedRisk.Avg,
+				MaxClosedRisk:        fixedRisk.Max,
+				MinClosedRisk:        fixedRisk.Min,
+				OpenDependencyVulns:  openDependencyVulns,
+				FixedDependencyVulns: fixedDependencyVulns,
+				Distribution: models.Distribution{
+					Low:      totalLow,
+					Medium:   totalMedium,
+					High:     totalHigh,
+					Critical: totalCritical,
 
-			Low:      totalLow,
-			Medium:   totalMedium,
-			High:     totalHigh,
-			Critical: totalCritical,
-
-			LowCVSS:      totalLowCvss,
-			MediumCVSS:   totalMediumCvss,
-			HighCVSS:     totalHighCvss,
-			CriticalCVSS: totalCriticalCvss,
-
-			OpenDependencyVulns:  openDependencyVulns,
-			FixedDependencyVulns: fixedDependencyVulns,
+					LowCVSS:      totalLowCvss,
+					MediumCVSS:   totalMediumCvss,
+					HighCVSS:     totalHighCvss,
+					CriticalCVSS: totalCriticalCvss,
+				},
+			},
 		}
 		err = s.projectRiskHistoryRepository.UpdateRiskAggregation(&projectRiskHistory)
 		if err != nil {
@@ -247,30 +248,32 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 		result := models.AssetRiskHistory{
 			AssetVersionName: assetVersion.Name,
 			AssetID:          assetID,
-			Day:              time,
+			History: models.History{
+				Day: time,
 
-			SumOpenRisk: openRisk.Sum,
-			AvgOpenRisk: openRisk.Avg,
-			MaxOpenRisk: openRisk.Max,
-			MinOpenRisk: openRisk.Min,
+				SumOpenRisk: openRisk.Sum,
+				AvgOpenRisk: openRisk.Avg,
+				MaxOpenRisk: openRisk.Max,
+				MinOpenRisk: openRisk.Min,
 
-			SumClosedRisk: fixedRisk.Sum,
-			AvgClosedRisk: fixedRisk.Avg,
-			MaxClosedRisk: fixedRisk.Max,
-			MinClosedRisk: fixedRisk.Min,
+				SumClosedRisk:        fixedRisk.Sum,
+				AvgClosedRisk:        fixedRisk.Avg,
+				MaxClosedRisk:        fixedRisk.Max,
+				MinClosedRisk:        fixedRisk.Min,
+				OpenDependencyVulns:  openDependencyVulns,
+				FixedDependencyVulns: fixedDependencyVulns,
+				Distribution: models.Distribution{
+					Low:      lowRisk,
+					Medium:   mediumRisk,
+					High:     highRisk,
+					Critical: criticalRisk,
 
-			Low:      lowRisk,
-			Medium:   mediumRisk,
-			High:     highRisk,
-			Critical: criticalRisk,
-
-			LowCVSS:      lowCvss,
-			MediumCVSS:   mediumCvss,
-			HighCVSS:     highCvss,
-			CriticalCVSS: criticalCvss,
-
-			OpenDependencyVulns:  openDependencyVulns,
-			FixedDependencyVulns: fixedDependencyVulns,
+					LowCVSS:      lowCvss,
+					MediumCVSS:   mediumCvss,
+					HighCVSS:     highCvss,
+					CriticalCVSS: criticalCvss,
+				},
+			},
 		}
 
 		err = s.assetRiskHistoryRepository.UpdateRiskAggregation(&result)
@@ -324,23 +327,54 @@ func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, en
 	return s.projectRiskHistoryRepository.GetRiskHistory(projectID, start, end)
 }
 
-func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error) {
+func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
 
 	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(nil, assetVersionName, assetID)
 	if err != nil {
 		return nil, err
 	}
 
-	totalRiskPerComponent := make(map[string]float64)
+	distributionPerComponent := make(map[string]models.Distribution)
 
-	for _, f := range dependencyVulns {
-		damagedPkg := f.ComponentPurl
-		parts := strings.Split(*damagedPkg, ":")
-		damagedPkg = &parts[1]
-		totalRiskPerComponent[*damagedPkg] += utils.OrDefault(f.RawRiskAssessment, 0)
+	for _, dependencyVuln := range dependencyVulns {
+		if dependencyVuln.ComponentPurl == nil {
+			continue
+		}
+		componentName := *dependencyVuln.ComponentPurl
+		if _, exists := distributionPerComponent[componentName]; !exists {
+			distributionPerComponent[componentName] = models.Distribution{}
+		}
+		distribution := distributionPerComponent[componentName]
+
+		risk := utils.OrDefault(dependencyVuln.RawRiskAssessment, 0)
+		cvss := float64(dependencyVuln.CVE.CVSS)
+
+		switch {
+		case risk >= 0.0 && risk < 4.0:
+			distribution.Low++
+		case risk >= 4.0 && risk < 7.0:
+			distribution.Medium++
+		case risk >= 7.0 && risk < 9.0:
+			distribution.High++
+		case risk >= 9.0 && risk <= 10.0:
+			distribution.Critical++
+		}
+
+		switch {
+		case cvss >= 0.0 && cvss < 4.0:
+			distribution.LowCVSS++
+		case cvss >= 4.0 && cvss < 7.0:
+			distribution.MediumCVSS++
+		case cvss >= 7.0 && cvss < 9.0:
+			distribution.HighCVSS++
+		case cvss >= 9.0 && cvss <= 10.0:
+			distribution.CriticalCVSS++
+		}
+
+		distributionPerComponent[componentName] = distribution
 	}
 
-	return totalRiskPerComponent, nil
+	return distributionPerComponent, nil
 }
 
 func (s *service) GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {

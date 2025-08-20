@@ -19,66 +19,49 @@ type AssetRiskDistribution struct {
 }
 
 type AssetRiskHistory struct {
+	History
 	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
-	// on the day 2024-08-12 the asset had a sumRisk of 25.
-	Day time.Time `json:"day" gorm:"primaryKey;type:date"`
-
-	SumOpenRisk float64 `json:"sumOpenRisk"`
-	AvgOpenRisk float64 `json:"averageOpenRisk"`
-	MaxOpenRisk float64 `json:"maxOpenRisk"`
-	MinOpenRisk float64 `json:"minOpenRisk"`
-
-	SumClosedRisk float64 `json:"sumClosedRisk"`
-	AvgClosedRisk float64 `json:"averageClosedRisk"`
-	MaxClosedRisk float64 `json:"maxClosedRisk"`
-	MinClosedRisk float64 `json:"minClosedRisk"`
-
-	Low      int `json:"low"`
-	Medium   int `json:"medium"`
-	High     int `json:"high"`
-	Critical int `json:"critical"`
-
-	LowCVSS      int `json:"lowCvss"`
-	MediumCVSS   int `json:"mediumCvss"`
-	HighCVSS     int `json:"highCvss"`
-	CriticalCVSS int `json:"criticalCvss"`
-
-	OpenDependencyVulns  int `json:"openDependencyVulns"`
-	FixedDependencyVulns int `json:"fixedDependencyVulns"`
 }
 
 func (m AssetRiskHistory) TableName() string {
 	return "asset_risk_history"
 }
 
-type ProjectRiskHistory struct {
-	ProjectID uuid.UUID `json:"id" gorm:"primaryKey;type:uuid"`
-	// on the day 2024-08-12 the asset had a sumRisk of 25.
-	Day time.Time `json:"day" gorm:"primaryKey;type:date"`
-
-	SumOpenRisk float64 `json:"sumOpenRisk"`
-	AvgOpenRisk float64 `json:"averageOpenRisk"`
-	MaxOpenRisk float64 `json:"maxOpenRisk"`
-	MinOpenRisk float64 `json:"minOpenRisk"`
-
-	SumClosedRisk float64 `json:"sumClosedRisk"`
-	AvgClosedRisk float64 `json:"averageClosedRisk"`
-	MaxClosedRisk float64 `json:"maxClosedRisk"`
-	MinClosedRisk float64 `json:"minClosedRisk"`
-
+type Distribution struct {
 	Low      int `json:"low"`
-	Medium   int `json:"medium"`
 	High     int `json:"high"`
+	Medium   int `json:"medium"`
 	Critical int `json:"critical"`
 
 	LowCVSS      int `json:"lowCvss"`
 	MediumCVSS   int `json:"mediumCvss"`
 	HighCVSS     int `json:"highCvss"`
 	CriticalCVSS int `json:"criticalCvss"`
+}
+
+type History struct {
+	Distribution
+	// on the day 2024-08-12 the asset had a sumRisk of 25.
+	Day         time.Time `json:"day" gorm:"primaryKey;type:date"`
+	SumOpenRisk float64   `json:"sumOpenRisk"`
+	AvgOpenRisk float64   `json:"averageOpenRisk"`
+	MaxOpenRisk float64   `json:"maxOpenRisk"`
+	MinOpenRisk float64   `json:"minOpenRisk"`
+
+	SumClosedRisk float64 `json:"sumClosedRisk"`
+	AvgClosedRisk float64 `json:"averageClosedRisk"`
+	MaxClosedRisk float64 `json:"maxClosedRisk"`
+	MinClosedRisk float64 `json:"minClosedRisk"`
 
 	OpenDependencyVulns  int `json:"openDependencyVulns"`
 	FixedDependencyVulns int `json:"fixedDependencyVulns"`
+}
+
+type ProjectRiskHistory struct {
+	Distribution
+	History
+	ProjectID uuid.UUID `json:"id" gorm:"primaryKey;type:uuid"`
 }
 
 func (m ProjectRiskHistory) TableName() string {
