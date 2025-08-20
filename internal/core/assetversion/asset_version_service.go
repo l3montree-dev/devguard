@@ -43,9 +43,10 @@ type service struct {
 	componentService         core.ComponentService
 	httpClient               *http.Client
 	thirdPartyIntegration    core.ThirdPartyIntegration
+	licenseRiskRepository    core.LicenseRiskRepository
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration, licenseRiskRepository core.LicenseRiskRepository) *service {
 	return &service{
 		assetVersionRepository:   assetVersionRepository,
 		componentRepository:      componentRepository,
@@ -60,6 +61,7 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		thirdPartyIntegration:    thirdPartyIntegration,
 		projectRepository:        projectRepository,
 		orgRepository:            orgRepository,
+		licenseRiskRepository:    licenseRiskRepository,
 	}
 }
 
@@ -674,7 +676,9 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	return nil
 }
 
-func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {
+func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) (*cdx.BOM, error) {
+	var pURL packageurl.PackageURL
+	var err error
 
 	if version == models.NoVersion {
 		version = "latest"
@@ -698,60 +702,80 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 		},
 	}
 
-	bomComponents := make([]cdx.Component, 0)
-	alreadyIncluded := make(map[string]bool)
-	for _, cLoop := range components {
-		c := cLoop
+	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
+	if err != nil {
+		return nil, err
+	}
+	componentLicenseOverwrites := make(map[string]string, len(licenseRisks))
+	for i := range licenseRisks {
+		componentLicenseOverwrites[licenseRisks[i].ComponentPurl] = licenseRisks[i].FinalLicenseDecision
+	}
 
-		var p packageurl.PackageURL
-		var err error
+	bomComponents := make([]cdx.Component, len(components))
+	processedComponents := make(map[string]struct{}, len(components))
 
-		p, err = packageurl.FromString(c.DependencyPurl)
-		if err == nil {
+	for _, component := range components {
+		pURL, err = packageurl.FromString(component.DependencyPurl)
+		if err != nil {
+			//swallow error and move on to the next component
+			continue
+		}
+		_, alreadyProcessed := processedComponents[component.DependencyPurl]
 
-			if _, ok := alreadyIncluded[c.DependencyPurl]; !ok {
-				alreadyIncluded[c.DependencyPurl] = true
+		if !alreadyProcessed {
+			processedComponents[component.DependencyPurl] = struct{}{}
+			licenses := cdx.Licenses{}
 
-				licenses := cdx.Licenses{}
-				//technically redundant call to c.Dependency.ComponentProject.License
-				if c.Dependency.ComponentProject != nil && c.Dependency.ComponentProject.License != "" {
-					// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
-					if c.Dependency.ComponentProject.License != "non-standard" {
-						licenses = append(licenses, cdx.LicenseChoice{
-							License: &cdx.License{
-								ID: c.Dependency.ComponentProject.License,
-							},
-						})
-					} else {
-						licenses = append(licenses, cdx.LicenseChoice{
-							License: &cdx.License{
-								Name: c.Dependency.ComponentProject.License,
-							},
-						})
-					}
-				}
-
-				if c.Dependency.IsLicenseOverwritten {
-					// manually overwritten license
-					licenses = []cdx.LicenseChoice{
-						{
-							License: &cdx.License{
-								ID: *c.Dependency.License,
-							},
-						},
-					}
-				}
-
-				bomComponents = append(bomComponents, cdx.Component{
-					Licenses:   &licenses,
-					BOMRef:     c.DependencyPurl,
-					Type:       cdx.ComponentType(c.Dependency.ComponentType),
-					PackageURL: c.DependencyPurl,
-					Version:    c.Dependency.Version,
-					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
+			//first check if the license is overwritten by a license risk#
+			overwrite, exists := componentLicenseOverwrites[pURL.String()]
+			if exists && overwrite != "" {
+				// TO-DO: check if the license provided by the user is a valid license or not
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						ID: overwrite,
+					},
 				})
 
+			} else if component.Dependency.License != nil && *component.Dependency.License != "" {
+				if *component.Dependency.License != "non-standard" {
+					licenses = append(licenses, cdx.LicenseChoice{
+						License: &cdx.License{
+							ID: *component.Dependency.License,
+						},
+					})
+				} else {
+					licenses = append(licenses, cdx.LicenseChoice{
+						License: &cdx.License{
+							Name: "non-standard",
+						},
+					})
+				}
+
+			} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
+				// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
+				if component.Dependency.ComponentProject.License != "non-standard" {
+					licenses = append(licenses, cdx.LicenseChoice{
+						License: &cdx.License{
+							ID: component.Dependency.ComponentProject.License,
+						},
+					})
+				} else {
+					licenses = append(licenses, cdx.LicenseChoice{
+						License: &cdx.License{
+							Name: "non-standard",
+						},
+					})
+				}
 			}
+
+			bomComponents = append(bomComponents, cdx.Component{
+				Licenses:   &licenses,
+				BOMRef:     component.DependencyPurl,
+				Type:       cdx.ComponentType(component.Dependency.ComponentType),
+				PackageURL: component.DependencyPurl,
+				Version:    component.Dependency.Version,
+				Name:       fmt.Sprintf("%s/%s", pURL.Namespace, pURL.Name),
+			})
 		}
 	}
 
@@ -785,7 +809,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 	}
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
-	return &bom
+	return &bom, nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {

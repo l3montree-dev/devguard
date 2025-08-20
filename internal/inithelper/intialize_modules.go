@@ -79,6 +79,7 @@ func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOa
 		repositories.NewVulnEventRepository(db),
 		CreateComponentService(db, depsDevService),
 		thirdPartyIntegration,
+		repositories.NewLicenseRiskRepository(db),
 	)
 }
 

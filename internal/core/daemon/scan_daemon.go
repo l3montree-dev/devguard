@@ -64,7 +64,7 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
 
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, projectRiskHistoryRepository)
 
@@ -116,7 +116,11 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 					}
 
 					for scannerID, components := range scannerIDMap {
-						bom := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", "", components)
+						bom, err := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", "", components)
+						if err != nil {
+							slog.Error("error when building SBOM")
+							continue
+						}
 						normalizedBOM := normalize.FromCdxBom(bom, false)
 						if len(components) <= 0 {
 							continue

@@ -487,7 +487,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 	invitationRepository := repositories.NewInvitationRepository(db)
 

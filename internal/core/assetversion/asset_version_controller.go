@@ -231,7 +231,7 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildSBOM(assetVersion, version, org.Name, components.Data), nil
+	return a.assetVersionService.BuildSBOM(assetVersion, version, org.Name, components.Data)
 }
 
 func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {
