@@ -56,24 +56,11 @@ func (c *componentRepository) CreateComponents(tx core.DB, components []models.C
 }
 
 // returns all component dependencies of the assetVersion  found by scannerID use "" to return all no matter who found it
-func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 
-	query := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
-
-	scannerIDs := strings.Split(scannerID, " ")
-	if len(scannerIDs) > 0 && scannerID != "" {
-		scannerIDsSubQuery := c.GetDB(tx)
-		for i, id := range scannerIDs {
-			if i == 0 {
-				scannerIDsSubQuery = scannerIDsSubQuery.Where("? = ANY(string_to_array(scanner_ids, ' '))", id)
-			} else {
-				scannerIDsSubQuery = scannerIDsSubQuery.Or("? = ANY(string_to_array(scanner_ids, ' '))", id)
-			}
-		}
-		query = query.Where(scannerIDsSubQuery)
-	}
+	query := c.GetDB(tx).Preload("Component").Preload("Dependency").Preload("Artifact").Where("asset_version_name = ? AND asset_id = ? artifact_name = ?", assetVersionName, assetID, artifactName)
 
 	err = query.Find(&components).Error
 
@@ -236,15 +223,10 @@ func licensesToMap(licenses []struct {
 	return licensesMap
 }
 
-func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, artifactName string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
 	var componentDependencies []models.ComponentDependency
 
-	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
-
-	if scannerID != "" {
-		// scanner ids is a string array separated by whitespaces
-		query = query.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
-	}
+	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ? AND artifact_name = ", assetVersionName, assetID, artifactName)
 
 	for _, f := range filter {
 		query = query.Where(f.SQL(), f.Value())
@@ -305,43 +287,24 @@ func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Compon
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error) {
+func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error) {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
 		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})
 
 	removed := comparison.OnlyInA
 	added := comparison.OnlyInB
-	needToBeChanged := comparison.InBoth
+
+	artifact := models.Artifact{
+		ArtifactName:     artifactName,
+		AssetID:          assetID,
+		AssetVersionName: assetVersionName,
+	}
 
 	return len(removed) > 0 || len(added) > 0, c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
-		//We remove the scanner id from all components in removed and if it was the only scanner id we remove the component
-		toDelete, toSave := diffComponents(removed, scannerID)
 
-		//Now we want to update the database with the new scanner id values
-		if len(toSave) > 0 {
-			err := c.db.Save(toSave).Error
-			if err != nil {
-				return err
-			}
-		}
-
-		if len(toDelete) > 0 {
-			err := c.db.Delete(toDelete).Error
-			if err != nil {
-				return err
-			}
-		}
-
-		//Next step is adding the scanner id to all existing component dependencies we just found
-		for i := range needToBeChanged {
-			if !utils.ContainsInWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID) {
-				needToBeChanged[i].ScannerIDs = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID)
-			}
-		}
-		//We also need to update these changes in the database
-		if len(needToBeChanged) > 0 {
-			err := c.db.Save(needToBeChanged).Error
+		if len(removed) > 0 {
+			err := c.db.Delete(removed).Error
 			if err != nil {
 				return err
 			}
@@ -349,10 +312,8 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 
 		// make sure the asset id is set
 		for i := range added {
-			added[i].AssetID = assetID
-			added[i].AssetVersionName = assetVersionName
+			added[i].Artifacts = append(added[i].Artifacts, artifact)
 		}
-
 		//At last we create all the new component dependencies
 		return c.CreateComponents(tx, added)
 	})
@@ -381,20 +342,4 @@ func (c *componentRepository) GetDependencyCountPerScanner(assetVersionName stri
 	}
 
 	return counts, nil
-}
-
-func diffComponents(components []models.ComponentDependency, scannerID string) ([]models.ComponentDependency, []models.ComponentDependency) {
-	var componentsToDelete []models.ComponentDependency
-	var componentsToSave []models.ComponentDependency
-
-	for i := range components {
-		if strings.TrimSpace(components[i].ScannerIDs) == scannerID {
-			componentsToDelete = append(componentsToDelete, components[i])
-		} else {
-			components[i].ScannerIDs = utils.RemoveFromWhitespaceSeparatedStringList(components[i].ScannerIDs, scannerID)
-			componentsToSave = append(componentsToSave, components[i])
-		}
-	}
-
-	return componentsToDelete, componentsToSave
 }

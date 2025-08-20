@@ -4,6 +4,7 @@
 package repositories
 
 import (
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -19,4 +20,14 @@ func NewArtifactRepository(db core.DB) *artifactRepository {
 		db:         db,
 		Repository: newGormRepository[string, models.Artifact](db),
 	}
+}
+
+func (r *artifactRepository) GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
+	var artifacts []models.Artifact
+	err := r.db.Where("asset_id = ? AND asset_version_name = ?", assetID, assetVersionName).Find(&artifacts).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return artifacts, nil
 }

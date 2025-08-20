@@ -779,7 +779,7 @@ func (githubIntegration *GithubIntegration) updateDependencyVulnTicket(ctx conte
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -898,7 +898,7 @@ func (githubIntegration *GithubIntegration) createDependencyVulnIssue(ctx contex
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(githubIntegration.componentRepository, asset.ID, assetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}

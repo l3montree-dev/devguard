@@ -28,6 +28,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/accesscontrol"
 	"github.com/l3montree-dev/devguard/internal/auth"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/artifact"
 	"github.com/l3montree-dev/devguard/internal/core/asset"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/attestation"
@@ -471,8 +472,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	attestationRepository := repositories.NewAttestationRepository(db)
 	policyRepository := repositories.NewPolicyRepository(db)
 	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-
 	webhookRepository := repositories.NewWebhookRepository(db)
+	artifactRepository := repositories.NewArtifactRepository(db)
 
 	dependencyVulnService := vuln.NewService(dependencyVulnRepository, vulnEventRepository, assetRepository, cveRepository, orgRepository, projectRepository, thirdPartyIntegration, assetVersionRepository)
 	firstPartyVulnService := vuln.NewFirstPartyVulnService(firstPartyVulnRepository, vulnEventRepository, assetRepository, thirdPartyIntegration)
@@ -487,7 +488,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration)
+	artifactService := artifact.NewService(artifactRepository)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, artifactService)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 	invitationRepository := repositories.NewInvitationRepository(db)
 

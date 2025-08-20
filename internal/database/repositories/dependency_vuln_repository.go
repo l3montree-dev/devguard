@@ -71,15 +71,10 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx 
 	return dependencyVulns, nil
 }
 
-func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
 
-	q := repository.Repository.GetDB(tx).Preload("Events").Preload("CVE").Preload("CVE.Exploits").Where("asset_id = ? AND asset_version_name != ?", assetID, assetVersionName)
-
-	if scannerID != "" {
-		// scanner ids is a string array separated by whitespaces
-		q = q.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
-	}
+	q := repository.Repository.GetDB(tx).Preload("Events").Preload("CVE").Preload("CVE.Exploits").Where("asset_id = ? AND asset_version_name != ? artifact_name = ? ", assetID, assetVersionName, artifactName)
 
 	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err

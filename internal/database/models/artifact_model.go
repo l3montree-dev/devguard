@@ -10,6 +10,10 @@ type Artifact struct {
 	AssetVersionName string        `json:"assetVersionName" gorm:"not null;"`
 	AssetID          uuid.UUID     `json:"vulnAssetId" gorm:"not null;"`
 	AssetVersion     *AssetVersion `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
+
+	DependencyVuln        []DependencyVuln `json:"dependencyVulns" gorm:"many2many:artifact_dependency_vulns;"`
+	ComponentDependencies []Component      `json:"componentDependencies" gorm:"many2many:artifact_component_dependencies;"`
+	LicenseRisks          []LicenseRisk    `json:"licenseRisks" gorm:"many2many:artifact_license_risks;"`
 }
 
 func (a Artifact) TableName() string {

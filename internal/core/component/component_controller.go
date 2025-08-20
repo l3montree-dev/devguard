@@ -67,7 +67,7 @@ func (httpController httpController) LicenseDistribution(ctx core.Context) error
 
 func (httpController httpController) ListPaged(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	scannerID := ctx.QueryParam("scannerID")
+	artifactName := ctx.QueryParam("artifact-name")
 
 	pageInfo := core.GetPageInfo(ctx)
 	filter := core.GetFilterQuery(ctx)
@@ -83,7 +83,7 @@ func (httpController httpController) ListPaged(ctx core.Context) error {
 		overwrittenLicense,
 		assetVersion.Name,
 		assetVersion.AssetID,
-		scannerID,
+		artifactName,
 		pageInfo,
 		search,
 		filter,

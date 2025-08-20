@@ -108,23 +108,23 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 
-	scannerID := c.Request().Header.Get("X-Scanner")
-	if scannerID == "" {
-		slog.Error("no X-Scanner header found")
-		return scanResults, fmt.Errorf("no X-Scanner header found")
+	artifactName := c.Request().Header.Get("X-Artifact-Name")
+	if artifactName == "" {
+		slog.Error("no X-Artifact-Name header found")
+		return scanResults, fmt.Errorf("no X-Artifact-Name header found")
 	}
 
 	// update the sbom in the database in parallel
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, scannerID, normalizedBom)
+	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
 
-	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
+	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, artifactName, userID)
 }
 
-func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
+func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, artifactName string, userID string) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
@@ -134,7 +134,7 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, scannerID, userID)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifactName, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err

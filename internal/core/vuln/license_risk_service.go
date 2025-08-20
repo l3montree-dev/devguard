@@ -28,8 +28,8 @@ func NewLicenseRiskService(licenseRiskRepository core.LicenseRiskRepository, vul
 	}
 }
 
-func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error {
-	existingLicenseRisks, err := service.licenseRiskRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
+func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string) error {
+	existingLicenseRisks, err := service.licenseRiskRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return err
 	}
@@ -67,9 +67,9 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 					AssetID:          assetVersion.AssetID,
 					AssetVersion:     assetVersion,
 					State:            models.VulnStateOpen,
-					ScannerIDs:       scannerID,
 					LastDetected:     time.Now(),
 				},
+				Artifacts:            []models.Artifact{{ArtifactName: artifactName, AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name}},
 				FinalLicenseDecision: "",
 				ComponentPurl:        component.Purl,
 			}
@@ -79,7 +79,7 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 			if _, processed := processedLicenseRisks[riskHash]; !processed {
 				processedLicenseRisks[riskHash] = struct{}{}
 				allLicenseRisks = append(allLicenseRisks, licenseRisk)
-				ev := models.NewDetectedEvent(riskHash, models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, scannerID)
+				ev := models.NewDetectedEvent(riskHash, models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, artifactName)
 				// apply the event on the dependencyVuln
 				ev.Apply(&licenseRisk)
 				allVulnEvents = append(allVulnEvents, ev)

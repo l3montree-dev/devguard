@@ -114,17 +114,17 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)
 
-	scannerID := ctx.QueryParam("scanner")
-	if scannerID == "" {
+	artifactName := ctx.QueryParam("scanner")
+	if artifactName == "" {
 		return echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, scannerID)
+	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, artifactName)
 	if err != nil {
 		return err
 	}
 
-	tree := BuildDependencyTree(components, scannerID)
+	tree := BuildDependencyTree(components)
 	if tree.Root.Children == nil {
 		tree.Root.Children = make([]*treeNode, 0)
 	}
@@ -136,19 +136,19 @@ func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 
-	scannerID := ctx.QueryParam("scanner")
+	artifactName := ctx.QueryParam("artifact-name")
 	pURL := ctx.QueryParam("purl")
 
-	if scannerID == "" {
+	if artifactName == "" {
 		return echo.NewHTTPError(400, "scanner query param is required")
 	}
 
-	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, scannerID)
+	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, artifactName)
 	if err != nil {
 		return err
 	}
 
-	tree := BuildDependencyTree(components, scannerID)
+	tree := BuildDependencyTree(components)
 	if tree.Root.Children == nil {
 		tree.Root.Children = make([]*treeNode, 0)
 	}
@@ -309,27 +309,28 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 
 func (a *AssetVersionController) Metrics(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	scannerIDs := []string{}
+	//artifactName := ctx.QueryParam("artifact-name")
 	// get the latest events of this asset per scan type
-	err := a.assetVersionRepository.GetDB(nil).Table("dependency_vulns").Select("DISTINCT scanner_ids").Where("asset_version_name  = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_ids", &scannerIDs).Error
+	/* 	err := a.assetVersionRepository.GetDB(nil).Table("dependency_vulns").Select("DISTINCT scanner_ids").Where("asset_version_name  = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_ids", &scannerIDs).Error
 
-	if err != nil {
-		return err
-	}
-
+	   	if err != nil {
+	   		return err
+	   	}
+	*/
 	var enabledSca = false
 	var enabledContainerScanning = false
 	var enabledImageSigning = assetVersion.SigningPubKey != nil
 
-	for _, scannerID := range scannerIDs {
-		if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca" {
-			enabledSca = true
-		}
-		if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning" {
-			enabledContainerScanning = true
-		}
-	}
-
+	//TODO
+	/* 	for _, scannerID := range scannerIDs {
+	   		if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca" {
+	   			enabledSca = true
+	   		}
+	   		if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning" {
+	   			enabledContainerScanning = true
+	   		}
+	   	}
+	*/
 	// check if in-toto is enabled
 	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {

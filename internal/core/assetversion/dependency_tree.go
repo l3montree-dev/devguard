@@ -104,7 +104,10 @@ func CalculateDepth(node *treeNode, currentDepth int, depthMap map[string]int) {
 	}
 }
 
-func buildDependencyTree(treeName string, elements []models.ComponentDependency) tree {
+func buildDependencyTree(elements []models.ComponentDependency) tree {
+
+	treeName := "root"
+
 	// create a new tree
 	tree := tree{
 		Root:    &treeNode{Name: treeName},
@@ -185,40 +188,12 @@ func (tree *tree) RenderToMermaid() string {
 }
 
 func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
-	tree := BuildDependencyTree(elements, "")
+	tree := BuildDependencyTree(elements)
 	// calculate the depth for each node
 	depthMap := make(map[string]int)
 	CalculateDepth(tree.Root, -1, depthMap) // first purl will be the application itself. whenever calculate depth sees a purl, it increments the depth.
 	// so the application itself will be at depth 0, the first dependency at depth 1, and so on.
 	return depthMap
-}
-
-func buildDependencyTreePerScanner(elements []models.ComponentDependency, onlyShowScannerID string) map[string]tree {
-	// create a new tree
-	res := make(map[string]tree)
-	scannerDependencyMap := make(map[string][]models.ComponentDependency)
-	for _, element := range elements {
-		scannerIDs := element.ScannerIDs
-		// split at whitespace
-		scannerIDsList := strings.Fields(scannerIDs)
-		for _, scannerID := range scannerIDsList {
-			if onlyShowScannerID == "" || onlyShowScannerID == scannerID {
-				if _, ok := scannerDependencyMap[scannerID]; !ok {
-					scannerDependencyMap[scannerID] = make([]models.ComponentDependency, 0)
-				}
-				scannerDependencyMap[scannerID] = append(scannerDependencyMap[scannerID], element)
-			}
-		}
-	}
-
-	for scannerID, elements := range scannerDependencyMap {
-		// group the elements by scanner id and build the dependency trees.
-		// for each scanner
-		tree := buildDependencyTree(scannerID, elements)
-		res[scannerID] = tree
-	}
-
-	return res
 }
 
 func mergeDependencyTrees(trees map[string]tree) tree {
@@ -262,10 +237,8 @@ func mergeDependencyTrees(trees map[string]tree) tree {
 	return tree
 }
 
-func BuildDependencyTree(elements []models.ComponentDependency, onlyShowScannerID string) tree {
+func BuildDependencyTree(elements []models.ComponentDependency) tree {
 	// create a new tree
-	treeMap := buildDependencyTreePerScanner(elements, onlyShowScannerID)
+	return buildDependencyTree(elements)
 
-	// merge the trees
-	return mergeDependencyTrees(treeMap)
 }

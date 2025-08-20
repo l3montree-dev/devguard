@@ -1182,7 +1182,7 @@ func (g *GitlabIntegration) updateDependencyVulnIssue(ctx context.Context, depen
 
 	exp := risk.Explain(*dependencyVuln, asset, vector, riskMetrics)
 
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, dependencyVuln.AssetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
 	if err != nil {
 		return err
 	}
@@ -1320,7 +1320,7 @@ func (g *GitlabIntegration) createDependencyVulnIssue(ctx context.Context, depen
 
 	assetSlug := asset.Slug
 	labels := commonint.GetLabels(dependencyVuln)
-	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.ScannerIDs, exp.ComponentPurl)
+	componentTree, err := commonint.RenderPathToComponent(g.componentRepository, asset.ID, assetVersionName, dependencyVuln.Artifacts, exp.ComponentPurl)
 	if err != nil {
 		return nil, err
 	}

@@ -90,6 +90,11 @@ type AttestationRepository interface {
 	GetByAssetVersionAndAssetID(assetID uuid.UUID, assetVersion string) ([]models.Attestation, error)
 }
 
+type ArtifactRepository interface {
+	common.Repository[string, models.Artifact, DB]
+	GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
+}
+
 type CveRepository interface {
 	common.Repository[string, models.CVE, DB]
 	FindByID(id string) (models.CVE, error)
@@ -124,8 +129,8 @@ type AffectedComponentRepository interface {
 type ComponentRepository interface {
 	common.Repository[string, models.Component, DB]
 
-	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.ComponentDependency, error)
-	LoadComponentsWithProject(tx DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
+	LoadComponents(tx DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error)
+	LoadComponentsWithProject(tx DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, artifactName string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.ComponentDependency], error)
 	LoadPathToComponent(tx DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error)
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
@@ -151,7 +156,7 @@ type DependencyVulnRepository interface {
 	ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
-	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
+	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error)
 	GetArtifacts(assetVersionName string, assetID uuid.UUID) ([]string, error)
 }
 
@@ -252,6 +257,10 @@ type AssetService interface {
 	GetCVSSBadgeSVG(CVSS models.AssetRiskDistribution) string
 	CreateAsset(asset models.Asset) (*models.Asset, error)
 }
+type ArtifactService interface {
+	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]string, error)
+	SaveArtifact(artifact models.Artifact) error
+}
 
 type DependencyVulnService interface {
 	RecalculateRawRiskAssessment(tx DB, responsible string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error
@@ -276,8 +285,8 @@ type AssetVersionService interface {
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, orgName string, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
-	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error
-	HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
+	UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM) error
+	HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error)
 	BuildOpenVeX(asset models.Asset, assetVersion models.AssetVersion, organizationSlug string, dependencyVulns []models.DependencyVuln) vex.VEX
 }
 
@@ -410,13 +419,13 @@ type ComponentProjectRepository interface {
 }
 
 type ComponentService interface {
-	GetAndSaveLicenseInformation(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error)
+	GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName string) ([]models.Component, error)
 	RefreshComponentProjectInformation(project models.ComponentProject)
 	GetLicense(component models.Component) (models.Component, error)
 }
 
 type LicenseRiskService interface {
-	FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error
+	FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string) error
 	UpdateLicenseRiskState(tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error)
 	MakeFinalLicenseDecision(vulnID string, finalLicense string, userID string) error
 }

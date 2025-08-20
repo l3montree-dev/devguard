@@ -170,14 +170,20 @@ func SetupAndPushPipeline(accessToken string, gitlabURL string, projectName stri
 }
 
 // this function returns a string containing a mermaids js flow chart to the given pURL
-func RenderPathToComponent(componentRepository core.ComponentRepository, assetID uuid.UUID, assetVersionName string, scannerID string, pURL string) (string, error) {
+func RenderPathToComponent(componentRepository core.ComponentRepository, assetID uuid.UUID, assetVersionName string, artifacts []models.Artifact, pURL string) (string, error) {
 
-	components, err := componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, scannerID)
+	//TODO
+	artifactName := ""
+	if len(artifacts) > 0 {
+		artifactName = artifacts[0].ArtifactName
+	}
+
+	components, err := componentRepository.LoadPathToComponent(nil, assetVersionName, assetID, pURL, artifactName)
 	if err != nil {
 		return "", err
 	}
 
-	tree := assetversion.BuildDependencyTree(components, "")
+	tree := assetversion.BuildDependencyTree(components)
 	return tree.RenderToMermaid(), nil
 }
 

@@ -86,6 +86,10 @@ func ParseBaseConfig() {
 		RuntimeBaseConfig.ScannerID = RuntimeBaseConfig.ScannerID + ":" + RuntimeBaseConfig.ArtifactName
 	}
 
+	if RuntimeBaseConfig.ArtifactName == "" {
+		RuntimeBaseConfig.ArtifactName = "default"
+	}
+
 	if RuntimeBaseConfig.APIURL != "" {
 		RuntimeBaseConfig.APIURL = sanitizeAPIURL(RuntimeBaseConfig.APIURL)
 	}
