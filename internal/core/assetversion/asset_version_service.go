@@ -297,13 +297,13 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return newDetectedVulnsNotOnOtherBranch, fixedVulns, append(newDetectedVulnsNotOnOtherBranch, inBoth...), nil
 }
 
-func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
@@ -323,8 +323,8 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          asset.ID,
-				ScannerIDs:       scannerID,
 			},
+			ArtifactName:          artifactName,
 			CVEID:                 utils.Ptr(v.CVEID),
 			ComponentPurl:         utils.Ptr(v.Purl),
 			ComponentFixedVersion: fixedVersion,
@@ -341,7 +341,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	opened, closed, newState, err = s.handleScanResult(userID, scannerID, assetVersion, dependencyVulns, asset)
+	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, dependencyVulns, asset)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -350,7 +350,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 		assetVersion.Metadata = make(map[string]any)
 	}
 
-	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
+	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
 	if len(opened) > 0 {
 		go func() {
@@ -369,37 +369,75 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	return opened, closed, newState, nil
 }
 
-func diffScanResults(currentScanner string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln) {
+func diffScanResults(currentArtifactName string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln) {
 	comparison := utils.CompareSlices(existingDependencyVulns, foundVulnerabilities, func(dependencyVuln models.DependencyVuln) string {
 		return dependencyVuln.CalculateHash()
 	})
 
-	foundByScannerAndNotExisting := comparison.OnlyInB //We want to create new vulnerabilities for these
-	foundByScannerAndExisting := comparison.InBoth     //We have to check if it was already found by this scanner or only by other scanners
-	notFoundByScannerAndExisting := comparison.OnlyInA //We have to update all vulnerabilities which were previously found by this scanner and now aren't
+	firstDetected := comparison.OnlyInB
 
-	var detectedByOtherScanner []models.DependencyVuln
-	var notDetectedByScannerAnymore []models.DependencyVuln
+	var fixedOnAll []models.DependencyVuln
+	var firstDetectedOnThisArtifactName []models.DependencyVuln
+	var fixedOnThisArtifactName []models.DependencyVuln
 
-	var fixedVulns []models.DependencyVuln //We should collect all vulnerabilities we want to fix so we can do it all at once
+	var foundVulnsMappedByID = make(map[string][]models.DependencyVuln)
+	for _, vuln := range foundVulnerabilities {
+		if _, ok := foundVulnsMappedByID[vuln.ID]; !ok {
+			foundVulnsMappedByID[vuln.ID] = []models.DependencyVuln{}
+		}
+		foundVulnsMappedByID[vuln.ID] = append(foundVulnsMappedByID[vuln.ID], vuln)
+	}
 
-	// Now we work on the vulnerabilities found in both sets -> has the vulnerability this scanner id already in his scanner_ids
-	for i := range foundByScannerAndExisting {
-		if !utils.ContainsInWhitespaceSeparatedStringList(foundByScannerAndExisting[i].ScannerIDs, currentScanner) {
-			detectedByOtherScanner = append(detectedByOtherScanner, foundByScannerAndExisting[i])
+	var existingVulnsMappedByID = make(map[string][]models.DependencyVuln)
+	for _, existingVuln := range foundVulnerabilities {
+		if _, ok := existingVulnsMappedByID[existingVuln.ID]; !ok {
+			existingVulnsMappedByID[existingVuln.ID] = []models.DependencyVuln{}
+		}
+		existingVulnsMappedByID[existingVuln.ID] = append(existingVulnsMappedByID[existingVuln.ID], existingVuln)
+	}
+
+	for i, existingVulns := range existingVulnsMappedByID {
+
+		if foundVulnsMappedByID[i] == nil {
+			if len(existingVulns) == 1 {
+				// this means that the vulnerability was fixed on all branches
+				fixedOnAll = append(fixedOnAll, existingVulns...)
+			} else {
+				// this means that the vulnerability was fixed on this branch
+				fixedOnThisArtifactName = append(fixedOnThisArtifactName, existingVuln)
+			}
+		} else {
+			alreadyDetectedOnThisArtifactName := false
+			for _, existingVuln := range existingVulns {
+				if *existingVuln.AssetVersion.Asset.RepositoryID == currentArtifactName {
+					alreadyDetectedOnThisArtifactName = true
+					break
+				}
+			}
+			if !alreadyDetectedOnThisArtifactName {
+				// this means that the vulnerability was first detected on this artifact name
+				firstDetectedOnThisArtifactName = append(firstDetectedOnThisArtifactName, foundVulnsMappedByID[i][0])
+			}
 		}
 	}
 
-	// Last we have to change the already existing vulnerabilities which were not found this time
-	for i := range notFoundByScannerAndExisting {
-		if strings.TrimSpace(notFoundByScannerAndExisting[i].ScannerIDs) == currentScanner {
-			fixedVulns = append(fixedVulns, notFoundByScannerAndExisting[i])
-		} else if utils.ContainsInWhitespaceSeparatedStringList(notFoundByScannerAndExisting[i].ScannerIDs, currentScanner) {
-			notDetectedByScannerAnymore = append(notDetectedByScannerAnymore, notFoundByScannerAndExisting[i])
+	for i, foundVulns := range foundVulnsOnBothMappedByID {
+		alreadyDetectedOnThisArtifactName := false
+		for _, foundVuln := range foundVulns {
+			if foundVuln.ArtifactName == currentArtifactName {
+				alreadyDetectedOnThisArtifactName = true
+				break
+			}
+
+			if !alreadyDetectedOnThisArtifactName {
+				firstDetectedOnThisArtifactName = append(firstDetectedOnThisArtifactName, foundVulns[0])
+			}
 		}
+
 	}
 
-	return foundByScannerAndNotExisting, fixedVulns, detectedByOtherScanner, notDetectedByScannerAnymore
+	return firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName
+
 }
 
 type Diffable interface {
@@ -448,7 +486,7 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
 }
 
-func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+func (s *service) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
 	// get all existing dependencyVulns from the database - this is the old state
 	//number := rand.IntN(len(dependencyVulns))
 	//dependencyVulns = dependencyVulns[:0]
@@ -458,7 +496,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 	// get all vulns from other branches
-	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -472,7 +510,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return dependencyVuln.State != models.VulnStateFixed
 	})
 
-	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(scannerID, dependencyVulns, existingDependencyVulns)
+	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 
 	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newDetectedVulns, existingVulnsOnOtherBranch)
 
