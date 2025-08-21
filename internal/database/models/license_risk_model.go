@@ -11,7 +11,7 @@ type LicenseRisk struct {
 	Vulnerability
 	Artifacts            []Artifact `json:"artifacts" gorm:"many2many:artifact_license_risks;"`
 	FinalLicenseDecision string     `json:"finalLicenseDecision" gorm:"type:text"`
-	ComponentPurl        string     `json:"componentPurl" gorm:"type:text;primarykey"`
+	ComponentPurl        string     `json:"componentPurl" gorm:"type:text;"`
 }
 
 func (licenseRisk LicenseRisk) TableName() string {

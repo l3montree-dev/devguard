@@ -82,6 +82,10 @@ type ComponentDependency struct {
 	Dependency     Component `json:"dependency" gorm:"foreignKey:DependencyPurl;references:Purl;constraint:OnDelete:CASCADE;"`
 	DependencyPurl string    `json:"dependencyPurl" gorm:"column:dependency_purl;index:dependency_purl_idx"`
 
+	// Foreign key fields for AssetVersion relationship
+	AssetVersionName string    `json:"assetVersionName" gorm:"column:asset_version_name;not null;"`
+	AssetID          uuid.UUID `json:"assetId" gorm:"column:asset_id;not null;type:uuid;"`
+
 	Artifacts []Artifact `json:"artifacts" gorm:"many2many:artifact_component_dependencies"`
 
 	Depth int `json:"depth" gorm:"column:depth"`
