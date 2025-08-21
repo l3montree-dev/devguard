@@ -274,19 +274,10 @@ func createSampleDependencyVulns() []vuln.DependencyVulnDTO {
 	effort := 4
 
 	cveData := &models.CVE{
-		CVE:                   "CVE-2021-44228",
-		Description:           "Apache Log4j2 <=2.14.1 JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints.",
-		CVSS:                  10.0,
-		Severity:              models.SeverityCritical,
-		AttackVector:          "Network",
-		AttackComplexity:      "Low",
-		PrivilegesRequired:    "None",
-		UserInteraction:       "None",
-		Scope:                 "Changed",
-		ConfidentialityImpact: "High",
-		IntegrityImpact:       "High",
-		AvailabilityImpact:    "High",
-		Vector:                "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+		CVE:         "CVE-2021-44228",
+		Description: "Apache Log4j2 <=2.14.1 JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+		CVSS:        10.0,
+		Vector:      "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
 	}
 
 	return []vuln.DependencyVulnDTO{

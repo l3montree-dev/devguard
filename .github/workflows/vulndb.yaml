@@ -1,7 +1,12 @@
 name: VulnDB Workflow
 
-on: 
+on:
   workflow_dispatch:
+    inputs:
+      run_import:
+        description: 'Run import job'
+        required: false
+        default: 'true'
   schedule:
     - cron: '0 */6 * * *' # every hour
 
@@ -50,6 +55,7 @@ jobs:
       with:
         go-version: 1.22
     - name: Import the last database version (this takes some time)
+      if: ${{ github.event.inputs.run_import == 'true' || github.event.inputs.run_import == null }}
       run: |
         go run ./cmd/devguard-cli/main.go vulndb import || true
     - name: Build the database (this takes some time)
