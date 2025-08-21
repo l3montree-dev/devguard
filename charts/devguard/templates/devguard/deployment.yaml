@@ -63,6 +63,8 @@ spec:
             value: devguard
           - name: POSTGRES_HOST
             value: postgresql
+          - name: OSI_LICENSES_API
+            value: https://opensource.org/api/license/
           - name: POSTGRES_PORT
             value: "5432"
           - name: FRONTEND_URL
