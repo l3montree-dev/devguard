@@ -184,7 +184,6 @@ func createTestVulnerability(t *testing.T, db core.DB, asset models.Asset, asset
 		DateLastModified: time.Now().Add(-12 * time.Hour),
 		Description:      "Test vulnerability for auto-reopen testing",
 		CVSS:             7.5,
-		Severity:         models.SeverityHigh,
 	}
 	err := db.Create(&cve).Error
 	assert.NoError(t, err)
