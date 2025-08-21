@@ -60,9 +60,12 @@ func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string
 	var components []models.ComponentDependency
 	var err error
 
-	query := c.GetDB(tx).Preload("Component").Preload("Dependency").Preload("Artifact").Where("asset_version_name = ? AND asset_id = ? artifact_name = ?", assetVersionName, assetID, artifactName)
-
-	err = query.Find(&components).Error
+	err = c.GetDB(tx).Debug().Model(&models.ComponentDependency{}).
+		Preload("Component").Preload("Dependency").
+		Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
+		Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").
+		Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ? AND artifacts.artifact_name = ?", assetVersionName, assetID, artifactName).
+		Find(&components).Error
 
 	if err != nil {
 		return nil, err
@@ -226,7 +229,10 @@ func licensesToMap(licenses []struct {
 func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, artifactName string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
 	var componentDependencies []models.ComponentDependency
 
-	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ? AND artifact_name = ", assetVersionName, assetID, artifactName)
+	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").
+		Joins("JOIN artifact_component_dependencies ON component_dependencies.id = artifact_component_dependencies.component_dependency_id").
+		Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").
+		Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ? AND artifacts.artifact_name = ?", assetVersionName, assetID, artifactName)
 
 	for _, f := range filter {
 		query = query.Where(f.SQL(), f.Value())
@@ -295,11 +301,11 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 	removed := comparison.OnlyInA
 	added := comparison.OnlyInB
 
-	artifact := models.Artifact{
+	/* 	artifact := models.Artifact{
 		ArtifactName:     artifactName,
 		AssetID:          assetID,
 		AssetVersionName: assetVersionName,
-	}
+	} */
 
 	return len(removed) > 0 || len(added) > 0, c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
 
@@ -310,10 +316,15 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 			}
 		}
 
-		// make sure the asset id is set
 		for i := range added {
-			added[i].Artifacts = append(added[i].Artifacts, artifact)
+			added[i].AssetVersionName = assetVersionName
+			added[i].AssetID = assetID
 		}
+
+		// make sure the asset id is set
+		/* 		for i := range added {
+			added[i].Artifacts = append(added[i].Artifacts, artifact)
+		} */
 		//At last we create all the new component dependencies
 		return c.CreateComponents(tx, added)
 	})

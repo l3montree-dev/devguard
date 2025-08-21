@@ -2,6 +2,7 @@ package inithelper
 
 import (
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/artifact"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
@@ -64,6 +65,12 @@ func CreateDependencyVulnService(db core.DB, oauth2 map[string]*gitlabint.Gitlab
 	)
 }
 
+func CreateArtifactService(db core.DB) core.ArtifactService {
+	return artifact.NewService(
+		repositories.NewArtifactRepository(db),
+	)
+}
+
 func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) core.AssetVersionService {
 	thirdPartyIntegration := integrations.NewThirdPartyIntegrations(gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory), githubint.NewGithubIntegration(db))
 	return assetversion.NewService(
@@ -79,6 +86,7 @@ func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOa
 		repositories.NewVulnEventRepository(db),
 		CreateComponentService(db, depsDevService),
 		thirdPartyIntegration,
+		CreateArtifactService(db),
 	)
 }
 
@@ -108,5 +116,6 @@ func CreateHTTPController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2C
 			gitlabint.NewGitlabIntegration(db, oauth2, rbac, clientFactory),
 			githubint.NewGithubIntegration(db),
 		)),
+		CreateArtifactService(db),
 	)
 }

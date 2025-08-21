@@ -74,7 +74,9 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx 
 func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
 
-	q := repository.Repository.GetDB(tx).Preload("Events").Preload("CVE").Preload("CVE.Exploits").Where("asset_id = ? AND asset_version_name != ? artifact_name = ? ", assetID, assetVersionName, artifactName)
+	q := repository.Repository.GetDB(tx).Debug().Preload("Events").Preload("CVE").Preload("CVE.Exploits").Where("asset_id = ? AND asset_version_name != ? ", assetID, assetVersionName).Preload("Artifacts", func(db core.DB) core.DB {
+		return db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID)
+	})
 
 	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err

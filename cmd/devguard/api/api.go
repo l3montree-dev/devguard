@@ -506,7 +506,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	projectController := project.NewHTTPController(projectRepository, assetRepository, projectService, webhookRepository)
 	assetController := asset.NewHTTPController(assetRepository, assetVersionRepository, assetService, dependencyVulnService, statisticsService)
 
-	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService)
+	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService)
 
 	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository)
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)

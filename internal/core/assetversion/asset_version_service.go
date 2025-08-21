@@ -317,17 +317,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	// first node will be the package name itself
 	CalculateDepth(tree.Root, -1, depthMap)
 
-	artifact := models.Artifact{
-		ArtifactName:     artifactName,
-		AssetVersionName: assetVersion.Name,
-		AssetID:          asset.ID,
-	}
-
-	// save the artifact to the database
-	if err := s.artifactService.SaveArtifact(artifact); err != nil {
-		slog.Error("could not save artifact", "err", err)
-		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
-	}
+	fmt.Println("artifactName", artifactName)
 
 	// now we have the depth.
 	for _, vuln := range vulns {
@@ -339,7 +329,11 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 				AssetID:          asset.ID,
 			},
 			Artifacts: []models.Artifact{
-				artifact,
+				{
+					ArtifactName:     artifactName,
+					AssetVersionName: assetVersion.Name,
+					AssetID:          asset.ID,
+				},
 			},
 
 			CVEID:                 utils.Ptr(v.CVEID),

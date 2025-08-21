@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/l3montree-dev/devguard/internal/database"
 	"gorm.io/gorm"
 )
@@ -14,8 +15,8 @@ type Attestation struct {
 	UpdatedAt        time.Time      `json:"updatedAt"`
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
 	PredicateType    string         `json:"predicateType" gorm:"type:text;primaryKey"`
-	AssetVersionName string         `json:"assetVersionName" gorm:"primaryKey"`
-	AssetID          string         `json:"assetId" gorm:"primaryKey"`
+	AssetVersionName string         `json:"assetVersionName" gorm:"primaryKey;type:text;"`
+	AssetID          uuid.UUID      `json:"assetId" gorm:"primaryKey;type:uuid"`
 	ArtifactName     string         `json:"artifactName" gorm:"primaryKey"`
 
 	Artifact Artifact `json:"artifact" gorm:"foreignKey:ArtifactName,AssetID,AssetVersionName;constraint:OnDelete:CASCADE;"`

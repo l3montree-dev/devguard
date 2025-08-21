@@ -40,6 +40,8 @@ type HTTPController struct {
 	assetVersionService    core.AssetVersionService
 	statisticsService      core.StatisticsService
 
+	artifactService core.ArtifactService
+
 	dependencyVulnService core.DependencyVulnService
 	firstPartyVulnService core.FirstPartyVulnService
 
@@ -47,7 +49,7 @@ type HTTPController struct {
 	core.FireAndForgetSynchronizer
 }
 
-func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService) *HTTPController {
+func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, artifactService core.ArtifactService) *HTTPController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -64,6 +66,7 @@ func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRe
 		dependencyVulnService:     dependencyVulnService,
 		firstPartyVulnService:     firstPartyVulnService,
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
+		artifactService:           artifactService,
 	}
 }
 
@@ -114,6 +117,17 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, fmt.Errorf("no X-Artifact-Name header found")
 	}
 
+	artifact := models.Artifact{
+		ArtifactName:     artifactName,
+		AssetVersionName: assetVersion.Name,
+		AssetID:          asset.ID,
+	}
+
+	// save the artifact to the database
+	if err := s.artifactService.SaveArtifact(artifact); err != nil {
+		slog.Error("could not save artifact", "err", err)
+		return scanResults, err
+	}
 	// update the sbom in the database in parallel
 	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
 	if err != nil {
