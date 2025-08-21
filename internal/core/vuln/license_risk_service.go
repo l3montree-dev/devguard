@@ -192,7 +192,7 @@ func (service *LicenseRiskService) updateLicenseRiskState(tx core.DB, userID str
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification, mechanicalJustification, licenseRisk.ScannerIDs)
+		ev = models.NewFalsePositiveEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification, mechanicalJustification, licenseRisk.GetArtifactNames())
 	case models.EventTypeReopened:
 		ev = models.NewReopenedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification)
 	case models.EventTypeComment:
@@ -210,7 +210,6 @@ func (service *LicenseRiskService) MakeFinalLicenseDecision(vulnID, finalLicense
 	}
 	licenseRisk.State = models.VulnStateFixed
 	licenseRisk.FinalLicenseDecision = finalLicense
-
-	ev := models.NewFixedEvent(vulnID, models.VulnTypeLicenseRisk, userID, licenseRisk.ScannerIDs)
+	ev := models.NewFixedEvent(vulnID, models.VulnTypeLicenseRisk, userID, licenseRisk.GetArtifactNames())
 	return service.licenseRiskRepository.ApplyAndSave(nil, &licenseRisk, &ev)
 }

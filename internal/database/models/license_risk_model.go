@@ -33,3 +33,14 @@ func (licenseRisk *LicenseRisk) BeforeSave(tx *gorm.DB) (err error) {
 	licenseRisk.ID = hash
 	return nil
 }
+
+func (licenseRisk *LicenseRisk) GetArtifactNames() string {
+	artifactNames := ""
+	for _, artifact := range licenseRisk.Artifacts {
+		if artifactNames != "" {
+			artifactNames += ", "
+		}
+		artifactNames += artifact.ArtifactName
+	}
+	return artifactNames
+}

@@ -44,6 +44,15 @@ type DependencyVuln struct {
 
 var _ Vuln = &DependencyVuln{}
 
+func (vuln *DependencyVuln) GetScannerIDsOrArtifactNames() string {
+	artifactNames := ""
+	for _, artifact := range vuln.Artifacts {
+		if artifact.ArtifactName != "" {
+			artifactNames += artifact.ArtifactName + " "
+		}
+	}
+	return artifactNames
+}
 func (vuln *DependencyVuln) SetRawRiskAssessment(risk float64) {
 	vuln.RawRiskAssessment = &risk
 }

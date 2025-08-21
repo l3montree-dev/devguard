@@ -65,7 +65,7 @@ func (s *service) UserFixedDependencyVulns(tx core.DB, userID string, dependency
 	events := make([]models.VulnEvent, len(dependencyVulns))
 
 	for i, dependencyVuln := range dependencyVulns {
-		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, dependencyVuln.ScannerIDs)
+		ev := models.NewFixedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, dependencyVuln.GetScannerIDsOrArtifactNames())
 		// apply the event on the dependencyVuln
 		ev.Apply(&dependencyVulns[i])
 		events[i] = ev
@@ -193,7 +193,7 @@ func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulne
 	events := make([]models.VulnEvent, len(vulnerabilities))
 
 	for i := range vulnerabilities {
-		ev := models.NewAddedScannerEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
+		ev := models.NewAddedArtifactNameEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
 		ev.Apply(&vulnerabilities[i])
 		events[i] = ev
 	}
@@ -214,7 +214,7 @@ func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, v
 
 	events := make([]models.VulnEvent, len(vulnerabilities))
 	for i := range vulnerabilities {
-		ev := models.NewRemovedScannerEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
+		ev := models.NewRemovedArtifactNameEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
 		ev.Apply(&vulnerabilities[i])
 		events[i] = ev
 	}
@@ -313,7 +313,7 @@ func (s *service) updateDependencyVulnState(tx core.DB, userID string, dependenc
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.ScannerIDs)
+		ev = models.NewFalsePositiveEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification, mechanicalJustification, dependencyVuln.GetScannerIDsOrArtifactNames())
 	case models.EventTypeReopened:
 		ev = models.NewReopenedEvent(dependencyVuln.CalculateHash(), models.VulnTypeDependencyVuln, userID, justification)
 	case models.EventTypeComment:

@@ -9,7 +9,6 @@ import (
 
 type LicenseRiskDTO struct {
 	ID                   string           `json:"id"`
-	ScannerIDs           string           `json:"scannerIds"`
 	Message              *string          `json:"message"`
 	AssetVersionName     string           `json:"assetVersionName"`
 	AssetID              string           `json:"assetId"`
@@ -19,8 +18,9 @@ type LicenseRiskDTO struct {
 	TicketURL            *string          `json:"ticketUrl"`
 	ManualTicketCreation bool             `json:"manualTicketCreation"`
 
-	FinalLicenseDecision string `json:"finalLicenseDecision"`
-	ComponentPurl        string `json:"componentPurl"`
+	FinalLicenseDecision string            `json:"finalLicenseDecision"`
+	ComponentPurl        string            `json:"componentPurl"`
+	Artifacts            []models.Artifact `json:"artifacts"`
 }
 
 type detailedLicenseRiskDTO struct {
@@ -32,7 +32,7 @@ func LicenseRiskToDto(f models.LicenseRisk) LicenseRiskDTO {
 
 	return LicenseRiskDTO{
 		ID:                   f.ID,
-		ScannerIDs:           f.ScannerIDs,
+		Artifacts:            f.Artifacts,
 		Message:              f.Message,
 		AssetVersionName:     f.AssetVersionName,
 		AssetID:              f.AssetID.String(),

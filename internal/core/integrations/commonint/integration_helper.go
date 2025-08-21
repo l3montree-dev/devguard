@@ -19,7 +19,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 )
 
-func CreateNewVulnEventBasedOnComment(vulnID string, vulnType models.VulnType, userID, comment string, scannerIDs string) models.VulnEvent {
+func CreateNewVulnEventBasedOnComment(vulnID string, vulnType models.VulnType, userID, comment string, artifactName string) models.VulnEvent {
 
 	event, mechanicalJustification, justification := commentTrimmedPrefix(vulnType, comment)
 
@@ -27,7 +27,7 @@ func CreateNewVulnEventBasedOnComment(vulnID string, vulnType models.VulnType, u
 	case models.EventTypeAccepted:
 		return models.NewAcceptedEvent(vulnID, vulnType, userID, justification)
 	case models.EventTypeFalsePositive:
-		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, scannerIDs)
+		return models.NewFalsePositiveEvent(vulnID, vulnType, userID, justification, mechanicalJustification, artifactName)
 	case models.EventTypeReopened:
 		return models.NewReopenedEvent(vulnID, vulnType, userID, justification)
 	case models.EventTypeComment:
@@ -223,38 +223,21 @@ func GetLabels(vuln models.Vuln) []string {
 		}
 	}
 
-	scannerIDsString := vuln.GetScannerIDs()
-	scannerIDs := strings.Split(scannerIDsString, " ")
+	namesString := vuln.GetScannerIDsOrArtifactNames()
+	names := strings.Split(namesString, " ")
 	scannerDefault := "github.com/l3montree-dev/devguard/cmd/devguard-scanner/"
 
 	// the same logic how to get the artifact name is implemented in the frontend
 	// so if you change it here, you need to change it there too
-	for _, scannerID := range scannerIDs {
-		scannerID = strings.TrimSpace(scannerID)
-		if scannerID == "" {
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
 			continue
 		}
-		scannerID = strings.TrimPrefix(scannerID, scannerDefault)
-		if strings.HasPrefix(scannerID, "sca") || strings.HasPrefix(scannerID, "container-scanning") || strings.HasPrefix(scannerID, "sbom") {
-			artifactName := scannerID
-			parts := strings.Split(scannerID, ":")
-			if len(parts) > 0 {
-				switch parts[0] {
-				case "sca":
-					artifactName = "source-code"
-				case "container-scanning":
-					artifactName = "container"
-				case "sbom":
-					artifactName = "sbom"
-				}
-			}
-			if len(parts) > 1 {
-				artifactName = artifactName + ":" + parts[1]
-			}
-			labels = append(labels, "artifact:"+artifactName)
-		} else {
-			labels = append(labels, scannerID)
-		}
+		name = strings.TrimPrefix(name, scannerDefault)
+
+		labels = append(labels, name)
+
 	}
 
 	return labels

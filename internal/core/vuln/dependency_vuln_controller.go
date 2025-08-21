@@ -137,7 +137,7 @@ func (controller dependencyVulnHTTPController) ListPaged(ctx core.Context) error
 		// append the dependencyVuln to the package
 		dependencyVulnsByPackage.DependencyVulns = append(res[*dependencyVuln.ComponentPurl].DependencyVulns, DependencyVulnDTO{
 			ID:                    dependencyVuln.ID,
-			ScannerIDs:            dependencyVuln.ScannerIDs,
+			Artifacts:             dependencyVuln.Artifacts,
 			Message:               dependencyVuln.Message,
 			AssetVersionName:      dependencyVuln.AssetVersionName,
 			AssetID:               dependencyVuln.AssetID.String(),
@@ -336,7 +336,7 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 			Priority:              dependencyVuln.Priority,
 			LastDetected:          dependencyVuln.LastDetected,
 			CreatedAt:             dependencyVuln.CreatedAt,
-			ScannerIDs:            dependencyVuln.ScannerIDs,
+			Artifacts:             dependencyVuln.Artifacts,
 			TicketID:              dependencyVuln.TicketID,
 			TicketURL:             dependencyVuln.TicketURL,
 			ManualTicketCreation:  dependencyVuln.ManualTicketCreation,
