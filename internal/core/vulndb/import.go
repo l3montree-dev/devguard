@@ -32,6 +32,14 @@ var pruneTablesBeforeInsert = []string{
 	"cve_affected_component",
 }
 
+var tableNameToPrimaryKey = map[string][]string{
+	"cves":                   {"cve"},
+	"cwes":                   {"cwe"},
+	"exploits":               {"id"},
+	"affected_components":    {"id"},
+	"cve_affected_component": {"cvecve", "affected_component_id"},
+}
+
 type importService struct {
 	cveRepository                core.CveRepository
 	cweRepository                core.CweRepository
@@ -173,8 +181,10 @@ func importCSV(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath s
 
 	defer func() {
 		if err != nil {
+			slog.Error("Rolling back transaction", "error", err)
 			tx.Rollback(ctx) // nolint:errcheck
 		} else {
+			slog.Info("Committing transaction")
 			tx.Commit(ctx) // nolint:errcheck
 		}
 	}()
@@ -210,11 +220,31 @@ func importCSV(ctx context.Context, pool *pgxpool.Pool, tableName, csvFilePath s
 		return fmt.Errorf("failed to import CSV: %w", err)
 	}
 
+	// retrieve the column names from the original table
+	rows, err := tx.Query(ctx, "SELECT column_name FROM information_schema.columns WHERE table_name = $1", tableName)
+	if err != nil {
+		return fmt.Errorf("failed to get column names: %w", err)
+	}
+	defer rows.Close()
+
+	// build the insert statement
+	var columns []string
+	for rows.Next() {
+		var columnName string
+		if err := rows.Scan(&columnName); err != nil {
+			return fmt.Errorf("failed to scan column name: %w", err)
+		}
+		columns = append(columns, columnName)
+	}
+
 	_, err = tx.Exec(ctx, fmt.Sprintf(`
         INSERT INTO %s
         SELECT * FROM tmp_%s
-        ON CONFLICT DO NOTHING;
-    `, tableName, tableName))
+        ON CONFLICT (%s) DO UPDATE
+		SET %s
+    `, tableName, tableName, strings.Join(tableNameToPrimaryKey[tableName], ","), strings.Join(utils.Map(columns, func(c string) string {
+		return fmt.Sprintf("\"%s\" = EXCLUDED.\"%s\"", c, c)
+	}), ",")))
 
 	_, err = tx.Exec(ctx, "SET session_replication_role = 'origin';")
 

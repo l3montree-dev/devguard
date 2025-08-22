@@ -27,6 +27,48 @@ type nvdCVE struct {
 	CISARequiredAction    string      `json:"cisaRequiredAction"`
 	CISAVulnerabilityName string      `json:"cisaVulnerabilityName"`
 	Metrics               struct {
+		CvssMetricV40 []struct {
+			Source   string `json:"source"`
+			Type     string `json:"type"`
+			CvssData struct {
+				Version                           string  `json:"version"`
+				VectorString                      string  `json:"vectorString"`
+				BaseScore                         float64 `json:"baseScore"`
+				BaseSeverity                      string  `json:"baseSeverity"`
+				AttackVector                      string  `json:"attackVector"`
+				AttackComplexity                  string  `json:"attackComplexity"`
+				AttackRequirements                string  `json:"attackRequirements"`
+				PrivilegesRequired                string  `json:"privilegesRequired"`
+				UserInteraction                   string  `json:"userInteraction"`
+				VulnConfidentialityImpact         string  `json:"vulnConfidentialityImpact"`
+				VulnIntegrityImpact               string  `json:"vulnIntegrityImpact"`
+				VulnAvailabilityImpact            string  `json:"vulnAvailabilityImpact"`
+				SubConfidentialityImpact          string  `json:"subConfidentialityImpact"`
+				SubIntegrityImpact                string  `json:"subIntegrityImpact"`
+				SubAvailabilityImpact             string  `json:"subAvailabilityImpact"`
+				ExploitMaturity                   string  `json:"exploitMaturity"`
+				ConfidentialityRequirement        string  `json:"confidentialityRequirement"`
+				IntegrityRequirement              string  `json:"integrityRequirement"`
+				AvailabilityRequirement           string  `json:"availabilityRequirement"`
+				ModifiedAttackVector              string  `json:"modifiedAttackVector"`
+				ModifiedAttackComplexity          string  `json:"modifiedAttackComplexity"`
+				ModifiedAttackRequirements        string  `json:"modifiedAttackRequirements"`
+				ModifiedPrivilegesRequired        string  `json:"modifiedPrivilegesRequired"`
+				ModifiedUserInteraction           string  `json:"modifiedUserInteraction"`
+				ModifiedVulnConfidentialityImpact string  `json:"modifiedVulnConfidentialityImpact"`
+				ModifiedVulnIntegrityImpact       string  `json:"modifiedVulnIntegrityImpact"`
+				ModifiedVulnAvailabilityImpact    string  `json:"modifiedVulnAvailabilityImpact"`
+				ModifiedSubConfidentialityImpact  string  `json:"modifiedSubConfidentialityImpact"`
+				ModifiedSubIntegrityImpact        string  `json:"modifiedSubIntegrityImpact"`
+				ModifiedSubAvailabilityImpact     string  `json:"modifiedSubAvailabilityImpact"`
+				Safety                            string  `json:"Safety"`
+				Automatable                       string  `json:"Automatable"`
+				Recovery                          string  `json:"Recovery"`
+				ValueDensity                      string  `json:"valueDensity"`
+				VulnerabilityResponseEffort       string  `json:"vulnerabilityResponseEffort"`
+				ProviderUrgency                   string  `json:"providerUrgency"`
+			} `json:"cvssData"`
+		} `json:"cvssMetricV40"`
 		CvssMetricV31 []struct {
 			Source   string `json:"source"`
 			Type     string `json:"type"`

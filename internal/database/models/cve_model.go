@@ -35,19 +35,7 @@ type CVE struct {
 	Weaknesses  []*Weakness `json:"weaknesses" gorm:"foreignKey:CVEID;constraint:OnDelete:CASCADE;" cve:"weaknesses"`
 	Description string      `json:"description" gorm:"type:text;" cve:"description"`
 
-	CVSS                float32  `json:"cvss" gorm:"type:decimal(4,2);" cve:"cvss"`
-	Severity            Severity `json:"severity" cve:"severity"`
-	ExploitabilityScore float32  `json:"exploitabilityScore" gorm:"type:decimal(4,2);" cve:"exploitabilityScore"`
-	ImpactScore         float32  `json:"impactScore" gorm:"type:decimal(4,2);" cve:"impactScore"`
-
-	AttackVector          string `json:"attackVector" cve:"attackVector"`
-	AttackComplexity      string `json:"attackComplexity" cve:"attackComplexity"`
-	PrivilegesRequired    string `json:"privilegesRequired" cve:"privilegesRequired"`
-	UserInteraction       string `json:"userInteractionRequired" cve:"userInteractionRequired"`
-	Scope                 string `json:"scope" cve:"scope"`
-	ConfidentialityImpact string `json:"confidentialityImpact" cve:"confidentialityImpact"`
-	IntegrityImpact       string `json:"integrityImpact" cve:"integrityImpact"`
-	AvailabilityImpact    string `json:"availabilityImpact" cve:"availabilityImpact"`
+	CVSS float32 `json:"cvss" gorm:"type:decimal(4,2);" cve:"cvss"`
 
 	References string `json:"references" gorm:"type:text;" cve:"references"`
 

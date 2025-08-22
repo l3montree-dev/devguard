@@ -889,7 +889,7 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
-		SpecVersion: cdx.SpecVersion1_5,
+		SpecVersion: cdx.SpecVersion1_6,
 		Version:     1,
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),

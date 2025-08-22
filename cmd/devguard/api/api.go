@@ -672,6 +672,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	projectRouter.GET("/assets/", assetController.List)
 
 	projectRouter.GET("/stats/risk-distribution/", statisticsController.GetProjectRiskDistribution)
+	projectRouter.GET("/stats/cvss-distribution/", statisticsController.GetProjectCvssDistribution)
 	projectRouter.GET("/stats/risk-history/", statisticsController.GetProjectRiskHistory)
 	projectRouter.GET("/compliance/", complianceController.ProjectCompliance)
 	projectRouter.GET("/policies/", policyController.GetProjectPolicies)

@@ -295,6 +295,24 @@ func toDate(date *utils.Date) *datatypes.Date {
 }
 
 func getCVSSMetric(nvdCVE nvdCVE) cvssMetric {
+	if len(nvdCVE.Metrics.CvssMetricV40) > 0 {
+		v40 := nvdCVE.Metrics.CvssMetricV40[0].CvssData
+		return cvssMetric{
+			Severity:              v40.BaseSeverity,
+			CVSS:                  float32(v40.BaseScore),
+			ExploitabilityScore:   0, // CVSS v4.0 doesn't provide separate exploitability score
+			ImpactScore:           0, // CVSS v4.0 doesn't provide separate impact score
+			AttackVector:          v40.AttackVector,
+			AttackComplexity:      v40.AttackComplexity,
+			PrivilegesRequired:    v40.PrivilegesRequired,
+			UserInteraction:       v40.UserInteraction,
+			Scope:                 "", // CVSS v4.0 doesn't have a scope field
+			ConfidentialityImpact: v40.VulnConfidentialityImpact,
+			IntegrityImpact:       v40.VulnIntegrityImpact,
+			AvailabilityImpact:    v40.VulnAvailabilityImpact,
+			Vector:                v40.VectorString,
+		}
+	}
 	// check if cvss v3 is available
 	if len(nvdCVE.Metrics.CvssMetricV31) > 0 {
 		return cvssMetric{
@@ -409,18 +427,7 @@ func fromNVDCVE(nistCVE nvdCVE) (models.CVE, []models.Weakness, []models.CPEMatc
 
 		Description: description,
 
-		Severity:              models.Severity(cvssMetric.Severity),
-		CVSS:                  cvssMetric.CVSS,
-		ExploitabilityScore:   cvssMetric.ExploitabilityScore,
-		ImpactScore:           cvssMetric.ImpactScore,
-		AttackVector:          cvssMetric.AttackVector,
-		AttackComplexity:      cvssMetric.AttackComplexity,
-		PrivilegesRequired:    cvssMetric.PrivilegesRequired,
-		UserInteraction:       cvssMetric.UserInteraction,
-		Scope:                 cvssMetric.Scope,
-		ConfidentialityImpact: cvssMetric.ConfidentialityImpact,
-		IntegrityImpact:       cvssMetric.IntegrityImpact,
-		AvailabilityImpact:    cvssMetric.AvailabilityImpact,
+		CVSS: cvssMetric.CVSS,
 
 		CISAExploitAdd:        toDate(nistCVE.CISAExploitAdd),
 		CISAActionDue:         toDate(nistCVE.CISAActionDue),
