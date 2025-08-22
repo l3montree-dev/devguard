@@ -13,3 +13,15 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+ALTER TABLE public.cves
+    DROP COLUMN IF EXISTS exploitability_score,
+    DROP COLUMN IF EXISTS impact_score,
+    DROP COLUMN IF EXISTS attack_vector,
+    DROP COLUMN IF EXISTS attack_complexity,
+    DROP COLUMN IF EXISTS privileges_required,
+    DROP COLUMN IF EXISTS user_interaction,
+    DROP COLUMN IF EXISTS confidentiality_impact,
+    DROP COLUMN IF EXISTS integrity_impact,
+    DROP COLUMN IF EXISTS availability_impact,
+    DROP COLUMN IF EXISTS severity,
+    DROP COLUMN IF EXISTS scope;
