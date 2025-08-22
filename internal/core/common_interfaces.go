@@ -135,7 +135,7 @@ type ComponentRepository interface {
 	SaveBatch(tx DB, components []models.Component) error
 	FindByPurl(tx DB, purl string) (models.Component, error)
 	HandleStateDiff(tx DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error)
-	GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
+	GetDependencyCountPerScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetLicenseDistribution(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error)
 }
 
@@ -144,7 +144,7 @@ type DependencyVulnRepository interface {
 
 	GetAllVulnsByAssetID(tx DB, assetID uuid.UUID) ([]models.DependencyVuln, error)
 	GetAllOpenVulnsByAssetVersionNameAndAssetID(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error)
-	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
+	GetDependencyVulnsByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error)
 	GetByAssetVersionPaged(tx DB, assetVersionName string, assetID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], map[string]int, error)
 	GetDefaultDependencyVulnsByOrgIDPaged(tx DB, userAllowedProjectIds []string, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
 	GetDefaultDependencyVulnsByProjectIDPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.DependencyVuln], error)
@@ -153,7 +153,7 @@ type DependencyVulnRepository interface {
 	GetDependencyVulnsByPurl(tx DB, purls []string) ([]models.DependencyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.DependencyVuln, vulnEvent *models.VulnEvent) error
 	GetDependencyVulnsByDefaultAssetVersion(tx DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
-	ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
+	ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error)
 	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error)
@@ -183,7 +183,7 @@ type LicenseRiskRepository interface {
 	GetAllOverwrittenLicensesForAssetVersion(assetID uuid.UUID, assetVersionName string) ([]models.LicenseRisk, error)
 	MaybeGetLicenseOverwriteForComponent(assetID uuid.UUID, assetVersionName string, pURL packageurl.PackageURL) (models.LicenseRisk, error)
 	DeleteByComponentPurl(assetID uuid.UUID, assetVersionName string, purl packageurl.PackageURL) error
-	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error)
+	ListByArtifactName(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error)
 	ApplyAndSave(tx DB, licenseRisk *models.LicenseRisk, vulnEvent *models.VulnEvent) error
 }
 

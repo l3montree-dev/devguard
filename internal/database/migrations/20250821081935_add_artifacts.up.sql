@@ -1,0 +1,137 @@
+
+CREATE TABLE IF NOT EXISTS public.attestations (
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    deleted_at timestamp with time zone,
+    predicate_type text NOT NULL,
+    scanner_id text NOT NULL,
+    asset_version_name text NOT NULL,
+    asset_id uuid NOT NULL,
+    content jsonb
+);
+
+
+ALTER TABLE public.attestations ADD COLUMN IF NOT EXISTS artifact_name TEXT NOT NULL DEFAULT 'default';
+
+CREATE TABLE IF NOT EXISTS public.artifacts (
+    artifact_name TEXT NOT NULL,
+    asset_version_name TEXT NOT NULL,
+    asset_id UUID NOT NULL
+);
+
+
+CREATE TABLE IF NOT EXISTS public.artifact_component_dependencies (
+    artifact_artifact_name TEXT NOT NULL,
+    artifact_asset_version_name TEXT NOT NULL,
+    artifact_asset_id UUID NOT NULL,
+    component_dependency_id UUID NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.artifact_dependency_vulns (
+    artifact_artifact_name TEXT NOT NULL,
+    artifact_asset_version_name TEXT NOT NULL,
+    artifact_asset_id UUID NOT NULL,
+    dependency_vuln_id TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.artifact_license_risks (
+    artifact_artifact_name TEXT NOT NULL,
+    artifact_asset_version_name TEXT NOT NULL,
+    artifact_asset_id UUID NOT NULL,
+    license_risk_id TEXT NOT NULL
+);
+
+
+ALTER TABLE public.artifact_component_dependencies DROP CONSTRAINT IF EXISTS artifact_component_dependencies_pkey;
+ALTER TABLE public.artifact_dependency_vulns DROP CONSTRAINT IF EXISTS artifact_dependency_vulns_pkey;
+ALTER TABLE public.artifact_license_risks DROP CONSTRAINT IF EXISTS artifact_license_risks_pkey;
+ALTER TABLE public.artifact_dependency_vulns DROP CONSTRAINT IF EXISTS fk_artifact_dependency_vulns_artifact;
+ALTER TABLE public.artifact_license_risks DROP CONSTRAINT IF EXISTS fk_artifact_license_risks_artifact;
+ALTER TABLE public.attestations DROP CONSTRAINT IF EXISTS fk_attestations_artifact;
+ALTER TABLE public.artifact_component_dependencies DROP CONSTRAINT IF EXISTS fk_artifact_component_dependencies_artifact;
+ALTER TABLE public.asset_versions DROP CONSTRAINT IF EXISTS fk_asset_versions_artifact;
+ALTER TABLE public.artifact_license_risks DROP CONSTRAINT IF EXISTS fk_artifact_license_risks_license_risk;
+ALTER TABLE public.artifact_dependency_vulns DROP CONSTRAINT IF EXISTS fk_artifact_dependency_vulns_dependency_vuln;
+ALTER TABLE public.artifact_component_dependencies DROP CONSTRAINT IF EXISTS fk_artifact_component_dependencies_component_dependency;
+
+ALTER TABLE public.artifacts DROP CONSTRAINT IF EXISTS fk_artifacts_asset_versions;
+ALTER TABLE public.artifacts DROP CONSTRAINT IF EXISTS artifacts_pkey;
+ALTER TABLE license_risks DROP CONSTRAINT IF EXISTS license_risks_pkey;
+
+
+ALTER TABLE ONLY public.artifacts
+    ADD CONSTRAINT artifacts_pkey PRIMARY KEY (artifact_name, asset_version_name, asset_id);
+
+
+
+ALTER TABLE ONLY public.artifact_component_dependencies
+    ADD CONSTRAINT artifact_component_dependencies_pkey PRIMARY KEY (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, component_dependency_id);
+
+
+ALTER TABLE ONLY public.artifact_dependency_vulns
+    ADD CONSTRAINT artifact_dependency_vulns_pkey PRIMARY KEY (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, dependency_vuln_id);
+
+
+ALTER TABLE ONLY public.artifact_license_risks
+    ADD CONSTRAINT artifact_license_risks_pkey PRIMARY KEY (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id, license_risk_id);
+
+ALTER TABLE license_risks ADD CONSTRAINT license_risks_pkey PRIMARY KEY (id);
+
+
+ALTER TABLE ONLY public.artifact_component_dependencies
+    ADD CONSTRAINT fk_artifact_component_dependencies_artifact FOREIGN KEY
+    (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id)
+    REFERENCES public.artifacts (artifact_name, asset_version_name, asset_id)
+    ON DELETE CASCADE;
+
+
+ALTER TABLE ONLY public.artifact_component_dependencies
+    ADD CONSTRAINT fk_artifact_component_dependencies_component_dependency FOREIGN KEY
+    (component_dependency_id)
+    REFERENCES public.component_dependencies (id)
+    ON DELETE CASCADE;
+
+
+ALTER TABLE ONLY public.artifact_dependency_vulns
+    ADD CONSTRAINT fk_artifact_dependency_vulns_artifact FOREIGN KEY
+    (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id)
+    REFERENCES public.artifacts (artifact_name, asset_version_name, asset_id)
+    ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.artifact_dependency_vulns
+    ADD CONSTRAINT fk_artifact_dependency_vulns_dependency_vuln FOREIGN KEY
+    (dependency_vuln_id)
+    REFERENCES public.dependency_vulns (id)
+    ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY public.artifact_license_risks
+    ADD CONSTRAINT fk_artifact_license_risks_artifact FOREIGN KEY
+    (artifact_artifact_name, artifact_asset_version_name, artifact_asset_id)
+    REFERENCES public.artifacts (artifact_name, asset_version_name, asset_id)
+    ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.artifact_license_risks
+    ADD CONSTRAINT fk_artifact_license_risks_license_risk FOREIGN KEY
+    (license_risk_id)
+    REFERENCES public.license_risks (id)
+    ON DELETE CASCADE;
+
+
+
+
+
+ALTER TABLE ONLY public.attestations
+    ADD CONSTRAINT fk_attestations_artifact FOREIGN KEY (artifact_name, asset_version_name, asset_id)
+    REFERENCES public.artifacts (artifact_name, asset_version_name, asset_id)
+    ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.artifacts
+    ADD CONSTRAINT fk_artifacts_asset_versions FOREIGN KEY
+    (asset_version_name, asset_id)
+    REFERENCES public.asset_versions (name, asset_id)
+    ON DELETE CASCADE;
+
+
+

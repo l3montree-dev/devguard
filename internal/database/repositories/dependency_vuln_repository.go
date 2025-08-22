@@ -54,15 +54,17 @@ func (repository *dependencyVulnRepository) applyAndSave(tx core.DB, dependencyV
 	return *ev, nil
 }
 
-func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx *gorm.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error) {
 
 	var dependencyVulns = []models.DependencyVuln{}
 
 	q := repository.Repository.GetDB(tx).Preload("Events").Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
 
-	if scannerID != "" {
+	if artifactName != "" {
 		// scanner ids is a string array separated by whitespaces
-		q = q.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
+		q = q.Preload("Artifacts", func(db core.DB) core.DB {
+			return db.Where("asset_version_name = ? AND asset_id = ? AND artifact_name = ?", assetVersionName, assetID, artifactName)
+		})
 	}
 
 	if err := q.Find(&dependencyVulns).Error; err != nil {
@@ -84,16 +86,18 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersio
 	return dependencyVulns, nil
 }
 
-func (repository *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx core.DB, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVersion(tx core.DB, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error) {
 	subQuery := repository.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", assetID, true)
 
 	var dependencyVulns = []models.DependencyVuln{}
 	q := repository.Repository.GetDB(tx).Preload("CVE").Preload("Events").Preload("CVE.Exploits").Where("asset_version_name IN (?) AND asset_id = ?", subQuery, assetID)
 
-	if scannerID != "" {
-		// scanner ids is a string array separated by whitespaces
-		q = q.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
+	if artifactName != "" {
+		q = q.Preload("Artifacts", func(db core.DB) core.DB {
+			return db.Where("asset_version_name IN (?) AND asset_id = ? AND artifact_name = ?", subQuery, assetID, artifactName)
+		})
 	}
+
 	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err
 	}
@@ -109,13 +113,15 @@ func (repository *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVers
 	return dependencyVulns, nil
 }
 
-func (repository *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.DependencyVuln, error) {
+func (repository *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
 	q := repository.Repository.GetDB(repository.db).Preload("CVE").Preload("Events").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ? AND state != 'fixed'", assetVersionName, assetID)
 
-	if scannerID != "" {
+	if artifactName != "" {
 		// scanner ids is a string array separated by whitespaces
-		q = q.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
+		q = q.Preload("Artifacts", func(db core.DB) core.DB {
+			return db.Where("asset_version_name = ? AND asset_id = ? AND artifact_name = ?", assetVersionName, assetID, artifactName)
+		})
 	}
 
 	if err := q.Find(&dependencyVulns).Error; err != nil {

@@ -29,7 +29,7 @@ func NewLicenseRiskService(licenseRiskRepository core.LicenseRiskRepository, vul
 }
 
 func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string) error {
-	existingLicenseRisks, err := service.licenseRiskRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, artifactName)
+	existingLicenseRisks, err := service.licenseRiskRepository.ListByArtifactName(assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return err
 	}

@@ -32,7 +32,7 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 		q = q.Where(f.SQL(), f.Value())
 	}
 	if search != "" && len(search) > 2 {
-		q = q.Where("license_risks.final_license_decision ILIKE ? OR license_risks.component_purl ILIKE ? OR license_risks.scanner_ids ILIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%")
+		q = q.Where("license_risks.final_license_decision ILIKE ? OR license_risks.component_purl ILIKE ? ", "%"+search+"%", "%"+search+"%")
 	}
 
 	err := q.Count(&count).Error
@@ -79,10 +79,14 @@ func (repository *LicenseRiskRepository) DeleteByComponentPurl(assetID uuid.UUID
 	return repository.db.Where("asset_id = ? AND asset_version_name = ? AND component_purl = ?", assetID, assetVersionName, pURL.String()).Delete(&models.LicenseRisk{}).Error
 }
 
-func (repository *LicenseRiskRepository) ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.LicenseRisk, error) {
+func (repository *LicenseRiskRepository) ListByArtifactName(assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
-	// scanner ids is a string array separated by whitespaces
-	err := repository.db.Where("asset_version_name = ? AND asset_id = ? AND ? = ANY(string_to_array(scanner_ids, ' '))", assetVersionName, assetID, scannerID).Find(&licenseRisks).Error
+
+	q := repository.db.Where("asset_version_name = ? AND asset_id = ? ", assetVersionName, assetID).Preload("Artifacts", func(db core.DB) core.DB {
+		return db.Where("asset_version_name = ? AND asset_id = ? AND artifact_name = ?", assetVersionName, assetID, artifactName)
+	})
+
+	err := q.Find(&licenseRisks).Error
 	if err != nil {
 		return nil, err
 	}

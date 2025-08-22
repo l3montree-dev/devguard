@@ -735,8 +735,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetAssetVersionRiskHistory)
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerID)
-	assetVersionRouter.GET("/stats/vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerID)
-	assetVersionRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScanner)
+	/* 	assetVersionRouter.GET("/stats/vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerID)
+	   	assetVersionRouter.GET("/stats/dependency-count-by-scan-type/", statisticsController.GetDependencyCountPerScannerID) */
 
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)

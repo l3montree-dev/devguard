@@ -55,27 +55,33 @@ func (c *componentRepository) CreateComponents(tx core.DB, components []models.C
 	return c.GetDB(tx).Create(&components).Error
 }
 
-// returns all component dependencies of the assetVersion  found by scannerID use "" to return all no matter who found it
 func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
-	var err error
 
-	err = c.GetDB(tx).Debug().Model(&models.ComponentDependency{}).
-		Preload("Component").Preload("Dependency").
-		Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
-		Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").
-		Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ? AND artifacts.artifact_name = ?", assetVersionName, assetID, artifactName).
+	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
+		Preload("Component").
+		Preload("Dependency").
+		Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).
+		Preload("Artifacts", func(db core.DB) core.DB {
+			return db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID)
+		}).
 		Find(&components).Error
-
 	if err != nil {
 		return nil, err
 	}
+
+	/* 	err := c.GetDB(tx).Debug().Model(&models.ComponentDependency{}).
+	Preload("Component").Preload("Dependency").
+	Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
+	Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").
+	Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ? AND artifacts.artifact_name = ?", assetVersionName, assetID, artifactName).
+	Find(&components).Error */
 
 	return components, err
 }
 
 // function which returns all dependency_components which lead to the package transmitted via the pURL parameter
-func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 
@@ -85,60 +91,65 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 
 	// using postgresql CYCLE Keyword to detect possible loops
 	query := c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
-  SELECT
-    component_purl,
-    dependency_purl,
-    asset_id,
-    scanner_ids,
-    0 AS depth,
-    ARRAY[dependency_purl] AS path
-  FROM component_dependencies
-  WHERE
-    component_purl IS NULL AND
-    asset_id = @assetID AND
-    asset_version_name = @assetVersionName AND
-    string_to_array(scanner_ids, ' ') && string_to_array(@scannerID, ' ')
+	SELECT
+		cd.component_purl,
+		cd.dependency_purl,
+		cd.asset_id,
+		0 AS depth,
+		ARRAY[cd.dependency_purl] AS path
+	FROM component_dependencies cd
+	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = cd.id
+	JOIN artifacts a ON acd.artifact_artifact_name = a.artifact_name AND acd.artifact_asset_version_name = a.asset_version_name AND acd.artifact_asset_id = a.asset_id
+	WHERE
+		cd.component_purl IS NULL AND
+		cd.asset_id = @assetID AND
+		cd.asset_version_name = @assetVersionName AND
+		a.artifact_name = @artifactName AND
+		a.asset_version_name = @assetVersionName AND
+		a.asset_id = @assetID
 
-  UNION ALL
+	UNION ALL
 
-  SELECT
-    co.component_purl,
-    co.dependency_purl,
-    co.asset_id,
-    co.scanner_ids,
-    cte.depth + 1,
-    cte.path || co.dependency_purl
-  FROM component_dependencies AS co
-  INNER JOIN components_cte AS cte
-    ON co.component_purl = cte.dependency_purl
-  WHERE
-    co.asset_id = @assetID AND
-    co.asset_version_name = @assetVersionName AND
-    string_to_array(co.scanner_ids, ' ') && string_to_array(@scannerID, ' ') AND
-    NOT co.dependency_purl = ANY(cte.path)
+	SELECT
+		co.component_purl,
+		co.dependency_purl,
+		co.asset_id,
+		cte.depth + 1,
+		cte.path || co.dependency_purl
+	FROM component_dependencies co
+	INNER JOIN components_cte cte
+		ON co.component_purl = cte.dependency_purl
+	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = co.id
+	JOIN artifacts a ON acd.artifact_artifact_name = a.artifact_name AND acd.artifact_asset_version_name = a.asset_version_name AND acd.artifact_asset_id = a.asset_id
+	WHERE
+		co.asset_id = @assetID AND
+		co.asset_version_name = @assetVersionName AND
+		a.artifact_name = @artifactName AND
+		a.asset_version_name = @assetVersionName AND
+		a.asset_id = @assetID AND
+		NOT co.dependency_purl = ANY(cte.path)
 ),
 target_path AS (
-  SELECT * FROM components_cte
-  WHERE dependency_purl = @pURL
-  ORDER BY depth ASC
+	SELECT * FROM components_cte
+	WHERE dependency_purl = @pURL
+	ORDER BY depth ASC
 ),
 path_edges AS (
-  SELECT
-    DISTINCT
-    component_purl,
-    dependency_purl,
-    asset_id,
-    scanner_ids,
-    depth
-  FROM components_cte
-  WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
+	SELECT
+		DISTINCT
+		component_purl,
+		dependency_purl,
+		asset_id,
+		depth
+	FROM components_cte
+	WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
 )
 SELECT * FROM path_edges
 ORDER BY depth;
 `, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
-		sql.Named("assetVersionName", assetVersionName), sql.Named("scannerID", scannerID))
+		sql.Named("assetVersionName", assetVersionName), sql.Named("artifactName", artifactName))
 
-	//Map the query results to the component model
+	// Map the query results to the component model
 	err = query.Find(&components).Error
 	if err != nil {
 		return nil, err
@@ -147,7 +158,7 @@ ORDER BY depth;
 	return components, err
 }
 
-func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error) {
+func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) (map[string]int, error) {
 	type License []struct {
 		License string
 		Count   int
@@ -179,12 +190,11 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 		models.VulnStateFixed, assetVersionName, assetID)
 
 	//We then still need to filter for the right scanner
-	if scannerID != "" {
-		// scanner ids is a string array separated by whitespaces
-		overwrittenLicensesQuery = overwrittenLicensesQuery.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
-		otherLicensesQuery = otherLicensesQuery.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
+	if artifactName != "" {
+		overwrittenLicensesQuery = overwrittenLicensesQuery.Preload("Artifacts", func(db core.DB) core.DB {
+			return db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID)
+		})
 	}
-
 	//Map the query to the right struct
 	err := overwrittenLicensesQuery.Scan(&overwrittenLicenses).Error
 	if err != nil {
@@ -321,16 +331,12 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 			added[i].AssetID = assetID
 		}
 
-		// make sure the asset id is set
-		/* 		for i := range added {
-			added[i].Artifacts = append(added[i].Artifacts, artifact)
-		} */
 		//At last we create all the new component dependencies
 		return c.CreateComponents(tx, added)
 	})
 }
 
-func (c *componentRepository) GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+func (c *componentRepository) GetDependencyCountPerScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
 	var results []struct {
 		ScannerID string `gorm:"column:scanner_ids"`
 		Count     int    `gorm:"column:count"`

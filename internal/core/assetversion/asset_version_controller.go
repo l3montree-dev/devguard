@@ -8,7 +8,6 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -82,13 +81,13 @@ func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx core.Context) err
 }
 
 func (a *AssetVersionController) AffectedComponents(ctx core.Context) error {
-	scannerID := ctx.QueryParam("scanner")
-	if scannerID == "" {
+	artifactName := ctx.QueryParam("artifact-name")
+	if artifactName == "" {
 		return echo.NewHTTPError(400, "scanner query param is required")
 	}
 
 	assetVersion := core.GetAssetVersion(ctx)
-	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scannerID)
+	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, artifactName)
 	if err != nil {
 		return err
 	}
@@ -98,13 +97,13 @@ func (a *AssetVersionController) AffectedComponents(ctx core.Context) error {
 	}))
 }
 
-func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
-	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, artifactName string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
+	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	dependencyVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	dependencyVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -239,9 +238,9 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 
-	scannerID := ctx.QueryParam("scanner")
+	artifactName := ctx.QueryParam("artifact-name")
 
-	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, scannerID)
+	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, artifactName)
 	if err != nil {
 		return vex.VEX{}, err
 	}
@@ -249,18 +248,10 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	return a.assetVersionService.BuildOpenVeX(asset, assetVersion, org.Slug, dependencyVulns), nil
 }
 
-func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, scannerID string) ([]models.DependencyVuln, error) {
-	// url decode the scanner
-	if scannerID != "" {
-		var err error
-		scannerID, err = url.QueryUnescape(scannerID)
-		if err != nil {
-			return nil, err
-		}
-	}
+func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, artifactName string) ([]models.DependencyVuln, error) {
 
 	// get all associated dependencyVulns
-	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersion.Name, assetVersion.AssetID, scannerID)
+	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +262,7 @@ func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	}
 
 	// get the dependency vulns for the default asset version to check if any are resolved already
-	defaultVulns, err = a.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(nil, assetVersion.AssetID, scannerID)
+	defaultVulns, err = a.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(nil, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
 	}
@@ -297,9 +288,9 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
-	scannerID := ctx.QueryParam("scanner")
+	artifactName := ctx.QueryParam("artifact-name")
 
-	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, scannerID)
+	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, artifactName)
 	if err != nil {
 		return nil, err
 	}

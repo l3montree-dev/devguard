@@ -34,12 +34,12 @@ func (httpController httpController) LicenseDistribution(ctx core.Context) error
 		}
 	}
 
-	scannerID := ctx.QueryParam("scannerID")
+	artifactName := ctx.QueryParam("artifact-name")
 
 	licenses, err := httpController.componentRepository.GetLicenseDistribution(nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
-		scannerID,
+		artifactName,
 	)
 
 	var res = make([]licenseResponse, 0, len(licenses))
