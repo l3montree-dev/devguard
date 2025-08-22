@@ -70,7 +70,7 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 					ScannerIDs:       scannerID,
 					LastDetected:     time.Now(),
 				},
-				FinalLicenseDecision: "",
+				FinalLicenseDecision: nil,
 				ComponentPurl:        component.Purl,
 			}
 
@@ -203,14 +203,12 @@ func (service *LicenseRiskService) updateLicenseRiskState(tx core.DB, userID str
 	return ev, err
 }
 
-func (service *LicenseRiskService) MakeFinalLicenseDecision(vulnID, finalLicense, userID string) error {
+func (service *LicenseRiskService) MakeFinalLicenseDecision(vulnID, finalLicense, justification, userID string) error {
 	licenseRisk, err := service.licenseRiskRepository.Read(vulnID)
 	if err != nil {
 		return err
 	}
-	licenseRisk.State = models.VulnStateFixed
-	licenseRisk.FinalLicenseDecision = finalLicense
 
-	ev := models.NewFixedEvent(vulnID, models.VulnTypeLicenseRisk, userID, licenseRisk.ScannerIDs)
+	ev := models.NewLicenseDecisionEvent(vulnID, models.VulnTypeLicenseRisk, userID, justification, licenseRisk.ScannerIDs, finalLicense)
 	return service.licenseRiskRepository.ApplyAndSave(nil, &licenseRisk, &ev)
 }

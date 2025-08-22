@@ -266,8 +266,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 				State:            models.VulnStateOpen,
 				ScannerIDs:       scannerID,
 			},
-			ComponentPurl:        componentWithInvalidLicense.Purl,
-			FinalLicenseDecision: "",
+			ComponentPurl: componentWithInvalidLicense.Purl,
 		}
 		// Manually set the ID using the same calculation as the model
 		existingLicenseRisk.ID = existingLicenseRisk.CalculateHash()

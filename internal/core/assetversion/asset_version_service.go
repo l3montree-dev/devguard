@@ -708,7 +708,9 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 	}
 	componentLicenseOverwrites := make(map[string]string, len(licenseRisks))
 	for i := range licenseRisks {
-		componentLicenseOverwrites[licenseRisks[i].ComponentPurl] = licenseRisks[i].FinalLicenseDecision
+		if licenseRisks[i].FinalLicenseDecision != nil {
+			componentLicenseOverwrites[licenseRisks[i].ComponentPurl] = *licenseRisks[i].FinalLicenseDecision
+		}
 	}
 
 	bomComponents := make([]cdx.Component, len(components))
@@ -774,7 +776,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 				Type:       cdx.ComponentType(component.Dependency.ComponentType),
 				PackageURL: component.DependencyPurl,
 				Version:    component.Dependency.Version,
-				Name:       fmt.Sprintf("%s/%s", pURL.Namespace, pURL.Name),
+				Name:       component.DependencyPurl,
 			})
 		}
 	}

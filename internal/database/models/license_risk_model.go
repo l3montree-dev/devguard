@@ -9,8 +9,13 @@ import (
 
 type LicenseRisk struct {
 	Vulnerability
-	FinalLicenseDecision string `json:"finalLicenseDecision" gorm:"type:text"`
-	ComponentPurl        string `json:"componentPurl" gorm:"type:text;primarykey"`
+	FinalLicenseDecision *string   `json:"finalLicenseDecision" gorm:"type:text"`
+	ComponentPurl        string    `json:"componentPurl" gorm:"type:text;primarykey"`
+	Component            Component `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl;constraint:OnDelete:CASCADE;"`
+}
+
+func (LicenseRisk *LicenseRisk) SetFinalLicenseDecision(finalLicenseDecision string) {
+	LicenseRisk.FinalLicenseDecision = &finalLicenseDecision
 }
 
 func (licenseRisk LicenseRisk) TableName() string {

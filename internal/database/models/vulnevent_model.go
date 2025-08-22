@@ -21,8 +21,9 @@ const (
 
 const (
 	// Manual Events (Events that required User Interaction) (see asset_version_service.go @ getDatesForVulnerabilityEvent)
-	EventTypeFixed    VulnEventType = "fixed"
-	EventTypeReopened VulnEventType = "reopened"
+	EventTypeFixed           VulnEventType = "fixed"
+	EventTypeLicenseDecision VulnEventType = "licenseDecision"
+	EventTypeReopened        VulnEventType = "reopened"
 
 	EventTypeAccepted          VulnEventType = "accepted"
 	EventTypeMitigate          VulnEventType = "mitigate"
@@ -103,6 +104,17 @@ func (event VulnEvent) TableName() string {
 
 func (event VulnEvent) Apply(vuln Vuln) {
 	switch event.Type {
+	case EventTypeLicenseDecision:
+		finalLicenseDecision, ok := (event.GetArbitraryJSONData()["finalLicenseDecision"]).(string)
+		if !ok {
+			slog.Error("could not parse final license decision", "dependencyVulnID",
+
+				event.VulnID)
+			return
+		}
+		v := vuln.(*LicenseRisk)
+		v.SetFinalLicenseDecision(finalLicenseDecision)
+		v.SetState(VulnStateFixed)
 	case EventTypeAddedScanner:
 		scannerID, ok := (event.GetArbitraryJSONData()["scannerIds"]).(string)
 		if !ok {
@@ -200,6 +212,18 @@ func NewFixedEvent(vulnID string, vulnType VulnType, userID string, scannerID st
 		UserID:   userID,
 	}
 	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID})
+	return ev
+}
+
+func NewLicenseDecisionEvent(vulnID string, vulnType VulnType, userID string, justification, scannerID string, finalLicenseDecision string) VulnEvent {
+	ev := VulnEvent{
+		Type:          EventTypeLicenseDecision,
+		VulnType:      vulnType,
+		VulnID:        vulnID,
+		UserID:        userID,
+		Justification: &justification,
+	}
+	ev.SetArbitraryJSONData(map[string]any{"scannerIds": scannerID, "finalLicenseDecision": finalLicenseDecision})
 	return ev
 }
 
