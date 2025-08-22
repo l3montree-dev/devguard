@@ -1,14 +1,8 @@
 
-CREATE TABLE IF NOT EXISTS public.attestations (
-    created_at timestamp with time zone,
-    updated_at timestamp with time zone,
-    deleted_at timestamp with time zone,
-    predicate_type text NOT NULL,
-    scanner_id text NOT NULL,
-    asset_version_name text NOT NULL,
-    asset_id uuid NOT NULL,
-    content jsonb
-);
+ALTER TABLE public.dependency_vulns DROP COLUMN IF EXISTS scanner_ids;
+ALTER TABLE public.license_risks DROP COLUMN IF EXISTS scanner_ids;
+ALTER TABLE public.component_dependencies DROP COLUMN IF EXISTS scanner_ids;
+
 
 
 ALTER TABLE public.attestations ADD COLUMN IF NOT EXISTS artifact_name TEXT NOT NULL DEFAULT 'default';
@@ -56,7 +50,7 @@ ALTER TABLE public.artifact_component_dependencies DROP CONSTRAINT IF EXISTS fk_
 
 ALTER TABLE public.artifacts DROP CONSTRAINT IF EXISTS fk_artifacts_asset_versions;
 ALTER TABLE public.artifacts DROP CONSTRAINT IF EXISTS artifacts_pkey;
-ALTER TABLE license_risks DROP CONSTRAINT IF EXISTS license_risks_pkey;
+ALTER TABLE public.license_risks DROP CONSTRAINT IF EXISTS license_risks_pkey;
 
 
 ALTER TABLE ONLY public.artifacts

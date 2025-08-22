@@ -157,7 +157,6 @@ type DependencyVulnRepository interface {
 	GetHintsInOrganizationForVuln(tx DB, orgID uuid.UUID, pURL string, cveID string) (common.DependencyVulnHints, error)
 	GetAllByAssetIDAndState(tx DB, assetID uuid.UUID, state models.VulnState, durationSinceStateChange time.Duration) ([]models.DependencyVuln, error)
 	GetDependencyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error)
-	GetArtifacts(assetVersionName string, assetID uuid.UUID) ([]string, error)
 }
 
 type FirstPartyVulnRepository interface {

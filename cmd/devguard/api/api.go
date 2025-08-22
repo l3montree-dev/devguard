@@ -508,7 +508,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService)
 
-	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository)
+	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository, artifactService)
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
 	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, assetVersionRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseRiskRepository)
@@ -767,8 +767,9 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)
 
+	assetVersionRouter.GET("/artifacts/", assetVersionController.ListArtifacts)
+
 	dependencyVulnRouter := assetVersionRouter.Group("/dependency-vulns")
-	dependencyVulnRouter.GET("/artifacts/", dependencyVulnController.ListArtifacts)
 	dependencyVulnRouter.GET("/", dependencyVulnController.ListPaged)
 	dependencyVulnRouter.GET("/:dependencyVulnID/", dependencyVulnController.Read)
 	dependencyVulnRouter.POST("/:dependencyVulnID/", dependencyVulnController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))

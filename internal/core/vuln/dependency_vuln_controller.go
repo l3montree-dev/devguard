@@ -364,17 +364,3 @@ func getAssetVersionName(vuln models.DependencyVuln, ev models.VulnEvent) string
 	}
 	return vuln.AssetVersionName // fallback to the vuln's asset version name if event does not have it
 }
-
-func (controller dependencyVulnHTTPController) ListArtifacts(ctx core.Context) error {
-
-	assetID := core.GetAsset(ctx).ID
-	assetVersion := core.GetAssetVersion(ctx)
-
-	// get the artifacts for this asset version
-	artifacts, err := controller.dependencyVulnRepository.GetArtifacts(assetVersion.Name, assetID)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
-	}
-
-	return ctx.JSON(200, artifacts)
-}

@@ -237,12 +237,12 @@ func licensesToMap(licenses []struct {
 }
 
 func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, artifactName string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+
 	var componentDependencies []models.ComponentDependency
 
-	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").
-		Joins("JOIN artifact_component_dependencies ON component_dependencies.id = artifact_component_dependencies.component_dependency_id").
-		Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").
-		Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ? AND artifacts.artifact_name = ?", assetVersionName, assetID, artifactName)
+	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Preload("Artifacts", func(db core.DB) core.DB {
+		return db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID)
+	}).Joins("left join artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id")
 
 	for _, f := range filter {
 		query = query.Where(f.SQL(), f.Value())

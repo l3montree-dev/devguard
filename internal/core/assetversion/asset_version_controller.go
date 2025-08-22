@@ -32,6 +32,7 @@ type AssetVersionController struct {
 	dependencyVulnService    core.DependencyVulnService
 	supplyChainRepository    core.SupplyChainRepository
 	licenseRiskRepository    core.LicenseRiskRepository
+	artifactService          core.ArtifactService
 }
 
 func NewAssetVersionController(
@@ -42,6 +43,7 @@ func NewAssetVersionController(
 	dependencyVulnService core.DependencyVulnService,
 	supplyChainRepository core.SupplyChainRepository,
 	licenseRiskRepository core.LicenseRiskRepository,
+	artifactService core.ArtifactService,
 ) *AssetVersionController {
 	return &AssetVersionController{
 		assetVersionRepository:   assetVersionRepository,
@@ -51,6 +53,7 @@ func NewAssetVersionController(
 		dependencyVulnService:    dependencyVulnService,
 		supplyChainRepository:    supplyChainRepository,
 		licenseRiskRepository:    licenseRiskRepository,
+		artifactService:          artifactService,
 	}
 }
 
@@ -81,9 +84,13 @@ func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx core.Context) err
 }
 
 func (a *AssetVersionController) AffectedComponents(ctx core.Context) error {
-	artifactName := ctx.QueryParam("artifact-name")
-	if artifactName == "" {
-		return echo.NewHTTPError(400, "scanner query param is required")
+	artifactName := ""
+	filter := core.GetFilterQuery(ctx)
+	for _, f := range filter {
+		if f.SQL() == "artifact= ?" {
+			artifactName = f.Value().(string)
+			break
+		}
 	}
 
 	assetVersion := core.GetAssetVersion(ctx)
@@ -113,9 +120,14 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)
 
-	artifactName := ctx.QueryParam("scanner")
-	if artifactName == "" {
-		return echo.NewHTTPError(400, "scanner query param is required")
+	artifactName := ""
+
+	filter := core.GetFilterQuery(ctx)
+	for _, f := range filter {
+		if f.SQL() == "artifact= ?" {
+			artifactName = f.Value().(string)
+			break
+		}
 	}
 
 	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, artifactName)
@@ -501,4 +513,18 @@ func buildZIPInMemory(writer io.Writer, templateName string, metadata, markdown 
 	//finalize the zip-archive and return it
 	zipWriter.Close()
 	return nil
+}
+
+func (a *AssetVersionController) ListArtifacts(ctx core.Context) error {
+
+	assetID := core.GetAsset(ctx).ID
+	assetVersion := core.GetAssetVersion(ctx)
+
+	// get the artifacts for this asset version
+	artifacts, err := a.artifactService.GetArtifactNamesByAssetIDAndAssetVersionName(assetID, assetVersion.Name)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
+	}
+
+	return ctx.JSON(200, artifacts)
 }
