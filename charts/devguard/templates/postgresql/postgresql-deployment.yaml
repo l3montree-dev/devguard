@@ -16,8 +16,8 @@ spec:
       labels:
         app: postgresql
         version: "{{ .Chart.AppVersion }}"
-    automountServiceAccountToken: false
     spec:
+      automountServiceAccountToken: false
       containers:
       - image: "{{ .Values.api.image.repository }}/postgresql:{{ .Chart.AppVersion }}"
         name: postgresql

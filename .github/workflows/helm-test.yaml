@@ -1,0 +1,198 @@
+name: Helm Chart Test
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'charts/**'
+      - '.github/workflows/helm-test.yaml'
+  pull_request:
+    paths:
+      - 'charts/**'
+      - '.github/workflows/helm-test.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  helm-test:
+    name: Test Helm Chart
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #v5
+      with:
+        submodules: recursive
+
+    - name: Set up Helm
+      uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 #v4.3.1
+      with:
+        version: '3.12.1'
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede #v4.0.1
+      with:
+        version: '1.33.1'
+
+    - name: Create kind cluster
+      uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 #v1.12.0
+      with:
+        cluster_name: devguard-test
+        kubectl_version: v1.33.1
+        wait: 120s
+
+    - name: Verify cluster
+      run: |
+        kubectl cluster-info
+        kubectl get nodes
+
+    - name: Lint Helm chart
+      run: |
+        helm lint ./charts/devguard
+
+    - name: Test Helm template rendering
+      run: |
+        helm template devguard-test ./charts/devguard \
+          --namespace devguard-test \
+          --set postgresql.enabled=true \
+          --set kratos.enabled=true > /dev/null
+
+    - name: Create test namespace
+      run: |
+        kubectl create namespace devguard-test
+
+    - name: Create required secrets
+      run: |
+        # Create dummy secrets required by the chart
+        kubectl create secret generic ec-private-key \
+          --from-literal=privateKey="dummy-private-key-for-testing" \
+          -n devguard-test
+        
+        kubectl create secret generic github-app-webhook-secret \
+          --from-literal=webhookSecret="dummy-webhook-secret-for-testing" \
+          -n devguard-test
+        
+        kubectl create secret generic github-app-private-key \
+          --from-literal=privateKey="dummy-github-private-key-for-testing" \
+          -n devguard-test
+
+    - name: Install Helm chart
+      run: |
+        helm install devguard-test ./charts/devguard \
+          --namespace devguard-test \
+          --wait \
+          --timeout=10m \
+          --set postgresql.enabled=true \
+          --set kratos.enabled=true \
+          --set api.image.tag=latest \
+          --set web.image.tag=latest
+
+    - name: Verify installation
+      run: |
+        helm status devguard-test -n devguard-test
+        kubectl get all -n devguard-test
+
+    - name: Wait for deployments
+      run: |
+        # Wait for all deployments to be ready
+        kubectl wait --for=condition=available deployment --all -n devguard-test --timeout=600s
+
+    - name: Check pod status
+      run: |
+        kubectl get pods -n devguard-test -o wide
+        
+        # Check for any failed pods
+        FAILED_PODS=$(kubectl get pods -n devguard-test --field-selector=status.phase=Failed --no-headers 2>/dev/null | wc -l)
+        if [ "$FAILED_PODS" -gt 0 ]; then
+          echo "Found $FAILED_PODS failed pods:"
+          kubectl get pods -n devguard-test --field-selector=status.phase=Failed
+          exit 1
+        fi
+        
+        # Check for pods with issues
+        PROBLEMATIC_PODS=$(kubectl get pods -n devguard-test --no-headers 2>/dev/null | grep -E "(CrashLoopBackOff|ImagePullBackOff|Error)" | wc -l)
+        if [ "$PROBLEMATIC_PODS" -gt 0 ]; then
+          echo "Found $PROBLEMATIC_PODS pods with issues:"
+          kubectl get pods -n devguard-test | grep -E "(CrashLoopBackOff|ImagePullBackOff|Error)"
+          exit 1
+        fi
+
+    - name: Test services
+      run: |
+        kubectl get services -n devguard-test
+        
+        # Check if services are created
+        SERVICES=$(kubectl get services -n devguard-test --no-headers | wc -l)
+        echo "Found $SERVICES services in namespace"
+        
+        if [ "$SERVICES" -eq 0 ]; then
+          echo "No services found in namespace"
+          exit 1
+        fi
+
+    - name: Test basic connectivity
+      run: |
+        # Try to port-forward to the API service and test connectivity
+        API_SERVICE=$(kubectl get service -n devguard-test -l app.kubernetes.io/name=devguard -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+        
+        if [ -n "$API_SERVICE" ]; then
+          echo "Testing connectivity to API service: $API_SERVICE"
+          kubectl port-forward -n devguard-test service/"$API_SERVICE" 8080:80 &
+          PF_PID=$!
+          sleep 10
+          
+          # Test if port is responding (basic connectivity test)
+          if timeout 10 bash -c "</dev/tcp/localhost/8080"; then
+            echo "API service is accessible on port 8080"
+          else
+            echo "Warning: API service connectivity test failed (might be expected if service is not fully ready)"
+          fi
+          
+          kill $PF_PID 2>/dev/null || true
+          wait $PF_PID 2>/dev/null || true
+        else
+          echo "No API service found for connectivity test"
+        fi
+
+    - name: Validate chart resources
+      run: |
+        # Check for expected deployments
+        EXPECTED_DEPLOYMENTS=("postgresql")
+        for deployment in "${EXPECTED_DEPLOYMENTS[@]}"; do
+          if kubectl get deployment "$deployment" -n devguard-test >/dev/null 2>&1; then
+            echo "✓ Deployment $deployment exists"
+          else
+            echo "⚠ Deployment $deployment not found"
+          fi
+        done
+        
+        # Count resources
+        CONFIGMAPS=$(kubectl get configmaps -n devguard-test --no-headers | wc -l)
+        SECRETS=$(kubectl get secrets -n devguard-test --no-headers | wc -l)
+        echo "Found $CONFIGMAPS configmaps and $SECRETS secrets"
+
+    - name: Show logs on failure
+      if: failure()
+      run: |
+        echo "=== Helm status ==="
+        helm status devguard-test -n devguard-test || true
+        
+        echo "=== Pod status ==="
+        kubectl get pods -n devguard-test -o wide || true
+        
+        echo "=== Events ==="
+        kubectl get events -n devguard-test --sort-by='.lastTimestamp' || true
+        
+        echo "=== Pod logs ==="
+        for pod in $(kubectl get pods -n devguard-test -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+          echo "--- Logs for pod: $pod ---"
+          kubectl logs "$pod" -n devguard-test --tail=50 || true
+          echo ""
+        done
+
+    - name: Cleanup
+      if: always()
+      run: |
+        helm uninstall devguard-test -n devguard-test || true
+        kubectl delete namespace devguard-test || true
