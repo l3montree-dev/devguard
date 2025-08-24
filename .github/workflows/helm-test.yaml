@@ -85,8 +85,8 @@ jobs:
           --timeout=10m \
           --set postgresql.enabled=true \
           --set kratos.enabled=true \
-          --set api.image.tag=latest \
-          --set web.image.tag=latest
+          --set api.image.tag=main-latest \
+          --set web.image.tag=main-latest
 
     - name: Verify installation
       run: |
