@@ -337,23 +337,23 @@ func (_c *StatisticsService_GetAverageFixingTime_Call) RunAndReturn(run func(ass
 }
 
 // GetComponentRisk provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error) {
+func (_mock *StatisticsService) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
 	ret := _mock.Called(assetVersionName, assetID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetComponentRisk")
 	}
 
-	var r0 map[string]float64
+	var r0 map[string]models.Distribution
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID) (map[string]float64, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID) (map[string]models.Distribution, error)); ok {
 		return returnFunc(assetVersionName, assetID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID) map[string]float64); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID) map[string]models.Distribution); ok {
 		r0 = returnFunc(assetVersionName, assetID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]float64)
+			r0 = ret.Get(0).(map[string]models.Distribution)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID) error); ok {
@@ -394,12 +394,12 @@ func (_c *StatisticsService_GetComponentRisk_Call) Run(run func(assetVersionName
 	return _c
 }
 
-func (_c *StatisticsService_GetComponentRisk_Call) Return(stringToFloat64 map[string]float64, err error) *StatisticsService_GetComponentRisk_Call {
-	_c.Call.Return(stringToFloat64, err)
+func (_c *StatisticsService_GetComponentRisk_Call) Return(stringToDistribution map[string]models.Distribution, err error) *StatisticsService_GetComponentRisk_Call {
+	_c.Call.Return(stringToDistribution, err)
 	return _c
 }
 
-func (_c *StatisticsService_GetComponentRisk_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID) (map[string]float64, error)) *StatisticsService_GetComponentRisk_Call {
+func (_c *StatisticsService_GetComponentRisk_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)) *StatisticsService_GetComponentRisk_Call {
 	_c.Call.Return(run)
 	return _c
 }
