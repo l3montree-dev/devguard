@@ -12,7 +12,7 @@ type LicenseRisk struct {
 	FinalLicenseDecision *string    `json:"finalLicenseDecision" gorm:"type:text"`
 	ComponentPurl        string     `json:"componentPurl" gorm:"type:text;primarykey"`
 	Component            Component  `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl;constraint:OnDelete:CASCADE;"`
-	Artifacts            []Artifact `json:"artifacts" gorm:"many2many:artifact_license_risks;"`
+	Artifacts            []Artifact `json:"artifacts" gorm:"many2many:artifact_license_risks;constraint:OnDelete:CASCADE"`
 }
 
 func (licenseRisk *LicenseRisk) SetFinalLicenseDecision(finalLicenseDecision string) {

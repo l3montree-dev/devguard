@@ -86,7 +86,7 @@ type ComponentDependency struct {
 	AssetVersionName string    `json:"assetVersionName" gorm:"column:asset_version_name;not null;"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"column:asset_id;not null;type:uuid;"`
 
-	Artifacts []Artifact `json:"artifacts" gorm:"many2many:artifact_component_dependencies"`
+	Artifacts []Artifact `json:"artifacts" gorm:"many2many:artifact_component_dependencies;constraint:OnDelete:CASCADE"`
 
 	Depth int `json:"depth" gorm:"column:depth"`
 }

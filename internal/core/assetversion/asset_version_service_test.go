@@ -201,7 +201,7 @@ func TestDiffScanResults(t *testing.T) {
 	})
 
 	t.Run("should correctly identify a vulnerability which now is fixed, since it was not found by the scanner anymore", func(t *testing.T) {
-		currentScanner := "new-scanner"
+		artifact := models.Artifact{ArtifactName: "artifact1"}
 
 		foundVulnerabilities := []models.DependencyVuln{}
 
@@ -209,7 +209,7 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
 		}
 
-		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
+		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(artifact.ArtifactName, foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, foundByScannerAndNotExisting)
 		assert.Equal(t, 1, len(fixedVulns))

@@ -42,8 +42,6 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 	assetRiskHistoryRepository := repositories.NewAssetRiskHistoryRepository(db)
 	projectRiskHistoryRepository := repositories.NewProjectRiskHistoryRepository(db)
 	licenseRiskRepository := repositories.NewLicenseRiskRepository(db)
-	artifactRepository := repositories.NewArtifactRepository(db)
-	artifactService := artifact.NewService(artifactRepository)
 
 	gitlabOauth2Integrations := gitlabint.NewGitLabOauth2Integrations(db)
 	gitlabClientFactory := gitlabint.NewGitlabClientFactory(
@@ -52,8 +50,8 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 	)
 
 	webhookIntegration := webhook.NewWebhookIntegration(db)
-	artifactRepository = repositories.NewArtifactRepository(db)
-	artifactService = artifact.NewService(artifactRepository)
+	artifactRepository := repositories.NewArtifactRepository(db)
+	artifactService := artifact.NewService(artifactRepository)
 	jiraIntegration := jiraint.NewJiraIntegration(db)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
 
@@ -130,7 +128,7 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 						}
 
 						if err != nil {
-							slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifactName, "assetVersionName", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+							slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 							continue
 						}
 

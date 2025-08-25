@@ -319,9 +319,6 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	// first node will be the package name itself
 	CalculateDepth(tree.Root, -1, depthMap)
 
-	fmt.Println("artifactName", artifactName)
-
-	// now we have the depth.
 	for _, vuln := range vulns {
 		v := vuln
 		fixedVersion := normalize.FixFixedVersion(v.Purl, v.FixedVersion)
@@ -389,23 +386,15 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 	var firstDetectedOnThisArtifactName []models.DependencyVuln
 	var fixedOnThisArtifactName []models.DependencyVuln
 
-	fmt.Printf("DEBUG diffScanResults: currentArtifactName=%s\n", currentArtifactName)
-	fmt.Printf("DEBUG diffScanResults: foundVulnerabilities count=%d\n", len(foundVulnerabilities))
-	fmt.Printf("DEBUG diffScanResults: existingDependencyVulns count=%d\n", len(existingDependencyVulns))
-
 	var foundVulnsMappedByID = make(map[string]models.DependencyVuln)
 	for _, vuln := range foundVulnerabilities {
-		fmt.Printf("DEBUG diffScanResults: found vuln ID=%s, CalculateHash=%s, CVEID=%v\n", vuln.ID, vuln.CalculateHash(), vuln.CVEID)
-		if _, ok := foundVulnsMappedByID[vuln.ID]; !ok {
-			foundVulnsMappedByID[vuln.ID] = vuln
+
+		if _, ok := foundVulnsMappedByID[vuln.CalculateHash()]; !ok {
+			foundVulnsMappedByID[vuln.CalculateHash()] = vuln
 		}
 	}
 
 	for _, existingVulns := range existingDependencyVulns {
-		fmt.Printf("DEBUG diffScanResults: existing vuln ID=%s, CalculateHash=%s, CVEID=%v, artifacts=%d\n", existingVulns.ID, existingVulns.CalculateHash(), existingVulns.CVEID, len(existingVulns.Artifacts))
-		for i, art := range existingVulns.Artifacts {
-			fmt.Printf("DEBUG diffScanResults: existing vuln artifact[%d]=%s\n", i, art.ArtifactName)
-		}
 
 		if _, ok := foundVulnsMappedByID[existingVulns.ID]; !ok {
 			if len(existingVulns.Artifacts) == 1 && existingVulns.Artifacts[0].ArtifactName == currentArtifactName {
@@ -424,13 +413,15 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 	}
 
 	for _, foundVuln := range foundVulnerabilities {
-		fmt.Printf("DEBUG diffScanResults: processing found vuln ID=%s\n", foundVuln.ID)
-		if _, ok := existingVulnsMappedByID[foundVuln.ID]; !ok {
+
+		if _, ok := existingVulnsMappedByID[foundVuln.CalculateHash()]; !ok {
 			firstDetected = append(firstDetected, foundVuln)
 		} else {
+			// existing vulnerability artifacts inspected instead of newly built vuln artifacts
+			existing := existingVulnsMappedByID[foundVuln.CalculateHash()]
 			alreadyDetectedOnThisArtifactName := false
-			for _, existingVuln := range foundVuln.Artifacts {
-				if existingVuln.ArtifactName == currentArtifactName {
+			for _, existingArtifact := range existing.Artifacts {
+				if existingArtifact.ArtifactName == currentArtifactName {
 					alreadyDetectedOnThisArtifactName = true
 					break
 				}
@@ -466,17 +457,16 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 	for _, newDetectedVuln := range foundVulnerabilities {
 		hash := newDetectedVuln.AssetVersionIndependentHash()
 		if existingVulns, ok := existingVulnsMap[hash]; ok {
-			// there is already a vulnerability with the same hash -
-			// thus it exists on another branch
+
 			newDetectedButOnOtherBranchExisting = append(newDetectedButOnOtherBranchExisting, newDetectedVuln)
 
 			existingVulnEventsOnOtherBranch := make([]models.VulnEvent, 0)
 			for _, existingVuln := range existingVulns {
-				// we only want to copy original events, not events which were already copied
+
 				events := utils.Filter(existingVuln.GetEvents(), func(ev models.VulnEvent) bool {
 					return ev.OriginalAssetVersionName == nil
 				})
-				// copy the events and set the original asset version name to the existing vuln's asset version name
+
 				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
 					event.OriginalAssetVersionName = utils.Ptr(existingVuln.GetAssetVersionName())
 					return event
@@ -492,9 +482,7 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 }
 
 func (s *service) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	// get all existing dependencyVulns from the database - this is the old state
-	//number := rand.IntN(len(dependencyVulns))
-	//dependencyVulns = dependencyVulns[:0]
+
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)

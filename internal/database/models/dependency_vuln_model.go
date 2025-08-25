@@ -39,7 +39,7 @@ type DependencyVuln struct {
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 
-	Artifacts []Artifact `json:"artifacts" gorm:"many2many:artifact_dependency_vulns"`
+	Artifacts []Artifact `json:"artifacts" gorm:"many2many:artifact_dependency_vulns;constraint:OnDelete:CASCADE"`
 }
 
 var _ Vuln = &DependencyVuln{}

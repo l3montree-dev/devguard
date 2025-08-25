@@ -55,6 +55,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			&models.ComponentProject{},
 			&models.LicenseRisk{},
 			&models.VulnEvent{},
+			&models.Artifact{},
 		)
 		assert.NoError(t, err)
 
@@ -89,33 +90,43 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Create component dependencies
-		artifact := models.Artifact{ArtifactName: "artifact1"}
+		artifact := models.Artifact{
+			ArtifactName:     "artifact1",
+			AssetVersionName: assetVersion.Name,
+			AssetID:          assetVersion.AssetID,
+		}
+
+		// First create the artifact
+		err = db.Create(&artifact).Error
+		assert.NoError(t, err)
+
 		componentDeps := []models.ComponentDependency{
 			{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
 				DependencyPurl:   componentWithInvalidLicense.Purl,
 				Dependency:       componentWithInvalidLicense,
-				Artifacts:        []models.Artifact{artifact},
 			},
 			{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
 				DependencyPurl:   componentWithValidLicense.Purl,
 				Dependency:       componentWithValidLicense,
-				Artifacts:        []models.Artifact{artifact},
 			},
 			{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
 				DependencyPurl:   componentWithoutLicense.Purl,
 				Dependency:       componentWithoutLicense,
-				Artifacts:        []models.Artifact{artifact},
 			},
 		}
 
 		for _, dep := range componentDeps {
 			err = db.Create(&dep).Error
+			assert.NoError(t, err)
+
+			// Now create the many-to-many relationship with artifacts
+			err = db.Model(&dep).Association("Artifacts").Append(&artifact)
 			assert.NoError(t, err)
 		}
 
@@ -152,7 +163,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 
 		// Verify that license risks were created for components with invalid licenses
 		var licenseRisks []models.LicenseRisk
-		err = db.Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&licenseRisks).Error
+		err = db.Preload("Artifacts").Where("asset_id = ? AND asset_version_name = ?", assetVersion.AssetID, assetVersion.Name).Find(&licenseRisks).Error
 		assert.NoError(t, err)
 
 		// We should have license risks for:
@@ -232,7 +243,15 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		err = db.Create(&componentWithInvalidLicense).Error
 		assert.NoError(t, err)
 
-		artifact := models.Artifact{ArtifactName: "artifact1"}
+		artifact := models.Artifact{
+			ArtifactName:     "artifact1",
+			AssetVersionName: assetVersion.Name,
+			AssetID:          assetVersion.AssetID,
+		}
+
+		// First create the artifact
+		err = db.Create(&artifact).Error
+		assert.NoError(t, err)
 
 		// Create component dependency
 		componentDep := models.ComponentDependency{
@@ -240,9 +259,12 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			AssetID:          assetVersion.AssetID,
 			DependencyPurl:   componentWithInvalidLicense.Purl,
 			Dependency:       componentWithInvalidLicense,
-			Artifacts:        []models.Artifact{artifact},
 		}
 		err = db.Create(&componentDep).Error
+		assert.NoError(t, err)
+
+		// Create the many-to-many relationship with artifacts
+		err = db.Model(&componentDep).Association("Artifacts").Append(&artifact)
 		assert.NoError(t, err)
 
 		// Create existing license risk
