@@ -166,25 +166,29 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 	var otherLicenses License
 	//We want to get all components with an overwritten license and all components without one and then just merge the two
 	//Components WITH an overwrite
-	overwrittenLicensesQuery := c.GetDB(tx).Raw(`SELECT c.license , COUNT(c.license) as count 
-	FROM components as c 
-	RIGHT JOIN component_dependencies as cd 
-	ON c.purl = cd.dependency_purl 
-	WHERE EXISTS 
-	(SELECT final_license_decision FROM license_risks as lr WHERE lr.component_purl = c.purl AND lr.state = ?)
-	AND asset_version_name = ?
-	AND asset_id = ? 
-	GROUP BY c.license`,
+	overwrittenLicensesQuery := c.GetDB(tx).Raw(`SELECT 
+    lr.final_license_decision as license,
+    COUNT(DISTINCT cd.dependency_purl) AS count
+	FROM license_risks AS lr
+	JOIN components AS c
+		ON lr.component_purl = c.purl
+	JOIN component_dependencies AS cd
+		ON c.purl = cd.dependency_purl
+	WHERE lr.state = ?
+	AND cd.asset_version_name = ?
+	AND cd.asset_id = ?
+	GROUP BY lr.final_license_decision`,
 		models.VulnStateFixed, assetVersionName, assetID)
+
 	//Components WITHOUT an overwrite
-	otherLicensesQuery := c.GetDB(tx).Raw(`SELECT c.license , COUNT(c.license) as count 
+	otherLicensesQuery := c.GetDB(tx).Raw(`SELECT c.license , COUNT(DISTINCT cd.component_purl) AS count
 	FROM components as c 
 	RIGHT JOIN component_dependencies as cd 
 	ON c.purl = cd.dependency_purl 
 	WHERE NOT EXISTS 
 	(SELECT final_license_decision FROM license_risks as lr WHERE lr.component_purl = c.purl AND lr.state = ?)
 	AND asset_version_name = ?
-	AND asset_id = ? 
+	AND asset_id = ?
 	GROUP BY c.license`,
 		models.VulnStateFixed, assetVersionName, assetID)
 
@@ -208,8 +212,16 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 	// convert normal query to map
 	overwrittenLicensesMap := licensesToMap(overwrittenLicenses)
 	otherLicensesMap := licensesToMap(otherLicenses)
+
+	// merge the two maps
 	for k := range otherLicensesMap {
 		otherLicensesMap[k] += overwrittenLicensesMap[k]
+	}
+
+	for k, v := range overwrittenLicensesMap {
+		if _, ok := otherLicensesMap[k]; !ok {
+			otherLicensesMap[k] = v
+		}
 	}
 
 	return otherLicensesMap, nil
@@ -280,7 +292,9 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 	// convert all overwritten licenses to a map which maps a purl to a new license
 	isPurlOverwrittenMap := make(map[string]string, len(overwrittenLicenses))
 	for i := range overwrittenLicenses {
-		isPurlOverwrittenMap[overwrittenLicenses[i].ComponentPurl] = overwrittenLicenses[i].FinalLicenseDecision
+		if overwrittenLicenses[i].FinalLicenseDecision != nil {
+			isPurlOverwrittenMap[overwrittenLicenses[i].ComponentPurl] = *overwrittenLicenses[i].FinalLicenseDecision
+		}
 	}
 
 	// now we check if a given component (dependency) is present in the overwrittenMap eg. it needs to be overwritten and flagged as such

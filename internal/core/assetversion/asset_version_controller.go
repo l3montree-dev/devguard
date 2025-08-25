@@ -33,6 +33,7 @@ type AssetVersionController struct {
 	dependencyVulnService    core.DependencyVulnService
 	supplyChainRepository    core.SupplyChainRepository
 	licenseRiskRepository    core.LicenseRiskRepository
+	componentService         core.ComponentService
 }
 
 func NewAssetVersionController(
@@ -43,6 +44,7 @@ func NewAssetVersionController(
 	dependencyVulnService core.DependencyVulnService,
 	supplyChainRepository core.SupplyChainRepository,
 	licenseRiskRepository core.LicenseRiskRepository,
+	componentService core.ComponentService,
 ) *AssetVersionController {
 	return &AssetVersionController{
 		assetVersionRepository:   assetVersionRepository,
@@ -52,6 +54,7 @@ func NewAssetVersionController(
 		dependencyVulnService:    dependencyVulnService,
 		supplyChainRepository:    supplyChainRepository,
 		licenseRiskRepository:    licenseRiskRepository,
+		componentService:         componentService,
 	}
 }
 
@@ -231,7 +234,7 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 		return nil, err
 	}
 
-	return a.assetVersionService.BuildSBOM(assetVersion, version, org.Name, components.Data), nil
+	return a.assetVersionService.BuildSBOM(assetVersion, version, org.Name, components.Data)
 }
 
 func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error) {
@@ -342,6 +345,19 @@ func (a *AssetVersionController) Metrics(ctx core.Context) error {
 		EnabledImageSigning:            enabledImageSigning,
 		VerifiedSupplyChainsPercentage: verifiedSupplyChainsPercentage,
 	})
+}
+
+// RefetchLicenses forces re-fetching license information for all components of the current asset version
+func (a *AssetVersionController) RefetchLicenses(ctx core.Context) error {
+	assetVersion := core.GetAssetVersion(ctx)
+	scannerID := ctx.QueryParam("scanner")
+
+	updated, err := a.componentService.RefreshAllLicenses(assetVersion, scannerID)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(200, updated)
 }
 
 type yamlVars struct {

@@ -30,7 +30,7 @@ func TestScanning(t *testing.T) {
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	os.Setenv("OSI_LICENSES_API", "https://opensource.org/api/license/")
+
 	controller, _ := initHTTPController(t, db, true)
 
 	// scan the vulnerable sbom
@@ -243,7 +243,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	os.Setenv("OSI_LICENSES_API", "https://opensource.org/api/license/")
+
 	controller, _ := initHTTPController(t, db, true)
 
 	// scan the vulnerable sbom
@@ -506,7 +506,7 @@ func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	os.Setenv("OSI_LICENSES_API", "https://opensource.org/api/license/")
+
 	controller, _ := initHTTPController(t, db, false)
 
 	app := echo.New()
@@ -633,7 +633,7 @@ func TestTicketHandling(t *testing.T) {
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	os.Setenv("OSI_LICENSES_API", "https://opensource.org/api/license/")
+
 	controller, gitlabClientFacade := initHTTPController(t, db, true)
 
 	// scan the vulnerable sbom

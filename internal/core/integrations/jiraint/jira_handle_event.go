@@ -76,6 +76,8 @@ func (i *JiraIntegration) HandleEvent(event any) error {
 
 		var vuln models.Vuln
 		switch vulnType {
+		case models.VulnTypeLicenseRisk:
+			return nil
 		case models.VulnTypeDependencyVuln:
 			v, err := i.dependencyVulnRepository.Read(ev.VulnID)
 			if err != nil {

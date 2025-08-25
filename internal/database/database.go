@@ -21,7 +21,16 @@ type sentryLogger struct {
 }
 
 func (s *sentryLogger) LogMode(level logger.LogLevel) logger.Interface {
-	return s
+	// Return a new sentryLogger wrapping the logger returned by the
+	// underlying logger's LogMode. This avoids mutating the original
+	// wrapper (which may be used concurrently) and matches GORM's
+	// expectation that LogMode returns a logger.Interface configured
+	// for the requested level.
+	var newDefault logger.Interface
+	if s.defaultLogger != nil {
+		newDefault = s.defaultLogger.LogMode(level)
+	}
+	return &sentryLogger{defaultLogger: newDefault}
 }
 func (s *sentryLogger) Info(ctx context.Context, msg string, data ...any) {
 	s.sendToSentry(ctx, msg, data...)
