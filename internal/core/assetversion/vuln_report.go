@@ -34,6 +34,7 @@ type VulnerabilityInReport struct {
 	DevguardScore       float64
 	DevguardSeverity    string
 	DevguardVector      string
+	Depth               int
 }
 
 // VulnerabilityReport is the top-level model matching the markdown.gotmpl context.

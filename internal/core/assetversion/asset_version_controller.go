@@ -524,10 +524,10 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 		AmountMedium:   distribution.Medium,
 		AmountLow:      distribution.Low,
 
-		AvgFixTimeCritical: avgCritical.String(),
-		AvgFixTimeHigh:     avgHigh.String(),
-		AvgFixTimeMedium:   avgMedium.String(),
-		AvgFixTimeLow:      avgLow.String(),
+		AvgFixTimeCritical: fmt.Sprintf("%d Tage", avgCritical.Hours()/24),
+		AvgFixTimeHigh:     fmt.Sprintf("%d Tage", avgHigh.Hours()/24),
+		AvgFixTimeMedium:   fmt.Sprintf("%d Tage", avgMedium.Hours()/24),
+		AvgFixTimeLow:      fmt.Sprintf("%d Tage", avgLow.Hours()/24),
 
 		CriticalVulns: vulnsBySeverity["critical"],
 		HighVulns:     vulnsBySeverity["high"],
