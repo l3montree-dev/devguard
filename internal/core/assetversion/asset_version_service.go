@@ -590,10 +590,12 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 			)
 			existingDependencies[componentPackageURL] = struct{}{}
 			if _, ok := existingComponentPurls[componentPackageURL]; !ok {
+
 				components[componentPackageURL] = models.Component{
 					Purl:          componentPackageURL,
 					ComponentType: models.ComponentType(component.Type),
 					Version:       component.Version,
+					License:       resolveCDXLicense(component),
 				}
 			}
 		}
@@ -634,6 +636,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 					Purl:          compPackageURL,
 					ComponentType: models.ComponentType(comp.Type),
 					Version:       comp.Version,
+					License:       resolveCDXLicense(dep),
 				}
 			}
 		}
@@ -679,6 +682,18 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 			}
 
 		}()
+	}
+	return nil
+}
+
+func resolveCDXLicense(component cdx.Component) *string {
+	if component.Licenses == nil || len(*component.Licenses) == 0 {
+		return nil //equivalent to no license found
+	}
+	if (*component.Licenses)[0].License.ID != "" {
+		return &(*component.Licenses)[0].License.ID
+	} else if (*component.Licenses)[0].License.Name != "" {
+		return &(*component.Licenses)[0].License.Name
 	}
 	return nil
 }
