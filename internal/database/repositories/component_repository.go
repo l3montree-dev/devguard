@@ -72,7 +72,7 @@ func (c *componentRepository) LoadComponentsForAllArtifacts(tx core.DB, assetVer
 func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 
-	err := c.GetDB(tx).Debug().Model(&models.ComponentDependency{}).
+	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
 		Preload("Component").Preload("Dependency").
 		Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
 		Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").
@@ -241,7 +241,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 
 	var componentDependencies []models.ComponentDependency
 
-	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Preload("Artifacts").Joins("left join artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id")
+	query := c.GetDB(tx).Debug().Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Artifacts").Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
 
 	for _, f := range filter {
 		query = query.Where(f.SQL(), f.Value())
@@ -269,7 +269,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 	var total int64
 	query.Session(&gorm.Session{}).Distinct("dependency_purl").Count(&total)
 
-	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Scan(&componentDependencies).Error
+	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&componentDependencies).Error
 	if err != nil {
 		return core.NewPaged(pageInfo, total, componentDependencies), err
 	}
@@ -294,6 +294,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 		}
 	}
 	return core.NewPaged(pageInfo, total, componentDependencies), nil
+
 }
 
 func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Component, error) {
