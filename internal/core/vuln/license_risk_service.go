@@ -9,6 +9,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type LicenseRiskService struct {
@@ -28,20 +29,14 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 	if err != nil {
 		return err
 	}
-	// put all the license risks we already have into a hash map for faster look up times
-	doesLicenseRiskAlreadyExist := make(map[string]struct{})
-	for i := range existingLicenseRisks {
-		doesLicenseRiskAlreadyExist[existingLicenseRisks[i].ComponentPurl] = struct{}{}
-	}
-
 	// get all current valid licenses to compare against
 	licenseMap := component.LicenseMap
 
-	//collect all risks before saving to the database, should be more efficient
+	//collect all risks before saving to the database
 	allLicenseRisks := []models.LicenseRisk{}
-	allVulnEvents := []models.VulnEvent{}
+
 	// track which license risks we've already processed to prevent duplicates
-	processedLicenseRisks := make(map[string]struct{})
+	processedLicenseRisks := make(map[string]struct{}, len(components))
 
 	//go over every component and check if the license is a valid osi license; if not we can create a license risk with the provided information
 	for _, component := range components {
@@ -50,9 +45,8 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 			continue
 		}
 		_, validLicense := licenseMap[strings.ToLower(*component.License)]
-		_, exists := doesLicenseRiskAlreadyExist[component.Purl]
 		// if we have an invalid license and we don not have a risk for this we create one
-		if !validLicense && !exists {
+		if !validLicense {
 			licenseRisk := models.LicenseRisk{
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: assetVersion.Name,
@@ -71,13 +65,47 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 			if _, processed := processedLicenseRisks[riskHash]; !processed {
 				processedLicenseRisks[riskHash] = struct{}{}
 				allLicenseRisks = append(allLicenseRisks, licenseRisk)
-				ev := models.NewDetectedEvent(riskHash, models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, scannerID)
-				// apply the event on the dependencyVuln
-				ev.Apply(&licenseRisk)
-				allVulnEvents = append(allVulnEvents, ev)
 			}
 		}
 	}
+
+	allVulnEvents := make([]models.VulnEvent, 0, len(allLicenseRisks))
+
+	comparison := utils.CompareSlices(existingLicenseRisks, allLicenseRisks, func(risk models.LicenseRisk) string {
+		return risk.CalculateHash()
+	})
+
+	fixRisks := comparison.OnlyInA
+	modifyRisks := comparison.InBoth
+	openRisks := comparison.OnlyInB
+
+	for i := range fixRisks {
+		if fixRisks[i].State == models.VulnStateOpen {
+			fixRisks[i].State = models.VulnStateFixed
+			ev := models.NewFixedEvent(fixRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", scannerID)
+			ev.Apply(&fixRisks[i])
+			allVulnEvents = append(allVulnEvents, ev)
+		}
+	}
+
+	for i := range modifyRisks {
+		if modifyRisks[i].State == models.VulnStateFixed {
+			modifyRisks[i].State = models.VulnStateOpen
+			ev := models.NewDetectedEvent(modifyRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, scannerID)
+			ev.Apply(&modifyRisks[i])
+			allVulnEvents = append(allVulnEvents, ev)
+		}
+	}
+
+	for i := range openRisks {
+		openRisks[i].State = models.VulnStateOpen
+		ev := models.NewDetectedEvent(openRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, scannerID)
+		ev.Apply(&openRisks[i])
+		allVulnEvents = append(allVulnEvents, ev)
+	}
+
+	allLicenseRisks = append(append(fixRisks, modifyRisks...), openRisks...)
+
 	err = service.licenseRiskRepository.SaveBatch(nil, allLicenseRisks)
 	if err != nil {
 		return err
