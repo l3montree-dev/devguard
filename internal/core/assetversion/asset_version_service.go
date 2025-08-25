@@ -1082,7 +1082,7 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 // generate the metadata used to generate the sbom-pdf and return it as struct
 func createYAMLMetadata(organizationName string, assetName string, assetVersionName string) yamlMetadata {
 	today := time.Now()
-	title1, title2 := createTitles(assetName)
+	title1, title2 := createTitles(assetName + "@" + assetVersionName)
 	// TO-DO: add sha hash to test the integrity
 	return yamlMetadata{
 		Vars: yamlVars{

@@ -301,7 +301,6 @@ func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.
 					orgID := org.GetID()
 
 					go func() {
-						return
 						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(safeCtx, org, userID)
 						if err != nil {
 							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "userID", userID)
@@ -706,6 +705,8 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	//Api to scan manually using an uploaded SBOM provided by the user
 	assetRouter.POST("/sbom-file/", scanController.ScanSbomFile, neededScope([]string{"scan"}))
+	// Api to upload a VeX/OpenVEX file to update vulnerability states for a specific asset version
+	assetRouter.POST("/vex-file/", assetVersionController.UploadVEX, neededScope([]string{"scan"}))
 
 	//TODO: add the projectScopedRBAC middleware to the following routes
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
@@ -727,7 +728,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetVersionRouter.GET("/vex.xml/", assetVersionController.VEXXML)
 	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
 	assetVersionRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
-	assetVersionRouter.GET("/vulnerability-report/", assetVersionController.BuildVulnerabilityReportPDF)
+	assetVersionRouter.GET("/vulnerability-report.pdf/", assetVersionController.BuildVulnerabilityReportPDF)
 
 	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)

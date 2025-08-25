@@ -208,6 +208,119 @@ func (a *AssetVersionController) OpenVEXJSON(ctx core.Context) error {
 	return vex.ToJSON(ctx.Response().Writer)
 }
 
+// UploadVEX accepts a multipart file upload (field name "file") containing an OpenVEX JSON document.
+// It updates existing dependency vulnerabilities on the target asset version and creates vuln events.
+func (a *AssetVersionController) UploadVEX(ctx core.Context) error {
+	var maxSize int64 = 32 * 1024 * 1024 // 32MB
+	if err := ctx.Request().ParseMultipartForm(maxSize); err != nil {
+		slog.Error("error when parsing data", "err", err)
+		return err
+	}
+
+	file, _, err := ctx.Request().FormFile("file")
+	if err != nil {
+		slog.Error("error when forming file", "err", err)
+		return err
+	}
+	defer file.Close()
+
+	// decode CycloneDX VEX (a CycloneDX BOM with vulnerabilities)
+	// read file into buffer because BOM decoder may need seekable reader
+	buf := new(bytes.Buffer)
+	if _, err := io.Copy(buf, file); err != nil {
+		slog.Error("could not read uploaded file", "err", err)
+		return echo.NewHTTPError(400, "could not read vex file").WithInternal(err)
+	}
+
+	var bom cdx.BOM
+	dec := cdx.NewBOMDecoder(bytes.NewReader(buf.Bytes()), cdx.BOMFileFormatJSON)
+	if err := dec.Decode(&bom); err != nil {
+		slog.Error("could not decode cyclonedx vex bom", "err", err)
+		return echo.NewHTTPError(400, "could not decode vex file as CycloneDX BOM").WithInternal(err)
+	}
+
+	asset := core.GetAsset(ctx)
+	assetVersion := core.GetAssetVersion(ctx)
+	userID := core.GetSession(ctx).GetUserID()
+
+	// load existing dependency vulns for this asset version
+	existing, err := a.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, "")
+	if err != nil {
+		slog.Error("could not load dependency vulns", "err", err)
+		return echo.NewHTTPError(500, "could not load dependency vulns").WithInternal(err)
+	}
+
+	// index by CVE id
+	vulnsByCVE := make(map[string][]models.DependencyVuln)
+	for _, v := range existing {
+		if v.CVE != nil && v.CVE.CVE != "" {
+			vulnsByCVE[v.CVE.CVE] = append(vulnsByCVE[v.CVE.CVE], v)
+		} else if v.CVEID != nil && *v.CVEID != "" {
+			vulnsByCVE[*v.CVEID] = append(vulnsByCVE[*v.CVEID], v)
+		}
+	}
+
+	updated := 0
+	notFound := 0
+
+	// helper to extract cve id from CycloneDX vulnerability id or source url
+	extractCVE := func(s string) string {
+		if s == "" {
+			return ""
+		}
+		s = strings.TrimSpace(s)
+		if strings.HasPrefix(s, "http") {
+			parts := strings.Split(s, "/")
+			return parts[len(parts)-1]
+		}
+		return s
+	}
+
+	// iterate vulnerabilities in the CycloneDX BOM
+	if bom.Vulnerabilities != nil {
+		for _, vuln := range *bom.Vulnerabilities {
+			cveID := extractCVE(vuln.ID)
+			if cveID == "" && vuln.Source != nil && vuln.Source.URL != "" {
+				cveID = extractCVE(vuln.Source.URL)
+			}
+			if cveID == "" {
+				notFound++
+				continue
+			}
+
+			cveID = strings.ToUpper(strings.TrimSpace(cveID))
+
+			vlist, ok := vulnsByCVE[cveID]
+			if !ok || len(vlist) == 0 {
+				notFound++
+				continue
+			}
+
+			statusType := normalize.MapCDXToStatus(vuln.Analysis)
+			if statusType == "" {
+				// skip unknown/unspecified statuses
+				continue
+			}
+
+			justification := "[VEX-Upload]"
+			if vuln.Analysis != nil && vuln.Analysis.Detail != "" {
+				justification = fmt.Sprintf("[VEX-Upload] %s", vuln.Analysis.Detail)
+			}
+
+			for i := range vlist {
+				_, err := a.dependencyVulnService.UpdateDependencyVulnState(nil, asset.ID, userID, &vlist[i], statusType, justification, models.MechanicalJustificationType(""), assetVersion.Name) // mechanical justification is not part of cyclonedx spec.
+				if err != nil {
+					slog.Error("could not update dependency vuln state", "err", err, "cve", cveID)
+					continue
+				}
+				updated++
+			}
+		}
+	}
+
+	return ctx.JSON(200, map[string]int{"updated": updated, "notFound": notFound})
+}
+
 func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 
 	assetVersion := core.GetAssetVersion(ctx)
@@ -451,7 +564,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 					continue
 				}
 
-				var response string = ""
+				response := ""
 				if v.Analysis != nil && v.Analysis.Response != nil && len(*v.Analysis.Response) > 0 {
 					response = string((*v.Analysis.Response)[0])
 				}
@@ -515,7 +628,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 
 	markdown := bytes.Buffer{}
 	err = parsedTemplate.Execute(&markdown, VulnerabilityReport{
-		AppTitle:           escapeLatex(asset.Name),
+		AppTitle:           fmt.Sprintf("%s@%s", escapeLatex(asset.Slug), escapeLatex(assetVersion.Slug)),
 		AppVersion:         escapeLatex(assetVersion.Name),
 		ReportCreationDate: escapeLatex(time.Now().Format("2006-01-02 15:04")),
 
@@ -524,10 +637,10 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 		AmountMedium:   distribution.Medium,
 		AmountLow:      distribution.Low,
 
-		AvgFixTimeCritical: fmt.Sprintf("%d Tage", avgCritical.Hours()/24),
-		AvgFixTimeHigh:     fmt.Sprintf("%d Tage", avgHigh.Hours()/24),
-		AvgFixTimeMedium:   fmt.Sprintf("%d Tage", avgMedium.Hours()/24),
-		AvgFixTimeLow:      fmt.Sprintf("%d Tage", avgLow.Hours()/24),
+		AvgFixTimeCritical: fmt.Sprintf("%d Tage", int(avgCritical.Hours()/24)),
+		AvgFixTimeHigh:     fmt.Sprintf("%d Tage", int(avgHigh.Hours()/24)),
+		AvgFixTimeMedium:   fmt.Sprintf("%d Tage", int(avgMedium.Hours()/24)),
+		AvgFixTimeLow:      fmt.Sprintf("%d Tage", int(avgLow.Hours()/24)),
 
 		CriticalVulns: vulnsBySeverity["critical"],
 		HighVulns:     vulnsBySeverity["high"],
