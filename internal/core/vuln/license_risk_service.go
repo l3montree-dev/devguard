@@ -1,19 +1,15 @@
 package vuln
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
-	"os"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/database/models"
+	"github.com/l3montree-dev/devguard/internal/utils"
 )
 
 type LicenseRiskService struct {
@@ -33,23 +29,14 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 	if err != nil {
 		return err
 	}
-	// put all the license risks we already have into a hash map for faster look up times
-	doesLicenseRiskAlreadyExist := make(map[string]struct{})
-	for i := range existingLicenseRisks {
-		doesLicenseRiskAlreadyExist[existingLicenseRisks[i].ComponentPurl] = struct{}{}
-	}
-
 	// get all current valid licenses to compare against
-	licenseMap, err := GetOSILicenses()
-	if err != nil {
-		return err
-	}
+	licenseMap := component.LicenseMap
 
-	//collect all risks before saving to the database, should be more efficient
+	//collect all risks before saving to the database
 	allLicenseRisks := []models.LicenseRisk{}
-	allVulnEvents := []models.VulnEvent{}
+
 	// track which license risks we've already processed to prevent duplicates
-	processedLicenseRisks := make(map[string]struct{})
+	processedLicenseRisks := make(map[string]struct{}, len(components))
 
 	//go over every component and check if the license is a valid osi license; if not we can create a license risk with the provided information
 	for _, component := range components {
@@ -57,10 +44,9 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 			slog.Warn("license is nil, avoided nil pointer dereference")
 			continue
 		}
-		_, validLicense := licenseMap[*component.License]
-		_, exists := doesLicenseRiskAlreadyExist[component.Purl]
+		_, validLicense := licenseMap[strings.ToLower(*component.License)]
 		// if we have an invalid license and we don not have a risk for this we create one
-		if !validLicense && !exists {
+		if !validLicense {
 			licenseRisk := models.LicenseRisk{
 				Vulnerability: models.Vulnerability{
 					AssetVersionName: assetVersion.Name,
@@ -69,9 +55,9 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 					State:            models.VulnStateOpen,
 					LastDetected:     time.Now(),
 				},
-				Artifacts:            []models.Artifact{{ArtifactName: artifactName, AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name}},
-				FinalLicenseDecision: "",
+				FinalLicenseDecision: nil,
 				ComponentPurl:        component.Purl,
+				Artifacts:            []models.Artifact{{ArtifactName: artifactName, AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name}},
 			}
 
 			// Check if we've already processed this license risk to avoid duplicates
@@ -79,13 +65,44 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 			if _, processed := processedLicenseRisks[riskHash]; !processed {
 				processedLicenseRisks[riskHash] = struct{}{}
 				allLicenseRisks = append(allLicenseRisks, licenseRisk)
-				ev := models.NewDetectedEvent(riskHash, models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, artifactName)
-				// apply the event on the dependencyVuln
-				ev.Apply(&licenseRisk)
-				allVulnEvents = append(allVulnEvents, ev)
 			}
 		}
 	}
+
+	allVulnEvents := make([]models.VulnEvent, 0, len(allLicenseRisks))
+
+	comparison := utils.CompareSlices(existingLicenseRisks, allLicenseRisks, func(risk models.LicenseRisk) string {
+		return risk.CalculateHash()
+	})
+
+	fixRisks := comparison.OnlyInA
+	modifyRisks := comparison.InBoth
+	openRisks := comparison.OnlyInB
+
+	for i := range fixRisks {
+		if fixRisks[i].State == models.VulnStateOpen {
+			ev := models.NewFixedEvent(fixRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", scannerID)
+			ev.Apply(&fixRisks[i])
+			allVulnEvents = append(allVulnEvents, ev)
+		}
+	}
+
+	for i := range modifyRisks {
+		if modifyRisks[i].State == models.VulnStateFixed {
+			ev := models.NewDetectedEvent(modifyRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, artifactName)
+			ev.Apply(&modifyRisks[i])
+			allVulnEvents = append(allVulnEvents, ev)
+		}
+	}
+
+	for i := range openRisks {
+		ev := models.NewDetectedEvent(openRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, scannerID)
+		ev.Apply(&openRisks[i])
+		allVulnEvents = append(allVulnEvents, ev)
+	}
+
+	allLicenseRisks = append(append(fixRisks, modifyRisks...), openRisks...)
+
 	err = service.licenseRiskRepository.SaveBatch(nil, allLicenseRisks)
 	if err != nil {
 		return err
@@ -95,81 +112,6 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 		return err
 	}
 	return nil
-}
-
-var (
-	validOSILicenseMap map[string]struct{} = make(map[string]struct{}) // cache for valid OSI licenses
-	licenseMapMutex    sync.Mutex                                      // protects access to validOSILicenseMap
-)
-
-// ResetOSILicenseCache clears the cached OSI licenses for testing purposes
-func ResetOSILicenseCache() {
-	licenseMapMutex.Lock()
-	defer licenseMapMutex.Unlock()
-	validOSILicenseMap = make(map[string]struct{})
-}
-
-func GetOSILicenses() (map[string]struct{}, error) {
-	// Check if we already have licenses (with read lock)
-	licenseMapMutex.Lock()
-	if len(validOSILicenseMap) > 0 {
-		licenseMapMutex.Unlock()
-		return validOSILicenseMap, nil
-	}
-	defer licenseMapMutex.Unlock()
-
-	var err error
-	validOSILicenseMap, err = fetchOSILicenses()
-
-	if err != nil {
-		return nil, err
-	}
-
-	return validOSILicenseMap, nil
-}
-
-func fetchOSILicenses() (map[string]struct{}, error) {
-	apiURL := os.Getenv("OSI_LICENSES_API")
-	if apiURL == "" {
-		return nil, fmt.Errorf("could not get the URL of the OSI API, check the OSI_LICENSES_API variable in your .env file")
-	}
-
-	req, err := http.NewRequest("GET", apiURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("could not build the http request: %s", err)
-	}
-	client := http.DefaultClient
-	client.Timeout = time.Minute
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("http request to %s was unsuccessful (code: %d)", apiURL, resp.StatusCode)
-	}
-	response := bytes.Buffer{}
-	type osiLicense struct {
-		ID string `json:"spdx_id"`
-	}
-	var licenses []osiLicense
-	_, err = io.Copy(&response, resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(response.Bytes(), &licenses)
-	if err != nil {
-		return nil, err
-	}
-
-	validOSILicenseMap := make(map[string]struct{})
-	for _, license := range licenses {
-		if license.ID != "" {
-			validOSILicenseMap[license.ID] = struct{}{}
-		}
-	}
-	return validOSILicenseMap, nil
 }
 
 func (service *LicenseRiskService) UpdateLicenseRiskState(tx core.DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {
@@ -203,13 +145,12 @@ func (service *LicenseRiskService) updateLicenseRiskState(tx core.DB, userID str
 	return ev, err
 }
 
-func (service *LicenseRiskService) MakeFinalLicenseDecision(vulnID, finalLicense, userID string) error {
+func (service *LicenseRiskService) MakeFinalLicenseDecision(vulnID, finalLicense, justification, userID string) error {
 	licenseRisk, err := service.licenseRiskRepository.Read(vulnID)
 	if err != nil {
 		return err
 	}
-	licenseRisk.State = models.VulnStateFixed
-	licenseRisk.FinalLicenseDecision = finalLicense
-	ev := models.NewFixedEvent(vulnID, models.VulnTypeLicenseRisk, userID, licenseRisk.GetArtifactNames())
+
+	ev := models.NewLicenseDecisionEvent(vulnID, models.VulnTypeLicenseRisk, userID, justification, licenseRisk.GetArtifactNames(), finalLicense)
 	return service.licenseRiskRepository.ApplyAndSave(nil, &licenseRisk, &ev)
 }

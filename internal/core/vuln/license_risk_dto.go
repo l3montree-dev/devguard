@@ -18,9 +18,11 @@ type LicenseRiskDTO struct {
 	TicketURL            *string          `json:"ticketUrl"`
 	ManualTicketCreation bool             `json:"manualTicketCreation"`
 
-	FinalLicenseDecision string            `json:"finalLicenseDecision"`
-	ComponentPurl        string            `json:"componentPurl"`
-	Artifacts            []models.Artifact `json:"artifacts"`
+	FinalLicenseDecision *string `json:"finalLicenseDecision"`
+	ComponentPurl        string  `json:"componentPurl"`
+
+	Component models.Component  `json:"component"`
+	Artifacts []models.Artifact `json:"artifacts"`
 }
 
 type detailedLicenseRiskDTO struct {
@@ -29,7 +31,6 @@ type detailedLicenseRiskDTO struct {
 }
 
 func LicenseRiskToDto(f models.LicenseRisk) LicenseRiskDTO {
-
 	return LicenseRiskDTO{
 		ID:                   f.ID,
 		Artifacts:            f.Artifacts,
@@ -44,5 +45,6 @@ func LicenseRiskToDto(f models.LicenseRisk) LicenseRiskDTO {
 
 		FinalLicenseDecision: f.FinalLicenseDecision,
 		ComponentPurl:        f.ComponentPurl,
+		Component:            f.Component,
 	}
 }

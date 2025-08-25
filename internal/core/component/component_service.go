@@ -228,6 +228,54 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 	return allComponents, nil
 }
 
+// RefreshAllLicenses forces re-fetching license information for all components of an asset version
+func (s *service) RefreshAllLicenses(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error) {
+	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	if err != nil {
+		return nil, err
+	}
+
+	// collect unique components
+	componentsMap := make(map[string]models.Component)
+	for _, cd := range componentDependencies {
+		componentsMap[cd.DependencyPurl] = cd.Dependency
+	}
+
+	components := make([]models.Component, 0, len(componentsMap))
+	for _, c := range componentsMap {
+		// clear existing license so GetLicense will re-fetch
+		c.License = nil
+		components = append(components, c)
+	}
+
+	slog.Info("refreshing license information for components", "amount", len(components))
+
+	errGroup := utils.ErrGroup[models.Component](10)
+	for _, component := range components {
+		comp := component
+		errGroup.Go(func() (models.Component, error) {
+			return s.GetLicense(comp)
+		})
+	}
+
+	updatedComponents, err := errGroup.WaitAndCollect()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.componentRepository.SaveBatch(nil, updatedComponents); err != nil {
+		return nil, err
+	}
+
+	// find potential license risks for all components
+	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, updatedComponents, scannerID)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedComponents, nil
+}
+
 func getDebianPackageInformation(pURL packageurl.PackageURL) (*bytes.Buffer, error) {
 	buff := bytes.Buffer{}
 

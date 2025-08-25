@@ -164,6 +164,74 @@ func (_c *ComponentService_GetLicense_Call) RunAndReturn(run func(component mode
 	return _c
 }
 
+// RefreshAllLicenses provides a mock function for the type ComponentService
+func (_mock *ComponentService) RefreshAllLicenses(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error) {
+	ret := _mock.Called(assetVersion, scannerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshAllLicenses")
+	}
+
+	var r0 []models.Component
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string) ([]models.Component, error)); ok {
+		return returnFunc(assetVersion, scannerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string) []models.Component); ok {
+		r0 = returnFunc(assetVersion, scannerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Component)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion, string) error); ok {
+		r1 = returnFunc(assetVersion, scannerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// ComponentService_RefreshAllLicenses_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshAllLicenses'
+type ComponentService_RefreshAllLicenses_Call struct {
+	*mock.Call
+}
+
+// RefreshAllLicenses is a helper method to define mock.On call
+//   - assetVersion models.AssetVersion
+//   - scannerID string
+func (_e *ComponentService_Expecter) RefreshAllLicenses(assetVersion interface{}, scannerID interface{}) *ComponentService_RefreshAllLicenses_Call {
+	return &ComponentService_RefreshAllLicenses_Call{Call: _e.mock.On("RefreshAllLicenses", assetVersion, scannerID)}
+}
+
+func (_c *ComponentService_RefreshAllLicenses_Call) Run(run func(assetVersion models.AssetVersion, scannerID string)) *ComponentService_RefreshAllLicenses_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 models.AssetVersion
+		if args[0] != nil {
+			arg0 = args[0].(models.AssetVersion)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *ComponentService_RefreshAllLicenses_Call) Return(components []models.Component, err error) *ComponentService_RefreshAllLicenses_Call {
+	_c.Call.Return(components, err)
+	return _c
+}
+
+func (_c *ComponentService_RefreshAllLicenses_Call) RunAndReturn(run func(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error)) *ComponentService_RefreshAllLicenses_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RefreshComponentProjectInformation provides a mock function for the type ComponentService
 func (_mock *ComponentService) RefreshComponentProjectInformation(project models.ComponentProject) {
 	_mock.Called(project)

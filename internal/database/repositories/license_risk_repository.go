@@ -25,12 +25,13 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 	var count int64
 	var licenseRisks = []models.LicenseRisk{}
 
-	q := repository.Repository.GetDB(tx).Model(&models.LicenseRisk{}).Where("license_risks.asset_version_name = ?", assetVersionName).Where("license_risks.asset_id = ?", assetID)
+	q := repository.Repository.GetDB(tx).Model(&models.LicenseRisk{}).Preload("Component").Where("license_risks.asset_version_name = ?", assetVersionName).Where("license_risks.asset_id = ?", assetID)
 
 	// apply filters
 	for _, f := range filter {
 		q = q.Where(f.SQL(), f.Value())
 	}
+
 	if search != "" && len(search) > 2 {
 		q = q.Where("license_risks.final_license_decision ILIKE ? OR license_risks.component_purl ILIKE ? ", "%"+search+"%", "%"+search+"%")
 	}
@@ -118,4 +119,13 @@ func (repository *LicenseRiskRepository) applyAndSave(tx core.DB, licenseRisk *m
 	}
 	licenseRisk.Events = append(licenseRisk.Events, *ev)
 	return *ev, nil
+}
+
+func (repository *LicenseRiskRepository) Read(vulnID string) (models.LicenseRisk, error) {
+	var licenseRisk models.LicenseRisk
+	err := repository.db.Where("id = ?", vulnID).Preload("Events").Preload("Component").First(&licenseRisk).Error
+	if err != nil {
+		return licenseRisk, err
+	}
+	return licenseRisk, nil
 }

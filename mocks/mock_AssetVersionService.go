@@ -111,7 +111,7 @@ func (_c *AssetVersionService_BuildOpenVeX_Call) RunAndReturn(run func(asset mod
 }
 
 // BuildSBOM provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) BuildSBOM(assetVersion models.AssetVersion, version string, orgName string, components []models.ComponentDependency) *cyclonedx.BOM {
+func (_mock *AssetVersionService) BuildSBOM(assetVersion models.AssetVersion, version string, orgName string, components []models.ComponentDependency) (*cyclonedx.BOM, error) {
 	ret := _mock.Called(assetVersion, version, orgName, components)
 
 	if len(ret) == 0 {
@@ -119,6 +119,10 @@ func (_mock *AssetVersionService) BuildSBOM(assetVersion models.AssetVersion, ve
 	}
 
 	var r0 *cyclonedx.BOM
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string, string, []models.ComponentDependency) (*cyclonedx.BOM, error)); ok {
+		return returnFunc(assetVersion, version, orgName, components)
+	}
 	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string, string, []models.ComponentDependency) *cyclonedx.BOM); ok {
 		r0 = returnFunc(assetVersion, version, orgName, components)
 	} else {
@@ -126,7 +130,12 @@ func (_mock *AssetVersionService) BuildSBOM(assetVersion models.AssetVersion, ve
 			r0 = ret.Get(0).(*cyclonedx.BOM)
 		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion, string, string, []models.ComponentDependency) error); ok {
+		r1 = returnFunc(assetVersion, version, orgName, components)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // AssetVersionService_BuildSBOM_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BuildSBOM'
@@ -171,12 +180,12 @@ func (_c *AssetVersionService_BuildSBOM_Call) Run(run func(assetVersion models.A
 	return _c
 }
 
-func (_c *AssetVersionService_BuildSBOM_Call) Return(bOM *cyclonedx.BOM) *AssetVersionService_BuildSBOM_Call {
-	_c.Call.Return(bOM)
+func (_c *AssetVersionService_BuildSBOM_Call) Return(bOM *cyclonedx.BOM, err error) *AssetVersionService_BuildSBOM_Call {
+	_c.Call.Return(bOM, err)
 	return _c
 }
 
-func (_c *AssetVersionService_BuildSBOM_Call) RunAndReturn(run func(assetVersion models.AssetVersion, version string, orgName string, components []models.ComponentDependency) *cyclonedx.BOM) *AssetVersionService_BuildSBOM_Call {
+func (_c *AssetVersionService_BuildSBOM_Call) RunAndReturn(run func(assetVersion models.AssetVersion, version string, orgName string, components []models.ComponentDependency) (*cyclonedx.BOM, error)) *AssetVersionService_BuildSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }
