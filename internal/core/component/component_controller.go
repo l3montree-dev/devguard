@@ -1,6 +1,8 @@
 package component
 
 import (
+	"strings"
+
 	"github.com/l3montree-dev/devguard/internal/core"
 )
 
@@ -45,7 +47,7 @@ func (httpController httpController) LicenseDistribution(ctx core.Context) error
 	var res = make([]licenseResponse, 0, len(licenses))
 	for id, count := range licenses {
 		// get the license from the license repository
-		l, ok := licenseMap[id]
+		l, ok := licenseMap[strings.ToLower(id)]
 		if !ok {
 			l = license{
 				LicenseID: id,

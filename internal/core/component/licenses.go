@@ -3,6 +3,7 @@ package component
 import (
 	_ "embed"
 	"encoding/json"
+	"strings"
 )
 
 //go:embed licenses.json
@@ -33,6 +34,6 @@ func init() {
 		panic(err)
 	}
 	for _, license := range licenses.Licenses {
-		licenseMap[license.LicenseID] = license
+		licenseMap[strings.ToLower(license.LicenseID)] = license
 	}
 }
