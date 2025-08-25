@@ -61,15 +61,26 @@ type WebhookIntegrationRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id uuid.UUID
 func (_e *WebhookIntegrationRepository_Expecter) Delete(tx interface{}, id interface{}) *WebhookIntegrationRepository_Delete_Call {
 	return &WebhookIntegrationRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *WebhookIntegrationRepository_Delete_Call) Run(run func(tx core.DB, id uuid.UUID)) *WebhookIntegrationRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -118,15 +129,26 @@ type WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call struct {
 }
 
 // FindByOrgIDAndProjectID is a helper method to define mock.On call
-//   - orgID
-//   - projectID
+//   - orgID uuid.UUID
+//   - projectID uuid.UUID
 func (_e *WebhookIntegrationRepository_Expecter) FindByOrgIDAndProjectID(orgID interface{}, projectID interface{}) *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call {
 	return &WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call{Call: _e.mock.On("FindByOrgIDAndProjectID", orgID, projectID)}
 }
 
 func (_c *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call) Run(run func(orgID uuid.UUID, projectID uuid.UUID)) *WebhookIntegrationRepository_FindByOrgIDAndProjectID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -173,14 +195,20 @@ type WebhookIntegrationRepository_GetClientByIntegrationID_Call struct {
 }
 
 // GetClientByIntegrationID is a helper method to define mock.On call
-//   - integrationID
+//   - integrationID uuid.UUID
 func (_e *WebhookIntegrationRepository_Expecter) GetClientByIntegrationID(integrationID interface{}) *WebhookIntegrationRepository_GetClientByIntegrationID_Call {
 	return &WebhookIntegrationRepository_GetClientByIntegrationID_Call{Call: _e.mock.On("GetClientByIntegrationID", integrationID)}
 }
 
 func (_c *WebhookIntegrationRepository_GetClientByIntegrationID_Call) Run(run func(integrationID uuid.UUID)) *WebhookIntegrationRepository_GetClientByIntegrationID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -229,15 +257,26 @@ type WebhookIntegrationRepository_GetProjectWebhooks_Call struct {
 }
 
 // GetProjectWebhooks is a helper method to define mock.On call
-//   - orgID
-//   - projectID
+//   - orgID uuid.UUID
+//   - projectID uuid.UUID
 func (_e *WebhookIntegrationRepository_Expecter) GetProjectWebhooks(orgID interface{}, projectID interface{}) *WebhookIntegrationRepository_GetProjectWebhooks_Call {
 	return &WebhookIntegrationRepository_GetProjectWebhooks_Call{Call: _e.mock.On("GetProjectWebhooks", orgID, projectID)}
 }
 
 func (_c *WebhookIntegrationRepository_GetProjectWebhooks_Call) Run(run func(orgID uuid.UUID, projectID uuid.UUID)) *WebhookIntegrationRepository_GetProjectWebhooks_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID), args[1].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -284,14 +323,20 @@ type WebhookIntegrationRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id uuid.UUID
 func (_e *WebhookIntegrationRepository_Expecter) Read(id interface{}) *WebhookIntegrationRepository_Read_Call {
 	return &WebhookIntegrationRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *WebhookIntegrationRepository_Read_Call) Run(run func(id uuid.UUID)) *WebhookIntegrationRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uuid.UUID))
+		var arg0 uuid.UUID
+		if args[0] != nil {
+			arg0 = args[0].(uuid.UUID)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -329,15 +374,26 @@ type WebhookIntegrationRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - model
+//   - tx core.DB
+//   - model *models.WebhookIntegration
 func (_e *WebhookIntegrationRepository_Expecter) Save(tx interface{}, model interface{}) *WebhookIntegrationRepository_Save_Call {
 	return &WebhookIntegrationRepository_Save_Call{Call: _e.mock.On("Save", tx, model)}
 }
 
 func (_c *WebhookIntegrationRepository_Save_Call) Run(run func(tx core.DB, model *models.WebhookIntegration)) *WebhookIntegrationRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.WebhookIntegration))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.WebhookIntegration
+		if args[1] != nil {
+			arg1 = args[1].(*models.WebhookIntegration)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

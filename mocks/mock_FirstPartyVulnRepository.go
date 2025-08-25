@@ -62,15 +62,26 @@ type FirstPartyVulnRepository_Activate_Call struct {
 }
 
 // Activate is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id string
 func (_e *FirstPartyVulnRepository_Expecter) Activate(tx interface{}, id interface{}) *FirstPartyVulnRepository_Activate_Call {
 	return &FirstPartyVulnRepository_Activate_Call{Call: _e.mock.On("Activate", tx, id)}
 }
 
 func (_c *FirstPartyVulnRepository_Activate_Call) Run(run func(tx core.DB, id string)) *FirstPartyVulnRepository_Activate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -163,16 +174,32 @@ type FirstPartyVulnRepository_ApplyAndSave_Call struct {
 }
 
 // ApplyAndSave is a helper method to define mock.On call
-//   - tx
-//   - dependencyVuln
-//   - vulnEvent
+//   - tx core.DB
+//   - dependencyVuln *models.FirstPartyVuln
+//   - vulnEvent *models.VulnEvent
 func (_e *FirstPartyVulnRepository_Expecter) ApplyAndSave(tx interface{}, dependencyVuln interface{}, vulnEvent interface{}) *FirstPartyVulnRepository_ApplyAndSave_Call {
 	return &FirstPartyVulnRepository_ApplyAndSave_Call{Call: _e.mock.On("ApplyAndSave", tx, dependencyVuln, vulnEvent)}
 }
 
 func (_c *FirstPartyVulnRepository_ApplyAndSave_Call) Run(run func(tx core.DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent)) *FirstPartyVulnRepository_ApplyAndSave_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.FirstPartyVuln), args[2].(*models.VulnEvent))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.FirstPartyVuln
+		if args[1] != nil {
+			arg1 = args[1].(*models.FirstPartyVuln)
+		}
+		var arg2 *models.VulnEvent
+		if args[2] != nil {
+			arg2 = args[2].(*models.VulnEvent)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -256,15 +283,26 @@ type FirstPartyVulnRepository_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - tx
-//   - t
+//   - tx core.DB
+//   - t *models.FirstPartyVuln
 func (_e *FirstPartyVulnRepository_Expecter) Create(tx interface{}, t interface{}) *FirstPartyVulnRepository_Create_Call {
 	return &FirstPartyVulnRepository_Create_Call{Call: _e.mock.On("Create", tx, t)}
 }
 
 func (_c *FirstPartyVulnRepository_Create_Call) Run(run func(tx core.DB, t *models.FirstPartyVuln)) *FirstPartyVulnRepository_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.FirstPartyVuln))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.FirstPartyVuln
+		if args[1] != nil {
+			arg1 = args[1].(*models.FirstPartyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -302,15 +340,26 @@ type FirstPartyVulnRepository_CreateBatch_Call struct {
 }
 
 // CreateBatch is a helper method to define mock.On call
-//   - tx
-//   - ts
+//   - tx core.DB
+//   - ts []models.FirstPartyVuln
 func (_e *FirstPartyVulnRepository_Expecter) CreateBatch(tx interface{}, ts interface{}) *FirstPartyVulnRepository_CreateBatch_Call {
 	return &FirstPartyVulnRepository_CreateBatch_Call{Call: _e.mock.On("CreateBatch", tx, ts)}
 }
 
 func (_c *FirstPartyVulnRepository_CreateBatch_Call) Run(run func(tx core.DB, ts []models.FirstPartyVuln)) *FirstPartyVulnRepository_CreateBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.FirstPartyVuln))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.FirstPartyVuln
+		if args[1] != nil {
+			arg1 = args[1].([]models.FirstPartyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -348,15 +397,26 @@ type FirstPartyVulnRepository_Delete_Call struct {
 }
 
 // Delete is a helper method to define mock.On call
-//   - tx
-//   - id
+//   - tx core.DB
+//   - id string
 func (_e *FirstPartyVulnRepository_Expecter) Delete(tx interface{}, id interface{}) *FirstPartyVulnRepository_Delete_Call {
 	return &FirstPartyVulnRepository_Delete_Call{Call: _e.mock.On("Delete", tx, id)}
 }
 
 func (_c *FirstPartyVulnRepository_Delete_Call) Run(run func(tx core.DB, id string)) *FirstPartyVulnRepository_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -394,15 +454,26 @@ type FirstPartyVulnRepository_DeleteBatch_Call struct {
 }
 
 // DeleteBatch is a helper method to define mock.On call
-//   - tx
-//   - ids
+//   - tx core.DB
+//   - ids []models.FirstPartyVuln
 func (_e *FirstPartyVulnRepository_Expecter) DeleteBatch(tx interface{}, ids interface{}) *FirstPartyVulnRepository_DeleteBatch_Call {
 	return &FirstPartyVulnRepository_DeleteBatch_Call{Call: _e.mock.On("DeleteBatch", tx, ids)}
 }
 
 func (_c *FirstPartyVulnRepository_DeleteBatch_Call) Run(run func(tx core.DB, ids []models.FirstPartyVuln)) *FirstPartyVulnRepository_DeleteBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.FirstPartyVuln))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.FirstPartyVuln
+		if args[1] != nil {
+			arg1 = args[1].([]models.FirstPartyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -451,15 +522,26 @@ type FirstPartyVulnRepository_GetByAssetID_Call struct {
 }
 
 // GetByAssetID is a helper method to define mock.On call
-//   - tx
-//   - assetID
+//   - tx core.DB
+//   - assetID uuid.UUID
 func (_e *FirstPartyVulnRepository_Expecter) GetByAssetID(tx interface{}, assetID interface{}) *FirstPartyVulnRepository_GetByAssetID_Call {
 	return &FirstPartyVulnRepository_GetByAssetID_Call{Call: _e.mock.On("GetByAssetID", tx, assetID)}
 }
 
 func (_c *FirstPartyVulnRepository_GetByAssetID_Call) Run(run func(tx core.DB, assetID uuid.UUID)) *FirstPartyVulnRepository_GetByAssetID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -508,16 +590,32 @@ type FirstPartyVulnRepository_GetByAssetVersion_Call struct {
 }
 
 // GetByAssetVersion is a helper method to define mock.On call
-//   - tx
-//   - assetVersionName
-//   - assetID
+//   - tx core.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
 func (_e *FirstPartyVulnRepository_Expecter) GetByAssetVersion(tx interface{}, assetVersionName interface{}, assetID interface{}) *FirstPartyVulnRepository_GetByAssetVersion_Call {
 	return &FirstPartyVulnRepository_GetByAssetVersion_Call{Call: _e.mock.On("GetByAssetVersion", tx, assetVersionName, assetID)}
 }
 
 func (_c *FirstPartyVulnRepository_GetByAssetVersion_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID)) *FirstPartyVulnRepository_GetByAssetVersion_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].(uuid.UUID))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -572,20 +670,56 @@ type FirstPartyVulnRepository_GetByAssetVersionPaged_Call struct {
 }
 
 // GetByAssetVersionPaged is a helper method to define mock.On call
-//   - tx
-//   - assetVersionName
-//   - assetID
-//   - pageInfo
-//   - search
-//   - filter
-//   - sort
+//   - tx core.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - pageInfo core.PageInfo
+//   - search string
+//   - filter []core.FilterQuery
+//   - sort []core.SortQuery
 func (_e *FirstPartyVulnRepository_Expecter) GetByAssetVersionPaged(tx interface{}, assetVersionName interface{}, assetID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
 	return &FirstPartyVulnRepository_GetByAssetVersionPaged_Call{Call: _e.mock.On("GetByAssetVersionPaged", tx, assetVersionName, assetID, pageInfo, search, filter, sort)}
 }
 
 func (_c *FirstPartyVulnRepository_GetByAssetVersionPaged_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *FirstPartyVulnRepository_GetByAssetVersionPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].(uuid.UUID), args[3].(core.PageInfo), args[4].(string), args[5].([]core.FilterQuery), args[6].([]core.SortQuery))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 core.PageInfo
+		if args[3] != nil {
+			arg3 = args[3].(core.PageInfo)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 []core.FilterQuery
+		if args[5] != nil {
+			arg5 = args[5].([]core.FilterQuery)
+		}
+		var arg6 []core.SortQuery
+		if args[6] != nil {
+			arg6 = args[6].([]core.SortQuery)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
 	})
 	return _c
 }
@@ -625,14 +759,20 @@ type FirstPartyVulnRepository_GetDB_Call struct {
 }
 
 // GetDB is a helper method to define mock.On call
-//   - tx
+//   - tx core.DB
 func (_e *FirstPartyVulnRepository_Expecter) GetDB(tx interface{}) *FirstPartyVulnRepository_GetDB_Call {
 	return &FirstPartyVulnRepository_GetDB_Call{Call: _e.mock.On("GetDB", tx)}
 }
 
 func (_c *FirstPartyVulnRepository_GetDB_Call) Run(run func(tx core.DB)) *FirstPartyVulnRepository_GetDB_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -679,19 +819,50 @@ type FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call struct 
 }
 
 // GetDefaultFirstPartyVulnsByOrgIDPaged is a helper method to define mock.On call
-//   - tx
-//   - userAllowedProjectIds
-//   - pageInfo
-//   - search
-//   - filter
-//   - sort
+//   - tx core.DB
+//   - userAllowedProjectIds []string
+//   - pageInfo core.PageInfo
+//   - search string
+//   - filter []core.FilterQuery
+//   - sort []core.SortQuery
 func (_e *FirstPartyVulnRepository_Expecter) GetDefaultFirstPartyVulnsByOrgIDPaged(tx interface{}, userAllowedProjectIds interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call {
 	return &FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call{Call: _e.mock.On("GetDefaultFirstPartyVulnsByOrgIDPaged", tx, userAllowedProjectIds, pageInfo, search, filter, sort)}
 }
 
 func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call) Run(run func(tx core.DB, userAllowedProjectIds []string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByOrgIDPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]string), args[2].(core.PageInfo), args[3].(string), args[4].([]core.FilterQuery), args[5].([]core.SortQuery))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []string
+		if args[1] != nil {
+			arg1 = args[1].([]string)
+		}
+		var arg2 core.PageInfo
+		if args[2] != nil {
+			arg2 = args[2].(core.PageInfo)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 []core.FilterQuery
+		if args[4] != nil {
+			arg4 = args[4].([]core.FilterQuery)
+		}
+		var arg5 []core.SortQuery
+		if args[5] != nil {
+			arg5 = args[5].([]core.SortQuery)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
 	})
 	return _c
 }
@@ -738,19 +909,50 @@ type FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIDPaged_Call str
 }
 
 // GetDefaultFirstPartyVulnsByProjectIDPaged is a helper method to define mock.On call
-//   - tx
-//   - projectID
-//   - pageInfo
-//   - search
-//   - filter
-//   - sort
+//   - tx core.DB
+//   - projectID uuid.UUID
+//   - pageInfo core.PageInfo
+//   - search string
+//   - filter []core.FilterQuery
+//   - sort []core.SortQuery
 func (_e *FirstPartyVulnRepository_Expecter) GetDefaultFirstPartyVulnsByProjectIDPaged(tx interface{}, projectID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIDPaged_Call {
 	return &FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIDPaged_Call{Call: _e.mock.On("GetDefaultFirstPartyVulnsByProjectIDPaged", tx, projectID, pageInfo, search, filter, sort)}
 }
 
 func (_c *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIDPaged_Call) Run(run func(tx core.DB, projectID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *FirstPartyVulnRepository_GetDefaultFirstPartyVulnsByProjectIDPaged_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(uuid.UUID), args[2].(core.PageInfo), args[3].(string), args[4].([]core.FilterQuery), args[5].([]core.SortQuery))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 core.PageInfo
+		if args[2] != nil {
+			arg2 = args[2].(core.PageInfo)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 []core.FilterQuery
+		if args[4] != nil {
+			arg4 = args[4].([]core.FilterQuery)
+		}
+		var arg5 []core.SortQuery
+		if args[5] != nil {
+			arg5 = args[5].([]core.SortQuery)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
 	})
 	return _c
 }
@@ -799,17 +1001,38 @@ type FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call struct
 }
 
 // GetFirstPartyVulnsByOtherAssetVersions is a helper method to define mock.On call
-//   - tx
-//   - assetVersionName
-//   - assetID
-//   - scannerID
+//   - tx core.DB
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scannerID string
 func (_e *FirstPartyVulnRepository_Expecter) GetFirstPartyVulnsByOtherAssetVersions(tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
 	return &FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call{Call: _e.mock.On("GetFirstPartyVulnsByOtherAssetVersions", tx, assetVersionName, assetID, scannerID)}
 }
 
 func (_c *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *FirstPartyVulnRepository_GetFirstPartyVulnsByOtherAssetVersions_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(string), args[2].(uuid.UUID), args[3].(string))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
 	})
 	return _c
 }
@@ -858,14 +1081,20 @@ type FirstPartyVulnRepository_List_Call struct {
 }
 
 // List is a helper method to define mock.On call
-//   - ids
+//   - ids []string
 func (_e *FirstPartyVulnRepository_Expecter) List(ids interface{}) *FirstPartyVulnRepository_List_Call {
 	return &FirstPartyVulnRepository_List_Call{Call: _e.mock.On("List", ids)}
 }
 
 func (_c *FirstPartyVulnRepository_List_Call) Run(run func(ids []string)) *FirstPartyVulnRepository_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].([]string))
+		var arg0 []string
+		if args[0] != nil {
+			arg0 = args[0].([]string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -914,16 +1143,32 @@ type FirstPartyVulnRepository_ListByScanner_Call struct {
 }
 
 // ListByScanner is a helper method to define mock.On call
-//   - assetVersionName
-//   - assetID
-//   - scannerID
+//   - assetVersionName string
+//   - assetID uuid.UUID
+//   - scannerID string
 func (_e *FirstPartyVulnRepository_Expecter) ListByScanner(assetVersionName interface{}, assetID interface{}, scannerID interface{}) *FirstPartyVulnRepository_ListByScanner_Call {
 	return &FirstPartyVulnRepository_ListByScanner_Call{Call: _e.mock.On("ListByScanner", assetVersionName, assetID, scannerID)}
 }
 
 func (_c *FirstPartyVulnRepository_ListByScanner_Call) Run(run func(assetVersionName string, assetID uuid.UUID, scannerID string)) *FirstPartyVulnRepository_ListByScanner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(uuid.UUID), args[2].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -970,14 +1215,20 @@ type FirstPartyVulnRepository_Read_Call struct {
 }
 
 // Read is a helper method to define mock.On call
-//   - id
+//   - id string
 func (_e *FirstPartyVulnRepository_Expecter) Read(id interface{}) *FirstPartyVulnRepository_Read_Call {
 	return &FirstPartyVulnRepository_Read_Call{Call: _e.mock.On("Read", id)}
 }
 
 func (_c *FirstPartyVulnRepository_Read_Call) Run(run func(id string)) *FirstPartyVulnRepository_Read_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -1015,15 +1266,26 @@ type FirstPartyVulnRepository_Save_Call struct {
 }
 
 // Save is a helper method to define mock.On call
-//   - tx
-//   - vuln
+//   - tx core.DB
+//   - vuln *models.FirstPartyVuln
 func (_e *FirstPartyVulnRepository_Expecter) Save(tx interface{}, vuln interface{}) *FirstPartyVulnRepository_Save_Call {
 	return &FirstPartyVulnRepository_Save_Call{Call: _e.mock.On("Save", tx, vuln)}
 }
 
 func (_c *FirstPartyVulnRepository_Save_Call) Run(run func(tx core.DB, vuln *models.FirstPartyVuln)) *FirstPartyVulnRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].(*models.FirstPartyVuln))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 *models.FirstPartyVuln
+		if args[1] != nil {
+			arg1 = args[1].(*models.FirstPartyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -1061,15 +1323,26 @@ type FirstPartyVulnRepository_SaveBatch_Call struct {
 }
 
 // SaveBatch is a helper method to define mock.On call
-//   - tx
-//   - vulns
+//   - tx core.DB
+//   - vulns []models.FirstPartyVuln
 func (_e *FirstPartyVulnRepository_Expecter) SaveBatch(tx interface{}, vulns interface{}) *FirstPartyVulnRepository_SaveBatch_Call {
 	return &FirstPartyVulnRepository_SaveBatch_Call{Call: _e.mock.On("SaveBatch", tx, vulns)}
 }
 
 func (_c *FirstPartyVulnRepository_SaveBatch_Call) Run(run func(tx core.DB, vulns []models.FirstPartyVuln)) *FirstPartyVulnRepository_SaveBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(core.DB), args[1].([]models.FirstPartyVuln))
+		var arg0 core.DB
+		if args[0] != nil {
+			arg0 = args[0].(core.DB)
+		}
+		var arg1 []models.FirstPartyVuln
+		if args[1] != nil {
+			arg1 = args[1].([]models.FirstPartyVuln)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -1107,14 +1380,20 @@ type FirstPartyVulnRepository_Transaction_Call struct {
 }
 
 // Transaction is a helper method to define mock.On call
-//   - txFunc
+//   - txFunc func(core.DB) error
 func (_e *FirstPartyVulnRepository_Expecter) Transaction(txFunc interface{}) *FirstPartyVulnRepository_Transaction_Call {
 	return &FirstPartyVulnRepository_Transaction_Call{Call: _e.mock.On("Transaction", txFunc)}
 }
 
 func (_c *FirstPartyVulnRepository_Transaction_Call) Run(run func(txFunc func(core.DB) error)) *FirstPartyVulnRepository_Transaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(func(core.DB) error))
+		var arg0 func(core.DB) error
+		if args[0] != nil {
+			arg0 = args[0].(func(core.DB) error)
+		}
+		run(
+			arg0,
+		)
 	})
 	return _c
 }
@@ -1152,16 +1431,32 @@ type FirstPartyVulnRepository_Upsert_Call struct {
 }
 
 // Upsert is a helper method to define mock.On call
-//   - t
-//   - conflictingColumns
-//   - updateOnly
+//   - t *[]*models.FirstPartyVuln
+//   - conflictingColumns []clause.Column
+//   - updateOnly []string
 func (_e *FirstPartyVulnRepository_Expecter) Upsert(t interface{}, conflictingColumns interface{}, updateOnly interface{}) *FirstPartyVulnRepository_Upsert_Call {
 	return &FirstPartyVulnRepository_Upsert_Call{Call: _e.mock.On("Upsert", t, conflictingColumns, updateOnly)}
 }
 
 func (_c *FirstPartyVulnRepository_Upsert_Call) Run(run func(t *[]*models.FirstPartyVuln, conflictingColumns []clause.Column, updateOnly []string)) *FirstPartyVulnRepository_Upsert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(*[]*models.FirstPartyVuln), args[1].([]clause.Column), args[2].([]string))
+		var arg0 *[]*models.FirstPartyVuln
+		if args[0] != nil {
+			arg0 = args[0].(*[]*models.FirstPartyVuln)
+		}
+		var arg1 []clause.Column
+		if args[1] != nil {
+			arg1 = args[1].([]clause.Column)
+		}
+		var arg2 []string
+		if args[2] != nil {
+			arg2 = args[2].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
