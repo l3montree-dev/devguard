@@ -562,6 +562,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	// update the sbom for the asset in the database.
 	components := make(map[string]models.Component)
 	dependencies := make([]models.ComponentDependency, 0)
+	existingDependencies := make(map[string]struct{}, len(dependencies))
 
 	// build a map of all components
 	bomRefMap := buildBomRefMap(sbom)
@@ -587,6 +588,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 					DependencyPurl: componentPackageURL,
 				},
 			)
+			existingDependencies[componentPackageURL] = struct{}{}
 			if _, ok := existingComponentPurls[componentPackageURL]; !ok {
 				components[componentPackageURL] = models.Component{
 					Purl:          componentPackageURL,
@@ -605,6 +607,10 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		for _, d := range *c.Dependencies {
 			dep := bomRefMap[d]
 			depPurlOrName := normalize.Purl(dep)
+			_, exists := existingDependencies[depPurlOrName]
+			if exists {
+				continue
+			}
 
 			dependencies = append(dependencies,
 				models.ComponentDependency{
@@ -613,6 +619,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 					DependencyPurl: depPurlOrName,
 				},
 			)
+			existingDependencies[depPurlOrName] = struct{}{}
 
 			if _, ok := existingComponentPurls[depPurlOrName]; !ok {
 				components[depPurlOrName] = models.Component{
