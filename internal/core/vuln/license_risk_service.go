@@ -24,8 +24,8 @@ func NewLicenseRiskService(licenseRiskRepository core.LicenseRiskRepository, vul
 	}
 }
 
-func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error {
-	existingLicenseRisks, err := service.licenseRiskRepository.ListByScanner(assetVersion.Name, assetVersion.AssetID, scannerID)
+func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, artifactName string) error {
+	existingLicenseRisks, err := service.licenseRiskRepository.ListByArtifactName(assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return err
 	}
@@ -53,11 +53,11 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 					AssetID:          assetVersion.AssetID,
 					AssetVersion:     assetVersion,
 					State:            models.VulnStateOpen,
-					ScannerIDs:       scannerID,
 					LastDetected:     time.Now(),
 				},
 				FinalLicenseDecision: nil,
 				ComponentPurl:        component.Purl,
+				Artifacts:            []models.Artifact{{ArtifactName: artifactName, AssetID: assetVersion.AssetID, AssetVersionName: assetVersion.Name}},
 			}
 
 			// Check if we've already processed this license risk to avoid duplicates
@@ -81,7 +81,7 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 
 	for i := range fixRisks {
 		if fixRisks[i].State == models.VulnStateOpen {
-			ev := models.NewFixedEvent(fixRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", scannerID)
+			ev := models.NewFixedEvent(fixRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", artifactName)
 			ev.Apply(&fixRisks[i])
 			allVulnEvents = append(allVulnEvents, ev)
 		}
@@ -89,14 +89,14 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 
 	for i := range modifyRisks {
 		if modifyRisks[i].State == models.VulnStateFixed {
-			ev := models.NewDetectedEvent(modifyRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, scannerID)
+			ev := models.NewDetectedEvent(modifyRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, artifactName)
 			ev.Apply(&modifyRisks[i])
 			allVulnEvents = append(allVulnEvents, ev)
 		}
 	}
 
 	for i := range openRisks {
-		ev := models.NewDetectedEvent(openRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, scannerID)
+		ev := models.NewDetectedEvent(openRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, artifactName)
 		ev.Apply(&openRisks[i])
 		allVulnEvents = append(allVulnEvents, ev)
 	}
@@ -134,7 +134,7 @@ func (service *LicenseRiskService) updateLicenseRiskState(tx core.DB, userID str
 	case models.EventTypeAccepted:
 		ev = models.NewAcceptedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification)
 	case models.EventTypeFalsePositive:
-		ev = models.NewFalsePositiveEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification, mechanicalJustification, licenseRisk.ScannerIDs)
+		ev = models.NewFalsePositiveEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification, mechanicalJustification, licenseRisk.GetArtifactNames())
 	case models.EventTypeReopened:
 		ev = models.NewReopenedEvent(licenseRisk.CalculateHash(), models.VulnTypeLicenseRisk, userID, justification)
 	case models.EventTypeComment:
@@ -151,6 +151,6 @@ func (service *LicenseRiskService) MakeFinalLicenseDecision(vulnID, finalLicense
 		return err
 	}
 
-	ev := models.NewLicenseDecisionEvent(vulnID, models.VulnTypeLicenseRisk, userID, justification, licenseRisk.ScannerIDs, finalLicense)
+	ev := models.NewLicenseDecisionEvent(vulnID, models.VulnTypeLicenseRisk, userID, justification, licenseRisk.GetArtifactNames(), finalLicense)
 	return service.licenseRiskRepository.ApplyAndSave(nil, &licenseRisk, &ev)
 }

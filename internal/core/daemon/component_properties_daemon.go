@@ -78,27 +78,11 @@ func UpdateComponentProperties(db core.DB) error {
 				return nil, err
 			}
 
-			// group by scanner id
-			groups := make(map[string]map[string][]models.DependencyVuln)
 			for _, f := range dependencyVulns {
-				if _, ok := groups[f.ScannerIDs]; !ok {
-					groups[f.ScannerIDs] = make(map[string][]models.DependencyVuln)
-				}
-
-				if _, ok := groups[f.ScannerIDs][f.AssetVersionName]; !ok {
-					groups[f.ScannerIDs][f.AssetVersionName] = make([]models.DependencyVuln, 0)
-				}
-
-				groups[f.ScannerIDs][f.AssetVersionName] = append(groups[f.ScannerIDs][f.AssetVersionName], f)
-			}
-
-			// group the dependencyVulns by scanner id
-			// build up the dependency tree for the asset
-			for scannerID, assetVersionDependencyVulnMapping := range groups {
-				for assetVersionName, dependencyVulns := range assetVersionDependencyVulnMapping {
-					components, err := componentRepository.LoadComponents(nil, assetVersionName, a.ID, scannerID)
+				for _, artifact := range f.Artifacts {
+					components, err := componentRepository.LoadComponents(nil, f.AssetVersionName, a.ID, artifact.ArtifactName)
 					if err != nil {
-						slog.Warn("could not load components", "asset", a.ID, "scanner", scannerID, "err", err)
+						slog.Warn("could not load components", "asset", a.ID, "artifact", artifact.ArtifactName, "err", err)
 						continue
 					}
 

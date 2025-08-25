@@ -23,26 +23,26 @@ import (
 )
 
 type DependencyVulnDTO struct {
-	ID                    string           `json:"id"`
-	ScannerIDs            string           `json:"scannerIds"`
-	Message               *string          `json:"message"`
-	AssetVersionName      string           `json:"assetVersionId"`
-	AssetID               string           `json:"assetId"`
-	State                 models.VulnState `json:"state"`
-	CVE                   *models.CVE      `json:"cve"`
-	CVEID                 *string          `json:"cveID"`
-	ComponentPurl         *string          `json:"componentPurl"`
-	ComponentDepth        *int             `json:"componentDepth"`
-	ComponentFixedVersion *string          `json:"componentFixedVersion"`
-	Effort                *int             `json:"effort"`
-	RiskAssessment        *int             `json:"riskAssessment"`
-	RawRiskAssessment     *float64         `json:"rawRiskAssessment"`
-	Priority              *int             `json:"priority"`
-	LastDetected          time.Time        `json:"lastDetected"`
-	CreatedAt             time.Time        `json:"createdAt"`
-	TicketID              *string          `json:"ticketId"`
-	TicketURL             *string          `json:"ticketUrl"`
-	ManualTicketCreation  bool             `json:"manualTicketCreation"`
+	ID                    string            `json:"id"`
+	Message               *string           `json:"message"`
+	AssetVersionName      string            `json:"assetVersionId"`
+	AssetID               string            `json:"assetId"`
+	State                 models.VulnState  `json:"state"`
+	CVE                   *models.CVE       `json:"cve"`
+	CVEID                 *string           `json:"cveID"`
+	ComponentPurl         *string           `json:"componentPurl"`
+	ComponentDepth        *int              `json:"componentDepth"`
+	ComponentFixedVersion *string           `json:"componentFixedVersion"`
+	Effort                *int              `json:"effort"`
+	RiskAssessment        *int              `json:"riskAssessment"`
+	RawRiskAssessment     *float64          `json:"rawRiskAssessment"`
+	Priority              *int              `json:"priority"`
+	LastDetected          time.Time         `json:"lastDetected"`
+	CreatedAt             time.Time         `json:"createdAt"`
+	TicketID              *string           `json:"ticketId"`
+	TicketURL             *string           `json:"ticketUrl"`
+	ManualTicketCreation  bool              `json:"manualTicketCreation"`
+	Artifacts             []models.Artifact `json:"artifacts"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
 }
@@ -56,7 +56,6 @@ func DependencyVulnToDto(f models.DependencyVuln) DependencyVulnDTO {
 
 	return DependencyVulnDTO{
 		ID:                    f.ID,
-		ScannerIDs:            f.ScannerIDs,
 		Message:               f.Message,
 		AssetVersionName:      f.AssetVersionName,
 		AssetID:               f.AssetID.String(),
@@ -76,5 +75,6 @@ func DependencyVulnToDto(f models.DependencyVuln) DependencyVulnDTO {
 		TicketURL:             f.TicketURL,
 		ManualTicketCreation:  f.ManualTicketCreation,
 		RiskRecalculatedAt:    f.RiskRecalculatedAt,
+		Artifacts:             f.Artifacts,
 	}
 }

@@ -335,6 +335,7 @@ func scaCommand(cmd *cobra.Command, args []string) error {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Scanner", config.RuntimeBaseConfig.ScannerID)
+	req.Header.Set("X-Artifact-Name", config.RuntimeBaseConfig.ArtifactName)
 	config.SetXAssetHeaders(req)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -375,6 +376,5 @@ func NewSCACommand() *cobra.Command {
 	}
 
 	addScanFlags(scaCommand)
-	scaCommand.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca", "The ID of the scanner. This is used to identify the scanner in the scan results. Defaults to 'devguard-scanner'.")
 	return scaCommand
 }

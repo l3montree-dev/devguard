@@ -19,7 +19,7 @@ type statisticsService interface {
 	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
 	GetDependencyVulnAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (DependencyVulnAggregationStateAndChange, error)
 	GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
-	GetDependencyCountPerscanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
+	GetDependencyCountPerScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
 	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, start time.Time, end time.Time, updateProject bool) error
 	GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)
@@ -54,9 +54,9 @@ func (c *httpController) GetComponentRisk(ctx core.Context) error {
 	return ctx.JSON(200, results)
 }
 
-func (c *httpController) GetDependencyCountPerScanner(ctx core.Context) error {
+func (c *httpController) GetDependencyCountPerScannerID(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetDependencyCountPerscanner(assetVersion.Name, assetVersion.AssetID)
+	results, err := c.statisticsService.GetDependencyCountPerScannerID(assetVersion.Name, assetVersion.AssetID)
 
 	if err != nil {
 		return err

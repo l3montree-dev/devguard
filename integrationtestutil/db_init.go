@@ -52,6 +52,7 @@ func InitDatabaseContainer(initDBSQLPath string) (core.DB, func()) {
 
 	// automigrate ALL models
 	if err := db.AutoMigrate(
+		&models.Artifact{},
 		&models.Org{},
 		&models.Project{},
 		&models.Asset{},

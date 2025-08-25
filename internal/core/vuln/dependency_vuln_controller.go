@@ -137,7 +137,7 @@ func (controller dependencyVulnHTTPController) ListPaged(ctx core.Context) error
 		// append the dependencyVuln to the package
 		dependencyVulnsByPackage.DependencyVulns = append(res[*dependencyVuln.ComponentPurl].DependencyVulns, DependencyVulnDTO{
 			ID:                    dependencyVuln.ID,
-			ScannerIDs:            dependencyVuln.ScannerIDs,
+			Artifacts:             dependencyVuln.Artifacts,
 			Message:               dependencyVuln.Message,
 			AssetVersionName:      dependencyVuln.AssetVersionName,
 			AssetID:               dependencyVuln.AssetID.String(),
@@ -336,7 +336,7 @@ func convertToDetailedDTO(dependencyVuln models.DependencyVuln) detailedDependen
 			Priority:              dependencyVuln.Priority,
 			LastDetected:          dependencyVuln.LastDetected,
 			CreatedAt:             dependencyVuln.CreatedAt,
-			ScannerIDs:            dependencyVuln.ScannerIDs,
+			Artifacts:             dependencyVuln.Artifacts,
 			TicketID:              dependencyVuln.TicketID,
 			TicketURL:             dependencyVuln.TicketURL,
 			ManualTicketCreation:  dependencyVuln.ManualTicketCreation,
@@ -363,18 +363,4 @@ func getAssetVersionName(vuln models.DependencyVuln, ev models.VulnEvent) string
 		return *ev.OriginalAssetVersionName
 	}
 	return vuln.AssetVersionName // fallback to the vuln's asset version name if event does not have it
-}
-
-func (controller dependencyVulnHTTPController) ListArtifacts(ctx core.Context) error {
-
-	assetID := core.GetAsset(ctx).ID
-	assetVersion := core.GetAssetVersion(ctx)
-
-	// get the artifacts for this asset version
-	artifacts, err := controller.dependencyVulnRepository.GetArtifacts(assetVersion.Name, assetID)
-	if err != nil {
-		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
-	}
-
-	return ctx.JSON(200, artifacts)
 }

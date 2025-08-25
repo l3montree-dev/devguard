@@ -44,6 +44,7 @@ func (a *attestationRepository) Create(db core.DB, attestation *models.Attestati
 			{Name: "predicate_type"},
 			{Name: "asset_version_name"},
 			{Name: "asset_id"},
+			{Name: "artifact_name"},
 		},
 		DoUpdates: clause.AssignmentColumns([]string{"content"}),
 	}).Create(attestation).Error

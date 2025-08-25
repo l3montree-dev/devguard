@@ -215,7 +215,7 @@ func (g *GitlabIntegration) HandleWebhook(ctx core.Context) error {
 		}()
 
 		// create a new event based on the comment
-		vulnEvent = commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), comment, vuln.GetScannerIDs())
+		vulnEvent = commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("gitlab:%d", event.User.ID), comment, vuln.GetScannerIDsOrArtifactNames())
 
 		vulnEvent.Apply(vuln)
 		// save the dependencyVuln and the event in a transaction

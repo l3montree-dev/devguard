@@ -438,8 +438,8 @@ func (_c *AssetVersionService_HandleFirstPartyVulnResult_Call) RunAndReturn(run 
 }
 
 // HandleScanResult provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	ret := _mock.Called(org, project, asset, assetVersion, vulns, scannerID, userID)
+func (_mock *AssetVersionService) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+	ret := _mock.Called(org, project, asset, assetVersion, vulns, artifactName, userID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for HandleScanResult")
@@ -450,31 +450,31 @@ func (_mock *AssetVersionService) HandleScanResult(org models.Org, project model
 	var r2 []models.DependencyVuln
 	var r3 error
 	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)); ok {
-		return returnFunc(org, project, asset, assetVersion, vulns, scannerID, userID)
+		return returnFunc(org, project, asset, assetVersion, vulns, artifactName, userID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string) []models.DependencyVuln); ok {
-		r0 = returnFunc(org, project, asset, assetVersion, vulns, scannerID, userID)
+		r0 = returnFunc(org, project, asset, assetVersion, vulns, artifactName, userID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.DependencyVuln)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string) []models.DependencyVuln); ok {
-		r1 = returnFunc(org, project, asset, assetVersion, vulns, scannerID, userID)
+		r1 = returnFunc(org, project, asset, assetVersion, vulns, artifactName, userID)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]models.DependencyVuln)
 		}
 	}
 	if returnFunc, ok := ret.Get(2).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string) []models.DependencyVuln); ok {
-		r2 = returnFunc(org, project, asset, assetVersion, vulns, scannerID, userID)
+		r2 = returnFunc(org, project, asset, assetVersion, vulns, artifactName, userID)
 	} else {
 		if ret.Get(2) != nil {
 			r2 = ret.Get(2).([]models.DependencyVuln)
 		}
 	}
 	if returnFunc, ok := ret.Get(3).(func(models.Org, models.Project, models.Asset, *models.AssetVersion, []models.VulnInPackage, string, string) error); ok {
-		r3 = returnFunc(org, project, asset, assetVersion, vulns, scannerID, userID)
+		r3 = returnFunc(org, project, asset, assetVersion, vulns, artifactName, userID)
 	} else {
 		r3 = ret.Error(3)
 	}
@@ -492,13 +492,13 @@ type AssetVersionService_HandleScanResult_Call struct {
 //   - asset models.Asset
 //   - assetVersion *models.AssetVersion
 //   - vulns []models.VulnInPackage
-//   - scannerID string
+//   - artifactName string
 //   - userID string
-func (_e *AssetVersionService_Expecter) HandleScanResult(org interface{}, project interface{}, asset interface{}, assetVersion interface{}, vulns interface{}, scannerID interface{}, userID interface{}) *AssetVersionService_HandleScanResult_Call {
-	return &AssetVersionService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", org, project, asset, assetVersion, vulns, scannerID, userID)}
+func (_e *AssetVersionService_Expecter) HandleScanResult(org interface{}, project interface{}, asset interface{}, assetVersion interface{}, vulns interface{}, artifactName interface{}, userID interface{}) *AssetVersionService_HandleScanResult_Call {
+	return &AssetVersionService_HandleScanResult_Call{Call: _e.mock.On("HandleScanResult", org, project, asset, assetVersion, vulns, artifactName, userID)}
 }
 
-func (_c *AssetVersionService_HandleScanResult_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string)) *AssetVersionService_HandleScanResult_Call {
+func (_c *AssetVersionService_HandleScanResult_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string)) *AssetVersionService_HandleScanResult_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 models.Org
 		if args[0] != nil {
@@ -546,14 +546,14 @@ func (_c *AssetVersionService_HandleScanResult_Call) Return(opened []models.Depe
 	return _c
 }
 
-func (_c *AssetVersionService_HandleScanResult_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *AssetVersionService_HandleScanResult_Call {
+func (_c *AssetVersionService_HandleScanResult_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error)) *AssetVersionService_HandleScanResult_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateSBOM provides a mock function for the type AssetVersionService
-func (_mock *AssetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
-	ret := _mock.Called(org, project, asset, assetVersion, scannerID, sbom)
+func (_mock *AssetVersionService) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM) error {
+	ret := _mock.Called(org, project, asset, assetVersion, artifactName, sbom)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateSBOM")
@@ -561,7 +561,7 @@ func (_mock *AssetVersionService) UpdateSBOM(org models.Org, project models.Proj
 
 	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(models.Org, models.Project, models.Asset, models.AssetVersion, string, normalize.SBOM) error); ok {
-		r0 = returnFunc(org, project, asset, assetVersion, scannerID, sbom)
+		r0 = returnFunc(org, project, asset, assetVersion, artifactName, sbom)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -578,13 +578,13 @@ type AssetVersionService_UpdateSBOM_Call struct {
 //   - project models.Project
 //   - asset models.Asset
 //   - assetVersion models.AssetVersion
-//   - scannerID string
+//   - artifactName string
 //   - sbom normalize.SBOM
-func (_e *AssetVersionService_Expecter) UpdateSBOM(org interface{}, project interface{}, asset interface{}, assetVersion interface{}, scannerID interface{}, sbom interface{}) *AssetVersionService_UpdateSBOM_Call {
-	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", org, project, asset, assetVersion, scannerID, sbom)}
+func (_e *AssetVersionService_Expecter) UpdateSBOM(org interface{}, project interface{}, asset interface{}, assetVersion interface{}, artifactName interface{}, sbom interface{}) *AssetVersionService_UpdateSBOM_Call {
+	return &AssetVersionService_UpdateSBOM_Call{Call: _e.mock.On("UpdateSBOM", org, project, asset, assetVersion, artifactName, sbom)}
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM)) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) Run(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM)) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 models.Org
 		if args[0] != nil {
@@ -627,7 +627,7 @@ func (_c *AssetVersionService_UpdateSBOM_Call) Return(err error) *AssetVersionSe
 	return _c
 }
 
-func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error) *AssetVersionService_UpdateSBOM_Call {
+func (_c *AssetVersionService_UpdateSBOM_Call) RunAndReturn(run func(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM) error) *AssetVersionService_UpdateSBOM_Call {
 	_c.Call.Return(run)
 	return _c
 }

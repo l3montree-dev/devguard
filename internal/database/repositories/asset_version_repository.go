@@ -225,6 +225,53 @@ func (repository *assetVersionRepository) DeleteOldAssetVersions(day int) (int64
 	}
 
 	if count > 0 {
+		// Get the asset versions to be deleted first
+		var assetVersionsToDelete []models.AssetVersion
+		err = repository.db.Where(query).Find(&assetVersionsToDelete).Error
+		if err != nil {
+			return 0, err
+		}
+
+		// For each asset version, clean up the many-to-many relationships first
+		for _, assetVersion := range assetVersionsToDelete {
+			// Delete many-to-many relationships for artifact_component_dependencies
+			err = repository.db.Exec(`
+				DELETE FROM artifact_component_dependencies 
+				WHERE artifact_artifact_name IN (
+					SELECT artifact_name FROM artifacts 
+					WHERE asset_version_name = ? AND asset_id = ?
+				) AND artifact_asset_version_name = ? AND artifact_asset_id = ?`,
+				assetVersion.Name, assetVersion.AssetID, assetVersion.Name, assetVersion.AssetID).Error
+			if err != nil {
+				return 0, err
+			}
+
+			// Delete many-to-many relationships for artifact_dependency_vulns
+			err = repository.db.Exec(`
+				DELETE FROM artifact_dependency_vulns 
+				WHERE artifact_artifact_name IN (
+					SELECT artifact_name FROM artifacts 
+					WHERE asset_version_name = ? AND asset_id = ?
+				) AND artifact_asset_version_name = ? AND artifact_asset_id = ?`,
+				assetVersion.Name, assetVersion.AssetID, assetVersion.Name, assetVersion.AssetID).Error
+			if err != nil {
+				return 0, err
+			}
+
+			// Delete many-to-many relationships for artifact_license_risks
+			err = repository.db.Exec(`
+				DELETE FROM artifact_license_risks 
+				WHERE artifact_artifact_name IN (
+					SELECT artifact_name FROM artifacts 
+					WHERE asset_version_name = ? AND asset_id = ?
+				) AND artifact_asset_version_name = ? AND artifact_asset_id = ?`,
+				assetVersion.Name, assetVersion.AssetID, assetVersion.Name, assetVersion.AssetID).Error
+			if err != nil {
+				return 0, err
+			}
+		}
+
+		// Now delete the asset versions, which should cascade to delete artifacts and other related records
 		err = repository.db.Unscoped().Where(query).
 			Delete(&models.AssetVersion{}).Error
 		if err != nil {

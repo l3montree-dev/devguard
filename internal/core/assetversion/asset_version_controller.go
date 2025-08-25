@@ -8,7 +8,6 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -37,6 +36,7 @@ type AssetVersionController struct {
 	licenseRiskRepository    core.LicenseRiskRepository
 	componentService         core.ComponentService
 	statisticsService        core.StatisticsService
+	artifactService          core.ArtifactService
 }
 
 func NewAssetVersionController(
@@ -49,6 +49,7 @@ func NewAssetVersionController(
 	licenseRiskRepository core.LicenseRiskRepository,
 	componentService core.ComponentService,
 	statisticsService core.StatisticsService,
+	artifactService core.ArtifactService,
 ) *AssetVersionController {
 	return &AssetVersionController{
 		assetVersionRepository:   assetVersionRepository,
@@ -60,6 +61,7 @@ func NewAssetVersionController(
 		licenseRiskRepository:    licenseRiskRepository,
 		componentService:         componentService,
 		statisticsService:        statisticsService,
+		artifactService:          artifactService,
 	}
 }
 
@@ -90,13 +92,17 @@ func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx core.Context) err
 }
 
 func (a *AssetVersionController) AffectedComponents(ctx core.Context) error {
-	scannerID := ctx.QueryParam("scanner")
-	if scannerID == "" {
-		return echo.NewHTTPError(400, "scanner query param is required")
+	artifactName := ""
+	filter := core.GetFilterQuery(ctx)
+	for _, f := range filter {
+		if f.SQL() == "artifact= ?" {
+			artifactName = f.Value().(string)
+			break
+		}
 	}
 
 	assetVersion := core.GetAssetVersion(ctx)
-	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, scannerID)
+	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, artifactName)
 	if err != nil {
 		return err
 	}
@@ -106,13 +112,13 @@ func (a *AssetVersionController) AffectedComponents(ctx core.Context) error {
 	}))
 }
 
-func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, scannerID string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
-	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion models.AssetVersion, artifactName string) ([]models.ComponentDependency, []models.DependencyVuln, error) {
+	components, err := a.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	dependencyVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	dependencyVulns, err := a.dependencyVulnRepository.GetDependencyVulnsByAssetVersion(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -122,17 +128,14 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)
 
-	scannerID := ctx.QueryParam("scanner")
-	if scannerID == "" {
-		return echo.NewHTTPError(400, "scanner query param is required")
-	}
+	artifactName := ctx.QueryParam("artifact-name")
 
-	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, scannerID)
+	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, artifactName)
 	if err != nil {
 		return err
 	}
 
-	tree := BuildDependencyTree(components, scannerID)
+	tree := BuildDependencyTree(components)
 	if tree.Root.Children == nil {
 		tree.Root.Children = make([]*treeNode, 0)
 	}
@@ -144,19 +147,16 @@ func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 
-	scannerID := ctx.QueryParam("scanner")
 	pURL := ctx.QueryParam("purl")
 
-	if scannerID == "" {
-		return echo.NewHTTPError(400, "scanner query param is required")
-	}
+	artifactName := ctx.QueryParam("artifact-name")
 
-	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, scannerID)
+	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, artifactName)
 	if err != nil {
 		return err
 	}
 
-	tree := BuildDependencyTree(components, scannerID)
+	tree := BuildDependencyTree(components)
 	if tree.Root.Children == nil {
 		tree.Root.Children = make([]*treeNode, 0)
 	}
@@ -337,17 +337,17 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 		}
 	}
 
-	scannerID := ctx.QueryParam("scanner")
+	filter := core.GetFilterQuery(ctx)
 
 	overwrittenLicenses, err := a.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	components, err := a.componentRepository.LoadComponentsWithProject(nil, overwrittenLicenses, assetVersion.Name, assetVersion.AssetID, scannerID, core.PageInfo{
+	components, err := a.componentRepository.LoadComponentsWithProject(nil, overwrittenLicenses, assetVersion.Name, assetVersion.AssetID, core.PageInfo{
 		PageSize: 1000,
 		Page:     1,
-	}, "", nil, nil)
+	}, "", filter, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -360,9 +360,9 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 
-	scannerID := ctx.QueryParam("scanner")
+	artifactName := ctx.QueryParam("artifact-name")
 
-	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, scannerID)
+	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, artifactName)
 	if err != nil {
 		return vex.VEX{}, err
 	}
@@ -370,18 +370,10 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	return a.assetVersionService.BuildOpenVeX(asset, assetVersion, org.Slug, dependencyVulns), nil
 }
 
-func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, scannerID string) ([]models.DependencyVuln, error) {
-	// url decode the scanner
-	if scannerID != "" {
-		var err error
-		scannerID, err = url.QueryUnescape(scannerID)
-		if err != nil {
-			return nil, err
-		}
-	}
+func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(assetVersion models.AssetVersion, artifactName string) ([]models.DependencyVuln, error) {
 
 	// get all associated dependencyVulns
-	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersion.Name, assetVersion.AssetID, scannerID)
+	dependencyVulns, err := a.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +384,7 @@ func (a *AssetVersionController) gatherVexInformationIncludingResolvedMarking(as
 	}
 
 	// get the dependency vulns for the default asset version to check if any are resolved already
-	defaultVulns, err = a.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(nil, assetVersion.AssetID, scannerID)
+	defaultVulns, err = a.dependencyVulnRepository.GetDependencyVulnsByDefaultAssetVersion(nil, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
 	}
@@ -418,9 +410,9 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
-	scannerID := ctx.QueryParam("scanner")
+	artifactName := ctx.QueryParam("artifact-name")
 
-	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, scannerID)
+	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, artifactName)
 	if err != nil {
 		return nil, err
 	}
@@ -430,27 +422,28 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 
 func (a *AssetVersionController) Metrics(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	scannerIDs := []string{}
+	//artifactName := ctx.QueryParam("artifact-name")
 	// get the latest events of this asset per scan type
-	err := a.assetVersionRepository.GetDB(nil).Table("dependency_vulns").Select("DISTINCT scanner_ids").Where("asset_version_name  = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_ids", &scannerIDs).Error
+	/* 	err := a.assetVersionRepository.GetDB(nil).Table("dependency_vulns").Select("DISTINCT scanner_ids").Where("asset_version_name  = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_ids", &scannerIDs).Error
 
-	if err != nil {
-		return err
-	}
-
+	   	if err != nil {
+	   		return err
+	   	}
+	*/
 	var enabledSca = false
 	var enabledContainerScanning = false
 	var enabledImageSigning = assetVersion.SigningPubKey != nil
 
-	for _, scannerID := range scannerIDs {
-		if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca" {
-			enabledSca = true
-		}
-		if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning" {
-			enabledContainerScanning = true
-		}
-	}
-
+	//TODO
+	/* 	for _, scannerID := range scannerIDs {
+	   		if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca" {
+	   			enabledSca = true
+	   		}
+	   		if scannerID == "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning" {
+	   			enabledContainerScanning = true
+	   		}
+	   	}
+	*/
 	// check if in-toto is enabled
 	verifiedSupplyChainsPercentage, err := a.supplyChainRepository.PercentageOfVerifiedSupplyChains(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
@@ -935,4 +928,18 @@ func buildVulnReportZipInMemory(writer io.Writer, templateName string, metadata,
 	//finalize the zip-archive and return it
 	zipWriter.Close()
 	return nil
+}
+
+func (a *AssetVersionController) ListArtifacts(ctx core.Context) error {
+
+	assetID := core.GetAsset(ctx).ID
+	assetVersion := core.GetAssetVersion(ctx)
+
+	// get the artifacts for this asset version
+	artifacts, err := a.artifactService.GetArtifactNamesByAssetIDAndAssetVersionName(assetID, assetVersion.Name)
+	if err != nil {
+		return echo.NewHTTPError(500, "could not get artifacts").WithInternal(err)
+	}
+
+	return ctx.JSON(200, artifacts)
 }

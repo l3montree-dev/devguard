@@ -138,7 +138,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 		comment = strings.ReplaceAll(comment, "}}", "")
 
 		// create a new event based on the comment
-		vulnEvent := commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), comment, vuln.GetScannerIDs())
+		vulnEvent := commonint.CreateNewVulnEventBasedOnComment(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), comment, vuln.GetScannerIDsOrArtifactNames())
 
 		vulnEvent.Apply(vuln)
 		// save the vuln and the event in a transaction
@@ -195,7 +195,7 @@ func (i *JiraIntegration) HandleWebhook(ctx core.Context) error {
 		if vuln.GetState() == models.VulnStateFalsePositive {
 			return nil
 		}
-		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDs())
+		vulnEvent := models.NewFalsePositiveEvent(vuln.GetID(), vuln.GetType(), fmt.Sprintf("jira:%s", userID), fmt.Sprintf("This Vulnerability is marked as a false positive by %s, due to the deletion of the jira ticket.", username), models.VulnerableCodeNotInExecutePath, vuln.GetScannerIDsOrArtifactNames())
 
 		err := i.aggregatedVulnRepository.ApplyAndSave(nil, vuln, &vulnEvent)
 		if err != nil {

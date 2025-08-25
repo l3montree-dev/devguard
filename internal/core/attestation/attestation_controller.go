@@ -56,8 +56,18 @@ func (a *attestationController) Create(ctx core.Context) error {
 		return err
 	}
 
-	attestation.AssetVersionName = assetVersion.Name
-	attestation.AssetID = asset.ID
+	attestationName := ctx.Request().Header.Get("X-Artifact-Name")
+	if attestationName == "" {
+		slog.Warn("no X-Artifact-Name header found. Using asset version name as artifact name")
+		attestationName = "default"
+	}
+
+	attestation.Artifact = models.Artifact{
+		AssetID:          asset.ID,
+		AssetVersionName: assetVersion.Name,
+		ArtifactName:     attestationName,
+	}
+
 	attestation.PredicateType = ctx.Request().Header.Get("X-Predicate-Type")
 
 	content, err := io.ReadAll(ctx.Request().Body)

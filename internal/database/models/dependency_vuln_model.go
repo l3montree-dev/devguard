@@ -38,10 +38,21 @@ type DependencyVuln struct {
 	LastDetected time.Time `json:"lastDetected" gorm:"default:now();not null;"`
 
 	RiskRecalculatedAt time.Time `json:"riskRecalculatedAt"`
+
+	Artifacts []Artifact `json:"artifacts" gorm:"many2many:artifact_dependency_vulns;constraint:OnDelete:CASCADE"`
 }
 
 var _ Vuln = &DependencyVuln{}
 
+func (vuln *DependencyVuln) GetScannerIDsOrArtifactNames() string {
+	artifactNames := ""
+	for _, artifact := range vuln.Artifacts {
+		if artifact.ArtifactName != "" {
+			artifactNames += artifact.ArtifactName + " "
+		}
+	}
+	return artifactNames
+}
 func (vuln *DependencyVuln) SetRawRiskAssessment(risk float64) {
 	vuln.RawRiskAssessment = &risk
 }
@@ -64,7 +75,7 @@ func (vuln *DependencyVuln) GetType() VulnType {
 
 func (vuln DependencyVuln) AssetVersionIndependentHash() string {
 	if vuln.CVEID == nil {
-		return utils.HashString(fmt.Sprintf("%s/%s/%s/%s", utils.OrDefault(vuln.ComponentPurl, ""), vuln.AssetVersionName, vuln.AssetID, vuln.ScannerIDs))
+		return utils.HashString(fmt.Sprintf("%s/%s/%s", utils.OrDefault(vuln.ComponentPurl, ""), vuln.AssetVersionName, vuln.AssetID))
 	}
 	return *vuln.CVEID
 }

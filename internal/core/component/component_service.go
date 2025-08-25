@@ -174,8 +174,8 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 	return component, nil
 }
 
-func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error) {
-	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName string) ([]models.Component, error) {
+	componentDependencies, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 	}
 
 	// find potential license risks
-	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, scannerID)
+	err = s.licenseRiskService.FindLicenseRisksInComponents(assetVersion, allComponents, artifactName)
 	if err != nil {
 		return nil, err
 	}
