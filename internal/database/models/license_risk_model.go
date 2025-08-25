@@ -14,8 +14,8 @@ type LicenseRisk struct {
 	Component            Component `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl;constraint:OnDelete:CASCADE;"`
 }
 
-func (LicenseRisk *LicenseRisk) SetFinalLicenseDecision(finalLicenseDecision string) {
-	LicenseRisk.FinalLicenseDecision = &finalLicenseDecision
+func (licenseRisk *LicenseRisk) SetFinalLicenseDecision(finalLicenseDecision string) {
+	licenseRisk.FinalLicenseDecision = &finalLicenseDecision
 }
 
 func (licenseRisk LicenseRisk) TableName() string {
