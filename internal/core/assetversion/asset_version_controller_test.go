@@ -1,8 +1,10 @@
 package assetversion_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -15,6 +17,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/inithelper"
 	"github.com/l3montree-dev/devguard/internal/utils"
+	"github.com/l3montree-dev/devguard/mocks"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,6 +31,7 @@ func TestBuildVEX(t *testing.T) {
 	assetVersionController := inithelper.CreateAssetVersionController(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
 	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
 	setupContext := func(ctx *core.Context) {
+		// set basic context values
 		core.SetAsset(*ctx, asset)
 		core.SetProject(*ctx, project)
 		core.SetOrg(*ctx, org)
@@ -255,4 +259,140 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 		panic(err)
 	}
 	return vuln1, vuln2
+}
+
+func TestUploadVEX(t *testing.T) {
+	db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
+	defer terminate()
+	app := echo.New()
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+	assetVersionController := inithelper.CreateAssetVersionController(db, nil, nil, integration_tests.TestGitlabClientFactory{GitlabClientFacade: nil}, nil)
+	org, project, asset, assetVersion := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	setupContext := func(ctx *core.Context) {
+		core.SetAsset(*ctx, asset)
+		core.SetProject(*ctx, project)
+		core.SetOrg(*ctx, org)
+		core.SetAssetVersion(*ctx, assetVersion)
+
+		// attach an authenticated session for UploadVEX handler
+		authSession := mocks.NewAuthSession(t)
+		authSession.On("GetUserID").Return("abc")
+		core.SetSession(*ctx, authSession)
+	}
+
+	// create fresh dependency vulns (two entries for same new CVE) so they are not pre-fixed
+	var err error
+	newCVE := models.CVE{
+		CVE:         "CVE-2025-00001",
+		Description: "Test upload vex",
+		CVSS:        5.00,
+	}
+	if err = db.Create(&newCVE).Error; err != nil {
+		t.Fatalf("could not create cve: %v", err)
+	}
+
+	newCVE2 := models.CVE{
+		CVE:         "CVE-2025-00002",
+		Description: "Test upload vex 2",
+		CVSS:        6.00,
+	}
+	if err = db.Create(&newCVE2).Error; err != nil {
+		t.Fatalf("could not create cve 2: %v", err)
+	}
+
+	dv1 := models.DependencyVuln{
+		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
+		ComponentPurl:     utils.Ptr("pkg:npm/example1@1.0.0"),
+		CVE:               &newCVE,
+		CVEID:             &newCVE.CVE,
+		RawRiskAssessment: utils.Ptr(1.23),
+		ComponentDepth:    utils.Ptr(1),
+	}
+	if err = db.Create(&dv1).Error; err != nil {
+		t.Fatalf("could not create dependency vuln 1: %v", err)
+	}
+
+	dv2 := models.DependencyVuln{
+		Vulnerability:     models.Vulnerability{AssetVersionName: assetVersion.Name, AssetID: asset.ID, State: "open"},
+		ComponentPurl:     utils.Ptr("pkg:npm/example2@2.0.0"),
+		CVE:               &newCVE2,
+		CVEID:             &newCVE2.CVE,
+		RawRiskAssessment: utils.Ptr(2.34),
+		ComponentDepth:    utils.Ptr(2),
+	}
+	if err = db.Create(&dv2).Error; err != nil {
+		t.Fatalf("could not create dependency vuln 2: %v", err)
+	}
+
+	// build a CycloneDX BOM with a single vulnerability (CVE) marked as resolved
+	vuln := cyclonedx.Vulnerability{
+		ID: "CVE-2025-00001",
+		Source: &cyclonedx.Source{
+			Name: "NVD",
+			URL:  "https://nvd.nist.gov/vuln/detail/CVE-2025-00001",
+		},
+		Analysis: &cyclonedx.VulnerabilityAnalysis{
+			State:  cyclonedx.IASFalsePositive,
+			Detail: "We are never using this dependency, so marking as false positive",
+		},
+	}
+	bom := cyclonedx.BOM{
+		BOMFormat:       "CycloneDX",
+		SpecVersion:     cyclonedx.SpecVersion1_6,
+		Version:         1,
+		Vulnerabilities: &[]cyclonedx.Vulnerability{vuln},
+	}
+
+	// encode BOM into multipart form
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	fw, err := mw.CreateFormFile("file", "vex.json")
+	if err != nil {
+		t.Fatalf("could not create form file: %v", err)
+	}
+	if err := cyclonedx.NewBOMEncoder(fw, cyclonedx.BOMFileFormatJSON).Encode(&bom); err != nil {
+		t.Fatalf("could not encode bom: %v", err)
+	}
+	if err := mw.Close(); err != nil {
+		t.Fatalf("could not close multipart writer: %v", err)
+	}
+
+	// perform POST request to UploadVEX
+	recorder := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/vex-file/", &body)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	ctx := app.NewContext(req, recorder)
+	setupContext(&ctx)
+
+	err = assetVersionController.UploadVEX(ctx)
+	assert.Nil(t, err)
+
+	resp := recorder.Result()
+	respBody, err := io.ReadAll(resp.Body)
+	assert.Nil(t, err)
+
+	var result map[string]int
+	err = json.Unmarshal(respBody, &result)
+	assert.Nil(t, err)
+
+	// both dependency vulns should be updated (two entries share the CVE)
+	assert.Equal(t, 1, result["updated"])
+	assert.Equal(t, 0, result["notFound"])
+
+	// verify DB: both dependency vulns should now be fixed
+	var dv []models.DependencyVuln
+	if err := db.Where("asset_version_name = ? AND asset_id = ?", assetVersion.Name, asset.ID).Preload("Events").Find(&dv).Error; err != nil {
+		t.Fatalf("could not query dependency vulns: %v", err)
+	}
+	assert.GreaterOrEqual(t, len(dv), 2)
+
+	for _, d := range dv {
+		switch *d.CVEID {
+		case "CVE-2025-00001":
+			assert.Equal(t, models.VulnStateFalsePositive, d.State)
+			assert.Equal(t, "[VEX-Upload] We are never using this dependency, so marking as false positive", *d.Events[0].Justification)
+		case "CVE-2025-00002":
+			assert.Equal(t, models.VulnStateOpen, d.State) // was not part of the uploaded vex.
+		}
+	}
 }

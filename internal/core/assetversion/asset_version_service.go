@@ -1028,7 +1028,7 @@ func getJustification(dependencyVuln models.DependencyVuln) *string {
 	if len(dependencyVuln.Events) > 0 {
 		// look for the last event which has a justification
 		for i := len(dependencyVuln.Events) - 1; i >= 0; i-- {
-			if dependencyVuln.Events[i].Justification != nil {
+			if dependencyVuln.Events[i].Type != models.EventTypeRawRiskAssessmentUpdated && dependencyVuln.Events[i].Justification != nil {
 				return dependencyVuln.Events[i].Justification
 			}
 		}
@@ -1116,7 +1116,7 @@ func markdownTableFromSBOM(outputFile *bytes.Buffer, bom *cdx.BOM) error {
 // generate the metadata used to generate the sbom-pdf and return it as struct
 func createYAMLMetadata(organizationName string, assetName string, assetVersionName string) yamlMetadata {
 	today := time.Now()
-	title1, title2 := createTitles(assetName)
+	title1, title2 := createTitles(assetName + "@" + assetVersionName)
 	// TO-DO: add sha hash to test the integrity
 	return yamlMetadata{
 		Vars: yamlVars{

@@ -98,6 +98,7 @@ func init() {
 	rootCmd.AddCommand(
 		NewSCACommand(),
 		NewContainerScanningCommand(),
+		NewCleanCommand(),
 		NewAttestCommand(),
 		NewInspectCommand(),
 		NewSignCommand(),
