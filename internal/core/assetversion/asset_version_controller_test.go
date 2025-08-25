@@ -36,11 +36,6 @@ func TestBuildVEX(t *testing.T) {
 		core.SetProject(*ctx, project)
 		core.SetOrg(*ctx, org)
 		core.SetAssetVersion(*ctx, assetVersion)
-
-		// attach an authenticated session for controller calls
-		authSession := mocks.NewAuthSession(t)
-		authSession.On("GetUserID").Return("abc")
-		core.SetSession(*ctx, authSession)
 	}
 	t.Run("test with empty db should return vex bom with no vulnerabilities", func(t *testing.T) {
 		//setup function call
