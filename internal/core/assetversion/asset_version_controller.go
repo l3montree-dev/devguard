@@ -120,15 +120,7 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)
 
-	artifactName := ""
-
-	filter := core.GetFilterQuery(ctx)
-	for _, f := range filter {
-		if f.SQL() == "artifact= ?" {
-			artifactName = f.Value().(string)
-			break
-		}
-	}
+	artifactName := ctx.QueryParam("artifact-name")
 
 	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, artifactName)
 	if err != nil {
@@ -147,12 +139,9 @@ func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 
-	artifactName := ctx.QueryParam("artifact-name")
 	pURL := ctx.QueryParam("purl")
 
-	if artifactName == "" {
-		return echo.NewHTTPError(400, "scanner query param is required")
-	}
+	artifactName := ctx.QueryParam("artifact-name")
 
 	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, artifactName)
 	if err != nil {
@@ -227,17 +216,17 @@ func (a *AssetVersionController) buildSBOM(ctx core.Context) (*cdx.BOM, error) {
 		}
 	}
 
-	scannerID := ctx.QueryParam("scanner")
+	filter := core.GetFilterQuery(ctx)
 
 	overwrittenLicenses, err := a.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	components, err := a.componentRepository.LoadComponentsWithProject(nil, overwrittenLicenses, assetVersion.Name, assetVersion.AssetID, scannerID, core.PageInfo{
+	components, err := a.componentRepository.LoadComponentsWithProject(nil, overwrittenLicenses, assetVersion.Name, assetVersion.AssetID, core.PageInfo{
 		PageSize: 1000,
 		Page:     1,
-	}, "", nil, nil)
+	}, "", filter, nil)
 	if err != nil {
 		return nil, err
 	}

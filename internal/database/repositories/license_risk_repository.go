@@ -82,9 +82,8 @@ func (repository *LicenseRiskRepository) DeleteByComponentPurl(assetID uuid.UUID
 func (repository *LicenseRiskRepository) ListByArtifactName(assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.LicenseRisk, error) {
 	var licenseRisks = []models.LicenseRisk{}
 
-	q := repository.db.Where("asset_version_name = ? AND asset_id = ? ", assetVersionName, assetID).Preload("Artifacts", func(db core.DB) core.DB {
-		return db.Where("asset_version_name = ? AND asset_id = ? AND artifact_name = ?", assetVersionName, assetID, artifactName)
-	})
+	q := repository.db.Model(&models.LicenseRisk{}).
+		Joins("JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Joins("JOIN artifacts ON artifact_license_risks.artifact_artifact_name = artifacts.artifact_name AND artifact_license_risks.artifact_asset_version_name = artifacts.asset_version_name AND artifact_license_risks.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ? AND artifacts.asset_version_name = ? AND artifacts.asset_id = ?", artifactName, assetVersionName, assetID)
 
 	err := q.Find(&licenseRisks).Error
 	if err != nil {

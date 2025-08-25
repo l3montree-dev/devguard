@@ -62,9 +62,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx 
 
 	if artifactName != "" {
 		// scanner ids is a string array separated by whitespaces
-		q = q.Preload("Artifacts", func(db core.DB) core.DB {
-			return db.Where("asset_version_name = ? AND asset_id = ? AND artifact_name = ?", assetVersionName, assetID, artifactName)
-		})
+		q = q.Joins("JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").Joins("JOIN artifacts ON artifact_dependency_vulns.artifact_artifact_name = artifacts.artifact_name AND artifact_dependency_vulns.artifact_asset_version_name = artifacts.asset_version_name AND artifact_dependency_vulns.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ? AND artifacts.asset_version_name = ? AND artifacts.asset_id = ?", artifactName, assetVersionName, assetID)
 	}
 
 	if err := q.Find(&dependencyVulns).Error; err != nil {
@@ -76,9 +74,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx 
 func (repository *dependencyVulnRepository) GetDependencyVulnsByOtherAssetVersions(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
 
-	q := repository.Repository.GetDB(tx).Debug().Preload("Events").Preload("CVE").Preload("CVE.Exploits").Where("asset_id = ? AND asset_version_name != ? ", assetID, assetVersionName).Preload("Artifacts", func(db core.DB) core.DB {
-		return db.Where("artifact_name = ? AND asset_version_name = ? AND asset_id = ?", artifactName, assetVersionName, assetID)
-	})
+	q := repository.Repository.GetDB(tx).Preload("Events").Preload("CVE").Preload("CVE.Exploits").Joins("JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").Joins("JOIN artifacts ON artifact_dependency_vulns.artifact_artifact_name = artifacts.artifact_name AND artifact_dependency_vulns.artifact_asset_version_name = artifacts.asset_version_name AND artifact_dependency_vulns.artifact_asset_id = artifacts.asset_id").Where("dependency_vulns.asset_version_name != ? AND dependency_vulns.asset_id = ?", assetVersionName, assetID)
 
 	if err := q.Find(&dependencyVulns).Error; err != nil {
 		return nil, err
@@ -90,12 +86,10 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByDefaultAssetVers
 	subQuery := repository.Repository.GetDB(tx).Model(&models.AssetVersion{}).Select("name").Where("asset_id IN (?) AND default_branch = ?", assetID, true)
 
 	var dependencyVulns = []models.DependencyVuln{}
-	q := repository.Repository.GetDB(tx).Preload("CVE").Preload("Events").Preload("CVE.Exploits").Where("asset_version_name IN (?) AND asset_id = ?", subQuery, assetID)
+	q := repository.Repository.GetDB(tx).Preload("CVE").Preload("Events").Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name IN (?) AND dependency_vulns.asset_id = ?", subQuery, assetID)
 
 	if artifactName != "" {
-		q = q.Preload("Artifacts", func(db core.DB) core.DB {
-			return db.Where("asset_version_name IN (?) AND asset_id = ? AND artifact_name = ?", subQuery, assetID, artifactName)
-		})
+		q = q.Joins("JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").Joins("JOIN artifacts ON artifact_dependency_vulns.artifact_artifact_name = artifacts.artifact_name AND artifact_dependency_vulns.artifact_asset_version_name = artifacts.asset_version_name AND artifact_dependency_vulns.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ? AND artifacts.asset_id = ? AND artifacts.asset_version_name IN (?)", artifactName, assetID, subQuery)
 	}
 
 	if err := q.Find(&dependencyVulns).Error; err != nil {
@@ -115,13 +109,11 @@ func (repository *dependencyVulnRepository) ListByAssetAndAssetVersion(assetVers
 
 func (repository *dependencyVulnRepository) ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.DependencyVuln, error) {
 	var dependencyVulns = []models.DependencyVuln{}
-	q := repository.Repository.GetDB(repository.db).Preload("Artifacts").Preload("CVE").Preload("Events").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ? AND state != 'fixed'", assetVersionName, assetID)
+	q := repository.Repository.GetDB(repository.db).Preload("Artifacts").Preload("CVE").Preload("Events").Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ? AND dependency_vulns.state != ?", assetVersionName, assetID, models.VulnStateFixed)
 
 	if artifactName != "" {
 		// scanner ids is a string array separated by whitespaces
-		q = q.Preload("Artifacts", func(db core.DB) core.DB {
-			return db.Where("asset_version_name = ? AND asset_id = ? AND artifact_name = ?", assetVersionName, assetID, artifactName)
-		})
+		q = q.Joins("JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").Joins("JOIN artifacts ON artifact_dependency_vulns.artifact_artifact_name = artifacts.artifact_name AND artifact_dependency_vulns.artifact_asset_version_name = artifacts.asset_version_name AND artifact_dependency_vulns.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ? AND artifacts.asset_version_name = ? AND artifacts.asset_id = ?", artifactName, assetVersionName, assetID)
 	}
 
 	if err := q.Find(&dependencyVulns).Error; err != nil {

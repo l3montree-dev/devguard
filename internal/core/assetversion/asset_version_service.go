@@ -612,13 +612,6 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 				models.ComponentDependency{
 					ComponentPurl:  nil, // direct dependency - therefore set it to nil
 					DependencyPurl: componentPackageURL,
-					Artifacts: []models.Artifact{
-						{
-							ArtifactName:     artifactName,
-							AssetVersionName: assetVersion.Name,
-							AssetID:          assetVersion.AssetID,
-						},
-					},
 				},
 			)
 			if _, ok := existingComponentPurls[componentPackageURL]; !ok {
@@ -642,14 +635,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 
 			dependencies = append(dependencies,
 				models.ComponentDependency{
-					ComponentPurl: utils.EmptyThenNil(compPackageURL),
-					Artifacts: []models.Artifact{
-						{
-							ArtifactName:     artifactName,
-							AssetVersionName: assetVersion.Name,
-							AssetID:          assetVersion.AssetID,
-						},
-					},
+					ComponentPurl:  utils.EmptyThenNil(compPackageURL),
 					DependencyPurl: depPurlOrName,
 				},
 			)
