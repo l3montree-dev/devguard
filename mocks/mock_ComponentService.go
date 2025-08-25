@@ -37,8 +37,8 @@ func (_m *ComponentService) EXPECT() *ComponentService_Expecter {
 }
 
 // GetAndSaveLicenseInformation provides a mock function for the type ComponentService
-func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error) {
-	ret := _mock.Called(assetVersion, scannerID)
+func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.AssetVersion, artifactName string) ([]models.Component, error) {
+	ret := _mock.Called(assetVersion, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAndSaveLicenseInformation")
@@ -47,17 +47,17 @@ func (_mock *ComponentService) GetAndSaveLicenseInformation(assetVersion models.
 	var r0 []models.Component
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string) ([]models.Component, error)); ok {
-		return returnFunc(assetVersion, scannerID)
+		return returnFunc(assetVersion, artifactName)
 	}
 	if returnFunc, ok := ret.Get(0).(func(models.AssetVersion, string) []models.Component); ok {
-		r0 = returnFunc(assetVersion, scannerID)
+		r0 = returnFunc(assetVersion, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.Component)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(models.AssetVersion, string) error); ok {
-		r1 = returnFunc(assetVersion, scannerID)
+		r1 = returnFunc(assetVersion, artifactName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -71,12 +71,12 @@ type ComponentService_GetAndSaveLicenseInformation_Call struct {
 
 // GetAndSaveLicenseInformation is a helper method to define mock.On call
 //   - assetVersion models.AssetVersion
-//   - scannerID string
-func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(assetVersion interface{}, scannerID interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
-	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersion, scannerID)}
+//   - artifactName string
+func (_e *ComponentService_Expecter) GetAndSaveLicenseInformation(assetVersion interface{}, artifactName interface{}) *ComponentService_GetAndSaveLicenseInformation_Call {
+	return &ComponentService_GetAndSaveLicenseInformation_Call{Call: _e.mock.On("GetAndSaveLicenseInformation", assetVersion, artifactName)}
 }
 
-func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersion models.AssetVersion, scannerID string)) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Run(run func(assetVersion models.AssetVersion, artifactName string)) *ComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 models.AssetVersion
 		if args[0] != nil {
@@ -99,7 +99,7 @@ func (_c *ComponentService_GetAndSaveLicenseInformation_Call) Return(components 
 	return _c
 }
 
-func (_c *ComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error)) *ComponentService_GetAndSaveLicenseInformation_Call {
+func (_c *ComponentService_GetAndSaveLicenseInformation_Call) RunAndReturn(run func(assetVersion models.AssetVersion, artifactName string) ([]models.Component, error)) *ComponentService_GetAndSaveLicenseInformation_Call {
 	_c.Call.Return(run)
 	return _c
 }

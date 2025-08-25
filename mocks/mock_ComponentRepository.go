@@ -544,12 +544,12 @@ func (_c *ComponentRepository_GetDB_Call) RunAndReturn(run func(tx core.DB) core
 	return _c
 }
 
-// GetDependencyCountPerScanner provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+// GetDependencyCountPerScannerID provides a mock function for the type ComponentRepository
+func (_mock *ComponentRepository) GetDependencyCountPerScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
 	ret := _mock.Called(assetVersionName, assetID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetDependencyCountPerScanner")
+		panic("no return value specified for GetDependencyCountPerScannerID")
 	}
 
 	var r0 map[string]int
@@ -572,19 +572,19 @@ func (_mock *ComponentRepository) GetDependencyCountPerScanner(assetVersionName 
 	return r0, r1
 }
 
-// ComponentRepository_GetDependencyCountPerScanner_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyCountPerScanner'
-type ComponentRepository_GetDependencyCountPerScanner_Call struct {
+// ComponentRepository_GetDependencyCountPerScannerID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDependencyCountPerScannerID'
+type ComponentRepository_GetDependencyCountPerScannerID_Call struct {
 	*mock.Call
 }
 
-// GetDependencyCountPerScanner is a helper method to define mock.On call
+// GetDependencyCountPerScannerID is a helper method to define mock.On call
 //   - assetVersionName string
 //   - assetID uuid.UUID
-func (_e *ComponentRepository_Expecter) GetDependencyCountPerScanner(assetVersionName interface{}, assetID interface{}) *ComponentRepository_GetDependencyCountPerScanner_Call {
-	return &ComponentRepository_GetDependencyCountPerScanner_Call{Call: _e.mock.On("GetDependencyCountPerScanner", assetVersionName, assetID)}
+func (_e *ComponentRepository_Expecter) GetDependencyCountPerScannerID(assetVersionName interface{}, assetID interface{}) *ComponentRepository_GetDependencyCountPerScannerID_Call {
+	return &ComponentRepository_GetDependencyCountPerScannerID_Call{Call: _e.mock.On("GetDependencyCountPerScannerID", assetVersionName, assetID)}
 }
 
-func (_c *ComponentRepository_GetDependencyCountPerScanner_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *ComponentRepository_GetDependencyCountPerScanner_Call {
+func (_c *ComponentRepository_GetDependencyCountPerScannerID_Call) Run(run func(assetVersionName string, assetID uuid.UUID)) *ComponentRepository_GetDependencyCountPerScannerID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -602,19 +602,19 @@ func (_c *ComponentRepository_GetDependencyCountPerScanner_Call) Run(run func(as
 	return _c
 }
 
-func (_c *ComponentRepository_GetDependencyCountPerScanner_Call) Return(stringToInt map[string]int, err error) *ComponentRepository_GetDependencyCountPerScanner_Call {
+func (_c *ComponentRepository_GetDependencyCountPerScannerID_Call) Return(stringToInt map[string]int, err error) *ComponentRepository_GetDependencyCountPerScannerID_Call {
 	_c.Call.Return(stringToInt, err)
 	return _c
 }
 
-func (_c *ComponentRepository_GetDependencyCountPerScanner_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID) (map[string]int, error)) *ComponentRepository_GetDependencyCountPerScanner_Call {
+func (_c *ComponentRepository_GetDependencyCountPerScannerID_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID) (map[string]int, error)) *ComponentRepository_GetDependencyCountPerScannerID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetLicenseDistribution provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID, scannerID)
+func (_mock *ComponentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) (map[string]int, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetLicenseDistribution")
@@ -623,17 +623,17 @@ func (_mock *ComponentRepository) GetLicenseDistribution(tx core.DB, assetVersio
 	var r0 map[string]int
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) (map[string]int, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID, scannerID)
+		return returnFunc(tx, assetVersionName, assetID, artifactName)
 	}
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) map[string]int); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID, scannerID)
+		r0 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]int)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID, scannerID)
+		r1 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -649,12 +649,12 @@ type ComponentRepository_GetLicenseDistribution_Call struct {
 //   - tx core.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-//   - scannerID string
-func (_e *ComponentRepository_Expecter) GetLicenseDistribution(tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *ComponentRepository_GetLicenseDistribution_Call {
-	return &ComponentRepository_GetLicenseDistribution_Call{Call: _e.mock.On("GetLicenseDistribution", tx, assetVersionName, assetID, scannerID)}
+//   - artifactName string
+func (_e *ComponentRepository_Expecter) GetLicenseDistribution(tx interface{}, assetVersionName interface{}, assetID interface{}, artifactName interface{}) *ComponentRepository_GetLicenseDistribution_Call {
+	return &ComponentRepository_GetLicenseDistribution_Call{Call: _e.mock.On("GetLicenseDistribution", tx, assetVersionName, assetID, artifactName)}
 }
 
-func (_c *ComponentRepository_GetLicenseDistribution_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *ComponentRepository_GetLicenseDistribution_Call {
+func (_c *ComponentRepository_GetLicenseDistribution_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string)) *ComponentRepository_GetLicenseDistribution_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -687,7 +687,7 @@ func (_c *ComponentRepository_GetLicenseDistribution_Call) Return(stringToInt ma
 	return _c
 }
 
-func (_c *ComponentRepository_GetLicenseDistribution_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error)) *ComponentRepository_GetLicenseDistribution_Call {
+func (_c *ComponentRepository_GetLicenseDistribution_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) (map[string]int, error)) *ComponentRepository_GetLicenseDistribution_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -845,8 +845,8 @@ func (_c *ComponentRepository_List_Call) RunAndReturn(run func(ids []string) ([]
 }
 
 // LoadComponents provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.ComponentDependency, error) {
-	ret := _mock.Called(tx, assetVersionName, assetID, scannerID)
+func (_mock *ComponentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error) {
+	ret := _mock.Called(tx, assetVersionName, assetID, artifactName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LoadComponents")
@@ -855,17 +855,17 @@ func (_mock *ComponentRepository) LoadComponents(tx core.DB, assetVersionName st
 	var r0 []models.ComponentDependency
 	var r1 error
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) ([]models.ComponentDependency, error)); ok {
-		return returnFunc(tx, assetVersionName, assetID, scannerID)
+		return returnFunc(tx, assetVersionName, assetID, artifactName)
 	}
 	if returnFunc, ok := ret.Get(0).(func(core.DB, string, uuid.UUID, string) []models.ComponentDependency); ok {
-		r0 = returnFunc(tx, assetVersionName, assetID, scannerID)
+		r0 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.ComponentDependency)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(core.DB, string, uuid.UUID, string) error); ok {
-		r1 = returnFunc(tx, assetVersionName, assetID, scannerID)
+		r1 = returnFunc(tx, assetVersionName, assetID, artifactName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -881,12 +881,12 @@ type ComponentRepository_LoadComponents_Call struct {
 //   - tx core.DB
 //   - assetVersionName string
 //   - assetID uuid.UUID
-//   - scannerID string
-func (_e *ComponentRepository_Expecter) LoadComponents(tx interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}) *ComponentRepository_LoadComponents_Call {
-	return &ComponentRepository_LoadComponents_Call{Call: _e.mock.On("LoadComponents", tx, assetVersionName, assetID, scannerID)}
+//   - artifactName string
+func (_e *ComponentRepository_Expecter) LoadComponents(tx interface{}, assetVersionName interface{}, assetID interface{}, artifactName interface{}) *ComponentRepository_LoadComponents_Call {
+	return &ComponentRepository_LoadComponents_Call{Call: _e.mock.On("LoadComponents", tx, assetVersionName, assetID, artifactName)}
 }
 
-func (_c *ComponentRepository_LoadComponents_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string)) *ComponentRepository_LoadComponents_Call {
+func (_c *ComponentRepository_LoadComponents_Call) Run(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string)) *ComponentRepository_LoadComponents_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -919,14 +919,14 @@ func (_c *ComponentRepository_LoadComponents_Call) Return(componentDependencys [
 	return _c
 }
 
-func (_c *ComponentRepository_LoadComponents_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.ComponentDependency, error)) *ComponentRepository_LoadComponents_Call {
+func (_c *ComponentRepository_LoadComponents_Call) RunAndReturn(run func(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error)) *ComponentRepository_LoadComponents_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // LoadComponentsWithProject provides a mock function for the type ComponentRepository
-func (_mock *ComponentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
-	ret := _mock.Called(tx, overwrittenLicenses, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)
+func (_mock *ComponentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+	ret := _mock.Called(tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LoadComponentsWithProject")
@@ -934,16 +934,16 @@ func (_mock *ComponentRepository) LoadComponentsWithProject(tx core.DB, overwrit
 
 	var r0 core.Paged[models.ComponentDependency]
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.LicenseRisk, string, uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.ComponentDependency], error)); ok {
-		return returnFunc(tx, overwrittenLicenses, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.LicenseRisk, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) (core.Paged[models.ComponentDependency], error)); ok {
+		return returnFunc(tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)
 	}
-	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.LicenseRisk, string, uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.ComponentDependency]); ok {
-		r0 = returnFunc(tx, overwrittenLicenses, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(0).(func(core.DB, []models.LicenseRisk, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) core.Paged[models.ComponentDependency]); ok {
+		r0 = returnFunc(tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)
 	} else {
 		r0 = ret.Get(0).(core.Paged[models.ComponentDependency])
 	}
-	if returnFunc, ok := ret.Get(1).(func(core.DB, []models.LicenseRisk, string, uuid.UUID, string, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
-		r1 = returnFunc(tx, overwrittenLicenses, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)
+	if returnFunc, ok := ret.Get(1).(func(core.DB, []models.LicenseRisk, string, uuid.UUID, core.PageInfo, string, []core.FilterQuery, []core.SortQuery) error); ok {
+		r1 = returnFunc(tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -960,16 +960,15 @@ type ComponentRepository_LoadComponentsWithProject_Call struct {
 //   - overwrittenLicenses []models.LicenseRisk
 //   - assetVersionName string
 //   - assetID uuid.UUID
-//   - scannerID string
 //   - pageInfo core.PageInfo
 //   - search string
 //   - filter []core.FilterQuery
 //   - sort []core.SortQuery
-func (_e *ComponentRepository_Expecter) LoadComponentsWithProject(tx interface{}, overwrittenLicenses interface{}, assetVersionName interface{}, assetID interface{}, scannerID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ComponentRepository_LoadComponentsWithProject_Call {
-	return &ComponentRepository_LoadComponentsWithProject_Call{Call: _e.mock.On("LoadComponentsWithProject", tx, overwrittenLicenses, assetVersionName, assetID, scannerID, pageInfo, search, filter, sort)}
+func (_e *ComponentRepository_Expecter) LoadComponentsWithProject(tx interface{}, overwrittenLicenses interface{}, assetVersionName interface{}, assetID interface{}, pageInfo interface{}, search interface{}, filter interface{}, sort interface{}) *ComponentRepository_LoadComponentsWithProject_Call {
+	return &ComponentRepository_LoadComponentsWithProject_Call{Call: _e.mock.On("LoadComponentsWithProject", tx, overwrittenLicenses, assetVersionName, assetID, pageInfo, search, filter, sort)}
 }
 
-func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *ComponentRepository_LoadComponentsWithProject_Call {
+func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery)) *ComponentRepository_LoadComponentsWithProject_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 core.DB
 		if args[0] != nil {
@@ -987,25 +986,21 @@ func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(tx co
 		if args[3] != nil {
 			arg3 = args[3].(uuid.UUID)
 		}
-		var arg4 string
+		var arg4 core.PageInfo
 		if args[4] != nil {
-			arg4 = args[4].(string)
+			arg4 = args[4].(core.PageInfo)
 		}
-		var arg5 core.PageInfo
+		var arg5 string
 		if args[5] != nil {
-			arg5 = args[5].(core.PageInfo)
+			arg5 = args[5].(string)
 		}
-		var arg6 string
+		var arg6 []core.FilterQuery
 		if args[6] != nil {
-			arg6 = args[6].(string)
+			arg6 = args[6].([]core.FilterQuery)
 		}
-		var arg7 []core.FilterQuery
+		var arg7 []core.SortQuery
 		if args[7] != nil {
-			arg7 = args[7].([]core.FilterQuery)
-		}
-		var arg8 []core.SortQuery
-		if args[8] != nil {
-			arg8 = args[8].([]core.SortQuery)
+			arg7 = args[7].([]core.SortQuery)
 		}
 		run(
 			arg0,
@@ -1016,7 +1011,6 @@ func (_c *ComponentRepository_LoadComponentsWithProject_Call) Run(run func(tx co
 			arg5,
 			arg6,
 			arg7,
-			arg8,
 		)
 	})
 	return _c
@@ -1027,7 +1021,7 @@ func (_c *ComponentRepository_LoadComponentsWithProject_Call) Return(paged core.
 	return _c
 }
 
-func (_c *ComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run func(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error)) *ComponentRepository_LoadComponentsWithProject_Call {
+func (_c *ComponentRepository_LoadComponentsWithProject_Call) RunAndReturn(run func(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error)) *ComponentRepository_LoadComponentsWithProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
