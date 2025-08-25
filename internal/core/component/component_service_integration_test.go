@@ -3,7 +3,6 @@ package component_test
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
@@ -17,11 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
-
-// resetOSILicenseCache resets the global license cache
-func resetOSILicenseCache() {
-	vuln.ResetOSILicenseCache()
-}
 
 func TestGetAndSaveLicenseInformation(t *testing.T) {
 	// Set up a mock OSI licenses API server that returns known valid licenses
@@ -41,15 +35,10 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Set the OSI API URL to our test server
-	os.Setenv("OSI_LICENSES_API", server.URL)
-	defer os.Unsetenv("OSI_LICENSES_API")
-
 	t.Run("should create license risk entries for components with invalid licenses", func(t *testing.T) {
 		// Clear the license cache to ensure we use our mock server
 		// This is a bit of a hack but necessary since the license cache is global
 		// Reset the global license cache
-		resetOSILicenseCache()
 
 		// Initialize database container
 		db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")
@@ -212,8 +201,6 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 	})
 
 	t.Run("should not create duplicate license risks for existing entries", func(t *testing.T) {
-		// Clear the license cache to ensure consistent test behavior
-		resetOSILicenseCache()
 
 		// Initialize database container
 		db, terminate := integration_tests.InitDatabaseContainer("../../../initdb.sql")

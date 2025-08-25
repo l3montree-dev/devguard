@@ -2,15 +2,19 @@ package vuln
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/events"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/labstack/echo/v4"
 	"github.com/package-url/packageurl-go"
+	"gorm.io/gorm"
 )
 
 type LicenseRiskController struct {
@@ -29,6 +33,56 @@ func NewLicenseRiskController(licenseOverwriteRepository core.LicenseRiskReposit
 		licenseRiskRepository: licenseOverwriteRepository,
 		licenseRiskService:    LicenseRiskService,
 	}
+}
+
+func (controller LicenseRiskController) Create(ctx core.Context) error {
+	var newLicenseRisk struct {
+		ComponentPurl        string `json:"componentPurl" validate:"required"`
+		FinalLicenseDecision string `json:"finalLicenseDecision" validate:"required"`
+	}
+	if err := ctx.Bind(&newLicenseRisk); err != nil {
+		return echo.NewHTTPError(400, "unable to process request").WithInternal(err)
+	}
+
+	if err := core.V.Struct(newLicenseRisk); err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+	if newLicenseRisk.FinalLicenseDecision == "" {
+		return echo.NewHTTPError(400, "license id must not be empty")
+	}
+
+	// check if valid osi license
+	_, validLicense := component.LicenseMap[strings.ToLower(newLicenseRisk.FinalLicenseDecision)]
+	if !validLicense {
+		slog.Warn("license is not a valid osi license", "license", newLicenseRisk.FinalLicenseDecision)
+		return echo.NewHTTPError(400, "license is not a valid osi license")
+	}
+
+	assetID := core.GetAsset(ctx).ID
+	assetVersion := core.GetAssetVersion(ctx)
+
+	licenseRisk := models.LicenseRisk{
+		ComponentPurl: newLicenseRisk.ComponentPurl,
+		Vulnerability: models.Vulnerability{
+			AssetID:          assetID,
+			AssetVersionName: assetVersion.Name,
+		},
+	}
+
+	riskHash := licenseRisk.CalculateHash()
+	// check if the license risk already exists
+	existingLicenseRisk, err := controller.licenseRiskRepository.Read(riskHash)
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		licenseRisk = existingLicenseRisk
+	}
+
+	ev := models.NewLicenseDecisionEvent(riskHash, models.VulnTypeLicenseRisk, core.GetSession(ctx).GetUserID(), "", "", newLicenseRisk.FinalLicenseDecision)
+
+	err = controller.licenseRiskRepository.ApplyAndSave(nil, &licenseRisk, &ev)
+	if err != nil {
+		return echo.NewHTTPError(500, err.Error())
+	}
+	return ctx.JSON(200, licenseRisk)
 }
 
 func (controller LicenseRiskController) ListPaged(ctx core.Context) error {

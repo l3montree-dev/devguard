@@ -47,7 +47,7 @@ func (httpController httpController) LicenseDistribution(ctx core.Context) error
 	var res = make([]licenseResponse, 0, len(licenses))
 	for id, count := range licenses {
 		// get the license from the license repository
-		l, ok := licenseMap[strings.ToLower(id)]
+		l, ok := LicenseMap[strings.ToLower(id)]
 		if !ok {
 			l = license{
 				LicenseID: id,

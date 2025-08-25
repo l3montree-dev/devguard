@@ -25,15 +25,15 @@ type licenseJSONFile struct {
 	Licenses           []license `json:"licenses"`
 }
 
-var licenseMap map[string]license
+var LicenseMap map[string]license
 
 func init() {
-	licenseMap = make(map[string]license)
+	LicenseMap = make(map[string]license)
 	var licenses licenseJSONFile
 	if err := json.Unmarshal(licensesFile, &licenses); err != nil {
 		panic(err)
 	}
 	for _, license := range licenses.Licenses {
-		licenseMap[strings.ToLower(license.LicenseID)] = license
+		LicenseMap[strings.ToLower(license.LicenseID)] = license
 	}
 }

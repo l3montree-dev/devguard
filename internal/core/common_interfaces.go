@@ -413,6 +413,8 @@ type ComponentService interface {
 	GetAndSaveLicenseInformation(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error)
 	RefreshComponentProjectInformation(project models.ComponentProject)
 	GetLicense(component models.Component) (models.Component, error)
+	// RefreshAllLicenses forces re-fetching license information for all components of an asset version
+	RefreshAllLicenses(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error)
 }
 
 type LicenseRiskService interface {

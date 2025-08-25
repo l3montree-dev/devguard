@@ -506,7 +506,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService)
 
-	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository)
+	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository, &componentService)
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
 	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, assetVersionRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseRiskRepository)
@@ -762,6 +762,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	assetVersionRouter.GET("/components/", componentController.ListPaged)
 	assetVersionRouter.GET("/components/licenses/", componentController.LicenseDistribution)
+	assetVersionRouter.POST("/components/licenses/refresh/", assetVersionController.RefetchLicenses, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 
 	assetVersionRouter.GET("/events/", vulnEventController.ReadEventsByAssetIDAndAssetVersionName)
 
@@ -784,6 +785,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	licenseRiskRouter := assetVersionRouter.Group("/license-risks")
 	licenseRiskRouter.GET("/", licenseRiskController.ListPaged)
 	licenseRiskRouter.GET("/:licenseRiskID/", licenseRiskController.Read)
+	licenseRiskRouter.POST("/", licenseRiskController.Create, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	licenseRiskRouter.POST("/:licenseRiskID/", licenseRiskController.CreateEvent, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	licenseRiskRouter.POST("/:licenseRiskID/mitigate/", licenseRiskController.Mitigate, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	licenseRiskRouter.POST("/:licenseRiskID/final-license-decision/", licenseRiskController.MakeFinalLicenseDecision, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
