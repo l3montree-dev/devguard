@@ -389,14 +389,24 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 	var firstDetectedOnThisArtifactName []models.DependencyVuln
 	var fixedOnThisArtifactName []models.DependencyVuln
 
+	fmt.Printf("DEBUG diffScanResults: currentArtifactName=%s\n", currentArtifactName)
+	fmt.Printf("DEBUG diffScanResults: foundVulnerabilities count=%d\n", len(foundVulnerabilities))
+	fmt.Printf("DEBUG diffScanResults: existingDependencyVulns count=%d\n", len(existingDependencyVulns))
+
 	var foundVulnsMappedByID = make(map[string]models.DependencyVuln)
 	for _, vuln := range foundVulnerabilities {
+		fmt.Printf("DEBUG diffScanResults: found vuln ID=%s, CalculateHash=%s, CVEID=%v\n", vuln.ID, vuln.CalculateHash(), vuln.CVEID)
 		if _, ok := foundVulnsMappedByID[vuln.ID]; !ok {
 			foundVulnsMappedByID[vuln.ID] = vuln
 		}
 	}
 
 	for _, existingVulns := range existingDependencyVulns {
+		fmt.Printf("DEBUG diffScanResults: existing vuln ID=%s, CalculateHash=%s, CVEID=%v, artifacts=%d\n", existingVulns.ID, existingVulns.CalculateHash(), existingVulns.CVEID, len(existingVulns.Artifacts))
+		for i, art := range existingVulns.Artifacts {
+			fmt.Printf("DEBUG diffScanResults: existing vuln artifact[%d]=%s\n", i, art.ArtifactName)
+		}
+
 		if _, ok := foundVulnsMappedByID[existingVulns.ID]; !ok {
 			if len(existingVulns.Artifacts) == 1 && existingVulns.Artifacts[0].ArtifactName == currentArtifactName {
 				fixedOnAll = append(fixedOnAll, existingVulns)
@@ -414,6 +424,7 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 	}
 
 	for _, foundVuln := range foundVulnerabilities {
+		fmt.Printf("DEBUG diffScanResults: processing found vuln ID=%s\n", foundVuln.ID)
 		if _, ok := existingVulnsMappedByID[foundVuln.ID]; !ok {
 			firstDetected = append(firstDetected, foundVuln)
 		} else {

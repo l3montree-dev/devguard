@@ -144,8 +144,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		componentDependency := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
-			AssetVersion:     assetVersion,
-			ScannerIDs:       "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca",
+			Artifacts:        []models.Artifact{{ArtifactName: "artifact1"}},
 			ComponentPurl:    nil,
 			DependencyPurl:   "pkg:npm/react@18.2.0",
 			Dependency:       models.Component{Purl: "pkg:npm/react@18.2.0"},
@@ -261,12 +260,11 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 		err = db.Create(&component).Error
 		assert.Nil(t, err)
 
-		devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"
+		artifact := models.Artifact{ArtifactName: "artifact1"}
 		componentDependency := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
-			AssetVersion:     assetVersion,
-			ScannerIDs:       devguardScanner,
+			Artifacts:        []models.Artifact{artifact},
 			ComponentPurl:    nil,
 			DependencyPurl:   "pkg:npm/react@18.2.0",
 			Dependency:       models.Component{Purl: "pkg:npm/react@18.2.0"},
@@ -283,9 +281,9 @@ func TestDaemonAsssetVersionScan(t *testing.T) {
 		err = db.First(&updatedAssetVersion, "name = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Error
 		assert.Nil(t, err)
 		assert.NotNil(t, updatedAssetVersion.Metadata)
-		assert.Contains(t, updatedAssetVersion.Metadata, devguardScanner)
+		assert.Contains(t, updatedAssetVersion.Metadata, artifact.ArtifactName)
 
-		metadataMap := updatedAssetVersion.Metadata[devguardScanner]
+		metadataMap := updatedAssetVersion.Metadata[artifact.ArtifactName]
 		metadataBytes, err := json.Marshal(metadataMap)
 		assert.Nil(t, err)
 		var metadata models.ScannerInformation
@@ -378,10 +376,10 @@ func TestDaemonSyncTickets(t *testing.T) {
 			AssetVersionName: assetVersion.Name,
 			TicketID:         nil,
 			TicketURL:        nil,
-			ScannerIDs:       "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca",
 			State:            models.VulnStateOpen,
 			LastDetected:     time.Now(),
 		},
+		Artifacts:         []models.Artifact{{ArtifactName: "artifact1"}},
 		CVE:               &cve,
 		CVEID:             utils.Ptr(cve.CVE),
 		ComponentDepth:    utils.Ptr(1),
@@ -549,10 +547,10 @@ func TestDaemonRecalculateRisk(t *testing.T) {
 			AssetID:          asset.ID,
 			AssetVersion:     assetVersion,
 			AssetVersionName: assetVersion.Name,
-			ScannerIDs:       "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca",
 			State:            models.VulnStateOpen,
 			LastDetected:     time.Now(),
 		},
+		Artifacts:         []models.Artifact{{ArtifactName: "artifact1"}},
 		CVE:               &cve,
 		CVEID:             utils.Ptr(cve.CVE),
 		ComponentDepth:    utils.Ptr(1),
@@ -650,23 +648,22 @@ func TestDaemonComponentProperties(t *testing.T) {
 	}
 	err = db.Create(&componentB).Error
 	assert.Nil(t, err)
-	devguardScanner := "github.com/l3montree-dev/devguard/cmd/devguard-scanner" + "/"
+	artifactA := models.Artifact{ArtifactName: "sca"}
 	componentDependencyA := models.ComponentDependency{
 		AssetID:          asset.ID,
 		AssetVersionName: assetVersion.Name,
-		AssetVersion:     assetVersion,
-		ScannerIDs:       devguardScanner + "sca",
+		Artifacts:        []models.Artifact{artifactA},
 		ComponentPurl:    nil,
 		DependencyPurl:   "pkg:npm/react@18.2.0",
 		Dependency:       componentA,
 	}
 	err = db.Create(&componentDependencyA).Error
 	assert.Nil(t, err)
+	artifactB := models.Artifact{ArtifactName: "sca"}
 	componentDependencyB := models.ComponentDependency{
 		AssetID:          asset.ID,
 		AssetVersionName: assetVersion.Name,
-		AssetVersion:     assetVersion,
-		ScannerIDs:       devguardScanner + "sca",
+		Artifacts:        []models.Artifact{artifactB},
 		ComponentPurl:    &componentA.Purl,
 		DependencyPurl:   "pkg:npm/react-dom@15.0.0",
 		Dependency:       componentB,
@@ -699,7 +696,6 @@ func TestDaemonComponentProperties(t *testing.T) {
 			AssetID:          asset.ID,
 			AssetVersion:     assetVersion,
 			AssetVersionName: assetVersion.Name,
-			ScannerIDs:       "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca",
 			State:            models.VulnStateOpen,
 			LastDetected:     time.Now(),
 		},
@@ -736,11 +732,11 @@ func TestDaemonComponentProperties(t *testing.T) {
 	})
 
 	t.Run("should update the component depth to a lower value, if a component dependency is found with a shorter path, and the scanner is only container-scanning or sca", func(t *testing.T) {
+		artifactC := models.Artifact{ArtifactName: "sca"}
 		componentDependencyC := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
-			AssetVersion:     assetVersion,
-			ScannerIDs:       devguardScanner + "sca",
+			Artifacts:        []models.Artifact{artifactC},
 			ComponentPurl:    nil,
 			DependencyPurl:   "pkg:npm/react-dom@15.0.0",
 			Dependency:       componentB,
@@ -774,15 +770,16 @@ func TestDaemonComponentProperties(t *testing.T) {
 
 	t.Run("should not update the component depth to shorter value, if a new component dependency has a shorter path but the container-scanning scanner is used additionally to the sca scanner", func(t *testing.T) {
 
-		dependencyVuln.ScannerIDs = "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning"
+		// Simulate both scanners by adding both artifact names
+		dependencyVuln.Vulnerability.ID = "1"
 		err = db.Save(&dependencyVuln).Error
 		assert.Nil(t, err)
 
+		artifactC := models.Artifact{ArtifactName: "container-scanning"}
 		componentDependencyC := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
-			AssetVersion:     assetVersion,
-			ScannerIDs:       devguardScanner + "container-scanning",
+			Artifacts:        []models.Artifact{artifactC},
 			ComponentPurl:    nil,
 			DependencyPurl:   "pkg:npm/react-dom@15.0.0",
 			Dependency:       componentB,
@@ -808,15 +805,16 @@ func TestDaemonComponentProperties(t *testing.T) {
 
 	t.Run("should update the component depth to lower value, if a new component dependency has a shorter path and the container-scanning scanner is the only scanner used", func(t *testing.T) {
 
-		dependencyVuln.ScannerIDs = "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning"
+		// Only container-scanning artifact
+		dependencyVuln.Vulnerability.ID = "1"
 		err = db.Save(&dependencyVuln).Error
 		assert.Nil(t, err)
 
+		artifactC := models.Artifact{ArtifactName: "container-scanning"}
 		componentDependencyC := models.ComponentDependency{
 			AssetID:          asset.ID,
 			AssetVersionName: assetVersion.Name,
-			AssetVersion:     assetVersion,
-			ScannerIDs:       devguardScanner + "container-scanning",
+			Artifacts:        []models.Artifact{artifactC},
 			ComponentPurl:    nil,
 			DependencyPurl:   "pkg:npm/react-dom@15.0.0",
 			Dependency:       componentB,

@@ -89,28 +89,28 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Create component dependencies
-		scannerID := "test-scanner"
+		artifact := models.Artifact{ArtifactName: "artifact1"}
 		componentDeps := []models.ComponentDependency{
 			{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
 				DependencyPurl:   componentWithInvalidLicense.Purl,
 				Dependency:       componentWithInvalidLicense,
-				ScannerIDs:       scannerID,
+				Artifacts:        []models.Artifact{artifact},
 			},
 			{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
 				DependencyPurl:   componentWithValidLicense.Purl,
 				Dependency:       componentWithValidLicense,
-				ScannerIDs:       scannerID,
+				Artifacts:        []models.Artifact{artifact},
 			},
 			{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
 				DependencyPurl:   componentWithoutLicense.Purl,
 				Dependency:       componentWithoutLicense,
-				ScannerIDs:       scannerID,
+				Artifacts:        []models.Artifact{artifact},
 			},
 		}
 
@@ -146,7 +146,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		)
 
 		// Call the function under test
-		resultComponents, err := componentService.GetAndSaveLicenseInformation(assetVersion, scannerID)
+		resultComponents, err := componentService.GetAndSaveLicenseInformation(assetVersion, artifact.ArtifactName)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, resultComponents)
 
@@ -171,7 +171,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		invalidLicenseRisk, exists := licenseRiskPurls[componentWithInvalidLicense.Purl]
 		assert.True(t, exists, "License risk should exist for component with invalid license")
 		assert.Equal(t, models.VulnStateOpen, invalidLicenseRisk.State)
-		assert.Equal(t, scannerID, invalidLicenseRisk.ScannerIDs)
+		assert.Equal(t, artifact.ArtifactName, invalidLicenseRisk.Artifacts[0].ArtifactName)
 		assert.Equal(t, assetVersion.AssetID, invalidLicenseRisk.AssetID)
 		assert.Equal(t, assetVersion.Name, invalidLicenseRisk.AssetVersionName)
 
@@ -232,7 +232,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		err = db.Create(&componentWithInvalidLicense).Error
 		assert.NoError(t, err)
 
-		scannerID := "test-scanner"
+		artifact := models.Artifact{ArtifactName: "artifact1"}
 
 		// Create component dependency
 		componentDep := models.ComponentDependency{
@@ -240,7 +240,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 			AssetID:          assetVersion.AssetID,
 			DependencyPurl:   componentWithInvalidLicense.Purl,
 			Dependency:       componentWithInvalidLicense,
-			ScannerIDs:       scannerID,
+			Artifacts:        []models.Artifact{artifact},
 		}
 		err = db.Create(&componentDep).Error
 		assert.NoError(t, err)
@@ -251,8 +251,8 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 				AssetVersionName: assetVersion.Name,
 				AssetID:          assetVersion.AssetID,
 				State:            models.VulnStateOpen,
-				ScannerIDs:       scannerID,
 			},
+			Artifacts:     []models.Artifact{artifact},
 			ComponentPurl: componentWithInvalidLicense.Purl,
 		}
 		// Manually set the ID using the same calculation as the model
@@ -277,7 +277,7 @@ func TestGetAndSaveLicenseInformation(t *testing.T) {
 		)
 
 		// Call the function under test
-		_, err = componentService.GetAndSaveLicenseInformation(assetVersion, scannerID)
+		_, err = componentService.GetAndSaveLicenseInformation(assetVersion, artifact.ArtifactName)
 		assert.NoError(t, err)
 
 		// Verify that no duplicate license risk was created

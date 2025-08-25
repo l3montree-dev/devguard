@@ -107,6 +107,7 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 		repositories.NewSupplyChainRepository(db),
 		repositories.NewLicenseRiskRepository(db),
 		&cmpService,
+		CreateArtifactService(db),
 	)
 }
 

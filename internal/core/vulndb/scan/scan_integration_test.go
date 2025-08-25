@@ -25,6 +25,15 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// Helper to extract artifact names from []models.Artifact
+func getArtifactNames(artifacts []models.Artifact) []string {
+	names := make([]string, 0, len(artifacts))
+	for _, a := range artifacts {
+		names = append(names, a.ArtifactName)
+	}
+	return names
+}
+
 func TestScanning(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
@@ -52,7 +61,7 @@ func TestScanning(t *testing.T) {
 
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "scanner-1")
+		req.Header.Set("X-Artifact-Name", "artifact-1")
 		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
 		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
@@ -73,14 +82,14 @@ func TestScanning(t *testing.T) {
 		assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
 	})
 
-	t.Run("should add the scanner id, if the vulnerability is found with another scanner", func(t *testing.T) {
-		// we found the CVE - Make sure, that if we scan again but with a different scanner, the scanner ids get updated
+	t.Run("should add the artifact, if the vulnerability is found with another artifact", func(t *testing.T) {
+		// we found the CVE - Make sure, that if we scan again but with a different artifact, the artifacts get updated
 		recorder := httptest.NewRecorder()
 		// reopen file
 		sbomFile := sbomWithVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "scanner-2")
+		req.Header.Set("X-Artifact-Name", "artifact-2")
 		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
 		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
@@ -92,21 +101,21 @@ func TestScanning(t *testing.T) {
 		var response scan.ScanResponse
 		err = json.Unmarshal(recorder.Body.Bytes(), &response)
 		assert.Nil(t, err)
-		assert.Equal(t, 0, response.AmountOpened) // already detected with other scanner
+		assert.Equal(t, 0, response.AmountOpened) // already detected with other artifact
 		assert.Equal(t, 0, response.AmountClosed)
 		assert.Len(t, response.DependencyVulns, 1)
 		assert.Equal(t, utils.Ptr("CVE-2025-46569"), response.DependencyVulns[0].CVEID)
-		// the scanner id should be updated
-		assert.Equal(t, "scanner-1 scanner-2", response.DependencyVulns[0].ScannerIDs)
+		// the artifacts should be updated
+		assert.ElementsMatch(t, []string{"artifact-1", "artifact-2"}, getArtifactNames(response.DependencyVulns[0].Artifacts))
 	})
 
-	t.Run("should only return vulnerabilities, which are found by the current scanner", func(t *testing.T) {
+	t.Run("should return vulnerabilities, which are found by the current artifact", func(t *testing.T) {
 		// scan the sbom without the vulnerability
 		recorder := httptest.NewRecorder()
 		sbomFile := sbomWithoutVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "scanner-3")
+		req.Header.Set("X-Artifact-Name", "artifact-3")
 		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
 		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
@@ -125,13 +134,13 @@ func TestScanning(t *testing.T) {
 		assert.Len(t, response.DependencyVulns, 0) // no vulnerabilities returned
 	})
 
-	t.Run("should return amount of closed 1, if the vulnerability is not detected by ANY scanner anymore", func(t *testing.T) {
-		// we found the CVE - Make sure, that if we scan again but with a different scanner, the scanner ids get updated
+	t.Run("should return amount of closed 1, if the vulnerability is not detected by ANY artifact anymore", func(t *testing.T) {
+		// we found the CVE - Make sure, that if we scan again but with a different artifact, the artifacts get updated
 		recorder := httptest.NewRecorder()
 		sbomFile := sbomWithoutVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "scanner-1")
+		req.Header.Set("X-Artifact-Name", "artifact-1")
 		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
 		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		ctx := app.NewContext(req, recorder)
@@ -146,13 +155,13 @@ func TestScanning(t *testing.T) {
 		assert.Nil(t, err)
 
 		assert.Equal(t, 0, response.AmountOpened)  // no new vulnerabilities found
-		assert.Equal(t, 0, response.AmountClosed)  // the vulnerability was not closed - still found by scanner 2
+		assert.Equal(t, 0, response.AmountClosed)  // the vulnerability was not closed - still found by artifact 2
 		assert.Len(t, response.DependencyVulns, 0) // no vulnerabilities returned
 
 		sbomFile = sbomWithoutVulnerability()
 		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "scanner-2")
+		req.Header.Set("X-Artifact-Name", "artifact-2")
 		req.Header.Set("X-Asset-Default-Branch", "main") // set the default branch header
 		req.Header.Set("X-Asset-Ref", "main")            // set the asset ref header
 		recorder = httptest.NewRecorder()
@@ -168,7 +177,7 @@ func TestScanning(t *testing.T) {
 		assert.Len(t, response.DependencyVulns, 0) // no vulnerabilities returned
 	})
 
-	t.Run("should respect, if the vulnerability is just found AGAIN on a different branch then the default branch", func(t *testing.T) {
+	t.Run("should respect, if the vulnerability is found AGAIN on a different branch then the default branch", func(t *testing.T) {
 		// if we find a vuln A on the default branch. Then we accept vuln A.
 		// now we find vuln A on a different branch. This vuln should be accepted as well.
 
@@ -187,7 +196,7 @@ func TestScanning(t *testing.T) {
 		sbomFile := sbomWithVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", vulns[0].ScannerIDs)
+		req.Header.Set("X-Artifact-Name", "artifact-1")
 		req.Header.Set("X-Asset-Ref", "some-other-branch")
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx) //setup context
@@ -279,7 +288,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		sbomFile := sbomWithVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "lifecycle-scanner")
+		req.Header.Set("X-Artifact-Name", "lifecycle-artifact")
 		req.Header.Set("X-Asset-Default-Branch", "main")
 		req.Header.Set("X-Asset-Ref", "branch-a")
 		ctx := app.NewContext(req, recorder)
@@ -320,7 +329,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		sbomFile = sbomWithVulnerability()
 		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "lifecycle-scanner")
+		req.Header.Set("X-Artifact-Name", "lifecycle-artifact")
 		req.Header.Set("X-Asset-Default-Branch", "main")
 		req.Header.Set("X-Asset-Ref", "branch-b")
 		ctx = app.NewContext(req, recorder)
@@ -399,7 +408,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		sbomFile = sbomWithVulnerability()
 		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "lifecycle-scanner")
+		req.Header.Set("X-Artifact-Name", "lifecycle-artifact")
 		req.Header.Set("X-Asset-Default-Branch", "main")
 		req.Header.Set("X-Asset-Ref", "branch-c")
 		ctx = app.NewContext(req, recorder)
@@ -439,7 +448,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		sbomFile := sbomWithVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "lifecycle-scanner-fp")
+		req.Header.Set("X-Artifact-Name", "lifecycle-artifact-fp")
 		req.Header.Set("X-Asset-Default-Branch", "main")
 		req.Header.Set("X-Asset-Ref", "branch-d")
 		ctx := app.NewContext(req, recorder)
@@ -454,7 +463,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		branchDVuln := vulns[0]
 
 		// Step 2: Mark as false positive on branch D
-		fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", models.ComponentNotPresent, "lifecycle-scanner-fp")
+		fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", models.ComponentNotPresent, "lifecycle-artifact-fp")
 		err = dependencyVulnRepository.ApplyAndSave(nil, &branchDVuln, &fpEvent)
 		assert.Nil(t, err)
 
@@ -463,7 +472,7 @@ func TestVulnerabilityLifecycleManagement(t *testing.T) {
 		sbomFile = sbomWithVulnerability()
 		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "lifecycle-scanner-fp")
+		req.Header.Set("X-Artifact-Name", "lifecycle-artifact-fp")
 		req.Header.Set("X-Asset-Default-Branch", "main")
 		req.Header.Set("X-Asset-Ref", "branch-e")
 		ctx = app.NewContext(req, recorder)
@@ -677,7 +686,7 @@ func TestTicketHandling(t *testing.T) {
 		sbomFile := sbomWithVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "scanner-4")
+		req.Header.Set("X-Artifact-Name", "artifact-4")
 
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
@@ -702,10 +711,12 @@ func TestTicketHandling(t *testing.T) {
 			ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: "main",
-				ScannerIDs:       "scanner-4",
 				State:            models.VulnStateOpen,
 				AssetID:          asset.ID,
 				TicketID:         utils.Ptr("gitlab:abc/789"),
+			},
+			Artifacts: []models.Artifact{
+				{ArtifactName: "artifact-4"},
 			},
 		}).Error
 		assert.Nil(t, err)
@@ -715,7 +726,7 @@ func TestTicketHandling(t *testing.T) {
 		sbomFile := sbomWithoutVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "scanner-4")
+		req.Header.Set("X-Artifact-Name", "artifact-4")
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
 
@@ -735,10 +746,13 @@ func TestTicketHandling(t *testing.T) {
 			ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: "main",
-				ScannerIDs:       "some-other-scanner scanner-4",
 				State:            models.VulnStateOpen,
 				AssetID:          asset.ID,
 				TicketID:         utils.Ptr("gitlab:abc/789"),
+			},
+			Artifacts: []models.Artifact{
+				{ArtifactName: "some-other-artifact"},
+				{ArtifactName: "artifact-4"},
 			},
 		}).Error
 		assert.Nil(t, err)
@@ -748,7 +762,7 @@ func TestTicketHandling(t *testing.T) {
 		sbomFile := sbomWithoutVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "scanner-4")
+		req.Header.Set("X-Artifact-Name", "artifact-4")
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
 
@@ -774,9 +788,11 @@ func TestTicketHandling(t *testing.T) {
 			ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
 			Vulnerability: models.Vulnerability{
 				State:            models.VulnStateAccepted,
-				ScannerIDs:       "scanner-4",
 				AssetVersionName: "main",
 				AssetID:          asset.ID,
+			},
+			Artifacts: []models.Artifact{
+				{ArtifactName: "artifact-4"},
 			},
 		}
 		err = db.Clauses(clause.OnConflict{
@@ -788,7 +804,7 @@ func TestTicketHandling(t *testing.T) {
 		sbomFile := sbomWithVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "scanner-4")
+		req.Header.Set("X-Artifact-Name", "artifact-4")
 		req.Header.Set("X-Asset-Default-Branch", "main")
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
@@ -812,10 +828,12 @@ func TestTicketHandling(t *testing.T) {
 			ComponentPurl: utils.Ptr("pkg:golang/github.com/open-policy-agent/opa@v0.68.0"),
 			Vulnerability: models.Vulnerability{
 				State:            models.VulnStateOpen,
-				ScannerIDs:       "scanner-4",
 				AssetVersionName: "main",
 				AssetID:          asset.ID,
 				TicketID:         nil,
+			},
+			Artifacts: []models.Artifact{
+				{ArtifactName: "artifact-4"},
 			},
 		}
 		err = db.Clauses(clause.OnConflict{
@@ -826,7 +844,7 @@ func TestTicketHandling(t *testing.T) {
 		sbomFile := sbomWithVulnerability()
 		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Scanner", "scanner-component")
+		req.Header.Set("X-Artifact-Name", "artifact-component")
 		req.Header.Set("X-Asset-Default-Branch", "main")
 		ctx := app.NewContext(req, recorder)
 		setupContext(ctx)
@@ -847,7 +865,7 @@ func TestTicketHandling(t *testing.T) {
 
 		assert.Equal(t, "CVE-2025-46569 found in golang/github.com/open-policy-agent/opa@v0.68.0", *createIssueOptions.Title)
 		assert.Equal(t,
-			"## CVE-2025-46569 found in golang/github.com/open-policy-agent/opa@v0.68.0 \n> [!important] \n> **Risk**: `0.00 (Unknown)`\n> **CVSS**: `0.0` \n### Description\n\n### Affected component \nThe vulnerability is in `pkg:golang/github.com/open-policy-agent/opa@v0.68.0`, detected by `scanner-4`, `scanner-component`.\n### Recommended fix\nNo fix is available.\n\n### Additional guidance for mitigating vulnerabilities\nVisit our guides on [devguard.org](https://devguard.org/risk-mitigation-guides/software-composition-analysis)\n\n<details>\n\n<summary>See more details...</summary>\n\n### Path to component\n```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nroot([\"root\"]) --- scanner_4([\"scanner-4\"])\nscanner_4([\"scanner-4\"]) --- go_mod([\"go.mod\"])\ngo_mod([\"go.mod\"]) --- github_com_l3montree_dev_devguard_test([\"github.com/l3montree-dev/devguard-test\"])\ngithub_com_l3montree_dev_devguard_test([\"github.com/l3montree-dev/devguard-test\"]) --- github_com_open_policy_agent_opa([\"github.com/open-policy-agent/opa\"])\nroot([\"root\"]) --- scanner_component([\"scanner-component\"])\nscanner_component([\"scanner-component\"]) --- go_mod([\"go.mod\"])\n\nclassDef default stroke-width:2px\n```\n| Risk Factor  | Value | Description | \n| ---- | ----- | ----------- | \n| Vulnerability Depth | `0` | The vulnerability is in a direct dependency of your project. | \n| EPSS | `0.00 %` | The exploit probability is very low. The vulnerability is unlikely to be exploited in the next 30 days. | \n| EXPLOIT | `Not available` | We did not find any exploit available. Neither in GitHub repositories nor in the Exploit-Database. There are no script kiddies exploiting this vulnerability. | \n| CVSS-BE | `0.0` |  | \n| CVSS-B | `0.0` |  | \n\nMore details can be found in [DevGuard](FRONTEND_URL/test-org/projects/test-project/assets/test-asset/refs/main/dependency-risks/"+vuln.ID+")\n\n</details>\n\n\n--- \n### Interact with this vulnerability\nYou can use the following slash commands to interact with this vulnerability:\n\n#### 👍   Reply with this to acknowledge and accept the identified risk.\n```text\n/accept I accept the risk of this vulnerability, because ...\n```\n\n#### ⚠️ Mark the risk as false positive: Use one of these commands if you believe the reported vulnerability is not actually a valid issue.\n```text\n/component-not-present The vulnerable component is not included in the artifact.\n```\n```text\n/vulnerable-code-not-present The component is present, but the vulnerable code is not included or compiled.\n```\n```text\n/vulnerable-code-not-in-execute-path The vulnerable code exists, but is never executed at runtime.\n```\n```text\n/vulnerable-code-cannot-be-controlled-by-adversary Built-in protections prevent exploitation of this vulnerability.\n```\n```text\n/inline-mitigations-already-exist The vulnerable code cannot be controlled or influenced by an attacker.\n```\n\n#### 🔁  Reopen the risk: Use this command to reopen a previously closed or accepted vulnerability.\n```text\n/reopen ... \n```\n", *createIssueOptions.Description)
+			"## CVE-2025-46569 found in golang/github.com/open-policy-agent/opa@v0.68.0 \n> [!important] \n> **Risk**: `0.00 (Unknown)`\n> **CVSS**: `0.0` \n### Description\n\n### Affected component \nThe vulnerability is in `pkg:golang/github.com/open-policy-agent/opa@v0.68.0`, detected by `artifact-4`, `artifact-component`.\n### Recommended fix\nNo fix is available.\n\n### Additional guidance for mitigating vulnerabilities\nVisit our guides on [devguard.org](https://devguard.org/risk-mitigation-guides/software-composition-analysis)\n\n<details>\n\n<summary>See more details...</summary>\n\n### Path to component\n```mermaid \n %%{init: { 'theme':'base', 'themeVariables': {\n'primaryColor': '#F3F3F3',\n'primaryTextColor': '#0D1117',\n'primaryBorderColor': '#999999',\n'lineColor': '#999999',\n'secondaryColor': '#ffffff',\n'tertiaryColor': '#ffffff'\n} }}%%\n flowchart TD\nroot([\"root\"]) --- artifact_4([\"artifact-4\"])\nartifact_4([\"artifact-4\"]) --- go_mod([\"go.mod\"])\ngo_mod([\"go.mod\"]) --- github_com_l3montree_dev_devguard_test([\"github.com/l3montree-dev/devguard-test\"])\ngithub_com_l3montree_dev_devguard_test([\"github.com/l3montree-dev/devguard-test\"]) --- github_com_open_policy_agent_opa([\"github.com/open-policy-agent/opa\"])\nroot([\"root\"]) --- artifact_component([\"artifact-component\"])\nartifact_component([\"artifact-component\"]) --- go_mod([\"go.mod\"])\n\nclassDef default stroke-width:2px\n```\n| Risk Factor  | Value | Description | \n| ---- | ----- | ----------- | \n| Vulnerability Depth | `0` | The vulnerability is in a direct dependency of your project. | \n| EPSS | `0.00 %` | The exploit probability is very low. The vulnerability is unlikely to be exploited in the next 30 days. | \n| EXPLOIT | `Not available` | We did not find any exploit available. Neither in GitHub repositories nor in the Exploit-Database. There are no script kiddies exploiting this vulnerability. | \n| CVSS-BE | `0.0` |  | \n| CVSS-B | `0.0` |  | \n\nMore details can be found in [DevGuard](FRONTEND_URL/test-org/projects/test-project/assets/test-asset/refs/main/dependency-risks/"+vuln.ID+")\n\n</details>\n\n\n--- \n### Interact with this vulnerability\nYou can use the following slash commands to interact with this vulnerability:\n\n#### 👍   Reply with this to acknowledge and accept the identified risk.\n```text\n/accept I accept the risk of this vulnerability, because ...\n```\n\n#### ⚠️ Mark the risk as false positive: Use one of these commands if you believe the reported vulnerability is not actually a valid issue.\n```text\n/component-not-present The vulnerable component is not included in the artifact.\n```\n```text\n/vulnerable-code-not-present The component is present, but the vulnerable code is not included or compiled.\n```\n```text\n/vulnerable-code-not-in-execute-path The vulnerable code exists, but is never executed at runtime.\n```\n```text\n/vulnerable-code-cannot-be-controlled-by-adversary Built-in protections prevent exploitation of this vulnerability.\n```\n```text\n/inline-mitigations-already-exist The vulnerable code cannot be controlled or influenced by an attacker.\n```\n\n#### 🔁  Reopen the risk: Use this command to reopen a previously closed or accepted vulnerability.\n```text\n/reopen ... \n```\n", *createIssueOptions.Description)
 	})
 }
 

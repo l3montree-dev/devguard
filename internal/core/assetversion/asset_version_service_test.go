@@ -186,8 +186,10 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234")},
 		}
 
+		artifact := models.Artifact{ArtifactName: "artifact1"}
+
 		existingDependencyVulns := []models.DependencyVuln{
-			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{ScannerIDs: "scanner-1"}},
+			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
 		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
@@ -204,7 +206,7 @@ func TestDiffScanResults(t *testing.T) {
 		foundVulnerabilities := []models.DependencyVuln{}
 
 		existingDependencyVulns := []models.DependencyVuln{
-			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{ScannerIDs: currentScanner}},
+			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
 		}
 
 		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
@@ -218,10 +220,12 @@ func TestDiffScanResults(t *testing.T) {
 	t.Run("should correctly identify a vulnerability which is not detected by the current scanner anymore", func(t *testing.T) {
 		currentScanner := "new-scanner"
 
+		artifact := models.Artifact{ArtifactName: "artifact1"}
+
 		foundVulnerabilities := []models.DependencyVuln{}
 
 		existingDependencyVulns := []models.DependencyVuln{
-			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{ScannerIDs: currentScanner + " scanner-1"}},
+			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
 		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
@@ -253,12 +257,15 @@ func TestDiffScanResults(t *testing.T) {
 	t.Run("BUG: should NOT incorrectly identify scanner removal when scanner ID contains colon and is substring of existing scanner", func(t *testing.T) {
 
 		currentScanner := "container-scanning"
+
+		artifact := models.Artifact{ArtifactName: "artifact1"}
+
 		foundVulnerabilities := []models.DependencyVuln{
 			{CVEID: utils.Ptr("CVE-1234")},
 		}
 
 		existingDependencyVulns := []models.DependencyVuln{
-			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning:scanner"}},
+			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
 		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
