@@ -43,9 +43,10 @@ type service struct {
 	componentService         core.ComponentService
 	httpClient               *http.Client
 	thirdPartyIntegration    core.ThirdPartyIntegration
+	licenseRiskRepository    core.LicenseRiskRepository
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration, licenseRiskRepository core.LicenseRiskRepository) *service {
 	return &service{
 		assetVersionRepository:   assetVersionRepository,
 		componentRepository:      componentRepository,
@@ -60,6 +61,7 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		thirdPartyIntegration:    thirdPartyIntegration,
 		projectRepository:        projectRepository,
 		orgRepository:            orgRepository,
+		licenseRiskRepository:    licenseRiskRepository,
 	}
 }
 
@@ -215,15 +217,22 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		return vuln.State != models.VulnStateFixed
 	})
 
+	existingVulnsOnOtherBranch, err := s.firstPartyVulnRepository.GetFirstPartyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	if err != nil {
+		slog.Error("could not get existing vulns on other branches", "err", err)
+		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
+	}
+
+	existingVulnsOnOtherBranch = utils.Filter(existingVulnsOnOtherBranch, func(dependencyVuln models.FirstPartyVuln) bool {
+		return dependencyVuln.State != models.VulnStateFixed
+	})
+
 	comparison := utils.CompareSlices(existingVulns, vulns, func(vuln models.FirstPartyVuln) string {
 		return vuln.CalculateHash()
 	})
 
-	fixedVulns := comparison.OnlyInA
 	newVulns := comparison.OnlyInB
-
 	inBoth := comparison.InBoth // these are the vulns that are already in the database, but we need to update them
-
 	updatedFirstPartyVulns := make([]models.FirstPartyVuln, 0)
 
 	for i := range inBoth {
@@ -235,18 +244,27 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 			}
 		}
 	}
-
 	// filter out any vulnerabilities which were already fixed, by only keeping the open ones
-	fixedVulns = utils.Filter(fixedVulns, func(vuln models.FirstPartyVuln) bool {
+	fixedVulns := utils.Filter(comparison.OnlyInA, func(vuln models.FirstPartyVuln) bool {
 		return vuln.State == models.VulnStateOpen
 	})
 
+	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newVulns, existingVulnsOnOtherBranch)
+
 	// get a transaction
 	if err := s.firstPartyVulnRepository.Transaction(func(tx core.DB) error {
-		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, newVulns); err != nil {
-			// this will cancel the transaction
+		// Process new vulnerabilities that exist on other branches with lifecycle management
+		if err := s.firstPartyVulnService.UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx, scannerID, newDetectedButOnOtherBranchExisting, existingEvents, *assetVersion, asset); err != nil {
+			slog.Error("error when trying to add events for existing first party vulnerability on different branch", "err", err)
 			return err
 		}
+
+		// Process new vulnerabilities that don't exist on other branches
+		if err := s.firstPartyVulnService.UserDetectedFirstPartyVulns(tx, userID, scannerID, newDetectedVulnsNotOnOtherBranch); err != nil {
+			return err
+		}
+
+		// Process fixed vulnerabilities
 		if err := s.firstPartyVulnService.UserFixedFirstPartyVulns(tx, userID, fixedVulns); err != nil {
 			return err
 		}
@@ -264,21 +282,21 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 		return []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, []models.FirstPartyVuln{}, err
 	}
 
-	if len(newVulns) > 0 {
+	if len(newDetectedVulnsNotOnOtherBranch) > 0 {
 		go func() {
 			if err = s.thirdPartyIntegration.HandleEvent(core.FirstPartyVulnsDetectedEvent{
 				AssetVersion: core.ToAssetVersionObject(*assetVersion),
 				Asset:        core.ToAssetObject(asset),
 				Project:      core.ToProjectObject(project),
 				Org:          core.ToOrgObject(org),
-				Vulns:        utils.Map(newVulns, vuln.FirstPartyVulnToDto),
+				Vulns:        utils.Map(newDetectedVulnsNotOnOtherBranch, vuln.FirstPartyVulnToDto),
 			}); err != nil {
 				slog.Error("could not handle first party vulnerabilities detected event", "err", err)
 			}
 		}()
 	}
 
-	return newVulns, fixedVulns, append(newVulns, inBoth...), nil
+	return newDetectedVulnsNotOnOtherBranch, fixedVulns, append(newDetectedVulnsNotOnOtherBranch, inBoth...), nil
 }
 
 func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
@@ -386,53 +404,49 @@ func diffScanResults(currentScanner string, foundVulnerabilities []models.Depend
 	return foundByScannerAndNotExisting, fixedVulns, detectedByOtherScanner, notDetectedByScannerAnymore
 }
 
-func diffVulnsBetweenBranches(scannerID string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, [][]models.VulnEvent) {
-	// build a map from those vulns based on the cve id
-	vulnMap := make(map[string][]models.DependencyVuln)
-	for _, vuln := range existingDependencyVulns {
-		if vuln.CVEID != nil {
-			if _, ok := vulnMap[*vuln.CVEID]; !ok {
-				// we only want to keep the latest version of the vuln
-				vulnMap[*vuln.CVEID] = []models.DependencyVuln{vuln}
-			} else {
-				vulnMap[*vuln.CVEID] = append(vulnMap[*vuln.CVEID], vuln)
-			}
-		}
+type Diffable interface {
+	AssetVersionIndependentHash() string
+	GetAssetVersionName() string
+	GetEvents() []models.VulnEvent
+}
+
+func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T) ([]T, []T, [][]models.VulnEvent) {
+	newDetectedVulnsNotOnOtherBranch := make([]T, 0)
+	newDetectedButOnOtherBranchExisting := make([]T, 0)
+	existingEvents := make([][]models.VulnEvent, 0)
+
+	// Create a map of existing vulnerabilities by hash for quick lookup
+	existingVulnsMap := make(map[string][]T)
+	for _, vuln := range existingVulns {
+		hash := vuln.AssetVersionIndependentHash()
+		existingVulnsMap[hash] = append(existingVulnsMap[hash], vuln)
 	}
 
-	newDetectedVulnsNotOnOtherBranch := make([]models.DependencyVuln, 0)
-	// check the new detected vulns if they are already present on the default branch
-	newDetectedButOnOtherBranchExisting := make([]models.DependencyVuln, 0)
-	existingEvents := make([][]models.VulnEvent, 0)
 	for _, newDetectedVuln := range foundVulnerabilities {
-		if newDetectedVuln.CVEID == nil {
-			continue // we only want to check for CVE vulns
-		}
-		if existingVulns, ok := vulnMap[*newDetectedVuln.CVEID]; ok {
-			// we found an existing vuln on the default branch
+		hash := newDetectedVuln.AssetVersionIndependentHash()
+		if existingVulns, ok := existingVulnsMap[hash]; ok {
+			// there is already a vulnerability with the same hash -
+			// thus it exists on another branch
 			newDetectedButOnOtherBranchExisting = append(newDetectedButOnOtherBranchExisting, newDetectedVuln)
 
-			// combine the existing vuln events into a single slice
 			existingVulnEventsOnOtherBranch := make([]models.VulnEvent, 0)
-			for _, vuln := range existingVulns {
-				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(
-					utils.Filter(vuln.Events, func(ev models.VulnEvent) bool {
-						// make sure to only copy original events, not events which were already copied
-						return ev.OriginalAssetVersionName == nil
-					}),
-					func(event models.VulnEvent) models.VulnEvent {
-						event.OriginalAssetVersionName = utils.Ptr(vuln.AssetVersionName)
-						return event
-					})...)
+			for _, existingVuln := range existingVulns {
+				// we only want to copy original events, not events which were already copied
+				events := utils.Filter(existingVuln.GetEvents(), func(ev models.VulnEvent) bool {
+					return ev.OriginalAssetVersionName == nil
+				})
+				// copy the events and set the original asset version name to the existing vuln's asset version name
+				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
+					event.OriginalAssetVersionName = utils.Ptr(existingVuln.GetAssetVersionName())
+					return event
+				})...)
 			}
-
-			// we also want to get the events for that vuln
 			existingEvents = append(existingEvents, existingVulnEventsOnOtherBranch)
 		} else {
-			// this is really a new detected vuln
 			newDetectedVulnsNotOnOtherBranch = append(newDetectedVulnsNotOnOtherBranch, newDetectedVuln)
 		}
 	}
+
 	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
 }
 
@@ -462,7 +476,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 
 	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(scannerID, dependencyVulns, existingDependencyVulns)
 
-	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, newDetectedVulns, existingVulnsOnOtherBranch)
+	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newDetectedVulns, existingVulnsOnOtherBranch)
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
 		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, scannerID, newDetectedButOnOtherBranchExisting, existingEvents, *assetVersion, asset); err != nil {
@@ -662,7 +676,9 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	return nil
 }
 
-func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) *cdx.BOM {
+func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, organizationName string, components []models.ComponentDependency) (*cdx.BOM, error) {
+	var pURL packageurl.PackageURL
+	var err error
 
 	if version == models.NoVersion {
 		version = "latest"
@@ -686,60 +702,82 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 		},
 	}
 
-	bomComponents := make([]cdx.Component, 0)
-	alreadyIncluded := make(map[string]bool)
-	for _, cLoop := range components {
-		c := cLoop
+	licenseRisks, err := s.licenseRiskRepository.GetAllOverwrittenLicensesForAssetVersion(assetVersion.AssetID, assetVersion.Name)
+	if err != nil {
+		return nil, err
+	}
+	componentLicenseOverwrites := make(map[string]string, len(licenseRisks))
+	for i := range licenseRisks {
+		if licenseRisks[i].FinalLicenseDecision != nil {
+			componentLicenseOverwrites[licenseRisks[i].ComponentPurl] = *licenseRisks[i].FinalLicenseDecision
+		}
+	}
 
-		var p packageurl.PackageURL
-		var err error
+	bomComponents := make([]cdx.Component, len(components))
+	processedComponents := make(map[string]struct{}, len(components))
 
-		p, err = packageurl.FromString(c.DependencyPurl)
-		if err == nil {
+	for _, component := range components {
+		pURL, err = packageurl.FromString(component.DependencyPurl)
+		if err != nil {
+			//swallow error and move on to the next component
+			continue
+		}
+		_, alreadyProcessed := processedComponents[component.DependencyPurl]
 
-			if _, ok := alreadyIncluded[c.DependencyPurl]; !ok {
-				alreadyIncluded[c.DependencyPurl] = true
+		if !alreadyProcessed {
+			processedComponents[component.DependencyPurl] = struct{}{}
+			licenses := cdx.Licenses{}
 
-				licenses := cdx.Licenses{}
-				//technically redundant call to c.Dependency.ComponentProject.License
-				if c.Dependency.ComponentProject != nil && c.Dependency.ComponentProject.License != "" {
-					// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
-					if c.Dependency.ComponentProject.License != "non-standard" {
-						licenses = append(licenses, cdx.LicenseChoice{
-							License: &cdx.License{
-								ID: c.Dependency.ComponentProject.License,
-							},
-						})
-					} else {
-						licenses = append(licenses, cdx.LicenseChoice{
-							License: &cdx.License{
-								Name: c.Dependency.ComponentProject.License,
-							},
-						})
-					}
-				}
-
-				if c.Dependency.IsLicenseOverwritten {
-					// manually overwritten license
-					licenses = []cdx.LicenseChoice{
-						{
-							License: &cdx.License{
-								ID: *c.Dependency.License,
-							},
-						},
-					}
-				}
-
-				bomComponents = append(bomComponents, cdx.Component{
-					Licenses:   &licenses,
-					BOMRef:     c.DependencyPurl,
-					Type:       cdx.ComponentType(c.Dependency.ComponentType),
-					PackageURL: c.DependencyPurl,
-					Version:    c.Dependency.Version,
-					Name:       fmt.Sprintf("%s/%s", p.Namespace, p.Name),
+			//first check if the license is overwritten by a license risk#
+			overwrite, exists := componentLicenseOverwrites[pURL.String()]
+			if exists && overwrite != "" {
+				// TO-DO: check if the license provided by the user is a valid license or not
+				licenses = append(licenses, cdx.LicenseChoice{
+					License: &cdx.License{
+						ID: overwrite,
+					},
 				})
 
+			} else if component.Dependency.License != nil && *component.Dependency.License != "" {
+				if *component.Dependency.License != "non-standard" {
+					licenses = append(licenses, cdx.LicenseChoice{
+						License: &cdx.License{
+							ID: *component.Dependency.License,
+						},
+					})
+				} else {
+					licenses = append(licenses, cdx.LicenseChoice{
+						License: &cdx.License{
+							Name: "non-standard",
+						},
+					})
+				}
+
+			} else if component.Dependency.ComponentProject != nil && component.Dependency.ComponentProject.License != "" {
+				// if the license is not a valid osi license we need to assign that to the name attribute in the license choice struct, because ID can only contain valid IDs
+				if component.Dependency.ComponentProject.License != "non-standard" {
+					licenses = append(licenses, cdx.LicenseChoice{
+						License: &cdx.License{
+							ID: component.Dependency.ComponentProject.License,
+						},
+					})
+				} else {
+					licenses = append(licenses, cdx.LicenseChoice{
+						License: &cdx.License{
+							Name: "non-standard",
+						},
+					})
+				}
 			}
+
+			bomComponents = append(bomComponents, cdx.Component{
+				Licenses:   &licenses,
+				BOMRef:     component.DependencyPurl,
+				Type:       cdx.ComponentType(component.Dependency.ComponentType),
+				PackageURL: component.DependencyPurl,
+				Version:    component.Dependency.Version,
+				Name:       component.DependencyPurl,
+			})
 		}
 	}
 
@@ -773,7 +811,7 @@ func (s *service) BuildSBOM(assetVersion models.AssetVersion, version string, or
 	}
 	bom.Dependencies = &bomDependencies
 	bom.Components = &bomComponents
-	return &bom
+	return &bom, nil
 }
 
 func dependencyVulnToOpenVexStatus(dependencyVuln models.DependencyVuln) vex.Status {
@@ -835,7 +873,7 @@ func (s *service) BuildOpenVeX(asset models.Asset, assetVersion models.AssetVers
 func (s *service) BuildVeX(asset models.Asset, assetVersion models.AssetVersion, organizationName string, dependencyVulns []models.DependencyVuln) *cdx.BOM {
 	bom := cdx.BOM{
 		BOMFormat:   "CycloneDX",
-		SpecVersion: cdx.SpecVersion1_5,
+		SpecVersion: cdx.SpecVersion1_6,
 		Version:     1,
 		Metadata: &cdx.Metadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),

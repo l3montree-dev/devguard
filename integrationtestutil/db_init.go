@@ -58,6 +58,7 @@ func InitDatabaseContainer(initDBSQLPath string) (core.DB, func()) {
 		&models.AssetVersion{},
 		&models.CVE{},
 		&models.DependencyVuln{},
+		&models.FirstPartyVuln{},
 		&models.VulnEvent{},
 		&models.Exploit{},
 		&models.ComponentDependency{},

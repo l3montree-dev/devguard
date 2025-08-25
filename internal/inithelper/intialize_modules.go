@@ -79,10 +79,17 @@ func CreateAssetVersionService(db core.DB, oauth2 map[string]*gitlabint.GitlabOa
 		repositories.NewVulnEventRepository(db),
 		CreateComponentService(db, depsDevService),
 		thirdPartyIntegration,
+		repositories.NewLicenseRiskRepository(db),
 	)
 }
 
 func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.GitlabOauth2Config, rbac core.RBACProvider, clientFactory core.GitlabClientFactory, depsDevService core.DepsDevService) *assetversion.AssetVersionController {
+	cmpService := component.NewComponentService(
+		depsDevService,
+		repositories.NewComponentProjectRepository(db),
+		repositories.NewComponentRepository(db),
+		CreateLicenseRiskService(db),
+	)
 	return assetversion.NewAssetVersionController(
 		repositories.NewAssetVersionRepository(db),
 		CreateAssetVersionService(db, oauth2, rbac, clientFactory, depsDevService),
@@ -91,6 +98,7 @@ func CreateAssetVersionController(db core.DB, oauth2 map[string]*gitlabint.Gitla
 		CreateDependencyVulnService(db, oauth2, rbac, clientFactory),
 		repositories.NewSupplyChainRepository(db),
 		repositories.NewLicenseRiskRepository(db),
+		&cmpService,
 	)
 }
 

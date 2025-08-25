@@ -161,7 +161,6 @@ func createDependencyVulns(db core.DB, assetID uuid.UUID, assetVersionName strin
 	cve := models.CVE{
 		CVE:         "CVE-2024-51479",
 		Description: "Test usage",
-		Severity:    models.SeverityHigh,
 		CVSS:        7.50,
 	}
 	if err = db.Create(&cve).Error; err != nil {

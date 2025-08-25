@@ -168,6 +168,7 @@ type FirstPartyVulnRepository interface {
 	ListByScanner(assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 	ApplyAndSave(tx DB, dependencyVuln *models.FirstPartyVuln, vulnEvent *models.VulnEvent) error
 	GetByAssetVersion(tx DB, assetVersionName string, assetID uuid.UUID) ([]models.FirstPartyVuln, error)
+	GetFirstPartyVulnsByOtherAssetVersions(tx DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.FirstPartyVuln, error)
 }
 
 type LicenseRiskRepository interface {
@@ -271,7 +272,7 @@ type FireAndForgetSynchronizer interface {
 }
 
 type AssetVersionService interface {
-	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) *cdx.BOM
+	BuildSBOM(assetVersion models.AssetVersion, version, orgName string, components []models.ComponentDependency) (*cdx.BOM, error)
 	BuildVeX(asset models.Asset, assetVersion models.AssetVersion, orgName string, dependencyVulns []models.DependencyVuln) *cdx.BOM
 	GetAssetVersionsByAssetID(assetID uuid.UUID) ([]models.AssetVersion, error)
 	HandleFirstPartyVulnResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, sarifScan common.SarifResult, scannerID string, userID string) ([]models.FirstPartyVuln, []models.FirstPartyVuln, []models.FirstPartyVuln, error)
@@ -297,6 +298,7 @@ type AssetVersionRepository interface {
 type FirstPartyVulnService interface {
 	UserFixedFirstPartyVulns(tx DB, userID string, firstPartyVulns []models.FirstPartyVuln) error
 	UserDetectedFirstPartyVulns(tx DB, userID string, scannerID string, firstPartyVulns []models.FirstPartyVuln) error
+	UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error
 	UpdateFirstPartyVulnState(tx DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error)
 	SyncIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, vulnList []models.FirstPartyVuln) error
 	SyncAllIssues(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion) error
@@ -411,12 +413,14 @@ type ComponentService interface {
 	GetAndSaveLicenseInformation(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error)
 	RefreshComponentProjectInformation(project models.ComponentProject)
 	GetLicense(component models.Component) (models.Component, error)
+	// RefreshAllLicenses forces re-fetching license information for all components of an asset version
+	RefreshAllLicenses(assetVersion models.AssetVersion, scannerID string) ([]models.Component, error)
 }
 
 type LicenseRiskService interface {
 	FindLicenseRisksInComponents(assetVersion models.AssetVersion, components []models.Component, scannerID string) error
 	UpdateLicenseRiskState(tx DB, userID string, licenseRisk *models.LicenseRisk, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error)
-	MakeFinalLicenseDecision(vulnID string, finalLicense string, userID string) error
+	MakeFinalLicenseDecision(vulnID, finalLicense, justification, userID string) error
 }
 
 type AccessControl interface {

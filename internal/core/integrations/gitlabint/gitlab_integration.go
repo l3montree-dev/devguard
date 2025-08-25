@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -332,6 +333,25 @@ func (g *GitlabIntegration) ListOrgs(ctx core.Context) ([]models.Org, error) {
 	return utils.Map(tokens, oauth2TokenToOrg), nil
 }
 
+type groupWithAccessLevel struct {
+	group        *gitlab.Group
+	avatarBase64 *string
+	accessLevel  gitlab.AccessLevelValue
+}
+
+func getAllParentGroups(idMap map[int]*gitlab.Group, group *gitlab.Group) []*gitlab.Group {
+	var parentGroups []*gitlab.Group
+	for group.ParentID != 0 {
+		parentGroup, ok := idMap[group.ParentID]
+		if !ok {
+			break
+		}
+		parentGroups = append(parentGroups, parentGroup)
+		group = parentGroup
+	}
+	return parentGroups
+}
+
 func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, providerID string) ([]models.Project, []core.Role, error) {
 	// get the oauth2 tokens for this user
 	token, err := g.gitlabOauth2TokenRepository.FindByUserIDAndProviderID(userID, providerID)
@@ -345,11 +365,12 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 		slog.Error("failed to create gitlab batch client", "err", err)
 		return nil, nil, err
 	}
-	// get the groups for this user
-	groups, _, err := gitlabClient.ListGroups(ctx, &gitlab.ListGroupsOptions{
-		ListOptions: gitlab.ListOptions{PerPage: 100},
-		//MinAccessLevel: utils.Ptr(gitlab.ReporterPermissions),
-		// only list groups where the user has at least reporter permissions
+
+	groups, err := fetchPaginatedData(func(page int) ([]*gitlab.Group, *gitlab.Response, error) {
+		// get the groups for this user
+		return gitlabClient.ListGroups(ctx, &gitlab.ListGroupsOptions{
+			ListOptions: gitlab.ListOptions{Page: page, PerPage: 100},
+		})
 	})
 
 	if err != nil {
@@ -357,14 +378,16 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 		return nil, nil, err
 	}
 
-	type groupWithAccessLevel struct {
-		group       *gitlab.Group
-		accessLevel gitlab.AccessLevelValue
+	errgroup := utils.ErrGroup[[]*groupWithAccessLevel](10)
+
+	// !!!we need to mark the user as member in ALL PARENT-GROUPS he has access to!!!
+	idMap := make(map[int]*gitlab.Group)
+	for _, group := range groups {
+		idMap[group.ID] = group
 	}
 
-	errgroup := utils.ErrGroup[*groupWithAccessLevel](10)
 	for _, group := range groups {
-		errgroup.Go(func() (*groupWithAccessLevel, error) {
+		errgroup.Go(func() ([]*groupWithAccessLevel, error) {
 			member, _, err := gitlabClient.GetMemberInGroup(ctx, token.GitLabUserID, (*group).ID)
 			if err != nil {
 				if strings.Contains(err.Error(), "403 Forbidden") || strings.Contains(err.Error(), "404 Not Found") {
@@ -374,10 +397,37 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 				}
 			}
 			if member.AccessLevel >= gitlab.ReporterPermissions {
-				return &groupWithAccessLevel{
-					group:       group,
-					accessLevel: member.AccessLevel,
-				}, nil
+				// check if we can fetch the avatar
+				var avatarBase64 *string
+				if group.AvatarURL != "" {
+					avatar, err := gitlabClient.FetchGroupAvatarBase64(group.ID)
+					if err != nil {
+						slog.Error("failed to fetch avatar", "err", err, "groupID", group.ID)
+						return nil, err
+					}
+					avatarBase64 = &avatar
+				}
+
+				// get all parent groups
+				parentGroups := getAllParentGroups(idMap, group)
+				res := make([]*groupWithAccessLevel, 0, len(parentGroups)+1)
+				// add the current group
+				res = append(res, &groupWithAccessLevel{
+					group:        group,
+					avatarBase64: avatarBase64,
+					accessLevel:  member.AccessLevel,
+				})
+
+				// add all parent groups
+				for _, parentGroup := range parentGroups {
+					res = append(res, &groupWithAccessLevel{
+						group:        parentGroup,
+						avatarBase64: nil,
+						accessLevel:  member.AccessLevel,
+					})
+				}
+				return res, nil
+
 			}
 			return nil, nil
 		})
@@ -387,17 +437,110 @@ func (g *GitlabIntegration) ListGroups(ctx context.Context, userID string, provi
 	if err != nil {
 		return nil, nil, err
 	}
-	cleanedGroups = utils.Filter(cleanedGroups, func(g *groupWithAccessLevel) bool {
+	cleanedGroupsFlat := utils.Filter(utils.Flat(cleanedGroups), func(g *groupWithAccessLevel) bool {
 		return g != nil && g.group != nil
 	})
 
-	return utils.Map(cleanedGroups, func(el *groupWithAccessLevel) models.Project {
-			return groupToProject(el.group, providerID)
+	// there might be duplicates now in the cleanedGroupsFlat - unique them by group ID. If a group has an avatar, we use that one, otherwise we use the first one we find.
+	uniqueIDMap := make(map[int]*groupWithAccessLevel)
+	for _, group := range cleanedGroupsFlat {
+		if existing, ok := uniqueIDMap[group.group.ID]; ok {
+			// if the existing group has an avatar, we keep it, otherwise we use the new one
+			if existing.avatarBase64 == nil && group.avatarBase64 != nil {
+				uniqueIDMap[group.group.ID] = group
+			}
+		} else {
+			// if the group is not in the map, we add it
+			uniqueIDMap[group.group.ID] = group
+		}
+	}
+
+	// convert the uniqueIdMap to a slice
+	cleanedGroupsFlat = make([]*groupWithAccessLevel, 0, len(uniqueIDMap))
+	for _, group := range uniqueIDMap {
+		cleanedGroupsFlat = append(cleanedGroupsFlat, group)
+	}
+
+	return utils.Map(cleanedGroupsFlat, func(el *groupWithAccessLevel) models.Project {
+			return groupToProject(el.avatarBase64, el.group, providerID)
 		}), utils.Map(
-			cleanedGroups, func(el *groupWithAccessLevel) core.Role {
+			cleanedGroupsFlat, func(el *groupWithAccessLevel) core.Role {
 				return gitlabAccessLevelToRole(el.accessLevel)
 			},
 		), nil
+}
+
+// Generic function to fetch paginated data with rate limiting and concurrency
+func fetchPaginatedData[T any](
+	fetchPage func(page int) ([]T, *gitlab.Response, error),
+) ([]T, error) {
+
+	// Channel to collect fetched data
+	dataChan := make(chan []T)
+	var wg sync.WaitGroup
+
+	// Fetch the first page
+	allData, response, err := fetchPage(1)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// check if total pages are defined - if not (thanks commit api), we have to work with the next page header
+	if response.TotalPages == 0 {
+		// work with the next page
+		for response.NextPage != 0 {
+			// Fetch the page
+			pageData, r, err := fetchPage(response.NextPage)
+
+			// update the response - otherwise this loop would run forever
+			response = r
+
+			if err != nil {
+				break
+			}
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				// Send fetched data to the channel
+				dataChan <- pageData
+			}()
+		}
+
+	} else if response.TotalPages > 1 { // we already fetched one page.
+		// Start fetching remaining pages concurrently
+		for page := response.NextPage; page <= response.TotalPages; page++ {
+			wg.Add(1)
+			go func(page int) {
+				defer wg.Done()
+				// Fetch the page
+				pageData, _, err := fetchPage(page)
+				if err != nil {
+					return
+				}
+
+				// Send fetched data to the channel
+				dataChan <- pageData
+			}(page)
+		}
+	}
+
+	// Collect all data from the channel
+	go func() {
+		wg.Wait()
+		close(dataChan)
+	}()
+
+	// Append data from the first page and the channel
+	// collect everything until the channel is closed
+	for pageData := range dataChan {
+		if pageData != nil {
+			allData = append(allData, pageData...)
+		}
+	}
+
+	return allData, nil
 }
 
 func gitlabAccessLevelToRole(accessLevel gitlab.AccessLevelValue) core.Role {
@@ -445,13 +588,25 @@ func (g *GitlabIntegration) ListProjects(ctx context.Context, userID string, pro
 	result := make([]models.Asset, 0, len(projects))
 	accessLevels := make([]core.Role, 0, len(projects))
 	for _, project := range projects {
+		// check if we can fetch the avatar
+		var avatarBase64 *string
+		if project.AvatarURL != "" {
+			avatar, err := gitlabClient.FetchProjectAvatarBase64(project.ID)
+			if err != nil {
+				slog.Error("failed to fetch avatar", "err", err, "projectID", project.ID)
+				// Continue without avatar instead of returning error
+			} else {
+				avatarBase64 = &avatar
+			}
+		}
+
 		// check if the project has a permissions set - otherwise it is an public project
 		if project.Permissions != nil && project.Permissions.ProjectAccess != nil {
-			result = append(result, projectToAsset(project, providerID))
+			result = append(result, projectToAsset(avatarBase64, project, providerID))
 			accessLevels = append(accessLevels, gitlabAccessLevelToRole(project.Permissions.ProjectAccess.AccessLevel))
 		} else {
 			// if the project has no permissions set, it is a public project - but we asked for min access level of developer, so we can assume that the user has at least developer permissions
-			result = append(result, projectToAsset(project, providerID))
+			result = append(result, projectToAsset(avatarBase64, project, providerID))
 			accessLevels = append(accessLevels, core.RoleMember) // default to member if no higher access level is found
 		}
 	}
@@ -486,7 +641,19 @@ func (g *GitlabIntegration) GetGroup(ctx context.Context, userID string, provide
 		slog.Error("failed to get organization", "err", err)
 		return models.Project{}, err
 	}
-	return groupToProject(group, providerID), nil
+
+	// check if the group has an avatar
+	var avatarBase64 *string
+	if group.AvatarURL != "" {
+		avatar, err := gitlabClient.FetchGroupAvatarBase64(group.ID)
+		if err != nil {
+			slog.Error("failed to fetch avatar", "err", err, "groupID", group.ID)
+			return models.Project{}, err
+		}
+		avatarBase64 = &avatar
+	}
+
+	return groupToProject(avatarBase64, group, providerID), nil
 }
 
 func (g *GitlabIntegration) GetRoleInGroup(ctx context.Context, userID string, providerID string, groupID string) (core.Role, error) {

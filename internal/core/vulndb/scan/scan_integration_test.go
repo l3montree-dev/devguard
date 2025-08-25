@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	integration_tests "github.com/l3montree-dev/devguard/integrationtestutil"
@@ -29,8 +30,8 @@ func TestScanning(t *testing.T) {
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	os.Setenv("OSI_LICENSES_API", "https://opensource.org/api/license/")
-	controller, _ := initHTTPController(t, db)
+
+	controller, _ := initHTTPController(t, db, true)
 
 	// scan the vulnerable sbom
 	app := echo.New()
@@ -237,13 +238,403 @@ func TestScanning(t *testing.T) {
 	})
 }
 
+func TestVulnerabilityLifecycleManagement(t *testing.T) {
+	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	defer terminate()
+
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
+	controller, _ := initHTTPController(t, db, true)
+
+	// scan the vulnerable sbom
+	app := echo.New()
+	createCVE2025_46569(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	setupContext := func(ctx core.Context) {
+		authSession := mocks.NewAuthSession(t)
+		authSession.On("GetUserID").Return("abc")
+		core.SetAsset(ctx, asset)
+		core.SetProject(ctx, project)
+		core.SetOrg(ctx, org)
+		core.SetSession(ctx, authSession)
+	}
+
+	t.Run("should copy all events when vulnerability is found on different branches - complete lifecycle test", func(t *testing.T) {
+		// Test comprehensive lifecycle management:
+		// 1. Scan branch A, find vulnerability
+		// 2. Accept vulnerability on branch A
+		// 3. Add a comment on branch A
+		// 4. Scan branch B, find same vulnerability
+		// 5. Verify vulnerability on branch B is automatically accepted and has all events copied
+
+		// Clear any existing vulnerabilities from previous tests
+		dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
+		vulns, _ := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		for _, vuln := range vulns {
+			db.Delete(&vuln)
+		}
+
+		// Step 1: Scan branch A and find vulnerability
+		recorder := httptest.NewRecorder()
+		sbomFile := sbomWithVulnerability()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Scanner", "lifecycle-scanner")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-a")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err := controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// Verify vulnerability was detected
+		vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 1)
+		branchAVuln := vulns[0]
+		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
+		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
+
+		// Step 2: Accept the vulnerability on branch A
+		acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepting this vulnerability for testing lifecycle management")
+		err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
+		assert.Nil(t, err)
+
+		// Step 3: Add a comment on branch A
+		commentEvent := models.NewCommentEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "This is a test comment for lifecycle verification")
+		err = dependencyVulnRepository.ApplyAndSave(nil, &branchAVuln, &commentEvent)
+		assert.Nil(t, err)
+
+		// Verify branch A vulnerability has both events and is accepted
+		vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 1)
+		branchAVuln = vulns[0]
+		assert.Equal(t, models.VulnStateAccepted, branchAVuln.State)
+		assert.Len(t, branchAVuln.Events, 3) // detected + accepted + comment
+
+		// Step 4: Scan branch B and find the same vulnerability
+		recorder = httptest.NewRecorder()
+		sbomFile = sbomWithVulnerability()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Scanner", "lifecycle-scanner")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-b")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// Step 5: Verify vulnerability lifecycle management worked correctly
+		vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 2) // Should now have vulnerabilities for both branches
+
+		// Find both vulnerabilities
+		var branchAFinalVuln, branchBVuln models.DependencyVuln
+		for _, vuln := range vulns {
+			switch vuln.AssetVersionName {
+			case "branch-a":
+				branchAFinalVuln = vuln
+			case "branch-b":
+				branchBVuln = vuln
+			}
+		}
+
+		// Verify branch A vulnerability is still accepted and has original events
+		assert.Equal(t, "branch-a", branchAFinalVuln.AssetVersionName)
+		assert.Equal(t, models.VulnStateAccepted, branchAFinalVuln.State)
+		assert.Len(t, branchAFinalVuln.Events, 3) // detected + accepted + comment
+
+		// Verify branch B vulnerability inherited the accepted state and all events
+		assert.Equal(t, "branch-b", branchBVuln.AssetVersionName)
+		assert.Equal(t, models.VulnStateAccepted, branchBVuln.State)
+		assert.Len(t, branchBVuln.Events, 3) // copied: detected + accepted + comment (NO new detected event)
+
+		// Verify the events were copied correctly
+		branchBEvents := branchBVuln.Events
+
+		// Find the copied events in branch B
+		var copiedDetectedEvent models.VulnEvent
+		var copiedAcceptedEvent models.VulnEvent
+		var copiedCommentEvent models.VulnEvent
+
+		for _, event := range branchBEvents {
+			switch event.Type {
+			case models.EventTypeDetected:
+				copiedDetectedEvent = event
+			case models.EventTypeAccepted:
+				copiedAcceptedEvent = event
+			case models.EventTypeComment:
+				copiedCommentEvent = event
+			}
+		}
+
+		// Verify the copied detected event
+		assert.NotEmpty(t, copiedDetectedEvent)
+		assert.Equal(t, models.EventTypeDetected, copiedDetectedEvent.Type)
+		assert.Equal(t, branchBVuln.CalculateHash(), copiedDetectedEvent.VulnID) // Should reference branch B vuln ID
+
+		// Verify the accepted event was copied correctly
+		assert.NotEmpty(t, copiedAcceptedEvent)
+		assert.Equal(t, models.EventTypeAccepted, copiedAcceptedEvent.Type)
+		assert.Equal(t, "test-user", copiedAcceptedEvent.UserID)
+		assert.Equal(t, "Accepting this vulnerability for testing lifecycle management", *copiedAcceptedEvent.Justification)
+		assert.Equal(t, branchBVuln.CalculateHash(), copiedAcceptedEvent.VulnID) // Should reference branch B vuln ID
+
+		// Verify the comment event was copied correctly
+		assert.NotEmpty(t, copiedCommentEvent)
+		assert.Equal(t, models.EventTypeComment, copiedCommentEvent.Type)
+		assert.Equal(t, "test-user", copiedCommentEvent.UserID)
+		assert.Equal(t, "This is a test comment for lifecycle verification", *copiedCommentEvent.Justification)
+		assert.Equal(t, branchBVuln.CalculateHash(), copiedCommentEvent.VulnID) // Should reference branch B vuln ID
+
+		// Test edge case: Scan branch C to ensure it also inherits the state
+		recorder = httptest.NewRecorder()
+		sbomFile = sbomWithVulnerability()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Scanner", "lifecycle-scanner")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-c")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// Verify branch C also inherits the accepted state
+		vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 3) // Should now have vulnerabilities for all three branches
+
+		var branchCVuln models.DependencyVuln
+		for _, vuln := range vulns {
+			if vuln.AssetVersionName == "branch-c" {
+				branchCVuln = vuln
+			}
+		}
+
+		assert.Equal(t, "branch-c", branchCVuln.AssetVersionName)
+		assert.Equal(t, models.VulnStateAccepted, branchCVuln.State)
+		assert.Len(t, branchCVuln.Events, 3) // Should have all copied events (detected + accepted + comment) but NO new detected event
+	})
+
+	t.Run("should handle false positive events in lifecycle management", func(t *testing.T) {
+		// Clear any existing vulnerabilities
+		dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
+		vulns, _ := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		for _, vuln := range vulns {
+			db.Delete(&vuln)
+		}
+
+		// Step 1: Scan branch D and find vulnerability
+		recorder := httptest.NewRecorder()
+		sbomFile := sbomWithVulnerability()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Scanner", "lifecycle-scanner-fp")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-d")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err := controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+
+		vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 1)
+		branchDVuln := vulns[0]
+
+		// Step 2: Mark as false positive on branch D
+		fpEvent := models.NewFalsePositiveEvent(branchDVuln.ID, branchDVuln.GetType(), "test-user", "This is a false positive", models.ComponentNotPresent, "lifecycle-scanner-fp")
+		err = dependencyVulnRepository.ApplyAndSave(nil, &branchDVuln, &fpEvent)
+		assert.Nil(t, err)
+
+		// Step 3: Scan branch E and verify false positive is inherited
+		recorder = httptest.NewRecorder()
+		sbomFile = sbomWithVulnerability()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Scanner", "lifecycle-scanner-fp")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-e")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+
+		vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 2)
+
+		var branchEVuln models.DependencyVuln
+		for _, vuln := range vulns {
+			if vuln.AssetVersionName == "branch-e" {
+				branchEVuln = vuln
+			}
+		}
+
+		// Verify branch E inherited the false positive state
+		assert.Equal(t, models.VulnStateFalsePositive, branchEVuln.State)
+		assert.Len(t, branchEVuln.Events, 2) // Should have copied events: detected + false positive (NO new detected event)
+
+		// Find the false positive event
+		var copiedFPEvent models.VulnEvent
+		for _, event := range branchEVuln.Events {
+			if event.Type == models.EventTypeFalsePositive {
+				copiedFPEvent = event
+				break
+			}
+		}
+
+		assert.NotEmpty(t, copiedFPEvent)
+		assert.Equal(t, "This is a false positive", *copiedFPEvent.Justification)
+	})
+}
+
+func TestFirstPartyVulnerabilityLifecycleManagement(t *testing.T) {
+	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	defer terminate()
+
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
+	controller, _ := initHTTPController(t, db, false)
+
+	app := echo.New()
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	setupContext := func(ctx core.Context) {
+		authSession := mocks.NewAuthSession(t)
+		authSession.On("GetUserID").Return("test-user")
+		core.SetAsset(ctx, asset)
+		core.SetProject(ctx, project)
+		core.SetOrg(ctx, org)
+		core.SetSession(ctx, authSession)
+	}
+
+	firstPartyVulnRepository := repositories.NewFirstPartyVulnerabilityRepository(db)
+
+	t.Run("should copy all events when first party vulnerability is found on different branches", func(t *testing.T) {
+		// Clear any existing vulnerabilities
+		vulns, _ := firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+		for _, vuln := range vulns {
+			db.Delete(&vuln)
+		}
+
+		// Step 1: Scan branch A and find first party vulnerability
+		recorder := httptest.NewRecorder()
+		sarifFile := sarifWithFirstPartyVuln()
+		req := httptest.NewRequest("POST", "/vulndb/scan/sarif", sarifFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Scanner", "first-party-scanner")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-a")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err := controller.FirstPartyVulnScan(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// Verify vulnerability was detected and reload with events
+		vulns, err = firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 1)
+		branchAVuln := vulns[0]
+		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
+		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
+
+		// Step 2: Accept vulnerability and add comment on branch A
+		acceptedEvent := models.NewAcceptedEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Accepted for lifecycle testing")
+		err = firstPartyVulnRepository.ApplyAndSave(nil, &branchAVuln, &acceptedEvent)
+		assert.Nil(t, err)
+
+		commentEvent := models.NewCommentEvent(branchAVuln.ID, branchAVuln.GetType(), "test-user", "Test comment for lifecycle verification")
+		err = firstPartyVulnRepository.ApplyAndSave(nil, &branchAVuln, &commentEvent)
+		assert.Nil(t, err)
+
+		// Reload to verify events were applied
+		vulns, err = firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		branchAVuln = vulns[0]
+		assert.Equal(t, models.VulnStateAccepted, branchAVuln.State)
+		assert.Len(t, branchAVuln.Events, 3) // detected + accepted + comment
+
+		// Step 3: Scan branch B and find the same vulnerability
+		recorder = httptest.NewRecorder()
+		sarifFile = sarifWithFirstPartyVuln()
+		req = httptest.NewRequest("POST", "/vulndb/scan/sarif", sarifFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Scanner", "first-party-scanner")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-b")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.FirstPartyVulnScan(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		// Reload all vulnerabilities with events
+		vulns, err = firstPartyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 2)
+
+		var branchBVuln models.FirstPartyVuln
+		for _, vuln := range vulns {
+			if vuln.AssetVersionName == "branch-b" {
+				branchBVuln = vuln
+			}
+		}
+
+		// Verify vulnerability exists on branch B
+		assert.NotEmpty(t, branchBVuln.ID)
+		assert.Equal(t, "branch-b", branchBVuln.AssetVersionName)
+		assert.Equal(t, models.VulnStateAccepted, branchBVuln.State)
+		assert.Len(t, branchBVuln.Events, 3) // detected + accepted + comment
+
+		// Verify events were copied correctly
+		var copiedAcceptedEvent, copiedCommentEvent models.VulnEvent
+		for _, event := range branchBVuln.Events {
+			switch event.Type {
+			case models.EventTypeAccepted:
+				copiedAcceptedEvent = event
+			case models.EventTypeComment:
+				copiedCommentEvent = event
+			}
+		}
+
+		// Verify accepted event was copied correctly
+		assert.NotEmpty(t, copiedAcceptedEvent.ID)
+		assert.Equal(t, models.EventTypeAccepted, copiedAcceptedEvent.Type)
+		assert.Equal(t, "test-user", copiedAcceptedEvent.UserID)
+		assert.Equal(t, "Accepted for lifecycle testing", *copiedAcceptedEvent.Justification)
+		assert.Equal(t, branchBVuln.CalculateHash(), copiedAcceptedEvent.VulnID)
+
+		// Verify comment event was copied correctly
+		assert.NotEmpty(t, copiedCommentEvent.ID)
+		assert.Equal(t, models.EventTypeComment, copiedCommentEvent.Type)
+		assert.Equal(t, "test-user", copiedCommentEvent.UserID)
+		assert.Equal(t, "Test comment for lifecycle verification", *copiedCommentEvent.Justification)
+		assert.Equal(t, branchBVuln.CalculateHash(), copiedCommentEvent.VulnID)
+	})
+}
+
 func TestTicketHandling(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()
 
 	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
-	os.Setenv("OSI_LICENSES_API", "https://opensource.org/api/license/")
-	controller, gitlabClientFacade := initHTTPController(t, db)
+
+	controller, gitlabClientFacade := initHTTPController(t, db, true)
 
 	// scan the vulnerable sbom
 	app := echo.New()
@@ -503,14 +894,75 @@ func sbomWithoutVulnerability() *os.File {
 	return file
 }
 
-func initHTTPController(t *testing.T, db core.DB) (*scan.HTTPController, *mocks.GitlabClientFacade) {
+func sarifWithFirstPartyVuln() *strings.Reader {
+	sarifContent := `{
+		"version": "2.1.0",
+		"$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+		"runs": [
+			{
+				"tool": {
+					"driver": {
+						"name": "test-scanner",
+						"version": "1.0.0",
+						"rules": [
+							{
+								"id": "test-rule-fp",
+								"name": "Test Security Rule",
+								"shortDescription": {
+									"text": "A test security vulnerability"
+								},
+								"fullDescription": {
+									"text": "This is a test security vulnerability for lifecycle testing"
+								},
+								"help": {
+									"text": "Fix this vulnerability by updating the code"
+								}
+							}
+						]
+					}
+				},
+				"results": [
+					{
+						"ruleId": "test-rule-fp",
+						"message": {
+							"text": "Test security issue found"
+						},
+						"locations": [
+							{
+								"physicalLocation": {
+									"artifactLocation": {
+										"uri": "src/test.go"
+									},
+									"region": {
+										"startLine": 10,
+										"endLine": 10,
+										"startColumn": 5,
+										"endColumn": 15,
+										"snippet": {
+											"text": "vulnerable code"
+										}
+									}
+								}
+							}
+						]
+					}
+				]
+			}
+		]
+	}`
+	return strings.NewReader(sarifContent)
+}
+
+func initHTTPController(t *testing.T, db core.DB, mockDepsDev bool) (*scan.HTTPController, *mocks.GitlabClientFacade) {
 	// there are a lot of repositories and services that need to be initialized...
 	clientfactory, client := integration_tests.NewTestClientFactory(t)
 
 	repositories.NewExploitRepository(db)
 	// mock the depsDevService to avoid any external calls during tests
 	depsDevService := mocks.NewDepsDevService(t)
-	depsDevService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.DepsDevVersionResponse{}, nil)
+	if mockDepsDev {
+		depsDevService.On("GetVersion", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(common.DepsDevVersionResponse{}, nil)
+	}
 
 	controller := inithelper.CreateHTTPController(db, gitlabint.NewGitLabOauth2Integrations(db), mocks.NewRBACProvider(t), clientfactory, depsDevService)
 	// do not use concurrency in this test, because we want to test the ticket creation

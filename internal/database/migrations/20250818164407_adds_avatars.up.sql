@@ -13,3 +13,8 @@
 -- You should have received a copy of the GNU Affero General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+-- Add avatar column to projects table
+ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS avatar TEXT;
+
+-- Add avatar column to assets table  
+ALTER TABLE public.assets ADD COLUMN  IF NOT EXISTS avatar TEXT;

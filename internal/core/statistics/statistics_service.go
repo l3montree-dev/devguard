@@ -3,7 +3,6 @@ package statistics
 import (
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -66,6 +65,8 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 		var projectRiskHistory = models.ProjectRiskHistory{}
 
 		openDependencyVulns, fixedDependencyVulns := 0, 0
+		totalLow, totalMedium, totalHigh, totalCritical := 0, 0, 0, 0
+		totalLowCvss, totalMediumCvss, totalHighCvss, totalCriticalCvss := 0, 0, 0, 0
 
 		for _, assetHistory := range assetsHistory {
 			if assetHistory.OpenDependencyVulns > 0 {
@@ -73,6 +74,17 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 			} else if assetHistory.FixedDependencyVulns > 0 {
 				fixedDependencyVulns += assetHistory.FixedDependencyVulns
 			}
+
+			// Aggregate severity counts
+			totalLow += assetHistory.Low
+			totalMedium += assetHistory.Medium
+			totalHigh += assetHistory.High
+			totalCritical += assetHistory.Critical
+
+			totalLowCvss += assetHistory.LowCVSS
+			totalMediumCvss += assetHistory.MediumCVSS
+			totalHighCvss += assetHistory.HighCVSS
+			totalCriticalCvss += assetHistory.CriticalCVSS
 
 			if riskAggregationOpen.Min > assetHistory.MinOpenRisk {
 				riskAggregationOpen.Min = assetHistory.MinOpenRisk
@@ -115,20 +127,32 @@ func (s *service) updateProjectRiskAggregation(projectID uuid.UUID, begin, end t
 
 		projectRiskHistory = models.ProjectRiskHistory{
 			ProjectID: projectID,
-			Day:       time,
+			History: models.History{
+				Day: time,
 
-			SumOpenRisk: openRisk.Sum,
-			AvgOpenRisk: openRisk.Avg,
-			MaxOpenRisk: openRisk.Max,
-			MinOpenRisk: openRisk.Min,
+				SumOpenRisk: openRisk.Sum,
+				AvgOpenRisk: openRisk.Avg,
+				MaxOpenRisk: openRisk.Max,
+				MinOpenRisk: openRisk.Min,
 
-			SumClosedRisk: fixedRisk.Sum,
-			AvgClosedRisk: fixedRisk.Avg,
-			MaxClosedRisk: fixedRisk.Max,
-			MinClosedRisk: fixedRisk.Min,
+				SumClosedRisk:        fixedRisk.Sum,
+				AvgClosedRisk:        fixedRisk.Avg,
+				MaxClosedRisk:        fixedRisk.Max,
+				MinClosedRisk:        fixedRisk.Min,
+				OpenDependencyVulns:  openDependencyVulns,
+				FixedDependencyVulns: fixedDependencyVulns,
+				Distribution: models.Distribution{
+					Low:      totalLow,
+					Medium:   totalMedium,
+					High:     totalHigh,
+					Critical: totalCritical,
 
-			OpenDependencyVulns:  openDependencyVulns,
-			FixedDependencyVulns: fixedDependencyVulns,
+					LowCVSS:      totalLowCvss,
+					MediumCVSS:   totalMediumCvss,
+					HighCVSS:     totalHighCvss,
+					CriticalCVSS: totalCriticalCvss,
+				},
+			},
 		}
 		err = s.projectRiskHistoryRepository.UpdateRiskAggregation(&projectRiskHistory)
 		if err != nil {
@@ -166,13 +190,14 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 		}
 
 		openDependencyVulns, fixedDependencyVulns := 0, 0
+		var openVulns []models.DependencyVuln
 
 		for _, dependencyVuln := range dependencyVulns {
 			var key string
 			if dependencyVuln.State == models.VulnStateOpen {
 				openDependencyVulns++
 				key = "open"
-
+				openVulns = append(openVulns, dependencyVuln)
 			} else {
 				fixedDependencyVulns++
 				key = "fixed"
@@ -216,23 +241,39 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 			fixedRisk.Avg = fixedRisk.Sum / float64(fixedDependencyVulns)
 		}
 
+		// Calculate severity counts
+		lowRisk, mediumRisk, highRisk, criticalRisk := calculateSeverityCountsByRisk(openVulns)
+		lowCvss, mediumCvss, highCvss, criticalCvss := calculateSeverityCountsByCvss(openVulns)
+
 		result := models.AssetRiskHistory{
 			AssetVersionName: assetVersion.Name,
 			AssetID:          assetID,
-			Day:              time,
+			History: models.History{
+				Day: time,
 
-			SumOpenRisk: openRisk.Sum,
-			AvgOpenRisk: openRisk.Avg,
-			MaxOpenRisk: openRisk.Max,
-			MinOpenRisk: openRisk.Min,
+				SumOpenRisk: openRisk.Sum,
+				AvgOpenRisk: openRisk.Avg,
+				MaxOpenRisk: openRisk.Max,
+				MinOpenRisk: openRisk.Min,
 
-			SumClosedRisk: fixedRisk.Sum,
-			AvgClosedRisk: fixedRisk.Avg,
-			MaxClosedRisk: fixedRisk.Max,
-			MinClosedRisk: fixedRisk.Min,
+				SumClosedRisk:        fixedRisk.Sum,
+				AvgClosedRisk:        fixedRisk.Avg,
+				MaxClosedRisk:        fixedRisk.Max,
+				MinClosedRisk:        fixedRisk.Min,
+				OpenDependencyVulns:  openDependencyVulns,
+				FixedDependencyVulns: fixedDependencyVulns,
+				Distribution: models.Distribution{
+					Low:      lowRisk,
+					Medium:   mediumRisk,
+					High:     highRisk,
+					Critical: criticalRisk,
 
-			OpenDependencyVulns:  openDependencyVulns,
-			FixedDependencyVulns: fixedDependencyVulns,
+					LowCVSS:      lowCvss,
+					MediumCVSS:   mediumCvss,
+					HighCVSS:     highCvss,
+					CriticalCVSS: criticalCvss,
+				},
+			},
 		}
 
 		err = s.assetRiskHistoryRepository.UpdateRiskAggregation(&result)
@@ -286,23 +327,54 @@ func (s *service) GetProjectRiskHistory(projectID uuid.UUID, start time.Time, en
 	return s.projectRiskHistoryRepository.GetRiskHistory(projectID, start, end)
 }
 
-func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error) {
+func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error) {
 
 	dependencyVulns, err := s.dependencyVulnRepository.GetAllOpenVulnsByAssetVersionNameAndAssetID(nil, assetVersionName, assetID)
 	if err != nil {
 		return nil, err
 	}
 
-	totalRiskPerComponent := make(map[string]float64)
+	distributionPerComponent := make(map[string]models.Distribution)
 
-	for _, f := range dependencyVulns {
-		damagedPkg := f.ComponentPurl
-		parts := strings.Split(*damagedPkg, ":")
-		damagedPkg = &parts[1]
-		totalRiskPerComponent[*damagedPkg] += utils.OrDefault(f.RawRiskAssessment, 0)
+	for _, dependencyVuln := range dependencyVulns {
+		if dependencyVuln.ComponentPurl == nil {
+			continue
+		}
+		componentName := *dependencyVuln.ComponentPurl
+		if _, exists := distributionPerComponent[componentName]; !exists {
+			distributionPerComponent[componentName] = models.Distribution{}
+		}
+		distribution := distributionPerComponent[componentName]
+
+		risk := utils.OrDefault(dependencyVuln.RawRiskAssessment, 0)
+		cvss := float64(dependencyVuln.CVE.CVSS)
+
+		switch {
+		case risk >= 0.0 && risk < 4.0:
+			distribution.Low++
+		case risk >= 4.0 && risk < 7.0:
+			distribution.Medium++
+		case risk >= 7.0 && risk < 9.0:
+			distribution.High++
+		case risk >= 9.0 && risk <= 10.0:
+			distribution.Critical++
+		}
+
+		switch {
+		case cvss >= 0.0 && cvss < 4.0:
+			distribution.LowCVSS++
+		case cvss >= 4.0 && cvss < 7.0:
+			distribution.MediumCVSS++
+		case cvss >= 7.0 && cvss < 9.0:
+			distribution.HighCVSS++
+		case cvss >= 9.0 && cvss <= 10.0:
+			distribution.CriticalCVSS++
+		}
+
+		distributionPerComponent[componentName] = distribution
 	}
 
-	return totalRiskPerComponent, nil
+	return distributionPerComponent, nil
 }
 
 func (s *service) GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
@@ -362,6 +434,40 @@ func (s *service) GetDependencyVulnAggregationStateAndChangeSince(assetVersionNa
 		Now: nowState,
 		Was: wasState,
 	}, nil
+}
+
+func calculateSeverityCountsByRisk(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+	for _, vuln := range dependencyVulns {
+		risk := utils.OrDefault(vuln.RawRiskAssessment, 0)
+		switch {
+		case risk >= 0.0 && risk < 4.0:
+			low++
+		case risk >= 4.0 && risk < 7.0:
+			medium++
+		case risk >= 7.0 && risk < 9.0:
+			high++
+		case risk >= 9.0 && risk <= 10.0:
+			critical++
+		}
+	}
+	return
+}
+
+func calculateSeverityCountsByCvss(dependencyVulns []models.DependencyVuln) (low, medium, high, critical int) {
+	for _, vuln := range dependencyVulns {
+		cvss := float64(vuln.CVE.CVSS)
+		switch {
+		case cvss >= 0.0 && cvss < 4.0:
+			low++
+		case cvss >= 4.0 && cvss < 7.0:
+			medium++
+		case cvss >= 7.0 && cvss < 9.0:
+			high++
+		case cvss >= 9.0 && cvss <= 10.0:
+			critical++
+		}
+	}
+	return
 }
 
 func calculateDependencyVulnAggregationState(dependencyVulns []models.DependencyVuln) DependencyVulnAggregationState {

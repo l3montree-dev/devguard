@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/core"
 	"github.com/l3montree-dev/devguard/internal/database/models"
@@ -70,6 +72,58 @@ func (s *firstPartyVulnService) UserDetectedFirstPartyVulns(tx core.DB, userID, 
 		return err
 	}
 	return s.vulnEventRepository.SaveBatch(tx, events)
+}
+
+func (s *firstPartyVulnService) UserDetectedExistingFirstPartyVulnOnDifferentBranch(tx core.DB, scannerID string, firstPartyVulns []models.FirstPartyVuln, alreadyExistingEvents [][]models.VulnEvent, assetVersion models.AssetVersion, asset models.Asset) error {
+	if len(firstPartyVulns) == 0 {
+		return nil
+	}
+
+	events := make([][]models.VulnEvent, len(firstPartyVulns))
+
+	for i, firstPartyVuln := range firstPartyVulns {
+		// copy all events for this vulnerability
+		if len(alreadyExistingEvents[i]) != 0 {
+			events[i] = utils.Map(alreadyExistingEvents[i], func(el models.VulnEvent) models.VulnEvent {
+				// Create a proper copy of the event
+				newEvent := models.VulnEvent{
+					Model:                    models.Model{}, // New model with empty ID and timestamps
+					Type:                     el.Type,
+					VulnID:                   firstPartyVuln.CalculateHash(),
+					VulnType:                 el.VulnType,
+					UserID:                   el.UserID,
+					Justification:            el.Justification,
+					MechanicalJustification:  el.MechanicalJustification,
+					ArbitraryJSONData:        el.ArbitraryJSONData,
+					OriginalAssetVersionName: el.OriginalAssetVersionName,
+				}
+				newEvent.ID = uuid.Nil
+				newEvent.CreatedAt = el.CreatedAt
+				newEvent.UpdatedAt = time.Now()
+				return newEvent
+			})
+		}
+		// replay all events on the firstPartyVuln
+		// but sort them by the time they were created ascending
+		slices.SortStableFunc(events[i], func(a, b models.VulnEvent) int {
+			if a.CreatedAt.Before(b.CreatedAt) {
+				return -1
+			} else if a.CreatedAt.After(b.CreatedAt) {
+				return 1
+			}
+			return 0
+		})
+		for _, ev := range events[i] {
+			ev.Apply(&firstPartyVulns[i])
+		}
+	}
+
+	err := s.firstPartyVulnRepository.SaveBatch(tx, firstPartyVulns)
+	if err != nil {
+		return err
+	}
+
+	return s.vulnEventRepository.SaveBatch(tx, utils.Flat(events))
 }
 
 func (s *firstPartyVulnService) UpdateFirstPartyVulnState(tx core.DB, userID string, firstPartyVuln *models.FirstPartyVuln, statusType string, justification string, mechanicalJustification models.MechanicalJustificationType) (models.VulnEvent, error) {

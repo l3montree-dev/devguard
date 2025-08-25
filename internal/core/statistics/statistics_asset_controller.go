@@ -13,17 +13,15 @@ import (
 )
 
 type statisticsService interface {
-	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]float64, error)
+	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
 	GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetVersionCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
 	GetDependencyVulnAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (DependencyVulnAggregationStateAndChange, error)
-
 	GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetDependencyCountPerscanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
 	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, start time.Time, end time.Time, updateProject bool) error
-
 	GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)
 }
 

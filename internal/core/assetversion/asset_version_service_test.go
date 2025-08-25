@@ -355,8 +355,6 @@ func TestCreateProjectTitle(t *testing.T) {
 
 func TestDiffVulnsBetweenBranches(t *testing.T) {
 	t.Run("should identify new vulnerabilities not on other branch", func(t *testing.T) {
-		scannerID := "test-scanner"
-
 		foundVulnerabilities := []models.DependencyVuln{
 			{
 				CVEID: utils.Ptr("CVE-2023-0001"),
@@ -381,7 +379,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			},
 		}
 
-		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, foundVulnerabilities, existingDependencyVulns)
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
 
 		assert.Len(t, newDetectedVulnsNotOnOtherBranch, 2)
 		assert.Empty(t, newDetectedButOnOtherBranchExisting)
@@ -391,8 +389,6 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 	})
 
 	t.Run("should identify vulnerabilities that exist on other branch", func(t *testing.T) {
-		scannerID := "test-scanner"
-
 		foundVulnerabilities := []models.DependencyVuln{
 			{
 				CVEID: utils.Ptr("CVE-2023-0001"),
@@ -416,7 +412,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			},
 		}
 
-		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, foundVulnerabilities, existingDependencyVulns)
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, newDetectedVulnsNotOnOtherBranch)
 		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
@@ -427,8 +423,6 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 	})
 
 	t.Run("should handle multiple vulnerabilities with same CVE on other branch", func(t *testing.T) {
-		scannerID := "test-scanner"
-
 		foundVulnerabilities := []models.DependencyVuln{
 			{
 				CVEID: utils.Ptr("CVE-2023-0001"),
@@ -463,7 +457,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			},
 		}
 
-		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, foundVulnerabilities, existingDependencyVulns)
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, newDetectedVulnsNotOnOtherBranch)
 		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
@@ -474,8 +468,6 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 	})
 
 	t.Run("should filter out events that were already copied", func(t *testing.T) {
-		scannerID := "test-scanner"
-
 		foundVulnerabilities := []models.DependencyVuln{
 			{
 				CVEID: utils.Ptr("CVE-2023-0001"),
@@ -504,7 +496,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			},
 		}
 
-		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, foundVulnerabilities, existingDependencyVulns)
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
 
 		assert.Empty(t, newDetectedVulnsNotOnOtherBranch)
 		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)
@@ -515,8 +507,6 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 	})
 
 	t.Run("should handle mixed scenario with new and existing vulnerabilities", func(t *testing.T) {
-		scannerID := "test-scanner"
-
 		foundVulnerabilities := []models.DependencyVuln{
 			{
 				CVEID: utils.Ptr("CVE-2023-0001"), // new vuln
@@ -552,7 +542,7 @@ func TestDiffVulnsBetweenBranches(t *testing.T) {
 			},
 		}
 
-		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffVulnsBetweenBranches(scannerID, foundVulnerabilities, existingDependencyVulns)
+		newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(foundVulnerabilities, existingDependencyVulns)
 
 		assert.Len(t, newDetectedVulnsNotOnOtherBranch, 2)
 		assert.Len(t, newDetectedButOnOtherBranchExisting, 1)

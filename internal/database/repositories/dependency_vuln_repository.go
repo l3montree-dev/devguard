@@ -362,3 +362,11 @@ func (repository *dependencyVulnRepository) GetArtifacts(assetVersionName string
 
 	return artifacts, nil
 }
+
+func (repository *dependencyVulnRepository) GetAllOpenVulnsByAssetVersionNameAndAssetID(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.DependencyVuln, error) {
+	var vulns = []models.DependencyVuln{}
+	if err := repository.Repository.GetDB(tx).Preload("CVE").Where("asset_version_name = ? AND asset_id = ? AND state = ?", assetVersionName, assetID, models.VulnStateOpen).Find(&vulns).Error; err != nil {
+		return nil, err
+	}
+	return vulns, nil
+}
