@@ -301,6 +301,7 @@ func externalEntityProviderRefreshMiddleware(externalEntityProviderService core.
 					orgID := org.GetID()
 
 					go func() {
+						return
 						err := externalEntityProviderService.RefreshExternalEntityProviderProjects(safeCtx, org, userID)
 						if err != nil {
 							slog.Error("could not refresh external entity provider projects", "err", err, "orgID", orgID, "userID", userID)
@@ -506,7 +507,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	scanController := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService)
 
-	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository, &componentService)
+	assetVersionController := assetversion.NewAssetVersionController(assetVersionRepository, assetVersionService, dependencyVulnRepository, componentRepository, dependencyVulnService, supplyChainRepository, licenseRiskRepository, &componentService, statisticsService)
 	attestationController := attestation.NewAttestationController(attestationRepository, assetVersionRepository)
 	intotoController := intoto.NewHTTPController(intotoLinkRepository, supplyChainRepository, assetVersionRepository, patRepository, intotoService)
 	componentController := component.NewHTTPController(componentRepository, assetVersionRepository, licenseRiskRepository)
@@ -726,6 +727,7 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetVersionRouter.GET("/vex.xml/", assetVersionController.VEXXML)
 	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
 	assetVersionRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
+	assetVersionRouter.GET("/vulnerability-report/", assetVersionController.BuildVulnerabilityReportPDF)
 
 	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
 	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
