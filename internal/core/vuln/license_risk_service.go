@@ -81,7 +81,7 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 
 	for i := range fixRisks {
 		if fixRisks[i].State == models.VulnStateOpen {
-			ev := models.NewFixedEvent(fixRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", scannerID)
+			ev := models.NewFixedEvent(fixRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", artifactName)
 			ev.Apply(&fixRisks[i])
 			allVulnEvents = append(allVulnEvents, ev)
 		}
@@ -96,7 +96,7 @@ func (service *LicenseRiskService) FindLicenseRisksInComponents(assetVersion mod
 	}
 
 	for i := range openRisks {
-		ev := models.NewDetectedEvent(openRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, scannerID)
+		ev := models.NewDetectedEvent(openRisks[i].CalculateHash(), models.VulnTypeLicenseRisk, "system", common.RiskCalculationReport{}, artifactName)
 		ev.Apply(&openRisks[i])
 		allVulnEvents = append(allVulnEvents, ev)
 	}

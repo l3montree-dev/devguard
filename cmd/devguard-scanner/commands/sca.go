@@ -376,6 +376,5 @@ func NewSCACommand() *cobra.Command {
 	}
 
 	addScanFlags(scaCommand)
-	scaCommand.Flags().String("scannerID", "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca", "The ID of the scanner. This is used to identify the scanner in the scan results. Defaults to 'devguard-scanner'.")
 	return scaCommand
 }
