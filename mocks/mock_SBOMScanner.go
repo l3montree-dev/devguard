@@ -71,20 +71,14 @@ type SBOMScanner_Scan_Call struct {
 }
 
 // Scan is a helper method to define mock.On call
-//   - bom normalize.SBOM
+//   - bom
 func (_e *SBOMScanner_Expecter) Scan(bom interface{}) *SBOMScanner_Scan_Call {
 	return &SBOMScanner_Scan_Call{Call: _e.mock.On("Scan", bom)}
 }
 
 func (_c *SBOMScanner_Scan_Call) Run(run func(bom normalize.SBOM)) *SBOMScanner_Scan_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 normalize.SBOM
-		if args[0] != nil {
-			arg0 = args[0].(normalize.SBOM)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(normalize.SBOM))
 	})
 	return _c
 }

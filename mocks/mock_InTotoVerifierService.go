@@ -67,20 +67,14 @@ type InTotoVerifierService_VerifySupplyChain_Call struct {
 }
 
 // VerifySupplyChain is a helper method to define mock.On call
-//   - supplyChainID string
+//   - supplyChainID
 func (_e *InTotoVerifierService_Expecter) VerifySupplyChain(supplyChainID interface{}) *InTotoVerifierService_VerifySupplyChain_Call {
 	return &InTotoVerifierService_VerifySupplyChain_Call{Call: _e.mock.On("VerifySupplyChain", supplyChainID)}
 }
 
 func (_c *InTotoVerifierService_VerifySupplyChain_Call) Run(run func(supplyChainID string)) *InTotoVerifierService_VerifySupplyChain_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(string))
 	})
 	return _c
 }
@@ -127,20 +121,14 @@ type InTotoVerifierService_VerifySupplyChainByDigestOnly_Call struct {
 }
 
 // VerifySupplyChainByDigestOnly is a helper method to define mock.On call
-//   - digest string
+//   - digest
 func (_e *InTotoVerifierService_Expecter) VerifySupplyChainByDigestOnly(digest interface{}) *InTotoVerifierService_VerifySupplyChainByDigestOnly_Call {
 	return &InTotoVerifierService_VerifySupplyChainByDigestOnly_Call{Call: _e.mock.On("VerifySupplyChainByDigestOnly", digest)}
 }
 
 func (_c *InTotoVerifierService_VerifySupplyChainByDigestOnly_Call) Run(run func(digest string)) *InTotoVerifierService_VerifySupplyChainByDigestOnly_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(string))
 	})
 	return _c
 }
@@ -187,26 +175,15 @@ type InTotoVerifierService_VerifySupplyChainWithOutputDigest_Call struct {
 }
 
 // VerifySupplyChainWithOutputDigest is a helper method to define mock.On call
-//   - supplyChainID string
-//   - digest string
+//   - supplyChainID
+//   - digest
 func (_e *InTotoVerifierService_Expecter) VerifySupplyChainWithOutputDigest(supplyChainID interface{}, digest interface{}) *InTotoVerifierService_VerifySupplyChainWithOutputDigest_Call {
 	return &InTotoVerifierService_VerifySupplyChainWithOutputDigest_Call{Call: _e.mock.On("VerifySupplyChainWithOutputDigest", supplyChainID, digest)}
 }
 
 func (_c *InTotoVerifierService_VerifySupplyChainWithOutputDigest_Call) Run(run func(supplyChainID string, digest string)) *InTotoVerifierService_VerifySupplyChainWithOutputDigest_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
+		run(args[0].(string), args[1].(string))
 	})
 	return _c
 }

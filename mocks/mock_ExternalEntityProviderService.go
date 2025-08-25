@@ -60,32 +60,16 @@ type ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call st
 }
 
 // RefreshExternalEntityProviderProjects is a helper method to define mock.On call
-//   - ctx core.Context
-//   - org models.Org
-//   - user string
+//   - ctx
+//   - org
+//   - user
 func (_e *ExternalEntityProviderService_Expecter) RefreshExternalEntityProviderProjects(ctx interface{}, org interface{}, user interface{}) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
 	return &ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call{Call: _e.mock.On("RefreshExternalEntityProviderProjects", ctx, org, user)}
 }
 
 func (_c *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call) Run(run func(ctx core.Context, org models.Org, user string)) *ExternalEntityProviderService_RefreshExternalEntityProviderProjects_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
-		if args[0] != nil {
-			arg0 = args[0].(core.Context)
-		}
-		var arg1 models.Org
-		if args[1] != nil {
-			arg1 = args[1].(models.Org)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
+		run(args[0].(core.Context), args[1].(models.Org), args[2].(string))
 	})
 	return _c
 }
@@ -134,20 +118,14 @@ type ExternalEntityProviderService_SyncOrgs_Call struct {
 }
 
 // SyncOrgs is a helper method to define mock.On call
-//   - c core.Context
+//   - c
 func (_e *ExternalEntityProviderService_Expecter) SyncOrgs(c interface{}) *ExternalEntityProviderService_SyncOrgs_Call {
 	return &ExternalEntityProviderService_SyncOrgs_Call{Call: _e.mock.On("SyncOrgs", c)}
 }
 
 func (_c *ExternalEntityProviderService_SyncOrgs_Call) Run(run func(c core.Context)) *ExternalEntityProviderService_SyncOrgs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
-		if args[0] != nil {
-			arg0 = args[0].(core.Context)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(core.Context))
 	})
 	return _c
 }
@@ -185,20 +163,14 @@ type ExternalEntityProviderService_TriggerOrgSync_Call struct {
 }
 
 // TriggerOrgSync is a helper method to define mock.On call
-//   - c core.Context
+//   - c
 func (_e *ExternalEntityProviderService_Expecter) TriggerOrgSync(c interface{}) *ExternalEntityProviderService_TriggerOrgSync_Call {
 	return &ExternalEntityProviderService_TriggerOrgSync_Call{Call: _e.mock.On("TriggerOrgSync", c)}
 }
 
 func (_c *ExternalEntityProviderService_TriggerOrgSync_Call) Run(run func(c core.Context)) *ExternalEntityProviderService_TriggerOrgSync_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 core.Context
-		if args[0] != nil {
-			arg0 = args[0].(core.Context)
-		}
-		run(
-			arg0,
-		)
+		run(args[0].(core.Context))
 	})
 	return _c
 }
