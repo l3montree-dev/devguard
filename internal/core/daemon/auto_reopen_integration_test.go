@@ -19,6 +19,7 @@ func TestAutoReopenAcceptedVulnerabilities(t *testing.T) {
 	defer terminate()
 
 	err := db.AutoMigrate(
+		&models.Artifact{},
 		&models.Org{},
 		&models.Project{},
 		&models.AssetVersion{},
@@ -194,12 +195,17 @@ func createTestVulnerability(t *testing.T, db core.DB, asset models.Asset, asset
 			AssetVersionName: assetVersion.Name,
 			AssetID:          asset.ID,
 			State:            models.VulnStateOpen,
-			ScannerIDs:       "test-scanner",
 			LastDetected:     time.Now().Add(-timeAgo),
 		},
 		CVEID:          utils.Ptr(cveID),
 		ComponentPurl:  utils.Ptr("pkg:npm/test-package@1.0.0"),
 		ComponentDepth: utils.Ptr(0),
+		Artifacts: []models.Artifact{
+			{ArtifactName: "test-artifact",
+				AssetVersionName: assetVersion.Name,
+				AssetID:          asset.ID,
+			},
+		},
 	}
 	err = db.Create(&vulnerability).Error
 	assert.NoError(t, err)

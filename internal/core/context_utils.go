@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http/httptest"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -188,6 +189,15 @@ func GetParam(ctx Context, param string) string {
 		return fallback.(string)
 	}
 	return v
+}
+
+func GetURLDecodedParam(ctx Context, param string) (string, error) {
+	v := GetParam(ctx, param)
+	decoded, err := url.PathUnescape(v)
+	if err != nil {
+		return "", fmt.Errorf("could not url decode param %s: %w", param, err)
+	}
+	return decoded, nil
 }
 
 func GetProjectSlug(ctx Context) (string, error) {

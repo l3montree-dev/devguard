@@ -15,8 +15,8 @@ type DependencyVulnAggregationStateAndChange struct {
 }
 
 type AssetRiskHistory struct {
-	Asset       models.Asset              `json:"asset"`
-	RiskHistory []models.AssetRiskHistory `json:"riskHistory"`
+	Asset       models.Asset                 `json:"asset"`
+	RiskHistory []models.ArtifactRiskHistory `json:"riskHistory"`
 }
 
 type ProjectRiskHistory struct {

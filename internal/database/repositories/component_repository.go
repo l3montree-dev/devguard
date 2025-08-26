@@ -18,6 +18,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
@@ -54,38 +55,35 @@ func (c *componentRepository) CreateComponents(tx core.DB, components []models.C
 
 	return c.GetDB(tx).Create(&components).Error
 }
-
-// returns all component dependencies of the assetVersion  found by scannerID use "" to return all no matter who found it
-func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadComponentsForAllArtifacts(tx core.DB, assetVersionName string, assetID uuid.UUID) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
-	var err error
 
-	query := c.GetDB(tx).Preload("Component").Preload("Dependency").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
-
-	scannerIDs := strings.Split(scannerID, " ")
-	if len(scannerIDs) > 0 && scannerID != "" {
-		scannerIDsSubQuery := c.GetDB(tx)
-		for i, id := range scannerIDs {
-			if i == 0 {
-				scannerIDsSubQuery = scannerIDsSubQuery.Where("? = ANY(string_to_array(scanner_ids, ' '))", id)
-			} else {
-				scannerIDsSubQuery = scannerIDsSubQuery.Or("? = ANY(string_to_array(scanner_ids, ' '))", id)
-			}
-		}
-		query = query.Where(scannerIDsSubQuery)
-	}
-
-	err = query.Find(&components).Error
-
+	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
+		Preload("Component").
+		Preload("Dependency").
+		Preload("Artifacts").
+		Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).
+		Find(&components).Error
 	if err != nil {
 		return nil, err
 	}
+	return components, err
+}
+func (c *componentRepository) LoadComponents(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) ([]models.ComponentDependency, error) {
+	var components []models.ComponentDependency
+
+	err := c.GetDB(tx).Model(&models.ComponentDependency{}).
+		Preload("Component").Preload("Dependency").
+		Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").
+		Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").
+		Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ? AND artifacts.artifact_name = ?", assetVersionName, assetID, artifactName).
+		Find(&components).Error
 
 	return components, err
 }
 
 // function which returns all dependency_components which lead to the package transmitted via the pURL parameter
-func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, scannerID string) ([]models.ComponentDependency, error) {
+func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName string, assetID uuid.UUID, pURL string, artifactName string) ([]models.ComponentDependency, error) {
 	var components []models.ComponentDependency
 	var err error
 
@@ -95,60 +93,65 @@ func (c *componentRepository) LoadPathToComponent(tx core.DB, assetVersionName s
 
 	// using postgresql CYCLE Keyword to detect possible loops
 	query := c.GetDB(tx).WithContext(ctx).Raw(`WITH RECURSIVE components_cte AS (
-  SELECT
-    component_purl,
-    dependency_purl,
-    asset_id,
-    scanner_ids,
-    0 AS depth,
-    ARRAY[dependency_purl] AS path
-  FROM component_dependencies
-  WHERE
-    component_purl IS NULL AND
-    asset_id = @assetID AND
-    asset_version_name = @assetVersionName AND
-    string_to_array(scanner_ids, ' ') && string_to_array(@scannerID, ' ')
+	SELECT
+		cd.component_purl,
+		cd.dependency_purl,
+		cd.asset_id,
+		0 AS depth,
+		ARRAY[cd.dependency_purl] AS path
+	FROM component_dependencies cd
+	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = cd.id
+	JOIN artifacts a ON acd.artifact_artifact_name = a.artifact_name AND acd.artifact_asset_version_name = a.asset_version_name AND acd.artifact_asset_id = a.asset_id
+	WHERE
+		cd.component_purl IS NULL AND
+		cd.asset_id = @assetID AND
+		cd.asset_version_name = @assetVersionName AND
+		a.artifact_name = @artifactName AND
+		a.asset_version_name = @assetVersionName AND
+		a.asset_id = @assetID
 
-  UNION ALL
+	UNION ALL
 
-  SELECT
-    co.component_purl,
-    co.dependency_purl,
-    co.asset_id,
-    co.scanner_ids,
-    cte.depth + 1,
-    cte.path || co.dependency_purl
-  FROM component_dependencies AS co
-  INNER JOIN components_cte AS cte
-    ON co.component_purl = cte.dependency_purl
-  WHERE
-    co.asset_id = @assetID AND
-    co.asset_version_name = @assetVersionName AND
-    string_to_array(co.scanner_ids, ' ') && string_to_array(@scannerID, ' ') AND
-    NOT co.dependency_purl = ANY(cte.path)
+	SELECT
+		co.component_purl,
+		co.dependency_purl,
+		co.asset_id,
+		cte.depth + 1,
+		cte.path || co.dependency_purl
+	FROM component_dependencies co
+	INNER JOIN components_cte cte
+		ON co.component_purl = cte.dependency_purl
+	JOIN artifact_component_dependencies acd ON acd.component_dependency_id = co.id
+	JOIN artifacts a ON acd.artifact_artifact_name = a.artifact_name AND acd.artifact_asset_version_name = a.asset_version_name AND acd.artifact_asset_id = a.asset_id
+	WHERE
+		co.asset_id = @assetID AND
+		co.asset_version_name = @assetVersionName AND
+		a.artifact_name = @artifactName AND
+		a.asset_version_name = @assetVersionName AND
+		a.asset_id = @assetID AND
+		NOT co.dependency_purl = ANY(cte.path)
 ),
 target_path AS (
-  SELECT * FROM components_cte
-  WHERE dependency_purl = @pURL
-  ORDER BY depth ASC
+	SELECT * FROM components_cte
+	WHERE dependency_purl = @pURL
+	ORDER BY depth ASC
 ),
 path_edges AS (
-  SELECT
-    DISTINCT
-    component_purl,
-    dependency_purl,
-    asset_id,
-    scanner_ids,
-    depth
-  FROM components_cte
-  WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
+	SELECT
+		DISTINCT
+		component_purl,
+		dependency_purl,
+		asset_id,
+		depth
+	FROM components_cte
+	WHERE dependency_purl = ANY((SELECT unnest(path) FROM target_path))
 )
 SELECT * FROM path_edges
 ORDER BY depth;
 `, sql.Named("pURL", pURL), sql.Named("assetID", assetID),
-		sql.Named("assetVersionName", assetVersionName), sql.Named("scannerID", scannerID))
+		sql.Named("assetVersionName", assetVersionName), sql.Named("artifactName", artifactName))
 
-	//Map the query results to the component model
+	// Map the query results to the component model
 	err = query.Find(&components).Error
 	if err != nil {
 		return nil, err
@@ -157,7 +160,7 @@ ORDER BY depth;
 	return components, err
 }
 
-func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, scannerID string) (map[string]int, error) {
+func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionName string, assetID uuid.UUID, artifactName string) (map[string]int, error) {
 	type License []struct {
 		License string
 		Count   int
@@ -193,12 +196,10 @@ func (c *componentRepository) GetLicenseDistribution(tx core.DB, assetVersionNam
 		models.VulnStateFixed, assetVersionName, assetID)
 
 	//We then still need to filter for the right scanner
-	if scannerID != "" {
-		// scanner ids is a string array separated by whitespaces
-		overwrittenLicensesQuery = overwrittenLicensesQuery.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
-		otherLicensesQuery = otherLicensesQuery.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
-	}
+	if artifactName != "" {
+		overwrittenLicensesQuery = overwrittenLicensesQuery.Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = cd.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Where("artifacts.artifact_name = ?", artifactName)
 
+	}
 	//Map the query to the right struct
 	err := overwrittenLicensesQuery.Scan(&overwrittenLicenses).Error
 	if err != nil {
@@ -248,15 +249,11 @@ func licensesToMap(licenses []struct {
 	return licensesMap
 }
 
-func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, scannerID string, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenLicenses []models.LicenseRisk, assetVersionName string, assetID uuid.UUID, pageInfo core.PageInfo, search string, filter []core.FilterQuery, sort []core.SortQuery) (core.Paged[models.ComponentDependency], error) {
+
 	var componentDependencies []models.ComponentDependency
 
-	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Joins("Dependency").Joins("Dependency.ComponentProject").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
-
-	if scannerID != "" {
-		// scanner ids is a string array separated by whitespaces
-		query = query.Where("? = ANY(string_to_array(scanner_ids, ' '))", scannerID)
-	}
+	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Artifacts").Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
 
 	for _, f := range filter {
 		query = query.Where(f.SQL(), f.Value())
@@ -284,7 +281,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 	var total int64
 	query.Session(&gorm.Session{}).Distinct("dependency_purl").Count(&total)
 
-	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Scan(&componentDependencies).Error
+	err := query.Select(distinctOnQuery).Limit(pageInfo.PageSize).Offset((pageInfo.Page - 1) * pageInfo.PageSize).Find(&componentDependencies).Error
 	if err != nil {
 		return core.NewPaged(pageInfo, total, componentDependencies), err
 	}
@@ -311,6 +308,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 		}
 	}
 	return core.NewPaged(pageInfo, total, componentDependencies), nil
+
 }
 
 func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Component, error) {
@@ -319,60 +317,99 @@ func (c *componentRepository) FindByPurl(tx core.DB, purl string) (models.Compon
 	return component, err
 }
 
-func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, scannerID string) (bool, error) {
+func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName string, assetID uuid.UUID, oldState []models.ComponentDependency, newState []models.ComponentDependency, artifactName string) (bool, error) {
 	comparison := utils.CompareSlices(oldState, newState, func(dep models.ComponentDependency) string {
 		return utils.SafeDereference(dep.ComponentPurl) + "->" + dep.DependencyPurl
 	})
 
+	artifact := models.Artifact{
+		ArtifactName:     artifactName,
+		AssetID:          assetID,
+		AssetVersionName: assetVersionName,
+	}
+
 	removed := comparison.OnlyInA
 	added := comparison.OnlyInB
-	needToBeChanged := comparison.InBoth
 
-	return len(removed) > 0 || len(added) > 0, c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
-		//We remove the scanner id from all components in removed and if it was the only scanner id we remove the component
-		toDelete, toSave := diffComponents(removed, scannerID)
+	fmt.Println("Removed:", len(removed), "Added:", len(added))
 
-		//Now we want to update the database with the new scanner id values
-		if len(toSave) > 0 {
-			err := c.db.Save(toSave).Error
+	toRemove := []models.ComponentDependency{}
+	toUpdate := []models.ComponentDependency{}
+	toAdd := []models.ComponentDependency{}
+
+	//load all dependencies which are already present for the assetID and assetVersionName
+
+	components, err := c.LoadComponentsForAllArtifacts(tx, assetVersionName, assetID)
+	if err != nil {
+		return false, err
+	}
+
+	// componentsMap
+	componentsMap := make(map[uuid.UUID]models.ComponentDependency)
+	for _, comp := range components {
+		componentsMap[comp.ID] = comp
+	}
+
+	for _, removedDep := range removed {
+		if existingComp, ok := componentsMap[removedDep.ID]; ok {
+			if len(existingComp.Artifacts) > 1 {
+				// we have more than one artifact - therefore we just remove the artifact from the list
+				newArtifacts := utils.Filter(existingComp.Artifacts, func(a models.Artifact) bool {
+					return a.ArtifactName != artifactName || a.AssetVersionName != assetVersionName || a.AssetID != assetID
+				})
+				existingComp.Artifacts = newArtifacts
+				toUpdate = append(toUpdate, existingComp)
+			} else {
+				// we only have one artifact - therefore we can delete the whole component dependency
+				toRemove = append(toRemove, existingComp)
+			}
+		}
+	}
+
+	for _, addedDep := range added {
+		addedDep.AssetID = assetID
+		addedDep.AssetVersionName = assetVersionName
+		if existingComp, ok := componentsMap[addedDep.ID]; ok {
+			// we already have this component dependency - therefore we just need to add the artifact to the list
+			newArtifacts := append(existingComp.Artifacts, artifact)
+			existingComp.Artifacts = newArtifacts
+			toUpdate = append(toUpdate, existingComp)
+		} else {
+			addedDep.Artifacts = []models.Artifact{artifact}
+			// we do not have this component dependency - therefore we need to add it
+			toAdd = append(toAdd, addedDep)
+		}
+	}
+
+	return len(toRemove) > 0 || len(toUpdate) > 0 || len(toAdd) > 0, c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
+
+		if len(toRemove) > 0 {
+			err := c.db.Delete(removed).Error
 			if err != nil {
 				return err
 			}
 		}
 
-		if len(toDelete) > 0 {
-			err := c.db.Delete(toDelete).Error
+		if len(toUpdate) > 0 {
+			for _, update := range toUpdate {
+				err := c.db.Save(&update).Error
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		if len(toAdd) > 0 {
+			err := c.CreateComponents(tx, toAdd)
 			if err != nil {
 				return err
 			}
 		}
 
-		//Next step is adding the scanner id to all existing component dependencies we just found
-		for i := range needToBeChanged {
-			if !utils.ContainsInWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID) {
-				needToBeChanged[i].ScannerIDs = utils.AddToWhitespaceSeparatedStringList(needToBeChanged[i].ScannerIDs, scannerID)
-			}
-		}
-		//We also need to update these changes in the database
-		if len(needToBeChanged) > 0 {
-			err := c.db.Save(needToBeChanged).Error
-			if err != nil {
-				return err
-			}
-		}
-
-		// make sure the asset id is set
-		for i := range added {
-			added[i].AssetID = assetID
-			added[i].AssetVersionName = assetVersionName
-		}
-
-		//At last we create all the new component dependencies
-		return c.CreateComponents(tx, added)
+		return nil
 	})
 }
-
-func (c *componentRepository) GetDependencyCountPerScanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
+func (c *componentRepository) GetDependencyCountPerScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
 	var results []struct {
 		ScannerID string `gorm:"column:scanner_ids"`
 		Count     int    `gorm:"column:count"`
@@ -395,20 +432,4 @@ func (c *componentRepository) GetDependencyCountPerScanner(assetVersionName stri
 	}
 
 	return counts, nil
-}
-
-func diffComponents(components []models.ComponentDependency, scannerID string) ([]models.ComponentDependency, []models.ComponentDependency) {
-	var componentsToDelete []models.ComponentDependency
-	var componentsToSave []models.ComponentDependency
-
-	for i := range components {
-		if strings.TrimSpace(components[i].ScannerIDs) == scannerID {
-			componentsToDelete = append(componentsToDelete, components[i])
-		} else {
-			components[i].ScannerIDs = utils.RemoveFromWhitespaceSeparatedStringList(components[i].ScannerIDs, scannerID)
-			componentsToSave = append(componentsToSave, components[i])
-		}
-	}
-
-	return componentsToDelete, componentsToSave
 }

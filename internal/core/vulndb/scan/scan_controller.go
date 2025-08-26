@@ -40,6 +40,8 @@ type HTTPController struct {
 	assetVersionService    core.AssetVersionService
 	statisticsService      core.StatisticsService
 
+	artifactService core.ArtifactService
+
 	dependencyVulnService core.DependencyVulnService
 	firstPartyVulnService core.FirstPartyVulnService
 
@@ -47,7 +49,7 @@ type HTTPController struct {
 	core.FireAndForgetSynchronizer
 }
 
-func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService) *HTTPController {
+func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRepository core.ComponentRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, assetVersionService core.AssetVersionService, statisticsService core.StatisticsService, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, artifactService core.ArtifactService) *HTTPController {
 	cpeComparer := NewCPEComparer(db)
 	purlComparer := NewPurlComparer(db)
 
@@ -64,6 +66,7 @@ func NewHTTPController(db core.DB, cveRepository core.CveRepository, componentRe
 		dependencyVulnService:     dependencyVulnService,
 		firstPartyVulnService:     firstPartyVulnService,
 		FireAndForgetSynchronizer: utils.NewFireAndForgetSynchronizer(),
+		artifactService:           artifactService,
 	}
 }
 
@@ -108,23 +111,34 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 		return scanResults, err
 	}
 
-	scannerID := c.Request().Header.Get("X-Scanner")
-	if scannerID == "" {
-		slog.Error("no X-Scanner header found")
-		return scanResults, fmt.Errorf("no X-Scanner header found")
+	artifactName := c.Request().Header.Get("X-Artifact-Name")
+	if artifactName == "" {
+		slog.Error("no X-Artifact-Name header found")
+		return scanResults, fmt.Errorf("no X-Artifact-Name header found")
 	}
 
+	artifact := models.Artifact{
+		ArtifactName:     artifactName,
+		AssetVersionName: assetVersion.Name,
+		AssetID:          asset.ID,
+	}
+
+	// save the artifact to the database
+	if err := s.artifactService.SaveArtifact(artifact); err != nil {
+		slog.Error("could not save artifact", "err", err)
+		return scanResults, err
+	}
 	// update the sbom in the database in parallel
-	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, scannerID, normalizedBom)
+	err = s.assetVersionService.UpdateSBOM(org, project, asset, assetVersion, artifactName, normalizedBom)
 	if err != nil {
 		slog.Error("could not update sbom", "err", err)
 		return scanResults, err
 	}
 
-	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, scannerID, userID)
+	return s.ScanNormalizedSBOM(org, project, asset, assetVersion, normalizedBom, artifactName, userID)
 }
 
-func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, scannerID string, userID string) (ScanResponse, error) {
+func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, normalizedBom normalize.SBOM, artifactName string, userID string) (ScanResponse, error) {
 	scanResults := ScanResponse{} //Initialize empty struct to return when an error happens
 	vulns, err := s.sbomScanner.Scan(normalizedBom)
 
@@ -134,7 +148,7 @@ func (s *HTTPController) ScanNormalizedSBOM(org models.Org, project models.Proje
 	}
 
 	// handle the scan result
-	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, scannerID, userID)
+	opened, closed, newState, err := s.assetVersionService.HandleScanResult(org, project, asset, &assetVersion, vulns, artifactName, userID)
 	if err != nil {
 		slog.Error("could not handle scan result", "err", err)
 		return scanResults, err

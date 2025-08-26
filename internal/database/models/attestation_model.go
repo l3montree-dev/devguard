@@ -15,9 +15,11 @@ type Attestation struct {
 	UpdatedAt        time.Time      `json:"updatedAt"`
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
 	PredicateType    string         `json:"predicateType" gorm:"type:text;primaryKey"`
-	AssetVersionName string         `json:"assetVersionName" gorm:"not null;primaryKey"`
-	AssetID          uuid.UUID      `json:"assetId" gorm:"not null;primaryKey"`
-	AssetVersion     AssetVersion   `json:"assetVersion" gorm:"foreignKey:AssetVersionName,AssetID;references:Name,AssetID;constraint:OnDelete:CASCADE;"`
+	AssetVersionName string         `json:"assetVersionName" gorm:"primaryKey;type:text;"`
+	AssetID          uuid.UUID      `json:"assetId" gorm:"primaryKey;type:uuid"`
+	ArtifactName     string         `json:"artifactName" gorm:"primaryKey"`
+
+	Artifact Artifact `json:"artifact" gorm:"foreignKey:ArtifactName,AssetID,AssetVersionName;constraint:OnDelete:CASCADE;"`
 
 	Content database.JSONB `json:"content" gorm:"type:jsonb"`
 }

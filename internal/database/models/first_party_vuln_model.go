@@ -15,6 +15,8 @@ import (
 
 type FirstPartyVuln struct {
 	Vulnerability
+	// the scanner which was used to detect this firstPartyVuln
+	ScannerIDs      string         `json:"scannerIds" gorm:"not null;column:scanner_ids"` //List of scanner ids separated by a white space
 	Fingerprint     string         `json:"fingerprint" gorm:"type:text;"`
 	RuleID          string         `json:"ruleId"`
 	RuleName        string         `json:"ruleName"`
@@ -31,6 +33,18 @@ type FirstPartyVuln struct {
 	Date   string `json:"date"`
 
 	SnippetContents database.JSONB `json:"snippetContents" gorm:"type:jsonb;snippet_contents"` // SnippetContents
+}
+
+func (firstPartyVuln *FirstPartyVuln) AddScannerID(scannerID string) {
+	firstPartyVuln.ScannerIDs = utils.AddToWhitespaceSeparatedStringList(firstPartyVuln.ScannerIDs, scannerID)
+}
+
+func (firstPartyVuln *FirstPartyVuln) RemoveScannerID(scannerID string) {
+	firstPartyVuln.ScannerIDs = utils.RemoveFromWhitespaceSeparatedStringList(firstPartyVuln.ScannerIDs, scannerID)
+}
+
+func (firstPartyVuln *FirstPartyVuln) GetScannerIDsOrArtifactNames() string {
+	return firstPartyVuln.ScannerIDs
 }
 
 type SnippetContents struct {

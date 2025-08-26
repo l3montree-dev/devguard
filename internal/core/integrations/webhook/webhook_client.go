@@ -282,8 +282,8 @@ func createSampleDependencyVulns() []vuln.DependencyVulnDTO {
 
 	return []vuln.DependencyVulnDTO{
 		{
-			ID:                    "dep-vuln-001",
-			ScannerIDs:            "trivy",
+			ID: "dep-vuln-001",
+			//	ScannerIDs:            "trivy",
 			AssetVersionName:      "v1.2.3",
 			AssetID:               "asset-12345",
 			State:                 models.VulnStateOpen,

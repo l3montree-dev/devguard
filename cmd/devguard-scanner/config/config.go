@@ -21,6 +21,7 @@ import (
 	"encoding/pem"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
@@ -44,7 +45,6 @@ type baseConfig struct {
 	Password string `json:"password" mapstructure:"password"`
 	Registry string `json:"registry" mapstructure:"registry"`
 
-	// used in SbomCMD
 	ScannerID     string `json:"scannerId" mapstructure:"scannerID"`
 	Ref           string `json:"ref" mapstructure:"ref"`
 	DefaultBranch string `json:"defaultRef" mapstructure:"defaultRef"`
@@ -75,15 +75,10 @@ var RuntimeBaseConfig baseConfig
 var RuntimeInTotoConfig InTotoConfig
 var RuntimeAttestationConfig AttestationConfig
 
-func ParseBaseConfig() {
+func ParseBaseConfig(runningCMD string) {
 	err := viper.Unmarshal(&RuntimeBaseConfig)
 	if err != nil {
 		panic(err)
-	}
-
-	// we don't add artifact name if it is 'default', because of backward compatibility, so we don't have new scanner IDs for existing assets
-	if RuntimeBaseConfig.ArtifactName != "" && RuntimeBaseConfig.ArtifactName != "default" {
-		RuntimeBaseConfig.ScannerID = RuntimeBaseConfig.ScannerID + ":" + RuntimeBaseConfig.ArtifactName
 	}
 
 	if RuntimeBaseConfig.APIURL != "" {
@@ -120,6 +115,20 @@ func ParseBaseConfig() {
 				// if we don't have a git version info, we use the current time as default ref
 				slog.Info("could not get git default ref. Not updating anything default branch information")
 			}
+		}
+	}
+
+	if RuntimeBaseConfig.ArtifactName == "" {
+		// the user did not set any artifact name - thus we try to set a good one.
+		suffix := strings.ReplaceAll(strings.ReplaceAll(RuntimeBaseConfig.AssetName, "/projects/", "/"), "/assets/", "/") + "@" + RuntimeBaseConfig.Ref
+		switch runningCMD {
+		case "container-scanning":
+			// we are scanning a container image - thus we use the container image as artifact name
+			RuntimeBaseConfig.ArtifactName = "pkg:oci/" + suffix
+		default:
+			// we are scanning an application - we have no idea which ecosystem - thus use generic
+			// use the asset name as the name of the artifact
+			RuntimeBaseConfig.ArtifactName = "pkg:devguard/" + suffix
 		}
 	}
 

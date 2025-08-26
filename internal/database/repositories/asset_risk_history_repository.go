@@ -11,18 +11,18 @@ import (
 
 type assetRiskHistoryRepository struct {
 	db core.DB
-	common.Repository[uint, models.AssetRiskHistory, core.DB]
+	common.Repository[uint, models.ArtifactRiskHistory, core.DB]
 }
 
 func NewAssetRiskHistoryRepository(db core.DB) *assetRiskHistoryRepository {
 	return &assetRiskHistoryRepository{
 		db:         db,
-		Repository: newGormRepository[uint, models.AssetRiskHistory](db),
+		Repository: newGormRepository[uint, models.ArtifactRiskHistory](db),
 	}
 }
 
-func (r *assetRiskHistoryRepository) GetRiskHistory(assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error) {
-	var assetRisk = []models.AssetRiskHistory{}
+func (r *assetRiskHistoryRepository) GetRiskHistory(assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error) {
+	var assetRisk = []models.ArtifactRiskHistory{}
 	// get all assetRisk of the asset
 	if err := r.Repository.GetDB(r.db).Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID).Where(
 		"day >= ? AND day <= ?", start, end,
@@ -33,12 +33,12 @@ func (r *assetRiskHistoryRepository) GetRiskHistory(assetVersionName string, ass
 	return assetRisk, nil
 }
 
-func (r *assetRiskHistoryRepository) UpdateRiskAggregation(assetRisk *models.AssetRiskHistory) error {
+func (r *assetRiskHistoryRepository) UpdateRiskAggregation(assetRisk *models.ArtifactRiskHistory) error {
 	return r.Repository.GetDB(r.db).Save(assetRisk).Error
 }
 
-func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectID uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error) {
-	var assetRisk = []models.AssetRiskHistory{}
+func (r *assetRiskHistoryRepository) GetRiskHistoryByProject(projectID uuid.UUID, day time.Time) ([]models.ArtifactRiskHistory, error) {
+	var assetRisk = []models.ArtifactRiskHistory{}
 
 	projectAndChildProjectsQuery := r.Repository.GetDB(r.db).Raw(`
 		WITH RECURSIVE project_tree AS (

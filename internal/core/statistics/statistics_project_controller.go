@@ -293,39 +293,3 @@ func (c *httpController) GetProjectRiskHistory(ctx core.Context) error {
 	// now we have two arrays. Combine them
 	return ctx.JSON(200, utils.MergeUnrelated(childResults, results))
 }
-
-func (c *httpController) GetProjectDependencyVulnAggregationStateAndChange(ctx core.Context) error {
-	project := core.GetProject(ctx)
-	compareTo := ctx.QueryParam("compareTo")
-
-	results, err := c.getProjectDependencyVulnAggregationStateAndChange(project.ID, compareTo)
-	if err != nil {
-		slog.Error("Error getting dependencyVuln aggregation state", "error", err)
-		return ctx.JSON(500, nil)
-	}
-	// aggregate the results
-	result := aggregateDependencyVulnAggregationStateAndChange(results)
-
-	return ctx.JSON(200, result)
-}
-
-func (c *httpController) getProjectDependencyVulnAggregationStateAndChange(projectID uuid.UUID, compareTo string) ([]DependencyVulnAggregationStateAndChange, error) {
-	projectIDs, err := c.getChildrenProjectIDs(projectID)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch child projects")
-	}
-
-	errgroup := utils.ErrGroup[DependencyVulnAggregationStateAndChange](10)
-	// get all assets
-	assets, err := c.assetVersionRepository.GetDefaultAssetVersionsByProjectIDs(projectIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, asset := range assets {
-		errgroup.Go(func() (DependencyVulnAggregationStateAndChange, error) {
-			return c.getDependencyVulnAggregationStateAndChange(compareTo, asset)
-		})
-	}
-	return errgroup.WaitAndCollect()
-}

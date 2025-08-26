@@ -36,12 +36,15 @@ func (httpController httpController) LicenseDistribution(ctx core.Context) error
 		}
 	}
 
-	scannerID := ctx.QueryParam("scannerID")
+	artifactName, err := core.GetURLDecodedParam(ctx, "artifact")
+	if err != nil {
+		return err
+	}
 
 	licenses, err := httpController.componentRepository.GetLicenseDistribution(nil,
 		assetVersion.Name,
 		assetVersion.AssetID,
-		scannerID,
+		artifactName,
 	)
 
 	var res = make([]licenseResponse, 0, len(licenses))
@@ -69,10 +72,11 @@ func (httpController httpController) LicenseDistribution(ctx core.Context) error
 
 func (httpController httpController) ListPaged(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	scannerID := ctx.QueryParam("scannerID")
+
+	filter := core.GetFilterQuery(ctx)
 
 	pageInfo := core.GetPageInfo(ctx)
-	filter := core.GetFilterQuery(ctx)
+
 	search := ctx.QueryParam("search")
 	sort := core.GetSortQuery(ctx)
 
@@ -85,7 +89,6 @@ func (httpController httpController) ListPaged(ctx core.Context) error {
 		overwrittenLicense,
 		assetVersion.Name,
 		assetVersion.AssetID,
-		scannerID,
 		pageInfo,
 		search,
 		filter,

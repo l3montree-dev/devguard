@@ -28,7 +28,7 @@ func registerMiddlewares(e *echo.Echo) {
 	e.HTTPErrorHandler = func(err error, ctx echo.Context) {
 		// do the logging straight inside the error handler
 		// this keeps controller methods clean
-		slog.Error(err.Error(), "method", ctx.Request().Method, "path", ctx.Request().URL.Path)
+		slog.Error(err.Error(), "method", ctx.Request().Method, "path", ctx.Request().URL.RawPath)
 
 		if ctx.Response().Committed {
 			return

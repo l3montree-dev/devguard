@@ -44,9 +44,10 @@ type service struct {
 	httpClient               *http.Client
 	thirdPartyIntegration    core.ThirdPartyIntegration
 	licenseRiskRepository    core.LicenseRiskRepository
+	artifactService          core.ArtifactService
 }
 
-func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration, licenseRiskRepository core.LicenseRiskRepository) *service {
+func NewService(assetVersionRepository core.AssetVersionRepository, componentRepository core.ComponentRepository, dependencyVulnRepository core.DependencyVulnRepository, firstPartyVulnRepository core.FirstPartyVulnRepository, dependencyVulnService core.DependencyVulnService, firstPartyVulnService core.FirstPartyVulnService, assetRepository core.AssetRepository, projectRepository core.ProjectRepository, orgRepository core.OrganizationRepository, vulnEventRepository core.VulnEventRepository, componentService core.ComponentService, thirdPartyIntegration core.ThirdPartyIntegration, licenseRiskRepository core.LicenseRiskRepository, artifactService core.ArtifactService) *service {
 	return &service{
 		assetVersionRepository:   assetVersionRepository,
 		componentRepository:      componentRepository,
@@ -62,6 +63,7 @@ func NewService(assetVersionRepository core.AssetVersionRepository, componentRep
 		projectRepository:        projectRepository,
 		orgRepository:            orgRepository,
 		licenseRiskRepository:    licenseRiskRepository,
+		artifactService:          artifactService,
 	}
 }
 
@@ -121,8 +123,8 @@ func (s *service) HandleFirstPartyVulnResult(org models.Org, project models.Proj
 					AssetVersionName: assetVersion.Name,
 					AssetID:          asset.ID,
 					Message:          &result.Message.Text,
-					ScannerIDs:       scannerID,
 				},
+				ScannerIDs:      scannerID,
 				RuleID:          result.RuleID,
 				RuleHelp:        preferMarkdown(rule.Help),
 				RuleName:        rule.Name,
@@ -299,25 +301,24 @@ func (s *service) handleFirstPartyVulnResult(userID string, scannerID string, as
 	return newDetectedVulnsNotOnOtherBranch, fixedVulns, append(newDetectedVulnsNotOnOtherBranch, inBoth...), nil
 }
 
-func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, scannerID string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
+func (s *service) HandleScanResult(org models.Org, project models.Project, asset models.Asset, assetVersion *models.AssetVersion, vulns []models.VulnInPackage, artifactName string, userID string) (opened []models.DependencyVuln, closed []models.DependencyVuln, newState []models.DependencyVuln, err error) {
 
 	// create dependencyVulns out of those vulnerabilities
 	dependencyVulns := []models.DependencyVuln{}
 
 	// load all asset components again and build a dependency tree
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, errors.Wrap(err, "could not load asset components")
 	}
 	// build a dependency tree
-	tree := BuildDependencyTree(assetComponents, "")
+	tree := BuildDependencyTree(assetComponents)
 	// calculate the depth of each component
 	depthMap := make(map[string]int)
 
 	// first node will be the package name itself
 	CalculateDepth(tree.Root, -1, depthMap)
 
-	// now we have the depth.
 	for _, vuln := range vulns {
 		v := vuln
 		fixedVersion := normalize.FixFixedVersion(v.Purl, v.FixedVersion)
@@ -325,8 +326,15 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 			Vulnerability: models.Vulnerability{
 				AssetVersionName: assetVersion.Name,
 				AssetID:          asset.ID,
-				ScannerIDs:       scannerID,
 			},
+			Artifacts: []models.Artifact{
+				{
+					ArtifactName:     artifactName,
+					AssetVersionName: assetVersion.Name,
+					AssetID:          asset.ID,
+				},
+			},
+
 			CVEID:                 utils.Ptr(v.CVEID),
 			ComponentPurl:         utils.Ptr(v.Purl),
 			ComponentFixedVersion: fixedVersion,
@@ -343,7 +351,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 
 	// let the asset service handle the new scan result - we do not need
 	// any return value from that process - even if it fails, we should return the current dependencyVulns
-	opened, closed, newState, err = s.handleScanResult(userID, scannerID, assetVersion, dependencyVulns, asset)
+	opened, closed, newState, err = s.handleScanResult(userID, artifactName, assetVersion, dependencyVulns, asset)
 	if err != nil {
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
@@ -352,7 +360,7 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 		assetVersion.Metadata = make(map[string]any)
 	}
 
-	assetVersion.Metadata[scannerID] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
+	assetVersion.Metadata[artifactName] = models.ScannerInformation{LastScan: utils.Ptr(time.Now())}
 
 	if len(opened) > 0 {
 		go func() {
@@ -371,37 +379,61 @@ func (s *service) HandleScanResult(org models.Org, project models.Project, asset
 	return opened, closed, newState, nil
 }
 
-func diffScanResults(currentScanner string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln) {
-	comparison := utils.CompareSlices(existingDependencyVulns, foundVulnerabilities, func(dependencyVuln models.DependencyVuln) string {
-		return dependencyVuln.CalculateHash()
-	})
+func diffScanResults(currentArtifactName string, foundVulnerabilities []models.DependencyVuln, existingDependencyVulns []models.DependencyVuln) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln) {
 
-	foundByScannerAndNotExisting := comparison.OnlyInB //We want to create new vulnerabilities for these
-	foundByScannerAndExisting := comparison.InBoth     //We have to check if it was already found by this scanner or only by other scanners
-	notFoundByScannerAndExisting := comparison.OnlyInA //We have to update all vulnerabilities which were previously found by this scanner and now aren't
+	var firstDetected []models.DependencyVuln
+	var fixedOnAll []models.DependencyVuln
+	var firstDetectedOnThisArtifactName []models.DependencyVuln
+	var fixedOnThisArtifactName []models.DependencyVuln
 
-	var detectedByOtherScanner []models.DependencyVuln
-	var notDetectedByScannerAnymore []models.DependencyVuln
+	var foundVulnsMappedByID = make(map[string]models.DependencyVuln)
+	for _, vuln := range foundVulnerabilities {
 
-	var fixedVulns []models.DependencyVuln //We should collect all vulnerabilities we want to fix so we can do it all at once
-
-	// Now we work on the vulnerabilities found in both sets -> has the vulnerability this scanner id already in his scanner_ids
-	for i := range foundByScannerAndExisting {
-		if !utils.ContainsInWhitespaceSeparatedStringList(foundByScannerAndExisting[i].ScannerIDs, currentScanner) {
-			detectedByOtherScanner = append(detectedByOtherScanner, foundByScannerAndExisting[i])
+		if _, ok := foundVulnsMappedByID[vuln.CalculateHash()]; !ok {
+			foundVulnsMappedByID[vuln.CalculateHash()] = vuln
 		}
 	}
 
-	// Last we have to change the already existing vulnerabilities which were not found this time
-	for i := range notFoundByScannerAndExisting {
-		if strings.TrimSpace(notFoundByScannerAndExisting[i].ScannerIDs) == currentScanner {
-			fixedVulns = append(fixedVulns, notFoundByScannerAndExisting[i])
-		} else if utils.ContainsInWhitespaceSeparatedStringList(notFoundByScannerAndExisting[i].ScannerIDs, currentScanner) {
-			notDetectedByScannerAnymore = append(notDetectedByScannerAnymore, notFoundByScannerAndExisting[i])
+	for _, existingVulns := range existingDependencyVulns {
+
+		if _, ok := foundVulnsMappedByID[existingVulns.CalculateHash()]; !ok {
+			if len(existingVulns.Artifacts) == 1 && existingVulns.Artifacts[0].ArtifactName == currentArtifactName {
+				fixedOnAll = append(fixedOnAll, existingVulns)
+			} else {
+				fixedOnThisArtifactName = append(fixedOnThisArtifactName, existingVulns)
+			}
+		}
+
+	}
+	var existingVulnsMappedByID = make(map[string]models.DependencyVuln)
+	for _, vuln := range existingDependencyVulns {
+		if _, ok := existingVulnsMappedByID[vuln.CalculateHash()]; !ok {
+			existingVulnsMappedByID[vuln.CalculateHash()] = vuln
 		}
 	}
 
-	return foundByScannerAndNotExisting, fixedVulns, detectedByOtherScanner, notDetectedByScannerAnymore
+	for _, foundVuln := range foundVulnerabilities {
+
+		if _, ok := existingVulnsMappedByID[foundVuln.CalculateHash()]; !ok {
+			firstDetected = append(firstDetected, foundVuln)
+		} else {
+			// existing vulnerability artifacts inspected instead of newly built vuln artifacts
+			existing := existingVulnsMappedByID[foundVuln.CalculateHash()]
+			alreadyDetectedOnThisArtifactName := false
+			for _, existingArtifact := range existing.Artifacts {
+				if existingArtifact.ArtifactName == currentArtifactName {
+					alreadyDetectedOnThisArtifactName = true
+					break
+				}
+			}
+			if !alreadyDetectedOnThisArtifactName {
+				firstDetectedOnThisArtifactName = append(firstDetectedOnThisArtifactName, foundVuln)
+			}
+		}
+	}
+
+	return firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName
+
 }
 
 type Diffable interface {
@@ -425,17 +457,16 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 	for _, newDetectedVuln := range foundVulnerabilities {
 		hash := newDetectedVuln.AssetVersionIndependentHash()
 		if existingVulns, ok := existingVulnsMap[hash]; ok {
-			// there is already a vulnerability with the same hash -
-			// thus it exists on another branch
+
 			newDetectedButOnOtherBranchExisting = append(newDetectedButOnOtherBranchExisting, newDetectedVuln)
 
 			existingVulnEventsOnOtherBranch := make([]models.VulnEvent, 0)
 			for _, existingVuln := range existingVulns {
-				// we only want to copy original events, not events which were already copied
+
 				events := utils.Filter(existingVuln.GetEvents(), func(ev models.VulnEvent) bool {
 					return ev.OriginalAssetVersionName == nil
 				})
-				// copy the events and set the original asset version name to the existing vuln's asset version name
+
 				existingVulnEventsOnOtherBranch = append(existingVulnEventsOnOtherBranch, utils.Map(events, func(event models.VulnEvent) models.VulnEvent {
 					event.OriginalAssetVersionName = utils.Ptr(existingVuln.GetAssetVersionName())
 					return event
@@ -450,17 +481,15 @@ func diffBetweenBranches[T Diffable](foundVulnerabilities []T, existingVulns []T
 	return newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents
 }
 
-func (s *service) handleScanResult(userID string, scannerID string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
-	// get all existing dependencyVulns from the database - this is the old state
-	//number := rand.IntN(len(dependencyVulns))
-	//dependencyVulns = dependencyVulns[:0]
+func (s *service) handleScanResult(userID string, artifactName string, assetVersion *models.AssetVersion, dependencyVulns []models.DependencyVuln, asset models.Asset) ([]models.DependencyVuln, []models.DependencyVuln, []models.DependencyVuln, error) {
+
 	existingDependencyVulns, err := s.dependencyVulnRepository.ListByAssetAndAssetVersion(assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 	// get all vulns from other branches
-	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, scannerID)
+	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -474,27 +503,27 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return dependencyVuln.State != models.VulnStateFixed
 	})
 
-	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(scannerID, dependencyVulns, existingDependencyVulns)
+	newDetectedVulns, fixedVulns, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 
 	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newDetectedVulns, existingVulnsOnOtherBranch)
 
 	if err := s.dependencyVulnRepository.Transaction(func(tx core.DB) error {
-		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, scannerID, newDetectedButOnOtherBranchExisting, existingEvents, *assetVersion, asset); err != nil {
+		if err := s.dependencyVulnService.UserDetectedExistingVulnOnDifferentBranch(tx, artifactName, newDetectedButOnOtherBranchExisting, existingEvents, *assetVersion, asset); err != nil {
 			slog.Error("error when trying to add events for existing vulnerability on different branch")
 			return err // this will cancel the transaction
 		}
 		// We can create the newly found one without checking anything
-		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, scannerID, newDetectedVulnsNotOnOtherBranch, *assetVersion, asset); err != nil {
+		if err := s.dependencyVulnService.UserDetectedDependencyVulns(tx, artifactName, newDetectedVulnsNotOnOtherBranch, *assetVersion, asset); err != nil {
 			return err // this will cancel the transaction
 		}
 
-		err = s.dependencyVulnService.UserDetectedDependencyVulnWithAnotherScanner(tx, firstTimeDetectedByCurrentScanner, scannerID)
+		err = s.dependencyVulnService.UserDetectedDependencyVulnWithAnotherScanner(tx, firstDetectedOnThisArtifactName, artifactName)
 		if err != nil {
 			slog.Error("error when trying to add events for adding scanner to vulnerability")
 			return err
 		}
 
-		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnWithScannerAnymore(tx, notDetectedByCurrentScannerAnymore, scannerID)
+		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnWithScannerAnymore(tx, fixedOnThisArtifactName, artifactName)
 		if err != nil {
 			slog.Error("error when trying to add events for removing scanner from vulnerability")
 			return err
@@ -506,7 +535,7 @@ func (s *service) handleScanResult(userID string, scannerID string, assetVersion
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 
-	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndScannerID(assetVersion.Name, assetVersion.AssetID, scannerID)
+	v, err := s.dependencyVulnRepository.ListUnfixedByAssetAndAssetVersionAndArtifactName(assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
@@ -545,9 +574,9 @@ func buildBomRefMap(bom normalize.SBOM) map[string]cdx.Component {
 	return res
 }
 
-func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, scannerID string, sbom normalize.SBOM) error {
+func (s *service) UpdateSBOM(org models.Org, project models.Project, asset models.Asset, assetVersion models.AssetVersion, artifactName string, sbom normalize.SBOM) error {
 	// load the asset components
-	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, "")
+	assetComponents, err := s.componentRepository.LoadComponents(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
 	if err != nil {
 		return errors.Wrap(err, "could not load asset components")
 	}
@@ -584,7 +613,6 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  nil, // direct dependency - therefore set it to nil
-					ScannerIDs:     scannerID,
 					DependencyPurl: componentPackageURL,
 				},
 			)
@@ -615,7 +643,6 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 			dependencies = append(dependencies,
 				models.ComponentDependency{
 					ComponentPurl:  utils.EmptyThenNil(compPackageURL),
-					ScannerIDs:     scannerID,
 					DependencyPurl: depPurlOrName,
 				},
 			)
@@ -649,7 +676,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 		return err
 	}
 
-	sbomUpdated, err := s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, scannerID)
+	sbomUpdated, err := s.componentRepository.HandleStateDiff(nil, assetVersion.Name, assetVersion.AssetID, assetComponents, dependencies, artifactName)
 	if err != nil {
 		return err
 	}
@@ -657,7 +684,7 @@ func (s *service) UpdateSBOM(org models.Org, project models.Project, asset model
 	// update the license information in the background
 	go func() {
 		slog.Info("updating license information in background", "asset", assetVersion.Name, "assetID", assetVersion.AssetID)
-		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, scannerID)
+		_, err := s.componentService.GetAndSaveLicenseInformation(assetVersion, artifactName)
 		if err != nil {
 			slog.Error("could not update license information", "asset", assetVersion.Name, "assetID", assetVersion.AssetID, "err", err)
 		} else {

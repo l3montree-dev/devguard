@@ -2,10 +2,10 @@ package daemon
 
 import (
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/l3montree-dev/devguard/internal/core"
+	"github.com/l3montree-dev/devguard/internal/core/artifact"
 	"github.com/l3montree-dev/devguard/internal/core/assetversion"
 	"github.com/l3montree-dev/devguard/internal/core/component"
 	"github.com/l3montree-dev/devguard/internal/core/integrations"
@@ -18,7 +18,6 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb/scan"
-	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/database/repositories"
 	"github.com/l3montree-dev/devguard/internal/monitoring"
 )
@@ -51,7 +50,8 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 	)
 
 	webhookIntegration := webhook.NewWebhookIntegration(db)
-
+	artifactRepository := repositories.NewArtifactRepository(db)
+	artifactService := artifact.NewService(artifactRepository)
 	jiraIntegration := jiraint.NewJiraIntegration(db)
 	gitlabIntegration := gitlabint.NewGitlabIntegration(db, gitlabOauth2Integrations, rbacProvider, gitlabClientFactory)
 
@@ -64,11 +64,11 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 	licenseRiskService := vuln.NewLicenseRiskService(licenseRiskRepository, vulnEventRepository)
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
 
-	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository)
+	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnerabilityRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
 
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskHistoryRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, projectRiskHistoryRepository)
 
-	s := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService)
+	s := scan.NewHTTPController(db, cveRepository, componentRepository, assetRepository, assetVersionRepository, assetVersionService, statisticsService, dependencyVulnService, firstPartyVulnService, artifactService)
 
 	orgs, err := orgRepository.All()
 	if err != nil {
@@ -100,22 +100,21 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 				monitoring.AssetVersionScanAmount.Inc()
 
 				for i := range assetVersions {
-					components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, "")
+
+					artifacts, err := artifactService.GetArtifactNamesByAssetIDAndAssetVersionName(assetVersions[i].AssetID, assetVersions[i].Name)
 					if err != nil {
-						slog.Error("failed to load components", "error", err)
+						slog.Error("failed to get artifacts for asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID, "error", err)
 						continue
 					}
 
-					// group the components by scannerID
-					scannerIDMap := make(map[string][]models.ComponentDependency)
-					for _, component := range components {
-						scanner := strings.Fields(component.ScannerIDs)
-						for _, scannerID := range scanner {
-							scannerIDMap[scannerID] = append(scannerIDMap[scannerID], component)
-						}
-					}
+					for _, artifact := range artifacts {
 
-					for scannerID, components := range scannerIDMap {
+						components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, artifact.ArtifactName)
+						if err != nil {
+							slog.Error("failed to load components", "error", err)
+							continue
+						}
+
 						bom, err := assetVersionService.BuildSBOM(assetVersions[i], "0.0.0", "", components)
 						if err != nil {
 							slog.Error("error when building SBOM")
@@ -125,17 +124,17 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 						if len(components) <= 0 {
 							continue
 						} else {
-							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], normalizedBOM, scannerID, "system")
+							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], normalizedBOM, artifact.ArtifactName, "system")
 						}
 
 						if err != nil {
-							slog.Error("failed to scan normalized sbom", "error", err, "scannerID", scannerID, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+							slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 							continue
 						}
-					}
 
-					monitoring.AssetVersionScanSuccess.Inc()
-					slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+						monitoring.AssetVersionScanSuccess.Inc()
+						slog.Info("scanned asset version", "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+					}
 				}
 			}
 		}

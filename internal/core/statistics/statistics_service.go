@@ -33,7 +33,7 @@ func NewService(statisticsRepository core.StatisticsRepository, componentReposit
 	}
 }
 
-func (s *service) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
+func (s *service) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	return s.assetRiskHistoryRepository.GetRiskHistory(assetVersionName, assetID, start, end)
 }
 
@@ -245,7 +245,7 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 		lowRisk, mediumRisk, highRisk, criticalRisk := calculateSeverityCountsByRisk(openVulns)
 		lowCvss, mediumCvss, highCvss, criticalCvss := calculateSeverityCountsByCvss(openVulns)
 
-		result := models.AssetRiskHistory{
+		result := models.ArtifactRiskHistory{
 			AssetVersionName: assetVersion.Name,
 			AssetID:          assetID,
 			History: models.History{
@@ -311,8 +311,8 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 			}
 		}
 	}
-	return nil
 
+	return nil
 }
 
 func (s *service) GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {
@@ -375,14 +375,6 @@ func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (
 	}
 
 	return distributionPerComponent, nil
-}
-
-func (s *service) GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
-	return s.statisticsRepository.GetDependencyVulnCountByScannerID(assetVersionName, assetID)
-}
-
-func (s *service) GetDependencyCountPerscanner(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
-	return s.componentRepository.GetDependencyCountPerScanner(assetVersionName, assetID)
 }
 
 func (s *service) GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {

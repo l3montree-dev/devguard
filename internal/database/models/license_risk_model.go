@@ -9,9 +9,10 @@ import (
 
 type LicenseRisk struct {
 	Vulnerability
-	FinalLicenseDecision *string   `json:"finalLicenseDecision" gorm:"type:text"`
-	ComponentPurl        string    `json:"componentPurl" gorm:"type:text;primarykey"`
-	Component            Component `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl;constraint:OnDelete:CASCADE;"`
+	FinalLicenseDecision *string    `json:"finalLicenseDecision" gorm:"type:text"`
+	ComponentPurl        string     `json:"componentPurl" gorm:"type:text;"`
+	Component            Component  `json:"component" gorm:"foreignKey:ComponentPurl;references:Purl;constraint:OnDelete:CASCADE;"`
+	Artifacts            []Artifact `json:"artifacts" gorm:"many2many:artifact_license_risks;constraint:OnDelete:CASCADE"`
 }
 
 func (licenseRisk *LicenseRisk) SetFinalLicenseDecision(finalLicenseDecision string) {
@@ -36,4 +37,15 @@ func (licenseRisk *LicenseRisk) BeforeSave(tx *gorm.DB) (err error) {
 	hash := licenseRisk.CalculateHash()
 	licenseRisk.ID = hash
 	return nil
+}
+
+func (licenseRisk *LicenseRisk) GetArtifactNames() string {
+	artifactNames := ""
+	for _, artifact := range licenseRisk.Artifacts {
+		if artifactNames != "" {
+			artifactNames += ", "
+		}
+		artifactNames += artifact.ArtifactName
+	}
+	return artifactNames
 }
