@@ -249,7 +249,7 @@ func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
 
 				purl := fmt.Sprintf("pkg:%s", repo)
 
-				notPURlVersionedComponents := make([]AffectedComponent, 0, len(affected.Versions))
+				notPurlVersionedComponents := make([]AffectedComponent, 0, len(affected.Versions))
 				for _, v := range affected.Versions {
 					tmpV := v
 					affectedComponent := AffectedComponent{
@@ -264,9 +264,9 @@ func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
 
 						CVE: cves,
 					}
-					notPURlVersionedComponents = append(notPURlVersionedComponents, affectedComponent)
+					notPurlVersionedComponents = append(notPurlVersionedComponents, affectedComponent)
 				}
-				affectedComponents = append(affectedComponents, notPURlVersionedComponents...)
+				affectedComponents = append(affectedComponents, notPurlVersionedComponents...)
 			}
 		}
 	}
