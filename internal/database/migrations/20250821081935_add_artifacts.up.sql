@@ -122,6 +122,7 @@ SELECT DISTINCT
     trim(sid) AS artifact_name
 FROM component_dependencies t,
 LATERAL regexp_split_to_table(t.scanner_ids, '\s+') sid
+WHERE t.asset_version_name IS NOT NULL
 ON CONFLICT (asset_id, asset_version_name, artifact_name) DO NOTHING;
 
 --- Recreate the relationship ---
