@@ -253,7 +253,7 @@ func (c *componentRepository) LoadComponentsWithProject(tx core.DB, overwrittenL
 
 	var componentDependencies []models.ComponentDependency
 
-	query := c.GetDB(tx).Debug().Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Artifacts").Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
+	query := c.GetDB(tx).Model(&models.ComponentDependency{}).Preload("Dependency").Preload("Component").Preload("Artifacts").Joins("JOIN artifact_component_dependencies ON artifact_component_dependencies.component_dependency_id = component_dependencies.id").Joins("JOIN artifacts ON artifact_component_dependencies.artifact_artifact_name = artifacts.artifact_name AND artifact_component_dependencies.artifact_asset_version_name = artifacts.asset_version_name AND artifact_component_dependencies.artifact_asset_id = artifacts.asset_id").Where("component_dependencies.asset_version_name = ? AND component_dependencies.asset_id = ?", assetVersionName, assetID)
 
 	for _, f := range filter {
 		query = query.Where(f.SQL(), f.Value())

@@ -135,7 +135,7 @@ func (repository *dependencyVulnRepository) GetByAssetVersionPaged(tx core.DB, a
 	var count int64
 	var dependencyVulns = []models.DependencyVuln{}
 
-	q := repository.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Preload("Artifacts").Joins("left join artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").Joins("CVE").Where("dependency_vulns.asset_version_name = ?", assetVersionName).Where("dependency_vulns.asset_id = ?", assetID)
+	q := repository.Repository.GetDB(tx).Model(&models.DependencyVuln{}).Preload("Artifacts").Joins("LEFT JOIN artifact_dependency_vulns ON artifact_dependency_vulns.dependency_vuln_id = dependency_vulns.id").Joins("CVE").Where("dependency_vulns.asset_version_name = ?", assetVersionName).Where("dependency_vulns.asset_id = ?", assetID)
 
 	// apply filters
 	for _, f := range filter {
@@ -307,7 +307,7 @@ func (repository *dependencyVulnRepository) GetHintsInOrganizationForVuln(tx cor
 	var hints common.DependencyVulnHints
 	stateCounts := make([]stateCount, 0, 7)
 
-	err := repository.GetDB(tx).Debug().Raw(`SELECT state, COUNT(*) as "count" FROM (
+	err := repository.GetDB(tx).Raw(`SELECT state, COUNT(*) as "count" FROM (
 	SELECT DISTINCT d.asset_id, d.state as "state"
     FROM dependency_vulns d
     WHERE d.asset_id IN (

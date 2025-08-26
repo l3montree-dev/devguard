@@ -16,18 +16,13 @@ func NewService(artifactRepository core.ArtifactRepository) *service {
 	}
 }
 
-func (s *service) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]string, error) {
+func (s *service) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	artifacts, err := s.artifactRepository.GetByAssetIDAndAssetVersionName(assetID, assetVersionName)
 	if err != nil {
 		return nil, err
 	}
 
-	artifactNames := make([]string, len(artifacts))
-	for i, artifact := range artifacts {
-		artifactNames[i] = artifact.ArtifactName
-	}
-
-	return artifactNames, nil
+	return artifacts, nil
 }
 
 func (s *service) SaveArtifact(artifact models.Artifact) error {

@@ -222,7 +222,7 @@ func TestDaemonAssetVersionDelete(t *testing.T) {
 		assert.Equal(t, "record not found", err.Error())
 
 		var deletedVulnEvent models.VulnEvent
-		err = db.Debug().First(&deletedVulnEvent, "vuln_id = ?", vulnEvent.VulnID).Error
+		err = db.First(&deletedVulnEvent, "vuln_id = ?", vulnEvent.VulnID).Error
 		fmt.Println("Deleted Vuln Event:", deletedVulnEvent.ID)
 		assert.Equal(t, "record not found", err.Error())
 

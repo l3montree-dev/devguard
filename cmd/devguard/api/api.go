@@ -713,30 +713,32 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	//TODO: add the projectScopedRBAC middleware to the following routes
 	assetVersionRouter := assetRouter.Group("/refs/:assetVersionSlug", assetVersionMiddleware(assetVersionRepository))
 
-	assetVersionRouter.GET("/", assetVersionController.Read)
+	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
+	// needs migration to artifact router
+	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
+	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
+	assetVersionRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
+	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetAssetVersionRiskHistory)
 
+	assetVersionRouter.GET("/", assetVersionController.Read)
 	assetVersionRouter.GET("/compliance/", complianceController.AssetCompliance)
 	assetVersionRouter.GET("/compliance/:policy/", complianceController.Details)
 	assetVersionRouter.DELETE("/", assetVersionController.Delete, neededScope([]string{"manage"})) //Delete an asset version
 
 	assetVersionRouter.GET("/metrics/", assetVersionController.Metrics)
-	assetVersionRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
-	assetVersionRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
-	assetVersionRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
-	assetVersionRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
-	assetVersionRouter.GET("/sbom.xml/", assetVersionController.SBOMXML)
-	assetVersionRouter.GET("/vex.json/", assetVersionController.VEXJSON)
-	assetVersionRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
-	assetVersionRouter.GET("/vex.xml/", assetVersionController.VEXXML)
-	assetVersionRouter.GET("/sarif.json/", firstPartyVulnController.Sarif)
-	assetVersionRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
-	assetVersionRouter.GET("/vulnerability-report.pdf/", assetVersionController.BuildVulnerabilityReportPDF)
 
-	assetVersionRouter.GET("/stats/component-risk/", statisticsController.GetComponentRisk)
-	assetVersionRouter.GET("/stats/risk-distribution/", statisticsController.GetAssetVersionRiskDistribution)
-	assetVersionRouter.GET("/stats/cvss-distribution/", statisticsController.GetAssetVersionCvssDistribution)
+	artifactRouter := assetVersionRouter.Group("/artifacts/:artifact", projectScopedRBAC(core.ObjectAsset, core.ActionRead))
+	artifactRouter.GET("/affected-components/", assetVersionController.AffectedComponents)
+	artifactRouter.GET("/dependency-graph/", assetVersionController.DependencyGraph)
+	artifactRouter.GET("/path-to-component/", assetVersionController.GetDependencyPathFromPURL)
+	artifactRouter.GET("/sbom.json/", assetVersionController.SBOMJSON)
+	artifactRouter.GET("/sbom.xml/", assetVersionController.SBOMXML)
+	artifactRouter.GET("/vex.json/", assetVersionController.VEXJSON)
+	artifactRouter.GET("/openvex.json/", assetVersionController.OpenVEXJSON)
+	artifactRouter.GET("/vex.xml/", assetVersionController.VEXXML)
+	artifactRouter.GET("/sbom.pdf/", assetVersionController.BuildPDFFromSBOM)
+	artifactRouter.GET("/vulnerability-report.pdf/", assetVersionController.BuildVulnerabilityReportPDF)
 
-	assetVersionRouter.GET("/stats/risk-history/", statisticsController.GetAssetVersionRiskHistory)
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerID)
 	/* 	assetVersionRouter.GET("/stats/vuln-count-by-scanner/", statisticsController.GetDependencyVulnCountByScannerID)

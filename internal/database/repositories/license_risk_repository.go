@@ -25,7 +25,8 @@ func (repository *LicenseRiskRepository) GetAllLicenseRisksForAssetVersionPaged(
 	var count int64
 	var licenseRisks = []models.LicenseRisk{}
 
-	q := repository.Repository.GetDB(tx).Model(&models.LicenseRisk{}).Preload("Component").Where("license_risks.asset_version_name = ?", assetVersionName).Where("license_risks.asset_id = ?", assetID)
+	q := repository.Repository.GetDB(tx).Model(&models.LicenseRisk{}).Preload("Component").Preload("Artifacts").Joins(
+		"LEFT JOIN artifact_license_risks ON artifact_license_risks.license_risk_id = license_risks.id").Where("license_risks.asset_version_name = ?", assetVersionName).Where("license_risks.asset_id = ?", assetID)
 
 	// apply filters
 	for _, f := range filter {

@@ -40,23 +40,23 @@ func (_m *AssetRiskHistoryRepository) EXPECT() *AssetRiskHistoryRepository_Expec
 }
 
 // GetRiskHistory provides a mock function for the type AssetRiskHistoryRepository
-func (_mock *AssetRiskHistoryRepository) GetRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
+func (_mock *AssetRiskHistoryRepository) GetRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	ret := _mock.Called(assetVersionName, assetID, start, end)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetRiskHistory")
 	}
 
-	var r0 []models.AssetRiskHistory
+	var r0 []models.ArtifactRiskHistory
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) ([]models.AssetRiskHistory, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
 		return returnFunc(assetVersionName, assetID, start, end)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) []models.AssetRiskHistory); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistory); ok {
 		r0 = returnFunc(assetVersionName, assetID, start, end)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.AssetRiskHistory)
+			r0 = ret.Get(0).([]models.ArtifactRiskHistory)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, time.Time, time.Time) error); ok {
@@ -109,34 +109,34 @@ func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) Run(run func(assetVers
 	return _c
 }
 
-func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) Return(assetRiskHistorys []models.AssetRiskHistory, err error) *AssetRiskHistoryRepository_GetRiskHistory_Call {
+func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) Return(assetRiskHistorys []models.ArtifactRiskHistory, err error) *AssetRiskHistoryRepository_GetRiskHistory_Call {
 	_c.Call.Return(assetRiskHistorys, err)
 	return _c
 }
 
-func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)) *AssetRiskHistoryRepository_GetRiskHistory_Call {
+func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)) *AssetRiskHistoryRepository_GetRiskHistory_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetRiskHistoryByProject provides a mock function for the type AssetRiskHistoryRepository
-func (_mock *AssetRiskHistoryRepository) GetRiskHistoryByProject(projectID uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error) {
+func (_mock *AssetRiskHistoryRepository) GetRiskHistoryByProject(projectID uuid.UUID, day time.Time) ([]models.ArtifactRiskHistory, error) {
 	ret := _mock.Called(projectID, day)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetRiskHistoryByProject")
 	}
 
-	var r0 []models.AssetRiskHistory
+	var r0 []models.ArtifactRiskHistory
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, time.Time) ([]models.AssetRiskHistory, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
 		return returnFunc(projectID, day)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, time.Time) []models.AssetRiskHistory); ok {
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, time.Time) []models.ArtifactRiskHistory); ok {
 		r0 = returnFunc(projectID, day)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.AssetRiskHistory)
+			r0 = ret.Get(0).([]models.ArtifactRiskHistory)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, time.Time) error); ok {
@@ -177,18 +177,18 @@ func (_c *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call) Run(run func(
 	return _c
 }
 
-func (_c *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call) Return(assetRiskHistorys []models.AssetRiskHistory, err error) *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call {
+func (_c *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call) Return(assetRiskHistorys []models.ArtifactRiskHistory, err error) *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call {
 	_c.Call.Return(assetRiskHistorys, err)
 	return _c
 }
 
-func (_c *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call) RunAndReturn(run func(projectID uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error)) *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call {
+func (_c *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call) RunAndReturn(run func(projectID uuid.UUID, day time.Time) ([]models.ArtifactRiskHistory, error)) *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateRiskAggregation provides a mock function for the type AssetRiskHistoryRepository
-func (_mock *AssetRiskHistoryRepository) UpdateRiskAggregation(assetRisk *models.AssetRiskHistory) error {
+func (_mock *AssetRiskHistoryRepository) UpdateRiskAggregation(assetRisk *models.ArtifactRiskHistory) error {
 	ret := _mock.Called(assetRisk)
 
 	if len(ret) == 0 {
@@ -196,7 +196,7 @@ func (_mock *AssetRiskHistoryRepository) UpdateRiskAggregation(assetRisk *models
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(*models.AssetRiskHistory) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(*models.ArtifactRiskHistory) error); ok {
 		r0 = returnFunc(assetRisk)
 	} else {
 		r0 = ret.Error(0)
@@ -215,11 +215,11 @@ func (_e *AssetRiskHistoryRepository_Expecter) UpdateRiskAggregation(assetRisk i
 	return &AssetRiskHistoryRepository_UpdateRiskAggregation_Call{Call: _e.mock.On("UpdateRiskAggregation", assetRisk)}
 }
 
-func (_c *AssetRiskHistoryRepository_UpdateRiskAggregation_Call) Run(run func(assetRisk *models.AssetRiskHistory)) *AssetRiskHistoryRepository_UpdateRiskAggregation_Call {
+func (_c *AssetRiskHistoryRepository_UpdateRiskAggregation_Call) Run(run func(assetRisk *models.ArtifactRiskHistory)) *AssetRiskHistoryRepository_UpdateRiskAggregation_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 *models.AssetRiskHistory
+		var arg0 *models.ArtifactRiskHistory
 		if args[0] != nil {
-			arg0 = args[0].(*models.AssetRiskHistory)
+			arg0 = args[0].(*models.ArtifactRiskHistory)
 		}
 		run(
 			arg0,
@@ -233,7 +233,7 @@ func (_c *AssetRiskHistoryRepository_UpdateRiskAggregation_Call) Return(err erro
 	return _c
 }
 
-func (_c *AssetRiskHistoryRepository_UpdateRiskAggregation_Call) RunAndReturn(run func(assetRisk *models.AssetRiskHistory) error) *AssetRiskHistoryRepository_UpdateRiskAggregation_Call {
+func (_c *AssetRiskHistoryRepository_UpdateRiskAggregation_Call) RunAndReturn(run func(assetRisk *models.ArtifactRiskHistory) error) *AssetRiskHistoryRepository_UpdateRiskAggregation_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -185,23 +185,23 @@ func (_c *StatisticsService_GetAssetVersionRiskDistribution_Call) RunAndReturn(r
 }
 
 // GetAssetVersionRiskHistory provides a mock function for the type StatisticsService
-func (_mock *StatisticsService) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
+func (_mock *StatisticsService) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	ret := _mock.Called(assetVersionName, assetID, start, end)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAssetVersionRiskHistory")
 	}
 
-	var r0 []models.AssetRiskHistory
+	var r0 []models.ArtifactRiskHistory
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) ([]models.AssetRiskHistory, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) ([]models.ArtifactRiskHistory, error)); ok {
 		return returnFunc(assetVersionName, assetID, start, end)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) []models.AssetRiskHistory); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, uuid.UUID, time.Time, time.Time) []models.ArtifactRiskHistory); ok {
 		r0 = returnFunc(assetVersionName, assetID, start, end)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]models.AssetRiskHistory)
+			r0 = ret.Get(0).([]models.ArtifactRiskHistory)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(string, uuid.UUID, time.Time, time.Time) error); ok {
@@ -254,12 +254,12 @@ func (_c *StatisticsService_GetAssetVersionRiskHistory_Call) Run(run func(assetV
 	return _c
 }
 
-func (_c *StatisticsService_GetAssetVersionRiskHistory_Call) Return(assetRiskHistorys []models.AssetRiskHistory, err error) *StatisticsService_GetAssetVersionRiskHistory_Call {
+func (_c *StatisticsService_GetAssetVersionRiskHistory_Call) Return(assetRiskHistorys []models.ArtifactRiskHistory, err error) *StatisticsService_GetAssetVersionRiskHistory_Call {
 	_c.Call.Return(assetRiskHistorys, err)
 	return _c
 }
 
-func (_c *StatisticsService_GetAssetVersionRiskHistory_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)) *StatisticsService_GetAssetVersionRiskHistory_Call {
+func (_c *StatisticsService_GetAssetVersionRiskHistory_Call) RunAndReturn(run func(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)) *StatisticsService_GetAssetVersionRiskHistory_Call {
 	_c.Call.Return(run)
 	return _c
 }

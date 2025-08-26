@@ -18,13 +18,16 @@ type AssetRiskDistribution struct {
 	Label            string    `json:"label"`
 }
 
-type AssetRiskHistory struct {
+type ArtifactRiskHistory struct {
 	History
 	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
+	ArtifactName     string    `json:"artifactName" gorm:"primaryKey;type:text;"`
+
+	Artifact Artifact `json:"artifact" gorm:"foreignKey:AssetID,AssetVersionName,ArtifactName;references:AssetID,AssetVersionName,ArtifactName;constraint:OnDelete:CASCADE;"`
 }
 
-func (m AssetRiskHistory) TableName() string {
+func (m ArtifactRiskHistory) TableName() string {
 	return "asset_risk_history"
 }
 

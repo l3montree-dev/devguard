@@ -64,7 +64,7 @@ func InitDatabaseContainer(initDBSQLPath string) (core.DB, func()) {
 		&models.Exploit{},
 		&models.ComponentDependency{},
 		&models.LicenseRisk{},
-		&models.AssetRiskHistory{},
+		&models.ArtifactRiskHistory{},
 		&models.ProjectRiskHistory{},
 		&models.Weakness{},
 		&models.GitLabIntegration{},

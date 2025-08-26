@@ -92,15 +92,7 @@ func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx core.Context) err
 }
 
 func (a *AssetVersionController) AffectedComponents(ctx core.Context) error {
-	artifactName := ""
-	filter := core.GetFilterQuery(ctx)
-	for _, f := range filter {
-		if f.SQL() == "artifact= ?" {
-			artifactName = f.Value().(string)
-			break
-		}
-	}
-
+	artifactName := ctx.Param("artifact")
 	assetVersion := core.GetAssetVersion(ctx)
 	_, dependencyVulns, err := a.getComponentsAndDependencyVulns(assetVersion, artifactName)
 	if err != nil {
@@ -128,7 +120,7 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)
 
-	artifactName := ctx.QueryParam("artifact-name")
+	artifactName := ctx.Param("artifact")
 
 	components, err := a.componentRepository.LoadComponents(nil, app.Name, app.AssetID, artifactName)
 	if err != nil {
@@ -149,7 +141,7 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) err
 
 	pURL := ctx.QueryParam("purl")
 
-	artifactName := ctx.QueryParam("artifact-name")
+	artifactName := ctx.Param("artifact")
 
 	components, err := a.componentRepository.LoadPathToComponent(nil, assetVersion.Name, assetVersion.AssetID, pURL, artifactName)
 	if err != nil {
@@ -360,7 +352,7 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 
-	artifactName := ctx.QueryParam("artifact-name")
+	artifactName := ctx.Param("artifact")
 
 	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, artifactName)
 	if err != nil {
@@ -410,7 +402,7 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
-	artifactName := ctx.QueryParam("artifact-name")
+	artifactName := ctx.Param("artifact")
 
 	dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, artifactName)
 	if err != nil {
@@ -422,7 +414,7 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 
 func (a *AssetVersionController) Metrics(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	//artifactName := ctx.QueryParam("artifact-name")
+	//artifactName := ctx.QueryParam("artifact")
 	// get the latest events of this asset per scan type
 	/* 	err := a.assetVersionRepository.GetDB(nil).Table("dependency_vulns").Select("DISTINCT scanner_ids").Where("asset_version_name  = ? AND asset_id = ?", assetVersion.Name, assetVersion.AssetID).Pluck("scanner_ids", &scannerIDs).Error
 
@@ -461,7 +453,7 @@ func (a *AssetVersionController) Metrics(ctx core.Context) error {
 // RefetchLicenses forces re-fetching license information for all components of the current asset version
 func (a *AssetVersionController) RefetchLicenses(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
-	scannerID := ctx.QueryParam("scanner")
+	scannerID := ctx.Param("artifact")
 
 	updated, err := a.componentService.RefreshAllLicenses(assetVersion, scannerID)
 	if err != nil {

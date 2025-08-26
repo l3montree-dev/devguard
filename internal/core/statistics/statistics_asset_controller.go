@@ -16,7 +16,7 @@ type statisticsService interface {
 	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
 	GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
 	GetAssetVersionCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
-	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error)
+	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
 	GetDependencyVulnAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (DependencyVulnAggregationStateAndChange, error)
 	GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
 	GetDependencyCountPerScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
@@ -210,7 +210,7 @@ func (c *httpController) GetAssetVersionRiskHistory(ctx core.Context) error {
 	return ctx.JSON(200, results)
 }
 
-func (c *httpController) getAssetVersionRiskHistory(start, end string, assetVersion models.AssetVersion) ([]models.AssetRiskHistory, error) {
+func (c *httpController) getAssetVersionRiskHistory(start, end string, assetVersion models.AssetVersion) ([]models.ArtifactRiskHistory, error) {
 
 	if start == "" || end == "" {
 		return nil, fmt.Errorf("start and end query parameters are required")

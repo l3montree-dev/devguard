@@ -257,7 +257,7 @@ type AssetService interface {
 	CreateAsset(asset models.Asset) (*models.Asset, error)
 }
 type ArtifactService interface {
-	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]string, error)
+	GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 	SaveArtifact(artifact models.Artifact) error
 }
 
@@ -393,9 +393,9 @@ type StatisticsRepository interface {
 }
 
 type AssetRiskHistoryRepository interface {
-	GetRiskHistory(assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.AssetRiskHistory, error)
-	GetRiskHistoryByProject(projectID uuid.UUID, day time.Time) ([]models.AssetRiskHistory, error)
-	UpdateRiskAggregation(assetRisk *models.AssetRiskHistory) error
+	GetRiskHistory(assetVersionName string, assetID uuid.UUID, start, end time.Time) ([]models.ArtifactRiskHistory, error)
+	GetRiskHistoryByProject(projectID uuid.UUID, day time.Time) ([]models.ArtifactRiskHistory, error)
+	UpdateRiskAggregation(assetRisk *models.ArtifactRiskHistory) error
 }
 
 type ProjectRiskHistoryRepository interface {

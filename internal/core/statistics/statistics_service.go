@@ -33,7 +33,7 @@ func NewService(statisticsRepository core.StatisticsRepository, componentReposit
 	}
 }
 
-func (s *service) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.AssetRiskHistory, error) {
+func (s *service) GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error) {
 	return s.assetRiskHistoryRepository.GetRiskHistory(assetVersionName, assetID, start, end)
 }
 
@@ -245,7 +245,7 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 		lowRisk, mediumRisk, highRisk, criticalRisk := calculateSeverityCountsByRisk(openVulns)
 		lowCvss, mediumCvss, highCvss, criticalCvss := calculateSeverityCountsByCvss(openVulns)
 
-		result := models.AssetRiskHistory{
+		result := models.ArtifactRiskHistory{
 			AssetVersionName: assetVersion.Name,
 			AssetID:          assetID,
 			History: models.History{
@@ -286,33 +286,7 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 	// save the last history update timestamp
 	assetVersion.LastHistoryUpdate = &end
 
-	// we ALWAYS need to propagate the risk aggregation to the project. The only exception is in the statistics daemon. There
-	// we update all assets and afterwards do a one time project update. This is just optimization.
-	if propagateToProject {
-		currentProject, err := s.projectRepository.GetProjectByAssetID(assetID)
-
-		if err != nil {
-			return fmt.Errorf("could not get project id by asset id: %w", err)
-		}
-		for {
-			// update all projects - parent projects as well.
-			err = s.updateProjectRiskAggregation(currentProject.ID, begin, end)
-			if err != nil {
-				return fmt.Errorf("could not update project risk aggregation: %w", err)
-			}
-
-			if currentProject.ParentID != nil {
-				currentProject, err = s.projectRepository.Read(*currentProject.ParentID)
-				if err != nil {
-					return fmt.Errorf("could not get parent project: %w", err)
-				}
-			} else {
-				break
-			}
-		}
-	}
 	return nil
-
 }
 
 func (s *service) GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error) {

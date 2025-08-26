@@ -107,9 +107,9 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 						continue
 					}
 
-					for _, artifactName := range artifacts {
+					for _, artifact := range artifacts {
 
-						components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, artifactName)
+						components, err := componentRepository.LoadComponents(db, assetVersions[i].Name, assetVersions[i].AssetID, artifact.ArtifactName)
 						if err != nil {
 							slog.Error("failed to load components", "error", err)
 							continue
@@ -124,11 +124,11 @@ func ScanAssetVersions(db core.DB, rbacProvider core.RBACProvider) error {
 						if len(components) <= 0 {
 							continue
 						} else {
-							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], normalizedBOM, artifactName, "system")
+							_, err = s.ScanNormalizedSBOM(org, project, asset, assetVersions[i], normalizedBOM, artifact.ArtifactName, "system")
 						}
 
 						if err != nil {
-							slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifactName, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
+							slog.Error("failed to scan normalized sbom", "error", err, "artifactName", artifact, "assetVersionName", assetVersions[i].Name, "assetID", assetVersions[i].AssetID)
 							continue
 						}
 
