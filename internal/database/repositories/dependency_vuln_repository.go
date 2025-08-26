@@ -58,7 +58,7 @@ func (repository *dependencyVulnRepository) GetDependencyVulnsByAssetVersion(tx 
 
 	var dependencyVulns = []models.DependencyVuln{}
 
-	q := repository.Repository.GetDB(tx).Preload("Events").Preload("CVE").Preload("CVE.Exploits").Where("asset_version_name = ? AND asset_id = ?", assetVersionName, assetID)
+	q := repository.Repository.GetDB(tx).Preload("Events").Preload("CVE").Preload("CVE.Exploits").Where("dependency_vulns.asset_version_name = ? AND dependency_vulns.asset_id = ?", assetVersionName, assetID)
 
 	if artifactName != "" {
 		// scanner ids is a string array separated by whitespaces
