@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-//go:embed licenses.json
+//go:embed approved-licenses.json
 var licensesFile []byte
 
 type license struct {

@@ -1,20 +1,12 @@
 package component
 
 import (
-	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
-	"os"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/google/licensecheck"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -112,12 +104,7 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 		}
 		component.License = &cov.Match[0].ID
 	case "apk":
-		license, err := getAlpineLicense(validatedPURL)
-		if err != nil || license == "" {
-			component.License = utils.Ptr("unknown")
-			return component, err
-		}
-		component.License = &license
+		component.License = utils.Ptr("WIP")
 	default:
 		resp, err := s.depsDevService.GetVersion(context.Background(), validatedPURL.Type, combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name), validatedPURL.Version)
 
@@ -313,167 +300,4 @@ func getDebianPackageInformation(pURL packageurl.PackageURL) (*bytes.Buffer, err
 	defer resp.Body.Close()
 	_, err = io.Copy(&buff, resp.Body)
 	return &buff, err
-}
-
-var (
-	alpineReleaseVersions []string
-	alpineVersionIndex                      = 0
-	alpineLicenseMap      map[string]string = make(map[string]string, 8192) // Map to cache alpine type licenses. Form : <package name> + <package version> -> license (size is just an approximate)
-	alpineMutex           sync.Mutex                                        // since we are running in a go routine we need to sync the access to the map
-)
-
-func getAlpineLicense(pURL packageurl.PackageURL) (string, error) {
-	var license string
-	alpineMutex.Lock() // it seems we cannot parallelize anything in this function, only 1 thread should get the versions at a time
-	// and only 1 thread should get new license information at a time
-	// because other threads may be included in the information currently fetched by the other thread
-	defer alpineMutex.Unlock()
-	if len(alpineReleaseVersions) == 0 {
-		err := retrieveAlpineVersions()
-		if err != nil {
-			return license, err
-		}
-	}
-	//if there is already a thread which gets new set of license information we should wait for that thread to finish before checking
-	license, exists := alpineLicenseMap[pURL.Name+pURL.Version]
-	if exists {
-		return license, nil
-	}
-	for alpineVersionIndex < len(alpineReleaseVersions) {
-
-		alpineBaseURL := os.Getenv("ALPINE_LICENSE_API")
-		if alpineBaseURL == "" {
-			return license, fmt.Errorf("missing ALPINE_RELEASES_API environment variable, see .env.example for an example value")
-		}
-		versionURL := fmt.Sprintf("%s%s/main/x86_64/APKINDEX.tar.gz", alpineBaseURL, alpineReleaseVersions[alpineVersionIndex])
-		alpineVersionIndex++
-
-		// maybe operate on a queue/stack not with indexes. If requests fails on the way it will never be retrieved again
-		apkIndex, err := getAPKIndexInformation(versionURL)
-		if err != nil {
-			return license, err
-		}
-		extractLicensesFromAPKINDEX(*apkIndex)
-		license, exists = alpineLicenseMap[pURL.Name+pURL.Version]
-		if exists {
-			return license, nil
-		}
-	}
-	slog.Warn("alpine license not found for", pURL.String(), "")
-	return license, nil
-}
-
-func getAPKIndexInformation(url string) (*bytes.Buffer, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return &bytes.Buffer{}, err
-	}
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return &bytes.Buffer{}, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return &bytes.Buffer{}, fmt.Errorf("http request was unsuccessful, status code: %d", resp.StatusCode)
-	}
-	defer resp.Body.Close()
-
-	buf := bytes.Buffer{}
-	_, err = io.Copy(&buf, resp.Body)
-	if err != nil {
-		return &bytes.Buffer{}, err
-	}
-
-	unzippedContents, err := gzip.NewReader(&buf)
-	if err != nil {
-		return &bytes.Buffer{}, err
-	}
-	defer unzippedContents.Close()
-
-	tarContents := tar.NewReader(unzippedContents)
-	apkIndex := bytes.NewBuffer(make([]byte, 0, 2*1000*1000)) // allocate 2 MB memory for buf to avoid resizing operations
-	for {                                                     //go through every file
-		header, err := tarContents.Next()
-		if err == io.EOF {
-			break // end of tar archive
-		}
-		if err != nil {
-			log.Fatal(err)
-		}
-		if header.Name == "APKINDEX" {
-			_, err = apkIndex.ReadFrom(tarContents)
-			if err != nil {
-				return &bytes.Buffer{}, err
-			}
-		}
-	}
-	return apkIndex, nil
-}
-
-// splits contents into blocks separated by two new line characters. Then iterate over every block to extract package name, version and license using string modifications
-func extractLicensesFromAPKINDEX(contents bytes.Buffer) {
-	var name, version, license string
-	var indexName, indexVersion, indexLicense int
-	for pkg := range strings.SplitSeq(contents.String(), "\n\n") {
-		indexName = strings.Index(pkg, "\nP:")
-		if indexName != -1 { // first check package name
-			name, _, _ = strings.Cut(pkg[indexName+3:], "\n")
-			indexVersion = strings.Index(pkg[indexName+len(name):], "\nV:") // reduce operations by starting the search after the package field
-			if indexVersion != -1 {                                         // then check version
-				version, _, _ = strings.Cut(pkg[indexName+len(name)+indexVersion+3:], "\n")
-				indexLicense = strings.Index(pkg[indexName+len(name)+indexVersion+len(version):], "\nL:")
-				if indexLicense != -1 { // last check the license
-					license, _, _ = strings.Cut(pkg[indexName+len(name)+indexVersion+len(version)+indexLicense+3:], "\n") // reduce operations by starting the search after the version field
-					alpineLicenseMap[name+version] = license
-				}
-			}
-		}
-	}
-}
-
-func retrieveAlpineVersions() error {
-	buf := bytes.NewBuffer(make([]byte, 0, 64*1000)) // json size is roughly 64 KB
-	releasesURL := os.Getenv("ALPINE_RELEASES_API")
-	if releasesURL == "" {
-		return fmt.Errorf("missing ALPINE_RELEASES_API environment variable, see .env.example for an example value")
-	}
-	req, err := http.NewRequest("GET", releasesURL, nil)
-	if err != nil {
-		return err
-	}
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	_, err = io.Copy(buf, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	type releases struct {
-		ReleaseBranches []struct {
-			Branch string `json:"rel_branch"`
-		} `json:"release_branches"`
-	}
-	r := releases{}
-	err = json.Unmarshal(buf.Bytes(), &r)
-	if err != nil {
-		return err
-	}
-	alpineReleaseVersions = make([]string, 0, len(r.ReleaseBranches))
-	for _, rls := range r.ReleaseBranches {
-		if rls.Branch[1] == '3' || rls.Branch == "edge" { //only check versions 3.x and edge
-			alpineReleaseVersions = append(alpineReleaseVersions, rls.Branch)
-		}
-	}
-	fmt.Printf("\n\nThis is the list of versions: %v\n\n", alpineReleaseVersions)
-	return nil
 }
