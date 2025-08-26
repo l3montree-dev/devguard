@@ -396,7 +396,7 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 
 	for _, existingVulns := range existingDependencyVulns {
 
-		if _, ok := foundVulnsMappedByID[existingVulns.ID]; !ok {
+		if _, ok := foundVulnsMappedByID[existingVulns.CalculateHash()]; !ok {
 			if len(existingVulns.Artifacts) == 1 && existingVulns.Artifacts[0].ArtifactName == currentArtifactName {
 				fixedOnAll = append(fixedOnAll, existingVulns)
 			} else {
@@ -407,8 +407,8 @@ func diffScanResults(currentArtifactName string, foundVulnerabilities []models.D
 	}
 	var existingVulnsMappedByID = make(map[string]models.DependencyVuln)
 	for _, vuln := range existingDependencyVulns {
-		if _, ok := existingVulnsMappedByID[vuln.ID]; !ok {
-			existingVulnsMappedByID[vuln.ID] = vuln
+		if _, ok := existingVulnsMappedByID[vuln.CalculateHash()]; !ok {
+			existingVulnsMappedByID[vuln.CalculateHash()] = vuln
 		}
 	}
 

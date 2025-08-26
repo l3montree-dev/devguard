@@ -8,6 +8,7 @@ import (
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/google/uuid"
 	"github.com/l3montree-dev/devguard/internal/common"
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
@@ -182,14 +183,19 @@ func TestDiffScanResults(t *testing.T) {
 	t.Run("should correctly identify a vulnerability which now gets found by another scanner", func(t *testing.T) {
 		currentScanner := "new-scanner"
 
+		assetID := uuid.New()
+		assetVersionName := "asset-version-1"
+
 		foundVulnerabilities := []models.DependencyVuln{
-			{CVEID: utils.Ptr("CVE-1234")},
+			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{AssetVersionName: assetVersionName, AssetID: assetID}},
 		}
 
-		artifact := models.Artifact{ArtifactName: "artifact1"}
+		artifact := models.Artifact{ArtifactName: "artifact1", AssetVersionName: assetVersionName, AssetID: assetID}
 
 		existingDependencyVulns := []models.DependencyVuln{
-			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
+			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{
+				AssetVersionName: assetVersionName, AssetID: assetID,
+			}, Artifacts: []models.Artifact{artifact}},
 		}
 
 		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
@@ -201,12 +207,15 @@ func TestDiffScanResults(t *testing.T) {
 	})
 
 	t.Run("should correctly identify a vulnerability which now is fixed, since it was not found by the scanner anymore", func(t *testing.T) {
-		artifact := models.Artifact{ArtifactName: "artifact1"}
+
+		assetID := uuid.New()
+
+		artifact := models.Artifact{ArtifactName: "artifact1", AssetVersionName: "asset-version-1", AssetID: assetID}
 
 		foundVulnerabilities := []models.DependencyVuln{}
 
 		existingDependencyVulns := []models.DependencyVuln{
-			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{{ArtifactName: "artifact1"}}},
+			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
 		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(artifact.ArtifactName, foundVulnerabilities, existingDependencyVulns)
