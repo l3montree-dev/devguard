@@ -129,9 +129,6 @@ func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
 
 	for _, affected := range osv.Affected {
 		// check if the affected package has a purl
-		if affected.Package.Purl == "" {
-			continue
-		}
 		if affected.EcosystemSpecific != nil {
 			// get the urgency - debian defines it: https://security-team.debian.org/security_tracker.html#severity-levels
 			if urgency, ok := affected.EcosystemSpecific["urgency"]; ok {
@@ -144,95 +141,133 @@ func AffectedComponentFromOSV(osv common.OSV) []AffectedComponent {
 				}
 			}
 		}
-		purl, err := packageurl.FromString(affected.Package.Purl)
-		if err != nil {
-			slog.Debug("could not parse purl", "purl", affected.Package.Purl, "err", err)
-			continue
-		}
-		qualifiersStr := purl.Qualifiers.String()
 
-		// iterate over all ranges
-		containsSemver := false
-		for _, r := range affected.Ranges {
-			if r.Type == "SEMVER" {
-				containsSemver = true
-			} else {
+		if affected.Package.Purl != "" {
+
+			purl, err := packageurl.FromString(affected.Package.Purl)
+			if err != nil {
+				slog.Debug("could not parse purl", "purl", affected.Package.Purl, "err", err)
 				continue
 			}
-			// iterate over all events
-			for i, e := range r.Events {
-				tmpE := e
-				if i%2 != 0 {
+			qualifiersStr := purl.Qualifiers.String()
+
+			// iterate over all ranges
+			containsSemver := false
+			for _, r := range affected.Ranges {
+				if r.Type == "SEMVER" {
+					containsSemver = true
+				} else {
+					continue
+				}
+				// iterate over all events
+				for i, e := range r.Events {
+					tmpE := e
+					if i%2 != 0 {
+						continue
+					}
+
+					// check if a fix does even exist
+					fixed := ""
+					if len(r.Events) != i+1 {
+						// there is a fix available
+						fixed = r.Events[i+1].Fixed
+					}
+
+					var semverIntroducedPtr *string
+					var semverFixedPtr *string
+					semverIntroduced, err := normalize.SemverFix(tmpE.Introduced)
+					if err == nil {
+						semverIntroducedPtr = &semverIntroduced
+					}
+					semverFixed, err := normalize.SemverFix(fixed)
+					if err == nil {
+						semverFixedPtr = &semverFixed
+					}
+
+					// create the affected package
+					affectedComponent := AffectedComponent{
+						PurlWithoutVersion: strings.Split(affected.Package.Purl, "?")[0],
+						Ecosystem:          affected.Package.Ecosystem,
+						Scheme:             "pkg",
+						Type:               purl.Type,
+						Name:               purl.Name,
+						Namespace:          &purl.Namespace,
+						Qualifiers:         &qualifiersStr,
+						Subpath:            &purl.Subpath,
+
+						Source: "osv",
+
+						SemverIntroduced: semverIntroducedPtr,
+						SemverFixed:      semverFixedPtr,
+
+						CVE: cves,
+					}
+					affectedComponents = append(affectedComponents, affectedComponent)
+				}
+			}
+
+			if !containsSemver {
+				notSemverVersionedComponents := make([]AffectedComponent, 0, len(affected.Ranges))
+				// create an affected package with a specific version
+				for _, v := range affected.Versions {
+					tmpV := v
+					affectedComponent := AffectedComponent{
+						PurlWithoutVersion: strings.Split(affected.Package.Purl, "?")[0],
+						Ecosystem:          affected.Package.Ecosystem,
+						Scheme:             "pkg",
+						Type:               purl.Type,
+						Name:               purl.Name,
+						Namespace:          &purl.Namespace,
+						Qualifiers:         &qualifiersStr,
+						Subpath:            &purl.Subpath,
+						Version:            &tmpV,
+
+						Source: "osv",
+
+						CVE: cves,
+					}
+					notSemverVersionedComponents = append(notSemverVersionedComponents, affectedComponent)
+				}
+
+				// combine the affected components using ranges - This adds a layer of heuristic to it.
+				// affectedComponents = append(affectedComponents, combineAffectedComponentsUsingRanges(notSemverVersionedComponents)...)
+
+				affectedComponents = append(affectedComponents, notSemverVersionedComponents...)
+			}
+		} else {
+
+			for _, r := range affected.Ranges {
+				if r.Type != "GIT" {
 					continue
 				}
 
-				// check if a fix does even exist
-				fixed := ""
-				if len(r.Events) != i+1 {
-					// there is a fix available
-					fixed = r.Events[i+1].Fixed
+				// repo: https://github.com/nextcloud/server
+				repo := strings.TrimPrefix(r.Type, "https://")
+
+				name := strings.TrimPrefix(repo, "github.com/")
+				name = strings.Trim(name, "/")
+
+				purl := fmt.Sprintf("pkg:%s", repo)
+
+				notPURlVersionedComponents := make([]AffectedComponent, 0, len(affected.Versions))
+				for _, v := range affected.Versions {
+					tmpV := v
+					affectedComponent := AffectedComponent{
+						PurlWithoutVersion: purl,
+						Ecosystem:          affected.Package.Ecosystem,
+						Scheme:             "pkg",
+						Type:               "git",
+						Name:               name,
+						Version:            &tmpV,
+
+						Source: "osv",
+
+						CVE: cves,
+					}
+					notPURlVersionedComponents = append(notPURlVersionedComponents, affectedComponent)
 				}
-
-				var semverIntroducedPtr *string
-				var semverFixedPtr *string
-				semverIntroduced, err := normalize.SemverFix(tmpE.Introduced)
-				if err == nil {
-					semverIntroducedPtr = &semverIntroduced
-				}
-				semverFixed, err := normalize.SemverFix(fixed)
-				if err == nil {
-					semverFixedPtr = &semverFixed
-				}
-
-				// create the affected package
-				affectedComponent := AffectedComponent{
-					PurlWithoutVersion: strings.Split(affected.Package.Purl, "?")[0],
-					Ecosystem:          affected.Package.Ecosystem,
-					Scheme:             "pkg",
-					Type:               purl.Type,
-					Name:               purl.Name,
-					Namespace:          &purl.Namespace,
-					Qualifiers:         &qualifiersStr,
-					Subpath:            &purl.Subpath,
-
-					Source: "osv",
-
-					SemverIntroduced: semverIntroducedPtr,
-					SemverFixed:      semverFixedPtr,
-
-					CVE: cves,
-				}
-				affectedComponents = append(affectedComponents, affectedComponent)
+				affectedComponents = append(affectedComponents, notPURlVersionedComponents...)
 			}
-		}
-
-		if !containsSemver {
-			notSemverVersionedComponents := make([]AffectedComponent, 0, len(affected.Ranges))
-			// create an affected package with a specific version
-			for _, v := range affected.Versions {
-				tmpV := v
-				affectedComponent := AffectedComponent{
-					PurlWithoutVersion: strings.Split(affected.Package.Purl, "?")[0],
-					Ecosystem:          affected.Package.Ecosystem,
-					Scheme:             "pkg",
-					Type:               purl.Type,
-					Name:               purl.Name,
-					Namespace:          &purl.Namespace,
-					Qualifiers:         &qualifiersStr,
-					Subpath:            &purl.Subpath,
-					Version:            &tmpV,
-
-					Source: "osv",
-
-					CVE: cves,
-				}
-				notSemverVersionedComponents = append(notSemverVersionedComponents, affectedComponent)
-			}
-
-			// combine the affected components using ranges - This adds a layer of heuristic to it.
-			// affectedComponents = append(affectedComponents, combineAffectedComponentsUsingRanges(notSemverVersionedComponents)...)
-
-			affectedComponents = append(affectedComponents, notSemverVersionedComponents...)
 		}
 	}
 	return affectedComponents
