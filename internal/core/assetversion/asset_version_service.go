@@ -503,7 +503,7 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 		return dependencyVuln.State != models.VulnStateFixed
 	})
 
-	newDetectedVulns, fixedVulns, firstTimeDetectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
+	newDetectedVulns, fixedVulns, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(artifactName, dependencyVulns, existingDependencyVulns)
 
 	newDetectedVulnsNotOnOtherBranch, newDetectedButOnOtherBranchExisting, existingEvents := diffBetweenBranches(newDetectedVulns, existingVulnsOnOtherBranch)
 
@@ -517,13 +517,13 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 			return err // this will cancel the transaction
 		}
 
-		err = s.dependencyVulnService.UserDetectedDependencyVulnWithAnotherScanner(tx, firstTimeDetectedByCurrentScanner, artifactName)
+		err = s.dependencyVulnService.UserDetectedDependencyVulnWithAnotherScanner(tx, firstDetectedOnThisArtifactName, artifactName)
 		if err != nil {
 			slog.Error("error when trying to add events for adding scanner to vulnerability")
 			return err
 		}
 
-		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnWithScannerAnymore(tx, notDetectedByCurrentScannerAnymore, artifactName)
+		err := s.dependencyVulnService.UserDidNotDetectDependencyVulnWithScannerAnymore(tx, fixedOnThisArtifactName, artifactName)
 		if err != nil {
 			slog.Error("error when trying to add events for removing scanner from vulnerability")
 			return err

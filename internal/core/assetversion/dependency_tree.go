@@ -196,47 +196,6 @@ func GetComponentDepth(elements []models.ComponentDependency) map[string]int {
 	return depthMap
 }
 
-func mergeDependencyTrees(trees map[string]tree) tree {
-	// create a new tree
-	tree := tree{
-		Root:    &treeNode{Name: "root"},
-		cursors: make(map[string]*treeNode),
-	}
-
-	tree.cursors["root"] = tree.Root
-	// if we have the sca and container scanning tree, remove the container scanning tree: For most applications the sca tree is much more detailed.
-	if _, ok := trees["github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning"]; ok {
-		// check if the sca tree exists
-		if _, ok := trees["github.com/l3montree-dev/devguard/cmd/devguard-scanner/sca"]; ok {
-			// remove the container scanning tree
-			delete(trees, "github.com/l3montree-dev/devguard/cmd/devguard-scanner/container-scanning")
-		}
-	}
-
-	for _, t := range trees {
-		// merge the trees
-		tree.Root.Children = append(tree.Root.Children, t.Root)
-		// merge the cursors
-		for k, v := range t.cursors {
-			if _, ok := tree.cursors[k]; !ok {
-				tree.cursors[k] = v
-			}
-		}
-	}
-
-	// check if the root node only has a single child (single scanner)
-	// if so, remove the root node.
-	if len(tree.Root.Children) == 1 {
-		tree.Root = tree.Root.Children[0]
-	}
-	// check if the root node still has a single child (single inspected meta file by the scanner) - if so, lets keep the single metafile (like go.mod) as root
-	if len(tree.Root.Children) == 1 {
-		tree.Root = tree.Root.Children[0]
-	}
-
-	return tree
-}
-
 func BuildDependencyTree(elements []models.ComponentDependency) tree {
 	// create a new tree
 	return buildDependencyTree(elements)

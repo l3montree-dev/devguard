@@ -180,8 +180,8 @@ func TestFirstPartyVulnHash(t *testing.T) {
 }
 func TestDiffScanResults(t *testing.T) {
 
-	t.Run("should correctly identify a vulnerability which now gets found by another scanner", func(t *testing.T) {
-		currentScanner := "new-scanner"
+	t.Run("should correctly identify a vulnerability which now gets found by another artifact", func(t *testing.T) {
+		currentArtifactName := "new-artifact"
 
 		assetID := uuid.New()
 		assetVersionName := "asset-version-1"
@@ -198,15 +198,15 @@ func TestDiffScanResults(t *testing.T) {
 			}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
-		assert.Empty(t, foundByScannerAndNotExisting)
-		assert.Empty(t, fixedVulns)
-		assert.Empty(t, notDetectedByCurrentScannerAnymore)
-		assert.Equal(t, 1, len(detectedByCurrentScanner))
+		assert.Empty(t, firstDetected)
+		assert.Empty(t, fixedOnAll)
+		assert.Empty(t, fixedOnThisArtifactName)
+		assert.Equal(t, 1, len(firstDetectedOnThisArtifactName))
 	})
 
-	t.Run("should correctly identify a vulnerability which now is fixed, since it was not found by the scanner anymore", func(t *testing.T) {
+	t.Run("should correctly identify a vulnerability which now is fixed, since it was not found by the artifact anymore", func(t *testing.T) {
 
 		assetID := uuid.New()
 
@@ -218,16 +218,16 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(artifact.ArtifactName, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(artifact.ArtifactName, foundVulnerabilities, existingDependencyVulns)
 
-		assert.Empty(t, foundByScannerAndNotExisting)
-		assert.Equal(t, 1, len(fixedVulns))
-		assert.Empty(t, detectedByCurrentScanner)
-		assert.Empty(t, notDetectedByCurrentScannerAnymore)
+		assert.Empty(t, firstDetected)
+		assert.Equal(t, 1, len(fixedOnAll))
+		assert.Empty(t, firstDetectedOnThisArtifactName)
+		assert.Empty(t, fixedOnThisArtifactName)
 	})
 
-	t.Run("should correctly identify a vulnerability which is not detected by the current scanner anymore", func(t *testing.T) {
-		currentScanner := "new-scanner"
+	t.Run("should correctly identify a vulnerability which is not detected by the current artifact anymore", func(t *testing.T) {
+		currentArtifactName := "new-artifact"
 
 		artifact := models.Artifact{ArtifactName: "artifact1"}
 
@@ -237,16 +237,16 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
-		assert.Empty(t, foundByScannerAndNotExisting)
-		assert.Empty(t, fixedVulns)
-		assert.Empty(t, detectedByCurrentScanner)
-		assert.Equal(t, 1, len(notDetectedByCurrentScannerAnymore))
+		assert.Empty(t, firstDetected)
+		assert.Empty(t, fixedOnAll)
+		assert.Empty(t, firstDetectedOnThisArtifactName)
+		assert.Equal(t, 1, len(fixedOnThisArtifactName))
 	})
 
 	t.Run("should identify new vulnerabilities", func(t *testing.T) {
-		currentScanner := "new-scanner"
+		currentArtifactName := "new-artifact"
 
 		foundVulnerabilities := []models.DependencyVuln{
 			{CVEID: utils.Ptr("CVE-1234")},
@@ -255,17 +255,17 @@ func TestDiffScanResults(t *testing.T) {
 
 		existingDependencyVulns := []models.DependencyVuln{}
 
-		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
-		assert.Equal(t, 2, len(foundByScannerAndNotExisting))
-		assert.Empty(t, fixedVulns)
-		assert.Empty(t, detectedByCurrentScanner)
-		assert.Empty(t, notDetectedByCurrentScannerAnymore)
+		assert.Equal(t, 2, len(firstDetected))
+		assert.Empty(t, fixedOnAll)
+		assert.Empty(t, firstDetectedOnThisArtifactName)
+		assert.Empty(t, fixedOnThisArtifactName)
 	})
 
-	t.Run("BUG: should NOT incorrectly identify scanner removal when scanner ID contains colon and is substring of existing scanner", func(t *testing.T) {
+	t.Run("BUG: should NOT incorrectly identify artifact removal when artifact ID contains colon and is substring of existing artifact", func(t *testing.T) {
 
-		currentScanner := "container-scanning"
+		currentArtifactName := "container-scanning"
 
 		artifact := models.Artifact{ArtifactName: "artifact1"}
 
@@ -277,12 +277,12 @@ func TestDiffScanResults(t *testing.T) {
 			{CVEID: utils.Ptr("CVE-1234"), Vulnerability: models.Vulnerability{}, Artifacts: []models.Artifact{artifact}},
 		}
 
-		foundByScannerAndNotExisting, fixedVulns, detectedByCurrentScanner, notDetectedByCurrentScannerAnymore := diffScanResults(currentScanner, foundVulnerabilities, existingDependencyVulns)
+		firstDetected, fixedOnAll, firstDetectedOnThisArtifactName, fixedOnThisArtifactName := diffScanResults(currentArtifactName, foundVulnerabilities, existingDependencyVulns)
 
-		assert.Empty(t, foundByScannerAndNotExisting, "Should be empty - this is a new detection by current scanner")
-		assert.Empty(t, fixedVulns, "Should be empty - no vulnerabilities are fixed")
-		assert.Equal(t, 1, len(detectedByCurrentScanner), "Should detect that current scanner found existing vulnerability for first time")
-		assert.Empty(t, notDetectedByCurrentScannerAnymore, "BUG: Should be empty - current scanner was never detecting this vulnerability before!")
+		assert.Empty(t, firstDetected, "Should be empty - this is a new detection by current artifact")
+		assert.Empty(t, fixedOnAll, "Should be empty - no vulnerabilities are fixed")
+		assert.Equal(t, 1, len(firstDetectedOnThisArtifactName), "Should detect that current artifact found existing vulnerability for first time")
+		assert.Empty(t, fixedOnThisArtifactName, "BUG: Should be empty - current artifact was never detecting this vulnerability before!")
 	})
 }
 

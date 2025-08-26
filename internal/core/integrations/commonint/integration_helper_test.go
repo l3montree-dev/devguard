@@ -104,9 +104,6 @@ func TestGetLabels(t *testing.T) {
 				{ArtifactName: "container"},
 				{ArtifactName: "container:test"},
 				{ArtifactName: "source-code:test"},
-				{ArtifactName: "sast"},
-				{ArtifactName: "secret-scanning"},
-				{ArtifactName: "iac"},
 			},
 			RawRiskAssessment: utils.Ptr(0.2),
 		}
@@ -118,6 +115,22 @@ func TestGetLabels(t *testing.T) {
 			"container",
 			"container:test",
 			"source-code:test",
+		}
+
+		assert.Equal(t, expectedLabels, GetLabels(vuln))
+	})
+
+	t.Run("should return correct labels for a FirstPartyVuln", func(t *testing.T) {
+		vuln := &models.FirstPartyVuln{
+			Vulnerability: models.Vulnerability{
+				State: models.VulnStateFixed,
+			},
+			ScannerIDs: "github.com/l3montree-dev/devguard/cmd/devguard-scanner/sast github.com/l3montree-dev/devguard/cmd/devguard-scanner/secret-scanning github.com/l3montree-dev/devguard/cmd/devguard-scanner/iac",
+		}
+
+		expectedLabels := []string{
+			"devguard",
+			"state:fixed",
 			"sast",
 			"secret-scanning",
 			"iac",

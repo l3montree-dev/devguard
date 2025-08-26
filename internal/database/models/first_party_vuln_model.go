@@ -35,16 +35,16 @@ type FirstPartyVuln struct {
 	SnippetContents database.JSONB `json:"snippetContents" gorm:"type:jsonb;snippet_contents"` // SnippetContents
 }
 
-func (d *FirstPartyVuln) AddScannerID(scannerID string) {
-	d.ScannerIDs = utils.AddToWhitespaceSeparatedStringList(d.ScannerIDs, scannerID)
+func (firstPartyVuln *FirstPartyVuln) AddScannerID(scannerID string) {
+	firstPartyVuln.ScannerIDs = utils.AddToWhitespaceSeparatedStringList(firstPartyVuln.ScannerIDs, scannerID)
 }
 
-func (d *FirstPartyVuln) RemoveScannerID(scannerID string) {
-	d.ScannerIDs = utils.RemoveFromWhitespaceSeparatedStringList(d.ScannerIDs, scannerID)
+func (firstPartyVuln *FirstPartyVuln) RemoveScannerID(scannerID string) {
+	firstPartyVuln.ScannerIDs = utils.RemoveFromWhitespaceSeparatedStringList(firstPartyVuln.ScannerIDs, scannerID)
 }
 
-func (d *FirstPartyVuln) GetScannerIDsOrArtifactNames() string {
-	return d.ScannerIDs
+func (firstPartyVuln *FirstPartyVuln) GetScannerIDsOrArtifactNames() string {
+	return firstPartyVuln.ScannerIDs
 }
 
 type SnippetContents struct {
