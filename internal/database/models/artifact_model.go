@@ -15,8 +15,6 @@ type Artifact struct {
 	DependencyVuln        []DependencyVuln      `json:"dependencyVulns" gorm:"many2many:artifact_dependency_vulns;constraint:OnDelete:CASCADE;"`
 	ComponentDependencies []ComponentDependency `json:"componentDependencies" gorm:"many2many:artifact_component_dependencies;constraint:OnDelete:CASCADE;"`
 	LicenseRisks          []LicenseRisk         `json:"licenseRisks" gorm:"many2many:artifact_license_risks;constraint:OnDelete:CASCADE;"`
-
-	RiskHistories []ArtifactRiskHistory `json:"riskHistories" gorm:"foreignKey:AssetID,AssetVersionName,ArtifactName;references:AssetID,AssetVersionName,ArtifactName;constraint:OnDelete:CASCADE;"`
 }
 
 func (a Artifact) TableName() string {
