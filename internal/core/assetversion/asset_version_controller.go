@@ -92,7 +92,7 @@ func (a *AssetVersionController) GetAssetVersionsByAssetID(ctx core.Context) err
 }
 
 func (a *AssetVersionController) AffectedComponents(ctx core.Context) error {
-	artifactName, err := core.GetUrlDecodedParam(ctx, "artifact")
+	artifactName, err := core.GetURLDecodedParam(ctx, "artifact")
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (a *AssetVersionController) getComponentsAndDependencyVulns(assetVersion mo
 func (a *AssetVersionController) DependencyGraph(ctx core.Context) error {
 	app := core.GetAssetVersion(ctx)
 
-	artifactName, err := core.GetUrlDecodedParam(ctx, "artifact")
+	artifactName, err := core.GetURLDecodedParam(ctx, "artifact")
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (a *AssetVersionController) GetDependencyPathFromPURL(ctx core.Context) err
 
 	pURL := ctx.QueryParam("purl")
 
-	artifactName, err := core.GetUrlDecodedParam(ctx, "artifact")
+	artifactName, err := core.GetURLDecodedParam(ctx, "artifact")
 	if err != nil {
 		return err
 	}
@@ -361,7 +361,7 @@ func (a *AssetVersionController) buildOpenVeX(ctx core.Context) (vex.VEX, error)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 
-	artifactName, err := core.GetUrlDecodedParam(ctx, "artifact")
+	artifactName, err := core.GetURLDecodedParam(ctx, "artifact")
 	if err != nil {
 		return vex.VEX{}, err
 	}
@@ -414,7 +414,7 @@ func (a *AssetVersionController) buildVeX(ctx core.Context) (*cdx.BOM, error) {
 	asset := core.GetAsset(ctx)
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
-	artifactName, err := core.GetUrlDecodedParam(ctx, "artifact")
+	artifactName, err := core.GetURLDecodedParam(ctx, "artifact")
 	if err != nil {
 		return nil, err
 	}
@@ -516,7 +516,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 	asset := core.GetAsset(ctx)
-	artifact, err := core.GetUrlDecodedParam(ctx, "artifact")
+	artifact, err := core.GetURLDecodedParam(ctx, "artifact")
 	if err != nil {
 		return err
 	}

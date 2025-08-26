@@ -286,6 +286,32 @@ func (s *service) UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, 
 	// save the last history update timestamp
 	assetVersion.LastHistoryUpdate = &end
 
+	// we ALWAYS need to propagate the risk aggregation to the project. The only exception is in the statistics daemon. There
+	// we update all assets and afterwards do a one time project update. This is just optimization.
+	if propagateToProject {
+		currentProject, err := s.projectRepository.GetProjectByAssetID(assetID)
+
+		if err != nil {
+			return fmt.Errorf("could not get project id by asset id: %w", err)
+		}
+		for {
+			// update all projects - parent projects as well.
+			err = s.updateProjectRiskAggregation(currentProject.ID, begin, end)
+			if err != nil {
+				return fmt.Errorf("could not update project risk aggregation: %w", err)
+			}
+
+			if currentProject.ParentID != nil {
+				currentProject, err = s.projectRepository.Read(*currentProject.ParentID)
+				if err != nil {
+					return fmt.Errorf("could not get parent project: %w", err)
+				}
+			} else {
+				break
+			}
+		}
+	}
+
 	return nil
 }
 

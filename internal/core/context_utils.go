@@ -191,7 +191,7 @@ func GetParam(ctx Context, param string) string {
 	return v
 }
 
-func GetUrlDecodedParam(ctx Context, param string) (string, error) {
+func GetURLDecodedParam(ctx Context, param string) (string, error) {
 	v := GetParam(ctx, param)
 	decoded, err := url.PathUnescape(v)
 	if err != nil {

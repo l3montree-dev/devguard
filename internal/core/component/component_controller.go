@@ -36,7 +36,7 @@ func (httpController httpController) LicenseDistribution(ctx core.Context) error
 		}
 	}
 
-	artifactName, err := core.GetUrlDecodedParam(ctx, "artifact")
+	artifactName, err := core.GetURLDecodedParam(ctx, "artifact")
 	if err != nil {
 		return err
 	}
