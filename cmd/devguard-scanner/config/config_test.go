@@ -29,7 +29,7 @@ func TestArtifactNameGeneration(t *testing.T) {
 			ref:            "main",
 			defaultRef:     "main",
 			presetArtifact: "",
-			want:           "pkg:oci/org/foo/bar@main",
+			want:           "pkg:oci/org/foo/bar",
 		},
 		{
 			name:           "default-command",
@@ -38,7 +38,7 @@ func TestArtifactNameGeneration(t *testing.T) {
 			ref:            "main",
 			defaultRef:     "main",
 			presetArtifact: "",
-			want:           "pkg:devguard/org/foo/bar@main",
+			want:           "pkg:devguard/org/foo/bar",
 		},
 		{
 			name:           "default-command",
@@ -47,7 +47,7 @@ func TestArtifactNameGeneration(t *testing.T) {
 			ref:            "1.0.0",
 			defaultRef:     "main",
 			presetArtifact: "",
-			want:           "pkg:devguard/org/foo/bar@1.0.0",
+			want:           "pkg:devguard/org/foo/bar",
 		},
 		{
 			name:           "preset-artifact-unchanged",

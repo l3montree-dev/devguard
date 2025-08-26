@@ -21,9 +21,9 @@ import (
 	"encoding/pem"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	toto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/l3montree-dev/devguard/internal/core/normalize"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"github.com/pkg/errors"
@@ -119,17 +119,7 @@ func ParseBaseConfig(runningCMD string) {
 	}
 
 	if RuntimeBaseConfig.ArtifactName == "" {
-		// the user did not set any artifact name - thus we try to set a good one.
-		suffix := strings.ReplaceAll(strings.ReplaceAll(RuntimeBaseConfig.AssetName, "/projects/", "/"), "/assets/", "/") + "@" + RuntimeBaseConfig.Ref
-		switch runningCMD {
-		case "container-scanning":
-			// we are scanning a container image - thus we use the container image as artifact name
-			RuntimeBaseConfig.ArtifactName = "pkg:oci/" + suffix
-		default:
-			// we are scanning an application - we have no idea which ecosystem - thus use generic
-			// use the asset name as the name of the artifact
-			RuntimeBaseConfig.ArtifactName = "pkg:devguard/" + suffix
-		}
+		RuntimeBaseConfig.ArtifactName = normalize.ArtifactPurl(runningCMD, RuntimeBaseConfig.AssetName)
 	}
 
 	slog.Info("running with config",

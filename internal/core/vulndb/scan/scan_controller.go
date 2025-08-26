@@ -16,7 +16,6 @@
 package scan
 
 import (
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -113,8 +112,7 @@ func (s *HTTPController) DependencyVulnScan(c core.Context, bom normalize.SBOM) 
 
 	artifactName := c.Request().Header.Get("X-Artifact-Name")
 	if artifactName == "" {
-		slog.Error("no X-Artifact-Name header found")
-		return scanResults, fmt.Errorf("no X-Artifact-Name header found")
+		artifactName = normalize.ArtifactPurl(c.Request().Header.Get("X-Scanner"), org.Slug+"/"+project.Slug+"/"+asset.Slug)
 	}
 
 	artifact := models.Artifact{
