@@ -639,7 +639,6 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	organizationRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageOrgFixingTime)
 	//TODO: change it
 	//organizationRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
-	organizationRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetOrgDependencyVulnAggregationStateAndChange)
 	organizationRouter.GET("/stats/risk-distribution/", statisticsController.GetOrgRiskDistribution)
 
 	organizationRouter.GET("/projects/", projectController.List, accessControlMiddleware(core.ObjectOrganization, core.ActionRead))
@@ -678,7 +677,6 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	projectRouter.GET("/policies/", policyController.GetProjectPolicies)
 
 	//projectRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
-	projectRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetProjectDependencyVulnAggregationStateAndChange)
 	projectRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageProjectFixingTime)
 
 	projectRouter.GET("/members/", projectController.Members)
@@ -746,7 +744,6 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 
 	//TODO: change it
 	//assetVersionRouter.GET("/stats/dependency-vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
-	assetVersionRouter.GET("/stats/vuln-aggregation-state-and-change/", statisticsController.GetDependencyVulnAggregationStateAndChange)
 	assetVersionRouter.GET("/stats/average-fixing-time/", statisticsController.GetAverageAssetVersionFixingTime)
 
 	assetRouter.POST("/integrations/gitlab/autosetup/", integrationController.AutoSetup, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))

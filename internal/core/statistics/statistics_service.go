@@ -377,14 +377,6 @@ func (s *service) GetComponentRisk(assetVersionName string, assetID uuid.UUID) (
 	return distributionPerComponent, nil
 }
 
-func (s *service) GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
-	return s.statisticsRepository.GetDependencyVulnCountByScannerID(assetVersionName, assetID)
-}
-
-func (s *service) GetDependencyCountPerScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error) {
-	return s.componentRepository.GetDependencyCountPerScannerID(assetVersionName, assetID)
-}
-
 func (s *service) GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error) {
 	var riskIntervalStart, riskIntervalEnd float64
 	switch severity {

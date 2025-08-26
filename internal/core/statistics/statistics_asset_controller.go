@@ -12,28 +12,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-type statisticsService interface {
-	GetComponentRisk(assetVersionName string, assetID uuid.UUID) (map[string]models.Distribution, error)
-	GetAssetVersionRiskDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
-	GetAssetVersionCvssDistribution(assetVersionName string, assetID uuid.UUID, assetName string) (models.AssetRiskDistribution, error)
-	GetAssetVersionRiskHistory(assetVersionName string, assetID uuid.UUID, start time.Time, end time.Time) ([]models.ArtifactRiskHistory, error)
-	GetDependencyVulnAggregationStateAndChangeSince(assetVersionName string, assetID uuid.UUID, calculateChangeTo time.Time) (DependencyVulnAggregationStateAndChange, error)
-	GetDependencyVulnCountByScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
-	GetDependencyCountPerScannerID(assetVersionName string, assetID uuid.UUID) (map[string]int, error)
-	GetAverageFixingTime(assetVersionName string, assetID uuid.UUID, severity string) (time.Duration, error)
-	UpdateAssetRiskAggregation(assetVersion *models.AssetVersion, assetID uuid.UUID, start time.Time, end time.Time, updateProject bool) error
-	GetProjectRiskHistory(projectID uuid.UUID, start time.Time, end time.Time) ([]models.ProjectRiskHistory, error)
-}
-
 type httpController struct {
-	statisticsService      statisticsService
+	statisticsService      core.StatisticsService
 	statisticsRepository   core.StatisticsRepository
 	assetVersionRepository core.AssetVersionRepository
 	assetRepository        core.AssetRepository
 	projectService         core.ProjectService
 }
 
-func NewHTTPController(statisticsService statisticsService, statisticsRepository core.StatisticsRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, projectService core.ProjectService) *httpController {
+func NewHTTPController(statisticsService core.StatisticsService, statisticsRepository core.StatisticsRepository, assetRepository core.AssetRepository, assetVersionRepository core.AssetVersionRepository, projectService core.ProjectService) *httpController {
 	return &httpController{
 		statisticsService:      statisticsService,
 		statisticsRepository:   statisticsRepository,
@@ -46,28 +33,6 @@ func NewHTTPController(statisticsService statisticsService, statisticsRepository
 func (c *httpController) GetComponentRisk(ctx core.Context) error {
 	assetVersion := core.GetAssetVersion(ctx)
 	results, err := c.statisticsService.GetComponentRisk(assetVersion.Name, assetVersion.AssetID)
-
-	if err != nil {
-		return err
-	}
-
-	return ctx.JSON(200, results)
-}
-
-func (c *httpController) GetDependencyCountPerScannerID(ctx core.Context) error {
-	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetDependencyCountPerScannerID(assetVersion.Name, assetVersion.AssetID)
-
-	if err != nil {
-		return err
-	}
-
-	return ctx.JSON(200, results)
-}
-
-func (c *httpController) GetDependencyVulnCountByScannerID(ctx core.Context) error {
-	assetVersion := core.GetAssetVersion(ctx)
-	results, err := c.statisticsService.GetDependencyVulnCountByScannerID(assetVersion.Name, assetVersion.AssetID)
 
 	if err != nil {
 		return err
@@ -228,44 +193,6 @@ func (c *httpController) getAssetVersionRiskHistory(start, end string, assetVers
 	}
 
 	return c.statisticsService.GetAssetVersionRiskHistory(assetVersion.Name, assetVersion.AssetID, beginTime, endTime)
-}
-
-func (c *httpController) GetDependencyVulnAggregationStateAndChange(ctx core.Context) error {
-	assetVersion := core.GetAssetVersion(ctx)
-	// extract the time from the query parameter
-	compareTo := ctx.QueryParam("compareTo")
-	results, err := c.getDependencyVulnAggregationStateAndChange(compareTo, assetVersion)
-
-	if err != nil {
-		slog.Error("Error getting dependencyVuln aggregation state", "error", err)
-		return ctx.JSON(500, nil)
-	}
-
-	return ctx.JSON(200, results)
-}
-
-func aggregateDependencyVulnAggregationStateAndChange(results []DependencyVulnAggregationStateAndChange) DependencyVulnAggregationStateAndChange {
-	// aggregate the results
-	result := DependencyVulnAggregationStateAndChange{}
-	for _, r := range results {
-		result.Now.Fixed += r.Now.Fixed
-		result.Now.Open += r.Now.Open
-
-		result.Was.Fixed += r.Was.Fixed
-		result.Was.Open += r.Was.Open
-	}
-
-	return result
-}
-
-func (c *httpController) getDependencyVulnAggregationStateAndChange(compareTo string, assetVersion models.AssetVersion) (DependencyVulnAggregationStateAndChange, error) {
-	// parse the date
-	calculateChangeTo, err := time.Parse(time.DateOnly, compareTo)
-	if err != nil {
-		return DependencyVulnAggregationStateAndChange{}, errors.Wrap(err, "error parsing date")
-	}
-
-	return c.statisticsService.GetDependencyVulnAggregationStateAndChangeSince(assetVersion.Name, assetVersion.AssetID, calculateChangeTo)
 }
 
 func (c *httpController) GetCVESWithKnownExploits(ctx core.Context) error {
