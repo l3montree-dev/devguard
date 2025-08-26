@@ -238,6 +238,40 @@ func TestFromOSV(t *testing.T) {
 			t.Errorf("Expected 2 affected package, got %d", len(affectedComponents))
 		}
 	})
+
+	t.Run("affected package with GIT ranges", func(t *testing.T) {
+		osv := common.OSV{
+			Affected: []common.Affected{
+				{
+					Package: common.Pkg{
+						Purl: "pkg:github/package-url/purl-spec",
+					},
+					Ranges: []common.Rng{
+						{
+							Type: "GIT",
+							Events: []common.SemverEvent{
+								{
+									Introduced: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+								},
+								{
+									Fixed: "a3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+								},
+							},
+						},
+					},
+					Versions: []string{
+						"1.14.14",
+						"1.14.15",
+					},
+				},
+			},
+		}
+
+		affectedComponents := AffectedComponentFromOSV(osv)
+		if len(affectedComponents) != 2 {
+			t.Errorf("Expected 2 affected packages, got %d", len(affectedComponents))
+		}
+	})
 }
 
 func ptr[T any](t T) *T {
