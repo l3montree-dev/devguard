@@ -516,7 +516,10 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 	assetVersion := core.GetAssetVersion(ctx)
 	org := core.GetOrg(ctx)
 	asset := core.GetAsset(ctx)
-	scannerID := ctx.QueryParam("scanner")
+	artifact, err := core.GetUrlDecodedParam(ctx, "artifact")
+	if err != nil {
+		return err
+	}
 
 	// check if external entity provider
 	templateName := "default"
@@ -543,7 +546,7 @@ func (a *AssetVersionController) BuildVulnerabilityReportPDF(ctx core.Context) e
 	result := utils.Concurrently(
 		func() (any, error) {
 			// get the vex from the asset version
-			dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, scannerID)
+			dependencyVulns, err := a.gatherVexInformationIncludingResolvedMarking(assetVersion, artifact)
 			if err != nil {
 				return nil, err
 			}
