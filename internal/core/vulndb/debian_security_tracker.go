@@ -10,6 +10,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/database/models"
 	"github.com/l3montree-dev/devguard/internal/utils"
 	"golang.org/x/mod/semver"
+	"pault.ag/go/debian/version"
 )
 
 // the osv does contain the debian ecosystem, but it removes all unassigned urgencies
@@ -135,15 +136,26 @@ func debianCveToAffectedComponent(packageName, cveID string, debianCVE debianCVE
 
 		purl := convertToPurl(packageName)
 		// convert the fixedVersion to semver - this makes it possible to compare the versions
+		fixed, err := version.Parse(cve.FixedVersion)
+		fixedVersionExists := true
+		if err != nil {
+			fixedVersionExists = false
+		}
 
-		for _, version := range cve.Repositories {
-			if version == cve.FixedVersion {
-				// this debian version is actually not affected.
+		for _, v := range cve.Repositories {
+			currentVersion, err := version.Parse(v)
+			if err != nil {
+				continue
+			}
+			// skip if current version is greater than or equal to the fixed version
+			// (only versions strictly smaller than the fixed version are affected)
+			if fixedVersionExists && version.Compare(fixed, currentVersion) < 0 {
+				// this version is not affected
 				continue
 			}
 
 			// it is only an affected component, if the version is smaller than the fixed version
-			v := normalize.ConvertToSemver(version)
+			v := normalize.ConvertToSemver(v)
 			fixedSemver := normalize.ConvertToSemver(cve.FixedVersion)
 
 			if cve.FixedVersion != "" && semver.Compare("v"+v, "v"+fixedSemver) != -1 {
@@ -161,11 +173,9 @@ func debianCveToAffectedComponent(packageName, cveID string, debianCVE debianCVE
 				Namespace:          utils.Ptr("debian"),
 				Qualifiers:         utils.Ptr("arch=source"),
 				Source:             "debian-security-tracker",
-				Version:            utils.Ptr(version),
-
+				Version:            utils.Ptr(v),
 				// we just fake a semver version here
 				// SemverFixed: utils.EmptyThenNil(normalize.ConvertToSemver(fixedSemver)),
-
 				VersionFixed: utils.EmptyThenNil(cve.FixedVersion),
 			}
 
