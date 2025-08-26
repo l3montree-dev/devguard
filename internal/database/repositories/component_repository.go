@@ -381,8 +381,6 @@ func (c *componentRepository) HandleStateDiff(tx core.DB, assetVersionName strin
 		}
 	}
 
-	fmt.Println("len to remove:", len(toRemove), "len to update:", len(toUpdate), "len to add:", len(toAdd))
-
 	return len(toRemove) > 0 || len(toUpdate) > 0 || len(toAdd) > 0, c.GetDB(tx).Transaction(func(tx *gorm.DB) error {
 
 		if len(toRemove) > 0 {
