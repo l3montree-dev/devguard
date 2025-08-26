@@ -22,7 +22,6 @@ type ArtifactRiskHistory struct {
 	History
 	AssetVersionName string    `json:"assetVersionName" gorm:"primaryKey;type:text;"`
 	AssetID          uuid.UUID `json:"assetId" gorm:"primaryKey;type:uuid"`
-	ArtifactName     string    `json:"artifactName" gorm:"primaryKey;type:text;"`
 }
 
 func (m ArtifactRiskHistory) TableName() string {
