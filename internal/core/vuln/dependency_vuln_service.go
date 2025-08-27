@@ -189,9 +189,6 @@ func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulne
 		return nil
 	}
 
-	// create a new VulnEvent for each fixed dependencyVuln
-	events := make([]models.VulnEvent, len(vulnerabilities))
-
 	for i := range vulnerabilities {
 		alreadyAssociated := false
 		for _, a := range vulnerabilities[i].Artifacts {
@@ -217,9 +214,7 @@ func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulne
 	if err != nil {
 		return err
 	}
-
-	return s.vulnEventRepository.SaveBatch(tx, events)
-
+	return nil
 }
 
 func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, vulnerabilities []models.DependencyVuln, scannerID string) error {
@@ -227,7 +222,6 @@ func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, v
 		return nil
 	}
 
-	events := make([]models.VulnEvent, len(vulnerabilities))
 	for i := range vulnerabilities {
 		filtered := make([]models.Artifact, 0, len(vulnerabilities[i].Artifacts))
 		for _, a := range vulnerabilities[i].Artifacts {
@@ -245,8 +239,7 @@ func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, v
 	if err != nil {
 		return err
 	}
-	// save the events
-	return s.vulnEventRepository.SaveBatch(tx, events)
+	return nil
 }
 
 func (s *service) RecalculateRawRiskAssessment(tx core.DB, userID string, dependencyVulns []models.DependencyVuln, justification string, asset models.Asset) error {
