@@ -38,23 +38,23 @@ func (_m *ArtifactService) EXPECT() *ArtifactService_Expecter {
 }
 
 // GetArtifactNamesByAssetIDAndAssetVersionName provides a mock function for the type ArtifactService
-func (_mock *ArtifactService) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]string, error) {
+func (_mock *ArtifactService) GetArtifactNamesByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error) {
 	ret := _mock.Called(assetID, assetVersionName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetArtifactNamesByAssetIDAndAssetVersionName")
 	}
 
-	var r0 []string
+	var r0 []models.Artifact
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) ([]string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) ([]models.Artifact, error)); ok {
 		return returnFunc(assetID, assetVersionName)
 	}
-	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) []string); ok {
+	if returnFunc, ok := ret.Get(0).(func(uuid.UUID, string) []models.Artifact); ok {
 		r0 = returnFunc(assetID, assetVersionName)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
+			r0 = ret.Get(0).([]models.Artifact)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(uuid.UUID, string) error); ok {
@@ -95,12 +95,12 @@ func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Run
 	return _c
 }
 
-func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Return(strings []string, err error) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
-	_c.Call.Return(strings, err)
+func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) Return(artifacts []models.Artifact, err error) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
+	_c.Call.Return(artifacts, err)
 	return _c
 }
 
-func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string) ([]string, error)) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
+func (_c *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call) RunAndReturn(run func(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)) *ArtifactService_GetArtifactNamesByAssetIDAndAssetVersionName_Call {
 	_c.Call.Return(run)
 	return _c
 }

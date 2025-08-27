@@ -211,9 +211,6 @@ func (s *service) UserDetectedDependencyVulnWithAnotherScanner(tx core.DB, vulne
 				return err
 			}
 		}
-		ev := models.NewAddedArtifactNameEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
-		ev.Apply(&vulnerabilities[i])
-		events[i] = ev
 	}
 
 	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
@@ -243,9 +240,6 @@ func (s *service) UserDidNotDetectDependencyVulnWithScannerAnymore(tx core.DB, v
 			vulnerabilities[i].CalculateHash(), scannerID, vulnerabilities[i].AssetVersionName, vulnerabilities[i].AssetID).Error; err != nil {
 			return err
 		}
-		ev := models.NewRemovedArtifactNameEvent(vulnerabilities[i].CalculateHash(), models.VulnTypeDependencyVuln, "system", scannerID)
-		ev.Apply(&vulnerabilities[i])
-		events[i] = ev
 	}
 	err := s.dependencyVulnRepository.SaveBatch(tx, vulnerabilities)
 	if err != nil {

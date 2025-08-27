@@ -245,6 +245,115 @@ func TestScanning(t *testing.T) {
 	})
 }
 
+func TestVulnerabilityLifecycleManagementOnMultipleArtifacts(t *testing.T) {
+	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
+	defer terminate()
+
+	os.Setenv("FRONTEND_URL", "FRONTEND_URL")
+
+	controller, _ := initHTTPController(t, db, true)
+
+	// scan the vulnerable sbom
+	app := echo.New()
+	createCVE2025_46569(db)
+	org, project, asset, _ := integration_tests.CreateOrgProjectAndAssetAssetVersion(db)
+	setupContext := func(ctx core.Context) {
+		authSession := mocks.NewAuthSession(t)
+		authSession.On("GetUserID").Return("abc")
+		core.SetAsset(ctx, asset)
+		core.SetProject(ctx, project)
+		core.SetOrg(ctx, org)
+		core.SetSession(ctx, authSession)
+	}
+
+	t.Run("should copy the events one time from a different branch even if the vulnerability is exiting on multiple artifacts", func(t *testing.T) {
+
+		dependencyVulnRepository := repositories.NewDependencyVulnRepository(db)
+		vulns, _ := dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		for _, vuln := range vulns {
+			db.Delete(&vuln)
+		}
+
+		recorder := httptest.NewRecorder()
+		sbomFile := sbomWithVulnerability()
+		req := httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "lifecycle-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-a")
+		ctx := app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err := controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 1)
+		branchAVuln := vulns[0]
+		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
+		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
+
+		recorder = httptest.NewRecorder()
+		sbomFile = sbomWithVulnerability()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "lifecycle-artifact-2")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-a")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 1)
+		branchAVuln = vulns[0]
+		assert.Equal(t, "branch-a", branchAVuln.AssetVersionName)
+		assert.Equal(t, models.VulnStateOpen, branchAVuln.State)
+		assert.Len(t, branchAVuln.Events, 1)
+
+		recorder = httptest.NewRecorder()
+		sbomFile = sbomWithVulnerability()
+		req = httptest.NewRequest("POST", "/vulndb/scan/normalized-sboms", sbomFile)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Artifact-Name", "lifecycle-artifact")
+		req.Header.Set("X-Asset-Default-Branch", "main")
+		req.Header.Set("X-Asset-Ref", "branch-b")
+		ctx = app.NewContext(req, recorder)
+		setupContext(ctx)
+
+		err = controller.ScanDependencyVulnFromProject(ctx)
+		assert.Nil(t, err)
+		assert.Equal(t, 200, recorder.Code)
+
+		vulns, err = dependencyVulnRepository.GetByAssetID(nil, asset.ID)
+		assert.Nil(t, err)
+		assert.Len(t, vulns, 2)
+		var branchAFinalVuln, branchBVuln models.DependencyVuln
+		for _, vuln := range vulns {
+			switch vuln.AssetVersionName {
+			case "branch-a":
+				branchAFinalVuln = vuln
+			case "branch-b":
+				branchBVuln = vuln
+			}
+		}
+
+		assert.Equal(t, "branch-a", branchAFinalVuln.AssetVersionName)
+		assert.Equal(t, models.VulnStateOpen, branchAFinalVuln.State)
+		assert.Len(t, branchAFinalVuln.Events, 1)
+		assert.Equal(t, "branch-b", branchBVuln.AssetVersionName)
+		assert.Equal(t, models.VulnStateOpen, branchBVuln.State)
+		assert.Len(t, branchBVuln.Events, 1) // only one event should be copied
+	})
+
+}
+
 func TestVulnerabilityLifecycleManagement(t *testing.T) {
 	db, terminate := integration_tests.InitDatabaseContainer("../../../../initdb.sql")
 	defer terminate()

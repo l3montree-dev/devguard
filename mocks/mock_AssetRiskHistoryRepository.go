@@ -109,8 +109,8 @@ func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) Run(run func(assetVers
 	return _c
 }
 
-func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) Return(assetRiskHistorys []models.ArtifactRiskHistory, err error) *AssetRiskHistoryRepository_GetRiskHistory_Call {
-	_c.Call.Return(assetRiskHistorys, err)
+func (_c *AssetRiskHistoryRepository_GetRiskHistory_Call) Return(artifactRiskHistorys []models.ArtifactRiskHistory, err error) *AssetRiskHistoryRepository_GetRiskHistory_Call {
+	_c.Call.Return(artifactRiskHistorys, err)
 	return _c
 }
 
@@ -177,8 +177,8 @@ func (_c *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call) Run(run func(
 	return _c
 }
 
-func (_c *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call) Return(assetRiskHistorys []models.ArtifactRiskHistory, err error) *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call {
-	_c.Call.Return(assetRiskHistorys, err)
+func (_c *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call) Return(artifactRiskHistorys []models.ArtifactRiskHistory, err error) *AssetRiskHistoryRepository_GetRiskHistoryByProject_Call {
+	_c.Call.Return(artifactRiskHistorys, err)
 	return _c
 }
 
@@ -210,7 +210,7 @@ type AssetRiskHistoryRepository_UpdateRiskAggregation_Call struct {
 }
 
 // UpdateRiskAggregation is a helper method to define mock.On call
-//   - assetRisk *models.AssetRiskHistory
+//   - assetRisk *models.ArtifactRiskHistory
 func (_e *AssetRiskHistoryRepository_Expecter) UpdateRiskAggregation(assetRisk interface{}) *AssetRiskHistoryRepository_UpdateRiskAggregation_Call {
 	return &AssetRiskHistoryRepository_UpdateRiskAggregation_Call{Call: _e.mock.On("UpdateRiskAggregation", assetRisk)}
 }

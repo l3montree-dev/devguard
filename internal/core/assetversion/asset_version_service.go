@@ -489,7 +489,7 @@ func (s *service) handleScanResult(userID string, artifactName string, assetVers
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
 	}
 	// get all vulns from other branches
-	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID, artifactName)
+	existingVulnsOnOtherBranch, err := s.dependencyVulnRepository.GetDependencyVulnsByOtherAssetVersions(nil, assetVersion.Name, assetVersion.AssetID)
 	if err != nil {
 		slog.Error("could not get existing dependencyVulns on default branch", "err", err)
 		return []models.DependencyVuln{}, []models.DependencyVuln{}, []models.DependencyVuln{}, err
