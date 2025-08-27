@@ -44,6 +44,7 @@ import (
 	"github.com/l3montree-dev/devguard/internal/core/org"
 	"github.com/l3montree-dev/devguard/internal/core/pat"
 	"github.com/l3montree-dev/devguard/internal/core/project"
+	"github.com/l3montree-dev/devguard/internal/core/release"
 	"github.com/l3montree-dev/devguard/internal/core/statistics"
 	"github.com/l3montree-dev/devguard/internal/core/vuln"
 	"github.com/l3montree-dev/devguard/internal/core/vulndb"
@@ -489,6 +490,9 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	componentService := component.NewComponentService(&depsDevService, componentProjectRepository, componentRepository, licenseRiskService)
 
 	artifactService := artifact.NewService(artifactRepository)
+
+	// release module
+	// release repository will be created later when project router is available
 	assetVersionService := assetversion.NewService(assetVersionRepository, componentRepository, dependencyVulnRepository, firstPartyVulnRepository, dependencyVulnService, firstPartyVulnService, assetRepository, projectRepository, orgRepository, vulnEventRepository, &componentService, thirdPartyIntegration, licenseRiskRepository, artifactService)
 	statisticsService := statistics.NewService(statisticsRepository, componentRepository, assetRiskAggregationRepository, dependencyVulnRepository, assetVersionRepository, projectRepository, repositories.NewProjectRiskHistoryRepository(db))
 	invitationRepository := repositories.NewInvitationRepository(db)
@@ -691,6 +695,23 @@ func BuildRouter(db core.DB, broker pubsub.Broker) *echo.Echo {
 	assetRouter := projectRouter.Group("/assets/:assetSlug", projectScopedRBAC(core.ObjectAsset, core.ActionRead), assetMiddleware(assetRepository))
 	assetRouter.GET("/", assetController.Read)
 	assetRouter.DELETE("/", assetController.Delete, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionDelete))
+
+	// release routes inside project scope
+	releaseRepository := repositories.NewReleaseRepository(db)
+	releaseService := release.NewService(releaseRepository)
+	releaseController := release.NewReleaseController(releaseService)
+
+	projectRouter.GET("/releases/", releaseController.List, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.POST("/releases/", releaseController.Create, projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectRouter.GET("/releases/:releaseID/", releaseController.Read, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.PUT("/releases/:releaseID/", releaseController.Update, projectScopedRBAC(core.ObjectProject, core.ActionUpdate))
+	projectRouter.DELETE("/releases/:releaseID/", releaseController.Delete, projectScopedRBAC(core.ObjectProject, core.ActionDelete))
+	projectRouter.GET("/releases/:releaseID/candidates/", releaseController.ListCandidates, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+	projectRouter.GET("/releases/candidates/", releaseController.ListCandidates, projectScopedRBAC(core.ObjectProject, core.ActionRead))
+
+	// add/remove items (artifact or child release) to/from a release
+	projectRouter.POST("/releases/:releaseID/items/", projectScopedRBAC(core.ObjectProject, core.ActionUpdate)(releaseController.AddItem))
+	projectRouter.DELETE("/releases/:releaseID/items/:itemID/", projectScopedRBAC(core.ObjectProject, core.ActionUpdate)(releaseController.RemoveItem))
 
 	assetRouter.GET("/secrets/", assetController.GetSecrets, neededScope([]string{"manage"}), projectScopedRBAC(core.ObjectAsset, core.ActionUpdate))
 	assetRouter.GET("/compliance/", complianceController.AssetCompliance)

@@ -41,6 +41,7 @@ func NewExternalEntityProviderService(
 }
 
 func (s externalEntityProviderService) TriggerSync(c echo.Context) error {
+	return nil
 	org := core.GetOrg(c)
 	if org.IsExternalEntity() {
 		// Trigger the sync for the external entity provider projects
@@ -54,6 +55,7 @@ func (s externalEntityProviderService) TriggerSync(c echo.Context) error {
 }
 
 func (s externalEntityProviderService) TriggerOrgSync(c echo.Context) error {
+	return nil
 	orgs, err := s.SyncOrgs(c)
 	if err != nil {
 		return echo.NewHTTPError(500, "could not sync organizations").WithInternal(err)

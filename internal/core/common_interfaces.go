@@ -95,6 +95,17 @@ type ArtifactRepository interface {
 	GetByAssetIDAndAssetVersionName(assetID uuid.UUID, assetVersionName string) ([]models.Artifact, error)
 }
 
+type ReleaseRepository interface {
+	common.Repository[uuid.UUID, models.Release, DB]
+	GetByProjectID(projectID uuid.UUID) ([]models.Release, error)
+	ReadWithItems(id uuid.UUID) (models.Release, error)
+	ReadRecursive(id uuid.UUID) (models.Release, error)
+	GetByProjectIDPaged(tx DB, projectID uuid.UUID, pageInfo PageInfo, search string, filter []FilterQuery, sort []SortQuery) (Paged[models.Release], error)
+	CreateReleaseItem(tx DB, item *models.ReleaseItem) error
+	DeleteReleaseItem(tx DB, id uuid.UUID) error
+	GetCandidateItemsForRelease(projectID uuid.UUID, releaseID *uuid.UUID) ([]models.Artifact, []models.Release, error)
+}
+
 type CveRepository interface {
 	common.Repository[string, models.CVE, DB]
 	FindByID(id string) (models.CVE, error)
