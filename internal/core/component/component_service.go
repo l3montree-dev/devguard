@@ -3,10 +3,13 @@ package component
 import (
 	"bytes"
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"sync"
 
 	"github.com/google/licensecheck"
 	"github.com/l3montree-dev/devguard/internal/core"
@@ -104,7 +107,12 @@ func (s *service) GetLicense(component models.Component) (models.Component, erro
 		}
 		component.License = &cov.Match[0].ID
 	case "apk":
-		component.License = utils.Ptr("WIP")
+		license, err := getAlpineLicense(validatedPURL)
+		if err != nil || license == "" {
+			component.License = utils.Ptr("unknown")
+			return component, nil
+		}
+		component.License = &license
 	default:
 		resp, err := s.depsDevService.GetVersion(context.Background(), validatedPURL.Type, combineNamespaceAndName(validatedPURL.Namespace, validatedPURL.Name), validatedPURL.Version)
 
@@ -204,6 +212,7 @@ func (s *service) GetAndSaveLicenseInformation(assetVersion models.AssetVersion,
 
 	// wait for all components to be processed
 	components, err := errGroup.WaitAndCollect()
+	slog.Info("Finished collecting no deadlock here")
 	if err != nil {
 		return nil, err
 	}
@@ -300,4 +309,28 @@ func getDebianPackageInformation(pURL packageurl.PackageURL) (*bytes.Buffer, err
 	defer resp.Body.Close()
 	_, err = io.Copy(&buff, resp.Body)
 	return &buff, err
+}
+
+//go:embed alpine-licenses.json
+var alpineLicenses []byte
+var alpineLicenseMap map[string]string = make(map[string]string, 100*1000)
+var mutex sync.Mutex
+
+func getAlpineLicense(pURL packageurl.PackageURL) (string, error) {
+	var err error
+	var license string
+	mutex.Lock()
+	if len(alpineLicenseMap) == 0 {
+		err = json.Unmarshal(alpineLicenses, &alpineLicenseMap)
+		if err != nil {
+			mutex.Unlock()
+			return license, err
+		}
+	}
+	mutex.Unlock()
+	license, exists := alpineLicenseMap[pURL.Name+pURL.Version]
+	if exists {
+		return license, nil
+	}
+	return "", nil
 }

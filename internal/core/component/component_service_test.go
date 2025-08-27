@@ -1,6 +1,7 @@
 package component_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -36,6 +37,25 @@ func TestHandleComponent(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, utils.Ptr("unknown"), actual.License)
+	})
+	t.Run("should also get alpine Licenses", func(t *testing.T) {
+		mockDepsDevService := mocks.NewDepsDevService(t)
+		mockComponentProjectRepository := mocks.NewComponentProjectRepository(t)
+		mockComponentRepository := mocks.NewComponentRepository(t)
+		mockLicenseRiskService := mocks.NewLicenseRiskService(t)
+
+		service := component.NewComponentService(mockDepsDevService, mockComponentProjectRepository, mockComponentRepository, mockLicenseRiskService)
+
+		component := models.Component{
+			Purl:    "pkg:apk/alpine/abiword-plugin-collab@3.0.0-r4",
+			Version: "3.0.0-r4",
+			License: nil,
+		}
+
+		actual, err := service.GetLicense(component)
+		fmt.Printf("License %s", *actual.License)
+		assert.NoError(t, err)
+		assert.NotEqual(t, utils.Ptr("unknown"), actual.License)
 	})
 
 	t.Run("should set the license information to unknown, if there is an error in the deps dev service", func(t *testing.T) {
